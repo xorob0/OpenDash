@@ -7,7 +7,10 @@ import path from 'node:path';
 import type { Dashboard, DashboardMetadata, DashPackage } from './generator.ts';
 import { hero } from './hero/hero.ts';
 import { GENERATED_FONTS_DIR, prepareFont } from './design/fontFiles.ts';
+import { rect } from './design/geometry.ts';
+import { idleScreen } from './idle.ts';
 import type { Layout } from './layouts/layout.ts';
+import { faceOf, INNER_INSET } from './layouts/round.ts';
 import { rule } from './elements/rule.ts';
 import { CARDS_DASHBOARD_NAME, cardScreens, DEFAULT_STRATEGY, inlineSlotItems, widgetSlotItems, type SlotStrategy } from './slots.ts';
 
@@ -54,11 +57,22 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
       {
         name: MAIN_SCREEN_NAME,
         inGame: true,
-        idle: true,
+        // Not the idle screen any more: showing this face with no game behind it is the bug #763 is
+        // about, and the screen after it is what SimHub shows instead.
+        idle: false,
         pit: true,
         backgroundColor: layout.background,
         items: [...rules, ...hero(layout.hero), ...slots],
       },
+      // Last, so that screen 0 is still the racing face: SimHub's own `MainPreviewIndex` is the first
+      // in-game screen and every test that reaches for `screens[0]` means the same thing it meant.
+      idleScreen({
+        frame: rect(0, 0, layout.width, layout.height),
+        background: layout.background,
+        // A round face is a disc inside its bounding square, and nothing may lie outside the inner
+        // disc the flag ring leaves; `layouts/round.ts` is where both come from.
+        ...(layout.shape === 'round' ? { disc: { ...faceOf(layout.width), r: layout.width / 2 - INNER_INSET } } : {}),
+      }),
     ],
     metadata,
   };
@@ -79,7 +93,15 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
  * in build.ts refuses a package that draws a weight missing from it, so a weight is added here,
  * and measured into design/advances.ts, before anything is drawn in it.
  */
-export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf', 'Barlow-Bold.ttf'] as const;
+export const FACE_FONT_FILES = [
+  'BarlowCondensed-SemiBold.ttf',
+  'BarlowCondensed-Bold.ttf',
+  // The idle screen's wordmark, whose "open" is Light: the second screens have always carried this
+  // file for the pit wall header, and #763 put the same two words on every face at rest.
+  'BarlowCondensed-Light.ttf',
+  'Barlow-Medium.ttf',
+  'Barlow-Bold.ttf',
+] as const;
 
 /**
  * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves

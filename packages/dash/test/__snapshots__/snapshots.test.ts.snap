@@ -5619,7 +5619,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "0a4152d7-36b0-5e1a-92a8-0b5ccf9d0acc",
       "AllowOverlays": true,
@@ -10089,6 +10089,139 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "a18856e3-fcac-5b74-ba92-4f18c8843662",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 759,
+          "Top": 111,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "4ea03754-5627-5549-888f-e242e6e01dd4",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 953,
+          "Top": 111,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "663f28ab-ce82-596d-853d-a633ce411b29",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 888,
+          "Top": 257,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "4e3ddf83-702e-5125-a068-8f54550b9444",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 896,
+          "Top": 350,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "06a3cdc4-0700-5347-b067-8b079c16c5d5",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -10109,12 +10242,12 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
     "Width": 1920,
     "Height": 480,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -10145,12 +10278,12 @@ exports[`dashboard snapshots OpenDash.djson.metadata 1`] = `
   "Width": 1920,
   "Height": 480,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -12225,7 +12358,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "5262cbd4-4bc1-5b6c-8bab-4fc92cd8b610",
       "AllowOverlays": true,
@@ -16069,6 +16202,139 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "e963beff-e1d4-52bc-a0b9-064bee9fb8e1",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 439,
+          "Top": 111,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "a9e337a2-c7af-5bde-860f-e5d1b0d73c07",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 633,
+          "Top": 111,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "a554e907-2835-53b1-a281-4baf44267036",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 568,
+          "Top": 257,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "e9f19835-e176-5454-aa27-464408160988",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 576,
+          "Top": 350,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "834dc291-8884-59f9-8f95-4ed78ae86212",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -16089,12 +16355,12 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
     "Width": 1280,
     "Height": 480,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -16125,12 +16391,12 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
   "Width": 1280,
   "Height": 480,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -17909,7 +18175,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "e85a0339-7f41-51f2-b7d5-2cfc690cfd82",
       "AllowOverlays": true,
@@ -21993,6 +22259,139 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "55969ae3-c1a3-5f56-a27f-56b850c5bb34",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 439,
+          "Top": 71,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "2acbe376-16f0-5067-8304-ec5c37a6216d",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 633,
+          "Top": 71,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "b1aef769-6044-5e44-bd5f-b012de5a335b",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 568,
+          "Top": 217,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "821328d6-7a88-5346-80fe-4502eb01258e",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 576,
+          "Top": 310,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "af769269-2078-5035-b485-c50b7e1c864e",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -22013,12 +22412,12 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
     "Width": 1280,
     "Height": 400,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -22049,12 +22448,12 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
   "Width": 1280,
   "Height": 400,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -23833,7 +24232,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "6caefba4-8220-526d-8cc0-c20322ea19c7",
       "AllowOverlays": true,
@@ -27304,6 +27703,139 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "0329213e-68de-5468-8b49-4962c06fd311",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 224,
+          "Top": 111,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "a1e96fda-3cc2-55e2-a32d-e57c9353829c",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 418,
+          "Top": 111,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "cee3927d-f62a-5c4f-862c-6e6d08aeb2bd",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 353,
+          "Top": 257,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "f1588f68-e9e0-5cfe-88d6-e2900f01aefb",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 361,
+          "Top": 350,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "84c1f188-2b02-5ecc-8896-1c1616c4e12d",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -27324,12 +27856,12 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
     "Width": 850,
     "Height": 480,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -27360,12 +27892,12 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson.m
   "Width": 850,
   "Height": 480,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -29144,7 +29676,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "11a97c12-45d4-5a4a-bf1d-8d0f07eb158d",
       "AllowOverlays": true,
@@ -32570,6 +33102,139 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "c607279d-f35e-5b68-8b47-d9c4f096f17c",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 199,
+          "Top": 111,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "0221ebd3-40f8-5d08-8d28-793b0c85ca14",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 393,
+          "Top": 111,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "e4b719e1-ff27-5acf-b3c1-edcc22d69079",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 328,
+          "Top": 257,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "3b216d9d-a94c-5a12-a406-53a4dbfaa277",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 336,
+          "Top": 350,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "8b852cff-219d-5263-914a-85d297bfa3d2",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -32590,12 +33255,12 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
     "Width": 800,
     "Height": 480,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -32626,12 +33291,12 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson.m
   "Width": 800,
   "Height": 480,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -34410,7 +35075,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "6b2f9d01-d0fd-5e8a-b711-6e3cf30c5cd2",
       "AllowOverlays": true,
@@ -38400,6 +39065,139 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "46f510ec-5256-5161-86b9-0d3a56c4e28c",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 439,
+          "Top": 231,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "31edb8d7-ab5c-5a9e-9603-9a7dc7fcf507",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 633,
+          "Top": 231,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "4361447a-f114-5acb-9aed-106e46a29acd",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 568,
+          "Top": 377,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "cb8d0a01-24a8-5c3b-9e43-8c3a56d5362b",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 576,
+          "Top": 470,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "297d5051-7c0c-5a6e-b08d-bd80ec65dd5b",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -38420,12 +39218,12 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
     "Width": 1280,
     "Height": 720,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -38456,12 +39254,12 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
   "Width": 1280,
   "Height": 720,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -40240,7 +41038,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "8b6c083a-af8c-5503-b5e1-a81ef8e9877a",
       "AllowOverlays": true,
@@ -44568,6 +45366,139 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "4655fa53-b6f1-52c3-bf3a-2a3abe735afd",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 288,
+          "Top": 52,
+          "Width": 139,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "ca5fda3a-8c34-5be1-83d8-f0e71175642e",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 396,
+          "Top": 52,
+          "Width": 149,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "b3b3acc2-d519-53b6-b21d-5a07dfc3f106",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 46,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 22,
+          "SpecialCharsWidth": 12,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 349,
+          "Top": 141,
+          "Width": 103,
+          "Height": 57,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "34c37ef5-a0d3-502a-84af-3dda16d1ebb8",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 336,
+          "Top": 215,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "c42d6743-27cd-5def-ace0-33fe34d25c3e",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -44588,12 +45519,12 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
     "Width": 800,
     "Height": 286,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -44624,12 +45555,12 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson.m
   "Width": 800,
   "Height": 286,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -46408,7 +47339,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "6c11edae-1001-5ec3-99e6-0360848b476a",
       "AllowOverlays": true,
@@ -49654,6 +50585,139 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "388edc09-ed97-5164-b95e-24ae2d67bf13",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 99,
+          "Top": 214,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "3b64bbcd-8c36-5472-9161-66b2728094a2",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 293,
+          "Top": 214,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "4e81e4db-05a6-5f08-ad48-0f8c080a6ef0",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 228,
+          "Top": 360,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "bcdbc17f-6c37-5d60-bf08-f1da4be44fb1",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 236,
+          "Top": 453,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "adab34ab-9534-5c14-b828-9ea81332b0ec",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -49674,12 +50738,12 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
     "Width": 600,
     "Height": 686,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -49710,12 +50774,12 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson.m
   "Width": 600,
   "Height": 686,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -51494,7 +52558,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "e5c1e53a-05b7-5b6d-94d3-91ab106f4d1f",
       "AllowOverlays": true,
@@ -54032,6 +55096,139 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "118427bd-231e-53b3-b26f-7107d6ac6d39",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 128,
+          "Top": 149,
+          "Width": 139,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "2599e0bb-1e59-565d-af57-49c7fe08f1e5",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 236,
+          "Top": 149,
+          "Width": 149,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "c622a55d-d141-5629-a61e-0a956ec43002",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 46,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 22,
+          "SpecialCharsWidth": 12,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 189,
+          "Top": 238,
+          "Width": 103,
+          "Height": 57,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "779d0068-d71f-52fc-aa07-c320dbc73dc6",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 176,
+          "Top": 312,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "02db35c2-304a-58d0-a815-6642f4cf3b83",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -54052,12 +55249,12 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
     "Width": 480,
     "Height": 480,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -54088,12 +55285,12 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson.metadata 
   "Width": 480,
   "Height": 480,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0
@@ -55872,7 +57069,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
       "RenderingSkip": 0,
       "Name": "Main",
       "InGameScreen": true,
-      "IdleScreen": true,
+      "IdleScreen": false,
       "PitScreen": true,
       "ScreenId": "d51af029-332e-5b45-a15d-2b837ee60fe7",
       "AllowOverlays": true,
@@ -59116,6 +60313,139 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "MinimumRefreshIntervalMS": 0
         }
       ]
+    },
+    {
+      "RenderingSkip": 0,
+      "Name": "Idle",
+      "InGameScreen": false,
+      "IdleScreen": true,
+      "PitScreen": false,
+      "ScreenId": "edf56a93-442c-54c2-bcb6-1421370497dd",
+      "AllowOverlays": true,
+      "IsForegroundLayer": false,
+      "IsOverlayLayer": false,
+      "OverlayTriggerExpression": {
+        "Expression": ""
+      },
+      "ScreenEnabledExpression": {
+        "Expression": ""
+      },
+      "OverlayMaxDuration": 0,
+      "OverlayMinDuration": 0,
+      "IsBackgroundLayer": false,
+      "BackgroundColor": "#FF0A0B0D",
+      "Background": "None",
+      "MinimumRefreshIntervalMS": 0,
+      "Items": [
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Light",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "open",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 199,
+          "Top": 271,
+          "Width": 247,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "e4c67a71-d07d-5823-8432-8afe4a894e7b",
+          "Name": "idle.wordmark.open",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "Bold",
+          "FontStyle": "Normal",
+          "FontSize": 116,
+          "Text": "Dash",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 393,
+          "Top": 271,
+          "Width": 266,
+          "Height": 141,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "7e7f3979-8579-5d90-903a-ee389d4bd478",
+          "Name": "idle.wordmark.dash",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 64,
+          "Text": "14:32",
+          "TextColor": "#FFF5F7FA",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 31,
+          "SpecialCharsWidth": 17,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 328,
+          "Top": 417,
+          "Width": 145,
+          "Height": 78,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "5fa5a3a9-dc05-51fa-a00e-56206b90bfcc",
+          "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "NO GAME RUNNING",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 336,
+          "Top": 510,
+          "Width": 128,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Id": "de9ffce1-31d5-5fe5-b8ec-530c34a76fc7",
+          "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        }
+      ]
     }
   ],
   "SnapToGrid": true,
@@ -59136,12 +60466,12 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
     "Width": 800,
     "Height": 800,
     "DashboardVersion": "0.0.0-snapshot",
-    "ScreenCount": 1,
+    "ScreenCount": 2,
     "InGameScreensIndexs": [
       0
     ],
     "IdleScreensIndexs": [
-      0
+      1
     ],
     "PitScreensIndexs": [
       0
@@ -59172,12 +60502,12 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson.metadata 
   "Width": 800,
   "Height": 800,
   "DashboardVersion": "0.0.0-snapshot",
-  "ScreenCount": 1,
+  "ScreenCount": 2,
   "InGameScreensIndexs": [
     0
   ],
   "IdleScreensIndexs": [
-    0
+    1
   ],
   "PitScreensIndexs": [
     0

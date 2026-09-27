@@ -127,20 +127,19 @@ describe('the families a package ships', () => {
     expect(weights).toContain('Bold');
   });
 
-  test('a face package ships four faces and a second screen five', () => {
+  test('a face package and a second screen both ship five faces', () => {
     // What the sheets' nine declared weights mean here. A package ships the faces it is drawn in
-    // rather than the faces it might ask for, so nine files would be six that no item names and
+    // rather than the faces it might ask for, so nine files would be four that no item names and
     // whose advances nothing measures; build.ts holds the other side of the rule, refusing a
-    // package that draws a weight absent from these lists. The fourth of a face is the flag band's
-    // name, which the artboards set in 700 against the 500 of every other label; the fourth of a
-    // screen is the pit wall wordmark's Light, which the companions carry too because one list
-    // serves both screens.
+    // package that draws a weight absent from these lists.
     const faces = (files: string[]): string[] => files.map((f) => `${familyOfFile(f)} ${weightOfFile(f)}`).sort();
     const shared = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`];
-    // The fourth is the flag band's name, which the face and the pit wall both draw; the second
-    // screens carry a fifth, the wordmark's Light, which only the pit wall header draws.
-    expect(faces(fontsForPackage())).toEqual([...shared, `${ds.font.label} Bold`].sort());
-    expect(faces(fontsForScreens())).toEqual([...shared, `${ds.font.label} Bold`, `${ds.font.data} Light`].sort());
+    // The fourth is the flag band's name, which the artboards set in 700 against the 500 of every
+    // other label. The fifth is the wordmark's Light: the pit wall header has always drawn it, and
+    // since #763 so does every face, on its idle screen.
+    const both = [...shared, `${ds.font.label} Bold`, `${ds.font.data} Light`].sort();
+    expect(faces(fontsForPackage())).toEqual(both);
+    expect(faces(fontsForScreens())).toEqual(both);
   });
 
   test('the vendored originals are left exactly as they were downloaded', () => {
