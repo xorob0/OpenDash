@@ -139,6 +139,11 @@ and this section exists so that it is a recorded one.
 go through a scheduled task. An emulator started over SSH is invisible to SimHub and the dash
 simply shows its defaults, with nothing in any log.
 
+**With no emulator running, what you are looking at is the idle screen**, not a face with no data in
+it: since #113 every package carries one and SimHub switches to it whenever `GameRunning` is false.
+The wordmark and a clock on screen therefore mean the telemetry never arrived, which is a clearer
+symptom than the old one and a surprise if you were expecting the face.
+
 **SimHub reads its template list once**, at startup, so a package has to be installed before SimHub
 starts rather than after.
 
