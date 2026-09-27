@@ -770,10 +770,13 @@ function fetchFromShare(host: Host, remotePath: string, localPath: string): RunR
  * Why nothing here can be clicked, or null when it can: the VNC tooling on the host, and the mode
  * the guest's display is in.
  *
- * Both are checked before a caller starts a run rather than at the click, because everything in
- * `bun run dev` and `bun run shots` that happens first -- claiming the VM, building, installing,
- * restarting SimHub, starting the emulator -- costs minutes, and the display mode is a property of
- * the guest that none of it changes.
+ * Every caller asks this as soon as the guest answers and before it builds anything, which is the
+ * earliest it can be asked -- a display mode needs the guest up and nothing more. What sits between
+ * there and the first click is the build, the install, SimHub's restart and the emulator, four
+ * minutes of `bun run dev` that a wrong display mode does not change and that a refusal afterwards
+ * would have spent for nothing.
+ *
+ * `openDashboard` checks the mode again at the click, because it is also called on its own.
  */
 export function guiProblem(host: Host): string | null {
   const tooling = host.local ? existsSync(VENV_PYTHON) : onHost(host, `test -x ${VENV_PYTHON}`, 30_000).ok;

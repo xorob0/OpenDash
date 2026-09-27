@@ -290,6 +290,13 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
         return 1;
       }
     }
+    // Before the build and the install, not at the first click: the guest being up is all this needs,
+    // and a recording run spends minutes getting to its first click.
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
+      return 1;
+    }
     if (!opts.noBuild) {
       console.log('building the packages');
       const b = Bun.spawnSync(['bun', 'run', 'build'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
@@ -308,11 +315,6 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
     const installed = install(host, opts.packages);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
-      return 1;
-    }
-    const cannotClick = guiProblem(host);
-    if (cannotClick) {
-      console.error(cannotClick);
       return 1;
     }
     const emulator = buildEmulator();
