@@ -28,7 +28,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
-import { CHARS, CORNERS } from '../src/second/values.ts';
+import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, charsOfText, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
@@ -39,6 +39,7 @@ import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { bindingExpression, cellOverruns, drawableGlyphs, drawableLiterals } from './monoGlyphs.ts';
 import { drawingOf } from './moduleItems.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -775,10 +776,44 @@ describe('the tyres page names the tick and the compound', () => {
  * Both halves are checked: the design-time gap, which is what DashStudio's editor and every preview
  * show, and the Left binding that keeps it at runtime. Without the binding the two disagree the
  * moment a temperature crosses a hundred, and only the binding can be wrong quietly.
+ *
+ * The binding is checked by what it evaluates to, not by its shape. It used to be enough that every
+ * property the Left read was one the value's Text read, which a mark at the budget's end that also
+ * glanced at the figure would have passed. Now the corner is handed a reading, the value's Text is
+ * evaluated to the figure it draws, and the mark's Left has to land one gap after that figure's
+ * cells: at a two-digit reading, a mark at the end of the three-digit budget is a cell too far. Only
+ * the corner under test publishes anything, so a mark following another corner's figure is placed
+ * for `--` and fails at every reading whose figure is not two cells wide.
  */
 describe('a tyre reading and its unit keep one gap', () => {
   const tyres = MODULES.find((m) => m.id === 'tyres')!;
-  const propertiesOf = (expression: string): string[] => ncalc.referencedProperties(expression);
+  /** What one corner reports; the pressure's unit is the sim's own spelling. */
+  interface Reading {
+    temperature: number;
+    pressure: number;
+    wear: number;
+    pressureUnit?: 'Psi' | 'Kpa' | 'Bar';
+  }
+  /**
+   * One reading per digit count each budget holds, then the boundary and the blank. `99.7` is what
+   * the binding rounds for: `format` writes it `100`, three digits from a reading under a hundred,
+   * and `99.96` psi is `100.0` the same way. The one-digit pressure is a bar reading and the
+   * three-digit one is kPa, which is also what puts the wide page's converted reading through both
+   * directions of its conversion.
+   */
+  const READINGS: readonly Reading[] = [
+    { temperature: 8, pressure: 1.9, wear: 8, pressureUnit: 'Bar' },
+    { temperature: 84, pressure: 27.8, wear: 79, pressureUnit: 'Psi' },
+    { temperature: 104, pressure: 190.3, wear: 100, pressureUnit: 'Kpa' },
+    { temperature: 99.7, pressure: 99.96, wear: 99.6, pressureUnit: 'Psi' },
+    { temperature: 0, pressure: 0, wear: 0 },
+  ];
+  const telemetry = (corner: Corner, r: Reading): Props => ({
+    [`DataCorePlugin.GameData.TyreTemperature${corner}`]: r.temperature,
+    [`DataCorePlugin.GameData.TyrePressure${corner}`]: r.pressure,
+    [`DataCorePlugin.GameData.TyreWear${corner}`]: r.wear,
+    ...(r.pressureUnit === undefined ? {} : { 'DataCorePlugin.GameData.TyrePressureUnit': r.pressureUnit }),
+  });
 
   for (const box of moduleBoxes()) {
     test(`on a ${box.name}`, () => {
@@ -789,13 +824,20 @@ describe('a tyre reading and its unit keep one gap', () => {
           const mark = texts.find((i) => i.name === `${value.name}.unit`);
           if (mark === undefined) continue;
           const mono = value.monospace!;
-          const after = value.rect.left + monoWidth(mono, charsOfText(value.text, mono));
-          expect({ box: box.name, item: value.name, gap: mark.rect.left - after }).toMatchObject({ gap: WHEEL_UNIT_GAP });
-          // And it is the figure the mark follows, not a constant: every property its Left reads is
-          // one the value's own Text reads.
-          const follows = propertiesOf(bindingExpression(mark, 'Left'));
-          const read = propertiesOf(bindingExpression(value, 'Text'));
-          expect({ box: box.name, item: value.name, follows: follows.length > 0, strays: follows.filter((p) => !read.includes(p)) }).toMatchObject({ follows: true, strays: [] });
+          /** Where a figure ends: the cells it takes, not the cells its budget holds. */
+          const after = (figure: string): number => value.rect.left + monoWidth(mono, charsOfText(figure, mono));
+          expect({ box: box.name, item: value.name, gap: mark.rect.left - after(value.text) }).toMatchObject({ gap: WHEEL_UNIT_GAP });
+          // And at runtime the mark follows the figure the value draws, at whatever digit count.
+          const placed = READINGS.map((reading) => {
+            const props = telemetry(corner, reading);
+            const figure = String(evalNcalc(bindingExpression(value, 'Text'), props));
+            return { figure, left: evalNcalc(bindingExpression(mark, 'Left'), props), expected: after(figure) + WHEEL_UNIT_GAP };
+          });
+          for (const { figure, left, expected } of placed) {
+            expect({ box: box.name, item: value.name, figure, left }).toMatchObject({ left: expected });
+          }
+          // The readings do take the mark to three places at least, or the check above was one digit count.
+          expect({ box: box.name, item: value.name, moves: new Set(placed.map((p) => p.expected)).size >= 3 }).toMatchObject({ moves: true });
         }
       }
     });
