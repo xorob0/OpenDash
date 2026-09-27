@@ -862,6 +862,12 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
  *
  * Read from iRacing alone, and kept here so that a second sim is a change to one line -- the
  * per-game mapping block #312 opened was closed on 2026-09-22.
+ *
+ * **It is false with no game running too, which today is the idle screen as well.** Every screen of
+ * every package is written with `idle: true`, so SimHub draws these screens when nothing is running
+ * and a notice is what a rig between sessions shows: deliberate until #763 gives the idle state
+ * content of its own, and #763's to decide whether these screens keep `idle` when it does. See the
+ * "no session yet" section of docs/second-screens.md.
  */
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
