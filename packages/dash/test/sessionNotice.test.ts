@@ -1,12 +1,13 @@
 /**
  * A module that needs a session says so while there is none (#406).
  *
- * The mechanism is `defineModule`'s: the module's content goes into one group whose Visible is the
- * session test, and `placeholder`'s notice takes the same rectangle gated the other way. What this
- * file checks is that every module the catalogue declares gets exactly that arrangement, at every
- * box a module is drawn in, that no other module gets it, that band D's four timing pages and zone
- * A's track page get the same, and that the condition under all of them is one expression rather
- * than several spellings.
+ * The mechanism is `withSessionGate`'s: the drawing goes into one group whose Visible is the session
+ * test, and `placeholder`'s notice takes the same rectangle gated the other way. What this file
+ * checks is that every module the catalogue declares gets exactly that arrangement, at every box a
+ * module is drawn in, that no other module gets it, that band D's four timing pages and zone A's
+ * track page get the same, that the pit wall's Track panel says it once over the whole panel rather
+ * than over the map alone, and that the condition under all of them is one expression rather than
+ * several spellings.
  */
 import { describe, expect, test } from 'bun:test';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../src/contract.ts';
@@ -16,6 +17,7 @@ import type { Rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SESSION_REASON, sessionGroupName, sessionNotice } from '../src/modules/module.ts';
 import { inSession } from '../src/second/values.ts';
+import { racePage } from '../src/screens/pitwall.ts';
 import { ZONE_FACES, sizeOf, zonesOf } from '../src/zones/index.ts';
 import { BAND_PAGES_NEEDING_SESSION, zonePageScreen } from '../src/zones/pages.ts';
 import { walkItems } from '../src/walk.ts';
@@ -174,4 +176,44 @@ describe("band D's timing pages say so too", () => {
       }
     });
   }
+});
+
+/**
+ * The pit wall's Track panel embeds the track module, and one panel says one thing.
+ *
+ * Letting the module draw its own notice here half-gated the panel: `TRACK · GO INTO A SESSION` was
+ * centred in the map's left half while SESSION BEST and a lap time stayed drawn 20 px to the right
+ * of that sentence, and the notice read as the map alone having failed. So the module is built with
+ * `notice: false` and the panel gates its whole body. What is pinned is the shape of that, since the
+ * mixed state passed every fit test it had.
+ */
+describe("the pit wall's Track panel says it once, over the whole panel", () => {
+  const items = racePage(1920, 1080).items;
+  const group = items.find((i): i is LayerItem => i.kind === 'layer' && i.name === sessionGroupName('race.track.'));
+  const notices = [...walkItems(items)].filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('race.track.placeholder'));
+
+  test('the map and the field column are in one gated group', () => {
+    expect(group).toBeDefined();
+    expect(formulaOf(group!, 'Visible')).toBe(SESSION);
+    const inside = group!.children.map((c) => c.name);
+    // The map, and every reading beside it: the session best, the two temperatures, the three assists.
+    expect(inside).toContain('race.track.map.map');
+    for (const field of ['sessionBest', 'road', 'air', 'tc', 'abs', 'bb']) {
+      expect({ field, gated: inside.some((n) => n.startsWith(`race.track.${field}.`)) }).toEqual({ field, gated: true });
+    }
+  });
+
+  test('the notice is one sentence in the panel body, not in the map half', () => {
+    expect(notices.length).toBeGreaterThan(0);
+    for (const n of notices) expect(formulaOf(n, 'Visible')).toBe(NO_SESSION);
+    expect(notices.map((n) => n.text).join(' ')).toBe(sessionNotice({ name: 'Track' }));
+    // The panel body, which is twice the map's width: the sentence is centred on the panel.
+    const map = [...walkItems(items)].find((i) => i.name === 'race.track.map.map')!;
+    for (const n of notices) expect(n.rect.width).toBeGreaterThan(map.kind === 'layer' ? 0 : map.rect.width);
+  });
+
+  test('the embedded module draws no second notice of its own', () => {
+    expect([...walkItems(items)].filter((i) => i.name.startsWith('race.track.map.placeholder'))).toHaveLength(0);
+    expect([...walkItems(items)].filter((i) => i.name === sessionGroupName('race.track.map.'))).toHaveLength(0);
+  });
 });
