@@ -14,10 +14,10 @@
  * use is visible as which layer is visible — see `revSegments.ts`.
  *
  * There is a third, and it is the one exception to everything said above: the measured tables of
- * ADR 0018, whose bands arrive already computed because 85 files of per-gear thresholds are not
- * something an expression can read. It is offered to the flag box's digit alone and only when that
- * panel is set to it, and it falls back to the two above; see `carLadderStageEntered` at the foot
- * of this file.
+ * ADR 0018, whose answer arrives already computed because 85 files of per-gear thresholds are not
+ * something an expression can read. It reaches a screen as well as the flag box's digit since #353 --
+ * the car's instants, in OpenDash's colours, behind the rig-wide rev light style -- and it falls back
+ * to the two above; see `carLadderOnScreens` and what follows it at the foot of this file.
  *
  * Two ways to ask. Something that lights a row of segments asks per segment, with
  * `mirrorStageLit` / `simhubStageLit` and the choice made structurally as two layers. Something
@@ -28,7 +28,7 @@
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
-import { CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, propertyName } from './contract.ts';
+import { CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName, setting } from './contract.ts';
 
 const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
 
@@ -213,8 +213,13 @@ export const simhubRedlineRpm = (): Expr => isnull(game('CarSettings_CurrentGear
  * ADR 0014's promise applied to a readout. Before this, the companion's speedo printed
  * `CarSettings_CurrentGearRedLineRPM` unconditionally, directly under a bar that went red at
  * `DriverCarSLLastRPM`, so a driver saw two different answers to the same question at once.
+ *
+ * Three deep since #353, in the precedence the bar itself draws in: the measured table's top band
+ * where a screen is drawing that bar, then the car's published `Last`, then SimHub's redline. The
+ * outermost test is the bar's own gate, evaluated on the same frame, which is what keeps the number
+ * and the colour beside it one answer under every ladder rather than only under two.
  */
-export const redlineRpm = (): Expr => iff(mirrorAvailable(), lastRpm(), simhubRedlineRpm());
+export const redlineRpm = (): Expr => iff(carLadderOnScreens(), carLadderTopRpm(), iff(mirrorAvailable(), lastRpm(), simhubRedlineRpm()));
 
 /**
  * One of SimHub's two band progress values, null-safe.
@@ -251,6 +256,60 @@ export const carLadderAvailable = (): Expr => ge(carLadderStage(), num(0));
 
 /** Whether the engine has entered band `stage` (0, 1, 2) of the car's own bar. */
 export const carLadderStageEntered = (stage: number): Expr => ge(carLadderStage(), num(stage + 1));
+
+/**
+ * The car's own bar as a fraction of itself: how many of its lamps are lit this frame, and how many
+ * this gear's ladder has. The plugin publishes both out of the walk it already does for the strips.
+ */
+const carLadderLit = (): Expr => isnull(prop(propertyName(CAR_LADDER_LIT)), num(0));
+const carLadderLamps = (): Expr => isnull(prop(propertyName(CAR_LADDER_LAMPS)), num(0));
+
+/**
+ * Whether a screen is drawing the car's own measured bar this frame: the rig is on the `car` rev
+ * light style, and something is publishing a bar.
+ *
+ * Both halves matter and neither is enough, exactly as they do for the flag box's digit. The style
+ * is where a driver says whose lights these are and the strips already obey it, so a screen that
+ * ignored it would be a second answer to one question; and a driver who has never fetched the
+ * tables, or is in a car nobody has measured, has the style and nothing behind it.
+ *
+ * It is the rig-wide read rather than a per-bar one because a screen has no bar: `LedRpmStyle` is
+ * the answer a strip with no opinion of its own falls back to, and a face is in that position by
+ * construction. The Lights tab offers the style per strip and not for the rig, so a driver who sets
+ * one strip to F1 leaves this at its default and gets the car's instants on their screens beside an
+ * F1 pattern on their strip; the record names that as the seam the gate leaves rather than pretending
+ * it away. #353, [ADR 0018](../../../docs/decisions/0018-the-cars-own-lights.md) amended.
+ */
+export const carLadderOnScreens = (): Expr => and(setting.ledRpmStyleIs('car'), carLadderAvailable());
+
+/**
+ * Segment `k` of `count`, under the car's own measured bar: lit once the car has lit as much of its
+ * own bar as this segment is up this one.
+ *
+ * Global rather than per band, which is the one place this ladder is shaped differently from the two
+ * derived ones. Those carry a threshold per band and so are asked per band; this one carries a count,
+ * and a count is a fact about the whole bar. The colours are still the bands' -- thirds of the
+ * segments, from `design/tokens.json` -- so what a driver sees is OpenDash's bar lighting at the
+ * car's instants, which is what #353 decided.
+ *
+ * A cross-multiplication in integers rather than a division, for the reason `bandLit` is one: it
+ * cannot divide by a zero-width bar, and it lights a segment on the frame the car lights its own LED
+ * rather than a rounding either side of it. Reduced to the entry test for the first segment, where
+ * the comparison is against zero.
+ */
+export const carLadderSegmentLit = (k: number, count: number): Expr =>
+  k === 0 ? gt(carLadderLit(), num(0)) : gt(mul(carLadderLit(), num(count)), mul(num(k), carLadderLamps()));
+
+/**
+ * The RPM the top band of the car's own measured bar lights at, in the gear it is in: the number a
+ * readout beside that bar has to print, and the third answer {@link redlineRpm} carries.
+ *
+ * The plugin finds it rather than a screen, for the same reason as everything else here -- it is the
+ * nth lowest of sixteen thresholds in one of 85 files - but it is the same instant the bar reddens
+ * at, because both come out of the one count: `Stage` reaches its third band exactly where segment
+ * ten of fifteen lights.
+ */
+export const carLadderTopRpm = (): Expr => isnull(prop(propertyName(CAR_LADDER_TOP_RPM)), num(0));
 
 /**
  * Over-rev on the car's own redline for the gear it is in — a separate threshold from the top band

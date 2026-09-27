@@ -732,6 +732,7 @@ const gearNames = (row: RoundRow): string[] => (row.hero.gear.neighbours ? ['her
 
 /** The items of a round face's hero, in the order the main screen draws them (the ring last, so it is the outermost element). */
 const roundHeroNames = (row: RoundRow): string[] => [
+  'revArc.shiftLightsCar',
   'revArc.shiftLights',
   'revArc.shiftLightsSimHub',
   'revArc.rpmBar',
@@ -782,7 +783,7 @@ describe('the round faces, row by row of the spec table', () => {
       test('every rev arc segment centre lies on its circle within 1 px and is rotated by its angle', () => {
         const { rev } = row.hero;
         if (rev.kind !== 'revArc') throw new Error('rev arc');
-        for (const layer of ['revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar']) {
+        for (const layer of ['revArc.shiftLightsCar', 'revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar']) {
           const segments = layerNamed(items, layer).children;
           expect(segments).toHaveLength(15);
           segments.forEach((s, k) => {
@@ -894,9 +895,12 @@ describe('the round faces, row by row of the spec table', () => {
       });
 
       test('the rev arc ends above the slots and, with the chequered checks, stays clear of the slots, the pit limiter and the hero text (rotated footprints)', () => {
-        const segments = [...layerNamed(items, 'revArc.shiftLights').children, ...layerNamed(items, 'revArc.shiftLightsSimHub').children, ...layerNamed(items, 'revArc.rpmBar').children].filter(hasRect);
+        const segments = ['revArc.shiftLightsCar', 'revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar'].flatMap((layer) => layerNamed(items, layer).children).filter(hasRect);
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
-        expect(segments).toHaveLength(45);
+        // Four layers of fifteen since #353, the fourth being the car's own measured bar. They are the
+        // same fifteen rectangles four times over, so what this measures is unchanged; the count is
+        // asserted so that a layer lost tomorrow is a failure rather than a smaller sample.
+        expect(segments).toHaveLength(60);
         expect(checks).toHaveLength(chequerCount(face));
         const heroBoxes = [...gearNames(row), 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);

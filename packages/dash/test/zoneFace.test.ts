@@ -530,7 +530,7 @@ describe('the rev bar segments sit at the gap each artboard draws', () => {
   // editor and its Overview thumbnails show, having no telemetry to evaluate a binding against.
   test('nine of the fifteen are coloured in at build time, as every sheet draws them', () => {
     const stages = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3];
-    for (const layer of ['revBar.shiftLights', 'revBar.shiftLightsSimHub'] as const) {
+    for (const layer of ['revBar.shiftLightsCar', 'revBar.shiftLights', 'revBar.shiftLightsSimHub'] as const) {
       const drawn = segmentsOf(zoneFace1920x480, layer).map((s) => s.backgroundColor);
       expect(drawn.filter((c) => c !== ds.purpose.shift.unlit)).toHaveLength(SAMPLE_LIT);
       expect({ layer, drawn }).toEqual({

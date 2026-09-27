@@ -45,8 +45,8 @@ const { and, eq, not, str } = ncalc;
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
 
-/** `isnull([OpenDash.LedRpmStyle], 'leftToRight') = '<which>'`, the gate on each style. */
-const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
+/** `isnull([OpenDash.LedRpmStyle], 'car') = '<which>'`, the gate on each style. */
+const styleIs = (which: LedRpmStyle): Expr => setting.ledRpmStyleIs(which);
 
 /**
  * The condition of a container whose group has already decided it. A `CustomStatus` must carry an

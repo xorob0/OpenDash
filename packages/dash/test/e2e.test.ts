@@ -402,9 +402,9 @@ describe('the emitted JSON', () => {
       if (flags.kind !== 'flagRing') throw new Error(`${layout.folder} draws no flag ring`);
       // 14 rev segments per layer (the one at the top is not rotated) and every check of the ring,
       // which the larger face carries more of, none of them at the top since the chequer took the
-      // band's phase and starts half a step in. Three rev layers since ADR 0014: the car's own
-      // ladder, SimHub's bands, and the plain RPM bar.
-      expect(rotated).toHaveLength(14 * 3 + chequerCount(flags.face));
+      // band's phase and starts half a step in. Four rev layers since #353: the car's own measured
+      // bar, the ladder the car publishes, SimHub's bands, and the plain RPM bar.
+      expect(rotated).toHaveLength(14 * 4 + chequerCount(flags.face));
       for (const r of rotated) {
         const keys = Object.keys(r);
         expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
