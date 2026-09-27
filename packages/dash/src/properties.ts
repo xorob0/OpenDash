@@ -24,11 +24,33 @@ export const COMPUTED_PROPERTIES: readonly string[] = Array.from({ length: PREVI
   return [name, `${name}_DeltaToSessionBest`];
 }).flat();
 
-/** Every property read by any binding of any package, deduplicated and sorted. */
-export function propertiesRead(): string[] {
+/** The scan itself: compose every package, and collect what its bindings read. */
+function scanPackages(): string[] {
   const all = new Set<string>(COMPUTED_PROPERTIES);
   for (const { pkg } of composePackages({ log: () => {} })) {
     for (const dashboard of pkg.dashboards) for (const property of propertiesIn(dashboard)) all.add(property);
   }
   return [...all].sort();
+}
+
+/**
+ * Held from the first answer, because composing every package to produce it costs well over a
+ * second and the answer cannot change inside a process: the layouts, the zone faces and the screen
+ * packages are module constants, and the scan is a pure function of them.
+ *
+ * What made this worth caching is that the callers ask more than once. `scripts/record.test.ts`
+ * asks three times in one file, which on a loaded CI runner once took a single test past Bun's
+ * five-second timeout and failed a build that had nothing wrong with it.
+ */
+let scanned: string[] | undefined;
+
+/**
+ * Every property read by any binding of any package, deduplicated and sorted.
+ *
+ * A copy each time, so that a caller sorting or splicing the list in place cannot hand the next
+ * caller a different answer.
+ */
+export function propertiesRead(): string[] {
+  scanned ??= scanPackages();
+  return [...scanned];
 }
