@@ -135,13 +135,25 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
   }
 
   try {
-    step(2, steps, 'starting the VM if it is down');
+    step(2, steps, 'starting the VM if it is down, and reading the display it will be clicked on');
     if (!status(host).stdout.includes('guest-ssh: up')) {
       up(host);
       if (!waitReady(host, 300)) {
         console.error('the VM did not answer within five minutes; try `bun run vm status` and `bun run vm shot`');
         return 1;
       }
+    }
+    // Asked here rather than at step 6, where the click is: the guest is up, which is all this needs,
+    // and the four minutes between the two are the build, the install and SimHub's restart. Refusing
+    // after them is refusing after spending them.
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
+      return 1;
+    }
+    if (!LIST_ORDER.includes(opts.packageName as (typeof LIST_ORDER)[number])) {
+      console.error(`unknown package "${opts.packageName}"; one of ${LIST_ORDER.join(', ')}`);
+      return 1;
     }
 
     step(3, steps, opts.noBuild ? 'skipping the build' : 'building the packages');
@@ -181,15 +193,6 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     console.log(`      ${running.stdout.split('\n').join('\n      ')}`);
 
     step(6, steps, `opening ${opts.packageName}`);
-    const cannotClick = guiProblem(host);
-    if (cannotClick) {
-      console.error(cannotClick);
-      return 1;
-    }
-    if (!LIST_ORDER.includes(opts.packageName as (typeof LIST_ORDER)[number])) {
-      console.error(`unknown package "${opts.packageName}"; one of ${LIST_ORDER.join(', ')}`);
-      return 1;
-    }
     const opened = openDashboard(host, { name: opts.packageName });
     if (!opened.ok) {
       console.error(opened.stderr);
