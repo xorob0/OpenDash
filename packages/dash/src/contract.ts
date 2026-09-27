@@ -283,6 +283,24 @@ export const CAR_LADDER_LAMPS = 'CarLadderLamps';
  */
 export const CAR_LADDER_TOP_RPM = 'CarLadderTopRpm';
 
+/**
+ * Whether the rig's rev light style is the car's own: the gate a screen draws the measured bar
+ * behind, and the answer only the plugin can give.
+ *
+ * The style is chosen per strip and a screen has no strip, so the question a face has to ask is
+ * about the rig: has anybody here asked for the car's own lights? The bars are a list the driver
+ * adds to at runtime, so their namespaces cannot appear in an expression a package was built with
+ * -- the plugin reduces them to this one boolean, from the same `AnyCarLadderWanted()` that decides
+ * whether the tables are walked at all. Any bar set to the car's own is enough, and a rig with no
+ * bars falls back to the rig-wide value a bar with no opinion would have taken.
+ *
+ * It is emphatically *not* `LedRpmStyle`, which is what #353 first shipped: that field has had no
+ * writer in the panel since the styles went per bar, so a driver who set their one strip to F1 left
+ * it at its default and got the car's instants on every screen. The seam it leaves is a rig with no
+ * strips at all, which has nowhere to say no and takes the default; ADR 0018 records it.
+ */
+export const CAR_LADDER_CHOSEN = 'CarLadderChosen';
+
 /** The name of the setting choosing how a car's bar is fitted to a strip that is a different length. */
 export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
 
@@ -372,10 +390,10 @@ export const setting = {
   /**
    * `isnull([OpenDash.LedRpmStyle], 'car') = 'car'`: whether the rig is on the given rev light style.
    *
-   * One spelling, because two surfaces now ask it. A strip asks it at build time -- a profile is
-   * generated for the style the bar is set to -- but the rev bar on a screen cannot: a package is
-   * installed once and the style is a property, so the question is an expression there. The strips'
-   * own runtime gate reads this too rather than spelling it a second time.
+   * One spelling for the strips, which ask it twice: once at build time, because a profile is
+   * generated for the style the bar is set to, and once at runtime, because the profile installed
+   * for a bar has this rewritten to that bar's own namespace. A screen asks a different question --
+   * {@link CAR_LADDER_CHOSEN} -- because the rig-wide name this reads is not what the panel writes.
    */
   ledRpmStyleIs: (style: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(style)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
@@ -1632,6 +1650,9 @@ export function flagBoxProperties(): string[] {
     CAR_LADDER_LIT,
     CAR_LADDER_LAMPS,
     CAR_LADDER_TOP_RPM,
+    // And the rig's answer to whose lights these are, which is a reduction of a list of bars rather
+    // than a setting of its own: the gate every surface reading the five above hangs on.
+    CAR_LADDER_CHOSEN,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

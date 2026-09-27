@@ -26,8 +26,10 @@
  * whether the digit is banded at all: off, it stays in the resting colour at any engine speed, for
  * the driver who wants the panel to report the gear and leave the shifting to the bar in front of
  * them. `GearCarLadder` decides where the bands come from, and is the digit's half of what the
- * strips have had since ADR 0018 -- the measured tables, where the rig has them and the car has a
- * row, and the published ladder where either is missing.
+ * strips have had since ADR 0018 -- the measured tables, where the rig is asking for the car's own
+ * lights, has them, and the car has a row, and the published ladder where any of the three is
+ * missing. The rig's answer is the same one the rev bar on a screen reads, so the digit and the bar
+ * cannot be on different ladders unless this switch says so (#353).
  *
  * **The flash is a threshold of its own, not a property of the top band**, and reading it as one was
  * the defect #284's review found here. `ShiftBand.blink` now carries the over-rev expression the
@@ -38,7 +40,7 @@ import type { Expr } from '../bind.ts';
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
-import { carLadderAvailable, carLadderOverRev, carLadderStageEntered, eitherOf } from '../shift.ts';
+import { carLadderOnScreens, carLadderOverRev, carLadderStageEntered, eitherOf } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
@@ -164,14 +166,21 @@ function bandChildren(band: ShiftBand, matrix: FlagBoxMatrix): MatrixContainer[]
 }
 
 /**
- * Whether this panel is reading the car's own measured bar this frame: set to it, and something
- * publishing it.
+ * Whether this panel is reading the car's own measured bar this frame: the rig asking for the car's
+ * own lights, something publishing a bar, and this panel not having been told otherwise.
  *
- * Both halves matter and neither is enough. A driver who has never fetched the tables has the
- * setting on and nothing behind it, and a driver in a car nobody has measured has the tables and no
- * row; in both the answer is the published ladder, arrived at without anybody being told.
+ * All three matter and none is enough. A driver who has never fetched the tables has the switch on
+ * and nothing behind it, and a driver in a car nobody has measured has the tables and no row; in both
+ * the answer is the published ladder, arrived at without anybody being told.
+ *
+ * The first two are `carLadderOnScreens()` and not a second spelling of it, which is #353's own
+ * review finding: the digit and the rev bar beside it were gated on different questions, so one rig
+ * on one frame could have the digit in the second band and the bar's top third already red. They are
+ * one question now, and the only thing that can still separate them is this panel's own switch --
+ * a driver saying "report the gear, leave the shifting to the bar", which is an instruction rather
+ * than a drift.
  */
-const readingCarLadder = (matrix: FlagBoxMatrix): Expr => and(eq(flagBoxMatrix(matrix).gearCarLadder(), 'true'), carLadderAvailable());
+const readingCarLadder = (matrix: FlagBoxMatrix): Expr => and(eq(flagBoxMatrix(matrix).gearCarLadder(), 'true'), carLadderOnScreens());
 
 /**
  * When this band is entered, on whichever ladder the panel is reading -- and never, when the panel
