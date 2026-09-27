@@ -272,7 +272,7 @@ describe('hero expressions', () => {
   const LIT = 'isnull([OpenDash.CarLadderLit], 0)';
   const LAMPS = 'isnull([OpenDash.CarLadderLamps], 0)';
   const TOP_RPM = 'isnull([OpenDash.CarLadderTopRpm], 0)';
-  const CAR = `((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0))`;
+  const CAR = `((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0))`;
   const CAR_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
 
   const segOf = (layer: { children: readonly unknown[] }, k: number) => {
@@ -306,10 +306,17 @@ describe('hero expressions', () => {
     expect(layers[1]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and ((!(${CAR})) and (${MIRROR}))` });
     expect(layers[2]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and ((!(${CAR})) and (!(${MIRROR})))` });
     expect(layers[3]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `!(${ON})` });
-    // The gate is the rig-wide rev light style and something publishing a bar, both of them: a driver
-    // who chose one of OpenDash's own styles keeps the derived ladders, and a driver who has never
-    // fetched the tables has the style and nothing behind it.
-    expect(CAR).toContain('[OpenDash.LedRpmStyle]');
+    // The gate is the rig's own answer to whose lights these are and something publishing a bar, both
+    // of them: a driver who chose one of OpenDash's own styles keeps the derived ladders, and a driver
+    // who has never fetched the tables has asked for the car's and has nothing behind it.
+    //
+    // `CarLadderChosen` and not `LedRpmStyle`, which is the review finding on #353's first cut: the
+    // rig-wide style is a field the panel has not written since the styles went per bar, so a driver
+    // who set their one strip to F1 left it at its default and got the car's instants on every screen.
+    // The plugin reduces the bars to this one boolean because a bar is added at runtime and its own
+    // property name cannot appear in an expression a package was built with.
+    expect(CAR).toContain('[OpenDash.CarLadderChosen]');
+    expect(CAR).not.toContain('[OpenDash.LedRpmStyle]');
     expect(CAR).toContain('[OpenDash.CarLadderStage]');
   });
 

@@ -319,8 +319,22 @@ namespace OpenDashPlugin
             return Contract.NormaliseChoice(value, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 
-        /// <summary>Whether anything on the rig is asking for the car's own shift pattern, which is what
-        /// decides whether the mirror is computed at all.</summary>
+        /// <summary>
+        /// Whether anything on the rig is asking for the car's own shift pattern: what decides whether
+        /// the mirror is computed at all, and since #353 what a screen reads as
+        /// <see cref="Contract.CarLadderChosen"/> to decide whether to draw it.
+        /// </summary>
+        /// <remarks>
+        /// <para>One reduction for both, so that a surface cannot be gated on an answer that leaves the
+        /// numbers behind it unfilled. Any bar asking for the car's own is enough: the mirror is one
+        /// computation feeding every strip, and a rig with one strip on the car's own bar and another on
+        /// F1 has asked for the car's instants somewhere, which is the divergence #353 exists to close.</para>
+        /// <para>The rig-wide <see cref="LedRpmStyle"/> answers only for a rig with no bars, which is
+        /// where a bar with no opinion of its own would have taken it from. It is deliberately not
+        /// consulted for a rig that has bars: the panel writes the style onto the bar and has written
+        /// nothing rig-wide since the styles went per bar, so a rig upgraded from before that carries a
+        /// stale value nobody can see or change.</para>
+        /// </remarks>
         public bool AnyCarLadderWanted()
         {
             var bars = LedBarList();
@@ -329,10 +343,7 @@ namespace OpenDashPlugin
             {
                 if (BarRpmStyle(bar.Namespace) == Contract.LedRpmStyleCar) return true;
             }
-            // A rig with bars may still have a face or a box reading the rig-wide answer -- and since
-            // #353 every installed screen does: a rev bar on the rig-wide `car` style takes the car's
-            // thresholds, so the rig-wide answer is a reason to compute the mirror on its own.
-            return LedRpmStyle == Contract.LedRpmStyleCar;
+            return false;
         }
 
         /// <summary>

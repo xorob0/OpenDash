@@ -16,8 +16,9 @@
  * There is a third, and it is the one exception to everything said above: the measured tables of
  * ADR 0018, whose answer arrives already computed because 85 files of per-gear thresholds are not
  * something an expression can read. It reaches a screen as well as the flag box's digit since #353 --
- * the car's instants, in OpenDash's colours, behind the rig-wide rev light style -- and it falls back
- * to the two above; see `carLadderOnScreens` and what follows it at the foot of this file.
+ * the car's instants, in OpenDash's colours, behind the rig's own answer to whose lights these are --
+ * and it falls back to the two above; see `carLadderOnScreens` and what follows it at the foot of
+ * this file.
  *
  * Two ways to ask. Something that lights a row of segments asks per segment, with
  * `mirrorStageLit` / `simhubStageLit` and the choice made structurally as two layers. Something
@@ -28,7 +29,7 @@
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
-import { CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName, setting } from './contract.ts';
+import { CAR_LADDER_CHOSEN, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
 
 const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
 
@@ -265,22 +266,37 @@ const carLadderLit = (): Expr => isnull(prop(propertyName(CAR_LADDER_LIT)), num(
 const carLadderLamps = (): Expr => isnull(prop(propertyName(CAR_LADDER_LAMPS)), num(0));
 
 /**
- * Whether a screen is drawing the car's own measured bar this frame: the rig is on the `car` rev
+ * Whether the rig's rev light style is the car's own, as the plugin reduces a list of strips to one
+ * boolean: any bar asking for the car's own lights is enough, and a rig with no bars falls back to
+ * the value a bar with no opinion would have taken.
+ *
+ * Not `LedRpmStyle` itself, which is what this asked when #353 first landed and is the one thing a
+ * driver cannot set: the Lights tab writes the style onto the bar, and each installed strip profile
+ * has the rig-wide name rewritten to its own, so the rig-wide property has had no writer since the
+ * styles went per bar. Asking it made the screens take the car's thresholds whatever the driver
+ * chose. The plugin is the only place the list can be reduced, because a bar is added at runtime and
+ * its namespace cannot appear in an expression a package was built with.
+ */
+const carLadderChosen = (): Expr => eq(isnull(prop(propertyName(CAR_LADDER_CHOSEN)), 'false'), 'true');
+
+/**
+ * Whether a screen is drawing the car's own measured bar this frame: the rig is on the car's own rev
  * light style, and something is publishing a bar.
  *
- * Both halves matter and neither is enough, exactly as they do for the flag box's digit. The style
- * is where a driver says whose lights these are and the strips already obey it, so a screen that
- * ignored it would be a second answer to one question; and a driver who has never fetched the
- * tables, or is in a car nobody has measured, has the style and nothing behind it.
+ * Both halves matter and neither is enough, exactly as they do for the flag box's digit -- which
+ * asks this same question and then its own panel's switch as well, so that the digit's band and the
+ * third of the bar that is red cannot be about different ladders. The style is where a driver says
+ * whose lights these are and the strips already obey it, so a screen that ignored it would be a
+ * second answer to one question; and a driver who has never fetched the tables, or is in a car
+ * nobody has measured, has the style and nothing behind it.
  *
- * It is the rig-wide read rather than a per-bar one because a screen has no bar: `LedRpmStyle` is
- * the answer a strip with no opinion of its own falls back to, and a face is in that position by
- * construction. The Lights tab offers the style per strip and not for the rig, so a driver who sets
- * one strip to F1 leaves this at its default and gets the car's instants on their screens beside an
- * F1 pattern on their strip; the record names that as the seam the gate leaves rather than pretending
- * it away. #353, [ADR 0018](../../../docs/decisions/0018-the-cars-own-lights.md) amended.
+ * The seam this leaves is a rig with no strips at all: there is no bar to carry a style, so the
+ * rig-wide default answers, and that default is the car's own. Such a rig can still turn the bar off
+ * or to plain revs per face, and its flag box has a switch of its own, but it cannot ask for
+ * OpenDash's derived ladders while keeping the bar. #353,
+ * [ADR 0018](../../../docs/decisions/0018-the-cars-own-lights.md) amended.
  */
-export const carLadderOnScreens = (): Expr => and(setting.ledRpmStyleIs('car'), carLadderAvailable());
+export const carLadderOnScreens = (): Expr => and(carLadderChosen(), carLadderAvailable());
 
 /**
  * Segment `k` of `count`, under the car's own measured bar: lit once the car has lit as much of its

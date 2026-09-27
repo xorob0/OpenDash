@@ -299,7 +299,10 @@ Since [#353](https://github.com/xorob0/OpenDash/issues/353) the digit is not the
 that answer. A screen's rev bar takes the same frame as a count — `OpenDash.CarLadderLit` of
 `OpenDash.CarLadderLamps` — and lights its fifteen segments in the tokens at the instants the car
 lights its own, so the band the digit is in and the third of the bar that is red are one comparison
-rather than two. The colours stay OpenDash's on a screen and the car's on a strip, which is the
+rather than two. Both are behind the same gate, `OpenDash.CarLadderChosen`, which is the rig's own
+answer to whose lights these are; this panel's switch sits in front of that and is the only thing that
+can put the digit on a different ladder from the bar beside it, which is a driver's instruction rather
+than a drift. The colours stay OpenDash's on a screen and the car's on a strip, which is the
 distinction that record draws: a strip is a copy of a bar and a face is a drawing of a state.
 
 There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says

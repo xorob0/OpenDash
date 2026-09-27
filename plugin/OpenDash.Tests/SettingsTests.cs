@@ -1811,6 +1811,45 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_rig_whose_strips_are_on_one_of_our_own_styles_is_asking_for_nothing_whatever_the_stale_field_says()
+        {
+            // #353's review finding, in the plugin half. The rig-wide LedRpmStyle has had no writer in
+            // the panel since the styles went per bar -- the Lights tab writes the style onto the bar,
+            // and each installed strip profile has the rig-wide name rewritten to its own -- so a rig
+            // upgraded from before that carries a value nobody can see or change. Consulting it made the
+            // tables be read, and every screen draw them, for a driver who had chosen F1 on the only
+            // strip they own.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            settings.Normalise();
+            var ns = settings.LedBarList()[0].Namespace;
+
+            // A new bar starts on the car's own, which is the default the rig ships with.
+            Assert.Equal(Contract.LedRpmStyleCar, settings.BarRpmStyle(ns));
+            Assert.True(settings.AnyCarLadderWanted());
+
+            // The driver sets their one strip to F1. That is the whole of the rig's answer, and the
+            // screens take the published ladder with it.
+            settings.LedBarList()[0].RpmStyle = "f1";
+            Assert.False(settings.AnyCarLadderWanted());
+            // Even with a stale rig-wide value saying otherwise, in either direction.
+            settings.LedRpmStyle = Contract.LedRpmStyleCar;
+            Assert.False(settings.AnyCarLadderWanted());
+            settings.LedRpmStyle = "f1";
+            settings.LedBarList()[0].RpmStyle = Contract.LedRpmStyleCar;
+            Assert.True(settings.AnyCarLadderWanted());
+
+            // A second strip on the car's own is enough on its own: the mirror is one computation, and
+            // a rig that has asked for the car's instants anywhere has asked for them.
+            settings.LedBarList()[0].RpmStyle = "leftToRight";
+            settings.AddLedBar("brow-15", "Brow", LedBar.ArduinoDevice);
+            settings.Normalise();
+            settings.LedBarList()[1].RpmStyle = Contract.LedRpmStyleCar;
+            Assert.True(settings.AnyCarLadderWanted());
+        }
+
+        [Fact]
         public void A_panel_added_by_name_takes_the_first_free_slot_and_arrives_working()
         {
             var settings = new OpenDashSettings();

@@ -185,13 +185,31 @@ rig saying different things about the same engine.
 
 It was also chosen against **colour behind the same `car` style the strips obey**, which is the shape
 [ADR 0011](0011-personalisation.md) would expect and is a setting for a picture nobody has asked for.
-The one thing taken from that answer is its gate: the *timing* is behind the rig-wide rev light style
-rather than unconditional. A driver on `car` gets the car everywhere, and a driver who chose
-`leftToRight`, `meetInMiddle` or `f1` has said whose lights they want and gets the derived ladders on
-the screens as they did before. That is a departure from answer 1 as the ticket wrote it — "the bar
-takes the car's thresholds" full stop — and it is deliberate: the style is the rig's one answer to
-whose lights these are, and a screen that ignored it would be a second answer. No new setting was
-added, which the ticket's third answer would have needed.
+The one thing taken from that answer is its gate: the *timing* is behind the rev light style rather
+than unconditional. A driver whose strips are on `car` gets the car everywhere, and a driver who chose
+`leftToRight`, `meetInMiddle` or `f1` on them has said whose lights they want and gets the derived
+ladders on the screens as they did before. That is a departure from answer 1 as the ticket wrote it —
+"the bar takes the car's thresholds" full stop — and it is deliberate: the style is the rig's one
+answer to whose lights these are, and a screen that ignored it would be a second answer. No new
+setting was added, which the ticket's third answer would have needed.
+
+**The gate is a question only the plugin can answer, and that is why it is published.** The style is
+chosen *per strip*: the Lights tab writes it onto the bar, and each installed strip profile has the
+rig-wide property name rewritten to that bar's own. A screen has no strip, and the bars are a list the
+driver adds to at runtime, so their property names cannot appear in an expression a package was built
+with. So the plugin reduces the list to one boolean, `OpenDash.CarLadderChosen` — any strip asking for
+the car's own lights, and the rig-wide value only for a rig that has no strips at all — and every
+surface hangs on that: the four rev-bar layers, the Redline readout, and the flag box's digit behind
+its own switch. It is the same reduction that decides whether the tables are walked, so a surface
+cannot be gated on an answer that leaves the numbers it reads unfilled.
+
+This is the correction to what #353 first shipped, and it is recorded rather than quietly fixed
+because the first version of this amendment claimed the opposite. That version gated the screens on
+`OpenDash.LedRpmStyle` itself — the rig-wide field a strip with no opinion of its own falls back to —
+and that field has had no writer in the panel since the styles went per bar. A driver who set their
+one strip to F1 left it at its default, `car`, and got the car's measured instants on every screen
+beside an F1 pattern on their strip; a rig carrying `f1` in a settings file written before that change
+got the reverse. Neither is what the paragraph above says, and both are what it now does.
 
 **The screens read a number, never the table.** The plugin already walks the table every frame for
 the strips, so it publishes three more values out of the same walk: how many of the car's own lamps
@@ -208,17 +226,20 @@ tables, no row for this car, a row that would not read, or a driver on one of Op
 All of them leave the screens on rungs 3 and 4, drawing exactly what they drew before — and which one
 a car is on is which layer of the bar is visible in Dash Studio, as it has been since ADR 0014.
 
-**The one seam this leaves, said plainly.** The style is *per strip* on the Lights tab, and
-`OpenDash.LedRpmStyle` — the rig's own answer, which a strip with no opinion falls back to and which a
-screen has no choice but to read — is not a row on that tab at all. It seeds a strip when one is added
-and is otherwise whatever a settings file carries, which on a rig that has never held an older version
-is the default, `car`. So a driver who sets their one strip to F1 today leaves the rig's answer at
-`car` and gets the car's instants on their screens beside an F1 pattern on their strip: the same
-instants the strip would light at only if it were on `car` too. That is a smaller disagreement than the
-one this ticket closed — both surfaces now read one model, and only the strip's *look* was chosen — but
-it is a disagreement, and it is the argument for the Lights tab offering the rig's answer beside the
-strips'. It is not offered here because a setting nobody asked for is what answer 3 was rejected for,
-and because `LedCentre` sits in exactly the same position and has since the strips went per bar.
+**The two seams this leaves, said plainly.** The first is a rig with two strips set differently: one
+on `car` and one on `f1` asks for the car's own lights, so the screens take the car's instants and the
+F1 strip keeps its own pattern. Any strip is enough on purpose — the mirror is one computation feeding
+every strip, and a rig that has asked for the car's instants anywhere has asked for them — but a driver
+who wanted that split on the strips did not necessarily mean it for their faces.
+
+The second is a rig with **no strips at all**: a wheel with a flag box on it and no RGB anywhere, or a
+screen and nothing else. There is no bar to carry a style, so the rig-wide value answers, and on a rig
+that has never held an older version that value is the default, `car`. Such a driver can still turn
+the bar off or to plain revs per face, and their flag box has a switch of its own, but they cannot ask
+for OpenDash's derived ladders while keeping the bar. That is the argument for the Lights tab offering
+the rig's answer beside the strips', and it is not offered here because a setting nobody has asked for
+is what answer 3 was rejected for — the next person to want it should add the row rather than discover
+the gap.
 
 ## Alternatives considered
 
