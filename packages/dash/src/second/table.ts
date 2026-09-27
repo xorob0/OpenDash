@@ -309,7 +309,7 @@ export const nameText = (idx: Expr, chars: number, fs: number): Expr => {
  * question the same way. The Overview panel is how a whole package is read at once, and a sample that
  * is a lie about the built thing is worse there than anywhere.
  */
-export const nameSampleAt = (fs: number, sample: string = NAME_SAMPLE): string => (nameIsUpperCased(fs) ? sample.toUpperCase() : sample);
+export const nameSampleAt = (fs: number): string => (nameIsUpperCased(fs) ? NAME_SAMPLE.toUpperCase() : NAME_SAMPLE);
 
 /** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
 export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
