@@ -8,9 +8,11 @@
 #
 # It builds only: no registry login, no push, nothing published. The image is loaded into the
 # runner's daemon, run, and asked the three questions docs/deploy.md asks after a first deploy —
-# the home page answers, the sitemap is not empty, the plugin zip is there — plus the stylesheet,
-# because the static folder is placed by hand in the runtime stage and missing it answers 200 with
-# no CSS. Those are the failures of this family that a build alone would not catch.
+# the home page answers, the sitemap is not empty, the plugin zip is there — and then the three
+# things the runtime stage assembles by hand, each of which is missing in an image whose every page
+# still answers 200: the static folder the stylesheet comes from, the openssl that Prisma's query
+# engine links, and a writable .next/cache. Those are the failures of this family that a build alone
+# would not catch.
 #
 # Keep the steps in sync with the docker build line in docs/deploy.md.
 name: Site image
@@ -167,6 +169,40 @@ jobs:
           unzip -l plugin.zip
 
           ls -l home.html style.css sitemap.xml plugin.zip
+
+      # The runtime stage carries three comments about things it has to assemble by hand, and all
+      # three failures leave every page answering 200, so the step above catches only the first of
+      # them. Without the openssl install the survey dies inside Prisma's query engine on the first
+      # request; without a writable .next/cache next/image re-optimises every capture on every
+      # request and logs an EACCES for each one. Both were checked by building this image with the
+      # relevant lines deleted: the four assertions above stay green, and these two do not.
+      - name: What the runtime stage assembles by hand
+        run: |
+          set -euo pipefail
+
+          # ldd exits 0 with unresolved entries listed, so it is the output that is read and not the
+          # status; the status is only interesting when there is no engine to read at all. Of the two
+          # engines Prisma ships it is the openssl-3.0.x one that bookworm selects, and the one that
+          # links libssl.
+          if ! linkage="$(docker exec opendash-site sh -c 'ldd node_modules/.prisma/client/libquery_engine-*.so.node' 2>&1)"; then
+            echo "::error::the Prisma query engine is not in the image, so the survey cannot work"
+            printf '%s\n' "$linkage"
+            exit 1
+          fi
+          printf '%s\n' "$linkage"
+          if printf '%s\n' "$linkage" | grep -q 'not found'; then
+            echo "::error::the Prisma query engine has unresolved libraries; the runtime stage is missing its openssl install"
+            exit 1
+          fi
+
+          # As the unprivileged user the image runs as, which is what the COPY --chown and the mkdir
+          # in the runtime stage are both for: the directory can exist and still not be writable.
+          if ! docker exec opendash-site sh -c '[ -d .next/cache ] && [ -w .next/cache ]'; then
+            echo "::error::.next/cache is missing or unwritable; next/image will re-optimise every picture on every request"
+            docker exec opendash-site sh -c 'ls -ld .next .next/cache' || true
+            exit 1
+          fi
+          echo ".next/cache is writable"
 
       # Whatever the server said on the way down is the only account of a failure there is, since
       # the container goes with the runner.
