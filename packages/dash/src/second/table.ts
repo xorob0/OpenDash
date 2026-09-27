@@ -149,6 +149,17 @@ const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34,
 /** The row height a table takes at a density unless its caller declares one. */
 export const tableRowHeight = (density: Density): number => ROW_HEIGHT[density];
 
+/**
+ * The heights at which a list row's type changes, which {@link rowTypeOf} reads as `>=`.
+ *
+ * Declared so that a caller stretching a row into its box can tell whether the stretch will change
+ * the type under it. It does: the 34 px row draws its position and its gap at 34 where the 28 px row
+ * draws them at 24, and those two are monospaced columns of a fixed budget, so a row that grows takes
+ * the width out of the one flexible column beside them — the name. #339's relative is where that
+ * matters and `relativeRowPlan` is what does the telling.
+ */
+export const ROW_TYPE_STEPS: readonly number[] = [34, 38];
+
 /** The sizes the cells of a row of this height are drawn at. */
 interface RowType {
   /** Position, gap and the lap times: the numbers a driver reads across a row. */
@@ -165,9 +176,16 @@ interface RowType {
  * The type a row of this height carries.
  *
  * The canvas draws 34 / 24 in its 34 px row and steps both down one in the 28 px row a narrow zone
- * takes; the companion's 38 px row promotes the car number to the position's size. The name stops
- * at 13 rather than following the compact ramp down to 12, which `density.ts` itself calls the
- * floor below which a label stops being readable at arm's length.
+ * takes; the companion's 38 px row promotes the car number to the position's size.
+ *
+ * **The name is 15 from the 34 px row up and 13 in the 28 px row**, where it used to be 13 in both.
+ * That is #339: the relative is the page a driver reads most and it drew the column that says *who* at
+ * the floor of the design, 13 px under a gap drawn at 34, on a screen 600 mm from the eye. The 34 px
+ * row is the row of a zone read at arm's length, and 15 is what that face labels at everywhere else;
+ * `density.ts` calls 13 the floor rather than the size. The 28 px row keeps 13 deliberately, because
+ * the cut is counted in characters and 15 would cost a narrow column three of them — the 850 x 480
+ * face gives the name 82 px, which is seven characters at 13 and five at 15, and a bigger name that
+ * says less is not a more readable one.
  *
  * A board is read across a garage rather than at arm's length and types the other way about: the
  * pit wall artboards draw every `.trow` with a 15 px name under 24 px numerals, with the car
@@ -180,7 +198,7 @@ function rowTypeOf(rowHeight: number, board = false): RowType {
     return { lead, minor: 16, rating: lead, name: 15 };
   }
   if (rowHeight >= 38) return { lead: 34, minor: 34, rating: 24, name: 15 };
-  if (rowHeight >= 34) return { lead: 34, minor: 24, rating: 24, name: 13 };
+  if (rowHeight >= 34) return { lead: 34, minor: 24, rating: 24, name: 15 };
   return { lead: 24, minor: 16, rating: 24, name: 13 };
 }
 
@@ -642,6 +660,27 @@ export function rowsThatFit(frame: Rect, opts: { density: Density; header: boole
   const gap = rowGapOf(board);
   const body = frame.height - (opts.header ? headerHeightOf(board, h) : 0);
   return Math.max(0, Math.floor((body + gap) / (h + gap)));
+}
+
+/**
+ * The tallest row that `rows` of them fill this frame: {@link rowsThatFit} solved the other way round.
+ *
+ * What a page calls when it has declared its row count and the box has height over. `table()` centres a
+ * declared block in whatever the frame leaves, which is right for a list that has run out of cars and
+ * wrong for one that was told to stop counting: eleven rows of 28 px in a 560 px zone is 328 px of list
+ * and 232 px of nothing, which reads as a page that failed to draw rather than as a page with a
+ * declared length. Stretching the row instead spends the height on the space between the rows, and
+ * `rowTypeOf` stops at 38 so what is bought above that is spacing and never size.
+ *
+ * Never below `rowHeight`, which is the caller's floor: a frame too short for the rows asked for is
+ * `table()`'s to clamp, and it does.
+ */
+export function rowHeightThatFills(frame: Rect, opts: { density: Density; header: boolean; rowHeight?: number; board?: boolean }, rows: number): number {
+  const board = opts.board ?? false;
+  const h = opts.rowHeight ?? tableRowHeight(opts.density);
+  const gap = rowGapOf(board);
+  const body = frame.height - (opts.header ? headerHeightOf(board, h) : 0);
+  return Math.max(h, Math.floor((body + gap) / Math.max(1, rows)) - gap);
 }
 
 /** The header row: a label per column, aligned as its cells are, closed on a board by its rule. */

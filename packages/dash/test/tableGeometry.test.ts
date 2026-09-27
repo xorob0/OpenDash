@@ -165,7 +165,11 @@ describe('the other two tables keep the row they already drew', () => {
     [...walkItems(MODULES.find((m) => m.id === id)!.build({ frame: rect(0, 0, width, height), density, prefix: '' }))];
 
   test('a zone list is padded 6, spaced 2 and ruled nowhere', () => {
-    const items = build('relative', 600, 242, 'zone');
+    // The leaderboard rather than the relative: since #339 the relative declares its own row count and
+    // stretches its row to fill the body, so its pitch is a fact about the box rather than about the
+    // list drawing. The leaderboard still takes the density's 34, which is the canvas's zone row, and
+    // the 2 px between two of them is what makes the pitch 36.
+    const items = build('leaderboard', 600, 242, 'zone');
     expect(items.find((i) => i.name.endsWith('.row.rule'))).toBeUndefined();
     expect(items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.pos'))!.rect.left).toBe(6);
     const stamped = items.find((i) => i.kind === 'layer' && i.name.endsWith('.rows'));
