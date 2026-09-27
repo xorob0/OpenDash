@@ -195,3 +195,15 @@ leaves nothing behind, so a capture is saved to the guest's own disk and copied 
 **A window has to be fully on screen to be photographed.** `PrintWindow` asks the window to draw
 itself, which is how a dash behind another window is still captured, but the part hanging off the
 screen comes back cut and looks exactly like a clipped glyph.
+
+**One clipped glyph on the VM is ours and is expected: the bar's race clock in a lap-counted race.**
+`zones/bar.ts` binds both `raceTime` and `timeLeft` to `clock(sessionTimeLeft())` with no
+`isTimedSession()` guard, where the session card, the session module, the pit wall header and the pit
+wall's own time field all have one — and `raceTime` is the default of the bar's first slot. iRacing
+publishes a week of time left for a session that has no clock, so the field draws `168:00:00`, seven
+digit cells in a budget of six, and WPF takes the last glyph off it on all 22 packages. Every iRacing
+lap race does this; the `untimed` scenario is what makes it visible. It is not a fault of the scenario
+and not the off-screen window above: the guard is the fix, `iff(isTimedSession(), clock(sessionTimeLeft()),
+str('-:--:--'))` on both fields as the other four places already write it, plus the snapshot refresh.
+Untracked at the time of writing — it was found by a review of the branch that added the scenario and
+has no ticket yet, so a VM pass should expect it rather than report it as new.

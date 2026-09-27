@@ -17,7 +17,8 @@
   // the pit wall's own field all have one -- and `raceTime` is the default of the bar's first slot.
   // A week of time left is therefore drawn as "168:00:00", seven digit cells in a budget of six, and
   // WPF takes the last glyph off it. Every iRacing lap race does this today; the scenario is what
-  // makes it visible.
+  // makes it visible. It is in docs/dev-loop.md with the other failures that are silent, so that a
+  // VM pass expects the clipped field rather than reporting it as new; it has no ticket yet.
   "extends": "green.json",
   "name": "Lap-counted race with no session clock, P3 of 24",
   "yaml": {
