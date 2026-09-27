@@ -26,7 +26,7 @@
  * iRacing reports the pressure the car left the pit box with, not a live one; the temperature and
  * the tread are live.
  */
-import type { Hex, Item, Monospace, Rect } from '../generator.ts';
+import type { Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -37,10 +37,10 @@ import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { tyreGlyph, tyreGlyphSize } from './tyreGlyph.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { charsOfText } from './field.ts';
+import { drawnFigure, drawnOr, figureWidth, textWidth, type DrawnFigure } from './drawn.ts';
 import { CHARS, NO_VALUE, pressureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
-const { iff, eq, lt, gt, str, num, fmt, mul, add, round, digitCount, game } = ncalc;
+const { iff, eq, lt, gt, str, num, fmt, mul, add, game } = ncalc;
 
 /** Tread left below this percentage is drawn in caution. */
 export const WEAR_CAUTION = 65;
@@ -120,25 +120,13 @@ interface Quantity {
   colorBind?: Expr;
   unit?: { text: string; widest?: string; bind?: Expr };
   /** Where the unit sits once the value is drawn: see {@link drawnValue}. */
-  drawn?: (mono: Monospace) => Expr;
+  drawn?: DrawnFigure;
   /**
    * The same value read a second way, drawn after the first on the line they share. Only the wide
    * page carries one, and only its pressure: see {@link otherPressure}.
    */
   also?: Quantity;
 }
-
-/**
- * The width a figure of `intDigits` whole digits and `decimals` decimals really draws in, as an
- * expression: the digits it has, not the digits its budget holds.
- */
-const figureWidth = (value: Expr, intDigits: number, decimals: number, mono: Monospace): Expr => {
-  const whole = digitCount(round(value, decimals), intDigits);
-  const digits = decimals === 0 ? whole : add(whole, num(decimals));
-  const drawn = mul(digits, num(mono.charWidth));
-  // One decimal point, in the narrow cell `.` is given.
-  return decimals === 0 ? drawn : add(drawn, num(mono.specialCharsWidth));
-};
 
 /**
  * Where a reading's unit sits once the value is drawn, rather than where the value's budget ends.
@@ -156,12 +144,11 @@ const figureWidth = (value: Expr, intDigits: number, decimals: number, mono: Mon
  * the degree sign did. #384.
  *
  * `decimals` is the reading's own format, so the width and the binding cannot disagree, and
- * `NO_VALUE` is two digit cells, the minus keeping the digit cell.
+ * `NO_VALUE` is two digit cells, the minus keeping the digit cell. The arithmetic itself is
+ * `second/field.ts`'s, which is where every other surface's followers read it from. #387.
  */
-const drawnValue =
-  (value: Expr, intDigits: number, decimals: number) =>
-  (mono: Monospace): Expr =>
-    iff(eq(value, num(0)), num(NO_VALUE.length * mono.charWidth), figureWidth(value, intDigits, decimals, mono));
+const drawnValue = (value: Expr, intDigits: number, decimals: number): DrawnFigure =>
+  drawnOr(eq(value, num(0)), NO_VALUE, drawnFigure({ value, digits: intDigits, decimals }));
 
 /** A row's readings, left to right: the quantity itself, and the second reading where it has one. */
 const readings = (q: Quantity): Quantity[] => (q.also ? [q, q.also] : [q]);
@@ -207,7 +194,7 @@ const PSI_PER_BAR = 14.503774;
  * The unit branched on is `pressureUnit`'s own spelling rather than SimHub's, so that the two
  * readings can never disagree about which unit the first of them is in.
  */
-function otherPressure(pressure: Expr): { value: Expr; unit: Expr; width: (mono: Monospace) => Expr } {
+function otherPressure(pressure: Expr): { value: Expr; unit: Expr; width: DrawnFigure } {
   const shown = pressureUnit();
   const isPsi = eq(shown, str('psi'));
   const asKpa = mul(pressure, num(KPA_PER_PSI));
@@ -218,7 +205,7 @@ function otherPressure(pressure: Expr): { value: Expr; unit: Expr; width: (mono:
     unit: iff(isPsi, str('kPa'), str('psi')),
     // The two branches are drawn different lengths -- four whole digits against three and a decimal
     // -- so the mark follows whichever of them is on the screen.
-    width: (mono) => iff(isPsi, figureWidth(asKpa, CHARS.pressure.digits, 0, mono), figureWidth(asPsi, CHARS.pressure.digits - 1, 1, mono)),
+    width: (mono) => iff(isPsi, figureWidth({ value: asKpa, digits: CHARS.pressure.digits }, mono), figureWidth({ value: asPsi, digits: CHARS.pressure.digits - 1, decimals: 1 }, mono)),
   };
 }
 
@@ -237,7 +224,7 @@ function otherReading(corner: Corner, d: DensitySpec): Quantity {
     bind: iff(eq(pressure, num(0)), str(NO_VALUE), other.value),
     color: ds.purpose.tyre.pressure,
     unit: { text: 'kPa', widest: 'kPa', bind: other.unit },
-    drawn: (mono) => iff(eq(pressure, num(0)), num(NO_VALUE.length * mono.charWidth), other.width(mono)),
+    drawn: drawnOr(eq(pressure, num(0)), NO_VALUE, other.width),
   };
 }
 
@@ -383,7 +370,7 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
         // rather than after the budget both are cut from: see {@link drawnValue}. The row is still
         // measured at the budget, so the mark's runtime place is the rightmost it can take.
         items.push(
-          unit(`${name}.${r.id}.unit`, r.unit.text, left + monoWidth(mono, charsOfText(r.sample, mono)), canvasYForBaseline(canvasBaseline(top, r.fs), d.labelSm), box, {
+          unit(`${name}.${r.id}.unit`, r.unit.text, left + textWidth(r.sample, mono), canvasYForBaseline(canvasBaseline(top, r.fs), d.labelSm), box, {
             size: d.labelSm,
             bind: r.unit.bind,
             widest: r.unit.widest,

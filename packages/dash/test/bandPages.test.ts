@@ -18,6 +18,7 @@ import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, 
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
+import { textWidth } from '../src/second/drawn.ts';
 import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -98,12 +99,18 @@ describe('the metrics band D is drawn to', () => {
       expect(Math.round(lineOf(value) - (row + 13))).toBe(5);
     });
 
-    test(`${face} sets a unit 5 px after the value it follows`, () => {
+    /**
+     * Measured from the characters the value draws and not from its box, which is the whole of
+     * what #387 changed here: the tank is cut for six cells, `15.12` fills five of them and a tank
+     * under ten fills four, so a mark at the end of the cells stood a cell or two off the figure.
+     * `followerPlacement.test.ts` holds the same rule for every follower of every surface, and the
+     * runtime half of it.
+     */
+    test(`${face} sets a unit 5 px after the figure it follows`, () => {
       const items = pageTexts(face as keyof typeof BANDS, 'fuel');
       const value = named(items, 'fuel.value');
       const unit = named(items, 'fuel.unit');
-      expect(unit.rect.left - (value.rect.left + value.rect.width)).toBeLessThanOrEqual(5);
-      expect(unit.rect.left).toBeGreaterThan(value.rect.left + value.rect.width - 5);
+      expect(unit.rect.left - (value.rect.left + textWidth(value.text, value.monospace!))).toBe(5);
     });
   }
 

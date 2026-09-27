@@ -21,6 +21,7 @@ import { measureText } from '../design/advances.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { CAR_MIN_WIDTH, carTopView, carTopViewSize, type CarPaint } from '../second/carTopView.ts';
+import { drawnFigure, drawnOr } from '../second/drawn.ts';
 import { densityOf } from '../second/density.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { fieldBlockHeight, fieldWidth, planLines, type FieldSpec } from '../second/field.ts';
@@ -288,6 +289,7 @@ export const pitView = defineModule('pitView', (ctx) => {
       fs,
       color: ds.purpose.fuel.low,
       follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
+      drawn: drawnOr(isNull(refuel), NO_VALUE, drawnFigure({ value: refuel, digits: CHARS.fuel.digits - 1, decimals: 1 })),
     }),
     fld(ctx, 'pitTime', 'Pit time', {
       sample: '24.3',
@@ -295,6 +297,7 @@ export const pitView = defineModule('pitView', (ctx) => {
       chars: CHARS.consumption,
       fs: Math.round(fs / TIME_RATIO),
       follower: { text: 's' },
+      drawn: drawnFigure({ value: iff(isInPitLane(), inPitSeconds(), lastPitDuration()), digits: CHARS.consumption.digits - 1, decimals: 1 }),
     }),
   ];
 

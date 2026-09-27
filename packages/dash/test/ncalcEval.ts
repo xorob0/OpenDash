@@ -4,7 +4,7 @@
  *
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
- * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `round`,
+ * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
  * `truncate`, the comparisons, `and` / `or` / `!`, and the arithmetic. Anything else is an error
  * rather than a silent `undefined`: a test that evaluates half an expression proves nothing.
  *
@@ -48,6 +48,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
     timespantoseconds: (v: unknown): number => Number(v),
     max: Math.max,
     min: Math.min,
+    abs: Math.abs,
     // NCalc's `Round(value, digits)`. .NET rounds a midpoint to even where this rounds it up; no
     // expression under test lands on one, and a reading that did would be a fault in the reading.
     round: (value: number, decimals = 0): number => {

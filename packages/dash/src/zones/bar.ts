@@ -20,6 +20,7 @@ import { rect } from '../design/geometry.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
+import { charsOfText, drawnFigure, type DrawnFigure } from '../second/drawn.ts';
 import { rank, type RankMember } from '../second/rank.ts';
 import { TRACKED_VALUES } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
@@ -41,7 +42,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, game, concat, driver, playerPosition } = ncalc;
+const { add, fmt, isnull, num, str, iff, eq, game, concat, driver, playerPosition } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -74,6 +75,14 @@ interface BarFieldSpec {
   widest?: string;
   /** A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. */
   denominator?: { sample: string; bind: string; chars: Chars };
+  /**
+   * How wide the value really draws, for placing the denominator after the figure rather than after
+   * the cells the figure is cut from. A field of the left end is drawn from its own edge, so lap 4
+   * in a two-digit budget carried `/ 32` a whole cell further out than lap 16 did; a field of the
+   * right end is already flush to the padding and its value is right aligned, so the pair keeps its
+   * gap there without a binding. Required of every field that has a denominator. #387.
+   */
+  drawn?: DrawnFigure;
 }
 
 /**
@@ -93,6 +102,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     bind: fmt(currentLap(), '0'),
     chars: CHARS.position,
     denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 4, specials: 1 } },
+    drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
   },
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: clock(sessionTimeLeft()), chars: CHARS.clock },
   { id: 'clock', label: 'Clock', sample: '14:32', bind: localClock(), chars: CHARS.clock },
@@ -105,6 +115,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     bind: fmt(isnull(game('Position'), num(0)), '0'),
     chars: CHARS.position,
     denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(opponentCount(), '0')), chars: { digits: 4, specials: 1 } },
+    drawn: drawnFigure({ value: isnull(game('Position'), num(0)), digits: CHARS.position.digits }),
   },
   // The position through the leaderboard function every other class reading uses, not a GameData
   // property of that name: SimHub publishes none, so the old read fell through to its own default,
@@ -119,8 +130,24 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   },
   // Four cells rather than the count's three: the x the artboard draws after the number takes one.
   { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 } },
-  { id: 'airTemp', label: 'Air', sample: '21.5', bind: fmt(airTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
-  { id: 'trackTemp', label: 'Track', sample: '27.6', bind: fmt(roadTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
+  {
+    id: 'airTemp',
+    label: 'Air',
+    sample: '21.5',
+    bind: fmt(airTemperature(), '0.0'),
+    chars: CHARS.pressure,
+    denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } },
+    drawn: drawnFigure({ value: airTemperature(), digits: CHARS.pressure.digits - 1, decimals: 1 }),
+  },
+  {
+    id: 'trackTemp',
+    label: 'Track',
+    sample: '27.6',
+    bind: fmt(roadTemperature(), '0.0'),
+    chars: CHARS.pressure,
+    denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } },
+    drawn: drawnFigure({ value: roadTemperature(), digits: CHARS.pressure.digits - 1, decimals: 1 }),
+  },
 ];
 
 /**
@@ -285,7 +312,16 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ),
       );
       if (spec.denominator) {
-        const dx = align === 'left' ? x + valueWidth(spec, valueSize) + DENOMINATOR_GAP : x + widest - denominator;
+        // A left-hand field is drawn from its own edge, so its denominator follows the figure rather
+        // than the cells the figure is cut from: `4 / 32` and `16 / 32` keep one gap. A right-hand
+        // one is laid from the padding inwards with the value right aligned, so the pair already
+        // does. See {@link BarFieldSpec.drawn}.
+        const mono = cells('SemiBold', valueSize);
+        if (align === 'left' && spec.drawn === undefined) {
+          throw new Error(`bar field ${spec.id}: a denominator needs the width its value really draws, or it is placed at the end of the budget`);
+        }
+        const dx = align === 'left' ? x + monoWidth(mono, charsOfText(spec.sample, mono)) + DENOMINATOR_GAP : x + widest - denominator;
+        const leftBind = align === 'left' && spec.drawn ? add(num(x), spec.drawn(mono), num(DENOMINATOR_GAP)) : undefined;
         items.push(
           withMoreBindings(
             numeral(`${name}.denominator`, spec.denominator.sample, dx, denominatorTop, denominatorSize, spec.denominator.chars, {
@@ -293,7 +329,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
               width: denominator,
               hAlign: align,
             }),
-            { Visible: visible, Text: spec.denominator.bind },
+            { Visible: visible, Text: spec.denominator.bind, Left: leftBind },
           ),
         );
       }

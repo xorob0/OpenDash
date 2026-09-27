@@ -24,6 +24,7 @@ import { SECTORS, sectorColour } from '../second/sectors.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
 import { archetypeOf } from './shedding.ts';
 import { stack, type StackRow } from '../second/layout.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, deltaColour, referenceDelta, referenceLabel, sectorDelta } from '../second/values.ts';
 
 const { signed } = ncalc;
@@ -60,7 +61,16 @@ export const delta = defineModule('delta', (ctx) => {
   // what every face with room across draws, and the caption under the number at two pixels, which
   // is the nano's. A compact zone always takes the stacked form, and so does any box the pair
   // would not fit side by side, because a caption is not worth pushing the number off the edge.
-  const number = { sample: '−0.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.hero, colorBind: deltaColour(value) };
+  // `signed(v, '0.00')` always writes the sign, so the budget's five digit cells are the sign, two
+  // whole digits and two decimals; the caption follows whichever of them are on the screen.
+  const number = {
+    sample: '−0.21',
+    bind: signed(value, '0.00'),
+    chars: CHARS.delta,
+    fs: d.hero,
+    colorBind: deltaColour(value),
+    drawn: drawnFigure({ value, digits: CHARS.delta.digits - 3, decimals: 2, signed: true }),
+  };
   const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'VS SESSION BEST', widest: CAPTION_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
   const below = fld(ctx, 'delta', 'VS SESSION BEST', number, { labelBind: referenceLabel(), labelWidest: CAPTION_WIDEST, labelBelow: true });
   const captionBelow = ctx.density === 'compact' || fieldWidth(beside, ctx.density) > ctx.frame.width;

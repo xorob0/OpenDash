@@ -29,7 +29,8 @@ import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts'
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
 import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
-import { DENOMINATOR_GAP, UNIT_GAP, charsOfText, field, type FieldSpec, type Follower } from '../src/second/field.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
+import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
