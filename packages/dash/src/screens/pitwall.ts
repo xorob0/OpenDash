@@ -627,7 +627,7 @@ export const PIT_WALL_SIZES: readonly PitWallSize[] = [
 export function pitWallDashboard(size: PitWallSize, metadata: DashboardMetadata): Dashboard {
   const pages = size.portrait ? [portraitPage(size.width, size.height)] : [racePage(size.width, size.height), towerPage(size.width, size.height), telemetryPage(size.width, size.height)];
   // And one idle screen after the pages, enabled unconditionally where each page is gated on the
-  // setting: an engineer's monitor between sessions showed a header, an empty field and four zones of
+  // setting: an engineer's monitor between sessions showed a header over an empty field and zones of
   // dashes, which is #113. Last, so `PitWallPage` and the previews still count the pages from zero.
   const screens = [...pages, idleScreen({ frame: rect(0, 0, size.width, size.height) })];
   return { name: size.folder, width: size.width, height: size.height, backgroundColor: ds.color.surface.base, screens, metadata };
