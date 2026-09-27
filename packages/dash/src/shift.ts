@@ -20,12 +20,13 @@
  * and it falls back to the two above; see `carLadderOnScreens` and what follows it at the foot of
  * this file.
  *
- * Two ways to ask. Something that lights a row of segments asks per segment, with
- * `mirrorStageLit` / `simhubStageLit` and the choice made structurally as two layers. Something
- * with a single thing to colour asks `stageEntered` and `overRevEither`, and something with a
- * number to print asks `redlineRpm`; all three carry the same choice inside one expression. They are the same thresholds either way, which is the whole point
- * of the module — and the flash is one of those thresholds rather than a property of the top band,
- * because it begins above the band and stops in the last gear.
+ * Two ways to ask. Something that lights a row of segments asks per band and per segment, with
+ * `carLadderSegmentLit` / `mirrorStageLit` / `simhubStageLit` and the choice made structurally as
+ * layers. Something with a single thing to colour asks `stageEntered` and `overRevEither`, and
+ * something with a number to print asks `redlineRpm`; all three carry the same choice inside one
+ * expression. They are the same thresholds either way, which is the whole point of the module — and
+ * the flash is one of those thresholds rather than a property of the top band, because it begins above
+ * the band and stops in the last gear.
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
