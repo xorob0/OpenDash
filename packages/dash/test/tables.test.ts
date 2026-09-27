@@ -297,8 +297,9 @@ describe('the row the canvas draws', () => {
   /**
    * And what the one lever those boxes still have would buy, which is the other number zones.md owes.
    *
-   * Four characters at 800 x 480 is `Lia…`, one glyph more than the `LIA` #385 was written to delete and
-   * strictly less for `L. Byrne` and `B. Liam`. The row is down to the position, the name and the gap,
+   * Four characters at 800 x 480 is `LIA…`, one glyph more than the `LIA` #385 was written to delete,
+   * and the same three glyphs for `L. Byrne` and `B. Liam`, whose cut lands on a space and drops it:
+   * `L.…` and `B.…`. The row is down to the position, the name and the gap,
    * all three of which `NEVER_DROPPED` keeps, so the only width left to give the name is one of the other
    * two: the position's 40 px and the gap's 92 are both the canvas's stated numbers, and the gap's is a
    * floor over its own content — six digits and a sign need 79 px at 24, so even dropping a decimal
