@@ -1,19 +1,23 @@
 /**
- * What the rev bar and the rev arc share: fifteen segments in three layers, never more than one
- * of them showing. Two of the three are the shift ladder and the third is the plain RPM bar.
- * `shiftLights` and `shiftLightsSimHub` are the ladder (OpenDash.RevBar `shift`, the default):
- * three colour bands, the last of which flashes at redline. `rpmBar` is what `rpm` and `off`
- * both land on, the same segments drawn as a plain RPM bar in text.secondary. The components
- * only differ in where the segments go: a row of snapped spans, or a circle with a rotation per
- * segment.
+ * What the rev bar and the rev arc share: fifteen segments in four layers, never more than one
+ * of them showing. Three of the four are the shift ladder and the fourth is the plain RPM bar.
+ * `shiftLightsCar`, `shiftLights` and `shiftLightsSimHub` are the ladder (OpenDash.RevBar `shift`,
+ * the default): three colour bands, the last of which flashes at redline. `rpmBar` is what `rpm`
+ * and `off` both land on, the same segments drawn as a plain RPM bar in text.secondary. The
+ * components only differ in where the segments go: a row of snapped spans, or a circle with a
+ * rotation per segment.
  *
- * The shift bands come from the car's own shift-light RPMs where it publishes them and from
- * SimHub's per-car bands where it does not (ADR 0014, and ADR 0004 for the fallback: SimHub
+ * The shift bands come from the car's own measured bar where the rig has one and is asking for it
+ * (#353), from the car's own shift-light RPMs where it publishes them, and from SimHub's per-car
+ * bands where it does not (ADR 0018 amended, ADR 0014, and ADR 0004 for the last of them: SimHub
  * exposes those bands as progress values rather than bar percentages, so this is the honest
- * per-car rendering). That choice is per frame, so the two ladders are two layers whose
- * visibility is bound to it: whichever of `shiftLights` and `shiftLightsSimHub` is visible in
- * Dash Studio is the one in use, which is how somebody debugging a car finds out which ladder it
- * is on. The model itself is in shift.ts.
+ * per-car rendering). That choice is per frame, so the three ladders are three layers whose
+ * visibility is bound to it: whichever of them is visible in Dash Studio is the one in use, which
+ * is how somebody debugging a car finds out which ladder it is on. The model itself is in shift.ts.
+ *
+ * All three draw the same colours. A measured bar changes when the segments light and never what
+ * they are: the strip is the surface that mirrors a Porsche's cornflower blue, and a face is
+ * OpenDash's drawing of the same fact in `design/tokens.json`.
  *
  * `off` is not one of the three, because drawing nothing is not a layer. A face that carries no
  * rev bar is a different arrangement of the whole screen, which `zones/face.ts` builds as a
@@ -25,7 +29,18 @@ import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { setting } from '../contract.ts';
 import { segment, type SegmentOptions } from '../elements/segment.ts';
-import { mirrorAvailable, mirrorOverRev, mirrorStageLit, overRevEither, simhubOverRev, simhubStageLit, stageEntered } from '../shift.ts';
+import {
+  carLadderOnScreens,
+  carLadderOverRev,
+  carLadderSegmentLit,
+  mirrorAvailable,
+  mirrorOverRev,
+  mirrorStageLit,
+  overRevEither,
+  simhubOverRev,
+  simhubStageLit,
+  stageEntered,
+} from '../shift.ts';
 import { ds } from '../tokens.ts';
 
 const { and, eq, game, gt, iff, not, num, str } = ncalc;
@@ -101,6 +116,8 @@ export interface RevSegmentPlacement {
 
 /** The bindings of one segment in each layer. */
 export interface RevSegmentOptions {
+  /** The car's own measured bar, as the plugin counts it. ADR 0018 amended, #353. */
+  car: SegmentOptions;
   /** The car's own shift-light RPMs. ADR 0014. */
   shift: SegmentOptions;
   /** SimHub's per-car bands, for a car that publishes no ladder of its own. ADR 0004. */
@@ -109,23 +126,31 @@ export interface RevSegmentOptions {
   rpm: SegmentOptions;
 }
 
-/** Which of the three layers a set of segment bindings belongs to. */
+/** Which of the four layers a set of segment bindings belongs to. */
 export type RevLayer = keyof RevSegmentOptions;
 
 /** The shift stage (0, 1, 2) of segment k of `count`: thirds, the last third taking any remainder. */
 export const stageOf = (k: number, count: number): number => Math.min(2, Math.floor((k * 3) / count));
 
 /**
- * The colour a lit segment takes in a layer: its band's on either shift ladder, and text.secondary
- * on the plain RPM bar, which reports revs rather than a shift point and so belongs to no band.
+ * The colour a lit segment takes in a layer: its band's on any of the three shift ladders, and
+ * text.secondary on the plain RPM bar, which reports revs rather than a shift point and so belongs
+ * to no band.
+ *
+ * That the measured ladder is in the first group and not a fourth case is the whole of #353's
+ * answer: a screen takes the car's timing and keeps OpenDash's palette.
  */
 const litColourOf = (layer: RevLayer, k: number, count: number): Hex =>
   layer === 'rpm' ? ds.color.text.secondary : (STAGE_COLORS[stageOf(k, count)] ?? ds.purpose.shift.stage3);
 
 /**
- * Bindings of segment k of `count`, in each of the three layers. Both shift ladders light the
+ * Bindings of segment k of `count`, in each of the four layers. All three shift ladders light the
  * same segment in the same colour and differ only in what decides it; the plain RPM bar lights a
  * segment when the displayed RPM percentage passes `k * 100 / count`.
+ *
+ * The measured ladder is asked globally -- segment k of the whole bar -- where the two derived ones
+ * are asked per band, because it arrives as a count of the car's own lamps rather than as a set of
+ * thresholds. Same segment, same colour, same frame; see `carLadderSegmentLit`.
  */
 export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const stage = stageOf(k, count);
@@ -142,6 +167,7 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const rpmLit = gt(game('CarSettings_CurrentDisplayedRPMPercent'), num(threshold));
 
   return {
+    car: { colorBind: litColor(carLadderSegmentLit(k, count), color), ...flash(carLadderOverRev()) },
     shift: { colorBind: litColor(mirrorStageLit(stage, local, stageCount), color), ...flash(mirrorOverRev()) },
     simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubOverRev()) },
     rpm: { colorBind: litColor(rpmLit, litColourOf('rpm', k, count)) },
@@ -160,11 +186,12 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
 export const SAMPLE_LIT = 9;
 
 /**
- * The three layers. `<prefix>.shiftLights` is the car's own ladder, `<prefix>.shiftLightsSimHub`
- * is SimHub's bands for a car that publishes none, and `<prefix>.rpmBar` is the plain bar that
- * both `rpm` and `off` fall to. Exactly one is visible at a time.
+ * The four layers. `<prefix>.shiftLightsCar` is the car's own measured bar, `<prefix>.shiftLights`
+ * is the ladder the car publishes, `<prefix>.shiftLightsSimHub` is SimHub's bands for a car that
+ * publishes none, and `<prefix>.rpmBar` is the plain bar that both `rpm` and `off` fall to. Exactly
+ * one is visible at a time.
  */
-export function revLayers(prefix: string, placements: readonly RevSegmentPlacement[], mode: Expr = setting.revBar()): [LayerItem, LayerItem, LayerItem] {
+export function revLayers(prefix: string, placements: readonly RevSegmentPlacement[], mode: Expr = setting.revBar()): [LayerItem, LayerItem, LayerItem, LayerItem] {
   const count = placements.length;
   const build = (layer: RevLayer): LayerItem['children'] =>
     placements.map((p, k) =>
@@ -183,9 +210,14 @@ export function revLayers(prefix: string, placements: readonly RevSegmentPlaceme
     children: build(which),
   }, { Visible: visible });
 
+  // The measured bar first, and the two derived ladders behind it rather than beside it: a rig
+  // reading the table is on one ladder whatever the car also publishes, and the fallback stays the
+  // per-frame choice it has always been. Four exhaustive tests, so no state draws two bars or none.
+  const car = carLadderOnScreens();
   return [
-    layer('shiftLights', 'shift', and(on, mirrorAvailable())),
-    layer('shiftLightsSimHub', 'simhub', and(on, not(mirrorAvailable()))),
+    layer('shiftLightsCar', 'car', and(on, car)),
+    layer('shiftLights', 'shift', and(on, and(not(car), mirrorAvailable()))),
+    layer('shiftLightsSimHub', 'simhub', and(on, and(not(car), not(mirrorAvailable())))),
     layer('rpmBar', 'rpm', not(on)),
   ];
 }

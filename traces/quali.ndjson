@@ -130,6 +130,11 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
 {"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
+{"p":"OpenDash.CarLadderLamps","v":0}
+{"p":"OpenDash.CarLadderLit","v":0}
+{"p":"OpenDash.CarLadderOverRev","v":false}
+{"p":"OpenDash.CarLadderStage","v":-1}
+{"p":"OpenDash.CarLadderTopRpm","v":0}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
 {"p":"OpenDash.DeltaReference","v":"session"}
 {"p":"OpenDash.DriverNameFormat","v":"full"}
@@ -257,6 +262,7 @@
 {"p":"OpenDash.Face850x480ZoneD","v":0}
 {"p":"OpenDash.Face850x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
+{"p":"OpenDash.LedRpmStyle","v":"car"}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
 {"p":"OpenDash.PitWallClassOnly","v":null}
 {"p":"OpenDash.PitWallFlagFormat","v":null}

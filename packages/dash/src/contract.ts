@@ -369,6 +369,15 @@ export const setting = {
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
   /** `isnull([OpenDash.LedRpmStyle], 'car')` */
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
+  /**
+   * `isnull([OpenDash.LedRpmStyle], 'car') = 'car'`: whether the rig is on the given rev light style.
+   *
+   * One spelling, because two surfaces now ask it. A strip asks it at build time -- a profile is
+   * generated for the style the bar is set to -- but the rev bar on a screen cannot: a package is
+   * installed once and the style is a property, so the question is an expression there. The strips'
+   * own runtime gate reads this too rather than spelling it a second time.
+   */
+  ledRpmStyleIs: (style: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(style)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
   /** `isnull([OpenDash.LedSpotterWhole], false)`: whether a car alongside takes the whole strip. */

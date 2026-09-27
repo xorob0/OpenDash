@@ -10,9 +10,15 @@
  *   1. **This table**, per car and per gear, for a car somebody has measured. *Built, on the RPM
  *      strips only.* `tabledStageLit` and `tabledOverRev` have exactly one caller in the build,
  *      `rpmStrip.ts`, which emits one conditional group per car and gear the table covers
- *      (`test/leds.test.ts` calls them too, which is a test and not a surface). No screen surface
- *      and not the flag box reads the table: the rev bar, the rev arc, the companion's speedo and
- *      the box's gear are all on rung 3 or 4 unconditionally.
+ *      (`test/leds.test.ts` calls them too, which is a test and not a surface).
+ *
+ *      **The measured tables of ADR 0018 are a rung of their own and are not this one.** They are
+ *      fetched rather than carried, they are the plugin's to read, and they now reach every surface:
+ *      the strips mirror the car's bar LED for LED, the flag box's digit takes its bands from
+ *      `CarLadderStage` where its own switch says so, and since #353 the rev bar, the rev arc, the
+ *      companion's speedo bar and the Redline beside it light at the car's instants in OpenDash's
+ *      colours, behind the rig-wide `car` rev light style. What no screen has, and what this rung
+ *      still means, is *the table*: a screen reads a count out of `shift.ts` and nothing else.
  *   2. **SimHub's own per-gear redline**, when the user has turned it on by hand —
  *      `CarSettings_RPMRedLinePerGearOverride` is 1 and `CarSettings_CurrentGearRedLineRPM` then
  *      varies with the gear. Their numbers, not ours. **Not built.** `simhubPerGear` below is the
@@ -32,11 +38,13 @@
  *   4. **SimHub's bands**, for a car that publishes no ladder at all (ADR 0004). *Built,
  *      everywhere*, as the other half of the same per-frame choice.
  *
- * **Nothing diverges today, and that is why the gap is easy to miss.** `data/shift-points.json`
+ * **Nothing diverges today, and that is why the gap was easy to miss.** `data/shift-points.json`
  * ships empty (see its own `$meta.empty`), so rung 1 emits no containers, rung 2 does not exist,
  * and every surface in the build is reading rungs 3 and 4 — the same two expressions, on the same
- * frame. The first measured car put into the table is also the first time a strip and a screen in
- * one rig will say different things, and closing that is work rather than a property of the model.
+ * frame — unless the plugin is publishing a measured bar, in which case every surface is reading
+ * that instead. The divergence this file warned of arrived by the other route: ADR 0018's fetched
+ * tables landed on the strips alone, and #353 closed it by giving every surface the same answer.
+ * What is left of the warning is the paragraph above, which is about this table and not about theirs.
  *
  * What is *not* in the list at all is a derived per-gear source, because there is not one. iRacing
  * publishes no per-gear shift data of any kind, and SimHub's learned table is unreachable from an

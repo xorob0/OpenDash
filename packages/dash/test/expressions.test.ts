@@ -271,6 +271,15 @@ describe('hero expressions', () => {
   const ON = setting.revBarIs('shift');
   const GEARS = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)';
   const LAST_GEAR = `((${GEARS}) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (${GEARS}))`;
+  // The car's own measured bar, as the plugin publishes it: the gate a screen draws it behind, the
+  // two numbers it draws it from, the RPM it reddens at, and its flash. Spelled out rather than
+  // called, for the reason MIRROR is: a shared helper name would pass with the bar and the readout
+  // beside it reading different properties, which is the defect ADR 0014 exists over.
+  const LIT = 'isnull([OpenDash.CarLadderLit], 0)';
+  const LAMPS = 'isnull([OpenDash.CarLadderLamps], 0)';
+  const TOP_RPM = 'isnull([OpenDash.CarLadderTopRpm], 0)';
+  const CAR = `((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0))`;
+  const CAR_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
 
   const segOf = (layer: { children: readonly unknown[] }, k: number) => {
     const s = layer.children[k];
@@ -288,21 +297,67 @@ describe('hero expressions', () => {
     return item;
   };
 
-  test('the rev bar is three layers, and exactly one of them is visible at a time', () => {
+  test('the rev bar is four layers, and exactly one of them is visible at a time', () => {
     const layers = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
-    expect(layers.map((l) => l.kind)).toEqual(['layer', 'layer', 'layer']);
-    expect(layers.map((l) => l.name)).toEqual(['revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar']);
+    expect(layers.map((l) => l.kind)).toEqual(['layer', 'layer', 'layer', 'layer']);
+    expect(layers.map((l) => l.name)).toEqual(['revBar.shiftLightsCar', 'revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar']);
     // The gate is the tri-state RevBar (ADR 0004, #189), not the deprecated ShiftLights boolean,
     // so `rpm` and `off` both land on the plain bar and the ladder split applies only within `shift`.
     expect(ON).toContain('[OpenDash.RevBar]');
     // Which ladder a car is on is which layer is visible, which is how it is seen in Dash Studio.
-    expect(layers[0]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (${MIRROR})` });
-    expect(layers[1]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (!(${MIRROR}))` });
-    expect(layers[2]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `!(${ON})` });
+    // Three of them now: the car's own measured bar first (#353), then the two derived ladders behind
+    // it, whose own per-frame choice is unchanged. The four tests are exhaustive and disjoint, so no
+    // state draws two bars or none.
+    expect(layers[0]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (${CAR})` });
+    expect(layers[1]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and ((!(${CAR})) and (${MIRROR}))` });
+    expect(layers[2]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and ((!(${CAR})) and (!(${MIRROR})))` });
+    expect(layers[3]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `!(${ON})` });
+    // The gate is the rig-wide rev light style and something publishing a bar, both of them: a driver
+    // who chose one of OpenDash's own styles keeps the derived ladders, and a driver who has never
+    // fetched the tables has the style and nothing behind it.
+    expect(CAR).toContain('[OpenDash.LedRpmStyle]');
+    expect(CAR).toContain('[OpenDash.CarLadderStage]');
+  });
+
+  test("the car's own measured bar: the car's instants, OpenDash's colours, and no table on the screen", () => {
+    const [car] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (car?.kind !== 'layer') throw new Error('layer');
+    const seg = (k: number) => segOf(car, k);
+
+    // Segment k of fifteen lights once the car has lit as much of its own bar, as a
+    // cross-multiplication in integers: nothing divides, and a segment lights on the frame the car
+    // lights its own LED rather than a rounding either side of it. The first reduces to the count
+    // leaving zero, the way the first segment of a band does on either derived ladder.
+    expect(expressionsOf(seg(0))).toEqual([`if((${LIT}) > (0), '#00D96A', '#33383F')`]);
+    expect(expressionsOf(seg(4))).toEqual([`if(((${LIT}) * (15)) > ((4) * (${LAMPS})), '#00D96A', '#33383F')`]);
+    expect(expressionsOf(seg(5))).toEqual([`if(((${LIT}) * (15)) > ((5) * (${LAMPS})), '#FFB300', '#33383F')`]);
+    // The top band's segments carry the flash as a second expression, which is why this one is the
+    // colour rather than the whole list.
+    expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if(((${LIT}) * (15)) > ((10) * (${LAMPS})), '#FF2D46', '#33383F')` });
+    // The colours are the three bands' -- thirds of the segments, out of design/tokens.json -- and
+    // never the car's. That is the whole of #353's answer, and the reason this layer is the same
+    // fifteen segments as the two behind it rather than a mirror: a 992's cornflower blue belongs on
+    // the strip, which is a copy of its bar.
+    for (const k of [0, 4, 5, 10, 14]) {
+      const formula = String(seg(k).bindings?.BackgroundColor?.formula ?? '');
+      expect({ k, unlit: formula.endsWith(", '#33383F')") }).toEqual({ k, unlit: true });
+    }
+    // The flash is the car's own redline for the gear it is in -- a threshold of its own, not the top
+    // band -- and it stops in the last gear, on the same terms as both derived ladders.
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: CAR_FLASH });
+    expect(seg(14).blink).toEqual({ delayMs: 62 });
+    expect(seg(9).blink).toBeUndefined();
+    // And the layer reads the plugin's answer and nothing else: no threshold, no colour, no gear, and
+    // nothing of the table. One definition, read twice, which is what the ticket asked for.
+    const text = JSON.stringify(car);
+    expect(text).toContain(LIT);
+    expect(text).toContain(LAMPS);
+    expect(text).not.toContain('DriverCarSL');
+    expect(text).not.toContain('CarSettings_RPMShiftLight');
   });
 
   test("the car's own ladder: nothing below First, bands at First and Shift, the last band at Last, the flash at Blink", () => {
-    const [shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    const [, shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (shift?.kind !== 'layer') throw new Error('layer');
     const seg = (k: number) => segOf(shift, k);
 
@@ -323,7 +378,7 @@ describe('hero expressions', () => {
   });
 
   test("SimHub's bands are unchanged for a car that publishes no ladder of its own, and flash at redline outside the last gear", () => {
-    const [, simhub, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    const [, , simhub, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (simhub?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('layers');
     const seg = (k: number) => segOf(simhub, k);
     // Null-safe: with no sim these are null, and an LED reading a bare band lights up, because
@@ -354,7 +409,7 @@ describe('hero expressions', () => {
   });
 
   test('the last gear stops the flash but not the light: one ladder per car, no per-gear table', () => {
-    const [shift, simhub] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    const [, shift, simhub] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (shift?.kind !== 'layer' || simhub?.kind !== 'layer') throw new Error('layers');
 
     // The top band is still lit at Last in every gear: the bar still says the engine is at its limit.
@@ -385,8 +440,8 @@ describe('hero expressions', () => {
     //
     // String equality against what both sides emit, the way the flag box's flash is pinned in
     // flagBox.test.ts. A shared helper name would pass with the two reading different properties.
-    const [shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
-    if (shift?.kind !== 'layer') throw new Error('layer');
+    const [car, shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (car?.kind !== 'layer' || shift?.kind !== 'layer') throw new Error('layers');
 
     // The bar's top band is `Rpms >= X`. X is the number a readout beside it has to print.
     const band = String(segOf(shift, 14).bindings?.BackgroundColor?.formula ?? '');
@@ -395,17 +450,26 @@ describe('hero expressions', () => {
     const threshold = parts?.[2] ?? '';
     expect(threshold).toBe(SL('Last'));
 
-    // Under the car's own ladder the printed number IS that threshold, character for character.
-    // Under SimHub's there is no RPM to print -- ADR 0004's fallback is two band progress values
-    // and a `RedLineReached` flag -- so the fallback is SimHub's own redline, which is the single
-    // seam and is a property of what SimHub exposes rather than a second model.
+    // Three deep since #353, in the precedence the bar draws in. Under the car's own ladder the
+    // printed number IS that threshold, character for character. Under SimHub's there is no RPM to
+    // print -- ADR 0004's fallback is two band progress values and a `RedLineReached` flag -- so the
+    // fallback is SimHub's own redline, which is the single seam and is a property of what SimHub
+    // exposes rather than a second model.
     const simhub = 'isnull([DataCorePlugin.GameData.CarSettings_CurrentGearRedLineRPM], 0)';
-    expect(redlineRpm()).toBe(`if(${MIRROR}, ${threshold}, ${simhub})`);
+    expect(redlineRpm()).toBe(`if(${CAR}, ${TOP_RPM}, if(${MIRROR}, ${threshold}, ${simhub}))`);
     expect(formulaOf(speedoField('redline'), 'Text')).toBe(`format(${redlineRpm()}, '#,0')`);
 
+    // And on the measured bar the printed number is the threshold of the segment that reddens, which
+    // is the same promise one rung up: the plugin's `TopRpm` is the RPM its tenth of fifteen segments
+    // lights at, and the digit on a flag box changes band on the same frame (CarLightsTests pins the
+    // other half of that in C#).
+    expect(String(segOf(car, 10).bindings?.BackgroundColor?.formula ?? '')).toBe(`if(((${LIT}) * (15)) > ((10) * (${LAMPS})), '#FF2D46', '#33383F')`);
+
     // And the choice is the bar's own gate, evaluated the same frame, not a second test that could
-    // drift: the same string the bar picks its visible layer with.
+    // drift: the same strings the bar picks its visible layer with.
     expect(formulaOf(speedoField('redline'), 'Text')).toContain(MIRROR);
+    expect(formulaOf(speedoField('redline'), 'Text')).toContain(CAR);
+    expect(String(car.bindings?.Visible?.formula ?? '')).toContain(CAR);
     expect(String(shift.bindings?.Visible?.formula ?? '')).toContain(MIRROR);
 
     // The RPM readout above it is still engine speed and nothing else, so the page has not simply
