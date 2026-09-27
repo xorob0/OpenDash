@@ -6,9 +6,14 @@ engineering conventions; this file is about how to work here. Note that
 [docs/scope-mvp.md](docs/scope-mvp.md) is closed: it describes the MVP and several of its
 refusals have since been reversed, so do not take its scope lines as current.
 
-## Commit as you go
+## Commit as you go, on a branch
 
-Commit whenever a piece of work stands on its own, without being asked, and push to `main`.
+Never commit to `main`, and never push to it: every change reaches `main` through a pull request.
+Work on a branch named after the ticket it is for -- the issue number and a few words of its title,
+as in `382-band-d-fuel-gate` -- and open the pull request from it; the `claude/` prefix the CLI
+adds is fine. If the work has no ticket, ask for one rather than inventing a name.
+
+Commit whenever a piece of work stands on its own, without being asked, and push the branch.
 A good commit is one green checkpoint: the tree passes `bun run check` and, when the plugin
 changed, `dotnet test plugin/OpenDash.Tests`. Do not wait for the end of a long task, and do not
 batch unrelated changes into one commit; if a change turns out to be wrong, a reader should be
