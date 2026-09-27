@@ -158,6 +158,11 @@ namespace OpenDashPlugin
         ///
         /// The plugin only publishes the choice. Building the name out of it is the dashboard's, since
         /// a name belongs to a car on a row and nothing here knows which row.
+        ///
+        /// The four examples are word order and not case. A list draws a name upper-cased at every size
+        /// it draws one at, because a lowercase `i` loses its dot to the raster at 13 px and reads as an
+        /// `l`; that is the dashboard's rule and not a setting, so the labels here stay mixed and the
+        /// question the panel asks stays which format (#339).
         /// </remarks>
         public static readonly string[] DriverNameFormats = { "full", "initialSurname", "initialFirstName", "surnameFirst" };
 

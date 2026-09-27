@@ -108,6 +108,11 @@ export const BLUE_FLAG_DETAIL_SETTING = 'BlueFlagDetail';
  * name, there being no `indexof` or `substring` in SimHub's NCalc to split a name with; a one-word
  * name has no surname to move and draws as itself in all four. `driverName` in `second/values.ts` is
  * the expression and says the rest.
+ *
+ * The four examples are word order and not case: a list draws a name upper-cased at every size it
+ * draws one at, because a lowercase `i` loses its dot to the raster at 13 px and reads as an `l`.
+ * `MIXED_CASE_NAME_SIZE` in `second/table.ts` is that rule and `docs/design/zones.md` records it. The
+ * panel keeps the mixed-case examples, the question it asks being which format and never which case.
  */
 export type DriverNameFormat = 'full' | 'initialSurname' | 'initialFirstName' | 'surnameFirst';
 export const DRIVER_NAME_FORMATS: readonly DriverNameFormat[] = ['full', 'initialSurname', 'initialFirstName', 'surnameFirst'];
