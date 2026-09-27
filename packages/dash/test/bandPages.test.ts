@@ -562,11 +562,39 @@ describe('the corner blocks at the ends of the band', () => {
 
 describe('what a page does when the band is too narrow for all of it', () => {
   test('it sheds from the tail rather than drawing outside', () => {
-    // The fuel page is six fields at 1920 and the 600 band is the narrowest there is: whatever it
+    // The fuel page is seven fields at 1920 and the 600 band is the narrowest there is: whatever it
     // keeps is a prefix of what the widest keeps, never a subset chosen some other way.
     const wide = keptIds(pageTexts('1920x480', 'fuel'));
     const narrow = keptIds(pageTexts('600x686', 'fuel'));
     expect(wide).toEqual(BAND_PAGES.fuel!.map((f) => f.id));
     expect(wide.slice(0, narrow.length)).toEqual(narrow);
+  });
+
+  /**
+   * And which fields each band ends up with, face by face.
+   *
+   * The prefix rule above is the mechanism and holds whatever the page carries, which is why it did
+   * not notice that `zones.md` §6 described the fuel page's shedding wrongly for two of the seven
+   * faces: it said the three 1280 bands each lost the per-lap average where 1280 × 400 loses that
+   * and the last lap, and that the nano-portrait 600 kept only the tank, the range and the margin
+   * where it keeps the estimate and the refuel as well. §6 is the page a maintainer holds an artboard
+   * against, so it is pinned here rather than left to be read off the build (#387).
+   */
+  test('and the fuel page keeps, at each band, what zones.md §6 says it keeps', () => {
+    const KEEPS = {
+      '1920x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
+      '1280x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+      '1280x400': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+      '1280x720': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+      '850x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
+      '800x286': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
+      '600x686': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+    } as const;
+    for (const [face, keeps] of Object.entries(KEEPS)) {
+      expect({ face, keeps: keptIds(pageTexts(face as keyof typeof BANDS, 'fuel')) }).toEqual({ face, keeps: [...keeps] });
+    }
+    // Every band keeps the estimate, which is the claim §6's last line makes: the margin outranks it
+    // in the declaration and no width has yet had to spend it.
+    for (const face of Object.keys(KEEPS)) expect({ face, has: keptIds(pageTexts(face as keyof typeof BANDS, 'fuel')).includes('laps') }).toEqual({ face, has: true });
   });
 });
