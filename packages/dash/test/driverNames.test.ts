@@ -17,7 +17,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DRIVER_NAME_FORMATS, type DriverNameFormat } from '../src/contract.ts';
 import { charsThatFit, ELLIPSIS, measureText, widestGlyph, widestOf } from '../src/design/advances.ts';
-import { columnWidths, NAME_FACE, nameColumnFloor, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
+import { columnWidths, NAME_FACE, nameColumnFloor, nameSizeForRow, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { driverName, ellipsised } from '../src/second/values.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { fittingColumns, LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
@@ -235,7 +235,12 @@ describe('the ellipsis', () => {
           const columns = board ? declared : fittingColumns(declared, width, density, rowHeight);
           const nameWidth = columnWidths(columns, width, density, rowHeight, board)[columns.indexOf('name')] ?? 0;
           if (nameWidth <= 0) continue;
-          const fs = density === 'companion' ? 15 : 13;
+          // Taken from the row rather than written down. It was `density === 'companion' ? 15 : 13`,
+          // which was the ramp before #339 raised the name to 15 from the 34 px row up: at zone density
+          // that measured a 13 px name in a 138 px column, twelve characters, where the build draws 15
+          // in it and cuts at ten. The one budget the build never emitted was the only one this test
+          // measured, and a 15 px name clipping anywhere would have passed.
+          const fs = nameSizeForRow(rowHeight, board);
           const chars = charsThatFit(NAME_FACE, fs, nameWidth);
           const text = String(drawn(twentyFive, 'full', chars));
           measured += 1;
