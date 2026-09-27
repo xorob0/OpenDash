@@ -10,7 +10,8 @@
  * same of every relative there is, so a page passing no filter of its own, the companion's and the
  * pit wall's among them, still draws one class wherever the rig counts in class.
  */
-import { columnWidths, nameFloorForRow, ROW_TYPE_STEPS, rowHeightThatFills, rowsThatFit, table, tableRowHeight, type ColumnId } from '../second/table.ts';
+import { columnWidths, DEFAULT_NAME_CHARS, NAME_FACE, nameSizeForRow, ROW_TYPE_STEPS, rowHeightThatFills, rowsThatFit, table, tableRowHeight, type ColumnId } from '../second/table.ts';
+import { charsThatFit } from '../design/advances.ts';
 import type { Density } from '../second/density.ts';
 import type { Rect } from '../design/geometry.ts';
 import { drawsHeader, fittingColumns } from './leaderboard.ts';
@@ -51,6 +52,16 @@ const FEWEST_EITHER_SIDE = 1;
  * tallest the canvas draws a table at, so a row stretched past it is spacing and not size — which is
  * rule 20's third edge read for a table: the height of the box, the width of the box, and the next
  * size up the ramp.
+ *
+ * And the stretch is refused outright where it would cost the name a letter it needs. The name column
+ * is the only one that flexes, so every pixel the stretch gives the position and the gap comes out of
+ * it, and the budget the name is cut to is counted in characters: **the stretch may never be the
+ * reason a name got shorter.** Ten characters is the line, `Liam Byrne` being the default format's own
+ * sample — a box whose declared row already holds fewer is held to what it had rather than to ten,
+ * since a stretch cannot be blamed for a column that was narrow before it. Zone B of the 1280 x 480
+ * face is the case: stretching 34 to 38 promoted the car number, took the name from 138 px to 122 and
+ * the budget from ten characters to nine, and bought four pixels of row spacing with the `e` of
+ * `Byrne`. It keeps 34 now.
  */
 function relativeRowPlan(frame: Rect, density: Density, header: boolean, columns: readonly ColumnId[]): { rows: number; rowHeight: number } {
   const declared = tableRowHeight(density);
@@ -59,20 +70,35 @@ function relativeRowPlan(frame: Rect, density: Density, header: boolean, columns
   const odd = fits % 2 === 0 ? fits - 1 : fits;
   const rows = Math.max(2 * FEWEST_EITHER_SIDE + 1, Math.min(2 * MOST_EITHER_SIDE + 1, odd));
   const stretched = rowHeightThatFills(frame, fit, rows);
-  // The heights to try, tallest first: the stretch itself, then the top of each type step under it.
-  // A stretch that crosses a step takes the position and the gap up with it, and both are monospaced
-  // columns of a fixed budget, so the width comes out of the name. At 245 px the 800 x 286 face's
-  // second arrangement stretched from 29 to 36, promoted its numerals and cut the name from six
-  // characters to four -- a page spending the room it gained on the column it exists to be read by.
+  // The heights to try, tallest first: the stretch itself, then the top of each type step under it,
+  // then the declared row, which is the height the guard below is measured against and therefore the
+  // one candidate that always passes.
   const steps = ROW_TYPE_STEPS.map((step) => step - 1).filter((h) => h >= declared && h < stretched);
-  const tried = [stretched, ...steps].sort((a, b) => b - a);
-  for (const rowHeight of tried) {
-    const kept = fittingColumns(columns, frame.width, density, rowHeight);
-    const name = columnWidths(kept, frame.width, density, rowHeight)[kept.indexOf('name')] ?? 0;
-    if (name >= nameFloorForRow(rowHeight)) return { rows, rowHeight };
-  }
-  // Nothing holds a name: take the shortest row tried, which is the one that leaves the column widest.
-  return { rows, rowHeight: tried[tried.length - 1] ?? declared };
+  const tried = [...new Set([stretched, ...steps, declared])].sort((a, b) => b - a);
+  const floor = Math.min(DEFAULT_NAME_CHARS, nameBudget(frame, density, declared, columns));
+  for (const rowHeight of tried) if (nameBudget(frame, density, rowHeight, columns) >= floor) return { rows, rowHeight };
+  return { rows, rowHeight: declared };
+}
+
+/**
+ * The name budget a row of this height leaves in this frame: the characters the column holds, which is
+ * what the cut is counted in.
+ *
+ * Characters and not pixels, because pixels are what the guard above got wrong. A stretch that crosses
+ * a type step takes the position and the gap up with it, both being monospaced columns of a fixed
+ * budget, so the width comes out of the name; the first guard asked only whether the narrowed column
+ * still cleared `nameFloorForRow`, the eight-character room the shortest format needs, and 122 px
+ * clears that comfortably while holding nine characters of the budget where 138 px held ten. Zone B of
+ * the 1280 x 480 face therefore bought four pixels of row spacing by turning `Liam Byrne` into
+ * `Liam Byr…`, on the page and in the format a rig that never opens the setting draws. Counting the
+ * cut the way the cut is made is the only test that sees that.
+ */
+function nameBudget(frame: Rect, density: Density, rowHeight: number, columns: readonly ColumnId[]): number {
+  const kept = fittingColumns(columns, frame.width, density, rowHeight);
+  const index = kept.indexOf('name');
+  if (index < 0) return 0;
+  const width = columnWidths(kept, frame.width, density, rowHeight)[index] ?? 0;
+  return charsThatFit(NAME_FACE, nameSizeForRow(rowHeight), width);
 }
 
 export const relative = defineModule('relative', (ctx) => {
