@@ -127,3 +127,128 @@ export const drawnAfter =
  * behind a settled-consumption gate and every one the sim does not publish.
  */
 export const drawnOr = (absent: Expr, text: string, drawn: DrawnFigure): DrawnFigure => drawnEither(absent, drawnText(text), drawn);
+
+/** The narrowest and the widest a placement expression can come to, in pixels. */
+export interface DrawnRange {
+  min: number;
+  max: number;
+}
+
+/** Split `s` at every `op` outside a bracket and outside a quoted literal. */
+function splitTop(s: string, op: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  let quoted = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '\\') i += 1;
+      else if (c === "'") quoted = false;
+      continue;
+    }
+    if (c === "'") quoted = true;
+    else if (c === '(' || c === '[') depth += 1;
+    else if (c === ')' || c === ']') depth -= 1;
+    else if (depth === 0 && c === op) {
+      parts.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.slice(start));
+  return parts;
+}
+
+/** Whether one bracket opens `s` and closes at its end, which is how `add` and `mul` wrap a term. */
+function bracketed(s: string): boolean {
+  if (!s.startsWith('(') || !s.endsWith(')')) return false;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth += 1;
+    else if (s[i] === ')') {
+      depth -= 1;
+      if (depth === 0) return i === s.length - 1;
+    }
+  }
+  return false;
+}
+
+const spread = (values: number[]): DrawnRange => ({ min: Math.min(...values), max: Math.max(...values) });
+
+/**
+ * Every place a placement expression can put a follower: the leftmost and the rightmost.
+ *
+ * A width expression is arithmetic over literals once the conditions are set aside. `digitCount` is
+ * a ladder of `if`s whose branches are digit counts, a grouped figure is the same ladder over its
+ * commas, and what surrounds them is a sum or a product of pixel constants; so taking both branches
+ * of every `if` and never reading what chooses between them bounds the whole expression without a
+ * single reading, and the interval that comes out is where the mark can land.
+ *
+ * That is the one question no screenshot of DashStudio answers. A rect says where the editor draws
+ * the mark, a binding says where the dash draws it, and the two are written in different places:
+ * the companion header laid its pair from zero and moved the rectangles afterwards, so both
+ * denominators were bound to a place the header never draws at and jumped to its top-left corner on
+ * all 21 pages. The rect was right, the formula read the right lap, and only a live session showed
+ * it. Holding the rect against this interval is what catches that. #387.
+ *
+ * Undefined where the expression is not arithmetic over literals -- a bare property read, a
+ * division, a function this does not know -- because a bound arrived at by guessing is worse than
+ * no bound at all.
+ */
+export function drawnRange(expr: Expr): DrawnRange | undefined {
+  const s = expr.trim();
+  if (s === '') return undefined;
+  const literal = Number(s);
+  if (Number.isFinite(literal)) return { min: literal, max: literal };
+
+  const sum = splitTop(s, '+');
+  if (sum.length > 1) return fold(sum, (a, b) => ({ min: a.min + b.min, max: a.max + b.max }));
+
+  // Only where every term is there: a leading `-` is a negative literal and not a subtraction.
+  const difference = splitTop(s, '-');
+  if (difference.length > 1 && difference.every((part) => part.trim() !== '')) {
+    return fold(difference, (a, b) => ({ min: a.min - b.max, max: a.max - b.min }));
+  }
+
+  const product = splitTop(s, '*');
+  if (product.length > 1) return fold(product, (a, b) => spread([a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max]));
+
+  // A rank that centres its row halves the slack it has left, which is where a division comes from.
+  const quotient = splitTop(s, '/');
+  if (quotient.length > 1) {
+    let range: DrawnRange | undefined;
+    for (const term of quotient) {
+      const bound = drawnRange(term);
+      // A divisor that can be zero bounds nothing, and nothing the build writes divides by a reading.
+      if (bound === undefined || (range !== undefined && bound.min <= 0 && bound.max >= 0)) return undefined;
+      range = range === undefined ? bound : spread([range.min / bound.min, range.min / bound.max, range.max / bound.min, range.max / bound.max]);
+    }
+    return range;
+  }
+
+  if (bracketed(s)) return drawnRange(s.slice(1, -1));
+
+  const call = /^([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)$/.exec(s);
+  if (call !== null && bracketed(s.slice((call[1] ?? '').length))) {
+    const name = (call[1] ?? '').toLowerCase();
+    const args = splitTop(call[2] ?? '', ',').map((arg) => drawnRange(arg));
+    const [first, second, third] = args;
+    if (name === 'if' && args.length === 3 && second && third) return spread([second.min, second.max, third.min, third.max]);
+    if ((name === 'min' || name === 'max') && args.length === 2 && first && second) {
+      const pick = name === 'min' ? Math.min : Math.max;
+      return { min: pick(first.min, second.min), max: pick(first.max, second.max) };
+    }
+  }
+  return undefined;
+}
+
+/** `combine` over the bounds of every term, and undefined as soon as one term has none. */
+function fold(terms: string[], combine: (a: DrawnRange, b: DrawnRange) => DrawnRange): DrawnRange | undefined {
+  let range: DrawnRange | undefined;
+  for (const term of terms) {
+    const bound = drawnRange(term);
+    if (bound === undefined) return undefined;
+    range = range === undefined ? bound : combine(range, bound);
+  }
+  return range;
+}

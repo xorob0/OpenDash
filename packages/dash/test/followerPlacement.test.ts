@@ -8,8 +8,8 @@
  * `MARGIN −4` carried `MIN` four empty cells out, nearer `EST. LAPS` than its own figure, and
  * `FUEL 30.35` carried `L` one cell out. #384 fixed it for the tyre corners; this is the rest.
  *
- * Two things are asserted of every pair, and neither is something the fit tests can see, a follower
- * inside its box being a follower that fits wherever it is.
+ * Three things are asserted of every pair, and none of them is something the fit tests can see, a
+ * follower inside its box being a follower that fits wherever it is.
  *
  * **The design-time gap**, which is what DashStudio's editor, the overview thumbnails and every
  * preview draw, is one of the four the drawings use, measured from the characters the sample really
@@ -19,6 +19,13 @@
  * `Left` that reads a property neither the value's own `Text` nor its own `Left` reads is a
  * follower placed from something other than the reading it follows, and that is drift no screenshot
  * of the editor can show.
+ *
+ * **The two are the same place.** A binding is arithmetic over literals once its conditions are set
+ * aside, so `drawnRange` bounds every place it can put the mark, and the design-time place has to be
+ * one of them. The first two claims pass a follower whose formula was written against a different
+ * origin from its own rectangle, which is what the companion header did: right rects, a formula
+ * reading the right lap, and both denominators bound to the header's top-left corner on all 21 pages
+ * of both companions, through a green `bun run check`.
  *
  * A follower with no `Left` at all is a claim that its value never changes length -- a clock, a lap
  * time, the placeholder of the same shape. That claim is `drawn: 'fixed'` where a field makes it,
@@ -33,7 +40,7 @@ import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { ZONE_FACES, buildZoneFace } from '../src/zones/index.ts';
 import { ncalc, type DashPackage, type TextItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
-import { textWidth } from '../src/second/drawn.ts';
+import { drawnRange, textWidth } from '../src/second/drawn.ts';
 import { DENOMINATOR_GAP, UNIT_GAP } from '../src/second/field.ts';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
 import { bindingExpression } from './monoGlyphs.ts';
@@ -77,6 +84,16 @@ const screensOf = (pkg: DashPackage): TextItem[][] =>
  * rather than a range, so that a fifth has to be added here and named.
  */
 const GAPS = [5, UNIT_GAP, DENOMINATOR_GAP, 10];
+
+/**
+ * What a design-time place may differ from its formula by, and why it is not nought.
+ *
+ * A rect is laid on whole pixels and a formula is not: a rank that centres its row halves the slack
+ * it has left, so the 850's speedo places its unit at 98 where the same arithmetic in NCalc comes to
+ * 97.5. One pixel is the rounding and is not drift; what this catches is a follower written against a
+ * different origin from its rect, which misses by hundreds.
+ */
+const ROUNDING = 1;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 const faceOf = (item: TextItem): MeasuredFace => {
@@ -125,6 +142,14 @@ const valueFor = (name: string, byName: Map<string, TextItem>): TextItem | undef
 /** The followers that carry no `Left`, which is every one whose value is a fixed-length reading. */
 const UNBOUND: readonly string[] = [];
 
+/**
+ * The four marks zone A draws at the end of a budget, by name.
+ *
+ * Its two pages that carry a unit are A1 `gearSpeedRevs` and A3 `speed`, each prefixing its items
+ * with its own page id, and each drawing a speed and an rpm.
+ */
+const ZONE_A_FOLLOWERS = new Set(['gearSpeedRevs.speed.unit', 'gearSpeedRevs.revs.unit', 'speed.speed.unit', 'speed.revs.unit']);
+
 describe('a follower sits beside the figure it belongs to', () => {
   for (const surface of SURFACES) {
     test(surface.name, () => {
@@ -152,7 +177,12 @@ describe('a follower sits beside the figure it belongs to', () => {
           // two to give. Centring on the ink instead costs the portrait face either its rpm or a
           // step of its speed, which is a decision for the canvas rather than for this branch;
           // `docs/design/zones.md` §10 records it with the measurement.
-          if (/^(gearSpeedRevs|speed)\./.test(mark.name)) continue;
+          //
+          // Named one by one rather than by their page prefix. Zone A's pages prefix every item with
+          // the page id, so `speed.` reads as a prefix here and is also the whole name of the speed
+          // *card*, whose follower is the precedent this rule is built on: a bare prefix let ten
+          // `cards.djson` items out of a test that holds them up as the model.
+          if (ZONE_A_FOLLOWERS.has(mark.name)) continue;
           const gap = Math.round(inkStart(mark) - inkEnd(value));
           expect({ surface: surface.name, item: mark.name, sample: value.text, gap, known: GAPS.includes(gap) }).toMatchObject({ known: true });
 
@@ -172,6 +202,20 @@ describe('a follower sits beside the figure it belongs to', () => {
             follows: reads.length > 0,
             strays: [...new Set(reads.filter((p) => !figure.includes(p)))],
           }).toMatchObject({ follows: true, strays: [] });
+
+          // And the two have to be the same place. A formula built against one origin and a rect
+          // placed at another satisfies both claims above -- the rect is right, the formula reads the
+          // right property -- and still lands somewhere else entirely on the dash, which is what the
+          // companion header did: 84 items bound to 32-44 px with rects at 704 and 797, through a
+          // green `bun run check`. `drawnRange` takes both branches of every `if` and reads nothing,
+          // so the interval it returns is every place the mark can take; the design-time place is one
+          // of them or the two were written against different origins.
+          const range = drawnRange(left);
+          expect({ surface: surface.name, item: mark.name, left: mark.rect.left, range, bounded: range !== undefined }).toMatchObject({ bounded: true });
+          if (range) {
+            const inRange = mark.rect.left >= range.min - ROUNDING && mark.rect.left <= range.max + ROUNDING;
+            expect({ surface: surface.name, item: mark.name, left: mark.rect.left, range, inRange }).toMatchObject({ inRange: true });
+          }
         }
       }
       expect({ surface: surface.name, unbound: [...new Set(unbound)].sort() }).toMatchObject({ unbound: UNBOUND.filter((n) => unbound.includes(n)) });
