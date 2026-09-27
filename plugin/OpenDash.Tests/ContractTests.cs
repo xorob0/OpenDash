@@ -74,10 +74,12 @@ namespace OpenDashPlugin.Tests
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
             // the switch on the digit's redline flash, which is a panel's own for the same reason, and
             // the two after it are whether the digit is banded at all and which ladder bands it. Six
-            // of the eight globals are settings; the other two are the car's own bands, which the
-            // plugin computes because a table of thresholds per gear is not a thing a profile reads.
+            // of the eleven globals are settings; the other five are the car's own bar, which the
+            // plugin computes because a table of thresholds per gear is not a thing a profile reads --
+            // the band and the flash for the digit, and the lit count, the ladder's length and the top
+            // band's RPM for a screen's rev bar (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 8 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 11 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -98,8 +100,10 @@ namespace OpenDashPlugin.Tests
             // banded at all and to which ladder bands it, which is eight names, and the car's own
             // bands had to be published for the digit to read.
             // And 340 once a driver could say how a name is written and whether it is the team's, which
-            // replaced the three-letter code every list drew (#385).
-            Assert.Equal(340, names.Count);
+            // replaced the three-letter code every list drew (#385), and 340 before a screen's rev bar
+            // took the car's thresholds too and needed that bar as three numbers: how many of its lamps
+            // are lit, how many it has, and the RPM its top third lights at.
+            Assert.Equal(343, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));

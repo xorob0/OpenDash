@@ -217,6 +217,13 @@ namespace OpenDashPlugin.Tests
             // A length no strip shape uses is not published, and asking for one is empty rather than an
             // error. The grid reaches twenty-five, so what nobody uses is a run past its end.
             Assert.Equal(string.Empty, service.Run(26));
+
+            // The same frame as three numbers, for the screens (#353). Two lamps at 6500 and 6000, both
+            // lit at 6900, and the top third of a two-lamp bar begins at the second of them.
+            Assert.Equal(2, service.Lamps);
+            Assert.Equal(2, service.Lit);
+            Assert.Equal(6500, service.TopRpm);
+            Assert.Equal(3, service.Stage);
         }
 
         [Fact]
@@ -232,6 +239,13 @@ namespace OpenDashPlugin.Tests
 
             service.Update("test one", "1", 6900, MirrorFit.Stretch, false, 0);
             Assert.False(service.Ready);
+
+            // And no ladder either, which is what sends a screen's rev bar back to the published one:
+            // zero lamps, and the band the flag box reads back to -1.
+            Assert.Equal(0, service.Lamps);
+            Assert.Equal(0, service.Lit);
+            Assert.Equal(0, service.TopRpm);
+            Assert.Equal(-1, service.Stage);
         }
 
         [Fact]

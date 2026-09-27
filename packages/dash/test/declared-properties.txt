@@ -271,6 +271,9 @@ OpenDash.LightsLowFuelLaps
 OpenDash.FlagBoxSpotterAnimation
 OpenDash.CarLadderStage
 OpenDash.CarLadderOverRev
+OpenDash.CarLadderLit
+OpenDash.CarLadderLamps
+OpenDash.CarLadderTopRpm
 OpenDash.FlagBoxMatrix1Rest
 OpenDash.FlagBoxMatrix1Flags
 OpenDash.FlagBoxMatrix1Pit
