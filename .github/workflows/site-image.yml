@@ -24,8 +24,15 @@ name: Site image
 # skipped run here means nothing the image reads has moved, rather than a green tick that proves
 # nothing.
 #
-# The list is written out twice because GitHub's workflow parser does not resolve YAML anchors; keep
-# the two copies identical.
+# On push and nothing else, unlike ci.yml above it. push and pull_request both fire for the same
+# commit of a branch in this repository, in two concurrency groups that cannot cancel each other,
+# so keeping both would build every commit twice — and ci.yml can afford that because its jobs are
+# seconds, while this one is minutes, which is the cost #397 objected to in the first place. Each of
+# those runs would also read a cache the other has not exported yet and then write over it. A pull
+# request lists whatever checks its head commit already has, so the run this trigger starts is the
+# run the pull request shows; what is given up is a pull request from a fork, which pushes nothing
+# here and so gets no build. There are none, and a fork's build would be its own decision about
+# running a fork's Dockerfile on this cache.
 on:
   push:
     paths:
@@ -45,33 +52,19 @@ on:
       - "CHANGELOG.md"
       - ".dockerignore"
       - ".github/workflows/site-image.yml"
-  pull_request:
-    paths:
-      - "site/**"
-      - "packages/**"
-      - "design/**"
-      - "scripts/**"
-      - "tools/**"
-      - "data/**"
-      - "plugin/**"
-      - "media/**"
-      - "package.json"
-      - "bun.lock"
-      - "bunfig.toml"
-      - "tsconfig.base.json"
-      - "VERSION"
-      - "CHANGELOG.md"
-      - ".dockerignore"
-      - ".github/workflows/site-image.yml"
   # So that a smoke build before a redeploy is one click, on whichever branch is about to be
-  # published.
+  # published. Available once this file is on the default branch, which is where Actions reads the
+  # dispatch list from.
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One run per branch; a newer push cancels the older. ci.yml keys this on the pull request number
+# when there is one, because it runs on both events; this job runs on push alone, so the ref is the
+# whole answer.
 concurrency:
-  group: site-image-${{ github.event.pull_request.number || github.ref }}
+  group: site-image-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
