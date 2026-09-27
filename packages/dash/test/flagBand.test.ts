@@ -264,9 +264,14 @@ describe('the waved yellow flash', () => {
  * everything it has to say after two seconds.
  *
  * The blocks are the band's own, not the flag's: `bandFlagBlocks` hands back the corner blocks on the
- * four faces that draw them and the side padding on the three that do not, so a settled flag can
+ * four faces that draw them and the side padding on the four that do not, so a settled flag can
  * never be laid into room a page is using. That is what the first test below measures, against the
  * room the page is actually given.
+ *
+ * What it does take, besides a corner block's two fields, is the band's side padding and the room the
+ * zone letter stands in, both being inside the width `bandCornerWidths` reserves: band D has no `D`
+ * while a flag is settled on a face with corner blocks, and keeps it on a face without. That is
+ * recorded in zones.md §6 and §10 and measured below, so it cannot change without being noticed.
  */
 const cornerLayers = (face: ZoneLayout): Map<string, LayerItem> =>
   new Map(
@@ -311,6 +316,20 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       const padX = bandMetrics(band).padX;
       const widths = face.bandCorners ? bandCornerWidths(band) : { left: padX, right: padX };
       expect({ left: blocks.left.width, right: blocks.right.width }).toEqual(widths);
+    });
+
+    test(`${face.folder} ${face.bandCorners ? "covers band D's letter, a corner's width including it" : "leaves band D's letter showing, the padding stopping short of it"}`, () => {
+      // A corner's width is the block's two fields plus the band's padding plus the room the letter
+      // stands in, so taking a corner whole takes the letter with it. The face draws the `D` at
+      // `padX` and pushes the flag groups after it, which is the order that decides this. It is
+      // recorded in zones.md §6 and §10 rather than worked around: the letter is twelve pixels that
+      // never change, whereas a flag held inboard of the band's edge on four faces and hard against
+      // it on the other four would be two drawings of one thing. Measured here so that a change of
+      // mind has to be a change of this line.
+      const letter = [...walkItems(faceItems(face))].find((i): i is TextItem => i.kind === 'text' && i.name === 'zoneD.letter');
+      if (!letter) throw new Error('band D has a letter');
+      const covered = letter.rect.left < blocks.left.left + blocks.left.width;
+      expect({ face: face.folder, covered }).toEqual({ face: face.folder, covered: face.bandCorners });
     });
 
     test(`${face.folder} draws every condition in both blocks, in the shape and colour it draws on the whole band`, () => {
