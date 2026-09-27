@@ -3,6 +3,9 @@
 # the site job needs the same output to know which packages exist.
 # A third job compares the built packages against the base and keeps one comment saying which of
 # them a reviewer should look at; it depends on neither of the others and runs beside them.
+# The site's Docker image is not built here but in site-image.yml, which runs on a path filter: the
+# site job below builds the site in a full checkout, where the whole tree is present, so it cannot
+# see what the image's build stage forgot to copy.
 # Spec: docs section 12. Keep the build steps in sync with release.yml.
 name: CI
 
