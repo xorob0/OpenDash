@@ -149,9 +149,17 @@ Two consequences follow for the tickets this record's Bad section names. The car
 retired at 1.0: #146 deletes `Layout.slots`, `cards/`, `slots.ts` and `design/rung.ts`, and it now
 waits on the conversion rather than on this answer. And `OpenDash.Slot01`–`Slot12` are **not**
 deprecated for a release and then deleted, as the Bad section and #170 both said: they are the only
-thing driving the two round faces, so they stay attached, undeprecated and documented as the round
-faces' own, and the release that converts the round faces is the one that carries the warning. #170
-records that resolution.
+thing driving the two round faces, so they stay attached and undeprecated, documented as the card
+model's rather than as any face's own — the eight published `OpenDash slots <size>` faces read four
+to twelve of them besides — and the release that converts the round faces is the one that carries the
+warning. #170 records that resolution.
+
+**The conversion owes a ticket of its own, and until one is filed this record is #146's blocker.**
+Naming "the conversion" is not the same as tracking it, and three obligations sit inside it: the
+canvas's two round artboards, the panel's round picker, and which of the twenty-one pages survive a
+140 × 108 box. All three are written in section 9 of [design/zones.md](../design/zones.md) and none
+of them has an issue number, so the ticket is the first thing to file when #145 closes and its number
+belongs here and in section 9 in place of this paragraph.
 
 [design/zones.md](../design/zones.md) section 9 is the written form of the design, part by part, and
 is where the open questions inside it live: which of the twenty-one pages survive a 140 × 108 box, and
