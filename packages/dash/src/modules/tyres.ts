@@ -36,7 +36,18 @@ const GAPS = {
 
 const COMPANION_GAP = { x: 28, y: 12 } as const;
 
-/** The compound chip: a badge rather than a label, so it keeps its own size at every density. */
+/**
+ * The compound chip: a badge rather than a label, so it keeps its own size at every density.
+ *
+ * It carries no word naming it, which #384 asked for and the drawing has no room for: the chip is
+ * centred on the axle line, the only band there free of the two inboard drawings is the column gap
+ * of 18 to 28 px, and the chip's own 80 px already overlap each front tyre by about thirty. A
+ * `COMPOUND` beside it measures 66 px more and would cover a third of each of them, and the footer
+ * is no roomier -- its two captions take 692 px of the 802 the widest box drawing them has. A chip
+ * draws a word rather than a figure, which is the reason a class chip is unlabelled too; the
+ * disagreement is recorded in `docs/design/zones.md` §10 rather than settled here, because the room
+ * for a label is the canvas's to give.
+ */
 const CHIP = { height: 28, size: 15, padding: 13, widest: 'MEDIUM' } as const;
 
 /** Gap between the two captions when they share a line. */
