@@ -13,7 +13,7 @@
  * then the chip and the number. The gap outlives both, because a leaderboard without a gap is a
  * list of names.
  */
-import { columnWidths, table, tableRowHeight, type ColumnId } from '../second/table.ts';
+import { columnWidths, nameFloorForRow, table, tableRowHeight, type ColumnId } from '../second/table.ts';
 import { defineModule, pageColumns } from './module.ts';
 import type { Density } from '../second/density.ts';
 
@@ -44,25 +44,32 @@ export const drawsHeader = (density: Density): boolean => density === 'companion
  * names, which is readability-pass.md §11. The name is here for the same reason from the other
  * side: once the zone frame took the artboards' 12 px of padding the body came down to 225, the
  * name was the last droppable column left, and the page became a list of gaps belonging to nobody.
- * A page keeps its position, its name and its gap whatever else it has to give up; a name whose
- * column is too narrow for a name becomes the three-letter code `table.ts` draws, which costs a
- * column nothing, and the loop stops when the three are all that is left.
+ * A page keeps its position, its name and its gap whatever else it has to give up, and the loop stops
+ * when the three are all that is left. A name whose column is still too narrow for one used to become
+ * a three-letter code, which cost a column nothing and said nothing; it is ellipsised now, which is
+ * the same trade made where a reader can see it being made.
  */
 const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'name', 'gap'];
 
-/** The floor the canvas puts under the flexible driver column: below it the row sheds a column. */
-const MINIMUM_NAME = 60;
-
-/** The columns that fit `width`: drops the last droppable one until the row is no wider than its box. */
+/**
+ * The columns that fit `width`: drops the last droppable one until the row is no wider than its box.
+ *
+ * The floor under the flexible driver column was the canvas's 60 px, which at 13 px is five characters
+ * of the budget the name is cut to — a column that fits `L. By…`. It is the room the shortest of the
+ * four name formats needs now, so a row sheds the column after the name before it shortens the name,
+ * which is what #385 asked for; a row with nothing left to shed draws the name ellipsised to the
+ * column it has.
+ */
 export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): ColumnId[] {
   const kept = [...columns];
   const h = rowHeight ?? tableRowHeight(density);
+  const floor = nameFloorForRow(h);
   for (;;) {
     const widths = columnWidths(kept, width, density, h);
     const nameIndex = kept.indexOf('name');
     // A row with no name column has nothing left to flex, so it fits by construction.
-    const name = nameIndex < 0 ? MINIMUM_NAME : (widths[nameIndex] ?? 0);
-    if (name >= MINIMUM_NAME) break;
+    const name = nameIndex < 0 ? floor : (widths[nameIndex] ?? 0);
+    if (name >= floor) break;
     const droppable = kept.map((id, i) => ({ id, i })).filter(({ id }) => !NEVER_DROPPED.includes(id));
     const last = droppable[droppable.length - 1];
     if (!last) break;

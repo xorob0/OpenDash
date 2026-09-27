@@ -131,6 +131,8 @@
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
 {"p":"OpenDash.DeltaReference","v":"session"}
+{"p":"OpenDash.DriverNameFormat","v":"full"}
+{"p":"OpenDash.DriverNameTeam","v":false}
 {"p":"OpenDash.Face1280x400BarLeft1","v":null}
 {"p":"OpenDash.Face1280x400BarLeft2","v":null}
 {"p":"OpenDash.Face1280x400BarRight1","v":null}

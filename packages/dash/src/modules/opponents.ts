@@ -51,13 +51,14 @@ import { ncalc } from '../generator.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
-import { measureText } from '../design/advances.ts';
+import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
 import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
+import { NAME_FACE, nameColumnFloor } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, driverCode, listNeighbour } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, driverName, ellipsised, listNeighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -96,17 +97,16 @@ const COLUMN_GAP = 48;
 const RULE = 1;
 
 /**
- * The widest three-letter code, which is what the name's box holds.
+ * The name's box: the canvas's 64 px, or the room the shortest of the four formats needs.
  *
- * The canvas draws a driver's name here and ellipsises it at 64 px. WPF has no ellipsis to give, so
- * `driverCode` cuts the name to its three-letter code in NCalc instead and the box holds that; the
- * canvas's 64 stays as the column's floor, which leaves it about twenty pixels wider than the code
- * needs. Narrowing it to the code is a change to the row's rhythm and is the author's.
+ * The canvas draws a driver's name here and ellipsises it at 64 px, which WPF cannot do, so this box
+ * used to hold a three-letter code instead. It holds a name now (#385), cut in the expression and
+ * closed with an ellipsis, and 64 px is not enough of one: the cut is counted in characters against
+ * the widest glyph the face draws, so 64 px at 13 px is five of them and `L. Byrne` would come out
+ * `L. B…`. The cell asks for the eight the shortest format needs, and the number and the class chip
+ * behind it shed to make room, which is the order `PIECES` already puts them in.
  */
-const CODE_WIDEST = 'WWW';
-
-/** The box the three-letter code is drawn in, with the pixel `label` leaves itself. */
-const codeWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', CODE_WIDEST, fs)) + 1;
+const nameCellWidth = (fs: number): number => Math.max(NAME_WIDTH, nameColumnFloor(fs));
 
 /** The pieces of a block, most important first, which is the order they are shed from the tail of. */
 const PIECES = ['gap', 'name', 'num', 'class', 'lastLap', 'rating'] as const;
@@ -203,7 +203,7 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
   const following = details(ctx, side, keep);
   const identity = cellsThatFit(
     [
-      ...(has('name') ? [{ id: 'name', width: Math.max(NAME_WIDTH, codeWidth(d.name)), height: d.name }] : []),
+      ...(has('name') ? [{ id: 'name', width: nameCellWidth(d.name), height: d.name }] : []),
       ...(has('num') ? [{ id: 'num', width: Math.max(NUMBER_WIDTH, fieldWidth(numSpec, ctx.density)), height: numberSize }] : []),
       ...(has('class') ? [{ id: 'class', width: chipWidth(ctx.density), height: d.chipHeight }] : []),
     ],
@@ -233,7 +233,15 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
       let x = box.left;
       for (const cell of identity) {
         if (cell.id === 'name') {
-          items.push(label(`${ctx.prefix}${side.id}.name`, 'TSA', x, centred(d.name), cell.width, { size: d.name, color: ds.color.text.primary, bind: driverCode(idx), widest: CODE_WIDEST }));
+          // The cell may have been clamped to a box too narrow for what it asked for, so the budget
+          // is taken from the width it actually got rather than from the width it wanted.
+          const chars = charsThatFit(NAME_FACE, d.name, cell.width);
+          items.push(label(`${ctx.prefix}${side.id}.name`, 'Liam Byrne', x, centred(d.name), cell.width, {
+            size: d.name,
+            color: ds.color.text.primary,
+            bind: ellipsised(driverName(idx), chars),
+            widest: widestOf(NAME_FACE, chars),
+          }));
         }
         if (cell.id === 'num') items.push(...field(numSpec, x, centred(numberSize) + numberSize, ctx.density, cell.width));
         if (cell.id === 'class') {

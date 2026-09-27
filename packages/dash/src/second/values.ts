@@ -9,6 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
+import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import { flagBox, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
@@ -24,6 +25,7 @@ const {
   num,
   iff,
   eq,
+  ne,
   gt,
   lt,
   ge,
@@ -302,15 +304,108 @@ export const carNumber = (idx: Expr): Expr => {
   return iff(ge(value, num(0)), fmt(value, '0'), str(''));
 };
 
+/** The entry's team, as the sim publishes it, or nothing where it publishes none. */
+export const carTeamName = (idx: Expr): Expr => isnull(driver('teamname', idx), str(''));
+
 /**
- * A driver name cut to the three-letter code the narrow drawings show, upper-cased.
- *
- * The cut is made in NCalc rather than by the renderer, the way `chipText` cuts a class name: WPF
- * has no ellipsis to give, it clips, so a name longer than its box has nowhere to go. Both the
- * lists and the opponents page draw this form, the one in a narrow column and the other in the
- * 64 px box the canvas fixes for it whatever the density.
+ * `L. Byrne`: SimHub's own short form of the name, which is `StringExtensions.GetShortName` in
+ * WoteverCommon and comes back unchanged for a name of one word.
  */
-export const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), str('')), 3));
+const carShortName = (idx: Expr): Expr => isnull(driver('shortname', idx), str(''));
+
+/**
+ * The surname, taken back out of the short name.
+ *
+ * `GetShortName` writes the first letter of the first word, a full stop and a space, then the rest of
+ * the words joined back: `Liam Byrne` is `L. Byrne` and `Liam Van Byrne` is `L. Van Byrne`. So taking
+ * `L. ` out of it leaves the surname, and the needle is built from the name rather than written down
+ * because the initial is whatever the driver's is. There is no `indexof`, `substring` or `length` in
+ * SimHub's NCalc to find a space with, so this is the only handle a formula has on where a name
+ * divides.
+ *
+ * A one-word name comes out of `GetShortName` untouched, and the needle is then `V. ` against
+ * `Verstappen`, which does not occur: the surname is the whole name and nothing is cut. That is why
+ * the needle is the initial and the stop rather than `left(short, 3)`, which would have left
+ * `stappen`.
+ */
+const surname = (idx: Expr): Expr => {
+  const short = carShortName(idx);
+  return ncalc.replaceWith(short, concat(left(short, 1), str('. ')), str(''));
+};
+
+/**
+ * The first name: the full name with the space and the surname taken off the end of it.
+ *
+ * A one-word name has the whole name as its surname, so the needle carries a leading space that does
+ * not occur and the first name is the whole name too. {@link driverName} does not reach here in that
+ * case, but a helper that only works under its caller's guard is one edit from being wrong.
+ */
+const firstName = (idx: Expr): Expr => ncalc.replaceWith(carName(idx), concat(str(' '), surname(idx)), str(''));
+
+/**
+ * Whether the name divides at all, read off SimHub's short form: its second character is the full
+ * stop of an abbreviated first name, and a one-word name has a letter there.
+ *
+ * Cheaper than comparing the short form against the full name, which is the same question asked with
+ * one opponent lookup more — and every lookup in here is made on every row on every frame.
+ */
+const hasSurname = (idx: Expr): Expr => eq(left(carShortName(idx), 1, 1), str('.'));
+
+/**
+ * A driver's name in the format the rig asks for, or the entry's team where it asks for that.
+ *
+ * The four formats are `contract.ts`'s `DriverNameFormat` and the panel offers them by example. The
+ * team is a separate setting and replaces the name rather than reformatting it — a team is not a
+ * person and has no surname to abbreviate — and it falls back to the driver per row wherever the sim
+ * publishes no team for that car.
+ *
+ * NCalc evaluates the branch it discards as well as the one it keeps, so every format is computed on
+ * every frame for every row whatever the setting says. That is the cost of the setting being a
+ * setting: a formula is written once, into one row template the repeated layer stamps, and cannot be
+ * specialised at build time for a value a driver changes mid-session. It is also why the two reordered
+ * formats share the first name between them rather than each building one: the shape is
+ * `<head> + firstName` with the head chosen, which costs two opponent lookups per row per frame less
+ * than the same thing written as two whole names.
+ *
+ * **Not title-cased**, although #385 asked for it. SimHub's `tcase` is `TextInfo.ToTitleCase`, which
+ * lower-cases the rest of every word it capitalises unless the word is entirely upper case: it turns
+ * `McDonald` into `Mcdonald` and leaves `LIAM BYRNE` shouting, which is the case it would have been
+ * reached for. Nor is a bracketed prefix stripped, for the reason {@link surname} gives — finding the
+ * closing bracket needs an index into the string and no SimHub function returns one.
+ */
+export function driverName(idx: Expr): Expr {
+  const full = carName(idx);
+  const head = iff(setting.driverNameFormatIs('initialFirstName'), concat(left(surname(idx), 1), str('. ')), concat(surname(idx), str(' ')));
+  const named = iff(
+    setting.driverNameFormatIs('full'),
+    full,
+    iff(setting.driverNameFormatIs('initialSurname'), carShortName(idx), iff(hasSurname(idx), concat(head, firstName(idx)), full)),
+  );
+  const team = carTeamName(idx);
+  return iff(and(setting.driverNameTeam(), ne(team, str(''))), team, named);
+}
+
+/**
+ * A text cut to `chars` characters, closed with an ellipsis where it was cut.
+ *
+ * SimHub's text items have no ellipsis mode: WPF is handed the box as `MaxTextWidth` and clips
+ * whatever overruns it, which is how the site's own opponents page came to show `Emma Larse`. So the
+ * cut is made in the expression.
+ *
+ * The test is one character rather than a comparison of two strings. `left(value, 1, chars)` asks for
+ * the one character just past the budget, and `StringExtensions.Left` returns an empty string rather
+ * than throwing when the value does not reach that far, so an empty answer is exactly "it fits". That
+ * matters because `value` here is a whole driver name, thirteen opponent lookups deep, and every
+ * mention of it is another thirteen evaluated on every row on every frame: the obvious spelling,
+ * `if(left(value, chars) != value, ...)`, names it four times where this one names it three.
+ *
+ * The cut keeps `chars - 1` characters and the ellipsis takes the last, so what is drawn is never
+ * wider than `chars` of the face's widest glyph — the ellipsis being the narrower of the two in every
+ * face `advances.ts` measures — which is what the caller's `widest` declares.
+ */
+export const ellipsised = (value: Expr, chars: number): Expr =>
+  chars <= 0 ? str('') : iff(eq(left(value, 1, chars), str('')), value, concat(left(value, chars - 1), str(ELLIPSIS)));
+
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
 /** The position a table shows, overall or in class per the plugin's PositionMode. */

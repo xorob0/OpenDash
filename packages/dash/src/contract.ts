@@ -90,6 +90,42 @@ export type BlueFlagDetail = 'none' | 'class' | 'positionClass';
 export const BLUE_FLAG_DETAILS: readonly BlueFlagDetail[] = ['none', 'class', 'positionClass'];
 export const BLUE_FLAG_DETAIL_SETTING = 'BlueFlagDetail';
 
+/**
+ * How a driver is named wherever a list names one, for Liam Byrne:
+ *
+ * - `full` — `Liam Byrne`, the name as the sim reports it.
+ * - `initialSurname` — `L. Byrne`, which is SimHub's own `drivershortname`.
+ * - `initialFirstName` — `B. Liam`, the surname's initial and then the first name.
+ * - `surnameFirst` — `Byrne Liam`.
+ *
+ * Rig-wide rather than per screen, and rather than per page. The three-letter code it replaces was
+ * `left(name, 3)`, so Liam Byrne was `LIA` and Hannah Fischer `HAN`: it identified nobody and
+ * collided for any two drivers who share a first name. Which of the four a driver wants is a question
+ * about how they read a name, which does not change between the rim and the pit wall, so it is on the
+ * Data tab with the other answers that are the same everywhere.
+ *
+ * The last two are built by taking the surname back out of `drivershortname` and then out of the full
+ * name, there being no `indexof` or `substring` in SimHub's NCalc to split a name with; a one-word
+ * name has no surname to move and draws as itself in all four. `driverName` in `second/values.ts` is
+ * the expression and says the rest.
+ */
+export type DriverNameFormat = 'full' | 'initialSurname' | 'initialFirstName' | 'surnameFirst';
+export const DRIVER_NAME_FORMATS: readonly DriverNameFormat[] = ['full', 'initialSurname', 'initialFirstName', 'surnameFirst'];
+export const DRIVER_NAME_FORMAT_SETTING = 'DriverNameFormat';
+
+/**
+ * Whether a list names the team rather than the driver, which is what an endurance entry is known by.
+ *
+ * A second property and not a fifth format, because it is a different question: the four formats are
+ * ways of writing a person's name and this one chooses whose name is written at all. It falls back to
+ * the driver per row wherever the sim publishes no team, so a mixed grid draws teams for the entries
+ * that have one and drivers for the rest rather than a column of blanks.
+ *
+ * Off, because a team name is the answer for one kind of racing and the driver is the answer for the
+ * rest.
+ */
+export const DRIVER_NAME_TEAM_SETTING = 'DriverNameTeam';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -131,6 +167,10 @@ export const DEFAULTS = {
   // driver already knows to look; the class of the car behind is a thing to ask for rather than a
   // thing to be given while lifting.
   BlueFlagDetail: 'none' as BlueFlagDetail,
+  // The name as the sim reports it, so that nothing changes for a rig that never opens the setting
+  // and so that the default is the one format that discards nothing.
+  DriverNameFormat: 'full' as DriverNameFormat,
+  DriverNameTeam: false,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -170,7 +210,7 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map(propertyName), ...zoneProperties()];
+  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -303,6 +343,12 @@ export const setting = {
   blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */
   blueFlagDetailIs: (detail: BlueFlagDetail): Expr => eq(setting.blueFlagDetail(), str(detail)),
+  /** `isnull([OpenDash.DriverNameFormat], 'full')`: how a driver is named. */
+  driverNameFormat: (): Expr => isnull(prop(propertyName(DRIVER_NAME_FORMAT_SETTING)), str(DEFAULTS.DriverNameFormat)),
+  /** `isnull([OpenDash.DriverNameFormat], 'full') = 'surnameFirst'`: whether names are drawn in the given format. */
+  driverNameFormatIs: (format: DriverNameFormat): Expr => eq(setting.driverNameFormat(), str(format)),
+  /** `isnull([OpenDash.DriverNameTeam], false)`: whether a list names the team rather than the driver. */
+  driverNameTeam: (): Expr => isnull(prop(propertyName(DRIVER_NAME_TEAM_SETTING)), String(DEFAULTS.DriverNameTeam)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */

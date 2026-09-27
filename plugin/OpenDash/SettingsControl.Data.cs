@@ -5,6 +5,9 @@
 // because almost nothing genuinely is global, and the rev bar left it for each face's own pane when it
 // turned out not to be -- a rim that already carries LEDs across its top and a display that does not
 // are two screens on one rig, and one switch was answering for both.
+//
+// How a driver is named passed the same test in the other direction: a name is read by a person, and the
+// person does not change between the wheel and the pit wall.
 using System.Windows;
 using System.Windows.Controls;
 
@@ -37,13 +40,29 @@ namespace OpenDashPlugin
                 Save();
             });
 
+            // Rig-wide for the same reason as the rest of the tab: a leaderboard on the rim and a board
+            // on the pit wall write the same name, and which of the four formats a driver reads fastest
+            // is a fact about the driver. #385.
+            var driverName = BuildSegmented(Contract.DriverNameFormats, PanelDataTab.DriverNameLabels, Settings.DriverNameFormat, value =>
+            {
+                Settings.DriverNameFormat = value;
+                Save();
+            });
+            var teamName = BuildToggle(Settings.DriverNameTeam, on =>
+            {
+                Settings.DriverNameTeam = on;
+                Save();
+            });
+
             // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
                 Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),
-                Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)));
+                Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag),
+                Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName),
+                Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName)));
         }
     }
 }

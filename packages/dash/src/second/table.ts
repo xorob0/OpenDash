@@ -23,7 +23,7 @@
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { measureText } from '../design/advances.ts';
+import { charsThatFit, measureText, widestGlyph, widestOf, type MeasuredFace } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
@@ -34,10 +34,10 @@ import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
-const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
+const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
 /** How a table picks the car on each row. */
 export type TableMode = 'full' | 'class' | 'relative';
@@ -184,15 +184,30 @@ function rowTypeOf(rowHeight: number, board = false): RowType {
   return { lead: 24, minor: 16, rating: 24, name: 13 };
 }
 
+/** The face a driver name is set in, which is Barlow Medium at every size and in both drawings. */
+export const NAME_FACE: MeasuredFace = 'BarlowMedium';
+
 /**
- * The name a flexible driver column is measured for: a full first and last name at the row's size.
+ * The shortest name any of the four formats draws, in characters: `L. Byrne` is eight.
  *
- * This used to be four characters' worth, which is a column that fits "Toma". WPF clips in silence,
- * so what that produced was not a narrow column but a cut name: at 800 x 480 zone C drew "Tomasz
- * Kowalcz" with the class chip hard against it. A column narrower than this draws the code form
- * instead, and a row that cannot hold even that sheds a column.
+ * The floor a column that names a driver at all is measured against, and the reason it is a count
+ * rather than a width. The cut is made in the expression, where nothing can measure a glyph, so the
+ * budget is characters of the widest glyph the name face draws; a column sized to what those eight
+ * letters actually need would be 49 px at 13 px and would cut `L. Byrne` to `L. B…`.
+ *
+ * `Byrne Liam` and a full name are longer and ellipsise where the room is only this. That is the
+ * trade, and the shortest format is the one a driver picks when the room is tight. It replaces
+ * `NAME_TO_FIT`, a sixteen-character `Tomasz Kowalczyk` that decided between a name and a code; there
+ * is no code to decide about any more, so what a column needs is the least a name can be rather than
+ * the most.
  */
-const NAME_TO_FIT = 'Tomasz Kowalczyk';
+export const SHORTEST_NAME_CHARS = 8;
+
+/** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
+export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
+
+/** The same, for a row of this height in this drawing: what `fittingColumns` sheds a column to reach. */
+export const nameFloorForRow = (rowHeight: number, board = false): number => nameColumnFloor(rowTypeOf(rowHeight, board).name);
 
 interface CellContext {
   /** Item name prefix, unique within the screen. */
@@ -307,22 +322,30 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
 /**
  * A proportional text cell: the driver name, which is Barlow Medium and never monospaced.
  *
- * Two forms, and the column picks between them rather than the renderer: a full name where the
- * column can hold one, and the three-letter code the narrow drawings show where it cannot. WPF has
- * no ellipsis to give -- it clips, and #172 records that a name longer than its column has
- * nowhere to go -- so the cut is made in NCalc, the way `chipText` cuts a class name. The own row
- * says YOU, which is the one row a driver does not need to read a name to identify.
+ * One form, in the format the rig asks for, cut to what the column holds and closed with an ellipsis
+ * where it was cut. There used to be two, the full name and a three-letter code for a column too
+ * narrow for one, and the code was `left(name, 3)`: Liam Byrne was LIA and Hannah Fischer HAN, which
+ * identifies nobody and collides for any two drivers sharing a first name. #385 took it out of every
+ * list on the face, the companion and the pit wall.
+ *
+ * The budget is characters and the box is pixels, so the count comes from the widest glyph the name
+ * face draws and the column declares that many of it as its `widest`. The fit tests therefore measure
+ * the budget rather than the sample, which is what makes a column too narrow for its own cut a failing
+ * test instead of a clipped name on somebody's rim.
+ *
+ * The own row says YOU, which is the one row a driver does not need to read a name to identify.
  */
 function cellName(ctx: CellContext): Item[] {
   const fs = ctx.type.name;
-  const full = ctx.width >= Math.ceil(measureText('BarlowMedium', NAME_TO_FIT, fs));
-  const bind = iff(ctx.isPlayer, str('YOU'), full ? carName(ctx.idx) : driverCode(ctx.idx));
+  const chars = charsThatFit(NAME_FACE, fs, ctx.width);
+  const bind = iff(ctx.isPlayer, str('YOU'), ellipsised(driverName(ctx.idx), chars));
   return [
     withMoreBindings(
-      label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+      label(`${ctx.name}.name`, 'Liam Byrne', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
+        widest: widestOf(NAME_FACE, chars),
       }),
       { TextColor: liftBind(ctx, inkBind(ctx)) },
     ),

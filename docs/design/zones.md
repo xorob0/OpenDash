@@ -439,9 +439,15 @@ Two worked examples first, because they are the two that show why it cannot be d
   and what the build actually drew there was two 34 px times side by side with 234 px of the zone
   empty under them. See §10 — **the catalogue owes a redraw of this one**, and
   [#330](https://github.com/xorob0/OpenDash/issues/330) is the ticket.
-- **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
-  position, code and gap only, and eight rows rather than six. The number and the class chip go
+- **Relative.** `wide`: position, number, name, class, gap. `grid`: the same five. `tall narrow`:
+  position, name and gap only, and eight rows rather than six. The number and the class chip go
   from between two columns that stay, which no rule about prefixes produces.
+
+  The catalogue draws that column as a three-letter code — `KLX`, `MOR`, `TSA` — at every one of the
+  four shapes, and **the build draws a name**, in whichever of four formats the rig asks for, cut in
+  the expression and closed with an ellipsis where the column cannot hold it. See §10; the code was
+  `left(name, 3)`, so Liam Byrne was `LIA` and Hannah Fischer `HAN`, and
+  [#385](https://github.com/xorob0/OpenDash/issues/385) is where that was decided.
 
 The pattern holds generally: a narrow zone loses columns before it loses rows, and a tall one
 buys rows before it buys columns.
@@ -841,6 +847,8 @@ a mistake in this document.
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
 | Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
 | Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
+| The driver column's three-letter code | Every list on the catalogue and on the opponents page draws the driver as three upper-case letters, `KLX` and `MOR` and `TSA`, at 13 px and at every shape. **A name is taken instead.** The code was built as `left(name, 3)`, which makes Liam Byrne `LIA` and Hannah Fischer `HAN`: it identifies nobody and collides for any two drivers who share a first name, and it is drawn on the one page a driver reads to answer *who is that*. What the build draws is one of four formats the rig chooses between — the full name, `L. Byrne`, `B. Liam` or `Byrne Liam` — cut in the expression to the characters the column holds and closed with an ellipsis where it was cut, since WPF clips rather than truncates. The canvas owes the redraw at all four shapes, and with it an answer to the width: a 274 × 300 zone gives the column about eighty pixels, which is seven characters of the widest glyph the name face draws, so the shortest format is the one that fits there whole. [#385](https://github.com/xorob0/OpenDash/issues/385) decided it; [#149](https://github.com/xorob0/OpenDash/issues/149) wants the same width for a licence badge and a rating. |
+| What a name is corrected to before it is formatted | #385 asked for a bracketed prefix from the sim's entry list to be stripped and the words title-cased before any format is applied. **Neither is built, and neither can be.** SimHub's NCalc has no `indexof`, `substring` or `length`, so nothing in an expression can find the closing bracket of a prefix whose length varies; and its `tcase` is .NET's `TextInfo.ToTitleCase`, which lower-cases the rest of every word it capitalises unless the word is entirely upper case, so it turns McDonald into Mcdonald and leaves a shouted name shouting — which is the case it would have been reached for. A name is therefore drawn as the sim reports it. Both would be corrections the plugin could make, and it cannot either: a name belongs to a car on a row and the plugin publishes no per-row property. |
 | A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
 
 ### Every variant the 1280 × 480 sheet lists

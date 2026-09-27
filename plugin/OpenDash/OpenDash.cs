@@ -435,6 +435,11 @@ namespace OpenDashPlugin
             // And after it, for the same reason: every band that writes a name reads this, on a face
             // and on a card face alike, so it belongs to the rig rather than to a screen.
             this.AttachDelegate(Contract.BlueFlagDetail, () => Settings.BlueFlagDetail);
+            // And the two that decide how a driver is named, shared for the same reason: a leaderboard
+            // on the rim and a board on the pit wall write the same name, and a driver who reads
+            // `L. Byrne` reads it on both. #385.
+            this.AttachDelegate(Contract.DriverNameFormat, () => Settings.DriverNameFormat);
+            this.AttachDelegate(Contract.DriverNameTeam, () => Settings.DriverNameTeam);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
