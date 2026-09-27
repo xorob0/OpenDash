@@ -48,6 +48,7 @@ import {
   writePackage,
   zipPackage,
   type DashPackage,
+  type TextItem,
   type ZippedPackage,
 } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -99,7 +100,14 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const FONT_FILES = [`${FONTS_DIR}/Barlow-Bold.ttf`, `${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
+/** What a face package carries in `_SHFonts/`; Light is the idle screen's wordmark (#113). */
+const FONT_FILES = [
+  `${FONTS_DIR}/Barlow-Bold.ttf`,
+  `${FONTS_DIR}/Barlow-Medium.ttf`,
+  `${FONTS_DIR}/openDashDisplay-Bold.ttf`,
+  `${FONTS_DIR}/openDashDisplay-Light.ttf`,
+  `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`,
+];
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -327,7 +335,19 @@ describe('widget build on disk', () => {
         expect(sidecar.Author).toBe('OpenDash contributors');
         expect(sidecar.MetadataVersion).toBe(2);
       }
-      expect(readJson(join(folder, `${layout.folder}.djson.metadata`))).toMatchObject({ Title: layout.folder, Description: layout.description, Width: layout.width, Height: layout.height, ScreenCount: 1 });
+      // Two screens: the face and the idle screen after it. The role lists say which is which, and
+      // `MainPreviewIndex` stays 0, which is what SimHub's own `UpdateMetadatas` would write (#113).
+      expect(readJson(join(folder, `${layout.folder}.djson.metadata`))).toMatchObject({
+        Title: layout.folder,
+        Description: layout.description,
+        Width: layout.width,
+        Height: layout.height,
+        ScreenCount: 2,
+        InGameScreensIndexs: [0],
+        IdleScreensIndexs: [1],
+        PitScreensIndexs: [0],
+        MainPreviewIndex: 0,
+      });
       expect(readJson(join(folder, `${CARDS_FILE}.metadata`))).toMatchObject({ Title: `${layout.folder} cards`, Width: layout.slotSize.width, Height: layout.slotSize.height, ScreenCount: CARD_CATALOGUE.length });
     }
     // The reference card face, which the zone face has taken the plain name from.
@@ -654,9 +674,11 @@ describe('the faces a package draws', () => {
     }
   });
 
-  test('the faces drawn are the three the tokens name, the flag name in Bold, and the wordmark Light on a pit wall', () => {
+  test('the faces drawn are the three the tokens name, the wordmark Light on every package, and the flag name in Bold where there is a band', () => {
     const drawn = (folder: string): string[] => drawnBy(folder).map(([family, weight]) => `${family} ${weight}`).sort();
-    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`].sort();
+    // Light is on the list since #113: the idle screen sets the wordmark's "open" in it, on every
+    // package there is, where before it was the pit wall header's alone.
+    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`, `${ds.font.data} Light`].sort();
     // The flag band writes its name in the artboards' 700. The round faces name no flag, drawing
     // the ring instead, and the nano's card face draws no label at all, so those three keep the
     // three the tokens name.
@@ -665,10 +687,10 @@ describe('the faces a package draws', () => {
       const expected = NO_FLAG_NAME.includes(folder) ? face : [...face, `${ds.font.label} Bold`].sort();
       expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, expected]);
     }
-    // A pit wall draws two more than a companion: the wordmark's Light, and the flag band's name in
-    // Bold. The companion's band is the nano style, which is colour and no word.
+    // A pit wall draws one more than a companion: the flag band's name in Bold. The companion's band
+    // is the nano style, which is colour and no word.
     for (const screen of SCREEN_PACKAGES) {
-      const wall = screen.kind === 'pitwall' ? [`${ds.font.data} Light`, `${ds.font.label} Bold`] : [];
+      const wall = screen.kind === 'pitwall' ? [`${ds.font.label} Bold`] : [];
       expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wall].sort()]);
     }
   });
@@ -704,10 +726,10 @@ describe('validation gate', () => {
 
   test('an item drawn in a weight the package does not ship is an error', () => {
     // A warning would be printed and the package written anyway, which is how a run measured in
-    // one face and drawn in another would reach a rig. Light is the case at hand: the second
-    // screens ship it for the wordmark and a face package does not.
+    // one face and drawn in another would reach a rig. The case at hand is a label in Light: the
+    // label family ships Medium and Bold, and every package draws its labels in Medium.
     const pkg = buildPackage(layout1920x480, { version: '0.0.0-test' });
-    const text = itemsOf(pkg.dashboards[0]!).find((i) => i.kind === 'text');
+    const text = itemsOf(pkg.dashboards[0]!).find((i): i is TextItem => i.kind === 'text' && i.font === ds.font.label);
     expect(text).toBeDefined();
     text!.fontWeight = 'Light';
     expect(() => validateOrThrow(pkg)).toThrow(/does not ship/);

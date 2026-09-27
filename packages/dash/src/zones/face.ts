@@ -24,6 +24,8 @@ import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
 import { popUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
+import { rect } from '../design/geometry.ts';
+import { idleScreen } from '../idle.ts';
 import { lapReview, lapReviewFrame, lapReviewOut } from '../components/lapReview.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
@@ -279,7 +281,9 @@ function faceScreen(layout: ZoneLayout, withRevBar: boolean): Screen {
   return {
     name: withRevBar ? FACE_SCREEN_NAME : FACE_SCREEN_NAME_NO_REV_BAR,
     inGame: true,
-    idle: true,
+    // Not idle any more. A face with no game behind it is a rev bar at zero over three zones of
+    // dashes, which is the bug #113 is about; `idle.ts` is the screen SimHub shows instead.
+    idle: false,
     pit: true,
     backgroundColor: layout.background,
     items: faceItems(layout, { revBar: withRevBar }),
@@ -306,7 +310,10 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions): Built
     width: layout.width,
     height: layout.height,
     backgroundColor: layout.background,
-    screens: [faceScreen(layout, true), faceScreen(off, false)],
+    // One idle screen for the face and not one per arrangement: the rev bar's setting says how the
+    // face is laid out while a game is running, and a rig at rest has no rev bar to arrange. It goes
+    // last, so screen 0 is still the face SimHub previews and the tests reach for.
+    screens: [faceScreen(layout, true), faceScreen(off, false), idleScreen({ frame: rect(0, 0, layout.width, layout.height), background: layout.background })],
     metadata,
   };
   // Both arrangements' rectangles, deduplicated by zoneDashboardsFor: the zones the rev bar's room

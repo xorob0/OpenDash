@@ -29,6 +29,7 @@ import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { packImages } from '../src/build.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
+import { IDLE_SCREEN_NAME } from '../src/idle.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
@@ -1169,9 +1170,12 @@ describe('a zone counts its cycle, not its catalogue', () => {
 
   test('every reading of the counter fits the box it is measured for', () => {
     // Per screen, because a face is two arrangements of itself and the rev-bar-off one hands its
-    // zones a taller box: two counters on each, and every reading has to fit on both.
+    // zones a taller box: two counters on each, and every reading has to fit on both. The idle
+    // screen draws no zones and so no counters, which is why it is skipped rather than expected to
+    // have two (#113).
     for (const { face, built } of BUILT) {
       for (const screen of built.main.screens) {
+        if (screen.name === IDLE_SCREEN_NAME) continue;
         const items = itemsOf({ ...built.main, screens: [screen] }).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.counter'));
         expect({ face: face.folder, screen: screen.name, counters: items.length }).toMatchObject({ counters: 2 });
         for (const item of items) {
@@ -1322,10 +1326,13 @@ describe('the rev bar can be off entirely', () => {
     off: built.main.screens.find((s) => s.name === FACE_SCREEN_NAME_NO_REV_BAR)!,
   });
 
-  test('a face is two screens, and exactly one of them is ever enabled', () => {
+  test('a face is two racing screens and one idle one, and exactly one arrangement is ever enabled', () => {
     for (const { face, built } of BUILT) {
+      // The idle screen is last and is a third screen rather than a third arrangement: the rev bar
+      // setting says how the face is laid out while a game runs, and a rig at rest has no rev bar to
+      // arrange (#113). Last, because SimHub previews the first in-game screen.
       expect({ face: face.folder, screens: built.main.screens.map((s) => s.name) }).toMatchObject({
-        screens: [FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR],
+        screens: [FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR, IDLE_SCREEN_NAME],
       });
       const { on, off } = screensOf(built);
       // Complementary, so SimHub's screen-role pass always has exactly one to choose. And it is

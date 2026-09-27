@@ -22,6 +22,7 @@ import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type
 import { COMPANION_OPEN_ON_SETTING, PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
+import { IDLE_SCREEN_NAME } from '../src/idle.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
@@ -171,10 +172,13 @@ describe('the companion', () => {
   const companion = PACKAGES.find((p) => p.def.folder === 'OpenDash Companion')!;
   const main = companion.pkg.dashboards[0]!;
   const bothSizes = PACKAGES.filter((p) => p.def.folder.startsWith('OpenDash Companion'));
+  /** The module screens, which is every screen but the idle one appended after them (#113). */
+  const modules = (dashboard: Dashboard): typeof dashboard.screens => dashboard.screens.filter((s) => s.name !== IDLE_SCREEN_NAME);
 
-  test('has one screen per module, in catalogue order', () => {
-    expect(main.screens).toHaveLength(MODULE_COUNT);
-    expect(main.screens.map((s) => s.name)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
+  test('has one screen per module in catalogue order, and the idle screen after them', () => {
+    expect(main.screens).toHaveLength(MODULE_COUNT + 1);
+    expect(main.screens[MODULE_COUNT]!.name).toBe(IDLE_SCREEN_NAME);
+    expect(modules(main).map((s) => s.name)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
     expect(MODULES.map((m) => m.id)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
   });
 
@@ -219,7 +223,7 @@ describe('the companion', () => {
    * left standing is one SimHub selects -- which is how a companion still opens on a chosen module.
    */
   test('switches each screen on its own module, and leaves the paging to SimHub', () => {
-    main.screens.forEach((screen, i) => {
+    modules(main).forEach((screen, i) => {
       expect(screen.enabledExpression).toBe(secondScreen.moduleLive(i + 1));
       expect(screen.enabledExpression).toContain(moduleSettingName(i + 1));
       // The page the plugin used to drive it with is not in it, which is the whole of the change.
@@ -234,11 +238,18 @@ describe('the companion', () => {
     expect(main.metadata.touchMode).toBe('simple');
   });
 
-  test('gives every screen the same roles, so the page shows in and out of a session', () => {
-    // SimHub only filters screens by role when the roles differ between them; identical roles keep
-    // whichever screen the page names showing whatever the game is doing.
-    const roles = new Set(main.screens.map((s) => `${s.inGame};${s.idle};${s.pit}`));
-    expect([...roles]).toEqual(['true;true;false']);
+  test('every module is an in-game screen and the idle screen is the only idle one', () => {
+    // `Dashboard.GetActiveScreens` compares "{PitScreen};{InGameScreen};{IdleScreen}" across the
+    // enabled screens and filters by role only when they differ, which they now do: while a game runs
+    // the ring is the twenty-one modules and the tap still pages them, and between sessions it is the
+    // idle screen alone. Identical roles are what used to leave a companion at rest on a module full
+    // of dashes (#113).
+    expect([...new Set(modules(main).map((s) => `${s.inGame};${s.idle};${s.pit}`))]).toEqual(['true;false;false']);
+    const idle = main.screens.find((s) => s.name === IDLE_SCREEN_NAME)!;
+    expect({ inGame: idle.inGame, idle: idle.idle, pit: idle.pit }).toEqual({ inGame: false, idle: true, pit: false });
+    // And it is enabled in every configuration, where a module screen is gated on the rotation: an
+    // expression SimHub reads as false would leave the mode with no screen to choose.
+    expect(idle.enabledExpression).toBeUndefined();
   });
 
   test('stacks the four bands the artboard draws, which fill the screen exactly', () => {
@@ -262,7 +273,8 @@ describe('the companion', () => {
   test('draws the header, the dots and the flag band on every screen', () => {
     for (const { pkg } of bothSizes) {
       const dashboard = pkg.dashboards[0]!;
-      for (const screen of dashboard.screens) {
+      // Every module screen. The idle screen draws none of the three, which is the point of it.
+      for (const screen of modules(dashboard)) {
         const items = itemsOf({ ...dashboard, screens: [screen] });
         const names = items.map((i) => i.name);
         expect(names.some((n) => n.includes('header.module'))).toBe(true);
@@ -288,8 +300,8 @@ describe('the pit wall', () => {
   const landscape = PACKAGES.find((p) => p.def.folder === 'OpenDash Pit wall')!;
   const main = landscape.pkg.dashboards[0]!;
 
-  test('has three pages', () => {
-    expect(main.screens.map((s) => s.name)).toEqual(['race', 'tower', 'telemetry']);
+  test('has three pages and the idle screen after them', () => {
+    expect(main.screens.map((s) => s.name)).toEqual(['race', 'tower', 'telemetry', IDLE_SCREEN_NAME]);
   });
 
   test('carries a zone dashboard for every rectangle its pages embed', () => {
@@ -342,7 +354,7 @@ describe('the pit wall', () => {
 
   test('the portrait page is one screen with four zones', () => {
     const portrait = PACKAGES.find((p) => p.def.folder === 'OpenDash Pit wall portrait')!.pkg.dashboards[0]!;
-    expect(portrait.screens.map((s) => s.name)).toEqual(['portrait']);
+    expect(portrait.screens.map((s) => s.name)).toEqual(['portrait', IDLE_SCREEN_NAME]);
     expect(itemsOf(portrait).filter((i) => i.kind === 'widget')).toHaveLength(4);
   });
 });

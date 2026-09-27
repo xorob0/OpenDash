@@ -7,7 +7,7 @@
  * so the drawing moved here unchanged. It is the one component both a face and a second screen
  * draw: it is the identity rather than a readout, which is why it is not in `second/`.
  */
-import type { Item } from '../generator.ts';
+import type { TextItem } from '../generator.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { ds } from '../tokens.ts';
@@ -23,7 +23,7 @@ export const wordmarkWidth = (fs: number): number =>
   Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + 2 + Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + 2;
 
 /** The wordmark, in the two weights the brand uses. Barlow Condensed Light and Bold are bundled. */
-export function wordmark(name: string, x: number, top: number, fs: number): { items: Item[]; width: number } {
+export function wordmark(name: string, x: number, top: number, fs: number): { items: TextItem[]; width: number } {
   // Each half is measured in its own weight: "Dash" set in Bold is wider than the same letters in
   // any other face, and a box measured from the wrong one loses its last letter.
   //
