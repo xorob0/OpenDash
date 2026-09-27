@@ -142,3 +142,48 @@ export function charsThatFit(face: MeasuredFace, fs: number, width: number): num
  * widest glyph in every face measured here.
  */
 export const widestOf = (face: MeasuredFace, chars: number): string => widestGlyph(face).glyph.repeat(Math.max(0, chars));
+
+/**
+ * The gap between an `i`'s tittle and its stem, in em, per face, measured from the same TTFs.
+ *
+ * The one thing an advance table cannot say: where a glyph's ink **stops and starts again**. Barlow's
+ * `i` and `j` are the only letters in any bundled face drawn in two pieces — `advances.test.ts` holds
+ * that, by reading every character back out of the outlines — and the piece that can be lost is the
+ * dot. Lose it and the letter is an `l`, since the two are the same height to within 0.017 em: on the
+ * 850 x 480 face's relative, `Liam Byrne` came back from the VM as `Llam B…` and `Nina Hartmann` as
+ * `NIna H…`.
+ *
+ * The number falls as the weight rises, which is the opposite of the instinct: a heavier face draws a
+ * fatter stem and a fatter dot into the same vertical, so Bold's break is 0.057 em where Light's is
+ * 0.101. Reaching for a heavier weight to separate the two closes the gap.
+ */
+export const TITTLE_BREAK: Readonly<Record<MeasuredFace, number>> = {
+  BarlowMedium: 0.08,
+  BarlowBold: 0.057,
+  BarlowCondensedSemiBold: 0.07,
+  BarlowCondensedBold: 0.058,
+  BarlowCondensedLight: 0.101,
+};
+
+/**
+ * The device pixels of break a dot needs to be certain of surviving the raster, which is two.
+ *
+ * A break of `g` px lands at whatever sub-pixel phase the glyph's baseline puts it at. Under two
+ * pixels there is no pixel row the break is guaranteed to fall wholly inside, so the renderer may
+ * shade the row above and the row below at partial coverage and draw a grey bridge where the design
+ * has background. At two the break covers one whole row at any phase and the dot is separate.
+ *
+ * It is a bound rather than a threshold measured on a rim, because WPF's raster is not something this
+ * build can run: what it can do is say at which size the question stops being one.
+ */
+const SAFE_BREAK_PX = 2;
+
+/**
+ * The smallest size at which this face's `i` is certain to keep its dot.
+ *
+ * 25 px in Barlow Medium, which is the name face: every size any list draws a name at — 15 px from
+ * the 34 px row up, 13 in the narrow zone's 28 px row, 12 on a companion — is under it, and the
+ * relative's 13 is where the VM saw it fail first. That is what makes the name column's case rule a
+ * rule and not a special case for one face.
+ */
+export const dottedLetterSize = (face: MeasuredFace): number => Math.ceil(SAFE_BREAK_PX / TITTLE_BREAK[face]);
