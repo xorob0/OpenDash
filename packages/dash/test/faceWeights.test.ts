@@ -27,11 +27,12 @@ const textsOf = (dashboards: readonly Dashboard[]): TextItem[] =>
 const isGear = (name: string): boolean => /(^|\.)gear$/.test(name) || /(^|\.)gear\.(above|below)$/.test(name);
 
 /**
- * A flag's name, in either format, which is the design's other 700: a label on the band, and a
+ * A flag's name, in either format and in either phase of the band one, which is the design's other
+ * 700: a label on the band, the same label in the corner block the flag settles into, and a
  * condensed run the height of the body in the full-screen format, which the sheets set in the same
  * weight for the same reason.
  */
-const isFlagName = (name: string): boolean => name.startsWith('flag.') || name.startsWith('flagFull.');
+const isFlagName = (name: string): boolean => name.startsWith('flag.') || name.startsWith('flagCorner.') || name.startsWith('flagFull.');
 
 describe('only the gear is Bold', () => {
   for (const face of ZONE_FACES) {
