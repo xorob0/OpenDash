@@ -14,7 +14,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
-import { captureDashboard, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
+import { captureDashboard, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
 import { claim, claimLost, install, readClaim, release, resolveHost, screenshot, simhubStop, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
@@ -181,8 +181,9 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     console.log(`      ${running.stdout.split('\n').join('\n      ')}`);
 
     step(6, steps, `opening ${opts.packageName}`);
-    if (!guiAvailable(host)) {
-      console.error('the VNC tooling is not on the VM host, so the dash cannot be opened from here');
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
       return 1;
     }
     if (!LIST_ORDER.includes(opts.packageName as (typeof LIST_ORDER)[number])) {

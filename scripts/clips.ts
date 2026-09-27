@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import path from 'node:path';
 import { LIST_ORDER, packageSize } from './dev.ts';
 import { build as buildEmulator, scenarios, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, waitForLaps } from './emulator.ts';
-import { closeDashboards, guiAvailable, openDashboard, placeDashboards, recordDashboard, type Recording } from './gui.ts';
+import { closeDashboards, guiProblem, openDashboard, placeDashboards, recordDashboard, type Recording } from './gui.ts';
 import { provenance } from './shotsRun.ts';
 import { claim, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
@@ -310,8 +310,9 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
       console.error(installed.stderr || installed.stdout);
       return 1;
     }
-    if (!guiAvailable(host)) {
-      console.error('the VNC tooling is not on the VM host, so a dash cannot be opened from here');
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
       return 1;
     }
     const emulator = buildEmulator();

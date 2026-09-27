@@ -28,7 +28,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, lapsCompleted, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios, waitForLaps } from './emulator.ts';
 import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
-import { captureDashboard, closeDashboards, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
+import { captureDashboard, closeDashboards, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { claim, claimLost, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
@@ -177,8 +177,9 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
       return 1;
     }
 
-    if (!guiAvailable(host)) {
-      console.error('the VNC tooling is not on the VM host, so a dash cannot be opened from here');
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
       return 1;
     }
 
