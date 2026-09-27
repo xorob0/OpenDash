@@ -216,7 +216,8 @@ describe('widget build on disk', () => {
     }
     // Written out rather than derived, because a rename is exactly what this should catch. Since
     // #169 the card faces carry "slots" in their names and the zone faces carry the shipped ones;
-    // the two round faces keep theirs, having no zone equivalent while #145 is undecided.
+    // the two round faces keep theirs, having no zone equivalent. #145 is answered -- a round face
+    // becomes zones on a ring -- but the conversion is after 1.0, so the names outlive the answer.
     expect((manifest.packages as JsonItem[])[0]).toEqual({ folder: 'OpenDash slots 1920x480', kind: 'dash', width: 1920, height: 480, slots: 12, rung: 'L', file: 'OpenDash slots 1920x480.simhubdash' });
     expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 850x480', kind: 'dash', width: 850, height: 480, slots: 6, rung: 'M', file: 'OpenDash slots 850x480.simhubdash' });
     expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash 480 round', kind: 'dash', width: 480, height: 480, slots: 2, rung: 'S', file: 'OpenDash 480 round.simhubdash' });
@@ -875,9 +876,11 @@ describe('what a released plugin embeds', () => {
 
   test('every card face is excluded, and nothing else is', () => {
     expect(LAYOUTS.length).toBeGreaterThan(0);
-    // The two round faces are the exception and are deliberate: they have no zone equivalent while
-    // #145 is undecided, so they are the only face at their size and a user who has one must keep
-    // getting it. They keep the shipped name and are embedded.
+    // The two round faces are the exception and are deliberate: they have no zone equivalent, so
+    // they are the only face at their size and a user who has one must keep getting it. They keep
+    // the shipped name and are embedded. #145 is answered -- a round face becomes zones on a ring --
+    // and the conversion is after 1.0, so the exclusion outlives the answer rather than waiting on
+    // it.
     const rounds = LAYOUTS.filter((l) => l.folder.includes('round'));
     expect(rounds).toHaveLength(2);
     for (const layout of LAYOUTS.filter((l) => !l.folder.includes('round'))) {

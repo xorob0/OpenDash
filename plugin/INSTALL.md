@@ -90,10 +90,12 @@ Four more dashboards are not faces for the wheel but second screens, described b
 | OpenDash Pit wall | 1920 x 1080 | three pages for someone who is not driving |
 | OpenDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
 
-**The two round faces are still the twelve-slot design.** What a round face should do with zones
-is not decided, so they were left as they were rather than changed badly. Of the dashboards the
-plugin installs they are the only ones the Layout section of the settings page applies to, and they
-number their slots the left side first, then the right side, then the bottom.
+**The two round faces are still the twelve-slot design, on purpose.** A round face becomes zones on
+a ring after 1.0 -- the rev arc it already has, one zone in the middle of the disc, its card
+rectangles as small zones of their own, and the flag on the ring -- and until that work is done the
+two ship as they are. Of the dashboards the plugin installs they are the only ones the Layout section
+of the settings page applies to, and they number their slots the left side first, then the right side,
+then the bottom.
 
 **Every screen keeps its own settings.** A rig with a face on the wheel and another beside it
 configures them apart: the zones, the bar and the glance of the 1920 face are separate from those
