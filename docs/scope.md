@@ -263,11 +263,12 @@ says so when a choice collides rather than quietly shipping it.
 every package one, "What ships" above describes it, and what a user may do to it was already in the
 runtime bucket of [ADR 0011](decisions/0011-personalisation.md), which is #736.
 
-A screen drawn *for* the pit lane was the other half of that line and is not built. Every screen
-declares `PitScreen` beside its in-game role, so SimHub keeps the dashboard up during a stop, and the
-pit family on the face -- the limiter banner over zone A and the stop alerts over the same zone -- is
-what OpenDash has in place of a page of its own. Whether a page laid out for a stop is worth building
-is a product question, and this document no longer answers it either way.
+A page laid out *for* the pit lane was the other half of that line and is not built, and it is
+scheduled rather than refused, so the answer this document gives is a ticket: #383 is the page that
+opens on entering the lane and is gone on leaving it. Until it lands, every screen declares
+`PitScreen` beside its in-game role, so SimHub keeps the dashboard up during a stop, and the pit
+family on the face -- the limiter banner over zone A and the stop alerts over the same zone -- is what
+a driver in the box reads.
 
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
@@ -323,11 +324,11 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Page navigation | #59, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 | Network update checks | #80, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
 | Theming and colour customisation | #124, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
-| Idle or pit screens | #763 | Every package carries an idle screen, which is what SimHub shows between sessions. No screen is drawn for the pit lane; the limiter banner and the stop alerts on the face are what stands in its place |
+| Idle or pit screens | #763, #383 | Every package carries an idle screen, which is what SimHub shows between sessions. No page is drawn for the pit lane yet; the limiter banner and the stop alerts on the face stand in its place until #383 lands |
 
-One of the nine still stands and ADR 0011 left a narrower line behind the one it moved. The pit half of
-the idle-and-pit line is not built and no longer refused, and the refusals above say what the face
-carries in its place. Each is restated above with the record that would have to move it:
+One of the nine still stands and ADR 0011 left a narrower line behind the one it moved. The pit half
+of the idle-and-pit line is not refused either: it is #383, and the refusals above say what the face
+carries until that lands. Each is restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
