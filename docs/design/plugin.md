@@ -261,6 +261,11 @@ chooser is read without its label and alongside the values beside it
 reader has to decode where `L. Byrne` next to `B. Liam` is the answer itself. The row therefore
 carries no caption: the control has already said everything.
 
+The examples stay mixed-case although a list draws a name upper-cased at every size it draws one at,
+which [zones.md](zones.md) records and `MIXED_CASE_NAME_SIZE` enforces. The question the control asks
+is which word order, and four shouted examples would read as a fifth choice about case that the panel
+does not offer.
+
 Naming a driver is here and not on a screen's pane because a name is read by a person, and the person
 does not change between the wheel and the pit wall ([#385](https://github.com/xorob0/OpenDash/issues/385)).
 
