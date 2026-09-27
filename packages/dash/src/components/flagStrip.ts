@@ -215,6 +215,12 @@ export interface FlagCornerBlocks {
  * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph. A name
  * that does not fit is not shrunk and not clipped; it is simply not written, and the block is colour
  * alone, which is what the nano's twelve-pixel strip already is.
+ *
+ * All fourteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
+ * so the answer comes out per face rather than per condition: on the four faces with no corner block a
+ * settled flag is a colour, and a colour is a family rather than a member -- the three blacks are one
+ * outlined sliver and the debris flag is a yellow. zones.md §6 weighs that against holding the whole
+ * band for the length of a caution, and §10 records what the canvas still owes those four faces.
  */
 const cornerNameFits = (block: Rect, text: string): boolean =>
   measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;
