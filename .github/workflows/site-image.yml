@@ -81,24 +81,27 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # The first stage is `bun run package` across both toolchains, which is the several minutes
-      # #397 did not want to pay on every push. The Actions cache is the answer to that, so what it
-      # actually saves belongs here in figures rather than in a hope. Two were measured on this
-      # runner: 3m02s for the first run, with nothing cached, and 31s for a run that changed only
-      # this file — which no COPY in site/Dockerfile reads, so that run rebuilt no layer at all and
-      # is the floor rather than the price of a change to the site.
+      # #397 did not want to pay on every push. This cache is the answer to that, so what it saves
+      # belongs here as figures, each against the change that produced it. Measured on this runner,
+      # for the build step:
       #
-      # What a real change costs is the layers after the COPY that carries it. Measured locally
-      # against a fully warm layer cache, so these are the build alone, without the checkout, the
-      # buildx setup or the cache transfer around it, on a machine with more cores than a runner
-      # has: a change under site/ rebuilds the site's install, `bun run generate` and `next build`,
-      # 35s; a change under packages/ rebuilds `bun run package` and the root install ahead of those,
-      # 45s. The artifacts stage is worth caching and not free to miss, and the packages/ case is
-      # exactly the change this job exists to check.
+      #   nothing cached, a branch's first push          3m23s
+      #   a change under site/                           2m05s  — 20s importing and extracting the
+      #                                                           artifacts stage, 46s for the site's
+      #                                                           install, generate and next build,
+      #                                                           52s exporting the cache again
+      #   nothing any COPY reads, e.g. this file alone      19s
       #
-      # The cache is scoped per ref with a read-through to the default branch, so a branch's first
-      # push reads what main last exported and writes its own; the fully warm case is the second push
-      # to the same branch. Export failures are warnings: an evicted or unavailable cache makes the
-      # run slow, not red.
+      # The last of those is the floor and not the common case: it was once recorded here as the warm
+      # figure for a site-only change, which it is not. Note also that `COPY site ./site` copies
+      # site/Dockerfile itself, so editing the Dockerfile is a change under site/. A change under
+      # packages/ invalidates `bun run package` as well, which is the first row again.
+      #
+      # mode=max is what makes the artifacts stage reusable at all, and the 52s of export above is
+      # what that costs; it is still the difference between 2m and 3m30s on the changes the site
+      # actually gets. The cache is scoped per ref with a read-through to the default branch, so a
+      # branch's first push reads what main last exported and writes its own. Export failures are
+      # warnings: an evicted or unavailable cache makes the run slow, not red.
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
