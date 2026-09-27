@@ -148,9 +148,10 @@ const litColourOf = (layer: RevLayer, k: number, count: number): Hex =>
  * same segment in the same colour and differ only in what decides it; the plain RPM bar lights a
  * segment when the displayed RPM percentage passes `k * 100 / count`.
  *
- * The measured ladder is asked globally -- segment k of the whole bar -- where the two derived ones
- * are asked per band, because it arrives as a count of the car's own lamps rather than as a set of
- * thresholds. Same segment, same colour, same frame; see `carLadderSegmentLit`.
+ * All three are asked per band, `(stage, local, stageCount)`, though the measured one arrives as a
+ * count of the car's lamps rather than as a set of thresholds. Asking it per band is what makes its
+ * band boundaries the digit's: the first segment of a band lights exactly where the plugin's `Stage`
+ * reaches it, at any segment count. Same segment, same colour, same frame; see `carLadderSegmentLit`.
  */
 export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const stage = stageOf(k, count);
@@ -167,7 +168,7 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const rpmLit = gt(game('CarSettings_CurrentDisplayedRPMPercent'), num(threshold));
 
   return {
-    car: { colorBind: litColor(carLadderSegmentLit(k, count), color), ...flash(carLadderFlash()) },
+    car: { colorBind: litColor(carLadderSegmentLit(stage, local, stageCount), color), ...flash(carLadderFlash()) },
     shift: { colorBind: litColor(mirrorStageLit(stage, local, stageCount), color), ...flash(mirrorOverRev()) },
     simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubOverRev()) },
     rpm: { colorBind: litColor(rpmLit, litColourOf('rpm', k, count)) },

@@ -98,9 +98,10 @@ namespace OpenDashPlugin
         /// of any segment count fills itself from (#353).
         ///
         /// <para>A count and a total rather than a fraction, because a screen compares them by
-        /// cross-multiplication -- <c>lit * segments &gt; k * lamps</c> -- exactly as the published
-        /// ladder's bands do, and so lights a segment on the frame the car lights its own LED rather
-        /// than a rounding either side of it.</para>
+        /// cross-multiplication, band by band -- <c>lit * 3m &gt; (band * m + local) * lamps</c> for a
+        /// band of m segments -- exactly as the published ladder's bands do. So it lights a segment on
+        /// the frame the car lights its own LED rather than a rounding either side of it, and it changes
+        /// band where <see cref="Stage"/> does, at any segment count.</para>
         /// </summary>
         public int Lit
         {

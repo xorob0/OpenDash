@@ -334,18 +334,29 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_fifteen_segment_bar_reddens_on_the_frame_the_digit_reaches_the_third_band()
+        public void A_bar_changes_band_on_the_frame_the_digit_does_whatever_its_segment_count()
         {
-            // The claim #353 rests on: the digit's band and the bar's top colour are one comparison, so
-            // a strip, a face and a flag box in one rig cannot say different things about one engine.
-            // This is the expression carLadderSegmentLit() builds, in C#: segment k of n is lit when
-            // lit * n > k * lamps, and the top third of fifteen segments begins at k = 10.
+            // The claim #353 rests on: the digit's band and the bar's colour change on one frame, so a
+            // strip, a face and a flag box in one rig cannot say different things about one engine.
+            //
+            // This is the plugin's half of it, and it is deliberately free of any segment count. A screen
+            // lights the first segment of band b on `lit * 3m > (b * m) * lamps` for a band of m
+            // segments, which is `lit * 3 > b * lamps` however m divides -- and that is exactly where
+            // Stage reaches b + 1. carLadderSegmentLit() is held to emitting those integers in
+            // expressions.test.ts, at four segment counts, because the first cut of this pinned the
+            // fifteen on both sides and the identity was an accident of 15 being divisible by three.
             foreach (var json in new[] { LeftToRight, MeetInMiddle, BlocksWithGap })
             {
                 var table = Parsed(json);
                 for (var rpm = 0; rpm <= 9000; rpm += 50)
                 {
                     var ladder = CarLightMirror.Ladder(table, "1", rpm);
+                    for (var band = 1; band <= 3; band++)
+                    {
+                        Assert.Equal(ladder.Stage >= band, ladder.Lit * 3 > (band - 1) * ladder.Lamps && ladder.Lit > 0);
+                    }
+                    // Which for a fifteen-segment bar is the tenth segment reddening with the third band,
+                    // said in the numbers the sheets actually draw.
                     var topSegmentLit = ladder.Lit * 15 > 10 * ladder.Lamps;
                     Assert.Equal(ladder.Stage == 3, topSegmentLit);
                     // And the RPM it prints is the RPM it reddens at, either side of the threshold.
