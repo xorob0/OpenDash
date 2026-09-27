@@ -15,14 +15,16 @@
  * The order is scenario first, package second. The other way round would restart the emulator once
  * per capture, and an emulator restart costs a SimHub reconnection.
  *
- * **A capture taken with no emulator running should be a photograph of the idle screen.** Since #113
- * every package carries one, and SimHub switches to it whenever `GameRunning` is false, so a scenario
- * that failed to start no longer shows as an empty face in the picture -- it shows as the wordmark and
- * a clock. `waitForLaps` is what makes that a failure rather than a surprise, and it is the reason the
+ * **A capture taken with no emulator running is a photograph of the idle screen.** Since #113 every
+ * package carries one, and SimHub switches to it whenever `GameRunning` is false, so a scenario that
+ * failed to start no longer shows as an empty face in the picture -- it shows as the wordmark and a
+ * clock. `waitForLaps` is what makes that a failure rather than a surprise, and it is the reason the
  * emulator is started before anything is opened rather than alongside it.
  *
- * "Should", because the switch is read off the decompiled 9.12.6 selection and has not been watched
- * happen; `docs/dev-loop.md` says what to look at when somebody runs this with no emulator.
+ * Watched happen on 2026-09-27 at 8d748ac, so it is a statement about this loop rather than a reading
+ * of the decompiled 9.12.6 screen selection: both packages switched to the idle screen with SimHub
+ * running and no game and came back to the face when the emulator started. `docs/dev-loop.md` tells it
+ * apart from the neighbouring state, a game running with no session named, which keeps the face.
  */
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
