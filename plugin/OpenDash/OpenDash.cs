@@ -229,6 +229,12 @@ namespace OpenDashPlugin
             // table behind them -- a rig with none, a car with no row, or nothing on the rig asking.
             this.AttachDelegate(Contract.CarLadderStage, () => CarLights.Stage);
             this.AttachDelegate(Contract.CarLadderOverRev, () => CarLights.OverRev);
+            // The same bar as a count out of a total, which is what a fifteen-segment rev bar fills
+            // itself from, and the RPM its top third lights at, which is what the Redline beside it
+            // prints. Zero and zero with no table, and a screen then draws the published ladder.
+            this.AttachDelegate(Contract.CarLadderLit, () => CarLights.Lit);
+            this.AttachDelegate(Contract.CarLadderLamps, () => CarLights.Lamps);
+            this.AttachDelegate(Contract.CarLadderTopRpm, () => CarLights.TopRpm);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;

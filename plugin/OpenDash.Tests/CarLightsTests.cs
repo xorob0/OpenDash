@@ -263,6 +263,71 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_ladder_is_a_lit_count_a_total_and_the_rpm_the_top_third_lights_at()
+        {
+            // What a screen draws the car's bar from (#353). It gets no colours and no thresholds: a
+            // fraction of a bar and the one RPM a readout has to print.
+            var table = Parsed(LeftToRight);
+            var ladder = CarLightMirror.Ladder(table, "1", 3500);
+            Assert.Equal(6, ladder.Lamps);
+            Assert.Equal(3, ladder.Lit);
+            // Six lamps a thousand apart: the top third is entered on the fifth, so 5000 is the number
+            // the bar goes red at and the number the Redline field prints.
+            Assert.Equal(5000, ladder.TopRpm);
+            // The gear's own row, as everywhere else: second gear's bar is a thousand higher throughout.
+            Assert.Equal(6000, CarLightMirror.Ladder(table, "2", 3500).TopRpm);
+
+            // A block of LEDs that light together shares a rank, so the top third of a blocked bar is
+            // the block's own threshold rather than a rung between blocks. Three at 3000 and three at
+            // 5000, and the fifth lamp is one of the second block.
+            var gapped = CarLightMirror.Ladder(Parsed(BlocksWithGap), "1", 3500);
+            Assert.Equal(6, gapped.Lamps);
+            Assert.Equal(3, gapped.Lit);
+            Assert.Equal(5000, gapped.TopRpm);
+            // The LED at zero is lit from idle and is not a rung, so it is in neither the count nor the total.
+            Assert.Equal(0, CarLightMirror.Ladder(Parsed(BlocksWithGap), "1", 100).Lit);
+
+            // A symmetric bar counts lamps rather than indices, so its sixth of eight is 3000 even
+            // though two LEDs share every threshold.
+            var symmetric = CarLightMirror.Ladder(Parsed(MeetInMiddle), "1", 1500);
+            Assert.Equal(8, symmetric.Lamps);
+            Assert.Equal(2, symmetric.Lit);
+            Assert.Equal(3000, symmetric.TopRpm);
+
+            // No table, no row and a row that disagrees with the bar's length are one answer, and it is
+            // the one that sends a screen back to the ladder the sim publishes: no lamps at all.
+            foreach (var none in new[] { CarLightMirror.Ladder(null, "1", 5000), CarLightMirror.CarLadder.None })
+            {
+                Assert.Equal(0, none.Lamps);
+                Assert.Equal(0, none.Lit);
+                Assert.Equal(0, none.TopRpm);
+                Assert.Equal(-1, none.Stage);
+            }
+        }
+
+        [Fact]
+        public void A_fifteen_segment_bar_reddens_on_the_frame_the_digit_reaches_the_third_band()
+        {
+            // The claim #353 rests on: the digit's band and the bar's top colour are one comparison, so
+            // a strip, a face and a flag box in one rig cannot say different things about one engine.
+            // This is the expression carLadderSegmentLit() builds, in C#: segment k of n is lit when
+            // lit * n > k * lamps, and the top third of fifteen segments begins at k = 10.
+            foreach (var json in new[] { LeftToRight, MeetInMiddle, BlocksWithGap })
+            {
+                var table = Parsed(json);
+                for (var rpm = 0; rpm <= 9000; rpm += 50)
+                {
+                    var ladder = CarLightMirror.Ladder(table, "1", rpm);
+                    var topSegmentLit = ladder.Lit * 15 > 10 * ladder.Lamps;
+                    Assert.Equal(ladder.Stage == 3, topSegmentLit);
+                    // And the RPM it prints is the RPM it reddens at, either side of the threshold.
+                    if (rpm > ladder.TopRpm) Assert.True(topSegmentLit);
+                    else Assert.False(topSegmentLit);
+                }
+            }
+        }
+
+        [Fact]
         public void No_table_and_no_gear_are_both_a_null_rather_than_a_dark_bar()
         {
             // The difference matters: null falls back to the published ladder, and a dark bar would
