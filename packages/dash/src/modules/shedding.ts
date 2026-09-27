@@ -134,13 +134,24 @@ export const SHEDDING: Record<string, Shedding> = {
   }),
   // The redline is a number a driver reads once a car, so it is the first thing the speedo drops.
   speedo: fields({ wide: ['speed', 'rpm', 'redline'], grid: ['speed', 'rpm'], tallNarrow: ['speed', 'rpm'], tall: ['speed', 'rpm'] }),
-  // What is left, how long it lasts, and what to add: those three survive everywhere. The three
-  // per-lap consumptions are one number three ways, so the narrow shapes keep the average alone.
+  // What is left, whether it reaches the flag, and what to add: those three survive everywhere. The
+  // three per-lap consumptions are one number three ways, so the narrow shapes keep the average
+  // alone.
+  //
+  // The margin is the one field of this page the canvas draws nowhere, and it is declared twice over
+  // as a preference rather than as a transcription (#387). At `wide` and `tall` it sits third and the
+  // estimated laps last: the estimate and the session's laps left are the two terms of the margin's
+  // subtraction, so a box that cannot carry both keeps the answer and sheds the working. At the two
+  // narrow shapes it takes the fuel time's place in the lead rank, which is the same trade and the
+  // only one the shape has room for -- the lead rank of a 250 px column is two readings grown, not
+  // three at the density's own size, and the fuel time is how long the tank lasts where the margin is
+  // that same quantity measured against the race. The tank itself is never the one that goes: the
+  // level and the bar under it are what the page is. zones.md §5 records both.
   fuel: fields({
-    wide: ['level', 'time', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
-    grid: ['level', 'time', 'toAdd', 'average'],
-    tallNarrow: ['level', 'time', 'toAdd', 'average'],
-    tall: ['level', 'time', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
+    wide: ['level', 'time', 'toEnd', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
+    grid: ['level', 'toEnd', 'toAdd', 'average'],
+    tallNarrow: ['level', 'toEnd', 'toAdd', 'average'],
+    tall: ['level', 'time', 'toEnd', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
   }),
   energy: nothing('one line of prose: iRacing publishes no virtual energy'),
   tyres: nothing('four corners cut from the box; rule 18'),

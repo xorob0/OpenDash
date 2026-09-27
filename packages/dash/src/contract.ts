@@ -841,7 +841,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 2, id: 'delta', name: 'Delta', description: 'Live delta to the reference lap on a centre-zero bar.', enabled: true },
   { number: 3, id: 'sectors', name: 'Sectors', description: 'The three sectors of the last lap with their deltas.', enabled: true },
   { number: 4, id: 'speedo', name: 'Speedo', description: 'Speed, RPM, redline and the shift bar.', enabled: true },
-  { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, time left, what to add and the per-lap use.', enabled: true },
+  { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, whether it reaches the flag, what to add and the per-lap use.', enabled: true },
   { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only.', enabled: false },
   { number: 7, id: 'tyres', name: 'Tyres', description: 'Temperature, pressure, wear and compound per corner.', enabled: true },
   { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off.', enabled: true },

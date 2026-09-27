@@ -464,7 +464,7 @@ a short box sheds the same line from both cars rather than emptying one of them.
 | 2 | Delta | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` |
 | 3 | Sectors | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` · `bestS1` · `bestS2` · `bestS3` | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` | `s1` · `s2` · `s3` · `yourBest` · `last` | `s1` · `s2` · `s3` · `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
-| 5 | Fuel | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
+| 5 | Fuel | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `toEnd` · `toAdd` · `average` | `level` · `toEnd` · `toAdd` · `average` | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
 | 8 | Pit view | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` |
 | 9 | Car settings | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` |
 | 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` |
@@ -500,6 +500,27 @@ holding a drawing against a zone should find the argument rather than suspect a 
   drawing carries one per-lap cell. The three come from the companion artboard, which is what the
   `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
   still one number.
+- **Fuel's margin, at every shape.** `toEnd` is the signed figure saying whether the fuel in the
+  tank reaches the end of the race and by how much, `+1.4` laps or `−3` minutes, and neither fuel
+  sheet draws it: `ZoneCatalogue.dc.html` describes the page as "fuel, fuel time, refuel, last lap,
+  2 and 5 lap averages, estimated laps, level gauge" and the companion artboard draws the same set.
+  It is taken all the same, because it is the only fuel question a race asks and the page already
+  carried every term of it — the range and the estimated laps here, the laps left on the session
+  page — so a driver was doing the subtraction himself between corners (#387).
+
+  Where it sits is a preference rather than a transcription, and it is declared twice. At `wide` and
+  at `tall` it goes third and the estimated laps stay last, since the estimate is the working and this
+  is the answer. At `grid` and at `tall narrow` it takes the fuel time's place, which is the same
+  trade at the only price those shapes can pay: the lead rank of a 250 px column is two readings
+  grown to fill it and not three at the density's own size, so a third field there costs the page its
+  growth and a rank besides. The fuel time is how long the tank lasts and the margin is that same
+  quantity measured against the race, so the narrow zone carries the one that answers. The tank and
+  the bar under it are never the pair that gives way; they are what the page is.
+
+  The canvas owes the redraw, on both sheets, and what it should draw is one design with the fuel
+  target of [#326](https://github.com/xorob0/OpenDash/issues/326) rather than two fields added
+  separately: the target says whether the lap just done was on plan and this says whether the plan
+  reaches the flag.
 - **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
   and the companion's list does. The trade runs the other way as well: the drawing gives the row a
   rating column, and neither list declares one.
@@ -635,6 +656,14 @@ whole band. The artboards draw the shedding rather than only describing it: the 
 fields at 1920, six at 1280, five in the catalogue's 1200-wide reference and three at 600, and the
 build sheds the sixth at 1280 because the corner blocks it measures are wider than the ones the
 drawing sketches.
+
+The page has seven fields of its own since #387, the margin sitting third, which is the count the
+1920 artboard draws and one more than the band used to have. Every width therefore draws what it drew
+before and sheds one more of its tail in the margin's favour: the three 1280 bands lose the per-lap
+average, 850 and the nano lose the last lap, and the nano-portrait 600 keeps the tank, the range and
+the margin over the estimate. Third is a design decision rather than an artboard reading, for the
+reason [§5](#where-the-build-keeps-more-than-the-drawing) gives: the rank sheds from the tail, so a
+band that can carry only one of the margin and the estimated laps carries the answer.
 
 **The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
 its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three
