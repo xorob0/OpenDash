@@ -29,6 +29,7 @@ import { rule } from '../src/elements/rule.ts';
 import { fixedRow, stack, type StackRow } from '../src/second/layout.ts';
 import type { FieldSpec } from '../src/second/field.ts';
 import { cellOverruns } from './monoGlyphs.ts';
+import { drawingOf } from './moduleItems.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 
 describe('shape is a pair of bands, not a ratio', () => {
@@ -136,8 +137,8 @@ describe('shedding comes before shrinking', () => {
 
   test('a page in a short box keeps its lead value at full size', () => {
     const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
-    const roomy = lapTimes.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: 'a.' });
-    const tight = lapTimes.build({ frame: rect(0, 0, 600, 120), density: 'zone', prefix: 'b.' });
+    const roomy = drawingOf(lapTimes, { frame: rect(0, 0, 600, 280), density: 'zone', prefix: 'a.' });
+    const tight = drawingOf(lapTimes, { frame: rect(0, 0, 600, 120), density: 'zone', prefix: 'b.' });
 
     const biggest = (items: readonly unknown[]): number => Math.max(...sizesOf(items as never), 0);
     // The tight box holds fewer things...

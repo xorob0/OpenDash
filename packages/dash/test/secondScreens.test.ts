@@ -36,6 +36,7 @@ import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { cellOverruns, drawableGlyphs } from './monoGlyphs.ts';
+import { drawingOf } from './moduleItems.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -765,7 +766,7 @@ describe('the opponents identity row sets its cells side by side', () => {
 describe('a bar drawn under a value', () => {
   const gaugeOf = (density: Density) => {
     const module = MODULES.find((m) => m.id === 'fuel')!;
-    const items = module.build({ frame: rect(0, 0, 802, 336), density, prefix: 'fuel.' });
+    const items = drawingOf(module, { frame: rect(0, 0, 802, 336), density, prefix: 'fuel.' });
     const drawn = items.find((i) => i.kind === 'linearGauge');
     if (drawn?.kind !== 'linearGauge') throw new Error('no gauge drawn');
     return drawn;
@@ -880,7 +881,7 @@ describe('the small text that follows a value', () => {
 
 describe('the track module has a titled and a titleless form', () => {
   const frame = rect(10, 20, 300, 200);
-  const build = (title?: boolean) => MODULES.find((m) => m.id === 'track')!.build({ frame, density: 'zone', prefix: 'track.', title });
+  const build = (title?: boolean) => drawingOf(MODULES.find((m) => m.id === 'track')!, { frame, density: 'zone', prefix: 'track.', title });
   const mapIn = (items: Item[]): StaticMapItem => items.find((i): i is StaticMapItem => i.kind === 'staticMap')!;
 
   test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
@@ -934,7 +935,7 @@ describe('the track module has a titled and a titleless form', () => {
   });
 
   test('strokes the circuit at a weight cut from the map rather than the same line in every box', () => {
-    const at = (w: number, h: number): number => mapIn(MODULES.find((m) => m.id === 'track')!.build({ frame: rect(0, 0, w, h), density: 'zone', prefix: 'track.', title: false })).trackWidth!;
+    const at = (w: number, h: number): number => mapIn(drawingOf(MODULES.find((m) => m.id === 'track')!, { frame: rect(0, 0, w, h), density: 'zone', prefix: 'track.', title: false })).trackWidth!;
     // The catalogue's own 566 by 220 map is where the 2.5 came from; a pit wall zone and a tall
     // face zone are the two that were drawing it at the same weight.
     expect(at(566, 220)).toBe(2.5);

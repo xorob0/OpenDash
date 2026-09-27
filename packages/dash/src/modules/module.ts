@@ -8,8 +8,11 @@
  * to its catalogue entry.
  */
 import type { Item, Rect } from '../generator.ts';
-import type { Expr } from '../bind.ts';
+import { ncalc } from '../generator.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { moduleMeta, type ModuleMeta } from '../contract.ts';
+import { placeholder } from '../second/placeholder.ts';
+import { inSession } from '../second/values.ts';
 import {
   drawFieldBlock,
   fieldBlockHeight,
@@ -87,10 +90,71 @@ export interface Module extends ModuleMeta {
   build: ModuleBuilder;
 }
 
+/** The reason half of a session notice: an instruction, since the reader can act on it. */
+export const SESSION_REASON = 'GO INTO A SESSION';
+
+/**
+ * `LEADERBOARD · GO INTO A SESSION`: what a page says in place of its empty table.
+ *
+ * Anything with a name, because band D's pages are named the same way and are not modules. The name
+ * half is the one `placeholder` drops in a box too short for both, which is why the reason half is
+ * an instruction that stands on its own.
+ *
+ * A page whose name is already a word of the instruction gets the instruction alone. Module 11 is
+ * called Session, and "SESSION · GO INTO A SESSION" is the stutter voice.md's governing principle
+ * refuses: the header above the box has said the name, so the notice has nothing to add by saying it
+ * again. Every other page keeps both halves, since "LAP TIMES" is not in the sentence.
+ */
+export const sessionNotice = (page: { name: string }): string => {
+  const name = page.name.toUpperCase();
+  return SESSION_REASON.split(' ').includes(name) ? SESSION_REASON : `${name} · ${SESSION_REASON}`;
+};
+
+/**
+ * The name of the group a module's content is gathered in while it waits for a session.
+ *
+ * Exported for the test that checks every gated module has exactly one, and so that nothing else
+ * has to know how the name is spelled.
+ */
+export const sessionGroupName = (prefix: string): string => `${prefix}inSession`;
+
+/**
+ * A module's content and its notice, in the same rectangle, one of them on the screen at a time.
+ *
+ * The content goes into one group whose `Visible` is the session test, rather than having the test
+ * folded into every item, for two reasons. A group whose Visible is false leaves its children's
+ * bindings unevaluated, so an empty leaderboard's forty rows cost nothing while the notice is
+ * showing; and an item that already binds Visible for a reason of its own -- a row on a car that
+ * does not exist, a field the sim does not publish -- keeps that binding untouched, where folding
+ * would have had to read and rewrite it.
+ *
+ * The first of those is the load-bearing one and it is verified rather than assumed:
+ * `EditorModel.ApplyItemBindings` in SimHub 9.12.6 evaluates an item's Visible, and returns on a
+ * `DrawableItem` that came out invisible *before* it walks a `Layer`'s children. `Layer` derives
+ * from `ContainerItemBase` and so from `DrawableItem`, so the return applies to it. That is why the
+ * readings inside need no extra guard on their text, which is the trap energy's header records: an
+ * invisible *leaf* does keep evaluating its other bindings, and formatting a null once a frame puts
+ * an error in SimHub's log once a frame.
+ *
+ * The notice is `placeholder`'s, in the same rectangle and gated the other way, so the two are
+ * never on the screen together and the overlap exists only in the editor, exactly as energy's does.
+ */
+function withSessionNotice(meta: ModuleMeta, ctx: ModuleContext, items: Item[]): Item[] {
+  const test = inSession();
+  return [
+    withMoreBindings({ kind: 'layer', name: sessionGroupName(ctx.prefix), children: items }, { Visible: test }),
+    ...placeholder(ctx.prefix, sessionNotice(meta), ctx.frame, ctx.density).map((item) => withMoreBindings(item, { Visible: ncalc.not(test) })),
+  ];
+}
+
 export function defineModule(id: string, build: ModuleBuilder): Module {
+  const meta = moduleMeta(id);
   // A module is always its own page, even when another page builds it inside itself: the pit wall's
   // track panel embeds the track module, and the table that applies to it is the track one.
-  return { ...moduleMeta(id), build: (ctx) => build({ ...ctx, page: id }) };
+  const page: ModuleBuilder = (ctx) => build({ ...ctx, page: id });
+  // A module that needs a session says so while there is none (#406). The catalogue's declaration
+  // is what decides it, so a module added later answers the question by existing.
+  return { ...meta, build: meta.needsSession ? (ctx) => withSessionNotice(meta, ctx, page(ctx)) : page };
 }
 
 /** A field of this module, its item name prefixed so it is unique on the screen. */

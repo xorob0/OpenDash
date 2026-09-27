@@ -304,8 +304,14 @@ namespace OpenDashPlugin.Tests
             if (!File.Exists(path)) return;
             var source = File.ReadAllText(path);
 
+            // needsSession is matched and not compared, and that is deliberate. It says whether a
+            // module draws a notice in place of an empty table while there is no session (#406),
+            // which is a question the generator asks and the plugin never does: the plugin lists the
+            // modules in the settings panel and switches them on. It is in the pattern rather than
+            // skipped over so that the row shape stays pinned, and so a module added to the
+            // catalogue without answering the question fails here as well as in the typechecker.
             var rows = Regex.Matches(source,
-                @"\{\s*number:\s*(?<number>\d+),\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*description:\s*'(?<description>[^']*)',\s*enabled:\s*(?<enabled>true|false)\s*\}");
+                @"\{\s*number:\s*(?<number>\d+),\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*description:\s*'(?<description>[^']*)',\s*enabled:\s*(?<enabled>true|false),\s*needsSession:\s*(?:true|false)\s*\}");
             Assert.Equal(Modules.All.Count, rows.Count);
             for (var i = 0; i < rows.Count; i++)
             {
