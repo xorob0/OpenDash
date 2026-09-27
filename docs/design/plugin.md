@@ -12,7 +12,7 @@ Lights.
 | tab | what is on it |
 |---|---|
 | **Rig** | the screen cards, and the selected screen's own pane |
-| **Data** | the four settings that mean the same thing on every screen |
+| **Data** | the settings that mean the same thing on every screen |
 | **Lights** | the flag box, the matrices and the strips |
 | **Install** | the packages, the plugin version, reinstall and the update check |
 
@@ -226,8 +226,8 @@ the cards in [#146](https://github.com/xorob0/OpenDash/issues/146).
 
 ## Data
 
-The four settings that are not per screen, because a lap time means the same thing on the rim as it
-does on the pit wall.
+The settings that are not per screen, because a lap time means the same thing on the rim as it does
+on the pit wall, and so does a name.
 
 ```
 These apply to every screen
@@ -244,7 +244,25 @@ These apply to every screen
 
   Session progress                     [ Auto | Laps | Time ]
   Auto shows laps when the session declares a lap count, time otherwise.
+
+  Blue flag detail                     [ Nothing | Class | Position and class ]
+  What shows next to a blue flag.
+
+  Driver names        [ Liam Byrne | L. Byrne | B. Liam | Byrne Liam ]
+
+  Team names                                              [ on/off ]
+  Names the team instead of the driver, and keeps the driver where
+  the sim has no team.
 ```
+
+**The four name formats are shown as what they make of one name rather than described.** A value in a
+chooser is read without its label and alongside the values beside it
+([voice.md](voice.md)), and "Initial and surname" next to "Surname and initial" is two fragments a
+reader has to decode where `L. Byrne` next to `B. Liam` is the answer itself. The row therefore
+carries no caption: the control has already said everything.
+
+Naming a driver is here and not on a screen's pane because a name is read by a person, and the person
+does not change between the wheel and the pit wall ([#385](https://github.com/xorob0/OpenDash/issues/385)).
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it

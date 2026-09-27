@@ -98,6 +98,16 @@ namespace OpenDashPlugin
         /// which decides how much of a screen a flag takes, is the screen's own.</summary>
         public string BlueFlagDetail { get; set; } = Contract.DefaultBlueFlagDetail;
 
+        /// <summary>How a driver is named wherever a list names one: one of Contract.DriverNameFormats.
+        /// Shared, because which of the four reads best is a fact about the reader and not about the
+        /// screen they are reading.</summary>
+        public string DriverNameFormat { get; set; } = Contract.DefaultDriverNameFormat;
+
+        /// <summary>Whether a list names the team rather than the driver, which is what an endurance
+        /// entry is known by. The dashboard falls back to the driver per row where the sim publishes no
+        /// team, so a mixed grid draws teams for the entries that have one.</summary>
+        public bool DriverNameTeam { get; set; } = Contract.DefaultDriverNameTeam;
+
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
@@ -751,6 +761,7 @@ namespace OpenDashPlugin
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
             BlueFlagDetail = Contract.NormaliseChoice(BlueFlagDetail, Contract.BlueFlagDetails, Contract.DefaultBlueFlagDetail);
+            DriverNameFormat = Contract.NormaliseChoice(DriverNameFormat, Contract.DriverNameFormats, Contract.DefaultDriverNameFormat);
             NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
@@ -1617,6 +1628,8 @@ namespace OpenDashPlugin
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
             BlueFlagDetail = other.BlueFlagDetail;
+            DriverNameFormat = other.DriverNameFormat;
+            DriverNameTeam = other.DriverNameTeam;
             Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();

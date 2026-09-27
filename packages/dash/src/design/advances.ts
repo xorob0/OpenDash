@@ -25,7 +25,7 @@ const BarlowMedium: Readonly<Record<string, number>> = {
   'h': 0.542, 'i': 0.255, 'j': 0.248, 'k': 0.512, 'l': 0.235, 'm': 0.826, 'n': 0.542, 'o': 0.555, 'p': 0.558,
   'q': 0.558, 'r': 0.371, 's': 0.487, 't': 0.369, 'u': 0.538, 'v': 0.491, 'w': 0.743, 'x': 0.499, 'y': 0.476,
   'z': 0.451, '{': 0.329, '|': 0.179, '}': 0.329, '~': 0.513, '°': 0.379, '·': 0.219, '−': 0.495, '–': 0.46,
-  'Δ': 0.646,
+  'Δ': 0.646, '…': 0.815,
 };
 
 /** The flag band's name, which the artboards set in 700 where every other label is 500. */
@@ -40,7 +40,7 @@ const BarlowBold: Readonly<Record<string, number>> = {
   '`': 0.233, 'a': 0.528, 'b': 0.566, 'c': 0.537, 'd': 0.566, 'e': 0.546, 'f': 0.387, 'g': 0.556, 'h': 0.547,
   'i': 0.255, 'j': 0.254, 'k': 0.533, 'l': 0.244, 'm': 0.835, 'n': 0.547, 'o': 0.557, 'p': 0.568, 'q': 0.568,
   'r': 0.383, 's': 0.502, 't': 0.38, 'u': 0.545, 'v': 0.52, 'w': 0.783, 'x': 0.538, 'y': 0.504, 'z': 0.46, '{': 0.376,
-  '|': 0.203, '}': 0.376, '~': 0.534, '°': 0.376, '·': 0.235, '−': 0.486, '–': 0.476, 'Δ': 0.661,
+  '|': 0.203, '}': 0.376, '~': 0.534, '°': 0.376, '·': 0.235, '−': 0.486, '–': 0.476, 'Δ': 0.661, '…': 0.851,
 };
 
 const BarlowCondensedSemiBold: Readonly<Record<string, number>> = {
@@ -55,7 +55,7 @@ const BarlowCondensedSemiBold: Readonly<Record<string, number>> = {
   'h': 0.439, 'i': 0.215, 'j': 0.211, 'k': 0.433, 'l': 0.199, 'm': 0.665, 'n': 0.439, 'o': 0.432, 'p': 0.441,
   'q': 0.441, 'r': 0.313, 's': 0.398, 't': 0.282, 'u': 0.438, 'v': 0.415, 'w': 0.592, 'x': 0.417, 'y': 0.403,
   'z': 0.368, '{': 0.319, '|': 0.171, '}': 0.319, '~': 0.48, '°': 0.359, '·': 0.215, '−': 0.439, '–': 0.377,
-  'Δ': 0.525,
+  'Δ': 0.525, '…': 0.679,
 };
 
 const BarlowCondensedBold: Readonly<Record<string, number>> = {
@@ -69,7 +69,7 @@ const BarlowCondensedBold: Readonly<Record<string, number>> = {
   'b': 0.445, 'c': 0.434, 'd': 0.445, 'e': 0.436, 'f': 0.298, 'g': 0.441, 'h': 0.447, 'i': 0.219, 'j': 0.217,
   'k': 0.449, 'l': 0.209, 'm': 0.675, 'n': 0.447, 'o': 0.442, 'p': 0.448, 'q': 0.448, 'r': 0.324, 's': 0.412,
   't': 0.291, 'u': 0.447, 'v': 0.436, 'w': 0.613, 'x': 0.439, 'y': 0.423, 'z': 0.373, '{': 0.344, '|': 0.186,
-  '}': 0.344, '~': 0.49, '°': 0.359, '·': 0.225, '−': 0.438, '–': 0.38, 'Δ': 0.54,
+  '}': 0.344, '~': 0.49, '°': 0.359, '·': 0.225, '−': 0.438, '–': 0.38, 'Δ': 0.54, '…': 0.709,
 };
 
 const BarlowCondensedLight: Readonly<Record<string, number>> = {
@@ -84,6 +84,7 @@ const BarlowCondensedLight: Readonly<Record<string, number>> = {
   'i': 0.205, 'j': 0.195, 'k': 0.394, 'l': 0.174, 'm': 0.641, 'n': 0.418, 'o': 0.407, 'p': 0.423, 'q': 0.423,
   'r': 0.284, 's': 0.364, 't': 0.261, 'u': 0.418, 'v': 0.364, 'w': 0.539, 'x': 0.359, 'y': 0.353, 'z': 0.357,
   '{': 0.255, '|': 0.133, '}': 0.255, '~': 0.454, '°': 0.358, '·': 0.189, '−': 0.443, '–': 0.37, 'Δ': 0.488,
+  '…': 0.603,
 };
 
 const FACES: Record<MeasuredFace, Readonly<Record<string, number>>> = { BarlowMedium, BarlowBold, BarlowCondensedSemiBold, BarlowCondensedBold, BarlowCondensedLight };
@@ -95,3 +96,49 @@ export function measureText(face: MeasuredFace, text: string, fs: number): numbe
   for (const ch of text) em += table[ch] ?? FALLBACK_ADVANCE;
   return em * fs;
 }
+
+/** The character a cut-short text ends in, which is one glyph and not three full stops. */
+export const ELLIPSIS = '…';
+
+/**
+ * The widest glyph a face draws, and its advance in em.
+ *
+ * Derived rather than written down, and it is what a **character** budget has to assume: a budget is
+ * per character where an advance is per glyph, and an expression can count characters but cannot
+ * measure them, so the only count that cannot clip is the one taken from the widest glyph in the
+ * face. It cuts an ordinary name a little early, which is the trade #385 records.
+ *
+ * `FALLBACK_ADVANCE` is narrower than this in every measured face — `widestGlyph` covers the whole
+ * of Latin-1's letters and the fallback is for the accented characters outside the table, every one
+ * of which is a narrower letter than W — and `metrics.test.ts` holds that, so a character the table
+ * does not carry is inside the budget too.
+ */
+export function widestGlyph(face: MeasuredFace): { glyph: string; advance: number } {
+  let glyph = '';
+  let advance = 0;
+  for (const [ch, em] of Object.entries(FACES[face])) if (em > advance) [glyph, advance] = [ch, em];
+  return { glyph, advance };
+}
+
+/**
+ * How many characters of any text are certain to fit `width` in `face` at `fs`.
+ *
+ * Strictly inside the box, because WPF clips at the edge and `textFit.test.ts` asks for `width <
+ * box`: a count whose widest rendering exactly met the box would lose the last glyph's final column.
+ */
+export function charsThatFit(face: MeasuredFace, fs: number, width: number): number {
+  const advance = widestGlyph(face).advance * fs;
+  if (advance <= 0) return 0;
+  const n = Math.floor(width / advance);
+  return Math.max(0, n * advance < width ? n : n - 1);
+}
+
+/**
+ * The widest string `charsThatFit` promises to hold: that many of the face's widest glyph.
+ *
+ * What a bound text declares as its `widest`, so that the fit tests measure the budget itself rather
+ * than whatever sample the item happens to draw at design time. A text cut to `chars - 1` characters
+ * and closed with {@link ELLIPSIS} is narrower than this, the ellipsis being narrower than the
+ * widest glyph in every face measured here.
+ */
+export const widestOf = (face: MeasuredFace, chars: number): string => widestGlyph(face).glyph.repeat(Math.max(0, chars));

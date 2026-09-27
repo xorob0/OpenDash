@@ -19,6 +19,8 @@ namespace OpenDashPlugin
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
         public const string BlueFlagDetail = "BlueFlagDetail";
+        public const string DriverNameFormat = "DriverNameFormat";
+        public const string DriverNameTeam = "DriverNameTeam";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
@@ -141,6 +143,33 @@ namespace OpenDashPlugin
         /// <summary>Nothing extra: a blue flag is read by its colour, and the class of the car
         /// behind is a thing to ask for rather than a thing to be given while lifting.</summary>
         public const string DefaultBlueFlagDetail = "none";
+
+        /// <summary>
+        /// How a driver is named wherever a list names one, for Liam Byrne: "full" is `Liam Byrne`,
+        /// "initialSurname" is `L. Byrne`, "initialFirstName" is `B. Liam` and "surnameFirst" is
+        /// `Byrne Liam`. Mirrors DRIVER_NAME_FORMATS in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared, and shared for the reason the blue flag detail is: which of the four reads best is a
+        /// fact about the reader rather than about the screen they are reading, so one answer serves the
+        /// rim and the pit wall. It replaced the three-letter code every list drew, which was
+        /// `left(name, 3)` -- Liam Byrne was LIA and Hannah Fischer HAN, so it identified nobody and
+        /// collided for any two drivers sharing a first name (#385).
+        ///
+        /// The plugin only publishes the choice. Building the name out of it is the dashboard's, since
+        /// a name belongs to a car on a row and nothing here knows which row.
+        /// </remarks>
+        public static readonly string[] DriverNameFormats = { "full", "initialSurname", "initialFirstName", "surnameFirst" };
+
+        /// <summary>The name as the sim reports it, so a rig that never opens the setting draws what it
+        /// drew before and the default is the one format that discards nothing.</summary>
+        public const string DefaultDriverNameFormat = "full";
+
+        /// <summary>Whether a list names the team rather than the driver, which is what an endurance
+        /// entry is known by. A second setting and not a fifth format: the formats are ways of writing a
+        /// person's name and this chooses whose name is written. Off, because the driver is the answer
+        /// for every other kind of racing.</summary>
+        public const bool DefaultDriverNameTeam = false;
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -822,6 +851,8 @@ namespace OpenDashPlugin
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
             yield return RevBar;
             yield return BlueFlagDetail;
+            yield return DriverNameFormat;
+            yield return DriverNameTeam;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

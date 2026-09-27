@@ -58,6 +58,33 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("What shows next to a blue flag.", PanelDataTab.BlueFlagCaption);
         }
 
+        /// <remarks>
+        /// The four values are worked examples of one name rather than descriptions of a format, which
+        /// is the one thing about this row a later reader is likely to "tidy" into "Initial and surname"
+        /// and its three siblings. docs/design/voice.md is why they are examples: a value in a chooser is
+        /// read without its label and beside the values next to it, and `L. Byrne` next to `B. Liam` is
+        /// the answer where two prose fragments are a puzzle.
+        /// </remarks>
+        [Fact]
+        public void The_driver_name_row_shows_each_format_by_example()
+        {
+            Assert.Equal("Driver names", PanelDataTab.DriverNameTitle);
+            Assert.Null(PanelDataTab.DriverNameCaption);
+            Assert.Equal(new[] { "Liam Byrne", "L. Byrne", "B. Liam", "Byrne Liam" }, PanelDataTab.DriverNameLabels);
+            // One label per format, in the contract's own order, or the control offers a value it cannot
+            // name or names one the contract does not have.
+            Assert.Equal(Contract.DriverNameFormats.Length, PanelDataTab.DriverNameLabels.Length);
+        }
+
+        [Fact]
+        public void The_team_row_says_what_happens_to_a_car_with_no_team()
+        {
+            Assert.Equal("Team names", PanelDataTab.TeamNameTitle);
+            // The fallback is the half a driver cannot guess: without it a column of teams that is half
+            // empty on a sprint grid reads as a fault rather than as the setting doing what it says.
+            Assert.Equal("Names the team instead of the driver, and keeps the driver where the sim has no team.", PanelDataTab.TeamNameCaption);
+        }
+
         [Fact]
         public void The_position_row_keeps_the_sentences_the_canvas_does_not_carry()
         {

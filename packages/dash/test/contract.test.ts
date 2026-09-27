@@ -63,6 +63,9 @@ import {
   DEFAULT_LAP_REVIEW,
   lapReviewSettingName,
   BLUE_FLAG_DETAIL_SETTING,
+  DRIVER_NAME_FORMATS,
+  DRIVER_NAME_FORMAT_SETTING,
+  DRIVER_NAME_TEAM_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -117,12 +120,12 @@ describe('settings', () => {
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
     ]);
-    // The lone 2 is RevBar and the blue flag detail, which every screen shares with the four modes
-    // and the twelve slots.
+    // The lone 4 is RevBar, the blue flag detail and the two that decide how a driver is named, which
+    // every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        2 +
+        4 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -152,7 +155,9 @@ describe('settings', () => {
     // flag readout, which did not work on a rig, was taken off the strip, and 328 before each matrix
     // was given its own answer to whether the digit is banded at all and to which ladder bands it,
     // which is eight names, and the car's own bands had to be published for the digit to read.
-    expect(props).toHaveLength(338);
+    // And 340 once a driver could say how a name is written and whether it is the team's, which
+    // replaced the three-letter code every list drew (#385).
+    expect(props).toHaveLength(340);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -165,6 +170,10 @@ describe('settings', () => {
     // per screen because it decides how much of one screen a flag takes, whereas what a band is
     // allowed to say is the same answer wherever it is written.
     expect(props[5 + SLOT_MAX]).toBe('OpenDash.BlueFlagDetail');
+    // And the two that say how a driver is named, shared for the same reason: which of the four
+    // formats reads best is a fact about the reader, not about the screen they are reading.
+    expect(props[6 + SLOT_MAX]).toBe('OpenDash.DriverNameFormat');
+    expect(props[7 + SLOT_MAX]).toBe('OpenDash.DriverNameTeam');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -254,7 +263,14 @@ describe('settings', () => {
     // round faces' rev arc and the companion's speedo draw the same segments and read the same
     // setting, and a screen may not read a property another screen owns.
     expect(shared).toEqual(
-      [...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`),
+      [
+        ...fixed,
+        ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)),
+        REV_BAR_SETTING,
+        BLUE_FLAG_DETAIL_SETTING,
+        DRIVER_NAME_FORMAT_SETTING,
+        DRIVER_NAME_TEAM_SETTING,
+      ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
@@ -471,6 +487,19 @@ describe('plugin mirror', () => {
     expect(source).toContain(`BlueFlagDetails = ${csArray(BLUE_FLAG_DETAILS)};`);
     expect(source).toContain(`public const string DefaultBlueFlagDetail = "${DEFAULTS.BlueFlagDetail}";`);
     expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${BLUE_FLAG_DETAIL_SETTING},`);
+    // How a driver is named, and whether it is the team's name: the two halves of #385, both shared
+    // and both on the Data tab, which is why there is a panel assertion under them and not under the
+    // blue flag detail above.
+    expect(source).toContain(`public const string ${DRIVER_NAME_FORMAT_SETTING} = "${DRIVER_NAME_FORMAT_SETTING}";`);
+    expect(source).toContain(`public const string ${DRIVER_NAME_TEAM_SETTING} = "${DRIVER_NAME_TEAM_SETTING}";`);
+    expect(source).toContain(`DriverNameFormats = ${csArray(DRIVER_NAME_FORMATS)};`);
+    expect(source).toContain(`public const string DefaultDriverNameFormat = "${DEFAULTS.DriverNameFormat}";`);
+    expect(source).toContain(`public const bool DefaultDriverNameTeam = ${String(DEFAULTS.DriverNameTeam)};`);
+    expect(panelSource()).toContain('Contract.DriverNameFormats');
+    expect(panelSource()).toContain('Settings.DriverNameTeam');
+    for (const name of [DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING]) {
+      expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
+    }
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);
