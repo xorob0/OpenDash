@@ -412,9 +412,24 @@ export function driverName(idx: Expr): Expr {
  * The cut keeps `chars - 1` characters and the ellipsis takes the last, so what is drawn is never
  * wider than `chars` of the face's widest glyph — the ellipsis being the narrower of the two in every
  * face `advances.ts` measures — which is what the caller's `widest` declares.
+ *
+ * **The space the cut lands on goes with it.** A cut between two words kept the space and then put the
+ * ellipsis after it, and the relative on the VM drew `Chloe …` and `Marco …`: a gap and then three
+ * dots reads as a pause rather than as a name that was too long, and it spends a whole character of a
+ * seven-character column on nothing. The remedy is a `replace` of the space and the ellipsis by the
+ * ellipsis, because SimHub's NCalc has no `trim` — `ncalcFunctions.ts` is the whole of the table it
+ * dispatches on, read out of 9.12.6, and the string functions in it are `left`, `right`, `replace`,
+ * `padleft` and the three case changes. The alternative, asking whether the last kept character is a
+ * space and cutting one more where it is, gives the same answer and names `value` five times where
+ * this names it three: `value` is a driver name thirteen opponent lookups deep, evaluated per row per
+ * frame, so the two extra mentions are twenty-six more lookups a row. The needle can only match what
+ * this line just built, a driver name carrying an ellipsis of its own not being a thing SimHub sends,
+ * which is the check every caller of `replace` owes.
  */
 export const ellipsised = (value: Expr, chars: number): Expr =>
-  chars <= 0 ? str('') : iff(eq(left(value, 1, chars), str('')), value, concat(left(value, chars - 1), str(ELLIPSIS)));
+  chars <= 0
+    ? str('')
+    : iff(eq(left(value, 1, chars), str('')), value, ncalc.replace(concat(left(value, chars - 1), str(ELLIPSIS)), ` ${ELLIPSIS}`, ELLIPSIS));
 
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
