@@ -11,7 +11,7 @@
  * for would scale its type with it, and zone A's four pages are not zone B's twenty-one, so the two
  * cannot share a file even at the same size.
  */
-import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
+import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
   BAND_D_PAGES,
   FACE_ZONE_LETTERS,
@@ -32,7 +32,12 @@ import { zoneFrame, zoneFrameMetrics } from '../second/header.ts';
 import { densityForBox } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
-import { bandCorners, bandPageItems } from './bandPages.ts';
+import { withMoreBindings } from '../bind.ts';
+import { ncalc } from '../generator.ts';
+import { sessionGroupName, sessionNotice } from '../modules/module.ts';
+import { placeholder } from '../second/placeholder.ts';
+import { inSession } from '../second/values.ts';
+import { bandCorners, bandPageItems, bandPageRoom } from './bandPages.ts';
 import { zoneAPage } from './zoneAPages.ts';
 
 /** Which catalogue a zone dashboard carries. A and D have their own; B and C share the modules. */
@@ -76,7 +81,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // nobody: on a page of three gaps "my class only" is the car ahead in class rather than a
     // shorter list, which is the whole of #210.
     items = [
-      ...bandPageItems(page.id, frame, `${page.id}.`, corners, zoneClassOnlyOnPage(face, zones, page.number)),
+      ...withBandSessionNotice(page, frame, corners, bandPageItems(page.id, frame, `${page.id}.`, corners, zoneClassOnlyOnPage(face, zones, page.number))),
       ...(corners ? bandCorners(frame, `${page.id}.corner.`) : []),
     ];
   } else {
@@ -102,6 +107,39 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
   }
 
   return pageScreen(page.id, items, groundOf(zone));
+}
+
+/**
+ * The band pages that have nothing to draw until the game has a session, and say so (#406).
+ *
+ * The same four questions the module catalogue answers for zones B and C, answered here because
+ * band D's pages are its own rather than modules: fuel use, the stint, the sectors and the three
+ * gaps of the relative are all timing, and the other four are car state or a notice of their own.
+ */
+export const BAND_PAGES_NEEDING_SESSION: readonly string[] = ['fuel', 'stint', 'sectors', 'relative'];
+
+/**
+ * A band page's rank and its notice, one of them on the screen at a time, the way `defineModule`
+ * arranges a module's.
+ *
+ * It is here rather than inside `bandPageItems` so that `bandPages.test.ts` keeps reading the rank
+ * directly: what that file is about is which fields a band draws and where, and it should not have
+ * to walk a layer to ask.
+ *
+ * The notice sits in the room the page had rather than across the band, so it clears the zone letter
+ * at one end and the corner blocks at both. It keeps the page's name, unlike a module's in a zone,
+ * because a band draws no header to say it for it. Drawn at `zone` density, whose label size is the
+ * `ds.size.label` the band's own labels are set in.
+ */
+function withBandSessionNotice(page: FaceZonePageMeta, frame: Rect, corners: boolean, items: Item[]): Item[] {
+  if (!BAND_PAGES_NEEDING_SESSION.includes(page.id)) return items;
+  const test = inSession();
+  const room = bandPageRoom(frame, corners);
+  const notice = placeholder(`${page.id}.`, sessionNotice(page), rect(room.left, frame.top, room.width, frame.height), 'zone');
+  return [
+    withMoreBindings({ kind: 'layer', name: sessionGroupName(`${page.id}.`), children: items }, { Visible: test }),
+    ...notice.map((item) => withMoreBindings(item, { Visible: ncalc.not(test) })),
+  ];
 }
 
 /**

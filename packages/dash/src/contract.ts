@@ -824,6 +824,12 @@ export interface ModuleMeta {
   description: string;
   /** Whether the module's screen is enabled when the plugin has never been configured. */
   enabled: boolean;
+  /**
+   * Whether the module has nothing to draw until the game has a session: timing, the field, fuel
+   * use and the like. Such a module says so while there is none, in place of an empty table (#406).
+   * A module that draws car state or a live input, or that carries a notice of its own, says false.
+   */
+  needsSession: boolean;
 }
 
 /**
@@ -837,27 +843,27 @@ export interface ModuleMeta {
  * its hero became the gear alone.
  */
 export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
-  { number: 1, id: 'lapTimes', name: 'Lap times', description: 'Last, session best and your best, with laps, estimate and delta.', enabled: true },
-  { number: 2, id: 'delta', name: 'Delta', description: 'Live delta to the reference lap on a centre-zero bar.', enabled: true },
-  { number: 3, id: 'sectors', name: 'Sectors', description: 'The three sectors of the last lap with their deltas.', enabled: true },
-  { number: 4, id: 'speedo', name: 'Speedo', description: 'Speed, RPM, redline and the shift bar.', enabled: true },
-  { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, whether it reaches the flag, what to add and the per-lap use.', enabled: true },
-  { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only.', enabled: false },
-  { number: 7, id: 'tyres', name: 'Tyres', description: 'Temperature, pressure, wear and compound per corner.', enabled: true },
-  { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off.', enabled: true },
-  { number: 9, id: 'carSettings', name: 'Car settings', description: 'TC, ABS, brake bias, mixture and anti-roll bars.', enabled: true },
-  { number: 10, id: 'inputs', name: 'Inputs', description: 'Throttle, brake and clutch traces with bar gauges.', enabled: true },
-  { number: 11, id: 'session', name: 'Session', description: 'Session type, position, class, lap and time left.', enabled: true },
-  { number: 12, id: 'radar', name: 'Radar', description: 'Proximity radar with the spotter on both sides.', enabled: true },
-  { number: 13, id: 'track', name: 'Track', description: 'The track map with every car on it.', enabled: true },
-  { number: 14, id: 'leaderboard', name: 'Leaderboard', description: 'Position, driver, class, gap, best and last.', enabled: true },
-  { number: 15, id: 'relative', name: 'Relative', description: 'The cars around you on track, you in the middle.', enabled: true },
-  { number: 16, id: 'opponents', name: 'Opponents', description: 'The car ahead and the car behind, in detail.', enabled: true },
-  { number: 17, id: 'gear', name: 'Gear', description: 'The gear, as large as the screen allows.', enabled: true },
-  { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true },
-  { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to the session best.', enabled: true },
-  { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false },
-  { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false },
+  { number: 1, id: 'lapTimes', name: 'Lap times', description: 'Last, session best and your best, with laps, estimate and delta.', enabled: true, needsSession: true },
+  { number: 2, id: 'delta', name: 'Delta', description: 'Live delta to the reference lap on a centre-zero bar.', enabled: true, needsSession: true },
+  { number: 3, id: 'sectors', name: 'Sectors', description: 'The three sectors of the last lap with their deltas.', enabled: true, needsSession: true },
+  { number: 4, id: 'speedo', name: 'Speedo', description: 'Speed, RPM, redline and the shift bar.', enabled: true, needsSession: false },
+  { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, whether it reaches the flag, what to add and the per-lap use.', enabled: true, needsSession: true },
+  { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only.', enabled: false, needsSession: false },
+  { number: 7, id: 'tyres', name: 'Tyres', description: 'Temperature, pressure, wear and compound per corner.', enabled: true, needsSession: false },
+  { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off.', enabled: true, needsSession: true },
+  { number: 9, id: 'carSettings', name: 'Car settings', description: 'TC, ABS, brake bias, mixture and anti-roll bars.', enabled: true, needsSession: false },
+  { number: 10, id: 'inputs', name: 'Inputs', description: 'Throttle, brake and clutch traces with bar gauges.', enabled: true, needsSession: false },
+  { number: 11, id: 'session', name: 'Session', description: 'Session type, position, class, lap and time left.', enabled: true, needsSession: true },
+  { number: 12, id: 'radar', name: 'Radar', description: 'Proximity radar with the spotter on both sides.', enabled: true, needsSession: false },
+  { number: 13, id: 'track', name: 'Track', description: 'The track map with every car on it.', enabled: true, needsSession: true },
+  { number: 14, id: 'leaderboard', name: 'Leaderboard', description: 'Position, driver, class, gap, best and last.', enabled: true, needsSession: true },
+  { number: 15, id: 'relative', name: 'Relative', description: 'The cars around you on track, you in the middle.', enabled: true, needsSession: true },
+  { number: 16, id: 'opponents', name: 'Opponents', description: 'The car ahead and the car behind, in detail.', enabled: true, needsSession: true },
+  { number: 17, id: 'gear', name: 'Gear', description: 'The gear, as large as the screen allows.', enabled: true, needsSession: false },
+  { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true, needsSession: true },
+  { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to the session best.', enabled: true, needsSession: true },
+  { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false, needsSession: false },
+  { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false, needsSession: false },
 ];
 
 /** How many modules the companion cycles through; the header counter says "n / MODULE_COUNT". */

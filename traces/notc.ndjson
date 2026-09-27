@@ -128,6 +128,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpLRTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRFTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
+{"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
 {"p":"OpenDash.DeltaReference","v":"session"}
