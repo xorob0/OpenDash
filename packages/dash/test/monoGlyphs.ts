@@ -13,7 +13,7 @@
  */
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
 import { MINUS } from '../src/design/metrics.ts';
-import type { TextItem } from '../src/generator.ts';
+import type { BindingTarget, TextItem } from '../src/generator.ts';
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 export const faceOf = (item: TextItem): MeasuredFace => {
@@ -23,9 +23,9 @@ export const faceOf = (item: TextItem): MeasuredFace => {
   return 'BarlowCondensedSemiBold';
 };
 
-/** The expression bound to an item's text, whatever shape the binding takes. */
-function textExpression(item: TextItem): string {
-  const binding = item.bindings?.Text;
+/** The expression bound to one of an item's properties, whatever shape the binding takes. */
+export function bindingExpression(item: TextItem, property: BindingTarget): string {
+  const binding = item.bindings?.[property];
   if (!binding) return '';
   const f: unknown = (binding as { formula?: unknown }).formula;
   if (typeof f === 'string') return f;
@@ -35,6 +35,9 @@ function textExpression(item: TextItem): string {
   }
   return '';
 }
+
+/** The expression bound to an item's text. */
+const textExpression = (item: TextItem): string => bindingExpression(item, 'Text');
 
 /**
  * Which argument of a function reaches the screen as the characters it is written with.
