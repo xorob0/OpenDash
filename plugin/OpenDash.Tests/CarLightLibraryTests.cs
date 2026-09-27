@@ -264,7 +264,7 @@ namespace OpenDashPlugin.Tests
             // in until somebody presses the button, and the button is beside it.
             Assert.Equal(PanelLights.CarTablesNone, service.Status);
             // Nothing is stale that was never fetched: the refresh invitation is for a copy that exists.
-            Assert.False(service.Stale);
+            Assert.False(service.Stale(DateTime.UtcNow));
         }
 
         [Fact]
@@ -279,7 +279,7 @@ namespace OpenDashPlugin.Tests
             // a minute later asks again, which is what a button that does nothing twice would not.
             Assert.True(service.Download(now.AddMinutes(1)).Fetched);
             Assert.Equal(2, source.Requested.Count);
-            Assert.False(service.Stale);
+            Assert.False(service.Stale(now.AddMinutes(1)));
         }
 
         [Fact]
