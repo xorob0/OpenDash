@@ -486,6 +486,21 @@ namespace OpenDashPlugin
         /// number the bar goes red at.</summary>
         public const string CarLadderTopRpm = "CarLadderTopRpm";
 
+        /// <summary>
+        /// Whether anything on this rig is asking for the car's own rev lights, which is the gate a
+        /// screen draws the measured bar behind (#353).
+        /// </summary>
+        /// <remarks>
+        /// Published because only the plugin can answer it. The style is chosen per strip and the bars
+        /// are a list the driver adds to at runtime, so their property names cannot appear in an
+        /// expression a package was built with; a face has no strip at all. <see
+        /// cref="OpenDashSettings.AnyCarLadderWanted"/> is the reduction, and it is the same one that
+        /// decides whether the tables are walked -- so a screen cannot be gated on a choice that leaves
+        /// the numbers it reads unfilled. Not <see cref="LedRpmStyle"/>, which the panel has not written
+        /// since the styles went per bar.
+        /// </remarks>
+        public const string CarLadderChosen = "CarLadderChosen";
+
         public const string LedMirrorFit = "LedMirrorFit";
 
         /// <summary>Whether a car alongside takes the whole strip rather than the lamp at that end. Off:
@@ -1639,6 +1654,9 @@ namespace OpenDashPlugin
             yield return CarLadderLit;
             yield return CarLadderLamps;
             yield return CarLadderTopRpm;
+            // And the rig's answer to whose lights these are, which every reader of the five above
+            // hangs on. Appended for the reason they were.
+            yield return CarLadderChosen;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;

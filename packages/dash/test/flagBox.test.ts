@@ -26,7 +26,7 @@ import {
 import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
-import { carLadderAvailable, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { carLadderAvailable, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
@@ -65,7 +65,7 @@ const litOf = (colorBind: string | undefined): string => {
  * `shift.ts` emits and nothing besides -- property reads, `isnull`, `max`, the comparisons,
  * `and` / `or` / `!` and arithmetic -- and throws on anything wider rather than guessing.
  */
-const evaluateShift = (expression: string, telemetry: Record<string, number>): boolean => {
+const evaluateShift = (expression: string, telemetry: Record<string, number | boolean>): boolean => {
   const js = expression
     .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
     .replace(/\bisnull\(/g, 'nz(')
@@ -78,8 +78,10 @@ const evaluateShift = (expression: string, telemetry: Record<string, number>): b
   // literals once the property reads have been replaced. They are JavaScript as they stand.
   const unknown = words.filter((w) => w !== 'nz' && w !== 'Math.max' && w !== 'true' && w !== 'false');
   if (unknown.length > 0) throw new Error(`evaluateShift does not cover ${unknown.join(', ')} in ${expression}`);
-  const read = (name: string): number | null => telemetry[name] ?? null;
-  const result: unknown = new Function('P', 'nz', `return (${js});`)(read, (v: number | null, d: number) => v ?? d);
+  // Booleans as well as numbers, because two of the properties the car's own bar is read through are
+  // published as booleans and `1` is not `true` to the comparison the expression makes.
+  const read = (name: string): number | boolean | null => telemetry[name] ?? null;
+  const result: unknown = new Function('P', 'nz', `return (${js});`)(read, (v: number | boolean | null, d: number | boolean) => v ?? d);
   if (typeof result !== 'boolean') throw new Error(`not a condition: ${expression}`);
   return result;
 };
@@ -522,16 +524,19 @@ describe('brightness', () => {
       'OpenDash.LightsNightMode',
       'OpenDash.LightsLowFuelLaps',
       'OpenDash.FlagBoxSpotterAnimation',
-      // Not settings at all, and so not settings silently shared: these five are one frame of
+      // Not settings at all, and so not settings silently shared: these six are one frame of
       // telemetry read through the car's own table, and the same frame for every panel by
-      // construction. What is per panel is whether a panel reads them, which is indexed. The last
-      // three are the same frame as a screen draws its rev bar from and are read by no panel at all
-      // (#353); they are declared in this group because the plugin computes them all at once.
+      // construction. What is per panel is whether a panel reads them, which is indexed. Three of
+      // them are the same frame as a screen draws its rev bar from and are read by no panel at all
+      // (#353); the last is the rig's own answer to whether either surface reads any of it, which is
+      // rig-wide because whose lights these are is one question for the rig. They are declared in this
+      // group because the plugin computes them all at once.
       'OpenDash.CarLadderStage',
       'OpenDash.CarLadderOverRev',
       'OpenDash.CarLadderLit',
       'OpenDash.CarLadderLamps',
       'OpenDash.CarLadderTopRpm',
+      'OpenDash.CarLadderChosen',
     ]);
     const text = serializeProfile(profile);
     for (const name of flagBoxProperties()) {
@@ -700,10 +705,14 @@ describe('the gear, as the resting state', () => {
     // The panel's own flash switch is the only thing in front of the bar's expression, and the bar's
     // is carried character for character behind it.
     const switchOn = `(${flagBoxMatrix(1).gearBlink()}) = (true)`;
-    // The panel's other switch chooses which threshold that is. On the car's own measured bar it is
-    // the plugin's answer; where the panel is not set to it, or nothing is publishing one, it is the
-    // bar's own expression, carried character for character behind both switches.
-    const reading = `((${flagBoxMatrix(1).gearCarLadder()}) = (true)) and (${carLadderAvailable()})`;
+    // The panel's other switch chooses which threshold that is, and the rig's own answer to whose
+    // lights these are is in front of it -- the same expression the rev bar on a screen picks its
+    // visible layer with, so the digit and the bar cannot be on different ladders (#353). On the
+    // car's own measured bar the threshold is the plugin's answer; where the panel is not set to it,
+    // where the rig is not asking, or where nothing is publishing a bar, it is the bar's own
+    // expression, carried character for character behind all of it.
+    const reading = `((${flagBoxMatrix(1).gearCarLadder()}) = (true)) and (${carLadderOnScreens()})`;
+    expect(reading).toInclude(String(carLadderAvailable()));
     expect(flash).toBe(`(${switchOn}) and (${eitherOf(reading, carLadderOverRev(), bar)})`);
     expect(flash).toInclude(bar);
     // And the two halves partition the band, so there is no RPM at which the digit is neither.
@@ -785,18 +794,31 @@ describe('the gear, as the resting state', () => {
     // -- and nothing of the published ladder is in this frame, so a band raised here is raised by
     // the table and by nothing else.
     const STAGE = 'OpenDash.CarLadderStage';
-    expect(evaluateShift(bandFormula('stage2'), { [STAGE]: 2 })).toBe(true);
-    expect(evaluateShift(bandFormula('redline'), { [STAGE]: 2 })).toBe(false);
-    expect(evaluateShift(bandFormula('redline'), { [STAGE]: 3 })).toBe(true);
-    expect(evaluateShift(bandFormula('rest'), { [STAGE]: 0 })).toBe(true);
+    // The rig asking for the car's own lights, which is the gate a screen's rev bar reads too: a
+    // table nobody asked for bands nothing.
+    const CHOSEN = 'OpenDash.CarLadderChosen';
+    const asking = (props: Record<string, number | boolean>): Record<string, number | boolean> => ({ [CHOSEN]: true, ...props });
+    expect(evaluateShift(bandFormula('stage2'), asking({ [STAGE]: 2 }))).toBe(true);
+    expect(evaluateShift(bandFormula('redline'), asking({ [STAGE]: 2 }))).toBe(false);
+    expect(evaluateShift(bandFormula('redline'), asking({ [STAGE]: 3 }))).toBe(true);
+    expect(evaluateShift(bandFormula('rest'), asking({ [STAGE]: 0 }))).toBe(true);
 
     // -1 is a rig with no tables, or a car nobody has measured. The digit is back on the ladder the
     // sim publishes with nothing said, which is what every car had before the tables existed.
-    expect(evaluateShift(bandFormula('rest'), { [STAGE]: -1, [REDLINE_REACHED]: 1 })).toBe(false);
-    expect(evaluateShift(bandFormula('redline'), { [STAGE]: -1, [REDLINE_REACHED]: 1 })).toBe(true);
+    expect(evaluateShift(bandFormula('rest'), asking({ [STAGE]: -1, [REDLINE_REACHED]: 1 }))).toBe(false);
+    expect(evaluateShift(bandFormula('redline'), asking({ [STAGE]: -1, [REDLINE_REACHED]: 1 }))).toBe(true);
 
-    // And a panel told not to read them ignores a table that is there.
-    const ignoring = { [STAGE]: 2, 'OpenDash.FlagBoxMatrix1GearCarLadder': 0 };
+    // And the same fallback where the rig is on one of OpenDash's own styles, table or no table: the
+    // digit is banded by the published ladder, exactly as the rev bar beside it is. This is the half
+    // #353 first shipped reading a property the panel does not write, so a driver who had chosen F1
+    // got the measured bands here and on every screen.
+    expect(evaluateShift(bandFormula('stage2'), { [STAGE]: 2 })).toBe(false);
+    expect(evaluateShift(bandFormula('rest'), { [STAGE]: 2 })).toBe(true);
+    expect(evaluateShift(bandFormula('redline'), { [STAGE]: 3, [REDLINE_REACHED]: 1 })).toBe(true);
+
+    // And a panel told not to read them ignores a table that is there, which is the one thing that
+    // can still put the digit and the bar on different ladders -- an instruction, not a drift.
+    const ignoring = asking({ [STAGE]: 2, 'OpenDash.FlagBoxMatrix1GearCarLadder': 0 });
     expect(evaluateShift(bandFormula('stage2'), ignoring)).toBe(false);
     expect(evaluateShift(bandFormula('rest'), ignoring)).toBe(true);
   });

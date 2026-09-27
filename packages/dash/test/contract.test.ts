@@ -106,11 +106,12 @@ describe('settings', () => {
     // alongside the whole strip. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
-    // Six of the eleven globals are settings; the other five are the car's own bar, computed by the
+    // Six of the twelve globals are settings; the other six are the car's own bar, computed by the
     // plugin because a table of thresholds per gear is not something an expression can read: the band
-    // and the flash the digit reads, and the lit count, the ladder's length and the top band's RPM a
-    // screen draws that bar from (#353).
-    expect(flagBoxProperties()).toHaveLength(11 + FLAG_BOX_MATRICES.length * 13);
+    // and the flash the digit reads, the lit count, the ladder's length and the top band's RPM a
+    // screen draws that bar from, and whether the rig asked for any of it -- which only the plugin can
+    // say, because the style is chosen per strip and a screen has no strip (#353).
+    expect(flagBoxProperties()).toHaveLength(12 + FLAG_BOX_MATRICES.length * 13);
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
@@ -160,8 +161,10 @@ describe('settings', () => {
     // And 340 once a driver could say how a name is written and whether it is the team's, which
     // replaced the three-letter code every list drew (#385), and 340 before a screen's rev bar
     // took the car's thresholds too and needed the same bar as three numbers: how many of its
-    // lamps are lit, how many it has, and the RPM its top third lights at.
-    expect(props).toHaveLength(343);
+    // lamps are lit, how many it has, and the RPM its top third lights at, and 343 before that
+    // bar's gate had to be published as well, the rig-wide rev light style it first read having
+    // had no writer in the panel since the styles went per bar.
+    expect(props).toHaveLength(344);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -376,6 +379,12 @@ describe('plugin mirror', () => {
     // Named, so that the two the plugin never attached cannot go missing again in silence.
     expect(pinnedProperties()).toContain('OpenDash.LedCentre');
     expect(pinnedProperties()).toContain('OpenDash.LedRpmStyle');
+    // And the gate a screen's rev bar hangs on, attached as well as declared: it is the one property in
+    // the group that is neither telemetry nor a setting a panel writes, and #353's first cut gated the
+    // screens on a rig-wide field nothing writes. An unattached gate is every screen stuck on its
+    // isnull() default, which here would be the derived ladders for everybody.
+    expect(pinnedProperties()).toContain('OpenDash.CarLadderChosen');
+    expect(pluginSource('OpenDash.cs')).toContain('this.AttachDelegate(Contract.CarLadderChosen,');
     // And the superseded name beside the one that supersedes it, both attached: a published property
     // name is a public interface, so an rc.2 rig's threshold does not vanish with the rename.
     expect(pinnedProperties()).toContain('OpenDash.LightsLowFuelLaps');

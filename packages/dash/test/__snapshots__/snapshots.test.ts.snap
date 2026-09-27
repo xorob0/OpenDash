@@ -2116,7 +2116,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
     "Bindings": {
       "Visible": {
         "Formula": {
-          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
         },
         "Mode": 2
       }
@@ -2590,7 +2590,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
     "Bindings": {
       "Visible": {
         "Formula": {
-          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
         },
         "Mode": 2
       }
@@ -3064,7 +3064,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
     "Bindings": {
       "Visible": {
         "Formula": {
-          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+          "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
         },
         "Mode": 2
       }
@@ -6726,7 +6726,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -7200,7 +7200,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -7674,7 +7674,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -13909,7 +13909,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -14383,7 +14383,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -14857,7 +14857,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -20200,7 +20200,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -20674,7 +20674,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -21148,7 +21148,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -26731,7 +26731,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -27205,7 +27205,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -27679,7 +27679,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -32649,7 +32649,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -33123,7 +33123,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -33597,7 +33597,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -38552,7 +38552,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -39026,7 +39026,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -39500,7 +39500,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -44929,7 +44929,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -45403,7 +45403,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -45877,7 +45877,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -51704,7 +51704,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -52178,7 +52178,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -52652,7 +52652,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -57321,7 +57321,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -57809,7 +57809,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -58297,7 +58297,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
@@ -62320,7 +62320,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and (((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))"
               },
               "Mode": 2
             }
@@ -62808,7 +62808,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)))))"
               },
               "Mode": 2
             }
@@ -63296,7 +63296,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.LedRpmStyle], 'car')) = ('car')) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
+                "Expression": "((isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('shift')) and ((!(((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) > (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM], 0))) and ((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM], 0))))))"
               },
               "Mode": 2
             }
