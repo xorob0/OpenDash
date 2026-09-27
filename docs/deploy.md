@@ -30,6 +30,7 @@ following. The field names are Dokploy's own.
 | Build | Docker Context Path | `.`, typed in rather than left to the placeholder |
 | Build | Docker Build Stage | leave empty |
 | Environment | Build Time Arguments | `NEXT_PUBLIC_SITE_URL=https://your.domain` |
+| Environment | Environment Variables | `DATABASE_URL` and `SURVEY_ADMIN_KEY`; see [the survey](#the-survey-stores-answers-and-needs-two-variables-for-it) |
 | Domains | Host | `your.domain` |
 | Domains | Container Port | `3000` |
 | Domains | HTTPS | on, with Let's Encrypt as the certificate provider |
@@ -69,6 +70,24 @@ do it.
 Give the origin with its scheme and without a trailing slash. Unset, the metadata simply carries no
 absolute URL, which [site/lib/site.ts](../site/lib/site.ts) prefers to guessing at a domain this
 repository does not know.
+
+### The survey stores answers, and needs two variables for it
+
+The sim racer survey is the one part of the site that keeps anything. The form lives at
+`/survey-k4qf9v` and the results behind a key at `/survey-admin-w7ne3p`; neither address is in the
+nav, the sitemap or the route list, because both are meant to be handed out rather than found, and
+changing an address is renaming its folder under `site/app/`. The submissions go to PostgreSQL
+through Prisma, so the application needs two runtime variables, and these do belong in the
+**Environment** tab, unlike the origin above, because the server reads them on every request:
+
+- `DATABASE_URL`: create a PostgreSQL database in Dokploy (Databases, then PostgreSQL) and use the
+  internal connection string it shows, which stays on Dokploy's own network.
+- `SURVEY_ADMIN_KEY`: a long random string. Whoever enters it on the results page sees every
+  response; there are no accounts behind it.
+
+There is no migration step: the table creates itself on the first submission. Both halves fail
+closed, so a deployment without `DATABASE_URL` answers 503 to a submission, and one without
+`SURVEY_ADMIN_KEY` answers 503 to the results page rather than letting an empty key through.
 
 ### What runs, and what the platform watches
 

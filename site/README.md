@@ -117,6 +117,17 @@ Environment tab, is read by nothing: the site answers, and its sitemap comes bac
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` (build argument) | The canonical origin, no trailing slash. There is no default: unset, the metadata carries no absolute URL and the sitemap comes back empty rather than pointing at a domain this repository would have had to guess. |
 | `PORT` (environment) | Defaults to 3000. |
+| `DATABASE_URL` (environment) | PostgreSQL, for the sim racer survey — the one thing the site stores. Unset, a submission answers 503 and every other page is unaffected. |
+| `SURVEY_ADMIN_KEY` (environment) | Gates the survey results page. Unset, the results answer 503 rather than letting an empty key through. |
+
+## The survey
+
+`lib/survey.ts` holds the questions once for all three consumers: the form at `/survey-k4qf9v`, the
+validation in `app/api/survey/route.ts`, and the tallies at `/survey-admin-w7ne3p` behind the key.
+Neither page is in `lib/routes.ts`, deliberately: they are handed out, not found, so the nav, the
+sitemap and the link test do not know them, and both carry `robots: noindex`. Changing an address is
+renaming its folder. Storage is one PostgreSQL table through Prisma
+(`prisma/schema.prisma`), created on first use; `prisma generate` runs as part of `bun run generate`.
 
 ## Design
 
