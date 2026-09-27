@@ -263,9 +263,10 @@ export const CAR_LADDER_OVER_REV = 'CarLadderOverRev';
  * this frame, and how many that gear's ladder has.
  *
  * A count and a total rather than a fraction, because a screen compares them by cross-multiplication
- * -- `lit * segments > k * lamps` -- exactly as the published ladder's bands do, so a segment lights
- * on the frame the car lights its own LED rather than a rounding either side of it. `lamps` at zero
- * is every way of there being no table, and is the gate a screen falls back on.
+ * -- `lit * 3m > (band * m + local) * lamps` for a band of `m` segments -- exactly as the published
+ * ladder's bands do, so a segment lights on the frame the car lights its own LED rather than a rounding
+ * either side of it, and a band begins where the flag box's digit says it does. `lamps` at zero is every
+ * way of there being no table, and is the gate a screen falls back on.
  *
  * #353, [ADR 0018](../../../docs/decisions/0018-the-cars-own-lights.md) amended 2026-09-27: a screen
  * takes the car's thresholds and keeps OpenDash's colours, so it needs the timing and none of the

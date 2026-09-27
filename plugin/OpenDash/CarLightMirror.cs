@@ -201,9 +201,11 @@ namespace OpenDashPlugin
             /// answers to one question.</para>
             ///
             /// <para>Derived from <see cref="Lit"/> and <see cref="Lamps"/> rather than counted a second
-            /// time, so that the digit changes band on the frame the bar's top segment lights: a screen
-            /// lights segment k of n on <c>lit * n &gt; k * lamps</c>, and at the top third that is this
-            /// same comparison.</para>
+            /// time, so that the digit changes band on the frame the bar's own band does: a screen lights
+            /// the first segment of band b on <c>lit * 3 &gt; b * lamps</c> -- written as
+            /// <c>lit * 3m &gt; (b * m) * lamps</c> for a band of m segments, which is the same
+            /// comparison -- and that is this one. It holds at any segment count, which CarLightsTests
+            /// walks band by band rather than at fifteen.</para>
             /// </summary>
             public int Stage
             {
