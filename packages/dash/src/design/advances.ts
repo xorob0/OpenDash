@@ -147,11 +147,17 @@ export const widestOf = (face: MeasuredFace, chars: number): string => widestGly
  * The gap between an `i`'s tittle and its stem, in em, per face, measured from the same TTFs.
  *
  * The one thing an advance table cannot say: where a glyph's ink **stops and starts again**. Barlow's
- * `i` and `j` are the only letters in any bundled face drawn in two pieces — `advances.test.ts` holds
- * that, by reading every character back out of the outlines — and the piece that can be lost is the
- * dot. Lose it and the letter is an `l`, since the two are the same height to within 0.017 em: on the
- * 850 x 480 face's relative, `Liam Byrne` came back from the VM as `Llam B…` and `Nina Hartmann` as
- * `NIna H…`.
+ * `i` and `j` are the only *unaccented* letters in any bundled face drawn in two pieces —
+ * `advances.test.ts` holds that, by reading every character of this table back out of the outlines —
+ * and the piece that can be lost is the dot. Lose it and the letter is an `l`, since the two are the
+ * same height to within 0.017 em: on the 850 x 480 face's relative, `Liam Byrne` came back from the VM
+ * as `Llam B…` and `Nina Hartmann` as `NIna H…`.
+ *
+ * The accented letters are built the same way and are not in this number, an entry per face being the
+ * `i`'s: in the name face `É`, `Å`, `Í` and `Ö` break at 0.064 to 0.076 em, tighter than the `i`'s
+ * 0.080, and `advances.test.ts` measures them too. They are not what the case rule in `second/table.ts`
+ * is for — a welded acute leaves `É` an `É`, where a welded tittle leaves `Liam` a legal `Llam` — so
+ * this entry stays the tittle's and the rule stays about the letter that can become another letter.
  *
  * The number falls as the weight rises, which is the opposite of the instinct: a heavier face draws a
  * fatter stem and a fatter dot into the same vertical, so Bold's break is 0.057 em where Light's is

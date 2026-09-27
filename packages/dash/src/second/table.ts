@@ -271,8 +271,17 @@ export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
  * and it does not clear the bound either. **Upper case costs nothing at all**, which is the part worth
  * saying twice: the budget is counted in characters of the face's *widest* glyph, so shouting a name
  * changes no budget anywhere — `tables.test.ts`'s six counts are the same numbers after this as before
- * it — and no upper-case letter in any bundled face is drawn in two pieces, so the failure has no glyph
- * left to happen to.
+ * it — and no *unaccented* upper-case letter in any bundled face is drawn in two pieces, so the letter
+ * that can be misread as a different letter has none left to be.
+ *
+ * What upper case does not buy is the construction. An accented capital is a mark floating over a
+ * letter, exactly the shape the `i` failed at, and four of them are tighter than it: `É`, `Å`, `Í` and
+ * `Ö` break at 0.064 to 0.076 em in the name face against the `i`'s 0.080, all under two device pixels
+ * at 13 px and at 15. So RÄIKKÖNEN may still come back with an umlaut welded to its A. What that costs
+ * is a letter drawn badly and not a name read wrongly — a welded tittle makes `Liam` into the legal
+ * `Llam`, where a welded acute makes `É` into a misdrawn `É`, which is still the letter and still the
+ * driver — and there is no tighter bound to reach for, these being the marks the bundled faces draw.
+ * `advances.test.ts` measures both halves of that, the alphabet that is safe and the marks that are not.
  *
  * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The face
  * upper-cases every other label it draws, the code this column replaced was `LIA`, and the player's
