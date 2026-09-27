@@ -138,13 +138,6 @@ export default function Home() {
           <li>Every release so far is a candidate.</li>
           <li>{CLAIMED_SIM}</li>
           <li>
-            No idle screen yet (
-            <a href={issueUrl(113)} className="link" rel="noopener">
-              #763
-            </a>
-            ).
-          </li>
-          <li>
             Night mode is for the lights only. Screens are coming (
             <a href={issueUrl(128)} className="link" rel="noopener">
               #740

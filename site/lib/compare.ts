@@ -140,7 +140,7 @@ export const ROWS: CompareRow[] = [
     id: 'idle',
     label: 'Idle screen',
     cells: {
-      opendash: cell('soon', '', { issues: [763] }),
+      opendash: cell('yes', 'In every package: the wordmark, the time and one line saying no game is running. Nothing to point at it.'),
       lovely: cell('yes', 'An animated screen, free. It needs SimHub’s HTML renderer.'),
       dnr: cell('paid', 'The logo, a driver tag or the car. Choosing costs £3 a month.'),
     },
