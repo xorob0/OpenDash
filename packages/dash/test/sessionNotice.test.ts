@@ -16,14 +16,10 @@ import type { Rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SESSION_REASON, sessionGroupName, sessionNotice } from '../src/modules/module.ts';
 import { inSession } from '../src/second/values.ts';
-import { contentRect } from '../src/second/layout.ts';
-import { zoneFrame } from '../src/second/header.ts';
-import type { Density } from '../src/second/density.ts';
-import { COMPANION_SIZES, companionGeometry } from '../src/screens/companion.ts';
-import { ZONE_REFERENCE } from '../src/screens/zones.ts';
 import { ZONE_FACES, sizeOf, zonesOf } from '../src/zones/index.ts';
 import { BAND_PAGES_NEEDING_SESSION, zonePageScreen } from '../src/zones/pages.ts';
 import { walkItems } from '../src/walk.ts';
+import { moduleBoxes } from './secondScreens.test.ts';
 
 const SESSION = inSession();
 const NO_SESSION = ncalc.not(SESSION);
@@ -34,27 +30,18 @@ const formulaOf = (item: Item, target: 'Visible'): string | undefined => {
   return typeof binding.formula === 'string' ? binding.formula : binding.formula.expression;
 };
 
-/** The boxes a module is drawn in: a companion page, the two canvas zones, and every face zone. */
-function boxes(): { name: string; frame: Rect; density: Density }[] {
-  const out: { name: string; frame: Rect; density: Density }[] = [];
-  for (const size of COMPANION_SIZES) out.push({ name: `${size.folder} page`, frame: contentRect(companionGeometry(size).module, 'companion'), density: 'companion' });
-  for (const [kind, size] of Object.entries(ZONE_REFERENCE)) {
-    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
-    out.push({ name: `reference ${kind}`, frame: body, density: kind === 'wide' ? 'wide' : 'zone' });
-  }
-  const seen = new Set<string>();
-  for (const layout of ZONE_FACES) {
-    for (const { zone, size } of zonesOf(layout)) {
-      if (zone === 'A' || zone === 'D') continue;
-      const key = `${size.width}x${size.height}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, 'zone', 'face');
-      out.push({ name: `face zone ${key}`, frame: body, density: 'zone' });
-    }
-  }
-  return out;
-}
+/**
+ * The boxes a module is drawn in, which is `secondScreens.test.ts`'s list rather than a second one.
+ *
+ * It was a copy of that function when this file was written, and the copy was already wrong on the
+ * day it was written: it passed `zone` as the density of every face rectangle, where `densityForBox`
+ * answers `compact` for eight of them, so the notice the build draws at 13 px was measured here at
+ * 15 in a body rect cut by the wrong ramp. It also left out the arrangement without the rev bar and
+ * every rectangle a pit wall places, which is where `wide` lives. The list is derived from the
+ * geometry that hands the boxes out and its header says why; deriving it twice is how the second one
+ * drifts.
+ */
+const BOXES = moduleBoxes();
 
 describe('the condition is one expression', () => {
   /**
@@ -84,7 +71,17 @@ describe('the condition is one expression', () => {
 });
 
 describe('a module that needs a session draws its notice while there is none', () => {
-  for (const box of boxes()) {
+  /**
+   * The notice is measured at every size of type it is ever set in, which is what the copied list
+   * stopped being true of. `compact` is the one that matters and the one the copy lost: eight face
+   * rectangles are drawn at it, the label is 13 px rather than 15, and 245 by 156 is the shortest
+   * box a module is given anywhere.
+   */
+  test('the list spans every density, the smallest type included', () => {
+    expect([...new Set(BOXES.map((b) => b.density))].sort()).toEqual(['compact', 'companion', 'wide', 'zone']);
+  });
+
+  for (const box of BOXES) {
     test(`on a ${box.name}`, () => {
       for (const module of MODULES) {
         const prefix = `${module.id}.`;
