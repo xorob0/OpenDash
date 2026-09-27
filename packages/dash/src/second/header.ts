@@ -35,7 +35,18 @@ export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } 
  */
 export const PAGE_DOT = { size: DOT_SIZE, gap: 6 } as const;
 
-/** A value with a small denominator after it, as the header draws "P4 / 24". */
+/**
+ * A value with a small denominator after it, as the header draws "P4 / 24".
+ *
+ * Measured before it is drawn, the way {@link inlineGroup} is and for the same reason: the header
+ * lays its two pairs from its right edge, so it has to know how wide each is before it knows where
+ * either starts. It draws at that x rather than being moved to it afterwards, because the
+ * denominator's place is a *binding* and a binding cannot be translated: `shift` moved rectangles
+ * and left the formulas at the origin they were built from, which bound both denominators to 32-44
+ * px from the left of a header whose rects put them at 704 and 797, and put `/ 24` and `/ 30` over
+ * the module name on all 21 pages of both companions. The rect was right, so the editor and the
+ * overview thumbnails drew it correctly and only a live session showed it. #387.
+ */
 function pair(
   name: string,
   valueSample: string,
@@ -45,32 +56,30 @@ function pair(
   denominator: string,
   denominatorWidest: string,
   denominatorBind: Expr,
-  x: number,
   y: number,
   fs: number,
   density: Density,
   visibleBind?: Expr,
-): { items: Item[]; width: number } {
+): { width: number; draw(x: number): Item[] } {
   const d = densityOf(density);
   const mono = cells('SemiBold', fs);
   const chars = { digits: valueSample.length, specials: 0 };
   const valueWidth = monoWidth(mono, chars);
   const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominatorWidest, d.labelSm));
-  // The budget is the sample's own length, so the two agree at design time and part company on the
-  // dash: `L9` is a cell shorter than `L12` and `P4` a cell shorter than `P24`, and a denominator
-  // placed at the end of the cells carries that cell with it. #387.
-  const denominatorX = x + valueWidth + ds.space[2];
   return {
-    items: [
+    width: valueWidth + ds.space[2] + denominatorWidth,
+    draw: (x: number): Item[] => [
       numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, maxWidth: valueWidth + 4 }),
-      unit(`${name}.denominator`, denominator, denominatorX, canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
+      // The budget is the sample's own length, so the two agree at design time and part company on
+      // the dash: `L9` is a cell shorter than `L12` and `P4` a cell shorter than `P24`, and a
+      // denominator placed at the end of the cells carries that cell with it. #387.
+      unit(`${name}.denominator`, denominator, x + valueWidth + ds.space[2], canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
         bind: denominatorBind,
         widest: denominatorWidest,
         visibleBind,
         leftBind: add(num(x), valueDrawn(mono), num(ds.space[2])),
       }),
     ],
-    width: valueWidth + ds.space[2] + denominatorWidth,
   };
 }
 
@@ -113,24 +122,19 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     '/ 30',
     '/ 999',
     concat(str('/ '), fmt(totalLaps(), '0')),
-    0,
     valueY,
     fs,
     density,
     gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
+  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
-  items.push(...shift(position.items, positionX), ...shift(lap.items, lapX));
+  items.push(...position.draw(positionX), ...lap.draw(lapX));
   items.push(rule(`${name}.rule`, frame.left, frame.top + frame.height - 1, frame.width, 1));
   return items;
 }
-
-/** Moves items right by `dx`; the pair helper lays out from zero and the header places the group. */
-const shift = (items: Item[], dx: number): Item[] =>
-  items.map((item) => (item.kind === 'layer' ? item : { ...item, rect: { ...item.rect, left: item.rect.left + dx } }));
 
 /** The dot row: one square per module, the current one lit. */
 export function pageDots(name: string, frame: Rect, count: number, active: number): Item[] {
