@@ -17,7 +17,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DRIVER_NAME_FORMATS, type DriverNameFormat } from '../src/contract.ts';
 import { charsThatFit, ELLIPSIS, measureText, widestGlyph, widestOf } from '../src/design/advances.ts';
-import { columnWidths, NAME_FACE, nameColumnFloor, nameSizeForRow, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
+import { columnWidths, MIXED_CASE_NAME_SIZE, NAME_FACE, nameColumnFloor, nameIsUpperCased, nameSizeForRow, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { driverName, ellipsised } from '../src/second/values.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { fittingColumns, LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
@@ -269,7 +269,12 @@ describe('the ellipsis', () => {
           // companion page 745 px wide it can. What must never happen is either of the other two: a name
           // ellipsised when there was room, or one drawn past the budget and clipped by WPF.
           expect({ what, density, width, chars, text, cut: text.endsWith(ELLIPSIS) }).toMatchObject({ cut: chars < twentyFive.name.length });
-          expect({ what, density, width, fits: measureText(NAME_FACE, text, fs) < nameWidth }).toMatchObject({ fits: true });
+          // Measured in the case the row draws it in, which under 25 px is upper. Upper case is wider
+          // per letter and the budget does not change for it — the count is characters of the face's
+          // widest glyph, which is a W either way — so this is the assertion that says so rather than
+          // leaves it to be believed.
+          const asDrawn = nameIsUpperCased(fs) ? text.toUpperCase() : text;
+          expect({ what, density, width, fits: measureText(NAME_FACE, asDrawn, fs) < nameWidth }).toMatchObject({ fits: true });
         }
       }
     }
@@ -310,7 +315,12 @@ describe('no list draws a three-letter code', () => {
   test('every name any module draws is the format expression, and never a cut to three characters', () => {
     // The code was `ucase(left(name, 0, 3))` and it was drawn by the lists and by the opponents page.
     // What replaced it reads `drivershortname` and the two settings, so both of those are the mark of
-    // a name that follows the rig, and `left(..., 0, 3)` is the mark of the code coming back.
+    // a name that follows the rig, and the code has neither.
+    //
+    // The upper-casing used to be the other half of this check, nothing about a name being shouted.
+    // It is not a mark of anything any more: the whole column is shouted under 25 px, which is the
+    // case rule the test below holds. What is left of the code's own signature is the *absence* of
+    // the format property, which no budget of any size can imitate.
     const boxes = [rect(0, 0, 745, 276), rect(0, 0, 250, 290), rect(0, 0, 225, 290), rect(0, 0, 576, 112)];
     let names = 0;
     for (const module of MODULES) {
@@ -324,10 +334,6 @@ describe('no list draws a three-letter code', () => {
             if (bind === undefined || !bind.includes('drivername(')) continue;
             names += 1;
             expect({ module: module.id, item: item.name, format: bind.includes('OpenDash.DriverNameFormat') }).toMatchObject({ format: true });
-            // The code was `ucase(left(name, 0, 3))`, and the upper-casing is the half of it that cannot
-            // be mistaken for something else: a budget of four characters also spells `left(v, 0, 3)`,
-            // whereas nothing about a name is shouted any more.
-            expect({ module: module.id, item: item.name, shouted: bind.includes('ucase(') }).toMatchObject({ shouted: false });
           }
         }
       }
@@ -335,6 +341,45 @@ describe('no list draws a three-letter code', () => {
     // The relative, the leaderboard and both blocks of the opponents page, over four boxes and two
     // densities: a selection that found nothing would pass this whole test vacuously.
     expect(names).toBeGreaterThan(20);
+  });
+
+  /**
+   * And the case rule, over the same walk.
+   *
+   * The failure it answers is a rendering one and cannot be seen from here: at 13 px WPF welded the
+   * dot of a lowercase `i` to its stem and `Liam Byrne` came back off the VM as `Llam B…`. What can be
+   * checked from here is that the rule was applied wherever a name is drawn and not only in the module
+   * the screenshot came from — the relative, the leaderboard, the opponents page and the three pit wall
+   * boards all draw a name and three separate call sites used to build one.
+   */
+  test('and is shouted exactly where the size cannot keep the dot of an i', () => {
+    const boxes = [rect(0, 0, 745, 276), rect(0, 0, 250, 290), rect(0, 0, 225, 290), rect(0, 0, 576, 112)];
+    const sizes = new Set<number>();
+    for (const module of MODULES) {
+      for (const density of ['zone', 'compact'] as Density[]) {
+        for (const frame of boxes) {
+          for (const item of module.build({ frame, density, prefix: `${module.id}.` }).flatMap((i) => [...walkItems([i])])) {
+            if (item.kind !== 'text') continue;
+            const text = item as TextItem;
+            const binding = text.bindings?.Text;
+            const formula = binding !== undefined && binding.mode === 'formula' ? binding.formula : undefined;
+            const bind = typeof formula === 'string' ? formula : formula?.expression;
+            if (bind === undefined || !bind.includes('drivername(')) continue;
+            sizes.add(text.fontSize);
+            expect({ module: module.id, item: item.name, fs: text.fontSize, shouted: bind.includes('ucase(') }).toMatchObject({
+              shouted: nameIsUpperCased(text.fontSize),
+            });
+          }
+        }
+      }
+    }
+    // Every size a name is drawn at here is under the bound, so every one of them is shouted. The
+    // assertion above is still written as the rule rather than as `true`, since a taller row would
+    // earn the sim's own spelling back and nothing should have to remember to allow that.
+    // 15 from the 34 px row up, 13 in the narrow zone's 28 px row, and the opponents page's own 12,
+    // which comes from the density rather than from a row and is the smallest name the build draws.
+    expect([...sizes].sort((a, b) => a - b)).toEqual([12, 13, 15]);
+    expect(MIXED_CASE_NAME_SIZE).toBe(25);
   });
 
   test('and no package ships one either', () => {

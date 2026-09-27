@@ -56,9 +56,9 @@ import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
-import { NAME_FACE, nameColumnFloor } from '../second/table.ts';
+import { NAME_FACE, nameColumnFloor, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, driverName, ellipsised, listNeighbour } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, listNeighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -236,10 +236,10 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
           // The cell may have been clamped to a box too narrow for what it asked for, so the budget
           // is taken from the width it actually got rather than from the width it wanted.
           const chars = charsThatFit(NAME_FACE, d.name, cell.width);
-          items.push(label(`${ctx.prefix}${side.id}.name`, 'Liam Byrne', x, centred(d.name), cell.width, {
+          items.push(label(`${ctx.prefix}${side.id}.name`, nameSampleAt(d.name, 'Liam Byrne'), x, centred(d.name), cell.width, {
             size: d.name,
             color: ds.color.text.primary,
-            bind: ellipsised(driverName(idx), chars),
+            bind: nameText(idx, chars, d.name),
             widest: widestOf(NAME_FACE, chars),
           }));
         }

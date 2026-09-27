@@ -23,7 +23,7 @@
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { charsThatFit, measureText, widestGlyph, widestOf, type MeasuredFace } from '../design/advances.ts';
+import { charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type MeasuredFace } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
@@ -247,6 +247,70 @@ export const NAME_SAMPLE = 'Liam Byrne';
 /** The characters the default format's own sample needs: `Liam Byrne` is ten. */
 export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
 
+/**
+ * The size from which a name is drawn as the sim spells it, and under which it is shouted.
+ *
+ * 25 px in the name face, and every size any table draws a name at is under it, so in practice every
+ * list on every face shouts. It is written as a rule rather than as "always" because it is a rule: the
+ * number is `2 / TITTLE_BREAK.BarlowMedium`, and a table that ever drew a name at 25 px would have
+ * earned the sim's own spelling back.
+ *
+ * #339's relative is where it was found. At 13 px in the 28 px row, WPF welded the dot of the
+ * lowercase `i` to its stem in four of the nine names on the VM's 850 x 480 face: `Liam Byrne` came
+ * back `Llam B…`, `Nina Hartmann` `NIna H…`, `Sofia Rossi` `Sofla …` and `Henrik Solberg` `Henrlk…`.
+ * That is not a blurred letter, it is a different one — Barlow's `i` and `l` are the same height to
+ * within 0.017 em — on the one column of the one page whose whole job is to say *who*.
+ *
+ * The remedy is measured rather than chosen, and `advances.ts` holds the measurement. The gap between
+ * the tittle and the stem is 0.080 em, which is 1.04 device pixels at 13 and 1.20 at 15: under two
+ * pixels there is no pixel row the gap is certain to fall wholly inside, so the raster can shade both
+ * rows and bridge them, and 13 is simply where that came up first. The other two candidates lose to
+ * the same numbers. **A heavier weight makes it worse**: Barlow Bold's break is 0.057 em against
+ * Medium's 0.080, a fatter stem and a fatter dot being drawn into the same vertical. **A bigger size
+ * costs letters**: 15 px in the three narrow boxes buys 6, 5 and 4 characters where 13 buys 7, 6 and 4,
+ * and it does not clear the bound either. **Upper case costs nothing at all**, which is the part worth
+ * saying twice: the budget is counted in characters of the face's *widest* glyph, so shouting a name
+ * changes no budget anywhere — `tables.test.ts`'s six counts are the same numbers after this as before
+ * it — and no upper-case letter in any bundled face is drawn in two pieces, so the failure has no glyph
+ * left to happen to.
+ *
+ * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The face
+ * upper-cases every other label it draws, the code this column replaced was `LIA`, and the player's
+ * own row already says `YOU`, so the column is now the one thing on the row that is not shouted rather
+ * than the one thing that is. `docs/design/zones.md` records the divergence.
+ */
+export const MIXED_CASE_NAME_SIZE = dottedLetterSize(NAME_FACE);
+
+/** Whether a name set at this size is shouted, which is the whole of the rule above. */
+export const nameIsUpperCased = (fs: number): boolean => fs < MIXED_CASE_NAME_SIZE;
+
+/**
+ * What a driver column draws: the rig's format, cut to the column's budget, in the case the size can
+ * carry.
+ *
+ * One function because there are two callers — every table on every face and both blocks of the
+ * opponents page — and a case rule applied in one of them would be a page that disagrees with the page
+ * beside it about what a driver is called.
+ *
+ * The `ucase` goes outside the cut rather than inside it. It is the same string either way, the cut
+ * being counted in characters, and outside it names the value once where inside it would name it
+ * three times; `ellipsised` explains what a mention of this particular value costs.
+ */
+export const nameText = (idx: Expr, chars: number, fs: number): Expr => {
+  const cut = ellipsised(driverName(idx), chars);
+  return nameIsUpperCased(fs) ? ncalc.ucase(cut) : cut;
+};
+
+/**
+ * And the design-time sample, in the case the row will really draw.
+ *
+ * `label` keeps a bound item's sample verbatim, so a column left with a mixed-case `Liam Byrne` would
+ * show one thing in Dash Studio's editor and another on the rig. `elements/unit.ts` settled the same
+ * question the same way. The Overview panel is how a whole package is read at once, and a sample that
+ * is a lie about the built thing is worse there than anywhere.
+ */
+export const nameSampleAt = (fs: number, sample: string = NAME_SAMPLE): string => (nameIsUpperCased(fs) ? sample.toUpperCase() : sample);
+
 /** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
 export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
 
@@ -380,15 +444,16 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
  * the budget rather than the sample, which is what makes a column too narrow for its own cut a failing
  * test instead of a clipped name on somebody's rim.
  *
- * The own row says YOU, which is the one row a driver does not need to read a name to identify.
+ * The own row says YOU, which is the one row a driver does not need to read a name to identify — and
+ * which is upper case, as {@link MIXED_CASE_NAME_SIZE} now makes the rest of the column.
  */
 function cellName(ctx: CellContext): Item[] {
   const fs = ctx.type.name;
   const chars = charsThatFit(NAME_FACE, fs, ctx.width);
-  const bind = iff(ctx.isPlayer, str('YOU'), ellipsised(driverName(ctx.idx), chars));
+  const bind = iff(ctx.isPlayer, str('YOU'), nameText(ctx.idx, chars, fs));
   return [
     withMoreBindings(
-      label(`${ctx.name}.name`, NAME_SAMPLE, ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+      label(`${ctx.name}.name`, nameSampleAt(fs), ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
