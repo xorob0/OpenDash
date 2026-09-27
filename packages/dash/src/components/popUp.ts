@@ -14,8 +14,9 @@
  * **It covers the hero and nothing else.** The box is placed from the hero rectangle each layout
  * gives it rather than at a coordinate, so it is centred on the gear on a face of any size, and it
  * is short enough and narrow enough to leave the rev bar, the bar of settled values, the limiter
- * banner and band D uncovered. A flag takes band D over for as long as it is out and a pop-up must
- * not be the thing that hides it.
+ * banner and band D uncovered. A flag takes band D over for its first three seconds and keeps the
+ * block at each end of it for as long as it is out, and a pop-up must not be the thing that hides
+ * either.
  *
  * **One at a time**, by the exclusion chain the flags use: a pop-up is visible when its own
  * condition holds and no higher one's does. An invisible layer's other bindings are never
