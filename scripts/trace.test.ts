@@ -50,6 +50,12 @@ describe('the format', () => {
     expect(lines(sample)[3]).toContain('"t":"timespan"');
   });
 
+  test('a header naming a hand-written column keeps that list, and one naming none stays silent', () => {
+    const marked: Trace = { ...sample, header: { ...header, asserted: ['A.Constant'] } };
+    expect(parseTrace(formatTrace(marked)).header.asserted).toEqual(['A.Constant']);
+    expect(lines(sample)[0]).not.toContain('asserted');
+  });
+
   const rejected: [string, string][] = [
     ['an empty file', ''],
     ['a first line that is not JSON', 'not json\n'],
@@ -64,6 +70,7 @@ describe('the format', () => {
     ['an array of the wrong length', `${JSON.stringify(header)}\n{"p":"A","v":[1,2]}\n`],
     ['a value that is not a scalar', `${JSON.stringify(header)}\n{"p":"A","v":{"nested":1}}\n`],
     ['a type nothing understands', `${JSON.stringify(header)}\n{"p":"A","t":"duration","v":1}\n`],
+    ['an asserted list that is not a list of names', `${JSON.stringify({ ...header, asserted: 'A' })}\n{"p":"A","v":1}\n`],
   ];
   for (const [what, text] of rejected) {
     test(`it refuses ${what}`, () => {
@@ -117,6 +124,29 @@ describe('the committed traces', () => {
         // A failure here is not a broken trace, it is an out-of-date one: something now reads a
         // property that was not recorded. Re-record with `bun run record <scenario>`.
         expect({ scenario, missing }).toEqual({ scenario, missing: [] });
+      });
+
+      /**
+       * The test above is the one that demands a trip to the VM, and the honest way to satisfy it
+       * without one is to say so rather than to type a column in quietly. `asserted` is where a
+       * hand-written column is named, and this is what keeps that claim worth reading.
+       *
+       * A re-record removes the entry by itself, `toTrace` building the header from scratch, and
+       * `recordedProperties()` derives the list it asks SimHub for from `propertiesRead()`, so
+       * anything a binding reads is picked up. What is checked here is that an asserted name is
+       * still a property something reads, that the column it names is really in the file, and that
+       * it is a constant -- nobody can honestly hand-write two hundred frames of a moving value.
+       */
+      test('any column it says was typed rather than observed is named, present and constant', () => {
+        const asserted = trace.header.asserted ?? [];
+        for (const name of asserted) {
+          const column = trace.columns.find((c) => c.p === name);
+          expect({ scenario, name, present: column !== undefined }).toEqual({ scenario, name, present: true });
+          expect({ scenario, name, moves: Array.isArray(column?.v) }).toEqual({ scenario, name, moves: false });
+          // Still read by something. An entry for a property nothing reads any more is an entry
+          // that should have gone rather than one a re-record will confirm.
+          expect({ scenario, name, read: required.includes(name) }).toEqual({ scenario, name, read: true });
+        }
       });
 
       test('it records which tick each frame came from, so a re-recording is comparable', () => {

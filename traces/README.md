@@ -45,7 +45,7 @@ In code, `scripts/trace.ts` is the reader: `readTrace(scenario)` and `frame(trac
 NDJSON, one header line and then one line per property, sorted by name:
 
 ```jsonc
-{"trace":1,"scenario":"green","frames":200,"hz":10,"ticks":[72721,6],"recorded":"2026-09-13","simHub":"9.12.6"}
+{"trace":1,"scenario":"green","frames":200,"hz":10,"ticks":[72721,6],"recorded":"2026-09-13","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning"]}
 {"p":"DataCorePlugin.GameData.CurrentLapTime","t":"timespan","v":["00:01:38.4120000", "..."]}
 {"p":"DataCorePlugin.GameData.Rpms","v":[4530.1, 4602.7]}
 {"p":"DataCorePlugin.GameData.TrackName","v":"Spa"}
@@ -67,6 +67,26 @@ that the tick each frame actually came from can be read off the file.
 
 Numbers are rounded to four decimals, which is past anything a dashboard draws and short of the
 noise in a double. Without that a re-recording of an unchanged scenario would differ on every line.
+
+## A column that was typed rather than observed says so
+
+`asserted` in the header names the columns of that file that were written by hand. Everything else
+came out of a real SimHub and `recorded` and `simHub` say which one and when; a hand-written column
+has none of that behind it, so it is listed rather than left to look like the rest.
+
+It exists because "it carries every property any binding of any package reads" fails the moment a
+package starts reading a property no trace holds, and the honest answers to that are a re-record or
+this. A re-record is the better one and is what removes an entry: `toTrace` builds the header from
+scratch, so the next recording of a scenario drops the list, and `recordedProperties()` derives what
+it asks SimHub for from `propertiesRead()`, so a property a binding reads is picked up without
+anybody adding it anywhere. Until then the entry is a claim, `scripts/trace.test.ts` holds it to
+being a constant -- nobody hand-writes two hundred frames of a moving value honestly -- and a reader
+replaying the file can see which one line of it nobody watched.
+
+The seven traces committed on 2026-09-18 carry one such column, `DataCorePlugin.GameRunning` at a
+constant 1. Every one of them was recorded with the emulator attached and a session live, which is
+what 1 means, so a re-record will write the same value; it is the provenance and not the number that
+this field is about.
 
 ## Why a recording waits two minutes first
 
