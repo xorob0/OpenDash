@@ -243,9 +243,23 @@ body, which is the shape the pit wall's other panels will need when they are gat
 none of the rest is gated yet, since each has its own chrome, its own body and its own wording to
 settle.
 
-It does not collide with the idle screen (#113): the idle screen covers the game not running and
-this covers the game running with nothing to show, which is the state a driver is in while waiting to
-qualify. `packages/dash/test/sessionNotice.test.ts` checks every box a module is drawn in.
+**It covers the game not running as well, and today that is the whole of the idle screen (#113).**
+The plan for this said the division of labour was that SimHub's idle screen covers the game not
+running while this covers the game running with nothing to show. The code does not implement that
+division and cannot yet: `serialize.ts` writes `IdleScreen: true` for every screen of every package,
+because every screen constructor sets `idle: true`, so these are the screens SimHub switches to when
+no game is running. That is #113's first line and its stated bug -- "SimHub already shows the racing
+face with no data in it when no game is running". `inSession()` is the game running *and* a session
+named, so with nothing running the notice is up, and that is the deliberate answer until there is an
+idle screen with content of its own: a dim `LEADERBOARD · GO INTO A SESSION` is a better thing to
+find on a rig between sessions than a table of empty rows, which is what was there before.
+
+So #113 inherits one decision rather than a conflict. When it adds a screen with idle content it has
+to decide whether the module screens keep `idle: true`: if they do, SimHub has two idle candidates
+and picks by index, and if they do not, this notice narrows on its own to the state it was written
+for, the game running and no session joined yet, which is where a driver waiting to qualify is.
+Either way nothing here has to change. `packages/dash/test/sessionNotice.test.ts` checks every box a
+module is drawn in.
 
 ## Where the code lives
 
