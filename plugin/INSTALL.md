@@ -59,9 +59,9 @@ A page is never scaled to fit. It is laid out for the shape of the box it is giv
 secondary rows before it shrinks its numerals, so a bigger screen shows more in each zone rather
 than the same thing larger.
 
-**With no game running, the screen shows the OpenDash mark, the time and "no game running".** That
-idle screen is inside every dashboard and there is nothing to set up or point at: SimHub switches to
-it by itself, and back to the face when a game starts.
+**With no game running, the screen shows the openDash wordmark, the time and "no game running".**
+That idle screen is inside every dashboard and there is nothing to set up or point at: SimHub
+switches to it by itself, and back to the face when a game starts.
 
 ## Sizes
 
