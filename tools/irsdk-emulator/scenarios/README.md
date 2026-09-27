@@ -32,6 +32,22 @@ The four shift RPMs, the redline and the forward-gear count are `{{placeholders}
 
 `bun run dev --scenario green` is the usual way to reach one, and `bun run shots` walks all four.
 
+## The states the other scenarios cannot reach
+
+| | What it holds still |
+|---|---|
+| `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · GO INTO A SESSION` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
+
+`inSession()` is `GameRunning` **and** a session type that is not blank, and every other scenario
+here inherits `race-session.yaml`, which names Practice, Lone Qualify and Race — so the notice had no
+scenario at all until this one. Stopping the emulator is not the same state: that makes `GameRunning`
+false and SimHub switches to the idle screen of #113 instead.
+
+What blanks the name is one field, `SessionType` of the session whose `SessionNum` matches the
+telemetry's, which is where SimHub's iRacing reader takes `GameData.SessionTypeName` from. It is
+`{{RaceSessionType}}` in the template for that reason; the file's own comment records the rest,
+including why the telemetry's `SessionNum` is left alone.
+
 ## The other scenarios
 
 `race.json` is the base: a GT3/GT4 race at Spa, 24 cars, 30 laps with 12 done, the player at

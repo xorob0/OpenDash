@@ -17,6 +17,7 @@ bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed
 bun run dev --scenario flagbox                # walk every state the flag box draws
+bun run dev --scenario nosession               # the game running with no session, for #406's notices
 ```
 
 ## The pieces underneath
