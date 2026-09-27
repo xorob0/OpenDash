@@ -30,8 +30,8 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { setting } from '../contract.ts';
 import { segment, type SegmentOptions } from '../elements/segment.ts';
 import {
+  carLadderFlash,
   carLadderOnScreens,
-  carLadderOverRev,
   carLadderSegmentLit,
   mirrorAvailable,
   mirrorOverRev,
@@ -167,7 +167,7 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const rpmLit = gt(game('CarSettings_CurrentDisplayedRPMPercent'), num(threshold));
 
   return {
-    car: { colorBind: litColor(carLadderSegmentLit(k, count), color), ...flash(carLadderOverRev()) },
+    car: { colorBind: litColor(carLadderSegmentLit(k, count), color), ...flash(carLadderFlash()) },
     shift: { colorBind: litColor(mirrorStageLit(stage, local, stageCount), color), ...flash(mirrorOverRev()) },
     simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubOverRev()) },
     rpm: { colorBind: litColor(rpmLit, litColourOf('rpm', k, count)) },

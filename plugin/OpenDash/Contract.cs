@@ -486,6 +486,12 @@ namespace OpenDashPlugin
         /// number the bar goes red at.</summary>
         public const string CarLadderTopRpm = "CarLadderTopRpm";
 
+        /// <summary>Whether this car and gear have a flash to give at all, which is not whether they are
+        /// giving one now: 47 of the 85 measured cars publish none, and a screen falls back to the
+        /// published over-rev threshold for those rather than leaving its own bar solid at redline
+        /// (#353).</summary>
+        public const string CarLadderFlashes = "CarLadderFlashes";
+
         /// <summary>
         /// Whether anything on this rig is asking for the car's own rev lights, which is the gate a
         /// screen draws the measured bar behind (#353).
@@ -1654,7 +1660,8 @@ namespace OpenDashPlugin
             yield return CarLadderLit;
             yield return CarLadderLamps;
             yield return CarLadderTopRpm;
-            // And the rig's answer to whose lights these are, which every reader of the five above
+            yield return CarLadderFlashes;
+            // And the rig's answer to whose lights these are, which every reader of the ones above
             // hangs on. Appended for the reason they were.
             yield return CarLadderChosen;
             foreach (var matrix in FlagBoxMatrices)

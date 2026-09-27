@@ -106,12 +106,13 @@ describe('settings', () => {
     // alongside the whole strip. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
-    // Six of the twelve globals are settings; the other six are the car's own bar, computed by the
+    // Six of the thirteen globals are settings; the other seven are the car's own bar, computed by the
     // plugin because a table of thresholds per gear is not something an expression can read: the band
     // and the flash the digit reads, the lit count, the ladder's length and the top band's RPM a
-    // screen draws that bar from, and whether the rig asked for any of it -- which only the plugin can
-    // say, because the style is chosen per strip and a screen has no strip (#353).
-    expect(flagBoxProperties()).toHaveLength(12 + FLAG_BOX_MATRICES.length * 13);
+    // screen draws that bar from, whether this car has a flash to give at all, and whether the rig
+    // asked for any of it -- which only the plugin can say, because the style is chosen per strip and
+    // a screen has no strip (#353).
+    expect(flagBoxProperties()).toHaveLength(13 + FLAG_BOX_MATRICES.length * 13);
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
@@ -163,8 +164,10 @@ describe('settings', () => {
     // took the car's thresholds too and needed the same bar as three numbers: how many of its
     // lamps are lit, how many it has, and the RPM its top third lights at, and 343 before that
     // bar's gate had to be published as well, the rig-wide rev light style it first read having
-    // had no writer in the panel since the styles went per bar.
-    expect(props).toHaveLength(344);
+    // had no writer in the panel since the styles went per bar, and 344 before the same bar had
+    // to be told whether the car has a flash to give at all, because 47 of the 85 measured cars
+    // publish none and OpenDash's own redline flash was going out with them.
+    expect(props).toHaveLength(345);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

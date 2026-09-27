@@ -79,6 +79,21 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether this car and gear have a flash to give at all, which is not the same question as
+        /// whether they are giving one now.
+        /// </summary>
+        /// <remarks>
+        /// 47 of the 85 measured cars publish no flash, and a strip mirroring one of them simply does
+        /// not blink. A screen draws OpenDash's own bar, whose top band has flashed at redline since
+        /// ADR 0004, so it needs to tell "not over-revving" from "never says so" and fall back to the
+        /// published threshold for the second (#353). False whenever no table is being read.
+        /// </remarks>
+        public bool Flashes
+        {
+            get { return frame.Flashes; }
+        }
+
+        /// <summary>
         /// How many of the car's own LEDs are lit this frame, out of <see cref="Lamps"/>: what a rev bar
         /// of any segment count fills itself from (#353).
         ///
@@ -287,6 +302,7 @@ namespace OpenDashPlugin
                 Runs = runs,
                 Ladder = row == null ? CarLightMirror.CarLadder.None : CarLightMirror.Ladder(row, rpm),
                 OverRev = row != null && CarLightMirror.OverRev(table, row, rpm),
+                Flashes = CarLightMirror.CanOverRev(table, row),
             };
         }
 
@@ -315,6 +331,7 @@ namespace OpenDashPlugin
             public string[] Runs;
             public CarLightMirror.CarLadder Ladder;
             public bool OverRev;
+            public bool Flashes;
 
             /// <summary>
             /// No mirror, shared rather than made.
@@ -323,7 +340,7 @@ namespace OpenDashPlugin
             /// sixty allocations a second for the whole time somebody is using one of OpenDash's own
             /// styles. It never changes, so there is one of it.</para>
             /// </summary>
-            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null, Ladder = CarLightMirror.CarLadder.None, OverRev = false };
+            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null, Ladder = CarLightMirror.CarLadder.None, OverRev = false, Flashes = false };
 
             public static Frame Dark()
             {

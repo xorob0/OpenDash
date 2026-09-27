@@ -284,6 +284,19 @@ export const CAR_LADDER_LAMPS = 'CarLadderLamps';
 export const CAR_LADDER_TOP_RPM = 'CarLadderTopRpm';
 
 /**
+ * Whether the car's own bar has a flash to give at all in the gear it is in, which is not the same
+ * question as whether it is giving one now.
+ *
+ * 47 of the 85 measured cars publish no flash and say so with a zero. A strip mirroring one of them
+ * simply does not blink, which is right: a strip is a copy of the car's bar. A screen draws OpenDash's
+ * own bar, whose top band has flashed at redline since ADR 0004, so going silent there would be
+ * adopting the car's look rather than its timing -- the opposite of what #353 decided. This is what
+ * lets `shift.ts` fall back to the published over-rev threshold for exactly those cars and leave the
+ * rest on the car's own redline.
+ */
+export const CAR_LADDER_FLASHES = 'CarLadderFlashes';
+
+/**
  * Whether the rig's rev light style is the car's own: the gate a screen draws the measured bar
  * behind, and the answer only the plugin can give.
  *
@@ -1650,8 +1663,9 @@ export function flagBoxProperties(): string[] {
     CAR_LADDER_LIT,
     CAR_LADDER_LAMPS,
     CAR_LADDER_TOP_RPM,
+    CAR_LADDER_FLASHES,
     // And the rig's answer to whose lights these are, which is a reduction of a list of bars rather
-    // than a setting of its own: the gate every surface reading the five above hangs on.
+    // than a setting of its own: the gate every surface reading the ones above hangs on.
     CAR_LADDER_CHOSEN,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);

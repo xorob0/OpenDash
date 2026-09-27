@@ -308,9 +308,27 @@ namespace OpenDashPlugin
         /// </summary>
         public static bool OverRev(CarLightTable table, CarLightGear row, double rpm)
         {
-            if (table.BlinkIntervalMs <= 0 || row.Redline <= 0) return false;
-            if (IsTransparent(table.BlinkColor)) return false;
+            if (!CanOverRev(table, row)) return false;
             return rpm >= row.Redline;
+        }
+
+        /// <summary>
+        /// Whether this car and gear have a flash to give at all: a blink interval, a redline, and a
+        /// colour to flash in.
+        /// </summary>
+        /// <remarks>
+        /// Published as <see cref="Contract.CarLadderFlashes"/>, and the difference between a car that
+        /// is not over-revving and a car that never says it is (#353). A strip mirrors the bar, so for
+        /// those 47 cars it simply does not blink; a screen draws OpenDash's own bar, whose top band has
+        /// flashed at redline since ADR 0004, and going silent there on more than half the measured cars
+        /// would be adopting the car's look rather than its timing. The screens fall back to the
+        /// published over-rev threshold instead, and this is the question they ask to know when.
+        /// </remarks>
+        public static bool CanOverRev(CarLightTable table, CarLightGear row)
+        {
+            if (table == null || row == null) return false;
+            if (table.BlinkIntervalMs <= 0 || row.Redline <= 0) return false;
+            return !IsTransparent(table.BlinkColor);
         }
 
         /// <summary>

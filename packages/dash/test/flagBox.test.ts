@@ -26,7 +26,7 @@ import {
 import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
-import { carLadderAvailable, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
@@ -524,7 +524,7 @@ describe('brightness', () => {
       'OpenDash.LightsNightMode',
       'OpenDash.LightsLowFuelLaps',
       'OpenDash.FlagBoxSpotterAnimation',
-      // Not settings at all, and so not settings silently shared: these six are one frame of
+      // Not settings at all, and so not settings silently shared: these seven are one frame of
       // telemetry read through the car's own table, and the same frame for every panel by
       // construction. What is per panel is whether a panel reads them, which is indexed. Three of
       // them are the same frame as a screen draws its rev bar from and are read by no panel at all
@@ -536,6 +536,7 @@ describe('brightness', () => {
       'OpenDash.CarLadderLit',
       'OpenDash.CarLadderLamps',
       'OpenDash.CarLadderTopRpm',
+      'OpenDash.CarLadderFlashes',
       'OpenDash.CarLadderChosen',
     ]);
     const text = serializeProfile(profile);
@@ -713,8 +714,20 @@ describe('the gear, as the resting state', () => {
     // expression, carried character for character behind all of it.
     const reading = `((${flagBoxMatrix(1).gearCarLadder()}) = (true)) and (${carLadderOnScreens()})`;
     expect(reading).toInclude(String(carLadderAvailable()));
-    expect(flash).toBe(`(${switchOn}) and (${eitherOf(reading, carLadderOverRev(), bar)})`);
+    expect(flash).toBe(`(${switchOn}) and (${eitherOf(reading, carLadderFlash(), bar)})`);
     expect(flash).toInclude(bar);
+    // On the measured ladder the threshold is the car's own redline -- and the published one for the 47
+    // measured cars in 85 that carry no flash at all, which is what `carLadderFlash` is for and what
+    // this asks frame by frame rather than by spelling. Without that the digit went solid at the limit
+    // on more than half the cars anybody has measured, and so did the rev bar beside it (#353).
+    const OVER_REV = 'OpenDash.CarLadderOverRev';
+    const FLASHES = 'OpenDash.CarLadderFlashes';
+    const onCar = { 'OpenDash.CarLadderChosen': true, 'OpenDash.CarLadderStage': 3 };
+    expect(evaluateShift(flash, { ...onCar, [FLASHES]: true, [OVER_REV]: true })).toBe(true);
+    expect(evaluateShift(flash, { ...onCar, [FLASHES]: true, [OVER_REV]: false, [REDLINE_REACHED]: 1 })).toBe(false);
+    expect(evaluateShift(flash, { ...onCar, [FLASHES]: false, [OVER_REV]: false, [REDLINE_REACHED]: 1 })).toBe(true);
+    // And the fallback is a fallback rather than a second flash: off redline it is steady.
+    expect(evaluateShift(flash, { ...onCar, [FLASHES]: false, [OVER_REV]: false, [REDLINE_REACHED]: 0 })).toBe(false);
     // And the two halves partition the band, so there is no RPM at which the digit is neither.
     expect(steady?.kind === 'when' ? String(steady.formula) : '').toBe(`!(${flash})`);
 
