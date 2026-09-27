@@ -167,6 +167,17 @@ you maximise it. A script that maximised once and started clicking was aiming fu
 coordinates at a 320 pixel strip. `maximiseSimHub` in [gui.ts](../scripts/gui.ts) is what waits,
 and it accepts nothing but a rectangle covering the desktop's working area.
 
+**The guest's display mode is part of the loop, and a container restart loses it.** `MENU` and
+`LIST` in [gui.ts](../scripts/gui.ts) are absolute pixels measured at 3840x2160; only the centred
+content column is a fraction of the width. On 2026-09-27 the VM came back at 1280x800 after a
+container restart and `openDashboard` clicked into empty space twice, reporting nothing but "could
+not be opened" — which sends the reader after coordinates that were right all along. The mode is now
+read before anything is clicked: `guiProblem` and `openDashboard` refuse, name the mode the guest is
+in and the one they need, and point at `/opt/winvm/shared/setres.ps1`, which has to be run in the
+interactive session because that is whose display it is. The coordinates themselves were left alone;
+a fraction of the height would be a guess at a page nobody has measured at a second mode, and a guess
+opens the wrong dashboard instead of saying so.
+
 **Bun does not deliver signals to a handler.** On 1.3.3, `process.on('SIGINT', ...)` registers a
 handler that is never called, and registering it suppresses the default action, so a long running
 Bun script that arms one cannot be interrupted at all. Where a clean stop matters, the trap lives

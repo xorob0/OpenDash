@@ -8,12 +8,12 @@
  * over the same QEMU VNC that takes the screenshots.
  *
  * Coordinates are the fragile part and are treated as such. Everything anchored to the window's
- * top-left, which is the left menu, is a fixed pixel offset and holds at any resolution while the
- * guest stays at 100% DPI; everything in the centred content column is a fraction of the screen
- * width. Both were measured on the 3840 by 2160 guest. Nothing is trusted: `openDashboard` waits
- * for SimHub's window to exist and to fill the screen before it measures anything from it, asks
- * Windows which dash windows exist afterwards, retries once, and fails with what to do by hand
- * rather than leaving the caller to wonder.
+ * top-left, which is the left menu, is a fixed pixel offset; everything in the centred content
+ * column is a fraction of the screen width. Both were measured on the 3840 by 2160 guest, and
+ * {@link EXPECTED_SCREEN} is now checked rather than assumed. Nothing else is trusted either:
+ * `openDashboard` waits for SimHub's window to exist and to fill the screen before it measures
+ * anything from it, asks Windows which dash windows exist afterwards, retries once, and fails with
+ * what to do by hand rather than leaving the caller to wonder.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -58,6 +58,43 @@ const LIST = { firstRow: 336, lastUsedBand: 221, rowHeight: 84, quickRunOffset: 
 const TRACK_LAYOUT_OFFER = { x: 0.695, y: 182 } as const;
 /** How long a row is hovered before it is clicked: its Start button appears on hover, not on click. */
 const HOVER_SECONDS = 2;
+
+/**
+ * The display mode every coordinate in this file was measured in, and the only one they hold in.
+ *
+ * `MENU` and `LIST` are absolute pixels, so at a smaller mode they land on whatever Dash Studio has
+ * drawn there instead -- which on 2026-09-27 was empty space twice in a row, reported as nothing but
+ * "could not be opened". The guest had come back at 1280x800 after a container restart, which is the
+ * way this happens: the mode is set on the interactive session and a restart does not keep it.
+ *
+ * Checked rather than adapted to. A fraction of the height would be a guess at a page whose rows,
+ * offer band and search box have never been measured anywhere else, and a guess that opens the wrong
+ * dashboard is worse than a refusal that says what to do.
+ */
+export const EXPECTED_SCREEN = { width: 3840, height: 2160 } as const;
+
+/** Where the mode is set from, which is a script on the share rather than a setting. */
+const SETRES = '/opt/winvm/shared/setres.ps1';
+
+/**
+ * Why the guest's display cannot be clicked in, or null when it can.
+ *
+ * Separate from reading the size so that it can be tested without a VM, and shared by
+ * `guiProblem` and `openDashboard` so that the two cannot come to disagree about which mode is the
+ * one that works.
+ */
+export function screenModeProblem(size: { width: number; height: number }): string | null {
+  if (size.width === EXPECTED_SCREEN.width && size.height === EXPECTED_SCREEN.height) return null;
+  return (
+    `the guest's display is ${size.width}x${size.height}; Dash Studio can only be clicked at ${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height}.\n` +
+    `The menu and list coordinates in scripts/gui.ts are absolute pixels measured in that mode, so at any ` +
+    `other one they land in empty space and the only symptom is "could not be opened". Nothing was clicked.\n` +
+    `Put the guest back and run this again: ${SETRES}, in the interactive session rather than over SSH ` +
+    `(\`powershell -File Z:\\setres.ps1 -Width ${EXPECTED_SCREEN.width} -Height ${EXPECTED_SCREEN.height}\`). ` +
+    `It prints the mode before and after and every mode the driver offers. A container restart undoes it, ` +
+    `so it is worth reading this message as "the VM restarted" rather than as a broken script.`
+  );
+}
 
 /** Runs a snippet against the guest's VNC through the Python environment the host already has. */
 function vnc(host: Host, body: string, timeoutMs = 90_000): RunResult {
@@ -431,6 +468,10 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
 
   const size = screenSize(host);
   if (!size) return { ok: false, code: 1, stdout: '', stderr: 'could not read the guest display size over VNC' };
+  // Read first and refused rather than clicked at: a wrong mode is not a coordinate this can
+  // correct, and the two attempts below would spend themselves on empty space.
+  const wrongMode = screenModeProblem(size);
+  if (wrongMode) return { ok: false, code: 1, stdout: '', stderr: wrongMode };
 
   const searchX = Math.round(size.width * CONTENT.searchX);
   const rowX = Math.round(size.width * CONTENT.rowX);
@@ -500,7 +541,8 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     stderr:
       `could not open ${opts.name} after two attempts.\n` +
       `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
-      `filters the list and presses Start, and the coordinates it uses were measured on a 3840x2160 guest at 100% DPI. ` +
+      `filters the list and presses Start, and the coordinates it uses were measured at ` +
+      `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
       `Open it by hand once (Dash Studio, find ${opts.name}, Start, Windowed) and run this again; everything else will be in place.`,
   };
 }
@@ -724,5 +766,24 @@ function fetchFromShare(host: Host, remotePath: string, localPath: string): RunR
   return { ok: r.exitCode === 0, code: r.exitCode, stdout: localPath, stderr: new TextDecoder().decode(r.stderr).trim() };
 }
 
-/** True when the host has the VNC tooling this module needs, which only the container host has. */
-export const guiAvailable = (host: Host): boolean => (host.local ? existsSync(VENV_PYTHON) : onHost(host, `test -x ${VENV_PYTHON}`, 30_000).ok);
+/**
+ * Why nothing here can be clicked, or null when it can: the VNC tooling on the host, and the mode
+ * the guest's display is in.
+ *
+ * Both are checked before a caller starts a run rather than at the click, because everything in
+ * `bun run dev` and `bun run shots` that happens first -- claiming the VM, building, installing,
+ * restarting SimHub, starting the emulator -- costs minutes, and the display mode is a property of
+ * the guest that none of it changes.
+ */
+export function guiProblem(host: Host): string | null {
+  const tooling = host.local ? existsSync(VENV_PYTHON) : onHost(host, `test -x ${VENV_PYTHON}`, 30_000).ok;
+  if (!tooling) return `the VNC tooling is not on the VM host (${VENV_PYTHON} is missing), so a dash cannot be opened from here`;
+  const size = screenSize(host);
+  if (!size) return 'could not read the guest display size over VNC, so there is no telling where a click would land';
+  return screenModeProblem(size);
+}
+
+// `guiAvailable`, a boolean, was what the four callers asked and each of them then printed a guess at
+// why the answer was no -- "the VNC tooling is not on the VM host" while the tooling was there and
+// the guest was simply at the wrong resolution, which is how a container restart came to look like
+// broken coordinates. A reason is the whole value of the check, so the reason is what it returns.
