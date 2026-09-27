@@ -25,7 +25,7 @@ import { sectorFields } from '../second/sectors.ts';
 import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second/table.ts';
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
-import { fld, type ModuleContext } from '../modules/module.ts';
+import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
   positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -206,6 +206,16 @@ const TRACK_LINE_GAP = 10;
  * second line beside the brake bias, which buries the one lap the whole board is read against. The
  * track's name and its surface state are the map's own header row, where `track.ts` already draws
  * them, and are not repeated here. Road comes before Air, as both sheets order them.
+ *
+ * **The whole body is gated on there being a session, and the panel says so once (#406).** The map
+ * is the track module, which carries its own notice, and letting it draw that notice here put "TRACK
+ * · GO INTO A SESSION" in the left half of the panel with a SESSION BEST label and a lap time
+ * unhidden 20 px to the right of the sentence -- one panel telling the reader there is nothing to
+ * read while showing them something. So the module is built with `notice: false` and the panel gates
+ * the map and the field column together, centring one notice in the body. Every reading in the
+ * column is session data or is hidden already: the session best is the session's, the two
+ * temperatures are `GameData` the plugin stops refreshing when the game quits, and the three assists
+ * hide where the car publishes no such control.
  */
 export function trackPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
@@ -219,25 +229,27 @@ export function trackPanel(name: string, frame: Rect): Item[] {
   const ctx = ctxOf(right, `${name}.`);
   return [
     ...items,
-    ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.` }),
-    ...fitFields(
-      [
-        fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
-        fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-        fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-        // Each of the three hides where the car has no such control, which is the rule the settings
-        // bar and the car settings page both apply to the same readings: SimHub normalises traction
-        // control and ABS into `TCLevel` and `ABSLevel` and reports 0 for a car with neither, so a
-        // cell drawn unconditionally says the dial is turned off where there is no dial. The test is
-        // the raw iRacing field behind each, which is absent rather than zero.
-        fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcTractionControl')) }),
-        fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcABS')) }),
-        fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
-      ],
-      right,
-      DENSITY,
-      { gap: TRACK_FIELD_GAP, lineGap: TRACK_LINE_GAP },
-    ),
+    ...withSessionGate(`${name}.`, sessionNotice({ name: 'Track' }), body, DENSITY, [
+      ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.`, notice: false }),
+      ...fitFields(
+        [
+          fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
+          fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
+          fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
+          // Each of the three hides where the car has no such control, which is the rule the settings
+          // bar and the car settings page both apply to the same readings: SimHub normalises traction
+          // control and ABS into `TCLevel` and `ABSLevel` and reports 0 for a car with neither, so a
+          // cell drawn unconditionally says the dial is turned off where there is no dial. The test is
+          // the raw iRacing field behind each, which is absent rather than zero.
+          fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcTractionControl')) }),
+          fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcABS')) }),
+          fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
+        ],
+        right,
+        DENSITY,
+        { gap: TRACK_FIELD_GAP, lineGap: TRACK_LINE_GAP },
+      ),
+    ]),
   ];
 }
 
