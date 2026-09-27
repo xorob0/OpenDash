@@ -138,10 +138,19 @@ and this section exists so that it is a recorded one.
 go through a scheduled task. An emulator started over SSH is invisible to SimHub and the dash
 simply shows its defaults, with nothing in any log.
 
-**With no emulator running, what you are looking at is the idle screen**, not a face with no data in
-it: since #113 every package carries one and SimHub switches to it whenever `GameRunning` is false.
-The wordmark and a clock on screen therefore mean the telemetry never arrived, which is a clearer
-symptom than the old one and a surprise if you were expecting the face.
+**With no emulator running, what you should be looking at is the idle screen**, not a face with no
+data in it: since #113 every package carries one and SimHub switches to it whenever `GameRunning` is
+false. The wordmark and a clock on screen therefore mean the telemetry never arrived, which is a
+clearer symptom than the old one and a surprise if you were expecting the face.
+
+"Should", because that sentence is read off the decompiled 9.12.6 screen selection that
+[research/simhub-dash-format.md](research/simhub-dash-format.md) records and nobody has watched the
+switch happen: #113 landed without a VM pass. Two things are worth a look while you are in there. The
+face now draws the wordmark's "open" in Light, which is the one weight a package ships that WPF may
+have to synthesise, and a synthesised face is the one case the advances cannot predict. And the way
+back matters as much as the way in: a display that shows the idle screen and stays on it when a game
+starts is the same bug the other way round. Whichever way it comes out, this paragraph is where the
+answer goes.
 
 **SimHub reads its template list once**, at startup, so a package has to be installed before SimHub
 starts rather than after.
