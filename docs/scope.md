@@ -254,6 +254,30 @@ OpenDash material.
 nothing is advertised as supported before somebody has driven it and the bindings have been
 audited.
 
+**The invisible dash.** A screen capture item drawn behind the face, so that the screen reads as
+transparent over the rig, is a feature of somebody else's product. SimHub does publish
+`ScreenCaptureItem`, and [research/simhub-dash-format.md](research/simhub-dash-format.md) already
+names it among the types the MVP did not need, so the refusal is a choice about focus rather than a
+limitation of the format.
+
+**The stream overlay.** A face drawn for a viewer on the other side of a broadcast is a different
+product: a different reading distance, a different set of readings, and an audience that is not
+holding a wheel. It is refused rather than left open. This line replaces the sentence that used to
+stand at the foot of these refusals, which said the overlay was neither built nor refused because
+nobody had asked for it; a standing "nobody has asked" is an invitation to ask.
+
+**Vendor-specific wheel integrations.** The rotary modes, the bite point steps and the clutch
+calibration overlays that the Precision Sim Engineering and Bavarian SimTec wheels are configured
+with need hardware nobody here owns, and a configuration screen that cannot be driven on the VM is
+worse than no screen at all. What SimHub publishes for any wheel is a separate matter and is not
+refused by this line: a bite point or a clutch paddle that arrives as an ordinary property is
+telemetry like any other, and a page may draw it.
+
+**User-ordered leaderboard columns.** Rule 17 in [design/zones.md](design/zones.md) says that a page
+answers to the shape of its zone, and a table whose column order the user fixes cannot shed from the
+tail when the box narrows. The columns the tables are missing are a separate matter and are added
+under #318; the ordering stays the model's.
+
 ## What the MVP refused and what reversed it
 
 The MVP scope listed nine things as explicitly out of scope. Seven of them have since been reversed,
@@ -281,8 +305,6 @@ restated above with the record that would have to move it:
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
 falls under one of these lines is declined however well it is written**; the line moves first, in
 its record, and the code follows.
-
-The stream overlay is neither built nor refused. Nobody has asked for it.
 
 ## Definition of done, for a change
 
