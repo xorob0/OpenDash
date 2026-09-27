@@ -18,7 +18,7 @@ The cost is the build: two toolchains, the whole dashboard, the plugin and then 
 several minutes rather than several seconds. That is the trade the container was designed around,
 and it is not worth optimising until a release is held up by it.
 
-The image is built on every push and pull request that touches anything it copies, by the Site image
+The image is built on every push that touches anything it copies, by the Site image
 job in [.github/workflows/site-image.yml](../.github/workflows/site-image.yml), which then runs the
 container and asks it the same questions the first deploy below does. The image's build stages are a
 hand-maintained subset of the tree, and without that job they drifted from it silently: the rest of
