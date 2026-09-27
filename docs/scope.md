@@ -152,6 +152,18 @@ driver's own lap beside it, and data zones whose contents are plugin settings.
 full, including every case where a module is off by default because iRacing publishes none of
 its data.
 
+### The idle screen
+
+Every package carries one, and it is the screen SimHub shows when no game is running: the wordmark,
+the time and one line saying that no game is running. It is not a package of its own and there is
+nothing to point at it -- a display already configured with an OpenDash face idles on OpenDash.
+
+What it does **not** draw is a reading a game has to publish. A last best lap, the car, the driver
+and the session are all the sim's, and drawing them as dashes between sessions is the thing this
+screen exists to stop: until #113 every racing screen claimed the idle role, so a rig at rest showed
+a rev bar at zero over three zones of dashes. What a user may then do to it is #104, and the update
+mark is #83.
+
 ### The flag box
 
 An 8x8 LED matrix in a printed box, beside the screen rather than on it, showing the flag that is
@@ -246,12 +258,15 @@ The one line the product holds underneath all of it is unchanged: two states a d
 apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
 says so when a choice collides rather than quietly shipping it.
 
-**Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
-face with no data in it between sessions, which is arguably worse than SimHub's own default. A
-screen with idle content is a real gap and is #113; it is a refusal today rather than a plan. What
-a user may then do to it is no longer the open question:
-[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so #104
-waits on the screen existing rather than on a record.
+**Idle and pit screens were a line here and are not one any more.** The idle screen ships: #113 gave
+every package one, "What ships" above describes it, and what a user may do to it was already in the
+runtime bucket of [ADR 0011](decisions/0011-personalisation.md), which is #104.
+
+A screen drawn *for* the pit lane was the other half of that line and is not built. Every screen
+declares `PitScreen` beside its in-game role, so SimHub keeps the dashboard up during a stop, and the
+pit family on the face -- the limiter banner over zone A and the stop alerts over the same zone -- is
+what OpenDash has in place of a page of its own. Whether a page laid out for a stop is worth building
+is a product question, and this document no longer answers it either way.
 
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
@@ -296,7 +311,7 @@ under #318; the ordering stays the model's.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Seven of them have since been reversed,
+The MVP scope listed nine things as explicitly out of scope. Eight of them have since been reversed,
 and each reversal is recorded here so that a reader of the old document is not misled.
 
 | The MVP refused | Reversed by | What is true now |
@@ -308,14 +323,15 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Page navigation | #59, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 | Network update checks | #80, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
 | Theming and colour customisation | #124, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
+| Idle or pit screens | #113 | Every package carries an idle screen, which is what SimHub shows between sessions. No screen is drawn for the pit lane; the limiter banner and the stop alerts on the face are what stands in its place |
 
-Two of the nine still stand, and ADR 0011 left a narrower line behind the one it moved. Each is
-restated above with the record that would have to move it:
+One of the nine still stands and ADR 0011 left a narrower line behind the one it moved. The pit half of
+the idle-and-pit line is not built and no longer refused, and the refusals above say what the face
+carries in its place. Each is restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
 | Personalisation that changes the layout | #132: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
-| Idle and pit screens | #113. The screen has to exist before #104 can hand it to the user |
 | Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that

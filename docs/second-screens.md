@@ -55,10 +55,12 @@ property, `isnull([OpenDash.CompanionModule07], 1)`; SimHub treats a screen as e
 expression is above zero and removes a disabled one from its Next/Previous ring. So turning eight
 modules off means paging through thirteen.
 
-Every screen carries the same roles: in game and idle, not pit. SimHub only filters screens by
-role when the roles differ between them, so identical roles keep every enabled screen navigable
-whatever the game is doing, which is what a companion is for. Paging is a wheel button bound to
-the device's own `NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
+Every module screen is an in-game screen and nothing else, and a twenty-second screen after them is
+the idle screen every package carries (#113). SimHub filters screens by role only when the roles
+differ between them -- `Dashboard.GetActiveScreens` compares `"{Pit};{InGame};{Idle}"` across the
+enabled screens -- so while a game runs the ring is the modules alone and a tap still pages them, and
+between sessions it is the idle screen alone. Paging is a wheel button bound to the device's own
+`NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
 
 ## The pit wall
 
@@ -70,6 +72,10 @@ Three landscape pages and one portrait page:
 | Tower | A compact field list, a large track map, one wide zone and two standard zones |
 | Telemetry | Speed, RPM, pedals and steering traced over the last minute, with three zones beside them |
 | Portrait | The field above, session and lap data in the middle, four zones below |
+
+One page is up, chosen by `PitWallPage`, and an idle screen sits after them all: between sessions an
+engineer's monitor shows the OpenDash mark, the time and "no game running" rather than a header over
+an empty field.
 
 ### The header, and the flag
 

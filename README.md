@@ -98,7 +98,8 @@ Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
 ```
 
 In both cases OpenDash is a normal SimHub dashboard afterwards: assign it to a display from
-Dash Studio like any other.
+Dash Studio like any other. With no game running it shows the OpenDash mark, the time and "no game
+running": the idle screen is inside the dashboard, so there is nothing to point at it.
 
 ## The dashboard
 
