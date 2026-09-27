@@ -214,9 +214,14 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480ZoneAStart` the one it opens on, `Face1920x480BarLeft1` a bar field and
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
-`OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12` for the
-round faces, `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to
-`PitWallZoneD`, `OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+`OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12`,
+`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to `PitWallZoneD`,
+`OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+
+`OpenDash.Slot01` to `OpenDash.Slot12` are read by two dashboards and no others:
+`OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
+each slot of those faces, and they stay: the round faces keep the twelve-slot design on purpose, and
+the release that gives them zones is the one that will say what happens to the twelve properties.
 
 `OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
 `OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a

@@ -485,9 +485,14 @@ namespace OpenDashPlugin
 
         // --- The zone face ---------------------------------------------------------------------
         //
-        // Additive: Slot01 to Slot12 stay until the card path is retired. The shape of these is the
-        // model -- a slot is arranged once with a mouse, a zone is changed with a thumb mid-lap, so
-        // what the contract carries is a page number a button can advance.
+        // Additive: Slot01 to Slot12 stay, and they are not on their way out. They drive the two
+        // round faces, which ship on the card model until a round face becomes zones on a ring after
+        // 1.0 (#145), so the release that converts those faces is the one that would carry a warning
+        // about the twelve. #170.
+        //
+        // The shape of the zone settings is the model -- a slot is arranged once with a mouse, a zone
+        // is changed with a thumb mid-lap, so what the contract carries is a page number a button can
+        // advance.
 
         /// <summary>How a face lays its three body zones out.</summary>
         public enum FaceBody
@@ -1207,6 +1212,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Property name of a slot, 1-based: Slot01 .. Slot12.</summary>
+        /// <remarks>
+        /// The twelve drive OpenDash 480 round and OpenDash 800 round and nothing else: the 480 reads
+        /// the first two and the 800 the first six, and every rectangular face is zones. They are
+        /// published in README.md as properties another dashboard or an LED profile may read, they are
+        /// not deprecated, and no release is promised to remove them. The one that would is the release
+        /// converting the round faces to zones on a ring, which is after 1.0. #145, #170.
+        /// </remarks>
         public static string SlotProperty(int slot)
         {
             if (slot < 1 || slot > SlotCount) throw new ArgumentOutOfRangeException(nameof(slot));
