@@ -198,10 +198,13 @@ namespace OpenDashPlugin
         /// <remarks>
         /// It decides a sentence now rather than a request. Nothing refetches on its own, so a stale copy
         /// is a thing the panel mentions beside the button and the driver ignores if they like.
+        /// The clock is the caller's, as it is for <see cref="Load"/> and <see cref="Download"/>: as a
+        /// property reading <see cref="DateTime.UtcNow"/> itself, this went stale for real one week after
+        /// the date a test had pinned, and took CI with it.
         /// </remarks>
-        public bool Stale
+        public bool Stale(DateTime nowUtc)
         {
-            get { return cars.Count > 0 && CarLightLibrary.IsStale(folder, DateTime.UtcNow); }
+            return cars.Count > 0 && CarLightLibrary.IsStale(folder, nowUtc);
         }
 
         /// <summary>The table for a car, or null when there is none. Keyed the folded way, so spelling does not matter.</summary>
