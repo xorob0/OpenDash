@@ -52,6 +52,10 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
   {
     "backgroundColor": "#00FFFFFF",
     "bindings": {
+      "Left": {
+        "formula": "(466.5) + ((((if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (100), 3, if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (10), 2, 1))) + (2)) * (16)) + (9)) + (5)",
+        "mode": "formula",
+      },
       "Text": {
         "formula": "ucase(if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L'))",
         "mode": "formula",
@@ -65,7 +69,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.unit",
     "rect": {
       "height": 17,
-      "left": 561,
+      "left": 545,
       "top": 461,
       "width": 26,
     },
@@ -176,6 +180,10 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
   {
     "backgroundColor": "#00FFFFFF",
     "bindings": {
+      "Left": {
+        "formula": "(727.5) + (if((((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0))) and (((ucase(isnull([DataCorePlugin.GameData.SessionTypeName], ''))) = ('RACE')) and (if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)), (isnull([DataCorePlugin.GameData.RemainingLaps], 0)) > (0)))), if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), ((if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (1000), 4, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (100), 3, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (10), 2, 1)))) + (1)) * (16), (((if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (100), 3, if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (10), 2, 1))) + (2)) * (16)) + (9)), 32)) + (5)",
+        "mode": "formula",
+      },
       "Text": {
         "formula": "ucase(if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'min', 'laps'))",
         "mode": "formula",
@@ -189,7 +197,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.unit",
     "rect": {
       "height": 17,
-      "left": 822,
+      "left": 790,
       "top": 461,
       "width": 33,
     },

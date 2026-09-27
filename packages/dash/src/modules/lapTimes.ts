@@ -28,6 +28,7 @@ import {
   lapTime,
   lastLap,
   player,
+  positionDrawn,
   referenceDelta,
   sectorLast,
   sectorTime,
@@ -102,6 +103,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
             // 32 px beside 46 on the companion and 23 beside 34 in a zone, which is what the
             // denominator follower already computes.
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+            drawn: positionDrawn(player()),
           }),
           fld(ctx, 'stintLap', 'Stint lap', { sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', player()), num(0)), '0'), chars: CHARS.position, fs: d.mid }),
         ],

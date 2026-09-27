@@ -20,7 +20,7 @@
  * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
  * room it gives a page of fields and otherwise leaves it alone.
  */
-import type { Item, Rect } from '../generator.ts';
+import type { Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -31,6 +31,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
+import { charsOfText, drawnFigure, drawnOr, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
@@ -49,6 +50,7 @@ import {
   fuelIsSettled,
   fuelPerLap,
   fuelToEndColour,
+  fuelToEndDrawn,
   fuelToEndText,
   fuelToEndUnit,
   FUEL_TO_END_UNIT_WIDEST,
@@ -69,7 +71,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+const { add, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -108,6 +110,16 @@ export interface BandField {
   afterBind?: string;
   /** The longest spelling `afterBind` can produce, which the box is measured by. */
   afterWidest?: string;
+  /**
+   * How wide the value really draws, which is where the unit after it sits.
+   *
+   * A value is laid in cells cut for its longest reading and drawn from the left of them, so a unit
+   * placed at the end of the cells stands off the figure by however many digits the reading does not
+   * have. `MARGIN −4 ... MIN`, photographed on the VM, is four empty cells: the mark ended up nearer
+   * `EST. LAPS` than its own number and read as a field of its own. Required of every field with an
+   * `after`, and `'fixed'` where the reading never changes length. `second/drawn.ts`. #387.
+   */
+  drawn?: DrawnWidth;
   color?: `#${string}`;
   /** The label's own colour, where it is not the label grey: D7 writes the driver's own position
    *  in the primary text the way it writes his own gap. */
@@ -174,7 +186,18 @@ const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VA
  * sheet, and `docs/design/zones.md` §5 records that. #387.
  */
 const fuel: readonly BandField[] = [
-  { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
+  {
+    id: 'fuel',
+    label: 'Fuel',
+    sample: '15.12',
+    bind: fmt(fuelLevel(), '0.00'),
+    chars: { digits: 5, specials: 1 },
+    drawn: drawnFigure({ value: fuelLevel(), digits: 3, decimals: 2 }),
+    after: 'L',
+    afterBind: fuelUnit(),
+    afterWidest: 'GAL',
+    color: ds.purpose.fuel.nominal,
+  },
   { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
   {
     id: 'toEnd',
@@ -183,6 +206,7 @@ const fuel: readonly BandField[] = [
     bind: fuelToEndText(),
     numeralWidest: FUEL_TO_END_WIDEST,
     chars: CHARS.margin,
+    drawn: fuelToEndDrawn(),
     colorBind: fuelToEndColour(),
     after: 'laps',
     afterBind: fuelToEndUnit(),
@@ -196,10 +220,19 @@ const fuel: readonly BandField[] = [
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
 const energy: readonly BandField[] = [
-  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy')), chars: CHARS.temperature, after: '%' },
-  { id: 'perLap', label: 'Per lap', sample: '5.6', bind: notAvailable(raw('VirtualEnergyPerLap')), chars: CHARS.consumption, after: '%' },
+  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy')), drawn: notAvailableDrawn(raw('VirtualEnergy')), chars: CHARS.temperature, after: '%' },
+  { id: 'perLap', label: 'Per lap', sample: '5.6', bind: notAvailable(raw('VirtualEnergyPerLap')), drawn: notAvailableDrawn(raw('VirtualEnergyPerLap')), chars: CHARS.consumption, after: '%' },
   { id: 'laps', label: 'Est. laps', sample: '12.1', bind: notAvailable(raw('VirtualEnergyLaps')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '31', bind: notAvailable(raw('VirtualEnergyRefuel')), chars: CHARS.temperature, after: '%', color: ds.color.caution.primary },
+  {
+    id: 'refuel',
+    label: 'Refuel',
+    sample: '31',
+    bind: notAvailable(raw('VirtualEnergyRefuel')),
+    drawn: notAvailableDrawn(raw('VirtualEnergyRefuel')),
+    chars: CHARS.temperature,
+    after: '%',
+    color: ds.color.caution.primary,
+  },
   { id: 'ratio', label: 'Fuel to energy', sample: '1.04', bind: fuelToEnergy(), chars: CHARS.consumption },
 ];
 
@@ -208,7 +241,15 @@ const stint: readonly BandField[] = [
   { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.position },
   { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(timespanToSeconds(isnull(driver('timesincelastpitout', playerPosition()), num(0)))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
-  { id: 'lastStop', label: 'Last stop', sample: '24.3', bind: fmt(timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), '0.0'), chars: CHARS.consumption, after: 's' },
+  {
+    id: 'lastStop',
+    label: 'Last stop',
+    sample: '24.3',
+    bind: fmt(timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), '0.0'),
+    drawn: drawnFigure({ value: timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+    chars: CHARS.consumption,
+    after: 's',
+  },
 ];
 
 /**
@@ -243,9 +284,17 @@ const tyres: readonly BandField[] = [
 /** D5 Weather. There is no weather module: a companion page of it would be mostly empty, and a
  *  band is exactly the shape for it. */
 const weather: readonly BandField[] = [
-  { id: 'air', label: 'Air', sample: '21.5', bind: fmt(airTemperature(), '0.0'), chars: CHARS.pressure, after: '°' },
-  { id: 'track', label: 'Track', sample: '27.6', bind: fmt(roadTemperature(), '0.0'), chars: CHARS.pressure, after: '°' },
-  { id: 'wind', label: 'Wind', sample: '12', bind: fmt(windKmh(), '0'), chars: CHARS.temperature, after: 'KM/H' },
+  { id: 'air', label: 'Air', sample: '21.5', bind: fmt(airTemperature(), '0.0'), drawn: drawnFigure({ value: airTemperature(), digits: CHARS.pressure.digits - 1, decimals: 1 }), chars: CHARS.pressure, after: '°' },
+  {
+    id: 'track',
+    label: 'Track',
+    sample: '27.6',
+    bind: fmt(roadTemperature(), '0.0'),
+    drawn: drawnFigure({ value: roadTemperature(), digits: CHARS.pressure.digits - 1, decimals: 1 }),
+    chars: CHARS.pressure,
+    after: '°',
+  },
+  { id: 'wind', label: 'Wind', sample: '12', bind: fmt(windKmh(), '0'), drawn: drawnFigure({ value: windKmh(), digits: CHARS.temperature.digits }), chars: CHARS.temperature, after: 'KM/H' },
   { id: 'grip', label: 'Grip', sample: 'GREEN', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 7, specials: 0 }, widest: 'MODERATE' },
 ];
 
@@ -337,6 +386,12 @@ const relativeFields = (classOnly?: Expr): readonly BandField[] => [
 function notAvailable(expr: string): string {
   return iff(ncalc.isNull(expr), str('--'), fmt(expr, '0.0'));
 }
+
+/** How wide {@link notAvailable} draws, for the per-cent sign that follows three of the four. */
+function notAvailableDrawn(expr: string): DrawnFigure {
+  return drawnOr(ncalc.isNull(expr), NO_VALUE, drawnFigure({ value: expr, digits: CHARS.consumption.digits - 1, decimals: 1 }));
+}
+
 
 /**
  * Litres per lap against energy per lap: how much fuel a per cent of the virtual tank is worth,
@@ -517,6 +572,20 @@ function fieldWidth(field: BandField, valueFs: number, labelFs: number): number 
 }
 
 /**
+ * Where a field's unit sits at runtime, or nothing for a reading that never changes length.
+ *
+ * The refusal is the one `second/field.ts` makes for the same reason: a bound value is the only
+ * thing that knows how long its own reading is, and a unit placed without that answer is placed at
+ * the end of a budget rather than beside a figure.
+ */
+function drawnLeft(field: BandField, mono: Monospace): Expr | undefined {
+  if (field.drawn === undefined) {
+    throw new Error(`band field ${field.id}: a value with a unit after it has to say how wide it draws, or the unit sits at the end of the budget`);
+  }
+  return field.drawn === 'fixed' ? undefined : field.drawn(mono);
+}
+
+/**
  * One field of a band page as a member of its rank: how wide it is, whether the game publishes it,
  * and how it draws itself wherever the rank puts it.
  */
@@ -571,11 +640,16 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
         );
       });
       if (field.after) {
+        // Beside the figure, not at the end of the cells the figure is cut from: see
+        // {@link BandField.drawn}. The unit's box is unchanged, so the rank's arithmetic and every
+        // width this page was measured at stay where they were.
+        const mono = cells('SemiBold', valueFs);
+        const drawn = drawnLeft(field, mono);
         items.push(
-          unit(`${prefix}${field.id}.unit`, field.after, at.x + valueWidth + FIELD_GAP, valueTop + (valueFs - ds.size.labelSm), unitWidth(field), {
+          unit(`${prefix}${field.id}.unit`, field.after, at.x + monoWidth(mono, charsOfText(field.sample, mono)) + FIELD_GAP, valueTop + (valueFs - ds.size.labelSm), unitWidth(field), {
             size: ds.size.labelSm,
             ...(field.afterBind ? { bind: field.afterBind, widest: field.afterWidest ?? field.after } : {}),
-            leftBind: at.leftAt(valueWidth + FIELD_GAP),
+            leftBind: drawn ? add(at.leftAt() ?? num(at.x), drawn, num(FIELD_GAP)) : at.leftAt(valueWidth + FIELD_GAP),
             visibleBind: at.visibleBind,
           }),
         );

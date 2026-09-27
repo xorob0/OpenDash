@@ -10,16 +10,20 @@
  * prove the row fits its module.
  */
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
+import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { SPECIAL_CHARS, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, nextOnRamp, type Density, type DensitySpec } from './density.ts';
+import { charsOfText, textWidth, type DrawnWidth } from './drawn.ts';
 import { rank } from './rank.ts';
+
+const { add, num } = ncalc;
 
 /** A small text that follows a value on its baseline: a unit ("L", "km/h") or a denominator ("/ 24"). */
 export interface Follower {
@@ -70,6 +74,12 @@ export interface FieldValue {
   colorBind?: Expr;
   weight?: DataWeight;
   follower?: Follower;
+  /**
+   * How wide the value really draws, which is where its follower sits. See {@link DrawnWidth}.
+   *
+   * Only a bound value with a follower needs one, and every one of them is required to declare it.
+   */
+  drawn?: DrawnWidth;
 }
 
 export interface FieldSpec {
@@ -150,12 +160,6 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
   }
   const drawn = (follower.widest ?? follower.text).toUpperCase();
   return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
-}
-
-/** The cells a literal string takes: `.,:` get the narrow cell and everything else the wide one. */
-export function charsOfText(text: string, mono: Monospace): Chars {
-  const specials = [...text].filter((c) => (mono.specialChars ?? SPECIAL_CHARS).includes(c)).length;
-  return { digits: text.length - specials, specials };
 }
 
 /**
@@ -241,6 +245,26 @@ export const rowHeight = (specs: readonly FieldSpec[], density: Density): number
   specs.reduce((h, spec) => Math.max(h, fieldHeight(spec, density)), 0);
 
 /**
+ * The `Left` a follower takes at runtime: the field's own left, plus what the value draws, plus the
+ * gap. Undefined where the value's length never varies, which is the one case the design-time place
+ * is also the runtime one.
+ *
+ * `leftAt` is the rank's, so a row that closes over a field the sim does not publish moves the
+ * follower with the rest of the field and the figure it follows at the same time.
+ */
+function followerLeft(spec: FieldSpec, x: number, gap: number, mono: Monospace, leftAt?: (dx?: number) => Expr | undefined): Expr | undefined {
+  const drawn = spec.value.drawn;
+  if (spec.value.bind === undefined) return undefined;
+  if (drawn === undefined) {
+    throw new Error(
+      `field ${spec.name}: the value is bound and carries a follower but declares no drawn width; a follower sits after the figure, not after the budget it is cut from, and only the field knows how long the figure is (declare 'fixed' where it never changes length)`,
+    );
+  }
+  if (drawn === 'fixed') return undefined;
+  return add(leftAt?.() ?? num(x), drawn(mono), num(gap));
+}
+
+/**
  * One field, its value's line box bottom on `bottom`. `maxWidth` caps the value's box, which
  * matters at the right edge of a module where the box would otherwise leave the screen.
  *
@@ -289,14 +313,20 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   );
   const follower = spec.value.follower;
   if (follower) {
-    const followerX = x + cellsWidth + followerGap(follower);
+    const gap = followerGap(follower);
+    const mono = cells(spec.value.weight ?? 'SemiBold', spec.value.fs);
+    // The rightmost place the follower can take, which is where a value filling its whole budget
+    // pushes it. The box is still measured from there, so nothing moves outwards and the row's
+    // width is the width it always was; only the place the follower starts from comes in.
+    const rightmost = x + cellsWidth + gap;
+    const followerX = x + textWidth(spec.value.sample, mono) + gap;
     const fs = followerSize(follower, d, spec.value.fs);
     const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), fs);
-    const box = Math.max(followerWidth(follower, d, spec.value.fs), x + width - followerX);
+    const box = Math.max(followerWidth(follower, d, spec.value.fs), x + width - rightmost);
     const opts = {
       bind: follower.bind,
       visibleBind: follower.visibleBind ?? spec.visibleBind,
-      leftBind: leftAt?.(followerX - x),
+      leftBind: followerLeft(spec, x, gap, mono, leftAt) ?? leftAt?.(followerX - x),
     };
     items.push(
       follower.kind === 'denominator'

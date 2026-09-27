@@ -19,6 +19,7 @@
 import { ncalc } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { stack } from '../second/layout.ts';
 import {
@@ -34,6 +35,7 @@ import {
   fuelThisLap,
   fuelToAdd,
   fuelToEndColour,
+  fuelToEndDrawn,
   fuelToEndText,
   fuelToEndUnit,
   FUEL_TO_END_UNIT_WIDEST,
@@ -88,6 +90,9 @@ export const fuel = defineModule('fuel', (ctx) => {
             fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
+            // Beside the figure rather than at the end of its four cells: `30.35 L` had the mark a
+            // cell out on the VM, and a tank under ten would have had it two. #387.
+            drawn: drawnFigure({ value: fuelLevel(), digits: CHARS.fuel.digits - 1, decimals: 1 }),
           }),
           // Behind the consumption gate for the reason the estimate beside it is: SimHub derives
           // `Fuel_RemainingTime` from the per-lap figure, so on the out lap the range moves every
@@ -107,6 +112,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             fs: d.big,
             colorBind: fuelToEndColour(),
             follower: { text: 'laps', bind: fuelToEndUnit(), widest: FUEL_TO_END_UNIT_WIDEST },
+            drawn: fuelToEndDrawn(),
           }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',

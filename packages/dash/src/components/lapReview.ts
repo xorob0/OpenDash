@@ -44,6 +44,7 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { zone as zoneSetting, type FaceSize } from '../contract.ts';
 import { densityOf } from '../second/density.ts';
+import { drawnFigure, drawnOr } from '../second/drawn.ts';
 import { fieldRowFitted, fieldTail, fieldWidth, rowHeight, type FieldSpec } from '../second/field.ts';
 import { sectorStrip } from '../second/sectors.ts';
 import {
@@ -195,6 +196,12 @@ const fuelField = (prefix: string, id: string, caption: string, value: Expr, sam
     chars,
     fs: densityOf(DENSITY).mid,
     follower: { text: 'L', widest: 'gal', bind: fuelUnit(), size: densityOf(DENSITY).labelSm },
+    // The same guard the binding reads, so the mark cannot be placed for a figure while `--` is
+    // what is on the screen.
+    drawn: (() => {
+      const figure = drawnFigure({ value, digits: chars.digits - 1, decimals: 1 });
+      return guard ? drawnOr(ncalc.not(guard), NO_VALUE, figure) : figure;
+    })(),
   },
 });
 

@@ -21,10 +21,11 @@ import { rule } from '../elements/rule.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
+import { drawnAfter, drawnFigure, type DrawnFigure } from './drawn.ts';
 import { CHARS, carPosition,
-  positionLabelled, currentLap, fieldSize, player, totalLaps } from './values.ts';
+  positionLabelled, positionLabelledDrawn, currentLap, fieldSize, player, totalLaps } from './values.ts';
 
-const { concat, str, fmt, iff, gt, num } = ncalc;
+const { add, concat, str, fmt, iff, gt, num } = ncalc;
 
 /** Height of the companion header, and the padding either side of it. */
 export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } as const;
@@ -39,6 +40,8 @@ function pair(
   name: string,
   valueSample: string,
   valueBind: Expr,
+  /** How wide the value really draws, so the denominator follows the figure: `L9 / 30` and `L12 / 30` keep one gap. */
+  valueDrawn: DrawnFigure,
   denominator: string,
   denominatorWidest: string,
   denominatorBind: Expr,
@@ -53,6 +56,9 @@ function pair(
   const chars = { digits: valueSample.length, specials: 0 };
   const valueWidth = monoWidth(mono, chars);
   const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominatorWidest, d.labelSm));
+  // The budget is the sample's own length, so the two agree at design time and part company on the
+  // dash: `L9` is a cell shorter than `L12` and `P4` a cell shorter than `P24`, and a denominator
+  // placed at the end of the cells carries that cell with it. #387.
   const denominatorX = x + valueWidth + ds.space[2];
   return {
     items: [
@@ -61,6 +67,7 @@ function pair(
         bind: denominatorBind,
         widest: denominatorWidest,
         visibleBind,
+        leftBind: add(num(x), valueDrawn(mono), num(ds.space[2])),
       }),
     ],
     width: valueWidth + ds.space[2] + denominatorWidth,
@@ -102,6 +109,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     `${name}.lap`,
     'L12',
     concat(str('L'), fmt(currentLap(), '0')),
+    drawnAfter('L', drawnFigure({ value: currentLap(), digits: 2 })),
     '/ 30',
     '/ 999',
     concat(str('/ '), fmt(totalLaps(), '0')),
@@ -111,7 +119,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     density,
     gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
+  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
