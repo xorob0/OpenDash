@@ -74,8 +74,8 @@ Three landscape pages and one portrait page:
 | Portrait | The field above, session and lap data in the middle, four zones below |
 
 One page is up, chosen by `PitWallPage`, and an idle screen sits after them all: between sessions an
-engineer's monitor shows the OpenDash mark, the time and "no game running" rather than a header over
-an empty field.
+engineer's monitor shows the openDash wordmark, the time and "no game running" rather than a header
+over an empty field.
 
 ### The header, and the flag
 
