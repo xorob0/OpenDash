@@ -17,7 +17,8 @@
  *      the strips mirror the car's bar LED for LED, the flag box's digit takes its bands from
  *      `CarLadderStage` where its own switch says so, and since #353 the rev bar, the rev arc, the
  *      companion's speedo bar and the Redline beside it light at the car's instants in OpenDash's
- *      colours, behind the rig-wide `car` rev light style. What no screen has, and what this rung
+ *      colours, behind `CarLadderChosen` -- the plugin's reduction of the strips' own rev light styles,
+ *      which is the nearest thing a face has to the setting a strip reads. What no screen has, and what this rung
  *      still means, is *the table*: a screen reads a count out of `shift.ts` and nothing else.
  *   2. **SimHub's own per-gear redline**, when the user has turned it on by hand —
  *      `CarSettings_RPMRedLinePerGearOverride` is 1 and `CarSettings_CurrentGearRedLineRPM` then

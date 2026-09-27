@@ -17,8 +17,10 @@
  * `design/tokens.json`, out of the count the plugin publishes beside these runs -- `CarLadderLit`,
  * `CarLadderLamps` and `CarLadderTopRpm`, read in `shift.ts`. A colour per LED is what a strip needs
  * because a strip is a copy of the car's bar; a face is OpenDash's drawing of the same fact, and a
- * 992's cornflower blue inside one would read as a rendering fault. Both gates are the rig-wide `car`
- * style, so the two surfaces cannot disagree about which ladder they are on.
+ * 992's cornflower blue inside one would read as a rendering fault. A strip's gate is its own bar's
+ * rev light style and a face has no bar, so a face reads `CarLadderChosen` -- the plugin's reduction
+ * of the same question over every strip on the rig, which is why a face beside a strip on the car's
+ * own bar cannot be on a different ladder from it.
  *
  * **Why a colour formula rather than a lit/unlit formula.** `CustomStatus`, which every other effect
  * in `rpmStrip.ts` uses, has one colour chosen at build time and an expression that says whether to
