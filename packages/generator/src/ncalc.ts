@@ -84,9 +84,32 @@ export const truncate = (value: Expr): Expr => `truncate(${value})`;
 export const abs = (value: Expr): Expr => `abs(${value})`;
 export const max = (a: Expr, b: Expr): Expr => `max(${a}, ${b})`;
 export const min = (a: Expr, b: Expr): Expr => `min(${a}, ${b})`;
-export const replace = (value: Expr, from: string, to: string): Expr => `replace(${value}, ${str(from)}, ${str(to)})`;
+export const replace = (value: Expr, from: string, to: string): Expr => replaceWith(value, str(from), str(to));
+
+/**
+ * `replace(value, search, replacement)` where the search is itself an expression.
+ *
+ * SimHub's delegate is `(object val, object search, object replacement) => $"{val}".Replace(...)`,
+ * so all three arguments are evaluated and interpolated: nothing about it requires the needle to be
+ * a literal. That is what lets a driver name be cut at a word boundary with no `indexof` to find
+ * one — the surname comes out of `drivershortname` and is then removed from the full name — which is
+ * the only way any of the reordered name formats can be built in an expression at all.
+ *
+ * .NET's `String.Replace` replaces **every** occurrence, not the first, which is why each caller of
+ * this has to be sure the needle cannot appear twice in a way that matters.
+ */
+export const replaceWith = (value: Expr, search: Expr, replacement: Expr): Expr => `replace(${value}, ${search}, ${replacement})`;
 export const ucase = (value: Expr): Expr => `ucase(${value})`;
 export const lcase = (value: Expr): Expr => `lcase(${value})`;
+/**
+ * Title case, which is `CultureInfo.TextInfo.ToTitleCase` and is **not** what a name wants.
+ *
+ * Here because it is a function SimHub registers and the table of functions is meant to be the whole
+ * of what it registers. Nothing draws a name through it: ToTitleCase lower-cases the rest of every
+ * word it capitalises unless the word is entirely upper case, so it turns McDonald into Mcdonald and
+ * leaves LIAM BYRNE shouting — which is the case it would have been reached for.
+ */
+export const tcase = (value: Expr): Expr => `tcase(${value})`;
 /**
  * First `count` characters, which is how a class chip keeps a long class name inside its box.
  *
@@ -158,8 +181,18 @@ export type DriverFunction =
   | 'available'
   | 'isplayer'
   | 'name'
+  /**
+   * `L. Byrne`: `StringExtensions.GetShortName`, which splits the name on spaces, keeps the first
+   * letter of the first word and joins the rest back. A one-word name comes back unchanged, which is
+   * how a caller tells that there is no surname to separate.
+   */
   | 'shortname'
   | 'initials'
+  /**
+   * The entry's team, which is what an endurance entry is known by. `Opponent.TeamName`, filled by
+   * whichever reader the sim has and empty where it has none.
+   */
+  | 'teamname'
   | 'carclass'
   | 'carnumber'
   | 'position'

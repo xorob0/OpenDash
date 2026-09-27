@@ -61,8 +61,8 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the rev bar mode, the blue flag detail, the zone face of
-            // every face that ships
+            // Four settings, twelve slots, the rev bar mode, the blue flag detail, the two that decide
+            // how a driver is named, the zone face of every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
@@ -77,7 +77,7 @@ namespace OpenDashPlugin.Tests
             // of the eight globals are settings; the other two are the car's own bands, which the
             // plugin computes because a table of thresholds per gear is not a thing a profile reads.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 8 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 8 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -97,7 +97,9 @@ namespace OpenDashPlugin.Tests
             // its header, and 328 before each matrix was given its own answer to whether the digit is
             // banded at all and to which ladder bands it, which is eight names, and the car's own
             // bands had to be published for the digit to read.
-            Assert.Equal(338, names.Count);
+            // And 340 once a driver could say how a name is written and whether it is the team's, which
+            // replaced the three-letter code every list drew (#385).
+            Assert.Equal(340, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -121,21 +123,30 @@ namespace OpenDashPlugin.Tests
             // band may say is the same answer wherever it is written.
             Assert.Equal("BlueFlagDetail", names[17]);
             Assert.Contains("BlueFlagDetail", Contract.SharedPropertyNames());
+            // And the two that say how a driver is named, appended after it and shared for the same
+            // kind of reason: which of the four formats reads fastest is a fact about the reader
+            // rather than about the screen they are reading. #385.
+            Assert.Equal("DriverNameFormat", names[18]);
+            Assert.Equal("DriverNameTeam", names[19]);
 
+            // The first face's group starts where the shared one ends. Counted rather than written as a
+            // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30
+            // until the driver name settings joined it, which is a diff that says nothing about faces.
+            var face = Contract.SharedPropertyNames().Count();
             var p = Contract.FacePrefix(Contract.ReferenceFace);
-            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(18).Take(4));
-            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(22).Take(4));
-            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(26).Take(4));
-            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(30).Take(4));
-            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(34).Take(4));
-            Assert.Equal(p + "QuickGlance", names[38]);
-            Assert.Equal(p + "FlagFormat", names[39]);
-            Assert.Equal(p + "LapReview", names[40]);
+            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(face).Take(4));
+            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(face + 4).Take(4));
+            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(face + 8).Take(4));
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(face + 12).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(face + 16).Take(4));
+            Assert.Equal(p + "QuickGlance", names[face + 20]);
+            Assert.Equal(p + "FlagFormat", names[face + 21]);
+            Assert.Equal(p + "LapReview", names[face + 22]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
 
-            var afterFaces = 18 + Contract.FaceSizes.Count * perFace;
+            var afterFaces = face + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
@@ -250,6 +261,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "overall", "class" }, Contract.PositionModes);
             Assert.Equal(new[] { "session", "alltime" }, Contract.DeltaReferences);
             Assert.Equal(new[] { "auto", "laps", "time" }, Contract.SessionProgressModes);
+            Assert.Equal(new[] { "full", "initialSurname", "initialFirstName", "surnameFirst" }, Contract.DriverNameFormats);
+            Assert.Equal("full", Contract.NormaliseChoice("Full", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
+            Assert.Equal("full", Contract.NormaliseChoice("initials", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
             Assert.Equal("alltime", Contract.NormaliseChoice("AllTime", Contract.DeltaReferences, "session"));
             Assert.Equal("session", Contract.NormaliseChoice("never", Contract.DeltaReferences, "session"));
         }
@@ -281,6 +295,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.PositionModes, ListOf(source, "POSITION_MODES"));
             Assert.Equal(Contract.DeltaReferences, ListOf(source, "DELTA_REFERENCES"));
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
+            Assert.Equal(Contract.DriverNameFormats, ListOf(source, "DRIVER_NAME_FORMATS"));
+            Assert.Contains("DriverNameFormat: '" + Contract.DefaultDriverNameFormat + "'", source);
+            Assert.Contains("DriverNameTeam: " + Contract.DefaultDriverNameTeam.ToString().ToLowerInvariant(), source);
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
             Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
             Assert.Equal(Contract.BlueFlagDetails, ListOf(source, "BLUE_FLAG_DETAILS"));

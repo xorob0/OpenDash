@@ -1,5 +1,5 @@
-// PanelDataTab.cs: the words the Data tab puts beside each of its four controls, and the gap it sets
-// them at.
+// PanelDataTab.cs: the words the Data tab puts beside each of its controls, and the gap it sets them
+// at.
 //
 // Apart from SettingsControl.Data.cs for the reason PanelLights.cs is apart from
 // SettingsControl.Lights.cs: the tab is WPF and the net8.0 test project cannot compile a line of it, so
@@ -17,9 +17,9 @@ namespace OpenDashPlugin
         /// <summary>Between one setting and the next on this tab, which is wider than the twenty every
         /// other section on the panel is given.</summary>
         /// <remarks>
-        /// Four rows are the whole of the tab, so the column under the label is short and reads as one
-        /// block rather than as four separate settings unless they are pushed apart; the design audit
-        /// takes the 22 off the canvas. It is this tab's own number rather than PanelMetrics.SectionGap
+        /// The tab is short, so the column under the label reads as one block rather than as a handful
+        /// of separate settings unless they are pushed apart; the design audit takes the 22 off the
+        /// canvas. It is this tab's own number rather than PanelMetrics.SectionGap
         /// because Install and Lights are long and lengthening them further buys nothing. 22 is off
         /// design/tokens.json's space scale, which steps 16 to 24, so it is recorded here rather than
         /// rounded to a token that would say something else.
@@ -77,5 +77,26 @@ namespace OpenDashPlugin
         public const string BlueFlagTitle = "Blue flag detail";
 
         public const string BlueFlagCaption = "What shows next to a blue flag.";
+
+        public const string DriverNameTitle = "Driver names";
+
+        /// <summary>No caption: the four values are worked examples of one name, so the control says
+        /// exactly what each of them does and a sentence under it would restate it.</summary>
+        public const string DriverNameCaption = null;
+
+        /// <summary>The four formats, shown as what they make of one name rather than described.
+        ///
+        /// A value in a chooser is read without its label and alongside the values beside it
+        /// (docs/design/voice.md), and "Initial and surname" beside "Surname and initial" is two
+        /// fragments a reader has to decode; `L. Byrne` beside `B. Liam` is the answer itself. The name
+        /// is the one the design canvas and the emulator's own field both use.</summary>
+        public static readonly string[] DriverNameLabels = { "Liam Byrne", "L. Byrne", "B. Liam", "Byrne Liam" };
+
+        public const string TeamNameTitle = "Team names";
+
+        /// <summary>Two facts the control cannot show: which of the two names it swaps, and that a car
+        /// with no team keeps its driver rather than going blank. The second is the one worth the line:
+        /// without it a half-filled column reads as a fault.</summary>
+        public const string TeamNameCaption = "Names the team instead of the driver, and keeps the driver where the sim has no team.";
     }
 }
