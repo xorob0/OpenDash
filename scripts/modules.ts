@@ -42,7 +42,7 @@ import { noticesForPackage } from '../packages/dash/src/design/notices.ts';
 import { ds } from '../packages/dash/src/tokens.ts';
 import { build as buildEmulator, lapsCompleted, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, waitForLaps } from './emulator.ts';
 import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
-import { captureDashboard, closeDashboards, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
+import { captureDashboard, closeDashboards, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { claim, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
@@ -180,8 +180,9 @@ export async function run(host: Host, opts: Options): Promise<number> {
       return 1;
     }
 
-    if (!guiAvailable(host)) {
-      console.error('no desktop session; the VM must be logged in (see docs/testing-vm.md)');
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
       return 1;
     }
 
