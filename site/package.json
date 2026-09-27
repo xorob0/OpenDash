@@ -5,18 +5,20 @@
   "description": "The OpenDash showcase website: what the dashes look like, which screens they fit, and where to download them.",
   "license": "MIT",
   "scripts": {
-    "generate": "bun scripts/tokens.ts && bun scripts/content.ts && bun scripts/fonts.ts",
+    "generate": "bun scripts/tokens.ts && bun scripts/content.ts && bun scripts/fonts.ts && prisma generate",
     "dev": "bun run generate && next dev",
     "build": "bun run generate && next build",
     "start": "next start",
     "typecheck": "bun run generate && tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/client": "^6.16.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "prisma": "^6.16.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
