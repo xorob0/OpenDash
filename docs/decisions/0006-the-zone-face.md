@@ -128,3 +128,31 @@ the only zone-era word touching them is that a round face uses its ring instead 
 `480round.ts` and `800round.ts` read `layout.slots`, which stays optional rather than being
 removed, so they keep building throughout and the decision is owed before the card path is
 retired rather than before the first zone face. #145.
+
+**Amended 2026-09-27 (#145): a round face is zones on a ring, and it is built after 1.0.** The
+Unresolved entry above is answered. Of the three answers #145 put — zones on a ring, freeze the round
+faces on the card path, or drop them — the first is taken: the rev arc a round face already has, zone
+A in the middle, the rectangles its cards occupy today as small catalogue zones, and the flag on the
+ring, with no bar and no band. It reuses every part the rectangular faces have, where dropping the
+round faces would take fourteen packages to twelve over a question about two rectangles, and freezing
+them would leave two rendering models in the repository for good.
+
+**The conversion is after 1.0, and the interval is deliberate rather than undecided.** Two of the
+three things the work needs are not this repository's to make: the canvas owes `DashRound480.dc.html`
+and `DashRound800.dc.html` drawn on the new model, being what the rects and the catalogue would be
+read off, and the panel owes a round picker beside the rectangular plan in
+[design/plugin.md](../design/plugin.md), since a face is configured on a picture of itself
+([ADR 0020](0020-the-panel-draws-what-it-configures.md)). Through 1.0 the two round faces therefore
+ship on the card model, and the documents say so in those words.
+
+Two consequences follow for the tickets this record's Bad section names. The card path is **not**
+retired at 1.0: #146 deletes `Layout.slots`, `cards/`, `slots.ts` and `design/rung.ts`, and it now
+waits on the conversion rather than on this answer. And `OpenDash.Slot01`–`Slot12` are **not**
+deprecated for a release and then deleted, as the Bad section and #170 both said: they are the only
+thing driving the two round faces, so they stay attached, undeprecated and documented as the round
+faces' own, and the release that converts the round faces is the one that carries the warning. #170
+records that resolution.
+
+[design/zones.md](../design/zones.md) section 9 is the written form of the design, part by part, and
+is where the open questions inside it live: which of the twenty-one pages survive a 140 × 108 box, and
+whether a round face gains the full-screen flag format the rectangular faces have.

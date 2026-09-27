@@ -12,8 +12,9 @@ contributor or an agent should read first, and the one that has to be amended wh
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)), and since
 > 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
 > faces, and the twelve-slot ones they replaced are published as `OpenDash slots <size>` for anyone
-> who wants the old design back. The two round faces are still the card model, because what a round
-> face does with zones is not decided (#145).
+> who wants the old design back. The two round faces ship on the card model, and that is a decision
+> rather than a gap: a round face becomes zones on a ring after 1.0, and until it does it stays the
+> design it is (#145).
 >
 > `README.md` and `plugin/INSTALL.md` still describe the twelve-slot face and are now wrong about
 > the product a user installs; correcting them is #150, and until it lands this document is the
@@ -70,8 +71,8 @@ A page is never scaled. It is laid out for the **shape** of the box it is given,
 secondary ranks before it shrinks its numerals, so a bigger screen shows more in each zone rather
 than more regions of the same size.
 
-Ten faces ship. Eight are rectangular and take the same five parts; the two round ones are not yet
-decided and are noted below.
+Ten faces ship. Eight are rectangular and take the same five parts; the two round ones are still the
+card model, on purpose, and what they become is noted below.
 
 | Package | Size | |
 |---|---|---|
@@ -83,8 +84,8 @@ decided and are noted below.
 | `OpenDash 800x480` | 800 x 480 | derived from 850 x 480 |
 | `OpenDash 800x286` | 800 x 286 | no bar: the height is not there |
 | `OpenDash 600x686` | 600 x 686 | portrait, A over B over C |
-| `OpenDash 800 round` | 800 x 800 | still on the card model; see below |
-| `OpenDash 480 round` | 480 x 480 | still on the card model; see below |
+| `OpenDash 800 round` | 800 x 800 | the card model until after 1.0; see below |
+| `OpenDash 480 round` | 480 x 480 | the card model until after 1.0; see below |
 
 **The base size is 850 x 480 and the large size is 1280 x 480.** They are the pair anything that
 has to pick a face picks: the size `bun run dev` opens when no package is named, the two the
@@ -125,9 +126,17 @@ that the two cannot drift.
 every page of every catalogue, and the shape model. [ADR 0006](decisions/0006-the-zone-face.md) is
 why the model changed from twelve equal slots, which is what shipped in 0.1.0.
 
-**What a round face does with zones is not decided.** The two round artboards are still drawn on
-the slot model and the only zone-era rule touching them is that a round face uses its ring instead
-of a band. They keep building on the card path until the question is answered.
+**A round face becomes zones on a ring, after 1.0.** The rev arc it already has, zone A in the
+middle, the rectangles its cards occupy today as small catalogue zones, and the flag on the ring:
+no bar and no band. That is the answer #145 took, of three, and
+[design/zones.md](design/zones.md) section 9 is the written form of it, with an amendment to
+[ADR 0006](decisions/0006-the-zone-face.md) recording the date.
+
+**Until that work is done the two round faces ship on the card model, deliberately.** They are
+decided and not yet converted, which is a different thing from undecided, and it is why the card
+path is not retired at 1.0 and why `OpenDash.Slot01` to `Slot12` stay (#170). The canvas owes two
+round artboards drawn on the new model and the plugin panel owes a round picker before the
+conversion can be built.
 
 ### The companion
 
