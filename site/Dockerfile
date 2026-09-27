@@ -17,6 +17,11 @@
 #
 # The origin is a build argument and not a runtime variable, for the reason given at the step that
 # consumes it. docs/deploy.md is the deployment itself, Dokploy field by field.
+#
+# The stages below are a hand-maintained subset of the tree, so CI builds this file and runs what
+# comes out of it on every push that touches anything it copies — see
+# .github/workflows/site-image.yml. A stage that stops copying something the site needs fails there,
+# on the branch that changed it, rather than in front of somebody pressing Redeploy.
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED

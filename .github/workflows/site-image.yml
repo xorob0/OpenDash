@@ -1,0 +1,165 @@
+# site-image.yml: builds site/Dockerfile and runs what comes out of it.
+#
+# Nothing else in the repository builds the image. ci.yml's Website job runs `cd site && bun run
+# build` in a full checkout, where the whole tree is simply present, so it cannot see that the
+# image's build stage is a hand-maintained subset of that tree. The first time the two disagreed
+# the deploy failed at the last step of a build several minutes long, in front of whoever pressed
+# Redeploy, over one missing COPY (#404). This job is where that disagreement surfaces instead.
+#
+# It builds only: no registry login, no push, nothing published. The image is loaded into the
+# runner's daemon, run, and asked the three questions docs/deploy.md asks after a first deploy —
+# the home page answers, the sitemap is not empty, the plugin zip is there — plus the stylesheet,
+# because the static folder is placed by hand in the runtime stage and missing it answers 200 with
+# no CSS. Those are the failures of this family that a build alone would not catch.
+#
+# Keep the steps in sync with the docker build line in docs/deploy.md.
+name: Site image
+
+# Only on the pushes that can break it. The paths are everything the image copies: the two build
+# stages between them take packages/, design/, scripts/, tools/, data/, plugin/, media/, site/ and
+# the root's manifests, so the list is most of the tree and a run is skipped only for a change to
+# docs/, traces/ or the repository's own prose. That is the honest version of a path filter — a
+# skipped run here means nothing the image reads has moved, rather than a green tick that proves
+# nothing.
+#
+# The list is written out twice because GitHub's workflow parser does not resolve YAML anchors; keep
+# the two copies identical.
+on:
+  push:
+    paths:
+      - "site/**"
+      - "packages/**"
+      - "design/**"
+      - "scripts/**"
+      - "tools/**"
+      - "data/**"
+      - "plugin/**"
+      - "media/**"
+      - "package.json"
+      - "bun.lock"
+      - "bunfig.toml"
+      - "tsconfig.base.json"
+      - "VERSION"
+      - "CHANGELOG.md"
+      - ".dockerignore"
+      - ".github/workflows/site-image.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "packages/**"
+      - "design/**"
+      - "scripts/**"
+      - "tools/**"
+      - "data/**"
+      - "plugin/**"
+      - "media/**"
+      - "package.json"
+      - "bun.lock"
+      - "bunfig.toml"
+      - "tsconfig.base.json"
+      - "VERSION"
+      - "CHANGELOG.md"
+      - ".dockerignore"
+      - ".github/workflows/site-image.yml"
+  # So that a smoke build before a redeploy is one click, on whichever branch is about to be
+  # published.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-image-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build and serve
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # buildx rather than the daemon's own builder, for the layer cache below. `load: true` needs
+      # it to hand the result to the daemon so the container can be run.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # The first stage is `bun run package` across both toolchains, which is the several minutes
+      # #397 did not want to pay on every push. The Actions cache pays it once for as long as
+      # nothing that stage copies changes, which is the common case of a site-only change; when
+      # packages/ is what moved it is a full build again, and that is exactly the change this job
+      # exists to check. Cache export failures are warnings: an evicted or unavailable cache makes
+      # the run slow, not red.
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          # The repository root, not site/: stages 1 and 2 read most of the tree.
+          context: .
+          file: site/Dockerfile
+          push: false
+          load: true
+          tags: opendash-site:ci
+          # A reserved domain rather than the real one, because this image is thrown away at the
+          # end of the job and the value is only here to prove the build argument is plumbed
+          # through to the sitemap. An empty origin builds an empty sitemap by design.
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=https://opendash.invalid
+          cache-from: type=gha,scope=site-image
+          cache-to: type=gha,mode=max,scope=site-image,ignore-error=true
+
+      - name: Start the container
+        run: docker run -d --name opendash-site -p 3000:3000 opendash-site:ci
+
+      # The image's own HEALTHCHECK fetches the same page; this waits for the second or so between
+      # the process existing and Next answering, rather than trusting either.
+      - name: Wait for it to answer
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/; then
+              echo "serving"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::the container did not answer / within 60 seconds"
+          exit 1
+
+      - name: The home page, its stylesheet, the sitemap and the downloads
+        run: |
+          set -euo pipefail
+
+          # The pages are in the standalone output.
+          curl -fsS -o home.html http://127.0.0.1:3000/
+          test -s home.html
+
+          # The static folder is copied into the runtime stage by hand, because Next leaves it out
+          # of the standalone tree expecting a CDN. Without it every page still answers 200 and
+          # arrives with no styling, so the stylesheet the home page asks for has to be fetched
+          # rather than assumed.
+          css="$(grep -o '/_next/static/css/[^"]*\.css' home.html | head -1)"
+          if [ -z "$css" ]; then
+            echo "::error::the home page links no stylesheet; the site's CSS is not being emitted"
+            exit 1
+          fi
+          curl -fsS -o style.css "http://127.0.0.1:3000${css}"
+          test -s style.css
+
+          # Not empty is the whole check: the sitemap comes back as a bare <urlset> when the origin
+          # was not given at build time, which is the quietest way this image goes wrong.
+          curl -fsS -o sitemap.xml http://127.0.0.1:3000/sitemap.xml
+          grep -q '<loc>' sitemap.xml
+
+          # The artifacts stage ran and its output reached the public folder. This is the part with
+          # the most moving pieces behind it, and the one a reader actually clicks.
+          curl -fsS -o plugin.zip http://127.0.0.1:3000/downloads/OpenDash-plugin.zip
+          unzip -l plugin.zip
+
+          ls -l home.html style.css sitemap.xml plugin.zip
+
+      # Whatever the server said on the way down is the only account of a failure there is, since
+      # the container goes with the runner.
+      - name: What the container said
+        if: failure()
+        run: docker logs opendash-site || true
