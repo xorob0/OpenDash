@@ -18,6 +18,16 @@ The cost is the build: two toolchains, the whole dashboard, the plugin and then 
 several minutes rather than several seconds. That is the trade the container was designed around,
 and it is not worth optimising until a release is held up by it.
 
+The image is built on every push and pull request that touches anything it copies, by the Site image
+job in [.github/workflows/site-image.yml](../.github/workflows/site-image.yml), which then runs the
+container and asks it the same questions the first deploy below does. The image's build stages are a
+hand-maintained subset of the tree, and without that job they drifted from it silently: the rest of
+CI builds the site in a full checkout, where every file is simply present, so a test that started
+importing `data/shift-points.json` passed every check and then failed a redeploy at the last step of
+a build several minutes long. A Dockerfile that has drifted now fails a check on the branch that
+drifted it. The job can also be started by hand from the Actions tab on whichever branch is about to
+be published, which is the cheapest way to find out whether a redeploy will survive.
+
 ## The application in Dokploy
 
 Create an application, point it at this repository and the branch to publish, then set the
