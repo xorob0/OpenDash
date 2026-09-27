@@ -128,6 +128,21 @@ export const drawnAfter =
  */
 export const drawnOr = (absent: Expr, text: string, drawn: DrawnFigure): DrawnFigure => drawnEither(absent, drawnText(text), drawn);
 
+/**
+ * A drawn width that stops at the cells its value is laid in.
+ *
+ * A declaration wider than the budget is a mark bound outside the region the box was measured for,
+ * and the least wrong place for a mark whose figure WPF has already clipped is the end of the ink
+ * that survived, which is the end of the budget. Band D's energy and refuel are the two: cut for
+ * three bare digit cells and formatted `0.0`, so `68.0` overruns the box before the `%` is placed at
+ * all. Widening those two budgets is the other half, is recorded in `docs/design/zones.md` §10 and
+ * is not this branch's; this is what keeps the mark inside the field until it happens.
+ */
+export const drawnAtMost =
+  (chars: Chars, drawn: DrawnFigure): DrawnFigure =>
+  (mono) =>
+    ncalc.min(drawn(mono), num(monoWidth(mono, chars)));
+
 /** The narrowest and the widest a placement expression can come to, in pixels. */
 export interface DrawnRange {
   min: number;
@@ -251,4 +266,31 @@ function fold(terms: string[], combine: (a: DrawnRange, b: DrawnRange) => DrawnR
     range = range === undefined ? bound : combine(range, bound);
   }
   return range;
+}
+
+/**
+ * `drawn`'s expression, held against the cells its value is laid in.
+ *
+ * A follower is bound to what its figure draws and its box is measured from the end of the figure's
+ * *budget*, that being the rightmost place a figure filling its cells can push it. So a value
+ * declaring that it draws wider than its own budget binds the mark outside the region anything was
+ * measured for, and no fit test can see it: `textFit` and `faceFit` measure boxes, not bound
+ * `Left`s. Band D's energy and refuel were the case -- cut for three bare digit cells, formatted
+ * `0.0`, so the declaration said 71 px where the budget holds 48 and the `%` went past the far side
+ * of a box WPF had already clipped. {@link drawnAtMost} is the answer where the budget cannot widen
+ * yet; this is what makes the next mismatch between a format and a budget a failed build. #387.
+ */
+export function drawnWithin(what: string, drawn: DrawnFigure, chars: Chars, mono: Monospace): Expr {
+  const expr = drawn(mono);
+  const range = drawnRange(expr);
+  if (range === undefined) {
+    throw new Error(`${what}: the drawn width ${JSON.stringify(expr)} is not arithmetic over literals, so nothing can say where it puts the mark; build it from second/drawn.ts`);
+  }
+  const budget = monoWidth(mono, chars);
+  if (range.max > budget) {
+    throw new Error(
+      `${what}: the value says it can draw ${range.max} px where its budget holds ${budget}, so the mark after it would sit past the cells its box was measured for; widen the budget, or clamp the declaration to it with drawnAtMost`,
+    );
+  }
+  return expr;
 }

@@ -25,13 +25,13 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth, textBox } from '../design/metrics.ts';
+import { cells, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { charsOfText, drawnFigure, drawnOr, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
+import { charsOfText, drawnAtMost, drawnFigure, drawnOr, drawnWithin, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
@@ -223,15 +223,15 @@ const fuel: readonly BandField[] = [
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
 const energy: readonly BandField[] = [
-  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy')), drawn: notAvailableDrawn(raw('VirtualEnergy')), chars: CHARS.temperature, after: '%' },
-  { id: 'perLap', label: 'Per lap', sample: '5.6', bind: notAvailable(raw('VirtualEnergyPerLap')), drawn: notAvailableDrawn(raw('VirtualEnergyPerLap')), chars: CHARS.consumption, after: '%' },
+  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy')), drawn: notAvailableDrawn(raw('VirtualEnergy'), CHARS.temperature), chars: CHARS.temperature, after: '%' },
+  { id: 'perLap', label: 'Per lap', sample: '5.6', bind: notAvailable(raw('VirtualEnergyPerLap')), drawn: notAvailableDrawn(raw('VirtualEnergyPerLap'), CHARS.consumption), chars: CHARS.consumption, after: '%' },
   { id: 'laps', label: 'Est. laps', sample: '12.1', bind: notAvailable(raw('VirtualEnergyLaps')), chars: CHARS.consumption },
   {
     id: 'refuel',
     label: 'Refuel',
     sample: '31',
     bind: notAvailable(raw('VirtualEnergyRefuel')),
-    drawn: notAvailableDrawn(raw('VirtualEnergyRefuel')),
+    drawn: notAvailableDrawn(raw('VirtualEnergyRefuel'), CHARS.temperature),
     chars: CHARS.temperature,
     after: '%',
     color: ds.color.caution.primary,
@@ -390,9 +390,19 @@ function notAvailable(expr: string): string {
   return iff(ncalc.isNull(expr), str('--'), fmt(expr, '0.0'));
 }
 
-/** How wide {@link notAvailable} draws, for the per-cent sign that follows three of the four. */
-function notAvailableDrawn(expr: string): DrawnFigure {
-  return drawnOr(ncalc.isNull(expr), NO_VALUE, drawnFigure({ value: expr, digits: CHARS.consumption.digits - 1, decimals: 1 }));
+/**
+ * How wide {@link notAvailable} draws, for the per-cent sign that follows three of the four.
+ *
+ * The format is the same `0.0` on every field and the budget is not, so the whole digits are counted
+ * off the field's own cells rather than off one constant: the estimate's four cells and a point hold
+ * `100.0`, and energy and refuel are cut for three bare digit cells, where the same format writes
+ * one character more than the box holds. Clamped to those cells for exactly that reason -- the mark
+ * belongs beside the ink the driver can see, and on a clipped figure the ink stops at the budget.
+ * Widening those two budgets to the estimate's is the other half and is `docs/design/zones.md` §10's
+ * to give away; until then the `%` stays inside the field rather than 25 px past it. #387.
+ */
+function notAvailableDrawn(expr: string, chars: Chars): DrawnFigure {
+  return drawnAtMost(chars, drawnOr(ncalc.isNull(expr), NO_VALUE, drawnFigure({ value: expr, digits: chars.digits - 1, decimals: 1 })));
 }
 
 
@@ -606,7 +616,10 @@ function drawnLeft(field: BandField, mono: Monospace): Expr | undefined {
   if (field.drawn === undefined) {
     throw new Error(`band field ${field.id}: a value with a unit after it has to say how wide it draws, or the unit sits at the end of the budget`);
   }
-  return field.drawn === 'fixed' ? undefined : field.drawn(mono);
+  if (field.drawn === 'fixed') return undefined;
+  // And held against the field's own cells: a declaration wider than the budget puts the mark
+  // outside the region the unit's box was measured from, which no fit test can see.
+  return drawnWithin(`band field ${field.id}`, field.drawn, field.chars, mono);
 }
 
 /**
