@@ -217,6 +217,12 @@ const stint: readonly BandField[] = [
  * One label over the four rather than four: the catalogue draws "Tyres °C" once and then 84 104 62
  * 88, which reads as a set and spends one degree sign instead of four on a band that has room for
  * neither.
+ *
+ * The `°C` is fixed rather than following the driver's `TemperatureUnit` the way the tyres module's
+ * corners now do, and that is not an oversight: these four are iRacing's raw `*tempCM`, which is
+ * degrees Celsius whatever the sim is set to display, where the module reads SimHub's own
+ * `TyreTemperature*` and gets the driver's unit already converted. A label following the setting
+ * here would relabel a Celsius figure as Fahrenheit. #384.
  */
 const tyres: readonly BandField[] = [
   {
