@@ -12,6 +12,11 @@
  * Bold's "6" advances 0.440 em and its bowl reaches 0.468, so a monospace cell cut to the advance
  * loses the right of the bowl. That is not a rounding error, it is the shape of the letter.
  *
+ * {@link inkBreak} measures a third thing, which is where a glyph's ink *stops and starts again*:
+ * the gap between the tittle of an `i` and its stem is 0.080 em in Barlow Medium, a device pixel at
+ * 13 px, and a gap that small is what turns Liam Byrne into `Llam Byrne` on a rim. The name column's
+ * case rule is read off it.
+ *
  *   bun tools/measure-font/measure.ts packages/dash/fonts/BarlowCondensed-Bold.ttf
  *   bun tools/measure-font/measure.ts --json --chars '0123456789NR' <file.ttf>
  *
@@ -209,6 +214,101 @@ export function fontName(font: Font, nameId: number): string | undefined {
 
 /** The family a renderer will file this face under: the typographic one when it has one. */
 export const familyOf = (font: Font): string | undefined => fontName(font, NAME_ID.typographicFamily) ?? fontName(font, NAME_ID.family);
+
+/**
+ * The vertical span of each contour of a glyph, in em, or `undefined` for a composite.
+ *
+ * A bounding box says where a glyph's ink ends; this says where it stops and starts again, which is
+ * the other thing a renderer can take away from a letter. Parsed here rather than inferred because
+ * the gap between a tittle and its stem is a number in the outline and nothing else in the build
+ * knows it.
+ *
+ * A composite glyph -- an accented letter, and in Barlow the full stop's relatives too -- is drawn
+ * from components rather than from contours of its own, so it answers `undefined` rather than a
+ * wrong list. Nothing that asks this is composite: the letters are all simple glyphs.
+ */
+export function contourSpans(font: Font, char: string): { yMin: number; yMax: number }[] | undefined {
+  const glyph = font.cmap.get(char.codePointAt(0) ?? -1);
+  if (glyph === undefined) return undefined;
+  const start = font.loca[glyph] ?? 0;
+  const end = font.loca[glyph + 1] ?? start;
+  if (end <= start) return [];
+  const { data } = font;
+  let at = font.glyfOffset + start;
+  const numberOfContours = data.getInt16(at);
+  if (numberOfContours < 0) return undefined;
+  at += 10;
+  const endPoints: number[] = [];
+  for (let i = 0; i < numberOfContours; i++) {
+    endPoints.push(data.getUint16(at));
+    at += 2;
+  }
+  const numPoints = (endPoints[numberOfContours - 1] ?? -1) + 1;
+  at += 2 + data.getUint16(at); // the instructions, which are skipped whole
+
+  // Flags run-length encode themselves through bit 3; bits 1 and 2 then say how each coordinate is
+  // stored and bits 4 and 5 double as the sign of a byte-sized delta or as "same as the last one".
+  const flags: number[] = [];
+  while (flags.length < numPoints) {
+    const flag = data.getUint8(at++);
+    flags.push(flag);
+    if (flag & 8) for (let repeat = data.getUint8(at++); repeat > 0; repeat--) flags.push(flag);
+  }
+  // The x coordinates come first and are skipped, this being about the vertical.
+  for (let i = 0; i < numPoints; i++) {
+    const flag = flags[i] ?? 0;
+    if (flag & 2) at += 1;
+    else if (!(flag & 16)) at += 2;
+  }
+  const ys: number[] = [];
+  let y = 0;
+  for (let i = 0; i < numPoints; i++) {
+    const flag = flags[i] ?? 0;
+    if (flag & 4) {
+      const delta = data.getUint8(at++);
+      y += flag & 32 ? delta : -delta;
+    } else if (!(flag & 32)) {
+      y += data.getInt16(at);
+      at += 2;
+    }
+    ys.push(y);
+  }
+  const spans: { yMin: number; yMax: number }[] = [];
+  let from = 0;
+  for (const endPoint of endPoints) {
+    const contour = ys.slice(from, endPoint + 1);
+    spans.push({ yMin: Math.min(...contour) / font.unitsPerEm, yMax: Math.max(...contour) / font.unitsPerEm });
+    from = endPoint + 1;
+  }
+  return spans;
+}
+
+/**
+ * The widest horizontal band a glyph leaves empty between two pieces of its own ink, in em.
+ *
+ * Zero for a letter drawn in one piece, and zero for a counter as well: the spans are merged before
+ * the gaps between them are measured, so the hole in an `O` -- which is inside the letter's span and
+ * not above or below it -- is not a break. What is left is the disjoint glyph: the tittle of an `i`
+ * over its stem, the dot of a `!` under its stroke.
+ *
+ * This is the number behind the name column's case rule. A break of `g` em drawn at `fs` px is
+ * `g × fs` device pixels of background, and at a break under two pixels there is no pixel row the
+ * gap is certain to fall inside whatever sub-pixel phase the glyph lands at, so the renderer can
+ * shade both rows grey and join the two pieces into one. `i` then reads as `l`.
+ */
+export function inkBreak(font: Font, char: string): number | undefined {
+  const spans = contourSpans(font, char);
+  if (spans === undefined) return undefined;
+  if (spans.length < 2) return 0;
+  const sorted = [...spans].sort((a, b) => a.yMin - b.yMin);
+  let widest = 0;
+  let reach = sorted[0]?.yMax ?? 0;
+  for (const span of sorted.slice(1)) {
+    if (span.yMin > reach) widest = Math.max(widest, span.yMin - reach);
+    reach = Math.max(reach, span.yMax);
+  }
+  return widest;
+}
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
