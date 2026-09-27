@@ -208,6 +208,18 @@ tables, no row for this car, a row that would not read, or a driver on one of Op
 All of them leave the screens on rungs 3 and 4, drawing exactly what they drew before — and which one
 a car is on is which layer of the bar is visible in Dash Studio, as it has been since ADR 0014.
 
+**The one seam this leaves, said plainly.** The style is *per strip* on the Lights tab, and
+`OpenDash.LedRpmStyle` — the rig's own answer, which a strip with no opinion falls back to and which a
+screen has no choice but to read — is not a row on that tab at all. It seeds a strip when one is added
+and is otherwise whatever a settings file carries, which on a rig that has never held an older version
+is the default, `car`. So a driver who sets their one strip to F1 today leaves the rig's answer at
+`car` and gets the car's instants on their screens beside an F1 pattern on their strip: the same
+instants the strip would light at only if it were on `car` too. That is a smaller disagreement than the
+one this ticket closed — both surfaces now read one model, and only the strip's *look* was chosen — but
+it is a disagreement, and it is the argument for the Lights tab offering the rig's answer beside the
+strips'. It is not offered here because a setting nobody asked for is what answer 3 was rejected for,
+and because `LedCentre` sits in exactly the same position and has since the strips went per bar.
+
 ## Alternatives considered
 
 **Bake the tables into the profiles at build time.** One `RPMSegments` per car and gear under a

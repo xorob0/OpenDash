@@ -281,6 +281,14 @@ ships empty, so rung 1 emits no containers anywhere and every surface in the bui
 and 4 — the same expressions, on the same frame. The first measured car is also the first divergence,
 and closing it is work rather than a property of the model.
 
+*Closed, 2026-09-27 ([#353](https://github.com/xorob0/OpenDash/issues/353)).* The divergence arrived
+by the other route — the fetched tables of [ADR 0018](0018-the-cars-own-lights.md), which landed on
+the strips alone — and every surface now reads them: the rev bar, the rev arc, the companion's speedo
+bar and its Redline take the car's measured instants in OpenDash's colours, behind the same rig-wide
+`car` style the strips obey, and the flag box's digit takes its bands behind its own switch. So the
+one-definition rule this record is about holds on all three rungs rather than on two, and a screen
+still reads no table: the plugin publishes the count, and `shift.ts` is the one place it is read.
+
 **The ladder clause was not being honoured by the flag box, and now is.** The Decision says the top
 band "flashes at `Blink` (except in the last gear)". The box's gear digit flashed on the *band*
 instead — the moment `Rpms >= LastRPM`, and in the last gear too — because the shared band model

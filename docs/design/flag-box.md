@@ -295,6 +295,13 @@ back through it to the ladder the sim publishes without anybody being told. The 
 published beside it as `OpenDash.CarLadderOverRev`, and it is the table's own redline for the gear
 the car is in, which is a threshold of its own here as everywhere.
 
+Since [#353](https://github.com/xorob0/OpenDash/issues/353) the digit is not the only thing reading
+that answer. A screen's rev bar takes the same frame as a count — `OpenDash.CarLadderLit` of
+`OpenDash.CarLadderLamps` — and lights its fifteen segments in the tokens at the instants the car
+lights its own, so the band the digit is in and the third of the bar that is red are one comparison
+rather than two. The colours stay OpenDash's on a screen and the car's on a strip, which is the
+distinction that record draws: a strip is a copy of a bar and a face is a drawing of a state.
+
 There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says
 otherwise, and the argument there — two states a driver cannot tell apart is a bug whoever chose
 the colours — is at its strongest on a device whose entire vocabulary is colour.
