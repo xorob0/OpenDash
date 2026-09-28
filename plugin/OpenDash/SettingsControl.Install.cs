@@ -25,13 +25,19 @@ namespace OpenDashPlugin
         private Button restoreButton;
         private Button checkButton;
         private UpdateStatus updateStatus = new UpdateStatus();
-        private UpdateService updateService;
+        /// <summary>Whether the answer on its way was asked for by a press, which it owes a sentence either way.</summary>
+        private bool askedManually;
+
+        /// <summary>Where an Update pressed on a remembered offer draws its progress, once the listing it asked
+        /// for has answered. Null when no such press is waiting.</summary>
+        private Border pendingApply;
         private bool confirmingEdited;
         private bool applying;
         private bool confirmingReinstall;
 
-        private UpdateService Updates =>
-            updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
+        /// <summary>The plugin's, not the panel's own: the check Init queued and the one this panel asks for are the
+        /// same service, so the releases either found are the ones the Update button applies.</summary>
+        private UpdateService Updates => plugin.Updates;
 
         private FrameworkElement BuildInstallTab()
         {

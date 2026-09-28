@@ -100,7 +100,9 @@ Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
 
 In both cases OpenDash is a normal SimHub dashboard afterwards: assign it to a display from
 Dash Studio like any other. With no game running it shows the openDash wordmark, the time and
-"no game running": the idle screen is inside the dashboard, so there is nothing to point at it.
+"no game running": the idle screen is inside the dashboard, so there is nothing to point at it. When
+the plugin has found a newer release, a small line in its corner says which and where to take it;
+the racing face never does, and a dashboard running without the plugin never does either.
 
 ## The dashboard
 
@@ -138,7 +140,9 @@ second arrangement of the screen, with the well's room given back; on everything
 arrangement -- the round faces' rev arc, the companion's speedo -- it falls back to the plain RPM
 bar rather than going dark, which is what ADR 0004 records.
 `OpenDash.ShiftLights` is still attached beside it as the deprecated alias, true only in the
-`shift` state.
+`shift` state. `OpenDash.UpdateAvailable` and `OpenDash.UpdateVersion` are what the plugin last
+heard from GitHub about a newer release, which the idle screen draws: false and empty with update
+checks switched off, and false and empty on a rig that runs the newest release.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are the card in each slot. Of the faces the plugin installs
 the two round ones are the only readers: `OpenDash 480 round` reads the first two and
