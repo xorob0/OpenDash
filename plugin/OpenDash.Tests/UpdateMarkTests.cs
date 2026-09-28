@@ -41,25 +41,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.4.0", UpdateMark.Remember("0.4.0", Answer(UpdateState.UpdateAvailable, " ")));
         }
 
-        // Installed and Offered
+        // Offered
 
         [Fact]
         public void A_rig_that_has_caught_up_is_offered_nothing()
         {
-            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", "0.3.0"));
-            Assert.Null(UpdateMark.Offered("0.4.0", "0.4.0"));
-            Assert.Null(UpdateMark.Offered("0.4.0", "0.4.1"));
+            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", "0.3.0", pluginStaged: false));
+            Assert.Null(UpdateMark.Offered("0.4.0", "0.4.0", pluginStaged: false));
+            Assert.Null(UpdateMark.Offered("0.4.0", "0.4.1", pluginStaged: false));
             // Pre-release ordering is Versioning's, so a candidate is behind its own release.
-            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", "0.4.0-rc.3"));
+            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", "0.4.0-rc.3", pluginStaged: false));
         }
 
         [Fact]
         public void Nothing_remembered_or_nothing_readable_is_silence()
         {
-            Assert.Null(UpdateMark.Offered(null, "0.3.0"));
-            Assert.Null(UpdateMark.Offered("", "0.3.0"));
-            Assert.Null(UpdateMark.Offered("0.4.0", null));
-            Assert.Null(UpdateMark.Offered("0.4.0", Versioning.UnknownVersion));
+            Assert.Null(UpdateMark.Offered(null, "0.3.0", pluginStaged: false));
+            Assert.Null(UpdateMark.Offered("", "0.3.0", pluginStaged: false));
+            Assert.Null(UpdateMark.Offered("0.4.0", null, pluginStaged: false));
+            Assert.Null(UpdateMark.Offered("0.4.0", Versioning.UnknownVersion, pluginStaged: false));
         }
 
         [Fact]
@@ -67,11 +67,16 @@ namespace OpenDashPlugin.Tests
         {
             // The same reduction the check makes: dashboards current and the plugin a release behind is a rig that
             // still has an update to take.
-            Assert.Equal("0.3.0", UpdateMark.Installed("0.4.0", "0.3.0", pluginStaged: false));
-            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", UpdateMark.Installed("0.4.0", "0.3.0", pluginStaged: false)));
-            // Once the new assembly is staged, what is left is the restart the panel asks for, not a second download.
-            Assert.Equal("0.4.0", UpdateMark.Installed("0.4.0", "0.3.0", pluginStaged: true));
-            Assert.Null(UpdateMark.Offered("0.4.0", UpdateMark.Installed("0.4.0", "0.3.0", pluginStaged: true)));
+            var running = UpdateCheck.RigVersion(new[] { new PackageStatus { FolderName = "OpenDash 850x480", InstalledVersion = "0.4.0" } }, new[] { "OpenDash 850x480" }, "0.3.0");
+            Assert.Equal("0.3.0", running);
+            Assert.Equal("0.4.0", UpdateMark.Offered("0.4.0", running, pluginStaged: false));
+            // Once the new assembly is staged, what is left is the restart the panel asks for, not a second download:
+            // after an update that wrote the dashboards before staging the plugin, as one did while a release
+            // attached them...
+            Assert.Null(UpdateMark.Offered("0.4.0", running, pluginStaged: true));
+            // ...and after one whose dashboards come inside the plugin (#438), which leaves them on the old version
+            // until the new plugin starts. Comparing the dashboards alone put the mark back up for exactly that.
+            Assert.Null(UpdateMark.Offered("0.4.0", UpdateCheck.ComparableInstalled("0.3.0", "0.3.0"), pluginStaged: true));
         }
 
         // Available and Shown
@@ -148,6 +153,34 @@ namespace OpenDashPlugin.Tests
             var upToDate = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = "0.4.0" };
             Assert.Same(upToDate, UpdateMark.Opening(true, upToDate, null, "0.4.0"));
             Assert.False(upToDate.IsVisible);
+        }
+
+        // Applied
+
+        /// <summary>
+        /// After an update, the line says up to date only once what the rig runs has reached the release.
+        /// </summary>
+        /// <remarks>
+        /// It said so whenever a dashboard had been replaced, and a run that wrote the dashboards and staged the
+        /// plugin leaves the old plugin running until SimHub restarts. Measured against the rig that is still a
+        /// release behind, so the offer stands and the panel goes on asking for the restart.
+        /// </remarks>
+        [Fact]
+        public void An_update_is_up_to_date_only_when_the_rig_has_reached_the_release()
+        {
+            var offer = new UpdateStatus { State = UpdateState.UpdateAvailable, InstalledVersion = "0.3.0", LatestVersion = "0.4.0" };
+
+            // The plugin staged, so the rig still runs 0.3.0 whatever the dashboards say.
+            Assert.Same(offer, UpdateMark.Applied(offer, true, "0.4.0", "0.3.0"));
+            // A run that did not finish changes nothing it could be wrong about.
+            Assert.Same(offer, UpdateMark.Applied(offer, false, "0.4.0", "0.4.0"));
+            Assert.Same(offer, UpdateMark.Applied(offer, true, null, "0.4.0"));
+
+            // The dashboards were all that was behind, and they have moved.
+            var caughtUp = UpdateMark.Applied(offer, true, "0.4.0", "0.4.0");
+            Assert.Equal(UpdateState.UpToDate, caughtUp.State);
+            Assert.Equal("You have the newest release, 0.4.0.", caughtUp.Line);
+            Assert.True(caughtUp.IsVisible);
         }
 
         [Fact]

@@ -47,8 +47,9 @@ export interface DensitySpec {
   labelRow: number;
   /** Units, denominators and compound letters. */
   labelSm: number;
-  /** Driver names, which are Barlow Medium and never monospaced. */
-  name: number;
+  // A driver's name is not a size of the density. It is the list row's, `LIST_ROW_TYPES` in
+  // `table.ts`, wherever the name is drawn: the relative, the leaderboard and the opponents page used
+  // to answer how large a name is twice, 15 / 13 in a list and 15 / 13 / 12 here, and #341 made it once.
   /** Gap between the fields of a row. */
   gapX: number;
   /** Gap between the rows of a module. */
@@ -79,7 +80,6 @@ const COMPANION: DensitySpec = {
   label: ds.size.label,
   labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
-  name: 15,
   gapX: ds.space[5],
   gapY: ds.space[4],
   fieldGap: FIELD_GAP,
@@ -102,7 +102,6 @@ const ZONE: DensitySpec = {
   label: ds.size.label,
   labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
-  name: 13,
   gapX: ds.space[5],
   gapY: 12,
   fieldGap: FIELD_GAP,
@@ -142,7 +141,6 @@ const COMPACT: DensitySpec = {
   label: 13,
   labelRow: 12,
   labelSm: 12,
-  name: 12,
   gapX: ds.space[4],
   gapY: 8,
   rowHeight: 20,

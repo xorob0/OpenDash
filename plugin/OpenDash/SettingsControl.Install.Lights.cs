@@ -12,8 +12,9 @@
 //
 // NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS, which is the consent half of ADR 0013 and what the
 // section's own caption says. Drawing the section is free of side effects: FlagBoxInstaller.Plan and
-// StripInstaller.Plan only ask SimHub what it already holds, and the profiles are read out of the
-// assembly rather than off disk.
+// StripInstaller.InstalledEverywhere only ask SimHub what it already holds, and the profiles are read
+// out of the assembly rather than off disk. The same holds for an update: a strip installed by an older
+// build is reported and offered an Update, and is not rewritten until that is pressed.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -94,9 +95,9 @@ namespace OpenDashPlugin
         /// One row per strip or brow shape the build embedded, grouped the way the canvas groups them.
         /// </summary>
         /// <remarks>
-        /// One read of SimHub's profile list for all nineteen rather than one per row: StripInstaller.Plan
-        /// takes the whole list, and a grouped row reduces its members with FlagBoxInstallPlan.Combine, so
-        /// the row can never read better than the profile it is worst about.
+        /// One read of every LED device's profile list for all the rows rather than one per row or per
+        /// bar, and each of the rig's bars is looked for in them by the id it derives
+        /// (LedBarProfile.Plan). A row then reports what its shapes' bars hold (PanelLightRows.RowPlan).
         ///
         /// A shape this build did not embed has no row at all, which is the honest answer: a row for a
         /// profile that is not there could only offer a press that does nothing.
@@ -115,37 +116,137 @@ namespace OpenDashPlugin
                 profiles.Add(new LightProfile(id, FlagBoxProfile.ProfileNameOf(text)));
             }
 
-            var rows = PanelLightRows.Rows(profiles);
-            var order = rows.SelectMany(row => row.ShapeIds).ToList();
-            var plans = Plan(order.Select(id => json[id]).ToList());
-            unavailable = plans.Any(p => p.State == FlagBoxInstallState.Unavailable);
-            var byId = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
-            for (var i = 0; i < order.Count && i < plans.Count; i++) byId[order[i]] = plans[i];
+            bool reachable;
+            var bars = BarCensus(json, out reachable);
+            unavailable = !reachable;
 
             var drawn = new List<UIElement>();
-            foreach (var row in rows)
+            foreach (var row in PanelLightRows.Rows(profiles))
             {
-                var members = row.ShapeIds;
-                // No press. A strip profile reaches SimHub as an LED bar's, under the name its owner gave
-                // it, because two strips that share one profile share one set of settings -- which is the
-                // thing the bars exist to stop. This row is the census: which shapes this build draws
-                // for, and whether anything of ours is in SimHub for them.
+                // No Install press. A strip profile reaches SimHub as an LED bar's, under the name its
+                // owner gave it, because two strips that share one profile share one set of settings --
+                // which is the thing the bars exist to stop -- and a bar is added on the Lights tab. This
+                // row is the census: which shapes this build draws for, and what the rig's own strips of
+                // those shapes hold in SimHub.
+                var shapeIds = row.ShapeIds;
                 drawn.Add(BuildCensusRow(
                     row.Name,
                     row.Caption,
-                    FlagBoxInstallPlan.Combine(members.Select(id => byId[id])),
-                    PanelLightRows.Tooltip(members.Count, FlagBoxInstallPlan.Combine(members.Select(id => byId[id])).State, null)));
+                    shapeIds.Count,
+                    PanelLightRows.RowPlan(shapeIds, bars, reachable),
+                    () => UpdateBars(shapeIds, json)));
             }
             return drawn;
         }
 
-        /// <summary>A row with no press: what the shape is and what SimHub holds for it.</summary>
-        private FrameworkElement BuildCensusRow(string name, string caption, FlagBoxPlan plan, string tooltip)
+        /// <summary>
+        /// A strip row: what the shapes are and what the rig's strips of them hold in SimHub, with an
+        /// Update press while one of those strips is older than this build.
+        /// </summary>
+        /// <remarks>
+        /// Update and nothing else, because it is the one thing this row can do that nothing else on the
+        /// panel does: a strip is added, moved and removed on the Lights tab, and an older copy in SimHub
+        /// is not rewritten on its own (ADR 0013, ADR 0017). The press redraws the row from what it
+        /// REPORTED, the way the flag box's does, so a strip that could not be rewritten leaves the row
+        /// saying so rather than a fresh read finding the others fine.
+        /// </remarks>
+        private FrameworkElement BuildCensusRow(string name, string caption, int members, FlagBoxPlan plan, Func<FlagBoxPlan> update)
         {
-            var state = PanelCopy.LightRow(plan.State, plan.InstalledVersion);
-            var row = Ui.InstallRow(null, name, caption, Ui.StatusPill(PanelLightRows.DotHex(plan.State), state.State, state.StateHex), null);
-            row.ToolTip = tooltip;
+            var pillHost = new Border { VerticalAlignment = VerticalAlignment.Center };
+            var actionHost = new Border { VerticalAlignment = VerticalAlignment.Center };
+            var row = Ui.InstallRow(null, name, caption, pillHost, actionHost);
+            Action<FlagBoxPlan> draw = null;
+            draw = current =>
+            {
+                var state = PanelCopy.LightRow(current.State, current.InstalledVersion);
+                pillHost.Child = Ui.StatusPill(PanelLightRows.DotHex(current.State), state.State, state.StateHex);
+                row.ToolTip = PanelLightRows.Tooltip(members, current);
+                if (current.State != FlagBoxInstallState.Outdated)
+                {
+                    actionHost.Child = null;
+                    return;
+                }
+                var button = Ui.PrimaryButton(state.Button, PanelMetrics.RowButtonHeight);
+                button.MinWidth = ButtonMinWidth;
+                button.Click += (sender, args) => draw(update());
+                actionHost.Child = button;
+            };
+            draw(plan);
             return row;
+        }
+
+        /// <summary>
+        /// Each of the rig's bars with what SimHub holds for it, off one read of every LED device.
+        /// </summary>
+        /// <remarks>
+        /// Reachable is false when no LED device could be read at all, which the section reports as
+        /// SimHub's LED settings being unavailable. An unreachable driver is a state a driver can do
+        /// nothing about rather than an error, so a failure to read is reported as one.
+        /// </remarks>
+        private IList<KeyValuePair<LedBar, FlagBoxPlan>> BarCensus(IDictionary<string, string> embedded, out bool reachable)
+        {
+            List<List<InstalledProfile>> devices;
+            try
+            {
+                devices = StripInstaller.InstalledEverywhere();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Reading SimHub's LED profiles failed: " + ex.Message);
+                devices = new List<List<InstalledProfile>>();
+            }
+            reachable = devices.Any(device => device != null);
+            var census = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            foreach (var bar in Settings.LedBarList())
+            {
+                if (bar == null || bar.Shape == null) continue;
+                string json;
+                var description = embedded.TryGetValue(bar.Shape, out json) ? FlagBoxProfile.DescriptionOf(json) : null;
+                census.Add(new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, description, devices)));
+            }
+            return census;
+        }
+
+        /// <summary>
+        /// Rewrites every bar of these shapes whose copy in SimHub is older than this build's, each into
+        /// the device it names, and reports the row as it then stands.
+        /// </summary>
+        /// <remarks>
+        /// The census is read again at the press rather than carried from the draw, so what is rewritten
+        /// is what SimHub holds when the button is pressed, which SimHub's own editor may have changed
+        /// since the tab was drawn. Each bar goes through InstallBar, the same install adding or moving it
+        /// runs, so an update writes exactly what adding the strip today would write: its own name, its
+        /// own id, its own properties.
+        ///
+        /// A bar whose device SimHub no longer has is left alone, and the press reports that it failed
+        /// with the reason in SimHub's log. InstallBar takes the bar's copy out of every device before it
+        /// installs into the one the bar names, so running it there would remove a strip that still
+        /// lights and put nothing in its place.
+        /// </remarks>
+        private FlagBoxPlan UpdateBars(IReadOnlyList<string> shapeIds, IDictionary<string, string> embedded)
+        {
+            bool reachable;
+            var outdated = PanelLightRows.OutdatedBars(shapeIds, BarCensus(embedded, out reachable));
+            var results = new List<FlagBoxPlan>();
+            foreach (var bar in outdated)
+            {
+                string json;
+                if (!embedded.TryGetValue(bar.Shape, out json))
+                {
+                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
+                }
+                else if (LedTargets.Find(bar.Device) == null)
+                {
+                    Log.Warn("The profile for " + bar.Name + " was not updated: the LED device it names is no longer in SimHub.");
+                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.Failed });
+                }
+                else
+                {
+                    results.Add(InstallBar(bar, json));
+                }
+            }
+            if (results.Any(plan => plan.State != FlagBoxInstallState.UpToDate)) return FlagBoxInstallPlan.Combine(results);
+            return PanelLightRows.RowPlan(shapeIds, BarCensus(embedded, out reachable), reachable);
         }
 
         /// <summary>
@@ -194,29 +295,6 @@ namespace OpenDashPlugin
             };
             draw(plan);
             return row;
-        }
-
-        /// <summary>
-        /// What any LED device on the rig holds for each of the shapes given.
-        /// </summary>
-        /// <remarks>
-        /// Any, and not one: SimHub keeps a profile list per LED device, these rows are a census of the
-        /// shapes this build carries rather than a statement about one strip, and a shape installed on
-        /// the wheel is installed. Which device a given strip goes to is the Lights tab's question,
-        /// asked per bar. An unreachable driver is a state a driver can do nothing about rather than an
-        /// error, so it is reported as one.
-        /// </remarks>
-        private static IList<FlagBoxPlan> Plan(IList<string> embedded)
-        {
-            try
-            {
-                return StripInstaller.PlanAnywhere(embedded);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Reading SimHub's LED profiles failed: " + ex.Message);
-                return embedded.Select(x => new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
-            }
         }
 
         /// <summary>Asks SimHub what it holds for the flag box, without touching it.</summary>

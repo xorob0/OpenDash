@@ -7,6 +7,7 @@ import type { Expr } from '../bind.ts';
 import type { Chars, DataWeight } from '../design/metrics.ts';
 import type { RungSpec } from '../design/rung.ts';
 import { label } from '../elements/label.ts';
+import { mark, unmarked, type Mark } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 import { cardFrame, centredTop } from './frame.ts';
@@ -31,6 +32,11 @@ export interface ValueSpec {
   color?: Hex;
   colorBind?: Expr;
   weight?: DataWeight;
+  /**
+   * A mark drawn in this value's place, in the value's own box, for a state whose reading is a glyph
+   * no cell can hold: the `∞` of a session with no clock. See `elements/mark.ts`.
+   */
+  mark?: Mark;
 }
 
 export interface ReadoutGeometry {
@@ -52,14 +58,17 @@ export function readoutGeometry(slot: Rect, rung: RungSpec): ReadoutGeometry {
 
 export function readout(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSpec, value: ValueSpec): Item[] {
   const g = readoutGeometry(slot, rung);
+  const maxWidth = slot.left + slot.width - g.x;
   return [
     label(`${prefix}label`, lbl.text, g.x, g.labelY, g.innerWidth, { bind: lbl.bind }),
     numeral(`${prefix}value`, value.sample, g.x, g.valueY, g.valueFs, value.chars, {
-      maxWidth: slot.left + slot.width - g.x,
+      maxWidth,
       bind: value.bind,
       color: value.color,
       colorBind: value.colorBind,
       weight: value.weight,
+      visibleBind: unmarked(value.mark),
     }),
+    ...(value.mark ? [mark(`${prefix}mark`, value.mark, g.x, g.valueY, g.valueFs, undefined, { weight: value.weight, color: value.color, maxWidth })] : []),
   ];
 }

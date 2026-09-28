@@ -31,7 +31,7 @@ import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
-import { CHARS, GRIP_WIDEST, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, trackGrip, windKmh } from '../second/values.ts';
+import { CHARS, GRIP_WIDEST, currentLap, incidentLimit, incidents, localClock, sessionClock, sessionType, simClock, totalLaps, trackGrip, untimedMark, windKmh } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
@@ -171,7 +171,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'timeLeft',
       parts: [
         { kind: 'label', text: 'Left' },
-        { kind: 'value', sample: '0:42:15', bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')), chars: CHARS.clock },
+        { kind: 'value', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
       ],
     },
     {

@@ -19,6 +19,7 @@ import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
+import { mark, type Mark, unmarked } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { charsOfText, drawnFigure, type DrawnFigure } from '../second/drawn.ts';
 import { rank, type RankMember } from '../second/rank.ts';
@@ -29,7 +30,6 @@ import {
   airTemperature,
   antiRollFront,
   fieldSize,
-  clock,
   currentLap,
   incidents,
   localClock,
@@ -37,9 +37,10 @@ import {
   positionDigits,
   positionDrawn,
   playerClass,
-  sessionTimeLeft,
+  sessionClock,
   simClock,
   totalLaps,
+  untimedMark,
   roadTemperature,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -75,6 +76,12 @@ interface BarFieldSpec {
    * what the field is measured by.
    */
   widest?: string;
+  /**
+   * A mark drawn in the value's place, in the value's own box, for a state whose reading is a glyph
+   * no cell can hold: the `∞` of a session with no clock. It takes no width of its own, so the
+   * catalogue is measured as it was; see `elements/mark.ts`.
+   */
+  mark?: Mark;
   /** A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. */
   denominator?: { sample: string; bind: string; chars: Chars };
   /**
@@ -96,7 +103,7 @@ const WIDEST_CLASS = 'LMP2 · P24';
 
 /** The ten fields an end of the bar can show. Ordered as the plugin lists them. */
 export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
-  { id: 'raceTime', label: 'Race', sample: '0:28:14', bind: clock(sessionTimeLeft()), chars: CHARS.clock },
+  { id: 'raceTime', label: 'Race', sample: '0:28:14', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
   {
     id: 'lap',
     label: 'Lap',
@@ -106,7 +113,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 4, specials: 1 } },
     drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
   },
-  { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: clock(sessionTimeLeft()), chars: CHARS.clock },
+  { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
   { id: 'clock', label: 'Clock', sample: '14:32', bind: localClock(), chars: CHARS.clock },
   { id: 'simulatedTime', label: 'Real time', sample: '19:26', bind: simClock(), chars: CHARS.clock },
   // The two position cells answer two questions, and cannot contradict each other on one face.
@@ -317,16 +324,20 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
       const value = valueWidth(spec, valueSize) + boxSlack(valueSize);
       const denominator = denominatorWidth(spec, denominatorSize) + boxSlack(denominatorSize);
       const after = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, denominatorSize) : 0;
+      const valueX = align === 'left' ? x : x + widest - after - value;
       items.push(
         withMoreBindings(
-          numeral(`${name}.value`, spec.sample, align === 'left' ? x : x + widest - after - value, valueTop, valueSize, spec.chars, {
+          numeral(`${name}.value`, spec.sample, valueX, valueTop, valueSize, spec.chars, {
             width: value,
             hAlign: align,
             ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
           }),
-          { Visible: visible, Text: spec.bind },
+          { Visible: unmarked(spec.mark, visible), Text: spec.bind },
         ),
       );
+      // The mark shares the value's box and alignment, so a right-hand slot draws it against the
+      // padding where the clock's last digit was, and the field is the width it always was.
+      if (spec.mark) items.push(mark(`${name}.mark`, spec.mark, valueX, valueTop, valueSize, visible, { width: value, hAlign: align }));
       if (spec.denominator) {
         // A left-hand field is drawn from its own edge, so its denominator follows the figure rather
         // than the cells the figure is cut from: `4 / 32` and `16 / 32` keep one gap. A right-hand

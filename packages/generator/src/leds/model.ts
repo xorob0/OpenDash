@@ -222,6 +222,10 @@ export interface LedProfile {
   useProfileBrightness?: boolean;
   /** How many LEDs the device this profile is generated for has. Not written; validation uses it. */
   ledCount?: number;
+  /** `ProfileBase.Author`, which SimHub shows in its list and round-trips untouched. */
+  author?: string;
+  /** `ProfileBase.Description`, the profile's own and not a container's. */
+  description?: string;
 }
 
 /** The `ContainerType` a container is written as. */

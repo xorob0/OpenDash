@@ -16,6 +16,7 @@ import { measureText } from '../design/advances.ts';
 import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
+import { mark, unmarked, type Mark } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
@@ -73,6 +74,12 @@ export interface FieldValue {
   color?: Hex;
   colorBind?: Expr;
   weight?: DataWeight;
+  /**
+   * A mark drawn in this value's place, for a state whose reading is a glyph no cell can hold: the
+   * `∞` of a session with no clock. The two are one field and never both drawn; see
+   * `elements/mark.ts`.
+   */
+  mark?: Mark;
   follower?: Follower;
   /**
    * How wide the value really draws, which is where its follower sits. See {@link DrawnWidth}.
@@ -309,11 +316,23 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       widest: spec.value.widest,
       color: spec.value.color,
       colorBind: spec.value.colorBind,
-      visibleBind: spec.visibleBind,
+      visibleBind: unmarked(spec.value.mark, spec.visibleBind),
       maxWidth: width,
       leftBind: leftAt?.(),
     }),
   );
+  if (spec.value.mark) {
+    // The value's own place and box, so a field the row re-centres carries its mark with it, and the
+    // mark is measured from itself rather than from the cells the value it replaces is cut from.
+    items.push(
+      mark(`${spec.name}.mark`, spec.value.mark, x, valueY, spec.value.fs, spec.visibleBind, {
+        weight: spec.value.weight,
+        color: spec.value.color,
+        maxWidth: width,
+        leftBind: leftAt?.(),
+      }),
+    );
+  }
   const follower = spec.value.follower;
   if (follower) {
     const gap = followerGap(follower);

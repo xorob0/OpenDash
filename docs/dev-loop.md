@@ -18,7 +18,7 @@ bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed
 bun run dev --scenario flagbox                # walk every state the flag box draws
 bun run dev --scenario nosession               # the game running with no session, for #406's notices
-bun run dev --scenario untimed                 # a lap race with no clock, for #387's laps form
+bun run dev --scenario untimed                 # a lap race with no clock: #387's laps form, #439's mark
 ```
 
 ## The pieces underneath
@@ -196,14 +196,16 @@ leaves nothing behind, so a capture is saved to the guest's own disk and copied 
 itself, which is how a dash behind another window is still captured, but the part hanging off the
 screen comes back cut and looks exactly like a clipped glyph.
 
-**One clipped glyph on the VM is ours and is expected: the bar's race clock in a lap-counted race.**
-`zones/bar.ts` binds both `raceTime` and `timeLeft` to `clock(sessionTimeLeft())` with no
-`isTimedSession()` guard, where the session card, the session module, the pit wall header and the pit
-wall's own time field all have one — and `raceTime` is the default of the bar's first slot. iRacing
-publishes a week of time left for a session that has no clock, so the field draws `168:00:00`, seven
-digit cells in a budget of six, and WPF takes the last glyph off it on all 22 packages. Every iRacing
-lap race does this; the `untimed` scenario is what makes it visible. It is not a fault of the scenario
-and not the off-screen window above: the guard is the fix, `iff(isTimedSession(), clock(sessionTimeLeft()),
-str('-:--:--'))` on both fields as the other four places already write it, plus the snapshot refresh.
-Untracked at the time of writing — it was found by a review of the branch that added the scenario and
-has no ticket yet, so a VM pass should expect it rather than report it as new.
+**The bar's race clock in a lap-counted race is fixed, and the `untimed` scenario is where to see
+it.** It used to be the one clipped glyph on the VM that was ours: `zones/bar.ts` bound both
+`raceTime` and `timeLeft` to `clock(sessionTimeLeft())` with no guard, where the session card, the
+session module, the pit wall header and the pit wall's own time field all had one — and `raceTime` is
+the default of the bar's first slot. iRacing publishes a week of time left for a session that has no
+clock, so the field drew `168:00:00`, seven digit cells in a budget of six, and WPF took the last
+glyph off it on all 22 packages. Fixed in #439: every surface now reads `sessionClock()` and draws
+`∞` where the session has no clock, `-:--:--` only where the clock is at or below zero. So on
+`untimed` the bar reads `RACE ∞` and nothing is clipped; a clipped clock there is a regression, and a
+clipped anything else is most likely the off-screen window above. The two surfaces that follow
+`SessionProgress`, the session module and the session card, draw the lap on `untimed` under the
+default `auto` and show the mark only when the setting is forced to `time`; and no scenario publishes
+a zero clock, so `-:--:--` is not a thing to look for on the VM at all.
