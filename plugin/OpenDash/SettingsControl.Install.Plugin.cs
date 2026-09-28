@@ -7,9 +7,11 @@
 // whole partial class.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using SimHub.Plugins.Styles;
 // Aliased rather than imported: System.Windows.Forms carries a Button of its own, and this file is
 // full of WPF ones. SHMessageBox answers with the Forms enum whatever the dialog it draws.
@@ -80,10 +82,54 @@ namespace OpenDashPlugin
 
         private Button BuildUpdateButton(Border progressHost)
         {
-            var button = BuildSecondaryButton("Update", "Download the newest release.");
+            var button = BuildSecondaryButton(null, "Download the newest release.");
+            button.SetBinding(ContentControl.ContentProperty, LabelFromTheLine(ReplacingAction.Update));
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => ApplyUpdate(progressHost);
             return button;
+        }
+
+        /// <summary>
+        /// A binding that draws Update's or Reinstall's label from the confirmation each time the update line changes.
+        /// </summary>
+        /// <remarks>
+        /// Bound to the line rather than set beside each sentence written to it, because the question is on the line
+        /// and a label set by hand outlived it (#480): Reinstall wrote its own sentence over Update's question and left
+        /// Update reading "Replace anyway". With the label a function of the line, whatever takes the line, a writer
+        /// added later included, turns it back into the button's verb, and it reads "Replace anyway" only while its own
+        /// question is what the line shows. The line is built before either button, so it is there to bind to.
+        /// </remarks>
+        private Binding LabelFromTheLine(ReplacingAction action)
+        {
+            return new Binding(nameof(TextBlock.Text))
+            {
+                Source = updateLine,
+                Mode = BindingMode.OneWay,
+                Converter = new ConfirmationLabel(confirmation, action),
+            };
+        }
+
+        /// <summary>The converter behind <see cref="LabelFromTheLine"/>: the line's text in, the button's label out.</summary>
+        private sealed class ConfirmationLabel : IValueConverter
+        {
+            private readonly PanelConfirmation confirmation;
+            private readonly ReplacingAction action;
+
+            public ConfirmationLabel(PanelConfirmation confirmation, ReplacingAction action)
+            {
+                this.confirmation = confirmation;
+                this.action = action;
+            }
+
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                return confirmation.Label(action, value as string);
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                throw new NotSupportedException();
+            }
         }
 
         /// <summary>
@@ -195,7 +241,6 @@ namespace OpenDashPlugin
                 updateStatus = manual && !answer.Manual ? answer.AsManual() : answer;
             }
             if (checkButton != null) checkButton.IsEnabled = true;
-            confirmingEdited = false;
             RefreshUpdateLine();
             // An Update pressed on the remembered offer, now that the listing it needed has come back.
             var host = pendingApply;
@@ -234,19 +279,24 @@ namespace OpenDashPlugin
                 return;
             }
 
+            // Read from the disk at the press rather than from whenever the installer last looked, since a dashboard
+            // edited in Dash Studio while the question is open is one the question did not name, and the second press
+            // has to see it in order to ask again.
+            plugin.Installer.Refresh();
             var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
-            if (edited.Count > 0 && !confirmingEdited)
+            var question = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
+            var press = confirmation.Press(ReplacingAction.Update, edited, question, updateLine.Text);
+            if (press == PressOutcome.Ask)
             {
                 // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
-                // settings page is worse than a button that changes what it says.
-                confirmingEdited = true;
-                updateButton.Content = "Replace anyway";
-                updateLine.Text = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
+                // settings page is worse than a button that changes what it says, which it does of itself once the
+                // question is on the line.
+                updateLine.Text = question;
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
 
-            var replaceEdited = confirmingEdited;
+            var replaceEdited = press == PressOutcome.RunReplacingEdited;
             applying = true;
             updateButton.IsEnabled = false;
             reinstallButton.IsEnabled = false;
@@ -276,14 +326,9 @@ namespace OpenDashPlugin
                 Dispatcher.Invoke(() =>
                 {
                     applying = false;
-                    confirmingEdited = false;
                     progressHost.Visibility = Visibility.Collapsed;
                     progressHost.Child = null;
-                    if (updateButton != null)
-                    {
-                        updateButton.Content = "Update";
-                        updateButton.IsEnabled = true;
-                    }
+                    if (updateButton != null) updateButton.IsEnabled = true;
                     if (reinstallButton != null) reinstallButton.IsEnabled = true;
                     if (checkButton != null) checkButton.IsEnabled = true;
                     // An update writes the stock folders from their packages, so it brings the packages'
@@ -410,8 +455,9 @@ namespace OpenDashPlugin
             var button = Ui.OutlineButton(null);
             button.MinWidth = ButtonMinWidth;
             button.ToolTip = "Install every dashboard on your rig again.";
-            reinstallLabel = Ui.Text("Reinstall", Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
-            button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), reinstallLabel);
+            var label = Ui.Text(string.Empty, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
+            label.SetBinding(TextBlock.TextProperty, LabelFromTheLine(ReplacingAction.Reinstall));
+            button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), label);
             button.Click += (sender, args) => Reinstall();
             return button;
         }
@@ -431,19 +477,21 @@ namespace OpenDashPlugin
             // one of them is extracting into, so whichever starts first holds the field.
             if (applying) return;
 
+            // From the disk at the press, for the reason ApplyUpdate reads it there.
+            plugin.Installer.Refresh();
             var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
-            if (edited.Count > 0 && !confirmingReinstall)
+            var question = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
+                + ": " + string.Join(", ", edited)
+                + ". Reinstalling replaces your version. A copy is kept, and \"Put mine back\" restores it.";
+            var press = confirmation.Press(ReplacingAction.Reinstall, edited, question, updateLine.Text);
+            if (press == PressOutcome.Ask)
             {
-                confirmingReinstall = true;
-                if (reinstallLabel != null) reinstallLabel.Text = "Replace anyway";
-                updateLine.Text = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
-                    + ": " + string.Join(", ", edited)
-                    + ". Reinstalling replaces your version. A copy is kept, and \"Put mine back\" restores it.";
+                updateLine.Text = question;
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
 
-            var replaceEdited = confirmingReinstall;
+            var replaceEdited = press == PressOutcome.RunReplacingEdited;
             reinstallButton.IsEnabled = false;
             try
             {
@@ -465,8 +513,6 @@ namespace OpenDashPlugin
             }
             finally
             {
-                confirmingReinstall = false;
-                if (reinstallLabel != null) reinstallLabel.Text = "Reinstall";
                 // The kit draws a disabled button at the canvas's 40 per cent through a template trigger,
                 // so putting IsEnabled back is the whole of the re-enable: nothing here dimmed it by hand.
                 if (reinstallButton != null) reinstallButton.IsEnabled = true;
