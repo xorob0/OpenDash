@@ -21,12 +21,12 @@
 import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
+import { LEADERBOARD_COLUMNS, LEAST_NAME_CHARS } from '../src/modules/leaderboard.ts';
 import { fittingColumns } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { densityForBox, type Density } from '../src/second/density.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnWidths, NAME_FACE, NAME_SAMPLE, nameFloorOf, nameSizeForRow, SHORTEST_NAME_CHARS, table, tableRowHeight } from '../src/second/table.ts';
+import { columnWidths, listPlan, NAME_FACE, NAME_SAMPLE, nameFloorOf, nameSizeForRow, rowSlack, SHORTEST_NAME_CHARS, table, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { charsThatFit } from '../src/design/advances.ts';
 import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { walkItems } from '../src/walk.ts';
@@ -383,7 +383,7 @@ describe('the row the canvas draws', () => {
    * Four characters at 800 x 480 is `LIA…`, one glyph more than the `LIA` #385 was written to delete,
    * and the same three glyphs for `L. Byrne` and `B. Liam`, whose cut lands on a space and drops it:
    * `L.…` and `B.…`. The row is down to the position, the name and the gap,
-   * all three of which `NEVER_DROPPED` keeps, so the only width left to give the name is one of the other
+   * all three of which `THE_ROW` keeps, so the only width left to give the name is one of the other
    * two: the position's 40 px and the gap's 92 are both the canvas's stated numbers, and the gap's is a
    * floor over its own content — six digits and a sign need 79 px at 24, so even dropping a decimal
    * would not narrow it. Giving the name the position's column is therefore the whole of the lever, and
@@ -509,6 +509,91 @@ describe('a long name cannot cost a page its gap column', () => {
       }
     });
   }
+});
+
+/**
+ * The rule written at `LEADERBOARD_COLUMNS`, held at every width rather than at the boxes that happen
+ * to exist (#340).
+ *
+ * The boxes above are the ones the build hands a list today, and the narrowest of them is 225 px, which
+ * is where step 3 is the last one taken. What a narrower box does was not decided, and `columnWidths`
+ * answered it by flooring the name at nothing and laying the position and the gap out past the box.
+ * So this walks every width from the gap alone to the widest zone and asks the rule's three questions of
+ * each: is the gap there, does the row fit, and was what it gave up taken in the order written down.
+ */
+describe('what a row gives way, in the order the leaderboard writes down', () => {
+  /** The order the rule gives columns up in, first to go first. The gap is not in it. */
+  const GIVES_WAY: readonly ColumnId[] = ['best', 'last', 'class', 'num', 'name', 'pos'];
+  const DENSITIES: Density[] = ['companion', 'zone', 'wide', 'compact', 'panel'];
+  /** The narrowest a row can be and still hold its gap: the gap's column and the row's padding. */
+  const gapAlone = (density: Density): number => -rowSlack(['gap'], 0, density);
+
+  test('keeps the gap, fits its box, and gives up only a head of the order, at every width', () => {
+    let widths = 0;
+    for (const density of DENSITIES) {
+      for (const [page, declared] of [['leaderboard', LEADERBOARD_COLUMNS], ['relative', RELATIVE_COLUMNS]] as const) {
+        let before = 0;
+        for (let width = gapAlone(density); width <= 1300; width++) {
+          const kept = fittingColumns(declared, width, density);
+          widths += 1;
+          const at = { density, page, width, kept: kept.join(' ') };
+          expect({ ...at, gap: kept.includes('gap') }).toMatchObject({ gap: true });
+          expect({ ...at, slack: rowSlack(kept, width, density), fits: rowSlack(kept, width, density) >= 0 }).toMatchObject({ fits: true });
+          // Kept in the order drawn, and given up from the front of the order: nothing is gone while a
+          // column earlier in the order is still drawn.
+          expect(kept).toEqual(declared.filter((id) => kept.includes(id)));
+          const gone = GIVES_WAY.filter((id) => declared.includes(id) && !kept.includes(id));
+          const drawn = GIVES_WAY.filter((id) => kept.includes(id));
+          expect({ ...at, inOrder: gone.every((id) => drawn.every((other) => GIVES_WAY.indexOf(id) < GIVES_WAY.indexOf(other))) }).toMatchObject({ inOrder: true });
+          // And a wider box never draws less.
+          expect({ ...at, before, fewer: kept.length < before }).toMatchObject({ fewer: false });
+          before = kept.length;
+        }
+      }
+    }
+    expect(widths).toBeGreaterThan(10000);
+  });
+
+  test('and takes each step at a width that is written down', () => {
+    // The least width that still draws each column, at the two rows a zone is drawn in. The first four
+    // are step 2 and move with the columns' own widths; the last two are step 4, which the narrowest
+    // body the build produces, 225 px, clears by 34 px in the 28 px row. A box under 104 px holds
+    // nothing but the gap and not all of that, and is the one width the page cannot answer.
+    const least = (density: Density): Record<string, number> => {
+      const found: Record<string, number> = {};
+      for (let width = 1300; width >= gapAlone(density); width--) {
+        const kept = fittingColumns(LEADERBOARD_COLUMNS, width, density);
+        for (const id of kept) found[id] = width;
+      }
+      return found;
+    };
+    expect(least('compact')).toEqual({ best: 587, last: 477, class: 367, num: 313, name: 191, pos: 156, gap: 104 });
+    expect(least('zone')).toEqual({ best: 666, last: 540, class: 414, num: 356, name: 216, pos: 177, gap: 117 });
+  });
+
+  test('the name goes once it cannot hold a letter and the ellipsis, and not before', () => {
+    // 191 px of 28 px row leaves the name 27 px, two characters at 13; a pixel less leaves it one,
+    // which would draw the ellipsis alone.
+    const nameAt = (width: number): number => {
+      const columns = ['pos', 'name', 'gap'] as const;
+      return charsThatFit(NAME_FACE, 13, columnWidths(columns, width, 'compact', 28)[1] ?? 0);
+    };
+    expect({ at191: nameAt(191), at190: nameAt(190) }).toEqual({ at191: LEAST_NAME_CHARS, at190: LEAST_NAME_CHARS - 1 });
+    expect(fittingColumns(LEADERBOARD_COLUMNS, 191, 'compact')).toEqual(['pos', 'name', 'gap']);
+    expect(fittingColumns(LEADERBOARD_COLUMNS, 190, 'compact')).toEqual(['pos', 'gap']);
+  });
+
+  test('a larger type never costs a column the canvas row kept', () => {
+    // A box tall enough for the 34 px numerals and 170 px wide: the canvas's 28 px row holds the position
+    // and the gap in it, and the 34 px row's would overrun it by seven and give up the position. The
+    // name's budget cannot refuse that step, the row having no name left to budget, so the plan holds
+    // the step to the columns as well and keeps the canvas's type.
+    const frame = rect(0, 0, 170, 400);
+    const list = { density: 'compact' as Density, header: false, columns: LEADERBOARD_COLUMNS, rows: 3, fit: fittingColumns };
+    expect(fittingColumns(LEADERBOARD_COLUMNS, 170, 'compact')).toEqual(['pos', 'gap']);
+    const plan = listPlan(frame, list);
+    expect({ columns: plan.columns, lead: plan.rowType.lead }).toEqual({ columns: ['pos', 'gap'], lead: 24 });
+  });
 });
 
 /**

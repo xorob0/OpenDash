@@ -771,14 +771,30 @@ function rowIndexFor(spec: TableSpec, centre: number): Expr {
  * widths and the name column is what pays the difference.
  */
 export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: RowSize, board = false): number[] {
-  const d = densityOf(density);
-  const row: RowSpec = { d, type: typeOfRow(rowHeight, density, board), board };
-  const raw = columns.map((id) => COLUMNS[id].width(row));
-  const fixed = raw.reduce((sum, w) => sum + w, 0);
-  const gaps = cellGapOf(board) * Math.max(0, columns.length - 1);
+  const raw = fixedWidths(columns, density, rowHeight, board);
   const flexColumns = raw.filter((w) => w === 0).length;
-  const spare = Math.max(0, width - 2 * padXOf(board) - fixed - gaps);
+  const spare = Math.max(0, rowSlack(columns, width, density, rowHeight, board));
   return raw.map((w) => (w === 0 ? Math.floor(spare / Math.max(1, flexColumns)) : w));
+}
+
+/** Each column's own width in a row of this type, 0 for the one that takes what is left. */
+function fixedWidths(columns: readonly ColumnId[], density: Density, rowHeight?: RowSize, board = false): number[] {
+  const row: RowSpec = { d: densityOf(density), type: typeOfRow(rowHeight, density, board), board };
+  return columns.map((id) => COLUMNS[id].width(row));
+}
+
+/**
+ * What a padded row of `width` has left once its fixed columns and the gaps between them are laid out:
+ * the width the flexible column gets, or, when it is negative, how far the fixed ones overrun the box.
+ *
+ * {@link columnWidths} floors it at nothing, since a column cannot be narrower than that, and a row
+ * whose fixed columns overrun is then laid out past its box without a word. A page's shedding asks
+ * this to know when that is about to happen, which is the one question the widths cannot answer.
+ */
+export function rowSlack(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: RowSize, board = false): number {
+  const fixed = fixedWidths(columns, density, rowHeight, board).reduce((sum, w) => sum + w, 0);
+  const gaps = cellGapOf(board) * Math.max(0, columns.length - 1);
+  return width - 2 * padXOf(board) - fixed - gaps;
 }
 
 /** Where a column of a row begins, and how wide it is. */
@@ -934,6 +950,13 @@ export const nameFloorOf = (had: number): number => (had >= DEFAULT_NAME_CHARS ?
  *
  * The type stops at the 38 px row, the tallest the canvas draws a list at, so rule 20's three edges
  * all hold: the height of the box, the width of the box, and the top of the ramp.
+ *
+ * **A step never costs a column the canvas's row kept** (#340). The name's budget is the width edge
+ * wherever the row has a name, but a page's shedding can give the name up, and a row with no name has
+ * no budget to lose: every step would pass, and the larger numerals would take their width from the
+ * position and then from nothing. So a step is also held to the columns, which is the same edge said
+ * about the whole row rather than about its one flexible column. No box the build produces meets it
+ * today; the rule is here so that the first one to do so gets the canvas's type and keeps its columns.
  */
 export function listPlan(frame: Rect, list: ListDeclaration): ListPlan {
   const floor = tableRowHeight(list.density);
@@ -944,8 +967,10 @@ export function listPlan(frame: Rect, list: ListDeclaration): ListPlan {
   const rowHeight = rowHeightThatFills(frame, fit, rows);
   const canvas = rowTypeOf(floor);
   const least = nameFloorOf(nameBudget(frame, list, canvas));
+  const columns = list.fit(list.columns, frame.width, list.density, canvas).join();
+  const keepsColumns = (step: RowType): boolean => list.fit(list.columns, frame.width, list.density, step).join() === columns;
   const steps = LIST_ROW_TYPES.slice(LIST_ROW_TYPES.indexOf(canvas)).filter((step) => step.from <= rowHeight).reverse();
-  const rowType = steps.find((step) => nameBudget(frame, list, step) >= least) ?? canvas;
+  const rowType = steps.find((step) => nameBudget(frame, list, step) >= least && keepsColumns(step)) ?? canvas;
   return { rows, rowHeight, rowType, columns: list.fit(list.columns, frame.width, list.density, rowType) };
 }
 
