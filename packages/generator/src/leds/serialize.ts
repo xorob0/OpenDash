@@ -162,6 +162,11 @@ export function buildContainerObject(c: LedContainer): JsonObject {
 /**
  * A whole profile. `CarChoices` is written as an empty array rather than omitted: SimHub always
  * writes one, and whether the editor copes with null was not established.
+ *
+ * `Author` and `Description` go last, after `ProfileId`, where the matrix serialiser puts them. The
+ * plugin rewrites a strip's `Name` and `ProfileId` by replacing the first occurrence of each key,
+ * and neither of these two is either key, so their place in the file is free; last is simply where
+ * the other profile already keeps them.
  */
 export function buildProfileObject(profile: LedProfile): JsonObject {
   return {
@@ -172,6 +177,8 @@ export function buildProfileObject(profile: LedProfile): JsonObject {
     ...(profile.useProfileBrightness ? { UseProfileBrightness: true } : {}),
     Name: profile.name,
     ProfileId: profile.profileId,
+    ...(profile.author !== undefined ? { Author: profile.author } : {}),
+    ...(profile.description !== undefined ? { Description: profile.description } : {}),
   };
 }
 
