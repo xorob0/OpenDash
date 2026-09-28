@@ -1,9 +1,10 @@
-// ScreenInstaller.cs: writes and removes the DashTemplates folder one screen owns.
+// ScreenInstaller.cs: what one screen's DashTemplates folder is made from, and the two things done to it
+// that are not an install -- putting the screen's name back into it, and removing it.
 //
-// DashboardInstaller's job is the embedded packages -- which of them there are, what version each is,
-// and the update path. That is a catalogue. This is the rig: one screen, its own folder, its own
-// namespace, written from whichever package it was made from. The two meet only at the stock screen,
-// whose folder is the package's own and which DashboardInstaller therefore keeps current by itself.
+// DashboardInstaller writes every folder the rig owns through one routine, the first screen of a size and
+// the second alike (#455). This file answers what that routine asks of a screen: which embedded package it
+// is written from, and what the package is turned into on the way in -- the folder, the title SimHub lists,
+// and for a second screen of a size the namespace its properties are rewritten to.
 //
 // ADR 0017 is why a screen has a folder at all.
 using System;
@@ -23,89 +24,43 @@ namespace OpenDashPlugin
         /// <summary>Null when it worked; the reason otherwise, in the words the panel shows.</summary>
         public string Error { get; set; }
 
-        /// <summary>True when this call actually wrote the folder, false when it was already there.</summary>
+        /// <summary>True when this call actually wrote or removed the folder.</summary>
         public bool Written { get; set; }
     }
 
     public static class ScreenInstaller
     {
         /// <summary>
-        /// Writes the screen's package into its own folder, unless it is already there.
+        /// What a screen's package becomes on the way into DashTemplates: its folder, its name and its namespace.
         /// </summary>
         /// <remarks>
-        /// A stock screen's folder is the package's own and is written unchanged, which is the
-        /// pre-ADR-0017 behaviour; only a screen with a namespace of its own has anything rewritten.
-        /// The fingerprint recorded afterwards is of what was actually written, not of the embedded
-        /// package, or an instanced folder would read as somebody's own work on the very next start and
-        /// the update path would refuse to touch it for ever.
+        /// One answer for every screen, which is the point of it. The first screen of a size holds the
+        /// stock namespace, so nothing is rewritten and only the title differs from what is embedded; a
+        /// second has a folder of its own and every property reference repointed at its own namespace.
+        /// The installer writes both from this, so a start, a reinstall and a press on the Rig tab cannot
+        /// disagree about what a screen's folder should hold.
         /// </remarks>
-        /// <param name="holdsAuthoredWork">
-        /// True when the folder about to be replaced is one somebody has edited, so the copy set aside
-        /// outlives the next install rather than being reclaimed by it. The panel passes what its own
-        /// fingerprint check found; the startup path, which only ever writes a folder that is missing,
-        /// has nothing to replace and leaves it false.
-        /// </param>
-        public static ScreenInstallResult Write(
-            ScreenInstance screen,
-            IPackageSource packages,
-            string simHubRoot,
-            IFolderRecord record,
-            IInstallLog log,
-            bool force = false,
-            bool holdsAuthoredWork = false)
+        public static PackageExtractor.ScreenTarget TargetFor(ScreenInstance screen)
         {
-            log = log ?? NullInstallLog.Instance;
-            var result = new ScreenInstallResult { Folder = screen?.Folder };
-            if (screen == null || string.IsNullOrEmpty(screen.Folder))
+            return new PackageExtractor.ScreenTarget
             {
-                result.Error = "That screen has no folder to write.";
-                return result;
-            }
-            if (!force && PackageExtractor.IsInstalled(simHubRoot, screen.Folder)) return result;
-
-            var name = PackageNameFor(screen, packages, log);
-            if (name == null)
-            {
-                result.Error = "This build ships no package for a " + screen.SizeLabel + " " + screen.Kind + ".";
-                return result;
-            }
-
-            try
-            {
-                using (var package = packages.Open(name))
-                {
-                    PackageExtractor.Install(package, simHubRoot, log, holdsAuthoredWork, new PackageExtractor.ScreenTarget
-                    {
-                        Folder = screen.Folder,
-                        Title = screen.Name,
-                        FromNamespace = screen.StockNamespace,
-                        ToNamespace = screen.Namespace,
-                    });
-                }
-                if (record != null)
-                {
-                    record.Set(screen.Folder, FolderFingerprint.Of(PackageExtractor.InstalledFolder(simHubRoot, screen.Folder)));
-                }
-                result.Written = true;
-                log.Info("Wrote the screen " + screen.Name + " into " + screen.Folder + ".");
-            }
-            catch (Exception ex)
-            {
-                result.Error = ex.Message;
-                log.Error("Writing the screen " + screen.Name + " failed: " + ex);
-            }
-            return result;
+                Folder = screen.Folder,
+                Title = screen.Name,
+                FromNamespace = screen.StockNamespace,
+                ToNamespace = screen.Namespace,
+            };
         }
 
         /// <summary>
         /// Writes the screen's name into the dashboard SimHub already has, and remembers what it wrote.
         /// </summary>
         /// <remarks>
-        /// The repair for the one thing Write does not own: a stock screen's folder belongs to a package
-        /// and DashboardInstaller writes it byte for byte, title and all, so every update replaced the
-        /// driver's name for that screen with the package's and the screen left SimHub's dashboard list
-        /// under a name its owner had never chosen. This runs after the installer has had its turn and
-        /// puts the name back, over a folder that is otherwise exactly what was shipped.
+        /// The repair for a folder whose title is not its screen's name. The installer writes the name
+        /// in whenever it writes a screen's folder, but the update path installs what it downloaded under
+        /// each package's own folder, title and all, and a folder an older plugin wrote carries whatever
+        /// that plugin gave it; either way the screen left SimHub's dashboard list under a name its owner
+        /// had never chosen. This runs after them and puts the name back, over a folder that is otherwise
+        /// exactly what was shipped.
         ///
         /// Only over a folder we can vouch for, which is what makes it safe to run on every start. A
         /// folder whose fingerprint has moved holds somebody's own work -- their own title, quite
@@ -180,16 +135,20 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The one the screen remembers, when that package is still carried. A screen migrated from a
         /// settings file written before ADR 0017 remembers none, and one whose package has been dropped
-        /// from the build remembers a name that is gone, so both fall back to matching on kind and size.
+        /// from the build remembers a name that is gone, so both fall back: first to the package whose own
+        /// folder the screen holds, which is every stock screen and was the only match the installer made
+        /// while it walked the packages rather than the rig, and then to the kind and the size.
         /// </remarks>
         public static string PackageNameFor(ScreenInstance screen, IPackageSource packages, IInstallLog log)
         {
-            if (packages == null) return null;
+            if (packages == null || screen == null) return null;
             if (!string.IsNullOrEmpty(screen.Package) && packages.Names.Contains(screen.Package)) return screen.Package;
-            var match = PackageCatalogue.From(packages, log).FirstOrDefault(entry =>
-                string.Equals(entry.Kind, screen.Kind, StringComparison.Ordinal)
-                && entry.Width == screen.Width
-                && entry.Height == screen.Height);
+            var catalogue = PackageCatalogue.From(packages, log);
+            var match = catalogue.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase))
+                ?? catalogue.FirstOrDefault(entry =>
+                    string.Equals(entry.Kind, screen.Kind, StringComparison.Ordinal)
+                    && entry.Width == screen.Width
+                    && entry.Height == screen.Height);
             return match?.Package;
         }
     }

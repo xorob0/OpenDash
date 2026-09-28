@@ -250,7 +250,7 @@ namespace OpenDashPlugin
             var write = BuildSecondaryButton("Install it again", "Puts this screen's dashboard back into SimHub.");
             write.Click += (sender, args) =>
             {
-                var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog(), force: true);
+                var result = plugin.Installer.Write(screen);
                 Save();
                 plugin.Installer.Refresh();
                 Redraw();
@@ -524,14 +524,7 @@ namespace OpenDashPlugin
                 case ScreenEdit.Rename:
                     RenameScreen(screen, wanted);
                     Save();
-                    var result = ScreenInstaller.Write(
-                        screen,
-                        plugin.Installer.PackageSource,
-                        plugin.Installer.SimHubRoot,
-                        plugin.Installer.Record,
-                        new SimHubInstallLog(),
-                        force: true,
-                        holdsAuthoredWork: Edited(screen));
+                    var result = plugin.Installer.Write(screen);
                     Save();
                     plugin.Installer.Refresh();
                     selected = screen.Namespace;
@@ -568,16 +561,8 @@ namespace OpenDashPlugin
         /// </remarks>
         private void ReinstallScreen(ScreenInstance screen)
         {
-            var result = ScreenInstaller.Write(
-                screen,
-                plugin.Installer.PackageSource,
-                plugin.Installer.SimHubRoot,
-                plugin.Installer.Record,
-                new SimHubInstallLog(),
-                force: true,
-                holdsAuthoredWork: Edited(screen));
+            var result = plugin.Installer.Write(screen);
             Save();
-            plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
             plugin.Installer.Refresh();
             selected = screen.Namespace;
             Redraw();
@@ -602,9 +587,8 @@ namespace OpenDashPlugin
 
             Settings.ResizeScreen(screen, entry);
             Save();
-            var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, log, force: true);
+            var result = plugin.Installer.Write(screen);
             Save();
-            plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
             plugin.Installer.Refresh();
             selected = screen.Namespace;
             Redraw();
@@ -632,9 +616,8 @@ namespace OpenDashPlugin
         {
             var screen = Settings.AddScreen(entry, name);
             Save();
-            var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog(), force: true);
+            var result = plugin.Installer.Write(screen);
             Save();
-            plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
             plugin.Installer.Refresh();
             selected = screen.Namespace;
             Redraw();
@@ -672,7 +655,6 @@ namespace OpenDashPlugin
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
                 Settings.RemoveScreen(screen.Namespace);
                 Save();
-                plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
                 plugin.Installer.Refresh();
                 selected = null;
                 Redraw();
