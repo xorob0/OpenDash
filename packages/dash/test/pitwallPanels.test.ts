@@ -144,7 +144,7 @@ describe('the Session panel draws the three fields of the sheet', () => {
     test(`${page} writes the session type into the first label and the time left under it`, () => {
       const label = texts(items, `${page}.left.label`)[0]!;
       expect(label.text).toBe('Race');
-      expect(label.widest).toBe('OFFLINE TESTING');
+      expect(label.widest).toBe('Offline Testing');
       expect(value(items, `${page}.left`).text).toBe('0:42:15');
     });
 
@@ -170,7 +170,7 @@ describe('the Lap data panel draws the three lap times of the sheet', () => {
         `${page}.yourBest.value`,
         `${page}.last.value`,
       ]);
-      expect(texts(items, `${page}.estimated.label`)[0]!.text).toBe('EST.');
+      expect(texts(items, `${page}.estimated.label`)[0]!.text).toBe('Est.');
     });
 
     test(`${page} sets them at 34 px, 20 apart`, () => {
@@ -238,7 +238,7 @@ describe('the Track panel carries the session best', () => {
 
     test(`${page} names the track and its state over the map`, () => {
       expect(texts(items, `${page}.map.title`)).toHaveLength(1);
-      expect(texts(items, `${page}.map.state`)[0]!.widest).toBe('MODERATE');
+      expect(texts(items, `${page}.map.state`)[0]!.widest).toBe('Moderate');
     });
 
     test(`${page} orders the conditions as both sheets do, road before air`, () => {

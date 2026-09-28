@@ -132,5 +132,45 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelLights.PanelNeedsInstall(state));
             Assert.Contains("select", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
         }
+
+        /// <summary>
+        /// A device SimHub has and OpenDash did not offer is named beside the picker, in every shape the
+        /// row takes.
+        /// </summary>
+        /// <remarks>
+        /// #437 was a wheel in SimHub's Devices view and absent from the picker with nothing said, and a
+        /// row reading "No LED device in SimHub" while the wheel sits in SimHub's list is worse than
+        /// nothing. The sentence is one sentence whatever it follows, which docs/design/voice.md holds
+        /// a caption to.
+        /// </remarks>
+        [Fact]
+        public void A_device_passed_over_is_named_beside_the_picker()
+        {
+            Assert.Null(PanelLights.NotOffered(null));
+            Assert.Null(PanelLights.NotOffered(new string[0]));
+            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.", PanelLights.NotOffered(new[] { "Rim" }));
+            Assert.Equal("Rim and Formula rim have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim" }));
+            Assert.Equal("Rim, Formula rim, Hub and 2 others have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box", "GT rim" }));
+            Assert.Equal("Rim, Formula rim, Hub and 1 other have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box" }));
+
+            // Nothing passed over: the row reads exactly as it did.
+            Assert.Equal(PanelLights.NoDevices, PanelLights.DeviceRowCaption(0, null, new string[0]));
+            Assert.Equal("Goes to Rim.", PanelLights.DeviceRowCaption(1, "Goes to Rim.", null));
+            Assert.Null(PanelLights.DeviceRowCaption(2, PanelLights.BarDeviceCaption, new string[0]));
+
+            // Something passed over and nothing offered: the device is named in place of "No LED device".
+            var none = PanelLights.DeviceRowCaption(0, null, new[] { "Rim" });
+            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.", none);
+            Assert.DoesNotContain(PanelLights.NoDevices, none);
+
+            // Something offered as well: the name follows what the row said, or stands alone.
+            Assert.Equal("Goes to Arduino RGB LEDs. Rim has no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.DeviceRowCaption(1, "Goes to Arduino RGB LEDs.", new[] { "Rim" }));
+            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.DeviceRowCaption(2, PanelLights.BarDeviceCaption, new[] { "Rim" }));
+        }
     }
 }

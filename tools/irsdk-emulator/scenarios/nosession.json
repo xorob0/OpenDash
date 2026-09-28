@@ -1,6 +1,6 @@
 {
   // The game running with no session named, which is the one state #406's notice is for: zones B
-  // and C and band D's fuel page should read "… · GO INTO A SESSION" while the rest of the face
+  // and C and band D's fuel page should read "… · Go into a session" while the rest of the face
   // draws normally. `inSession()` is GameRunning and a named session type, so stopping the
   // emulator does not reach it -- that makes GameRunning false and SimHub switches to the idle
   // screen of #113 instead. The emulator has to keep running and say nothing about the session.

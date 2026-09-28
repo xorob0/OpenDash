@@ -105,17 +105,19 @@ const DRAWN: Record<string, { a1: [number, number, number]; a2: number; a3: [num
   '340x361': { a1: [199, 69, 40], a2: 297, a3: [159, 87] },
   '300x366': { a1: [201, 70, 40], a2: 301, a3: [161, 88] },
   // The speed is the one run a column can be too narrow for: at 340 the width stops it before the
-  // height does, and the sheets draw 204 there. The code reaches 210, because the speed is a
+  // height does, and the sheets draw 204 there. The code reaches 212, because the speed is a
   // SemiBold numeral again and SemiBold cells are narrower than the Bold ones it used to be
   // measured in, so the same column holds eight pixels more, of which the zone's own eight-pixel
-  // unit gap then takes two back. docs/research/design-audit.md carries the question; the 204 is
-  // the only number on these sheets the build no longer reproduces.
-  '340x554': { a1: [305, 105, 61], a2: 458, a3: [210, 133] },
+  // unit gap then takes two back; and the unit beside it is `km/h` in its own case rather than the
+  // `KM/H` it was upper-cased to, which gives the speed the last two (#422).
+  // docs/research/design-audit.md carries the question; the 204 is the only number on these sheets
+  // the build no longer reproduces.
+  '340x554': { a1: [305, 105, 61], a2: 458, a3: [212, 133] },
   // The one column where the gear is stopped by its neighbours rather than by its own share: a
   // 0.42 ghost either side of a 329 px gear wants 344 px of a 340 px column, so the cluster settles
   // at 320. It is a rev-bar-off arrangement, which no sheet draws, so 329 was a share rather than a
   // reading; the three sheets that do draw ghosts all set them at 0.42 of the gear.
-  '340x598': { a1: [320, 114, 66], a2: 495, a3: [210, 144] },
+  '340x598': { a1: [320, 114, 66], a2: 495, a3: [212, 144] },
 };
 
 describe('zone A shares its column', () => {

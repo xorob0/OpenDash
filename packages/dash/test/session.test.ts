@@ -63,23 +63,23 @@ describe('session card modes', () => {
   });
 
   test('auto (and no plugin) shows time left in a timed session, laps otherwise', () => {
-    expect(reading(game(1800, 0))).toEqual({ label: 'TIME LEFT', value: '0:30:00', dim: false, denominator: null });
-    expect(reading(game(5025, 20, 3, 'auto'))).toEqual({ label: 'TIME LEFT', value: '1:23:45', dim: false, denominator: null });
-    expect(reading(game(A_WEEK, 20, 3, 'auto'))).toEqual({ label: 'LAP', value: '3', dim: false, denominator: '/ 20' });
-    expect(reading(game(A_WEEK, 0, 3, 'auto'))).toEqual({ label: 'LAP', value: '3', dim: false, denominator: null });
-    expect(reading(game(0, 20, 3))).toEqual({ label: 'LAP', value: '3', dim: false, denominator: '/ 20' });
+    expect(reading(game(1800, 0))).toEqual({ label: 'Time left', value: '0:30:00', dim: false, denominator: null });
+    expect(reading(game(5025, 20, 3, 'auto'))).toEqual({ label: 'Time left', value: '1:23:45', dim: false, denominator: null });
+    expect(reading(game(A_WEEK, 20, 3, 'auto'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: '/ 20' });
+    expect(reading(game(A_WEEK, 0, 3, 'auto'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: null });
+    expect(reading(game(0, 20, 3))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: '/ 20' });
   });
 
   test('time shows time left, or the dim placeholder when the session has no limit', () => {
-    expect(reading(game(86399, 20, 3, 'time'))).toEqual({ label: 'TIME LEFT', value: '23:59:59', dim: false, denominator: null });
-    expect(reading(game(A_WEEK, 20, 3, 'time'))).toEqual({ label: 'TIME LEFT', value: TIME_PLACEHOLDER, dim: true, denominator: null });
-    expect(reading(game(0, 0, 3, 'time'))).toEqual({ label: 'TIME LEFT', value: '-:--:--', dim: true, denominator: null });
+    expect(reading(game(86399, 20, 3, 'time'))).toEqual({ label: 'Time left', value: '23:59:59', dim: false, denominator: null });
+    expect(reading(game(A_WEEK, 20, 3, 'time'))).toEqual({ label: 'Time left', value: TIME_PLACEHOLDER, dim: true, denominator: null });
+    expect(reading(game(0, 0, 3, 'time'))).toEqual({ label: 'Time left', value: '-:--:--', dim: true, denominator: null });
   });
 
   test('laps shows the lap, with the total only when one is declared', () => {
-    expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'LAP', value: '3', dim: false, denominator: '/ 20' });
-    expect(reading(game(1800, 0, 112, 'laps'))).toEqual({ label: 'LAP', value: '112', dim: false, denominator: null });
-    expect(reading(game(A_WEEK, 5, 7, 'laps'))).toEqual({ label: 'LAP', value: '7', dim: false, denominator: '/ 5' });
+    expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: '/ 20' });
+    expect(reading(game(1800, 0, 112, 'laps'))).toEqual({ label: 'Lap', value: '112', dim: false, denominator: null });
+    expect(reading(game(A_WEEK, 5, 7, 'laps'))).toEqual({ label: 'Lap', value: '7', dim: false, denominator: '/ 5' });
   });
 });
 

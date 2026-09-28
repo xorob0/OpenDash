@@ -210,3 +210,29 @@ finished.
 Verified on the VM, whole: an older build offered the newer release, the dialog appeared, Yes closed
 SimHub, the assembly was replaced, the old one was kept as `OpenDash.dll.replaced`, and SimHub started
 again by itself with every setting and device intact.
+
+## Amended, 2026-09-28: the idle screen says so too, so the check no longer waits for the panel
+
+#83 puts the answer on the one dashboard surface that may carry a message, the idle screen, as a small
+line in its corner: `OpenDash.UpdateAvailable` and `OpenDash.UpdateVersion`, attached by the plugin and
+read with `isnull()` defaults of false and empty, so a package running without the plugin says nothing,
+exactly as the ticket requires. Two things the record above left implicit had to be settled for it.
+
+**When the check runs.** It ran when the settings page was first opened, and a mark that appears only
+after somebody has opened the panel is a mark for a driver who already knows. It is now queued from
+`Init` onto the thread pool, which is what "never on the startup path" permits and all it permits:
+nothing joins the thread SimHub starts on, and a rig with no network starts exactly as fast as one with
+it. Everything else stands -- at most once per start, not within twenty-four hours of the last answer,
+nothing constructed with the setting off -- and the panel no longer asks for itself: it shows the answer
+the plugin's check found, and asks only when that check did not start. "Once per start" is held by the
+plugin rather than by the clock, because the interval moves only on a real answer: an unreachable check
+leaves the clock where it was, and the panel asking again on that account would be exactly the repeated
+retry this record refuses.
+
+**What is remembered.** The check runs once a day and SimHub starts more often than that, so the release
+the last answered check offered is persisted (`OfferedRelease`) and the mark is drawn from it on every
+start in between. It is compared with what the rig runs each time rather than trusted, so a rig that has
+caught up stops being told at once; an answer nobody could read changes nothing in either direction; the
+switch silences the mark the moment it is turned off. The panel opens on the same offer, and its Update
+button fetches the listing it needs before applying, since the download URLs the listing carries expire
+within the hour and none is kept between runs.

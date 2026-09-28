@@ -131,6 +131,32 @@ export const DRIVER_NAME_FORMAT_SETTING = 'DriverNameFormat';
  */
 export const DRIVER_NAME_TEAM_SETTING = 'DriverNameTeam';
 
+/**
+ * Whether a newer OpenDash than the rig runs exists, as the plugin last heard from GitHub. #83.
+ *
+ * Published rather than chosen, like {@link CAR_LADDER_CHOSEN}, and read by one surface: the idle
+ * screen, the one dashboard surface that may carry a message because nobody is driving while it is
+ * up. False with the update check switched off, false before any answer and once the rig has caught
+ * up, and false through its `isnull()` default with no plugin at all -- the absence of the plugin
+ * never triggers anything, which is the ticket's rule as much as ADR 0003's.
+ */
+export const UPDATE_AVAILABLE = 'UpdateAvailable';
+
+/**
+ * The version the idle screen's mark names, or `''` when it has none to name.
+ *
+ * The plugin publishes a version only when it is at most {@link UPDATE_VERSION_MAX_LENGTH} characters
+ * of {@link UPDATE_VERSION_CHARACTERS}, and an empty string for anything else, so the mark's box can be
+ * measured for the longest version it will ever be handed rather than for the one a sample shows.
+ */
+export const UPDATE_VERSION = 'UpdateVersion';
+
+/** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
+export const UPDATE_VERSION_MAX_LENGTH = 12;
+
+/** The characters a published version may be written in: semver's, which is what `VERSION` holds. */
+export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -160,7 +186,11 @@ export const RETIRED_LED_CENTRE = 'rpmOnly';
 export const DEFAULTS = {
   ShiftLights: true,
   RevBar: 'shift' as RevBarMode,
-  PositionMode: 'overall' as PositionMode,
+  // The place a driver is racing for, which in a multiclass race is the place in their own class: a
+  // driver second of class drawn as P16 is shown a number that is not theirs. A single-class field
+  // makes the two readings identical, so counting the whole field buys nothing there and is wrong
+  // everywhere else. Overall remains the other choice of the setting. #432.
+  PositionMode: 'class' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
@@ -223,7 +253,10 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING].map(propertyName), ...zoneProperties()];
+  // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
+  // ends with an idle screen, and the group is pinned in order. #83.
+  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION];
+  return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -394,7 +427,7 @@ export const setting = {
   revBar: (): Expr => isnull(prop(propertyName(REV_BAR_SETTING)), iff(setting.shiftLights(), str('shift'), str('rpm'))),
   /** `isnull([OpenDash.RevBar], ...) = 'off'`: whether the face is in the given rev bar mode. */
   revBarIs: (mode: RevBarMode): Expr => eq(setting.revBar(), str(mode)),
-  /** `isnull([OpenDash.PositionMode], 'overall')` */
+  /** `isnull([OpenDash.PositionMode], 'class')`, the fallback being what a package draws with no plugin. #432. */
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
@@ -429,6 +462,10 @@ export const setting = {
   driverNameFormatIs: (format: DriverNameFormat): Expr => eq(setting.driverNameFormat(), str(format)),
   /** `isnull([OpenDash.DriverNameTeam], false)`: whether a list names the team rather than the driver. */
   driverNameTeam: (): Expr => isnull(prop(propertyName(DRIVER_NAME_TEAM_SETTING)), String(DEFAULTS.DriverNameTeam)),
+  /** `isnull([OpenDash.UpdateAvailable], false)`: whether the idle screen says an update exists. */
+  updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
+  /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */
+  updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
@@ -902,19 +939,19 @@ export interface CardMeta {
 
 /** The cards in card-number order. The plugin ships the same list in Contract.cs. */
 export const CARD_CATALOGUE: readonly CardMeta[] = [
-  { number: 0, id: 'currentLap', label: 'CURRENT', displayName: 'Current lap' },
-  { number: 1, id: 'lastLap', label: 'LAST', displayName: 'Last lap' },
-  { number: 2, id: 'bestLap', label: 'BEST', displayName: 'Best lap' },
-  { number: 3, id: 'delta', label: 'DELTA', displayName: 'Delta' },
-  { number: 4, id: 'position', label: 'POSITION', displayName: 'Position' },
-  { number: 5, id: 'session', label: 'LAP', displayName: 'Session' },
-  { number: 6, id: 'fuel', label: 'FUEL', displayName: 'Fuel' },
-  { number: 7, id: 'fuelLaps', label: 'FUEL LAPS', displayName: 'Fuel laps' },
+  { number: 0, id: 'currentLap', label: 'Current', displayName: 'Current lap' },
+  { number: 1, id: 'lastLap', label: 'Last', displayName: 'Last lap' },
+  { number: 2, id: 'bestLap', label: 'Best', displayName: 'Best lap' },
+  { number: 3, id: 'delta', label: 'Delta', displayName: 'Delta' },
+  { number: 4, id: 'position', label: 'Position', displayName: 'Position' },
+  { number: 5, id: 'session', label: 'Lap', displayName: 'Session' },
+  { number: 6, id: 'fuel', label: 'Fuel', displayName: 'Fuel' },
+  { number: 7, id: 'fuelLaps', label: 'Fuel laps', displayName: 'Fuel laps' },
   { number: 8, id: 'tc', label: 'TC', displayName: 'TC' },
   { number: 9, id: 'abs', label: 'ABS', displayName: 'ABS' },
-  { number: 10, id: 'tyreTemps', label: 'TYRES °C · LAST STOP', displayName: 'Tyre temps' },
-  { number: 11, id: 'tyrePressures', label: 'PRESSURES PSI · LAST STOP', displayName: 'Tyre pressures' },
-  { number: 12, id: 'speed', label: 'SPEED', displayName: 'Speed' },
+  { number: 10, id: 'tyreTemps', label: 'Tyres °C · last stop', displayName: 'Tyre temps' },
+  { number: 11, id: 'tyrePressures', label: 'Pressures psi · last stop', displayName: 'Tyre pressures' },
+  { number: 12, id: 'speed', label: 'Speed', displayName: 'Speed' },
 ];
 
 export function cardMeta(id: string): CardMeta {

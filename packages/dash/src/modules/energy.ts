@@ -27,7 +27,7 @@ import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
 const { fmt, iff, isNull, isnull, not, num, raw, str } = ncalc;
 
-export const ENERGY_MESSAGE = 'VIRTUAL ENERGY · NOT AVAILABLE IN IRACING';
+export const ENERGY_MESSAGE = 'Virtual energy · Not available in iRacing';
 
 /** The four members the sim either fills or does not; `VirtualEnergy` is the one the page turns on. */
 const LEVEL = raw('VirtualEnergy');

@@ -106,7 +106,7 @@ describe('tyres · both pressure units', () => {
 describe('lap history · delta to best', () => {
   test('the wide page gives its third column to the delta to the session best', () => {
     for (const { zone, items } of pages('wide', 'lapHistory')) {
-      expect({ zone, head: named(items, 'lapHistory.head.delta')?.text }).toMatchObject({ head: 'Δ BEST' });
+      expect({ zone, head: named(items, 'lapHistory.head.delta')?.text }).toMatchObject({ head: 'Δ best' });
       expect({ zone, drawn: drawn(named(items, 'lapHistory.row.delta')) }).toMatchObject({ drawn: expect.stringContaining('DeltaToSessionBest') });
     }
   });

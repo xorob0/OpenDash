@@ -16,12 +16,13 @@
  * evaluating to something plausible.
  */
 import { describe, expect, test } from 'bun:test';
-import { secondScreen, setting } from '../src/contract.ts';
+import { DEFAULTS, secondScreen, setting } from '../src/contract.ts';
 import { rect } from '../src/design/geometry.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { racePage } from '../src/screens/pitwall.ts';
-import { carPosition, player, rowsInClass } from '../src/second/values.ts';
+import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
+import { carPosition, fieldSize, player, rowsInClass } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Expr } from '../src/bind.ts';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -64,7 +65,8 @@ const classStartOf = (row: number): number => [...rowsOfClass(GRID[row - 1]!)].s
 
 /** What the plugin publishes for one run of the evaluator. */
 interface Settings {
-  positionMode: 'overall' | 'class';
+  /** Absent is a package drawn with no plugin attached, which falls back to the contract's default. */
+  positionMode: 'overall' | 'class' | undefined;
   /** The pit wall's own class filter, which is a zone filter of the kind a face carries per zone. */
   screenFilter?: boolean;
 }
@@ -73,6 +75,9 @@ interface Settings {
 function scopeFor(settings: Settings, repeatIndex: number): Record<string, unknown> {
   const properties: Record<string, unknown> = {
     'OpenDash.PositionMode': settings.positionMode,
+    'DataCorePlugin.GameData.CarClass': PLAYER_CLASS,
+    'DataCorePlugin.GameData.OpponentsCount': GRID.length,
+    'DataCorePlugin.GameData.PlayerClassOpponentsCount': CLASS_ROWS.length,
     ...(settings.screenFilter === undefined ? {} : { 'OpenDash.PitWallClassOnly': settings.screenFilter }),
   };
   const classRowAt = (place: number): number => CLASS_ROWS[place - 1] ?? -1;
@@ -272,4 +277,46 @@ describe('the rig-wide mode is one property', () => {
     expect(setting.positionMode()).toContain('OpenDash.PositionMode');
     expect(carPosition(player())).toContain(setting.positionMode());
   });
+});
+
+describe('a rig that never chose counts in class', () => {
+  test('the fallback a package draws with no plugin is the class, place and count alike', () => {
+    // #432: second of class in a multiclass race read P16, because the default counted the whole
+    // field. The plugin's default is held to this one by contract.test.ts; this is what it draws.
+    expect(DEFAULTS.PositionMode).toBe('class');
+    const unset = { positionMode: undefined };
+    expect({ place: evaluate(carPosition(player()), unset), of: evaluate(fieldSize(), unset) }).toEqual({
+      place: classPositionOf(PLAYER_ROW),
+      of: CLASS_ROWS.length,
+    });
+  });
+});
+
+describe("the bar's two position cells cannot contradict each other", () => {
+  const cell = (id: string): { bind: Expr; of?: Expr } => {
+    const spec = BAR_FIELD_SPECS.find((f) => f.id === id)!;
+    return { bind: spec.bind, ...(spec.denominator ? { of: spec.denominator.bind } : {}) };
+  };
+
+  for (const positionMode of ['overall', 'class', undefined] as const) {
+    test(`position reads the place the rig counts and the field it counts it in, counting ${positionMode ?? 'by default'}`, () => {
+      // The bar's position cell bound Position and OpponentsCount whatever the mode said, so a rig
+      // counting in class read 3 / 6 in the bar beside 2 / 3 on every other surface. It now reads the
+      // same expressions the session module and the pit wall do.
+      const settings = { positionMode };
+      const { bind, of } = cell('position');
+      const inClass = positionMode !== 'overall';
+      expect({ place: evaluate(bind, settings), of: evaluate(of!, settings) }).toEqual({
+        place: String(inClass ? classPositionOf(PLAYER_ROW) : PLAYER_ROW),
+        of: `/ ${inClass ? CLASS_ROWS.length : GRID.length}`,
+      });
+    });
+
+    test(`class position is the class whatever the rig counts, counting ${positionMode ?? 'by default'}`, () => {
+      // The one cell that is always the class: what it adds is the class name, and with the rig
+      // counting overall it is where the class place still reads. With the rig counting in class the
+      // two cells say the same place, which is agreement rather than contradiction.
+      expect(evaluate(cell('classPosition').bind, { positionMode })).toBe(`${PLAYER_CLASS} · P${classPositionOf(PLAYER_ROW)}`);
+    });
+  }
 });

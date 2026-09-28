@@ -1,7 +1,13 @@
 /**
- * label: a field label in Barlow Medium, text.label, 15 px (13 for the small variant), upper-cased
- * unless the caller keeps the case it wrote. Proportional, never monospaced. The box spans the
- * available width and is top aligned so the baseline lands where the canvas line box puts it.
+ * label: a field label in Barlow Medium, text.label, 15 px (13 for the small variant), drawn in the
+ * case it is written in. Proportional, never monospaced. The box spans the available width and is
+ * top aligned so the baseline lands where the canvas line box puts it.
+ *
+ * The case is the caller's, and it is the case a product writes the word in: a label in sentence
+ * case (`Fuel left`, `Best lap`), a unit in its symbol's (`km/h`, `kPa`), and capitals only where
+ * the word is a name in capitals on its own account, a flag, an acronym or aid (`RPM`, `ABS`,
+ * `DRS`) or a class. Those capitals are typed in the string rather than applied here, so that a
+ * search for a capitalised literal finds every one of them. docs/design/brand.md holds the rule.
  */
 import type { FontWeight, HAlign, Hex, TextItem } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
@@ -23,13 +29,7 @@ export interface LabelOptions {
   /** TextColor binding, for a label whose ink says something: a telltale lit or unlit. */
   colorBind?: Expr;
   hAlign?: HAlign;
-  /**
-   * What is done to a literal `text`: a field label is upper-cased, which is the default, while
-   * `asIs` keeps what the caller wrote. The canvas writes a unit `s` and prose copy in sentence
-   * case, and neither survives an upper-casing the caller cannot decline.
-   */
-  case?: 'upper' | 'asIs';
-  /** Text binding. `text` is then the design-time sample and is not upper-cased. */
+  /** Text binding. `text` is then the design-time sample. */
   bind?: Expr;
   /** The widest string `bind` can produce. The box should be measured from it, and the fit tests are. */
   widest?: string;
@@ -45,7 +45,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
-    text: opts.bind || opts.case === 'asIs' ? text : text.toUpperCase(),
+    text,
     font: ds.font.label,
     fontWeight: opts.weight ?? 'Medium',
     fontSize: fs,
@@ -70,8 +70,8 @@ export interface LabelForm {
 
 /**
  * The first form whose widest rendering fits `width`, else the shortest form. SimHub clips a
- * label that does not fit its box, so a card that cannot show "TYRES °C · LAST STOP" shows
- * "TYRES °C" rather than half of "STOP".
+ * label that does not fit its box, so a card that cannot show "Tyres °C · last stop" shows
+ * "Tyres °C" rather than half of "stop".
  */
 export function fitLabelForm(forms: readonly LabelForm[], width: number, fs: number = ds.size.label): LabelForm {
   const last = forms[forms.length - 1];

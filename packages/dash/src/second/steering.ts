@@ -65,9 +65,11 @@ function markOnCircle(name: string, face: Circle, size: number, color: Hex, angl
  * turned further would carry the mark past the top again and read as a smaller angle than it is.
  */
 export function steeringDial(name: string, frame: Rect, labelSize: number): Item[] {
-  const labelWidth = Math.ceil(measureText('BarlowMedium', 'STEER', labelSize));
+  // A pixel over the advance: `Steer` is a whole 36 px at 15, and a box cut to the exact advance loses
+  // the last glyph's final column to WPF.
+  const labelWidth = Math.ceil(measureText('BarlowMedium', 'Steer', labelSize)) + 1;
   // The word is shed rather than shrunk in a column too narrow for it: a dial is legible without
-  // being named and a clipped "STEE" names nothing. Its line box is taller than its size, and a row
+  // being named and a clipped "Stee" names nothing. Its line box is taller than its size, and a row
   // measured from the size instead puts the last of the word outside the frame.
   const named = labelWidth <= frame.width;
   const box = textBox(0, labelSize);
