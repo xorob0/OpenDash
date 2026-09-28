@@ -336,8 +336,10 @@ namespace OpenDashPlugin
                         if (live != null) live.RpmStyle = value;
                         Save();
                     });
+                IList<string> notOffered;
+                var targets = LedTargets.All(out notOffered);
                 return Ui.VStack(4,
-                    BuildLedDeviceRow(LedTargets.All(), LedTargets.NotOffered(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
+                    BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Centre display", "The LEDs at each end are not affected.", centre),
                     Ui.Row("Rev light style", "Car-specific copies the car you are driving.", style),
                     Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
@@ -514,10 +516,11 @@ namespace OpenDashPlugin
             // Which device gets the profile. SimHub keeps one profile list per LED device, so this is
             // not a detail: a bar installed into the wrong one is written, saved and verified correctly
             // into a list the hardware does not read, which is exactly what a rig reported.
-            var targets = LedTargets.All();
-            var preferred = LedTargets.Preferred();
+            IList<string> notOffered;
+            var targets = LedTargets.All(out notOffered);
+            var preferred = LedTargets.Preferred(targets);
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
-            var deviceRow = BuildLedDeviceRow(targets, LedTargets.NotOffered(), device, value => device = value);
+            var deviceRow = BuildLedDeviceRow(targets, notOffered, device, value => device = value);
 
             var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption,
                 BuildSegmented(

@@ -78,14 +78,30 @@ namespace OpenDashPlugin
         /// Never null and never throws: a broken chain is an empty list or a list without that device,
         /// which the panel reads as "there is nowhere to put this" and says so. A device whose LED module
         /// carries no driver is left out rather than offered as a target that cannot hold anything, and
-        /// the log says so; <see cref="NotOffered"/> gives the panel its name.
+        /// the log says so; <see cref="All(out IList{string})"/> gives the panel its name.
         /// </remarks>
         public static List<LedTarget> All()
         {
+            IList<string> notOffered;
+            return All(out notOffered);
+        }
+
+        /// <summary>
+        /// <see cref="All()"/>, and the names of the devices SimHub has, this list does not offer, and that
+        /// show some sign of LEDs, from one walk of SimHub's devices, for a panel row that shows both.
+        /// </summary>
+        /// <remarks>
+        /// A pedal set or a screen is left to the log. The reasons are in SimHub's log, one line for every
+        /// device; see <see cref="LedDeviceSurvey"/>.
+        /// </remarks>
+        public static List<LedTarget> All(out IList<string> notOffered)
+        {
+            var survey = Survey();
+            notOffered = LedDeviceSurvey.Declined(survey.Select(entry => entry.Seen));
             var targets = new List<LedTarget>();
             var arduino = Arduino();
             if (arduino != null) targets.Add(arduino);
-            targets.AddRange(Devices());
+            targets.AddRange(Devices(survey));
             return targets;
         }
 
@@ -109,8 +125,14 @@ namespace OpenDashPlugin
         /// </remarks>
         public static LedTarget Preferred()
         {
-            var targets = All();
-            if (targets.Count == 0) return null;
+            return Preferred(All());
+        }
+
+        /// <summary><see cref="Preferred()"/> from a list already read, so a form that shows the list does
+        /// not walk SimHub's devices a second time to choose from it.</summary>
+        public static LedTarget Preferred(IList<LedTarget> targets)
+        {
+            if (targets == null || targets.Count == 0) return null;
             var device = targets.FirstOrDefault(t => !string.Equals(t.Id, LedBar.ArduinoDevice, StringComparison.Ordinal));
             return device ?? targets[0];
         }
@@ -136,14 +158,6 @@ namespace OpenDashPlugin
         /// two devices rather than as a device and a category.</summary>
         public const string ArduinoName = "Arduino RGB LEDs";
 
-        /// <summary>The names of the devices SimHub has, this list does not offer, and that show some sign of
-        /// LEDs, for the picker to say. A pedal set or a screen is left to the log. The reasons are in
-        /// SimHub's log, one line for every device; see <see cref="LedDeviceSurvey"/>.</summary>
-        public static IList<string> NotOffered()
-        {
-            return LedDeviceSurvey.Declined(Survey().Select(entry => entry.Seen));
-        }
-
         /// <summary>Every LED module of every device SimHub has, connected or not.</summary>
         /// <remarks>
         /// Every root device is judged, not only the LED modules, and what was seen of each is logged by
@@ -151,9 +165,9 @@ namespace OpenDashPlugin
         /// FanaBridge wheel went missing from the picker with nothing to say whether it was not an LED
         /// module or was one with no driver (#437).
         /// </remarks>
-        private static IEnumerable<LedTarget> Devices()
+        private static IEnumerable<LedTarget> Devices(IEnumerable<Surveyed> survey)
         {
-            var targets = Survey().Where(entry => entry.Target != null).Select(entry => entry.Target).ToList();
+            var targets = survey.Where(entry => entry.Target != null).Select(entry => entry.Target).ToList();
             // Two LED modules under one device would take one id and overwrite each other, so only the
             // first of each is offered. Nothing in SimHub's registry builds such a device today; if one
             // appears, a bar pointed at it lands on its first module rather than at random.
