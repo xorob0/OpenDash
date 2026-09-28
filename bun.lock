@@ -11,14 +11,12 @@
     },
     "packages/dash": {
       "name": "@opendash/dash",
-      "version": "0.1.0",
       "dependencies": {
         "@opendash/generator": "workspace:*",
       },
     },
     "packages/generator": {
       "name": "@opendash/generator",
-      "version": "0.1.0",
       "dependencies": {
         "fflate": "^0.8.2",
       },
