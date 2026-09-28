@@ -153,18 +153,20 @@ namespace OpenDashPlugin
         /// coming, and draws it in <see cref="ShowUpdateAnswer"/>. Nothing here blocks: a socket that never
         /// answers would otherwise freeze the settings page.
         /// </remarks>
-        private void Check(bool manual)
+        /// <returns>Whether an answer is coming.</returns>
+        private bool Check(bool manual)
         {
-            if (!Settings.CheckForUpdates && !manual) return;
+            if (!Settings.CheckForUpdates && !manual) return false;
             // Whether a request will be made is decided before saying so, because saying "Checking for updates…"
             // and then not checking left the panel on that sentence for as long as it was open, and hid an offer
             // it had already found.
-            if (!plugin.StartUpdateCheck(manual)) return;
+            if (!plugin.StartUpdateCheck(manual)) return false;
 
             askedManually |= manual;
             if (checkButton != null) checkButton.IsEnabled = false;
             updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
             RefreshUpdateLine();
+            return true;
         }
 
         /// <summary>
@@ -175,6 +177,9 @@ namespace OpenDashPlugin
         {
             var manual = askedManually;
             askedManually = false;
+            // The check Init queued can land while an update is installing, and the line and the buttons are
+            // the install's until it finishes; what it says about the rig afterwards is its own to decide.
+            if (applying) return;
             if (answer == null)
             {
                 // The service declined after all. Whatever was showing before is still the truth.
@@ -214,8 +219,7 @@ namespace OpenDashPlugin
                 // not, since a download URL expires within the hour and none is kept between runs. The press is
                 // a request, so the listing is asked for now and the update applied when it answers.
                 pendingApply = progressHost;
-                Check(manual: true);
-                if (askedManually) return;
+                if (Check(manual: true)) return;
                 pendingApply = null;
             }
             if (release == null)
