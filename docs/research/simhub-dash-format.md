@@ -50,6 +50,17 @@ OpenDash/
   JavascriptExtensions/        optional .js files loaded into the JavaScript engine
 ```
 
+Every sidecar is found by the main dashboard's file name, and by nothing else. Decompiled from 9.12.6
+on 2026-09-28 for #456: SimHub keeps no list of them, and each one is read as the `.djson`'s own path
+with a suffix appended, the `.metadata` by `GraphicalDashItem`, the `.jpg` or `.png` by `LoadPreview`,
+the `.ressources` by `DashboardImage.GetImageFromRessources` and the `.carclasses` by
+`EditorModel.LoadCarClassOverrides`. `EditorModel.CleanDir` reads a file the same way, taking whatever
+precedes `.djson.` as the dashboard it belongs to, and deletes a sidecar whose dashboard is not beside
+it. A copy of a dashboard under another name has therefore to rename every `<name>.djson.*` with it,
+since a sidecar left under the old name raises no error and is simply never read. Nothing inside a
+sidecar names the dashboard, on the other hand: an image is looked up inside the `.ressources` zip by
+its own `Name` and `Extension`.
+
 The `.metadata` sidecar duplicates the `Metadata` object of the `.djson`:
 
 ```json

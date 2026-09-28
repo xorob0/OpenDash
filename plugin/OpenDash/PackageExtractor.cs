@@ -55,9 +55,10 @@ namespace OpenDashPlugin
         /// Turns a freshly extracted package into one screen's copy of it, in the staging folder.
         /// </summary>
         /// <remarks>
-        /// Three things move, and only three. SimHub finds a dashboard as <c>&lt;folder&gt;/&lt;folder&gt;.djson</c>, so the
-        /// folder and the main dashboard are renamed together; the sub-dashboards are referenced by bare
-        /// file name and are left exactly as they are. The Title is written because SimHub's dashboard
+        /// Three things move, and only three. SimHub finds a dashboard as <c>&lt;folder&gt;/&lt;folder&gt;.djson</c> and
+        /// everything that belongs to it by that file's name, so the folder, the main dashboard and every file
+        /// named after it are renamed together; the sub-dashboards are referenced by bare file name and are
+        /// left exactly as they are, their own sidecars with them. The Title is written because SimHub's dashboard
         /// list shows it, and two screens of one size were otherwise two entries a user could not tell
         /// apart. Then every <c>OpenDash.&lt;namespace&gt;</c> in every .djson becomes this screen's.
         ///
@@ -78,16 +79,47 @@ namespace OpenDashPlugin
                 var renamed = Path.Combine(staging, wanted);
                 Rename(source, renamed, Directory.Move);
                 source = renamed;
-                foreach (var suffix in new[] { DashExtension, MetadataExtension })
+                foreach (var file in FilesNamedAfter(source, folderName))
                 {
-                    var from = Path.Combine(source, folderName + suffix);
-                    if (File.Exists(from)) Rename(from, Path.Combine(source, wanted + suffix), File.Move);
+                    var suffix = Path.GetFileName(file).Substring(folderName.Length);
+                    Rename(file, Path.Combine(source, wanted + suffix), File.Move);
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(screen.Title)) WriteTitle(source, wanted, screen.Title, log);
             if (screen.Rewrites) RewriteNamespace(source, screen, log);
             return wanted;
+        }
+
+        /// <summary>
+        /// The main dashboard and every file SimHub finds beside it by its name: <c>&lt;name&gt;.djson</c> and
+        /// <c>&lt;name&gt;.djson.*</c>.
+        /// </summary>
+        /// <remarks>
+        /// SimHub keeps no list of sidecars. Each one is the .djson's own path with something appended: the
+        /// .metadata the dashboard list reads, the .jpg or .png it draws as the thumbnail, the .ressources zip
+        /// the images are read from, the .carclasses overrides. Dash Studio's own clean-up reads a file the same
+        /// way, taking whatever comes before ".djson." as the dashboard it belongs to. Renaming by that rule
+        /// rather than by a list of suffixes is what keeps a copy whole when the build ships a sidecar it did
+        /// not ship before: the list this replaced named two, and a second screen of a size was written with
+        /// its thumbnail and its images still under the package's name, where SimHub never looks (#456).
+        ///
+        /// Case is ignored because SimHub finds these files through File.Exists on Windows, which ignores it.
+        /// Only the top of the folder is read, because nothing SimHub resolves by name lives below it, and a
+        /// widget's sidecars are named after the widget, so they stay where they are with it.
+        /// </remarks>
+        private static List<string> FilesNamedAfter(string folder, string dashboard)
+        {
+            var main = dashboard + DashExtension;
+            return Directory
+                .GetFiles(folder)
+                .Where(path =>
+                {
+                    var name = Path.GetFileName(path);
+                    return name.Equals(main, StringComparison.OrdinalIgnoreCase)
+                        || name.StartsWith(main + ".", StringComparison.OrdinalIgnoreCase);
+                })
+                .ToList();
         }
 
         /// <summary>
