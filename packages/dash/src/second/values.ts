@@ -11,6 +11,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
+import type { Mark } from '../elements/mark.ts';
 import { flagBox, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
@@ -659,6 +660,47 @@ export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLe
 /** iRacing reports a week of time left when a session is not timed. */
 export const UNTIMED_SECONDS = 86400;
 export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), lt(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+
+/**
+ * A session the sim has given, which has no clock: iRacing's week of `SessionTimeLeft` in a
+ * lap-limited race. The other half of {@link isTimedSession}'s window, and the state the two used
+ * to be folded into.
+ */
+export const isUntimedSession = (): Expr => ge(sessionTimeLeft(), num(UNTIMED_SECONDS));
+
+/** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
+export const NO_CLOCK = `-:--:--`;
+
+/**
+ * The mark a session clock reads where the session has no clock at all, U+221E.
+ *
+ * It is not drawn through a monospace cell and cannot be. Rule 19: the cell is cut for the widest
+ * ink a digit draws, 0.47 em in SemiBold and 0.49 in Bold, and this glyph advances 0.651 and 0.658
+ * em in those faces -- a third over the cell in both, which is further over it than any character
+ * `font.cell.excluded` names. So the clock and the mark are two items in one place, the clock
+ * monospaced and the mark proportional, and {@link untimedMark} is the pair's switch. See
+ * `elements/mark.ts`.
+ */
+export const UNTIMED_MARK = '∞';
+
+/**
+ * The session clock every surface draws: how long is left while the session is timed, and the unset
+ * clock when there is no session.
+ *
+ * One spelling of a rule that had five, four of which agreed. `zones/bar.ts` was the fifth and drew
+ * `clock(sessionTimeLeft())` bare, so a lap race's week of time left reached the bar's six-digit
+ * budget as `168:00:00` and WPF took the last glyph off it -- every iRacing lap race, on the default
+ * field of the default slot (#439).
+ *
+ * The untimed session is *not* this expression's business: it draws {@link UNTIMED_MARK} instead,
+ * from the item beside this one, and this clock is hidden while that mark is shown. Folding the two
+ * states into one placeholder is what the four agreeing surfaces did, and it tells a driver in a
+ * thirty-lap race that the dash has no reading where it has one.
+ */
+export const sessionClock = (): Expr => iff(isTimedSession(), clock(sessionTimeLeft()), str(NO_CLOCK));
+
+/** The mark that replaces the session clock where the session has no clock. */
+export const untimedMark = (): Mark => ({ text: UNTIMED_MARK, when: isUntimedSession() });
 
 /**
  * Whether a page shows how much time is left rather than which lap it is, per `SessionProgress`.
