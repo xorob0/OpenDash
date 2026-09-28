@@ -98,10 +98,13 @@ namespace OpenDashPlugin
             return panel;
         }
 
-        /// <summary>.lbl on the canvas: Barlow Medium 12, uppercase, 0.14 em tracking.</summary>
+        /// <summary>.lbl on the canvas: Barlow Medium 12 at the label tracking, drawn in the case it is
+        /// written in. A label is sentence case and the capitals that remain, an acronym or a flag, are typed
+        /// in the string, as docs/design/brand.md says; the tracking was sized for capitals and is the
+        /// canvas's to re-size, which brand.md records as owed.</summary>
         public static StackPanel Label(string text, string hex = Theme.TextLabel, double size = Theme.SizeLabel)
         {
-            return Tracked(text.ToUpperInvariant(), size, FontWeights.Medium, hex, Theme.TrackingLabel);
+            return Tracked(text, size, FontWeights.Medium, hex, Theme.TrackingLabel);
         }
 
         /// <summary>The tracking WPF gives no property for: every character is its own TextBlock and carries
