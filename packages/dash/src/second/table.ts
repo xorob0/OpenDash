@@ -851,7 +851,10 @@ export interface ListDeclaration {
   header: boolean;
   /** The columns the page draws at this shape, before a narrow box sheds any. */
   columns: readonly ColumnId[];
-  /** The rows the page wants. A box too short for them at the canvas's row lists fewer. */
+  /**
+   * The rows the page wants. A box too short for them at the canvas's row lists fewer. `Infinity` is
+   * a list that wants every row its box holds at that row, which is the pit wall's answer.
+   */
   rows: number;
   /** The fewest it asks for however short the box; `table()` clamps what the frame cannot hold. */
   least?: number;

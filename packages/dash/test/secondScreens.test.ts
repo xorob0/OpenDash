@@ -544,7 +544,10 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
     if (seen.has(key)) return;
     seen.add(key);
     const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
-    boxes.push({ name: `${owner} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
+    // At the density `screens/zones.ts` builds the zone at, which is the pit wall's `panel` for a
+    // standard zone and not the face's `zone`: a page that answers the pit wall differently is only
+    // measured doing so if the box is asked the question the build asks.
+    boxes.push({ name: `${owner} ${key}`, frame: body, density: wide ? 'wide' : 'panel' });
   };
   // The rectangles the canvas designs a zone on come first, so that they are in the list whether or
   // not a page ever places one of them: a zone is a widget, so the rectangles below are only the

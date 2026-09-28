@@ -175,6 +175,22 @@ describe('a list declares its rows and answers the box with the rest', () => {
   });
 
   /**
+   * The ticket's own exception: buying rows is right for the pit wall, where the question is *who is in
+   * the race*. So a pit wall zone's leaderboard lists every car its box holds at the canvas's row rather
+   * than its shape's count, and the 487 x 315 body of the `519 x 359` zone, a `grid` box that would
+   * declare six, lists the eight it listed before #328. The row still fills the body, and the relative,
+   * whose window is its question on either surface, keeps its count.
+   */
+  test('but a pit wall zone lists every car its box holds', () => {
+    for (const density of ['panel', 'wide'] as const) {
+      const board = rowsOf(build('leaderboard', 487, 315, density));
+      expect({ density, rows: board.count, pitch: board.pitch }).toEqual({ density, rows: 8, pitch: 39 });
+      expect({ density, relative: rowsOf(build('relative', 487, 315, density)).count }).toEqual({ density, relative: 7 });
+    }
+    expect(rowsOf(build('leaderboard', 487, 315, 'zone')).count).toBe(6);
+  });
+
+  /**
    * The harm #328 names, on the base face: the driver name drawn at 13 px on the one column that says
    * *who*, under however much height the zone had, because the height went on more rows of 28.
    *

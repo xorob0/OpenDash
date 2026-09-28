@@ -1,7 +1,8 @@
 /**
  * Module 14, Leaderboard: the order of the race, overall or in the player's class. The page declares
  * how many rows it lists at each shape and a box too short for them lists fewer, so the same module is
- * seven rows on a companion page and four in a short zone.
+ * seven rows on a companion page and four in a short zone. A pit wall's zone is the exception and
+ * lists every car it has room for; see {@link rowsIn}.
  *
  * Two settings say "class" here and since #212 they meet, in one direction. `PositionMode` is the
  * rig's own and it filters the rows it numbers, a column of class positions drawn over the whole
@@ -16,7 +17,7 @@
  */
 import { columnWidths, listPlan, nameFloorForRow, table, tableRowHeight, type ColumnId, type ListPlan, type RowSize } from '../second/table.ts';
 import { defineModule, drawnAt, pageColumns, type ModuleContext } from './module.ts';
-import type { Density } from '../second/density.ts';
+import { isPitWall, type Density } from '../second/density.ts';
 import type { Archetype } from './shedding.ts';
 
 /**
@@ -101,13 +102,27 @@ export function fittingColumns(columns: readonly ColumnId[], width: number, dens
  */
 const ROWS: Record<Archetype, number> = { wide: 7, grid: 6, tallNarrow: 8, tall: 11 };
 
+/**
+ * How many rows the leaderboard lists in this context: the count above on a face and on the companion,
+ * and on the pit wall every car the box holds at the canvas's row.
+ *
+ * #328 is a face's question. A zone of a face asks *who is near me and by how much*, the answer is a
+ * few rows, and height the count does not need is better spent on type and space. A pit wall zone asks
+ * *who is in the race*, and there buying rows is right, which the ticket says in as many words; its
+ * `519 x 359` zone listed eight before #328 and would have listed six under the `grid` count, two cars
+ * fewer under 18 px of air a row. So the pit wall keeps listing the field, at a row stretched to fill
+ * the box and carrying the largest type the plan allows, which is the same answer to height it gets
+ * everywhere else.
+ */
+const rowsIn = (ctx: ModuleContext): number => (isPitWall(ctx.density) ? Number.POSITIVE_INFINITY : ROWS[drawnAt(ctx)]);
+
 /** The leaderboard's plan for this box: its declared rows, the type they carry and the columns kept. */
 export const leaderboardPlan = (ctx: ModuleContext): ListPlan =>
   listPlan(ctx.frame, {
     density: ctx.density,
     header: drawsHeader(ctx.density),
     columns: pageColumns(LEADERBOARD_COLUMNS, ctx),
-    rows: ROWS[drawnAt(ctx)],
+    rows: rowsIn(ctx),
     fit: fittingColumns,
   });
 
