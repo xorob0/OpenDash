@@ -124,6 +124,75 @@ namespace OpenDashPlugin.Tests
             Assert.Equal('5', LedBarProfile.IdFor("LedRim").ToString("D")[14]);
         }
 
+        /// <summary>
+        /// A bar is looked for by the id it derives, on every LED device, and the best reading wins.
+        /// </summary>
+        /// <remarks>
+        /// Every device because SimHub keeps a list per device and a bar moved from the Arduino to a wheel
+        /// is installed on the wheel; the install takes the copy out of every other list, so the Arduino
+        /// holding nothing is the expected answer there and not a contradiction. A device whose list could
+        /// not be read is a null entry, and any device that could be read outranks it.
+        /// </remarks>
+        [Fact]
+        public void A_bar_is_found_by_its_own_id_on_whichever_device_holds_it()
+        {
+            const string current = "Built by OpenDash 0.3.0; do not edit here.";
+            var bar = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
+            var arduino = new List<InstalledProfile> { new InstalledProfile { ProfileId = Guid.NewGuid(), Name = "Rim" } };
+            var wheel = new List<InstalledProfile> { new InstalledProfile { ProfileId = LedBarProfile.IdFor("LedRim"), Name = "Rim", Description = current } };
+
+            var found = LedBarProfile.Plan(bar, current, new IEnumerable<InstalledProfile>[] { arduino, null, wheel });
+            Assert.Equal(FlagBoxInstallState.UpToDate, found.State);
+            Assert.Equal(LedBarProfile.IdFor("LedRim"), found.Existing);
+            Assert.Equal("0.3.0", found.InstalledVersion);
+
+            // A profile of the same name is not the bar's: the name is the user's to change, the id is not.
+            Assert.Equal(FlagBoxInstallState.NotInstalled, LedBarProfile.Plan(bar, current, new IEnumerable<InstalledProfile>[] { arduino }).State);
+            // Nothing that could be read, or no device at all, is unavailable rather than absent.
+            Assert.Equal(FlagBoxInstallState.Unavailable, LedBarProfile.Plan(bar, current, new IEnumerable<InstalledProfile>[] { null }).State);
+            Assert.Equal(FlagBoxInstallState.Unavailable, LedBarProfile.Plan(bar, current, new IEnumerable<InstalledProfile>[0]).State);
+            Assert.Equal("0.3.0", LedBarProfile.Plan(bar, current, null).EmbeddedVersion);
+
+            // Installed by an older build, or before strips carried a version: older, either way.
+            wheel[0].Description = "Built by OpenDash 0.3.0-rc.8; do not edit here.";
+            Assert.Equal(FlagBoxInstallState.Outdated, LedBarProfile.Plan(bar, current, new[] { wheel }).State);
+            wheel[0].Description = null;
+            Assert.Equal(FlagBoxInstallState.Outdated, LedBarProfile.Plan(bar, current, new[] { wheel }).State);
+        }
+
+        /// <summary>
+        /// The strip the build wrote says who built it and at which version, and a bar's copy of it still
+        /// does after the rewrite.
+        /// </summary>
+        /// <remarks>
+        /// The cross-language half of the version contract for strips, as FlagBoxInstallPlanTests holds it
+        /// for the flag box: rpmStripDescription() in packages/dash/src/leds/rpmStrip.ts writes the marker
+        /// and FlagBoxInstallPlan.VersionOf reads it back out of the copy in SimHub. A strip that carried
+        /// none read as current whatever built it (#457).
+        /// </remarks>
+        [Fact]
+        public void A_bars_profile_carries_the_version_the_build_stamped()
+        {
+            var embedded = BuiltStripProfile();
+            if (embedded == null)
+            {
+                Assert.False(OnCI, "no built 3-9-3 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
+
+            var mine = LedBarProfile.For(new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" }, embedded);
+            Assert.Equal(FlagBoxInstallPlan.Author, FlagBoxProfile.AuthorOf(mine));
+            Assert.Equal(RepoPaths.Version(), FlagBoxInstallPlan.VersionOf(FlagBoxProfile.DescriptionOf(mine)));
+            Assert.Equal(FlagBoxProfile.DescriptionOf(embedded), FlagBoxProfile.DescriptionOf(mine));
+        }
+
+        /// <summary>See FlagBoxInstallPlanTests: on CI the dash artifact is in Resources/ before the tests
+        /// run, so a missing strip there is the contract having parted company rather than a local
+        /// checkout that has built nothing.</summary>
+        private static bool OnCI =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
+
         [Fact]
         public void The_rewrite_moves_the_bars_own_names_two_fields_and_nothing_else()
         {

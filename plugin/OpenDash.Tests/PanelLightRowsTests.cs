@@ -190,37 +190,162 @@ namespace OpenDashPlugin.Tests
             // The whole reason a strip row has a tooltip of its own. FlagBoxInstallPlan.Summary offers the
             // copy in the OpenDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
             // that sentence over a strip row sends a driver looking for a file nothing ever created.
-            var strip = PanelLightRows.Tooltip(5, FlagBoxInstallState.Unavailable, null);
+            var strip = PanelLightRows.Tooltip(5, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
             Assert.Equal(PanelLightRows.Unavailable, strip);
             Assert.DoesNotContain("OpenDash folder", strip, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("by hand", strip, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// What a strip row says of the rig's strips, and the one press it can have.
+        /// </summary>
+        /// <remarks>
+        /// This replaces a test of the wording the rows had while they compared the embedded profiles
+        /// with SimHub, member by member and worst first: "at least one of these seven is not installed,
+        /// install them all". That wording described a press the rows lost when a strip became a bar, and
+        /// a reduction #457 replaces, so it is no longer true of anything the panel draws.
+        /// </remarks>
         [Fact]
-        public void A_grouped_tooltip_claims_nothing_about_the_members_it_cannot_speak_for()
+        public void A_strip_tooltip_says_what_the_rigs_strips_hold_and_offers_only_the_press_the_row_has()
         {
-            // Combine reports the WORST member, so "not installed" over seven brows means at least one of
-            // them is, and the sentence has to say so rather than that none of them is.
-            var group = PanelLightRows.Tooltip(7, FlagBoxInstallState.NotInstalled, null);
-            Assert.Contains("At least one of these seven", group, StringComparison.Ordinal);
-            Assert.Contains("them all", group, StringComparison.Ordinal);
+            // No strip of the shape in SimHub: a strip is added on the Lights tab, and the row has no
+            // Install press to name, so it says where to go.
+            var one = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
+            Assert.Equal("No strip of this shape is in SimHub. Add one on the Lights tab.", one);
+            var group = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
+            Assert.Equal("No strip of these shapes is in SimHub. Add one on the Lights tab.", group);
 
-            var one = PanelLightRows.Tooltip(1, FlagBoxInstallState.NotInstalled, null);
-            Assert.StartsWith("Not installed.", one, StringComparison.Ordinal);
-            Assert.DoesNotContain("At least one", one, StringComparison.Ordinal);
+            // Current: the version it carries, and no warning, because there is no press to warn about.
+            var current = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.3.0", EmbeddedVersion = "0.3.0" });
+            Assert.Equal("Installed and up to date (0.3.0).", current);
+            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, current, StringComparison.Ordinal);
+            Assert.DoesNotContain("(", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }), StringComparison.Ordinal);
 
-            // A press that replaces a copy the user may have edited carries the same warning the flag box
-            // carries, and is the one sentence neither file writes twice.
-            Assert.Contains(FlagBoxInstallPlan.Replaces, PanelLightRows.Tooltip(3, FlagBoxInstallState.UpToDate, null), StringComparison.Ordinal);
-            Assert.Contains(FlagBoxInstallPlan.Replaces, PanelLightRows.Tooltip(1, FlagBoxInstallState.Outdated, "0.4.0"), StringComparison.Ordinal);
-            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, PanelLightRows.Tooltip(1, FlagBoxInstallState.NotInstalled, null), StringComparison.Ordinal);
+            // Older: both versions, and the warning the flag box's Update carries, since the row's Update
+            // replaces the copy in SimHub by id and whatever was changed in it there goes with it.
+            var older = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, InstalledVersion = "0.3.0-rc.8", EmbeddedVersion = "0.3.0" });
+            Assert.Equal("A newer profile is available (0.3.0-rc.8 to 0.3.0). " + FlagBoxInstallPlan.Replaces, older);
+            // A strip installed before strips carried a version says the new one alone rather than
+            // inventing an old one.
+            var unstamped = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, EmbeddedVersion = "0.3.0" });
+            Assert.Equal("A newer profile is available (0.3.0). " + FlagBoxInstallPlan.Replaces, unstamped);
 
-            // Installing adds a profile; it does not switch to one.
-            Assert.Contains("Select", PanelLightRows.Tooltip(1, FlagBoxInstallState.UpToDate, "0.4.0"), StringComparison.Ordinal);
-            Assert.Contains("0.4.0", PanelLightRows.Tooltip(1, FlagBoxInstallState.UpToDate, "0.4.0"), StringComparison.Ordinal);
-            // A strip profile carries no version marker, so the row says "Installed" and invents none.
-            Assert.DoesNotContain("(", PanelLightRows.Tooltip(1, FlagBoxInstallState.UpToDate, null), StringComparison.Ordinal);
+            Assert.Equal(PanelLightRows.Unavailable, PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
+            Assert.Equal("Install failed. See SimHub's log.", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Failed }));
+        }
+
+        /// <summary>What a strip built by this checkout's VERSION says in its description.</summary>
+        private const string Current = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0; do not edit here, it is replaced on update.";
+
+        private const string Older = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0-rc.8; do not edit here, it is replaced on update.";
+
+        private static IList<KeyValuePair<LedBar, FlagBoxPlan>> Census(IEnumerable<LedBar> bars, params IEnumerable<InstalledProfile>[] devices)
+        {
+            return bars.Select(bar => new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, Current, devices))).ToList();
+        }
+
+        /// <summary>
+        /// The rig #457 was reported from: a 3/9/3 and a 3/9/3 Fanatec added on the Arduino, and every
+        /// strip row saying Not installed beside them.
+        /// </summary>
+        /// <remarks>
+        /// The two ids are the ones SimHub wrote into ArduinoRGBLedsSettings.json on that run, and they
+        /// are what the two bars derive from their namespaces, which is the whole of the fix: a row asks
+        /// about the ids the rig's bars derive. It used to ask about the embedded profile's own id,
+        /// cf7dc3c7-... for the 3/9/3, which no bar ever carries, so it could never find one. A profile
+        /// under that id is not a bar's and the row does not speak for it.
+        /// </remarks>
+        [Fact]
+        public void A_row_finds_the_rigs_strips_by_the_ids_their_bars_derive()
+        {
+            var plain = new LedBar { Name = "OpenDash 3/9/3", Namespace = "Led393", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
+            var fanatec = new LedBar { Name = "OpenDash 3/9/3 Fanatec", Namespace = "Led393Fanatec", Shape = "3-9-3-fanatec", Device = LedBar.ArduinoDevice };
+            var arduino = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), Name = "OpenDash 3/9/3", Description = Current },
+                new InstalledProfile { ProfileId = Guid.Parse("cf2f576b-a3e3-5f53-be30-5d74ece9cf6c"), Name = "OpenDash 3/9/3 Fanatec", Description = Current },
+                new InstalledProfile { ProfileId = Guid.NewGuid(), Name = "Somebody's own" },
+            };
+            Assert.Equal(arduino[0].ProfileId, LedBarProfile.IdFor(plain.Namespace));
+            Assert.Equal(arduino[1].ProfileId, LedBarProfile.IdFor(fanatec.Namespace));
+
+            var census = Census(new[] { plain, fanatec }, arduino);
+            var rows = PanelLightRows.Rows(FullBuild());
+            var sideThree = rows.Single(row => row.ShapeIds.Contains("3-9-3"));
+            var fanatecRow = rows.Single(row => row.ShapeIds.Contains("3-9-3-fanatec"));
+            Assert.Equal("OpenDash 3/4/3 … 3/12/3", sideThree.Name);
+
+            var plan = PanelLightRows.RowPlan(sideThree.ShapeIds, census, true);
+            Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
+            Assert.Equal("0.3.0", plan.InstalledVersion);
+            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(fanatecRow.ShapeIds, census, true).State);
+            // Every other shape has no strip on this rig, and says so.
+            foreach (var row in rows.Where(row => row != sideThree && row != fanatecRow))
+            {
+                Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(row.ShapeIds, census, true).State);
+            }
+
+            // The embedded profile's own id is not a strip of the rig's: a copy of it in SimHub reads the
+            // rig-wide settings and belongs to no bar, and a row with no bar of its shape is Not installed.
+            var embeddedOnly = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = Current },
+            };
+            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(sideThree.ShapeIds, Census(new LedBar[0], embeddedOnly), true).State);
+        }
+
+        /// <summary>
+        /// A row reads Outdated while any strip of its shapes that is in SimHub is older than this build,
+        /// and its Update rewrites exactly those.
+        /// </summary>
+        [Fact]
+        public void A_row_reports_an_older_strip_and_its_update_rewrites_only_that_one()
+        {
+            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
+            var dash = new LedBar { Name = "Dash", Namespace = "LedDash", Shape = "3-12-3" };
+            var unstamped = new LedBar { Name = "Old", Namespace = "LedOld", Shape = "3-4-3" };
+            var gone = new LedBar { Name = "Gone", Namespace = "LedGone", Shape = "3-8-3" };
+            var arduino = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = LedBarProfile.IdFor(rim.Namespace), Description = Older },
+                new InstalledProfile { ProfileId = LedBarProfile.IdFor(dash.Namespace), Description = Current },
+            };
+            var sideThree = new[] { "3-4-3", "3-8-3", "3-9-3", "3-12-3" };
+
+            // Rim alone is older: the row cannot read current while it is.
+            var plan = PanelLightRows.RowPlan(sideThree, Census(new[] { rim, dash, gone }, arduino), true);
+            Assert.Equal(FlagBoxInstallState.Outdated, plan.State);
+            Assert.Equal("0.3.0", plan.EmbeddedVersion);
+            // Two strips at two versions: the pill names neither rather than one of them.
+            Assert.Null(plan.InstalledVersion);
+            Assert.Equal(new[] { rim }, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
+
+            // Gone has no copy anywhere, and neither pulls the row down to Not installed nor is rewritten
+            // by an Update: there is nothing of it in SimHub to bring forward.
+            Assert.DoesNotContain(gone, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
+
+            // A strip installed before strips carried a version is older too, because nothing says it is
+            // current; its copy names no version and the row invents none.
+            arduino.Add(new InstalledProfile { ProfileId = LedBarProfile.IdFor(unstamped.Namespace), Description = null });
+            var alone = PanelLightRows.RowPlan(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino), true);
+            Assert.Equal(FlagBoxInstallState.Outdated, alone.State);
+            Assert.Null(alone.InstalledVersion);
+            Assert.Equal(new[] { unstamped }, PanelLightRows.OutdatedBars(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino)));
+
+            // And a row whose strips are all current has nothing to update.
+            Assert.Empty(PanelLightRows.OutdatedBars(new[] { "3-12-3" }, Census(new[] { rim, dash, gone }, arduino)));
+        }
+
+        /// <summary>No LED device could be read: the row says so rather than Not installed.</summary>
+        [Fact]
+        public void A_rig_whose_LED_devices_cannot_be_read_is_unavailable_rather_than_empty()
+        {
+            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
+            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new[] { rim }), false).State);
+            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0]), false).State);
+            // Reachable and holding nothing of ours is a rig with no such strip, which is a fact.
+            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0], new List<InstalledProfile>()), true).State);
         }
 
         [Fact]

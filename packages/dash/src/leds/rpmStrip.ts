@@ -38,6 +38,7 @@ import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type EffectRole, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { carCentre } from './mirror.ts';
+import { FLAG_BOX_AUTHOR } from './profile.ts';
 import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, not, str } = ncalc;
@@ -440,11 +441,21 @@ const ignitionGroup = (children: readonly leds.LedContainer[]): leds.LedContaine
 });
 
 /**
+ * The strip's own description, carrying the same `Built by OpenDash <version>` marker the flag box
+ * carries, and for the same reason: the plugin reads the version back out of the copy SimHub holds
+ * (`FlagBoxInstallPlan.VersionOf`, whose twin on this side is `flagBoxVersion()`), and that is the
+ * only way it can tell a strip installed by an older build from a current one. Without it every bar
+ * read as current whatever built it (#457).
+ */
+export const rpmStripDescription = (version: string): string =>
+  `Shift lights, flags and the spotter on one LED strip. Built by OpenDash ${version}; do not edit here, it is replaced on update.`;
+
+/**
  * The profile for one strip shape. A strip the maker wired in some other order is the same tree
  * inside a `Groups.RemapGroup` that turns logical positions into physical ones, which is the whole
  * reason a new device is a row of numbers rather than a second profile.
  */
-export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedProfile {
+export function rpmStripProfile(shape: StripShape, profileId: string, version = '0.0.0'): leds.LedProfile {
   const length = deviceLength(shape);
   // Everything is inside a GameRunningGroup, and that is a correctness fix rather than tidiness.
   // Every native Status.* container tests GameRunning itself; CustomStatusContainer does not, and
@@ -470,6 +481,8 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
     profileId,
     ledCount: length,
     containers: shape.positions ? [{ kind: 'remapGroup', description: 'the order this device is wired in', positions: shape.positions, children: tree }] : tree,
+    author: FLAG_BOX_AUTHOR,
+    description: rpmStripDescription(version),
   };
 }
 

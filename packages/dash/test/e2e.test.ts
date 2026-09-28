@@ -59,6 +59,7 @@ import { ZONE_FACES, type ZoneLayout } from '../src/zones/index.ts';
 import { CARDS_FILE } from '../src/slots.ts';
 import { ALL_SHAPES, deviceLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
+import { FLAG_BOX_AUTHOR, flagBoxVersion } from '../src/leds/profile.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
 import { itemsOf } from '../src/walk.ts';
@@ -578,6 +579,17 @@ describe('LED profiles on disk', () => {
       for (const c of doc.LedContainers as Record<string, unknown>[]) walk(c);
       expect(types.length).toBeGreaterThan(0);
       for (const t of types) expect({ shape: shape.id, type: t, known: leds.KNOWN_CONTAINER_TYPES.has(t) }).toMatchObject({ known: true });
+    }
+  });
+
+  test('every strip says who built it and at which version, in the marker the plugin reads back', () => {
+    // A bar's copy in SimHub is compared with the plugin's embedded one by this version and nothing
+    // else (#457). A strip that carried none read as current whatever built it, so an update could
+    // never be offered; the flag box has carried the same marker since it shipped.
+    for (const { shape, path: file } of lit.stripProfiles) {
+      const doc = JSON.parse(readFileSync(file, 'utf8')) as { Author?: string; Description?: string };
+      expect({ shape: shape!.id, author: doc.Author }).toEqual({ shape: shape!.id, author: FLAG_BOX_AUTHOR });
+      expect({ shape: shape!.id, version: flagBoxVersion(doc.Description) }).toEqual({ shape: shape!.id, version: lit.version });
     }
   });
 

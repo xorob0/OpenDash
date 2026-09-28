@@ -251,7 +251,8 @@ export function flagBoxTree(): MatrixContainer[] {
 
 /**
  * Stamped into the profile's `Author`, which SimHub shows in its profile list and round-trips
- * untouched. It is how the plugin tells its own profile from one the user made.
+ * untouched. It is how the plugin tells its own profile from one the user made. The strips carry it
+ * too (`rpmStripProfile`), with the version marker below in their own description.
  */
 export const FLAG_BOX_AUTHOR = 'OpenDash';
 
