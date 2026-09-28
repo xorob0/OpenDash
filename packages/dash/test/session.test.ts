@@ -64,11 +64,15 @@ describe('session card modes', () => {
     expect(evalNcalc('!((1) > (0)) or ((2) > (1))', {})).toBe(true);
   });
 
-  test('timed means 0 < time left < a day: iRacing reports a week when there is no limit', () => {
+  test('timed means 0 < time left <= a day, the day included: iRacing reports a week when there is no limit', () => {
     expect(UNTIMED_SECONDS).toBe(86400);
-    for (const [secs, timed] of [[1, true], [1800, true], [86399, true], [0, false], [-1, false], [86400, false], [A_WEEK, false]] as const) {
+    // A day exactly is timed, and deliberately: Daytona, Le Mans and the Nurburgring are 86400 s,
+    // and `SessionTimeRemain` sits on the total until the clock starts, so a race whose time left is
+    // the whole point would otherwise open by saying it has none (#439).
+    for (const [secs, timed] of [[1, true], [1800, true], [86399, true], [86400, true], [0, false], [-1, false], [86401, false], [A_WEEK, false]] as const) {
       expect({ secs, timed: evalNcalc(timedSession(), game(secs, 0)) }).toEqual({ secs, timed });
     }
+    expect(reading(game(86400, 20, 3, 'auto'))).toEqual({ label: 'Time left', value: '24:00:00', dim: false, denominator: null });
     expect(evalNcalc(showTime(), game(1800, 0))).toBe(true);
     expect(evalNcalc(showTime(), game(A_WEEK, 0))).toBe(false);
   });

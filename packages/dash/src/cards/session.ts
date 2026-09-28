@@ -2,7 +2,8 @@
  * Card 5, Session: time left or lap of total, per OpenDash.SessionProgress. 'time' and 'laps'
  * force a mode; 'auto' shows time when the session is timed and laps otherwise. iRacing reports
  * SessionTimeLeft as 604800 s (a week) when a session has no time limit, so "timed" means
- * 0 < SessionTimeLeft < 86400 s; iRacing's TotalLaps is the leader's completed laps in timed
+ * 0 < SessionTimeLeft <= 86400 s, a 24-hour race being timed and the boundary being in for that
+ * reason (see UNTIMED_SECONDS); iRacing's TotalLaps is the leader's completed laps in timed
  * sessions, which is why the mode never keys off it. The label follows the resolved mode; in
  * time mode an untimed session shows `∞` and a session that has not started shows `-:--:--` in
  * text.dim; the `/ N` denominator is visible only in laps mode with a declared lap count, its Left

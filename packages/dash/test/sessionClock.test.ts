@@ -13,7 +13,7 @@ import type { Item, TextItem } from '../src/generator.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
 import { ZONE_FACES, buildZoneFace, sizeOf } from '../src/zones/index.ts';
-import { NO_CLOCK, UNTIMED_MARK, UNTIMED_SECONDS, isUntimedSession, sessionClock } from '../src/second/values.ts';
+import { CHARS, NO_CLOCK, UNTIMED_MARK, UNTIMED_SECONDS, isUntimedSession, sessionClock } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
@@ -64,10 +64,29 @@ describe('the mark an untimed session draws is measured before it is drawn', () 
 });
 
 describe('the clock the surfaces bind', () => {
-  test('it counts down while the session is timed', () => {
+  test('it counts down while the session is timed, a 24-hour race included', () => {
     for (const [secs, reading] of [[1800, '0:30:00'], [5025, '1:23:45'], [86399, '23:59:59'], [1, '0:00:01']] as const) {
       expect({ secs, reading: evalNcalc(sessionClock(), game(secs)) }).toEqual({ secs, reading });
     }
+  });
+
+  test('a day exactly is a clock and not the mark, and it is the six cells every clock is cut for', () => {
+    // The boundary on purpose rather than in passing. Daytona, Le Mans and the Nurburgring are 86400 s
+    // exactly, and `SessionTimeRemain` sits on `SessionTimeTotal` until the clock starts, so a
+    // threshold that excluded the boundary would have the one class of race where time left is the
+    // whole point open by asserting it has no end -- at full strength, now that the state has a mark.
+    // The reading is the longest a clock can be and is still six digit cells and two separators.
+    expect({ reading: evalNcalc(sessionClock(), game(UNTIMED_SECONDS)), marked: evalNcalc(isUntimedSession(), game(UNTIMED_SECONDS)) }).toEqual({
+      reading: '24:00:00',
+      marked: false,
+    });
+    const reading = '24:00:00';
+    expect({ digits: [...reading].filter((c) => /[0-9]/.test(c)).length, specials: [...reading].filter((c) => c === ':').length }).toEqual({
+      digits: CHARS.clock.digits,
+      specials: CHARS.clock.specials,
+    });
+    // One second over it is the mark, so the two remain complementary across the line.
+    expect({ marked: evalNcalc(isUntimedSession(), game(UNTIMED_SECONDS + 1)) }).toEqual({ marked: true });
   });
 
   test('it is the unset clock where there is no session, and the mark takes the untimed one', () => {
@@ -78,9 +97,9 @@ describe('the clock the surfaces bind', () => {
         marked: false,
       });
     }
-    // At and above the sentinel the clock is hidden and the mark is shown, so what this expression
-    // reads there is never drawn -- but it is the placeholder rather than a week either way.
-    for (const secs of [UNTIMED_SECONDS, A_WEEK]) {
+    // Above the sentinel the clock is hidden and the mark is shown, so what this expression reads
+    // there is never drawn -- but it is the placeholder rather than a week either way.
+    for (const secs of [UNTIMED_SECONDS + 1, A_WEEK]) {
       expect({ secs, reading: evalNcalc(sessionClock(), game(secs)), marked: evalNcalc(isUntimedSession(), game(secs)) }).toEqual({
         secs,
         reading: NO_CLOCK,

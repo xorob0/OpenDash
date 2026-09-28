@@ -78,10 +78,10 @@ describe('card expressions', () => {
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
 
-  test('session resolves its mode from the setting and the 0 < time left < 86400 guard', () => {
+  test('session resolves its mode from the setting and the 0 < time left <= 86400 guard', () => {
     const mode = "isnull([OpenDash.SessionProgress], 'auto')";
     const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
-    const timed = `((${secs}) > (0)) and ((${secs}) < (86400))`;
+    const timed = `((${secs}) > (0)) and ((${secs}) <= (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');
@@ -90,7 +90,7 @@ describe('card expressions', () => {
     // Dim is the clock nobody is counting, which is the session that has not started. An untimed
     // session is the third state and draws the `∞` mark beside this clock at full strength, so it is
     // excluded from the dim here rather than folded in with the absence (#439).
-    const untimed = `(${secs}) >= (86400)`;
+    const untimed = `(${secs}) > (86400)`;
     expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})) and (!(${untimed})), '#33383F', '#F5F7FA')`);
     const mark = textItem('session', 'mark');
     expect({ text: mark.text, mono: mark.monospace, bound: mark.bindings?.Text }).toMatchObject({ text: '∞', mono: undefined, bound: undefined });

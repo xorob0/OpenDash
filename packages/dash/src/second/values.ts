@@ -30,6 +30,7 @@ const {
   gt,
   lt,
   ge,
+  le,
   and,
   concat,
   fmt,
@@ -657,16 +658,33 @@ export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
 export const completedLaps = (): Expr => isnull(game('CompletedLaps'), num(0));
 export const totalLaps = (): Expr => isnull(game('TotalLaps'), num(0));
 export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
-/** iRacing reports a week of time left when a session is not timed. */
+/**
+ * The longest session clock taken at its word: a day, and a day inclusive.
+ *
+ * iRacing reports a week of time left -- 604800 s, `Irsdk.UnlimitedTime` -- for a session that has
+ * no clock, and nothing SimHub publishes says "untimed" in words, so the sentinel has to be read as
+ * a threshold rather than matched. A day is where the threshold sits, and **exactly** a day is on
+ * the timed side of it, because the 24-hour races are the longest real clocks anybody drives:
+ * Daytona, Le Mans and the Nürburgring are 86400 s exactly, and `SessionTimeRemain` equals
+ * `SessionTimeTotal` until the clock starts, so a boundary that excluded 86400 would have a 24-hour
+ * race open by announcing it has no end -- in the one class of race where time left is the whole
+ * point. `24:00:00` is six digit cells and two separators, which is {@link CHARS.clock} exactly, so
+ * including the boundary costs no width anywhere.
+ *
+ * What the threshold still gets wrong is the other direction: a real clock longer than a day -- a
+ * 25-hour race, a multi-day league session -- reads the mark for its whole length. That is the
+ * trade this constant has always made, and no property distinguishes the two cases.
+ */
 export const UNTIMED_SECONDS = 86400;
-export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), lt(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS)));
 
 /**
  * A session the sim has given, which has no clock: iRacing's week of `SessionTimeLeft` in a
  * lap-limited race. The other half of {@link isTimedSession}'s window, and the state the two used
- * to be folded into.
+ * to be folded into. Strictly above the threshold, so a 24-hour race draws its clock; see
+ * {@link UNTIMED_SECONDS} for which side of the line each length of race falls on.
  */
-export const isUntimedSession = (): Expr => ge(sessionTimeLeft(), num(UNTIMED_SECONDS));
+export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SECONDS));
 
 /** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
 export const NO_CLOCK = `-:--:--`;
