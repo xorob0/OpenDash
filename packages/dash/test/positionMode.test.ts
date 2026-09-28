@@ -388,6 +388,21 @@ describe('the session best is the fastest car of the field the rig counts in (#4
     expect(purpleRows(build('leaderboard', PAGE.width, PAGE.height), CLASS)).toEqual([classPositionOf(CLASS_BEST_ROW)]);
   });
 
+  test("a board filtered to one class by its own zone, the rig counting overall, paints that class's fastest car", () => {
+    // The rows are the player's class by their overall places, so the purple has to be that class's
+    // best too: the field's would fall on the LMP2, which this board does not draw, and leave it
+    // with no purple row at all.
+    const board = build('leaderboard', PAGE.width, PAGE.height, secondScreen.classOnly());
+    const filtered: Settings = { positionMode: 'overall', screenFilter: true };
+    expect(column(board, filtered)).toEqual(CLASS_ROWS);
+    expect(purpleRows(board, filtered)).toEqual([CLASS_BEST_ROW]);
+  });
+
+  test('the same board with its zone filter off is the whole field again, and so is its purple', () => {
+    const board = build('leaderboard', PAGE.width, PAGE.height, secondScreen.classOnly());
+    expect(purpleRows(board, { positionMode: 'overall', screenFilter: false })).toEqual([FIELD_BEST_ROW]);
+  });
+
   test('carIsSessionBest answers for exactly one row in each mode', () => {
     const rows = GRID.map((_, i) => i + 1);
     const holders = (settings: Settings): number[] => rows.filter((r) => evaluate(carIsSessionBest(String(r)), settings));

@@ -292,9 +292,17 @@ export const splitHiddenCars = (topRows: number, rows: number): Expr => sub(spli
  * being told: the Lap times, Sectors and pit wall fields, and the purple on a leaderboard's `Best`
  * column through {@link carIsSessionBest}, which on a board filtered to one class would otherwise
  * paint the overall fastest car and therefore nobody at all.
+ *
+ * A list asks a wider question than the rig does, which is why the condition can be passed. A zone
+ * filtered to the player's class draws only that class whatever `PositionMode` says, so its purple
+ * has to be the fastest car of that class or it falls on a car the list does not draw; the table
+ * hands in the same condition its rows are chosen by, a plain `true` or `false` where the rows
+ * never change field, and every other reader takes the rig's.
  */
-export const sessionBestRow = (): Expr => {
-  const index = iff(classMode(), isnull(game('BestLapOpponentSameClassPosition'), num(-1)), isnull(game('BestLapOpponentPosition'), num(-1)));
+export const sessionBestRow = (inClass: Expr | boolean = classMode()): Expr => {
+  const inClassIndex = isnull(game('BestLapOpponentSameClassPosition'), num(-1));
+  const fieldIndex = isnull(game('BestLapOpponentPosition'), num(-1));
+  const index = typeof inClass === 'boolean' ? (inClass ? inClassIndex : fieldIndex) : iff(inClass, inClassIndex, fieldIndex);
   return iff(ge(index, num(0)), add(index, num(1)), num(-1));
 };
 
@@ -624,7 +632,15 @@ export const carClassInterval = (idx: Expr): Expr => {
 
 export const carLastLap = (idx: Expr): Expr => lapTime(driver('lastlap', idx));
 export const carBestLap = (idx: Expr): Expr => lapTime(driver('bestlap', idx));
-export const carIsSessionBest = (idx: Expr): Expr => and(eq(idx, sessionBestRow()), gt(sessionBestRow(), num(0)));
+/**
+ * Whether a car holds the session best, which is the fastest car of the field its list draws: the
+ * player's class where `inClass` holds and the whole field otherwise, the rig's `PositionMode` when
+ * nothing is passed (see {@link sessionBestRow}).
+ */
+export const carIsSessionBest = (idx: Expr, inClass?: Expr | boolean): Expr => {
+  const row = sessionBestRow(inClass);
+  return and(eq(idx, row), gt(row, num(0)));
+};
 export const carSector = (idx: Expr, sector: number): Expr => sectorTime(ncalc.driverSector('lastlap', idx, sector, false));
 export const carStintLaps = (idx: Expr): Expr => fmt(isnull(driver('lapsdonesincelastpitout', idx), num(0)), '0');
 export const carPitCount = (idx: Expr): Expr => fmt(isnull(driver('pitcount', idx), num(0)), '0');
