@@ -50,6 +50,43 @@ namespace OpenDashPlugin
         public const string NotInstalled = "Not installed";
         public const string InstallFailed = "Install failed";
 
+        /// <summary>
+        /// The sentence a glance row ends on: the binding is a hold, and the press type the dialog
+        /// offers is not the driver's to choose.
+        /// </summary>
+        /// <remarks>
+        /// SettingsControl.HoldWhilePressed rewrites every mapping made on a glance binder to SimHub's
+        /// `During`, the one press type under which SimHub calls the release, and the dialog opens on
+        /// ShortAndLongPress. The correction stays (#435): a glance bound any other way appears and
+        /// vanishes in one frame, so there is no other choice a driver could make and keep a glance,
+        /// and a warning would leave that binding in place to fail. What changed is that the row says
+        /// so, so a driver who picks a press type and watches it change back has been told why.
+        /// </remarks>
+        public const string GlanceBoundAsHold = "Bound as a hold, whatever press type you pick.";
+
+        /// <summary>The glance row's caption on a face.</summary>
+        public const string FaceGlance = "Hold to show one page, release to return. " + GlanceBoundAsHold;
+
+        /// <summary>The glance row's caption on a pit wall, where the page is lent to one zone.</summary>
+        public const string PitWallGlance = "Hold to show one page, release to put the zone back. " + GlanceBoundAsHold;
+
+        /// <summary>
+        /// How a companion is paged, and where the button for it is bound, which is not in OpenDash.
+        /// </summary>
+        /// <remarks>
+        /// SimHub pages a companion, and its NextScreen and PreviousScreen are bound in the Controls and
+        /// events of the device the companion runs on. The panel cannot host that binder the way it
+        /// hosts its own, since SimHub's ControlsEditor binds a plugin action by name and these belong
+        /// to a device, so the sentence names the place rather than only the action: a driver told
+        /// only what to bind was left to find where (#435). plugin/INSTALL.md and the site's install
+        /// page carry the same passage.
+        /// </remarks>
+        public const string CompanionPaging =
+            "Tap the left or right half of the screen to change module. For a wheel button, open the "
+            + "device or window the companion runs on in SimHub, go to its Controls and events, and bind "
+            + "NextScreen, with PreviousScreen to go back. Those bindings belong to that device, so the "
+            + "button that pages the companion does not page your dash.";
+
         /// <summary>The separator the panel joins facts with, which is the canvas's middle dot.</summary>
         private const string Join = " · ";
 

@@ -580,7 +580,7 @@ namespace OpenDashPlugin
             }
 
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to return."));
+                Ui.Caption(PanelCopy.FaceGlance));
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons",
@@ -639,7 +639,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to put the zone back."));
+                Ui.Caption(PanelCopy.PitWallGlance));
             glanceText.MaxWidth = 420;
 
             return Ui.VStack(0,
@@ -902,18 +902,6 @@ namespace OpenDashPlugin
                 BuildCompanionPaging(screen));
         }
 
-        /// <summary>
-        /// How a companion is paged, which is not OpenDash's to decide any more.
-        /// </summary>
-        /// <remarks>
-        /// There were two selects here -- the module a session opens on and the one a held button
-        /// shows -- and a binder for OpenDash's own next-module action. All three needed OpenDash to be
-        /// the thing choosing which screen was up, and that is exactly what stopped a tap working:
-        /// SimHub's only touch gesture maps a tap to the previous or next screen, and its navigation
-        /// walks the screens whose expression is true, so with one of twenty-one enabled there was
-        /// nothing to walk. A row that no longer does anything is worse than a row that is not there,
-        /// so they are replaced by the sentence saying where the controls went.
-        /// </remarks>
         /// <summary>One module of the catalogue, numbered as the panel numbers them.</summary>
         private ComboBox BuildModuleSelect(int selected, string tooltip, Action<int> chosen)
         {
@@ -935,16 +923,35 @@ namespace OpenDashPlugin
             return select;
         }
 
+        /// <summary>
+        /// How a companion is paged, which is not OpenDash's to decide any more.
+        /// </summary>
+        /// <remarks>
+        /// There used to be a select for the module a held button shows and a binder for OpenDash's own
+        /// next-module action here. Both needed OpenDash to be the thing choosing which screen was up,
+        /// and that is exactly what stopped a tap working: SimHub's only touch gesture maps a tap to the
+        /// previous or next screen, and its navigation walks the screens whose expression is true, so
+        /// with one of twenty-one enabled there was nothing to walk. A row that no longer does anything
+        /// is worse than a row that is not there, so they are replaced by the sentence saying where the
+        /// controls went: PanelCopy.CompanionPaging, which names the device's Controls and events,
+        /// NextScreen and PreviousScreen, and that the binding belongs to the device. What stays is the
+        /// First module select, the one a session opens on, which OpenDash still sets once at the start
+        /// and SimHub pages from.
+        ///
+        /// It is prose and not a picture (#435). A drawn diagram in the panel's own hand would be a
+        /// drawing of SimHub's dialog, which goes stale at SimHub's next release as surely as a
+        /// photograph does and cannot be checked from here; a bitmap is machinery the panel does not
+        /// carry, and ADR 0020 (#398) is where that would be decided. The photograph of the real dialog
+        /// belongs on the site's install page, taken with the other captures in the #430 pass, whose
+        /// ticket carries it as a comment.
+        /// </remarks>
         private FrameworkElement BuildCompanionPaging(ScreenInstance screen)
         {
             var startText = Ui.VStack(4, Ui.Body("First module"),
                 Ui.Caption("Shown when a session starts."));
             startText.MaxWidth = 420;
             return Ui.Section("Module paging",
-                Ui.Caption(
-                    "Tap the left or right half of the screen to change module. For a wheel button, bind "
-                    + "SimHub's \"Next screen\".",
-                    BodyWidth),
+                Ui.Caption(PanelCopy.CompanionPaging, BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
                     screen.CompanionStart = value;

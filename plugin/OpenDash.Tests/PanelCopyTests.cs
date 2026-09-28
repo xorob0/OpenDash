@@ -5,6 +5,9 @@
 // sentences. The pairing tests are the point of the table: a verb with the wrong button style is a panel
 // offering an update as though it were an afterthought, or a removal as though it were the thing to do.
 using System;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -131,6 +134,60 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextLabel, absent.StateHex);
             Assert.Equal("Add", absent.Button);
             Assert.Equal(PanelButton.Outline, absent.Style);
+        }
+
+        /// <summary>
+        /// A glance row says the binding is a hold, since the binder rewrites whatever press type the
+        /// dialog was set to (#435), and every glance binder on the panel sits under that sentence.
+        /// </summary>
+        [Fact]
+        public void A_glance_row_says_it_is_bound_as_a_hold()
+        {
+            Assert.Equal("Bound as a hold, whatever press type you pick.", PanelCopy.GlanceBoundAsHold);
+            Assert.Equal("Hold to show one page, release to return. Bound as a hold, whatever press type you pick.", PanelCopy.FaceGlance);
+            Assert.Equal("Hold to show one page, release to put the zone back. Bound as a hold, whatever press type you pick.", PanelCopy.PitWallGlance);
+
+            var panel = string.Join("\n", RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            // The correction the sentence announces is still made, and made to the one press type
+            // SimHub releases on.
+            Assert.Contains("mapping.PressType = PressType.During", panel);
+            var holds = Regex.Matches(panel, @"BuildBinder\([^;]*hold: true\)").Count;
+            Assert.Equal(2, holds);
+            Assert.Contains("Ui.Caption(PanelCopy.FaceGlance)", panel);
+            Assert.Contains("Ui.Caption(PanelCopy.PitWallGlance)", panel);
+            Assert.DoesNotContain("\"Hold to show one page", panel);
+        }
+
+        /// <summary>
+        /// The companion's paging names the place as well as the action: the device's own Controls and
+        /// events, NextScreen and PreviousScreen, and that the binding belongs to the device (#435).
+        /// </summary>
+        [Fact]
+        public void The_companion_paging_names_where_the_button_is_bound()
+        {
+            Assert.Equal(
+                "Tap the left or right half of the screen to change module. For a wheel button, open the "
+                + "device or window the companion runs on in SimHub, go to its Controls and events, and bind "
+                + "NextScreen, with PreviousScreen to go back. Those bindings belong to that device, so the "
+                + "button that pages the companion does not page your dash.",
+                PanelCopy.CompanionPaging);
+        }
+
+        /// <summary>
+        /// The guide says what the pane says. plugin/INSTALL.md is read before the plugin is open, so the
+        /// place, the two actions and the per-device scope have to be there too; site/test/copy.test.ts
+        /// holds the site's install page to the same.
+        /// </summary>
+        [Fact]
+        public void The_guide_names_the_same_place_the_pane_does()
+        {
+            // Whitespace folded, because the guide wraps at a hundred columns and a phrase may break.
+            var guide = Regex.Replace(File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "INSTALL.md")), @"\s+", " ");
+            foreach (var phrase in new[] { "Controls and events", "NextScreen", "PreviousScreen", "does not page your dash", "device or window the companion runs on" })
+            {
+                Assert.Contains(phrase, PanelCopy.CompanionPaging);
+                Assert.Contains(phrase, guide);
+            }
         }
 
         /// <summary>One primary per panel: of every pairing the table holds, exactly one is accented.</summary>

@@ -86,6 +86,34 @@ describe('the footer', () => {
   });
 });
 
+/**
+ * Where a companion's paging is bound, which the plugin's pane and plugin/INSTALL.md also say (#435).
+ * SimHub pages a companion, so the button is bound in the Controls and events of the device it runs
+ * on, and that binding is the device's: the button paging the phone does not page the dash. A driver
+ * looks here before the plugin is open, so the place has to be here and not only the action. The
+ * page is read as text with its markup and its line breaks folded away, since a phrase may cross a
+ * `<code>` or a wrap.
+ */
+describe('the install page on paging a companion', () => {
+  const text = read('app/install/page.tsx')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\{' '\}/g, ' ')
+    .replace(/\s+/g, ' ');
+  const guide = readFileSync(path.join(site, '..', 'plugin', 'INSTALL.md'), 'utf8').replace(/\*\*/g, '').replace(/\s+/g, ' ');
+
+  test.each([
+    'Tap the left or right half of the screen to change module.',
+    'open the device or window the companion runs on in SimHub, go to its',
+    'Controls and events',
+    'NextScreen, with PreviousScreen to go back.',
+    'Those bindings belong to that device, so the button that pages',
+    'does not page your dash.',
+  ])('says, as the guide does, %p', (phrase) => {
+    expect(text.toLowerCase()).toContain(phrase.toLowerCase());
+    expect(guide.toLowerCase()).toContain(phrase.toLowerCase());
+  });
+});
+
 describe('the writing rules', () => {
   test('no source carries an em dash', () => {
     const offenders = ALL_SOURCES.filter((f) => /—/.test(readFileSync(f, 'utf8'))).map((f) => path.relative(site, f));

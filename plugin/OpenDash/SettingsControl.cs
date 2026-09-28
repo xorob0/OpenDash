@@ -466,6 +466,12 @@ namespace OpenDashPlugin
         ///
         /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
         /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
+        ///
+        /// Decided in #435, and kept as a correction rather than turned into a warning: a warning
+        /// would leave in place a binding that cannot hold anything, and there is no press type but
+        /// `During` a driver could choose and still have a glance. It is the one place OpenDash does
+        /// not let SimHub's own control mean what it says, so the row says it instead of doing it
+        /// silently: every glance row's caption ends on PanelCopy.GlanceBoundAsHold.
         /// </summary>
         private static void HoldWhilePressed(ControlsEditor editor)
         {
