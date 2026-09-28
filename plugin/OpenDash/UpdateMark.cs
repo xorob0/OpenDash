@@ -36,32 +36,28 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The version the offer is compared against: UpdateCheck.ComparableInstalled, unless the new plugin is
-        /// already staged.
-        /// </summary>
-        /// <remarks>
-        /// A staged assembly is a plugin that has moved: it is put in place when SimHub closes, and what is left
-        /// to do is the restart the panel already asks for rather than a second download. Compared as it was
-        /// before, the running plugin's old version would keep the mark up, and the panel's Update button with
-        /// it, until the restart -- offering again a release that has been fetched and applied.
-        /// </remarks>
-        public static string Installed(string dashboards, string plugin, bool pluginStaged) =>
-            pluginStaged ? dashboards : UpdateCheck.ComparableInstalled(dashboards, plugin);
-
-        /// <summary>
         /// The release the mark offers, or null when it offers none.
         /// </summary>
         /// <param name="remembered">What <see cref="Remember"/> left.</param>
-        /// <param name="installed">What the rig runs, as UpdateCheck.ComparableInstalled reduces it: the older of
-        /// the dashboards and the plugin, the same version the check compared.</param>
+        /// <param name="installed">What the rig runs, UpdateCheck.RigVersion: the older of the dashboards and the
+        /// plugin, the same version the check compared.</param>
+        /// <param name="pluginStaged">Whether a new plugin is waiting for SimHub to close.</param>
         /// <remarks>
         /// Compared again rather than trusted, so that a rig which has caught up -- an update applied, a plugin
         /// swapped at the restart -- stops being told about a release it now runs, without waiting a day for
         /// the next check to say so. An installed version nobody can read keeps the mark quiet: silence is the
         /// failure this feature is allowed.
+        ///
+        /// A staged plugin offers nothing. It is a release that has been fetched, and what is left to do is the
+        /// restart the panel already asks for rather than a second download. This used to compare the
+        /// dashboards alone once a plugin was staged, which held while an update wrote them before staging the
+        /// plugin; since #438 they come inside the plugin and are written by its first start, so while it waits
+        /// they are still the old ones, and the same comparison put the mark back up for the release the driver
+        /// had just downloaded. A newer release found in the meantime is offered once the restart has happened.
         /// </remarks>
-        public static string Offered(string remembered, string installed)
+        public static string Offered(string remembered, string installed, bool pluginStaged)
         {
+            if (pluginStaged) return null;
             if (string.IsNullOrWhiteSpace(remembered) || string.IsNullOrWhiteSpace(installed)) return null;
             if (installed == Versioning.UnknownVersion) return null;
             return Versioning.VersionCompare(remembered, installed) > 0 ? remembered : null;
@@ -82,7 +78,8 @@ namespace OpenDashPlugin
         /// <param name="enabled">The update check setting.</param>
         /// <param name="last">What this session's last completed check concluded, or null.</param>
         /// <param name="offered">What <see cref="Offered"/> returned.</param>
-        /// <param name="installed">The dashboards' version, which is what the panel's line names.</param>
+        /// <param name="installed">What the rig runs, UpdateCheck.RigVersion, which is what the panel's line
+        /// names: the version the check compared and the mark compares, never a folder of the panel's own.</param>
         /// <remarks>
         /// The mark and the panel say the same thing, because a driver who reads "update" on the idle screen
         /// and opens the panel to act on it has to find the offer there. The check runs once a day, so on the
@@ -103,6 +100,29 @@ namespace OpenDashPlugin
             }
             if (last != null && last.State == UpdateState.UpdateAvailable && last.LatestVersion == offered) return last;
             return new UpdateStatus { State = UpdateState.UpdateAvailable, InstalledVersion = installed, LatestVersion = offered };
+        }
+
+        /// <summary>
+        /// What the panel's update line stands on once an update has run: up to date when what the rig runs has
+        /// reached the release, and otherwise what it was showing.
+        /// </summary>
+        /// <param name="shown">What the line showed before the update ran.</param>
+        /// <param name="ok">Whether the run finished.</param>
+        /// <param name="release">The release it applied.</param>
+        /// <param name="installed">What the rig runs now, UpdateCheck.RigVersion.</param>
+        /// <remarks>
+        /// Compared rather than read off what the run wrote. It used to be up to date whenever a dashboard had
+        /// been replaced, and named the version of one folder; measured against what the rig runs, a run that
+        /// wrote the dashboards and staged the plugin is not there yet, because the old plugin runs until SimHub
+        /// restarts. "You have the newest release" under it would be the finished-looking panel that ADR 0012's
+        /// first amendment took away, so the offer stands, which keeps the restart sentence on the line and the
+        /// pill amber until the swap has happened.
+        /// </remarks>
+        public static UpdateStatus Applied(UpdateStatus shown, bool ok, string release, string installed)
+        {
+            if (!ok || string.IsNullOrWhiteSpace(installed) || string.IsNullOrWhiteSpace(release)) return shown;
+            if (Versioning.VersionCompare(installed, release) < 0) return shown;
+            return new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = installed, Manual = true };
         }
 
         /// <summary>

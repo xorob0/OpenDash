@@ -87,7 +87,7 @@ namespace OpenDashPlugin
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
             // What the idle screen's mark says, so a driver who read it there finds the same offer here.
-            updateStatus = UpdateMark.Opening(Settings.CheckForUpdates, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.Installer.InstalledVersion);
+            updateStatus = UpdateMark.Opening(Settings.CheckForUpdates, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.RigVersion);
             Content = BuildPage();
             ShowTab(tab);
             // The answers arrive from the plugin, which asks for Init and for this page alike. Held only

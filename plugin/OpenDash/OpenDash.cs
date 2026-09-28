@@ -88,6 +88,14 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The version this rig runs, which the update check compares, the idle screen's mark compares and every
+        /// line of the panel names. UpdateCheck.RigVersion is the definition; this is the one place it is read
+        /// from, so that none of them can compose it differently from the others (#458).
+        /// </summary>
+        public string RigVersion =>
+            UpdateCheck.RigVersion(Installer.Packages, Settings.RigScreens().Select(screen => screen.Folder), Version);
+
+        /// <summary>
         /// The one update service, shared by the check that runs from Init and the panel, so the releases a
         /// check found are the ones the panel's Update button applies whichever of the two asked.
         /// </summary>
@@ -141,7 +149,7 @@ namespace OpenDashPlugin
                 return false;
             }
             if (!manual) automaticAsked = true;
-            var installed = UpdateCheck.ComparableInstalled(Installer.InstalledVersion, Version);
+            var installed = RigVersion;
             var enabled = Settings.CheckForUpdates;
             var ticks = Settings.LastUpdateCheckTicks;
             UpdateService.InBackground(() =>
@@ -197,8 +205,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public void RefreshUpdateMark()
         {
-            var installed = UpdateMark.Installed(Installer.InstalledVersion, Version, PluginUpdate.Pending(Installer.SimHubRoot));
-            offeredUpdate = UpdateMark.Offered(Settings.OfferedRelease, installed);
+            offeredUpdate = UpdateMark.Offered(Settings.OfferedRelease, RigVersion, PluginUpdate.Pending(Installer.SimHubRoot));
         }
 
         /// <summary>The release the idle screen's mark offers whatever the switch says, or null; the panel reads
