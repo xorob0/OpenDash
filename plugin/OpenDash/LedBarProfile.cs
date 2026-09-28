@@ -8,9 +8,14 @@
 // dashboards, for the same reason -- what SimHub reads back has to be what the build wrote, less exactly
 // the two fields and three names named here.
 //
+// The id the rewrite gives a bar is also how the bar is found again in SimHub, so the census of what
+// SimHub holds for the rig's bars (Plan) lives here beside it rather than beside the embedded profile.
+//
 // Pure: no SimHub types and no JSON library, so OpenDash.Tests compiles it and pins the rewrite.
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -71,6 +76,42 @@ namespace OpenDashPlugin
                 bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
                 return new Guid(bytes);
             }
+        }
+
+        /// <summary>
+        /// What SimHub holds for one bar, looked for on every LED device the rig has, by the id the bar
+        /// derives.
+        /// </summary>
+        /// <remarks>
+        /// By <see cref="IdFor"/> and never by the embedded profile's own id, which is the whole of #457:
+        /// <see cref="For"/> gives every bar an id of its own, so no profile SimHub holds ever carries the
+        /// embedded one, and a census asking about it found nothing on a rig full of strips.
+        ///
+        /// Every device, and the best reading wins (<see cref="FlagBoxInstallPlan.Better"/>): a bar found
+        /// on the wheel is installed whatever the Arduino holds, and the install takes the copy out of
+        /// every other device, so two readings that disagree are one device that has it and others that
+        /// do not. A device whose list could not be read is a null entry and reads Unavailable, which any
+        /// device that could be read outranks; a rig with no LED device at all is Unavailable outright.
+        ///
+        /// The embedded description is the one this build carries for the bar's shape, and the version
+        /// in it is what the copy in SimHub is compared with: a bar installed by an older build reads
+        /// Outdated, and one installed before strips carried a version at all reads Outdated as well,
+        /// because nothing says it is current.
+        /// </remarks>
+        public static FlagBoxPlan Plan(LedBar bar, string embeddedDescription, IEnumerable<IEnumerable<InstalledProfile>> devices)
+        {
+            if (bar == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            var id = IdFor(bar.Namespace);
+            FlagBoxPlan best = null;
+            foreach (var device in devices ?? Enumerable.Empty<IEnumerable<InstalledProfile>>())
+            {
+                best = FlagBoxInstallPlan.Better(best, FlagBoxInstallPlan.Decide(id, embeddedDescription, device));
+            }
+            return best ?? new FlagBoxPlan
+            {
+                State = FlagBoxInstallState.Unavailable,
+                EmbeddedVersion = FlagBoxInstallPlan.VersionOf(embeddedDescription),
+            };
         }
 
         /// <summary>

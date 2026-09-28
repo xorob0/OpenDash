@@ -124,9 +124,10 @@ namespace OpenDashPlugin
     ///
     /// Everything that made the matrix safe holds here unchanged -- a profile is matched by its
     /// ProfileId, ours is removed and re-added, anything else in either list is the user's and is not
-    /// touched -- so the only difference is which driver the chain ends at. The panel offers one row
-    /// per embedded shape; a grouped row installs its members under a single save and reads its state
-    /// back off them with <see cref="FlagBoxInstallPlan.Combine"/>.
+    /// touched -- so the only difference is which driver the chain ends at. What is installed is never
+    /// the embedded profile itself but one bar's copy of it, under the id that bar derives
+    /// (<see cref="LedBarProfile.For"/>), so what SimHub holds is asked about by that id as well
+    /// (<see cref="LedBarProfile.Plan"/>) and never by the embedded one.
     /// </summary>
     public static class StripInstaller
     {
@@ -144,55 +145,18 @@ namespace OpenDashPlugin
             return target == null ? null : ProfileInstall.Census(target.Settings.Profiles, "RGB LED");
         }
 
-        /// <summary>One shape's row on one device: the embedded profile compared with what it holds.</summary>
-        public static FlagBoxPlan Plan(string embeddedJson, string device)
-        {
-            return Plan(new[] { embeddedJson }, device)[0];
-        }
-
         /// <summary>
-        /// A plan per member, in the order given, off ONE read of one device's profile list.
-        ///
-        /// The panel redraws its rows whenever the tab is opened, and there are nineteen of them, so
-        /// asking the driver once and deciding nineteen times is the difference between one traversal
-        /// of the user's profiles and nineteen. <see cref="FlagBoxInstallPlan.Combine"/> turns these
-        /// into the grouped row's own state.
-        /// </summary>
-        public static IList<FlagBoxPlan> Plan(IEnumerable<string> embeddedJsons, string device)
-        {
-            var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
-            var installed = Installed(device);
-            return parsed
-                .Select(p => p == null
-                    ? new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }
-                    : FlagBoxInstallPlan.Decide(p.ProfileId, p.Description, installed))
-                .ToList();
-        }
-
-        /// <summary>
-        /// A plan per member across every LED device on the rig, worst state last to win.
+        /// What every LED device on the rig holds, one list per device, off one walk of SimHub's devices.
         /// </summary>
         /// <remarks>
-        /// What the Install tab's census rows ask, and the only question they can ask: those rows are
-        /// about which shapes this build carries, not about one strip, and a shape installed on the
-        /// wheel is installed whatever the Arduino holds. A rig with no LED device at all reports
-        /// Unavailable, which is what it was before there was more than one device to ask.
+        /// What the Install tab's strip rows are drawn from, and read once for all of them rather than
+        /// once per row or per bar: the rows are redrawn whenever the tab is opened. An entry is null for
+        /// a device whose list could not be read, and the list is empty on a rig with no LED device at
+        /// all, which the panel reports as unavailable.
         /// </remarks>
-        public static IList<FlagBoxPlan> PlanAnywhere(IEnumerable<string> embeddedJsons)
+        public static List<List<InstalledProfile>> InstalledEverywhere()
         {
-            var jsons = (embeddedJsons ?? Enumerable.Empty<string>()).ToList();
-            var targets = LedTargets.All();
-            if (targets.Count == 0) return jsons.Select(j => new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
-            var best = new FlagBoxPlan[jsons.Count];
-            foreach (var target in targets)
-            {
-                var plans = Plan(jsons, target.Id);
-                for (var i = 0; i < best.Length && i < plans.Count; i++)
-                {
-                    best[i] = best[i] == null ? plans[i] : FlagBoxInstallPlan.Better(best[i], plans[i]);
-                }
-            }
-            return best.Select(p => p ?? new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
+            return LedTargets.All().Select(target => ProfileInstall.Census(target.Settings.Profiles, "RGB LED")).ToList();
         }
 
         /// <summary>One shape, installed on one device. The list form with a single member.</summary>

@@ -1,9 +1,9 @@
 # Installing the OpenDash plugin
 
-The plugin does two things: it installs the OpenDash dashboards into SimHub, one per screen
-size plus the two companions and the two pit walls, and it adds an "OpenDash" page to SimHub's
-left menu where you choose what each of them shows. It reads no telemetry and renders nothing;
-SimHub does that.
+The plugin does two things: it adds an "OpenDash" page to SimHub's left menu, where you add the
+screens your rig has and choose what each of them shows, and it installs into SimHub the dashboard
+of each screen you add there, and of no other. It reads no telemetry and renders nothing; SimHub
+does that.
 
 You need SimHub 9.12.6 or later on Windows. `OpenDash-plugin.zip` contains `OpenDash.dll`,
 this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship.
@@ -22,14 +22,15 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    asks to restart, restart it.
 5. "OpenDash" now appears in SimHub's left menu. Open it on the **Rig** tab, which starts empty:
    the plugin writes no dashboard until you add a screen, so a first start puts nothing new in
-   SimHub's dashboard list. Press **Add a screen**, choose its kind and the size that matches the
-   display from Sizes below, and the plugin writes that one dashboard into its own folder under
-   `DashTemplates` (`OpenDash 1280x480` for the first screen of that size). Add one screen per
-   display, then restart SimHub, which reads its list of dashboards only when it starts.
+   SimHub's dashboard list. Press **Add a screen**, choose the screen type and the size that
+   matches the display from Sizes below, give it a name and press **Add screen**: the plugin writes
+   that one dashboard into its own folder under `DashTemplates` (`OpenDash 1280x480` for the first
+   screen of that size). Add one screen per display, then restart SimHub, which reads its list of
+   dashboards only when it starts.
 6. Assign each dashboard to its display. OpenDash is a normal SimHub dashboard from here on: in
-   Dash Studio the sizes are listed as "OpenDash", "OpenDash 1280x480" and so on, and you open one
-   in a window, send it to a USB or HDMI display, or point a phone or tablet at it exactly like any
-   other dashboard. Nothing in the plugin launches it; that is SimHub's job.
+   Dash Studio each one is listed under the name you gave its screen, and you open one in a window,
+   send it to a USB or HDMI display, or point a phone or tablet at it exactly like any other
+   dashboard. Nothing in the plugin launches it; that is SimHub's job.
 
 ## The face
 
@@ -39,10 +40,9 @@ A face is **five parts**, and every rectangular size is the same five.
   the RPMs **your sim publishes for the car you are driving**, so a car released this morning is
   right with nothing to set up; for a car that publishes none, the bar falls back to SimHub's own
   per-car bands, the ones you tune on SimHub's Car Settings page. Nothing in the plugin chooses
-  between the two and there is no setting for it: the bar asks the car, every frame. It can show a
-  plain RPM bar instead, or nothing at all: switched off, the well goes with it, the bar rises into
-  its room and the body grows by what it gained. The band keeps its place, because it is measured
-  from the bottom edge.
+  between the two and there is no setting for it: the bar asks the car, every frame. Each screen can
+  also do without it: switched off, the well goes with it, the bar rises into its room and the body
+  grows by what it gained. The band keeps its place, because it is measured from the bottom edge.
 - The **bar** below it, carrying what does not change during a lap: two fields at each end,
   chosen from a catalogue of ten, and between them the car settings your sim publishes.
 - The **body**, which is **zone B, zone A and zone C** side by side. Zone A is the narrow middle
@@ -98,19 +98,20 @@ Four more dashboards are not faces for the wheel but second screens, described b
 **The two round faces are still the twelve-slot design, on purpose.** A round face becomes zones on
 a ring after 1.0 -- the rev arc it already has, one zone in the middle of the disc, its card
 rectangles as small zones of their own, and the flag on the ring -- and until that work is done the
-two ship as they are. Of the dashboards the plugin installs they are the only ones the Layout section
-of the settings page applies to, and they number their slots the left side first, then the right side,
-then the bottom.
+two ship as they are. Of the dashboards the plugin installs they are the only ones set up on the Rig
+tab in a Slots section rather than in zones, and they number their slots the left side first, then
+the right side, then the bottom.
 
 **Every screen keeps its own settings.** A rig with a face on the wheel and another beside it
 configures them apart: the zones, the bar and the glance of the 1920 face are separate from those
-of the 850, and each has its own wheel buttons. The settings page has a **Screen** picker at the
-top of the Zones section saying which one you are configuring.
+of the 850, and each has its own wheel buttons. The Rig tab draws a card for each screen, and what
+is set below the cards belongs to the one selected.
 
 ## Wheel buttons
 
-Cycling a zone is a wheel button, bound in SimHub the way any action is. The settings page has a
-binder for each, in the Buttons section, so you do not have to go looking in Controls and events.
+Cycling a zone is a wheel button, bound in SimHub the way any action is. A face's pane on the Rig
+tab has a binder for each, under Wheel buttons, so you do not have to go looking in Controls and
+events.
 
 | Action | What it does |
 |---|---|
@@ -133,8 +134,8 @@ draw.
 ## The companion
 
 The companion shows one module at a time: a big, calm page for a phone or a tablet beside the
-wheel. There are twenty-one modules, listed on the OpenDash page under Companion, and each has
-its own switch. A module that is off is skipped entirely.
+wheel. There are twenty-one modules, listed under Modules on the companion's pane on the Rig tab,
+and each has its own switch. A module that is off is skipped entirely.
 
 Paging is SimHub's, not OpenDash's, so OpenDash registers no action for a companion. Tap the left
 or right half of the screen to change module. For a wheel button, open the device or window the
@@ -151,13 +152,15 @@ zeros. Switch them on for a sim that does carry the data.
 ## The pit wall
 
 The pit wall is for a screen someone watches rather than drives: the whole field with gaps,
-intervals, sectors and stops, the driver's own lap next to it, and four **data zones** you
-choose the contents of. The landscape dashboard has three pages (race, tower, telemetry) that
-you page with the same NextScreen binding; the portrait one has a single page.
+intervals, sectors and stops, the driver's own lap next to it, and **data zones** you choose the
+contents of. The landscape dashboard has three pages (race, tower, telemetry) and shows the one
+chosen in the Page row of its pane on the Rig tab: it does not change while you race, and
+NextScreen does not page it. The portrait one has a single page.
 
-Zones A to D and the wide zone are set on the OpenDash page under Pit wall. Each can show any of
-eleven pages (fuel, tyres, opponents, pit view, relative, leaderboard, lap history, web view,
-inputs, radar, sectors); the wide zone on the tower page has six of its own. The **Web view**
+The zones are set on the same pane, under Zones, in a group per page: zones A and B of the race
+page, the wide zone and zones A and B of the tower page, and zones A to C of the telemetry page.
+Each can show any of eleven pages (fuel, tyres, opponents, pit view, relative, leaderboard, lap
+history, web view, inputs, radar, sectors); the wide zone has six of its own. The **Web view**
 page shows any web page you like: put an http or https address in the Web view address box. An
 address that is neither is ignored.
 
@@ -171,26 +174,32 @@ If you have an **8x8 LED matrix** on an Arduino — the printed box a lot of peo
 screen — OpenDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
 and the warnings you would otherwise miss.
 
-Install it from the OpenDash page under **Lights**: press **Install into SimHub**, then pick the
-profile on your matrix device. The button says what it will do before you press it, and the line
-beside it says what SimHub holds now.
+Install it from the OpenDash page's **Install** tab, where it is the "OpenDash Flag box" row under
+"Lights OpenDash can install": press **Install**, then pick the profile on your matrix device. The
+button says what it will do before you press it, and the status beside it says what SimHub holds
+now; hovering the row says the rest. Then, on the **Lights** tab, press **Add a matrix panel** under
+"Your matrix panels", name the panel and press **Add a matrix panel** again, and pick on the device
+the content number it names, SimHub matrix 1 for the first: a box with no panel stays dark.
 
 **OpenDash never installs it on its own.** A profile paints hardware you own, so it is asked about
 once rather than assumed. It also only ever recognises its own profile, so one you made yourself is
-never touched. When OpenDash updates, the button offers **Update in SimHub** — and updating replaces
-the copy in SimHub, including any changes you made to it there.
+never touched. When OpenDash carries a newer profile than SimHub holds, the button reads **Update**,
+and once SimHub holds the current one it reads **Reinstall**; either press replaces the copy in
+SimHub, including any changes you made to it there.
 
 If the button is greyed out, SimHub's matrix settings could not be reached. OpenDash also writes the
-profile to `SimHub\OpenDash\OpenDash Flag box.ledsprofile`, shown under the button, which you can
-import through SimHub's own profile import.
+profile to `SimHub\OpenDash\OpenDash Flag box.ledsprofile`, whose path is then shown under the rows
+with **Copy to SimHub's import folder** beside it, and you can import that file through SimHub's own
+profile import.
 
 Before any of that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those
 belong to SimHub rather than to OpenDash, because the right values depend on which corner your data
 cable enters — and if they are wrong, the picture comes out sideways or shredded and the profile
 looks broken when it is not.
 
-[docs/flag-box.md](../docs/flag-box.md) is the full guide: what every picture means, what the box
-does not do and why, and what to check when it looks wrong.
+[docs/flag-box.md](https://github.com/xorob0/OpenDash/blob/main/docs/flag-box.md) is the full
+guide: what every picture means, what the box does not do and why, and what to check when it looks
+wrong.
 
 ## Wheels made with FanaBridge
 
@@ -204,7 +213,7 @@ look at, and what a report needs.
 - **Is the wheel in SimHub's Devices view, and can SimHub's own LED editor save a profile to it?**
   If SimHub's own editor cannot, OpenDash will not either: a strip goes into the list that editor
   shows.
-- **Is it in OpenDash's LED device list** on the Lights page's *Add an LED strip* form? A device
+- **Is it in OpenDash's LED device list** on the Lights tab's *Add an LED strip* form? A device
   with some sign of LEDs that OpenDash sees and does not offer is named under that list as having
   no LEDs OpenDash can reach. Every device in SimHub's Devices view, named there or not, has a line
   in SimHub's log, `Logs\SimHub.txt`: one beginning `[OpenDash] LED device not offered` with the
@@ -227,27 +236,28 @@ FanaBridge supports natively, if you have one, is the most useful comparison the
 Every change on the OpenDash page takes effect immediately on a running dashboard; there is
 nothing to save and no restart.
 
-| Section | Setting | Values |
+| Where | Setting | Values |
 |---|---|---|
-| General | The rev bar | Shift lights (the car's own, SimHub's bands where the car publishes none), RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
-| Data | Position | Overall, Class |
-| Data | Delta reference | Session best, All-time best |
-| Data | Session progress | Auto, Laps, Time |
-| Zones | Screen | which face the settings below belong to |
-| Zones | Zone A, B, C, D | the page each opens on, and which pages it cycles |
-| Zones | The two fields at each end of the bar | any of the ten bar fields |
-| Buttons | Zone A to Zone D | the wheel button that cycles that zone |
-| Buttons | Quick glance | the zone and page a held button shows, and the button |
-| Layout | Slot 01 to Slot 12 | any of the thirteen cards; **the two round faces only** |
-| Companion | Module 01 to Module 21 | on, off; an off module is skipped when you page |
-| Pit wall | Zone A to Zone D | any of the eleven zone pages |
-| Pit wall | Wide zone | any of the six wide pages (tower page only) |
-| Pit wall | Web view address | an http or https address, or empty |
-| Dashboard | Check for updates | on, off; asks GitHub once a day and sends nothing about you |
-| Dashboard | Reinstall | extracts every embedded dashboard again; your settings are kept |
+| Rig tab, a face's Zones | Zone A, B, C, D | the page each opens on, and which pages it cycles |
+| Rig tab, a face's Zones | The two fields at each end of the bar | any of the ten bar fields |
+| Rig tab, a face's Zones | Revbar | On (the car's own shift lights, SimHub's bands where the car publishes none), Off (gives the bar's room back to the zones; pick it if your wheel has shift lights of its own) |
+| Rig tab, a face's Wheel buttons | Zone A to Zone D | the wheel button that cycles that zone |
+| Rig tab, a face's Wheel buttons | Quick glance | the zone and page a held button shows, and the button |
+| Rig tab, a round face's Slots | Slot 01 to Slot 12 | any of the thirteen cards |
+| Rig tab, a round face's Slots | Revbar | On, Off, for every round face at once |
+| Rig tab, a companion's Modules | Each of the twenty-one modules | on, off; an off module is skipped when you page |
+| Rig tab, a pit wall's Zones | Page | Race, Tower, Telemetry |
+| Rig tab, a pit wall's Zones | Zones A and B of each page, and C of Telemetry | any of the eleven zone pages |
+| Rig tab, a pit wall's Zones | Wide zone | any of the six wide pages (Tower page only) |
+| Rig tab, a pit wall's Zones | Web view address | an http or https address, or empty |
+| Data tab | Position | Overall, Class |
+| Data tab | Delta reference | Session best, All-time best |
+| Data tab | Session progress | Auto, Laps, Time |
+| Install tab, This plugin | Check for updates | on, off; asks GitHub once a day and sends nothing about you |
+| Install tab, This plugin | Reinstall | writes every dashboard on your rig again; your settings are kept |
 
 The same page may sit in two zones at once. The page says so in amber and does not stop you: two
-zones on the relative is a choice, not a mistake. The Layout section says the same of a card
+zones on the relative is a choice, not a mistake. The Slots section says the same of a card
 assigned to two slots of a round face.
 
 The settings are stored by SimHub in `PluginsData\Common\OpenDash.GeneralSettings.json` and are
@@ -258,8 +268,9 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
 `OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12`,
-`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to `PitWallZoneD`,
-`OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallPage`, the pit wall's zones
+named for their page and letter (`OpenDash.PitWallRaceA`, `PitWallTowerWide`, `PitWallTelemetryC`
+and the rest) and `OpenDash.WebViewUrl`.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are read by two of the dashboards the plugin installs:
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
@@ -268,9 +279,11 @@ the release that gives them zones is the one that will say what happens to the t
 `OpenDash slots <size>` faces that earlier releases published read them as well, four to twelve each,
 so one you installed by hand from such a release is reading the twelve too.
 
-`OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
-`OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
-dashboard or an LED profile written against it still reads.
+`OpenDash.RevBar` is `shift` or `off`, and it is what the Revbar row of a round face writes; a zone
+face reads its own, `OpenDash.Face1920x480RevBar` on the reference face. A settings file that still
+says `rpm`, the plain bar earlier releases offered, reads as `shift`. `OpenDash.ShiftLights` is the
+deprecated alias kept beside it, true only in the `shift` state, so a dashboard or an LED profile
+written against it still reads.
 
 ## Update
 
@@ -282,17 +295,18 @@ example `OpenDash 1280x480_backup.zip`, and `OpenDash Rim_backup.zip` for a seco
 named Rim).
 
 A dashboard you have edited in Dash Studio is **not** replaced silently. The plugin notices that
-the folder no longer holds what it wrote, leaves it alone and says so; pressing Reinstall a second
-time replaces it, and the copy it takes then is kept under a name no later update reclaims. A
-dashboard OpenDash has never seen before is adopted as it is, because an edit made before OpenDash
-started watching cannot be told from an untouched folder.
+the folder no longer holds what it wrote and leaves it alone, which it says in SimHub's log and in
+the tooltip of the status pill under "This plugin" on the Install tab; pressing **Reinstall** there,
+then **Replace anyway**, replaces it, and the copy it takes then is kept under a name no later
+update reclaims. A dashboard OpenDash has never seen before is adopted as it is, because an edit
+made before OpenDash started watching cannot be told from an untouched folder.
 
 The plugin can also tell you when a newer release exists. It asks GitHub once a day, sends nothing
-that identifies you, and can be switched off in the Dashboard section, in which case nothing is
-fetched at all. Nothing is ever installed without being asked for. When you press Update, it
-downloads the new plugin with the dashboards inside it and asks you to restart SimHub; that start
-brings the dashboards up to date as described above, and replaces one you edited only if you said
-yes when Update asked.
+that identifies you, and can be switched off with Check for updates under "This plugin" on the
+Install tab, in which case nothing is fetched at all. Nothing is ever installed without being asked
+for. When you press **Update** there, it downloads the new plugin with the dashboards inside it and
+asks you to restart SimHub; that start brings the dashboards up to date as described above, and
+replaces one you edited only if you pressed **Replace anyway** when Update asked.
 
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
 with a wheel button, under the same dashboard names. Your old face is no longer published: the plugin
@@ -305,30 +319,32 @@ release keeps reading them.
 
 Close SimHub, delete `OpenDash.dll` from the SimHub folder and, if you want the dashboards gone
 too, delete the folders of the Sizes table under `DashTemplates` (`OpenDash`,
-`OpenDash 1280x480` and the rest, plus their `_backup.zip` files). The settings file named above
-can be deleted as well. The fonts copied into `DashFonts` (Barlow) are harmless and shared with
-other dashboards.
+`OpenDash 1280x480` and the rest) and the folder of any second screen of a size, which is
+`OpenDash` followed by the name you gave it, with the `.zip` copies kept beside them. The settings
+file named above can be deleted as well. The fonts copied into `DashFonts` (Barlow) are harmless
+and shared with other dashboards.
 
 ## Troubleshooting
 
 - SimHub never asked about the plugin, or shows an error about loading it: the file is
   blocked (step 3) or it is not in the SimHub folder itself (step 2).
-- The status in the Dashboard section is the worst one across the fourteen dashboards; hover it
-  to see each dashboard with its own status.
-- The Dashboard section says "Not installed": the plugin could not write to `DashTemplates`, or
-  one of the folders is missing. Check that SimHub can write to its own folder, then click
-  Reinstall, which extracts every dashboard again.
+- The status pill under "This plugin" on the Install tab is the worst one across the screens on
+  your rig, or "Update available" when the daily check has found a newer release; hover it to see
+  each dashboard OpenDash carries with its own status, including the ones your rig does not use.
+- The pill says "Not installed": the plugin could not write to `DashTemplates`, or the folder of
+  one of your screens is missing. Check that SimHub can write to its own folder, then press
+  **Reinstall** beside the pill, which writes every dashboard on your rig again.
 - "Install failed": hover the status for the reason and the dashboard concerned. Details are in
   SimHub's log, `Logs\SimHub.txt`, on the lines prefixed `[OpenDash]`.
-- A dashboard says it was left alone: OpenDash found changes in it and will not overwrite
-  somebody's work without being told twice. Press Reinstall again to replace it; a copy is kept
-  either way.
+- The pill's tooltip says a dashboard was left alone: OpenDash found changes in it and will not
+  overwrite somebody's work without being told twice. Press **Reinstall**, then **Replace
+  anyway**, to replace it; a copy is kept either way.
 - The dashboard shows the default pages although you changed them: the dashboard reads the
   settings through the plugin's properties, so the plugin has to be enabled; check SimHub's
   Settings > Plugins page.
 - A wheel button does nothing: check that you bound the action of the screen you are looking at.
-  Each size has its own, named for it, so `Face1920x480CycleZoneB` moves the 1920 face and not the
-  850 beside it.
+  Each screen has its own, so `Face1920x480CycleZoneB` moves the 1920 face and not the 850 beside
+  it.
 - A zone will not stop on the page you want: that page is probably not ticked in the zone's page
   list, so the cycle steps past it.
 - A round face does not show the card you assigned: a round face reads only its first slots, two

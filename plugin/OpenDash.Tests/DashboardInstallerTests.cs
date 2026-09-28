@@ -453,7 +453,7 @@ namespace OpenDashPlugin.Tests
         // The install run
 
         [Fact]
-        public void Every_embedded_package_is_installed_and_the_primary_one_names_the_version()
+        public void Every_embedded_package_is_installed_and_the_rig_is_named_by_its_version()
         {
             var log = new ListLog();
             var installer = Installer(TwoPackages(), log);
@@ -473,10 +473,11 @@ namespace OpenDashPlugin.Tests
             Assert.All(installer.Packages, p => Assert.True(p.Extracted));
             Assert.All(installer.Packages, p => Assert.Null(p.Error));
 
-            Assert.Equal("OpenDash", installer.FolderName);
-            Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("0.2.0", installer.EmbeddedVersion);
-            Assert.Equal("OpenDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
+            Assert.All(installer.Packages, p => Assert.Equal("0.2.0", p.InstalledVersion));
+            Assert.All(installer.Packages, p => Assert.Equal("0.2.0", p.EmbeddedVersion));
+            // Named by the dashboards the rig holds, and here they are the half that is behind the plugin.
+            var rig = new[] { SmallFolder, "OpenDash" };
+            Assert.Equal("OpenDash 0.2.0", DashboardInstaller.Summary(UpdateCheck.RigVersion(installer.Packages, rig, "0.3.0")));
 
             // Both packages carry the same fonts; the second install finds them in DashFonts already.
             Assert.Equal(2, Directory.GetFiles(Path.Combine(root, "DashFonts"), "*.ttf").Length);
@@ -558,16 +559,18 @@ namespace OpenDashPlugin.Tests
             var installer = Installer(TwoPackages("0.2.0"));
 
             installer.Refresh();
+            var wide = installer.Packages.Single(p => p.FolderName == "OpenDash");
             Assert.Equal(InstallStatus.UpdateAvailable, installer.Status);
-            Assert.Equal("0.1.0", installer.InstalledVersion);
-            Assert.Equal("0.2.0", installer.EmbeddedVersion);
+            Assert.Equal("0.1.0", wide.InstalledVersion);
+            Assert.Equal("0.2.0", wide.EmbeddedVersion);
 
             installer.EnsureInstalled(false);
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Equal("0.3.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
-            Assert.Equal("0.2.0", installer.InstalledVersion);
+            Assert.Equal("0.2.0", installer.Packages.Single(p => p.FolderName == "OpenDash").InstalledVersion);
+            Assert.Equal("0.3.0", installer.Packages.Single(p => p.FolderName == SmallFolder).InstalledVersion);
         }
 
         [Fact]
@@ -581,8 +584,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, installer.Packages.Count);
             Assert.All(installer.Packages, p => Assert.Equal(InstallStatus.NotInstalled, p.Status));
             Assert.All(installer.Packages, p => Assert.Null(p.InstalledVersion));
-            Assert.Null(installer.InstalledVersion);
-            Assert.Equal("0.2.0", installer.EmbeddedVersion);
+            Assert.All(installer.Packages, p => Assert.Equal("0.2.0", p.EmbeddedVersion));
             Assert.False(Directory.Exists(Path.Combine(root, "DashTemplates")));
         }
 
@@ -613,9 +615,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(InstallStatus.UpToDate, installer.Packages[1].Status);
             Assert.Equal("OpenDash: Up to date", installer.Packages[1].Describe());
 
-            // The primary package still names the version even though another one failed.
-            Assert.Equal("OpenDash", installer.FolderName);
-            Assert.Equal("0.2.0", installer.InstalledVersion);
+            // The rig is still named by its version even though a package failed: one that could not be read has
+            // no folder, so it is no screen of anybody's and does not count.
+            Assert.Equal("0.2.0", UpdateCheck.RigVersion(installer.Packages, new[] { "OpenDash" }, "0.3.0"));
             Assert.Equal(broken.Describe() + "\n" + "OpenDash: Up to date", installer.PackageReport());
             Assert.Contains(log.Lines, line => line.StartsWith("error: Installing OpenDashPlugin.Resources.broken.simhubdash failed"));
         }
@@ -646,20 +648,48 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(InstallStatus.UpdateAvailable, installer.Packages.Single(p => p.FolderName == "OpenDash").Status);
         }
 
+        /// <summary>
+        /// A rig that never added the 1920 x 480 face, which since ADR 0017 is most of them, is told the version
+        /// it runs (#458).
+        /// </summary>
+        /// <remarks>
+        /// The panel read the version off the folder `OpenDash` alone and named it as it found it. Seen on the VM
+        /// on a rig of one 850 x 480 face, the second start of the day: the Install tab read "Version 0.3.0-rc.7
+        /// is available. You have an unknown version." under a title reading 0.3.0-rc.6, while the check and the
+        /// idle screen's mark had compared the plugin's version all along. The line, the title, the check and the
+        /// mark are handed one value now, measured over the rig's own screens.
+        /// </remarks>
         [Fact]
-        public void Without_a_primary_package_the_first_one_names_the_version()
+        public void A_rig_without_the_1920_face_is_told_the_version_it_runs()
         {
-            var installer = Installer(new MemoryPackageSource().Add(SmallName, SyntheticPackage.Zip(SmallFolder, "0.2.0")));
+            using (var package = SyntheticPackage.Zip(SmallFolder, "0.3.0-rc.6")) PackageExtractor.Install(package, root, null);
+            var installer = Installer(TwoPackages("0.3.0-rc.6"));
+            installer.Refresh();
+            Assert.False(PackageExtractor.IsInstalled(root, "OpenDash"));
 
-            installer.EnsureInstalled(false);
+            var running = UpdateCheck.RigVersion(installer.Packages, new[] { SmallFolder }, "0.3.0-rc.6");
+            Assert.Equal("0.3.0-rc.6", running);
 
-            Assert.Equal(SmallFolder, installer.FolderName);
-            Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("OpenDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
+            // The second start of the day: no check has answered in this session, so the panel opens on the offer
+            // the idle screen's mark draws, remembered from the first.
+            var offered = UpdateMark.Offered("0.3.0-rc.7", running, pluginStaged: false);
+            var opening = UpdateMark.Opening(true, null, offered, running);
+            Assert.Equal("Version 0.3.0-rc.7 is available. You have 0.3.0-rc.6.", opening.Line);
+            Assert.Equal("OpenDash 0.3.0-rc.6", DashboardInstaller.Summary(running));
+            // And an answer the check brings back names what it was handed to compare, which is the same value.
+            Assert.Equal("Could not reach GitHub. You have 0.3.0-rc.6.", UpdateCheck.Conclude(running, new ReleaseInfo[0], manual: true).Line);
         }
 
+        /// <summary>
+        /// A build that embeds no package installs nothing and says so.
+        /// </summary>
+        /// <remarks>
+        /// It used to read the 1920 x 480 folder and call itself up to date when that folder was there, which is
+        /// the one package no longer standing for the rig (#458). A folder is measured against the package that
+        /// writes it, and this build carries none, so a folder on the disk changes nothing it can say.
+        /// </remarks>
         [Fact]
-        public void A_build_without_packages_installs_nothing_and_reports_what_is_there()
+        public void A_build_without_packages_installs_nothing_and_vouches_for_nothing()
         {
             var log = new ListLog();
             var installer = Installer(new MemoryPackageSource(), log);
@@ -669,14 +699,15 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(InstallStatus.NotInstalled, installer.Status);
             Assert.Empty(installer.Packages);
-            Assert.Null(installer.EmbeddedVersion);
             Assert.False(Directory.Exists(Path.Combine(root, "DashTemplates")));
             Assert.Contains(log.Lines, line => line.StartsWith("warn: No .simhubdash is embedded"));
 
             using (var package = SyntheticPackage.Zip("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
             installer.Refresh();
-            Assert.Equal(InstallStatus.UpToDate, installer.Status);
-            Assert.Equal("0.1.0", installer.InstalledVersion);
+            Assert.Equal(InstallStatus.NotInstalled, installer.Status);
+            Assert.Null(installer.LastError);
+            // With nothing read, the rig is named by the plugin that is running.
+            Assert.Equal("0.2.0", UpdateCheck.RigVersion(installer.Packages, new[] { "OpenDash" }, "0.2.0"));
         }
 
         // The panel's texts

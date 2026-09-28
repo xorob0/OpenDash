@@ -305,6 +305,15 @@ value that is text rather than a number, and the bar draws it as the artboard do
 proportional run of "GT3 · P4" measured from the widest class and place it promises to hold; a
 cell would hold the dot and the letters, but only by spacing them as digits.
 
+The same answer covers a **mark**, which is what a reading draws in place of its value in a state
+that has no figure: `∞` where a session has no clock (#439). Measured it is 0.651 em in SemiBold
+against a 0.47 em digit cell — a third over, which is the same thing that bans the eight glyphs
+above, four of which (`%`, `@`, `W` and `m`) are wider still — so the mark is a
+proportional run in the value's own box, on the value's line and at the value's size, with the value
+hidden while it is drawn. A clock and its mark are therefore two items in one place and never both
+drawn — monospace is a property of the item, and no binding makes a cell wide for one reading and
+narrow for the next.
+
 ---
 
 ## 3. The bar
@@ -335,6 +344,11 @@ default since #432, the two fields at the default right end therefore draw the s
 out of the class count and once after the class name; which fields that end carries by default is
 the canvas's question and is left to it. `positionMode.test.ts` evaluates both fields under both
 modes. [#432](https://github.com/xorob0/OpenDash/issues/432).
+
+Race and Time left are the two clocks, and a session with no clock is a state they have to read
+rather than a reading they lack: they draw `∞` there, the mark of rule 19, and `-:--:--` only where
+there is no session at all. Hiding the field instead would leave an empty slot under the label a
+driver put there, which an end field is — a fixed slot, not a member of a closing rank.
 
 The bar is drawn at a scale of its own rather than at the zone density ramp's. Every artboard
 gives it a 15 px label in a 13 px row, five pixels under it, six between a value and the dimmer

@@ -327,10 +327,24 @@ namespace OpenDashPlugin.Tests
 
         // --- ADR 0017: a second screen at a size gets its own copy ------------------------------
 
-        /// <summary>A package shaped like a real one: bindings in the main dashboard and in a widget.</summary>
+        /// <summary>
+        /// A package shaped like a real one: bindings in the main dashboard and in a widget, and the sidecars
+        /// SimHub finds by each one's name -- the main dashboard's thumbnail, images and car classes, and the
+        /// widget's own metadata and images.
+        /// </summary>
         private static MemoryStream Instanceable(string folder, string ns)
         {
             return SyntheticPackage.Instanceable(folder, ns);
+        }
+
+        /// <summary>Every file below a folder whose name begins with the given one, whatever its case.</summary>
+        private static string[] NamedAfter(string folder, string name)
+        {
+            return Directory
+                .GetFiles(folder, "*", SearchOption.AllDirectories)
+                .Select(Path.GetFileName)
+                .Where(file => file.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
         }
 
         [Fact]
@@ -370,6 +384,50 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains("\"Title\":\"Rim\"", File.ReadAllText(Path.Combine(folder, "OpenDash Rim.djson.metadata")));
                 Assert.Contains("\"Title\":\"Rim\"", main);
             }
+        }
+
+        /// <summary>
+        /// Everything SimHub finds by the dashboard's name follows the dashboard to the screen's name.
+        /// </summary>
+        /// <remarks>
+        /// Seen on the VM (#456): a second 850x480 was written with its .djson and its .metadata renamed, and
+        /// its thumbnail and its images left under the package's name, so Dash Studio listed it with an empty
+        /// box and the trend arrows had no file to be read from. SimHub resolves every sidecar as the .djson's
+        /// own path with a suffix appended, so what is asserted is that rule rather than a list of suffixes:
+        /// nothing in the copy may still be named after the folder it was made from.
+        /// </remarks>
+        [Fact]
+        public void An_instanced_folder_holds_no_file_named_after_the_package()
+        {
+            PackageExtractor.Install(Instanceable("OpenDash 1280x480", "Face1280x480"), root, null, false, new PackageExtractor.ScreenTarget
+            {
+                Folder = "OpenDash Rim",
+                Title = "Rim",
+                FromNamespace = "Face1280x480",
+                ToNamespace = "Rim",
+            });
+            var folder = Templates("OpenDash Rim");
+
+            Assert.Empty(NamedAfter(folder, "OpenDash 1280x480"));
+            Assert.True(File.Exists(Path.Combine(folder, "OpenDash Rim.djson.png")));
+            Assert.True(File.Exists(Path.Combine(folder, "OpenDash Rim.djson.carclasses")));
+            // SimHub looks an image up inside the zip by the image's own name, never by the dashboard's, so
+            // the sidecar moves and nothing inside it has to.
+            using (var resources = ZipFile.OpenRead(Path.Combine(folder, "OpenDash Rim.djson.ressources")))
+            {
+                Assert.Equal(new[] { "trend-down.png", "trend-up.png" }, resources.Entries.Select(entry => entry.FullName).OrderBy(name => name, StringComparer.Ordinal));
+            }
+            // A widget's sidecars are named after the widget, and stay with it.
+            Assert.True(File.Exists(Path.Combine(folder, "zoneface-module.djson.metadata")));
+            Assert.True(File.Exists(Path.Combine(folder, "zoneface-module.djson.ressources")));
+
+            // The renames happen in staging, before the folder is moved into place, so the fingerprint
+            // the installer records afterwards is of the renamed folder. The next start retitles every
+            // screen and finds nothing to change here, so the screen still reads as the one OpenDash wrote
+            // rather than as somebody's edit the update path would have to hold back.
+            var recorded = FolderFingerprint.Of(folder);
+            Assert.False(PackageExtractor.Retitle(root, "OpenDash Rim", "Rim", null));
+            Assert.True(FolderFingerprint.LooksUntouched(folder, recorded));
         }
 
         /// <summary>
@@ -520,6 +578,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(File.Exists(package), package + " is missing although the build output is present; run `bun run build`");
 
             int before;
+            string[] sidecars;
             using (var zip = ZipFile.OpenRead(package))
             {
                 before = zip.Entries
@@ -528,8 +587,18 @@ namespace OpenDashPlugin.Tests
                     {
                         using (var reader = new StreamReader(entry.Open())) return Count(reader.ReadToEnd(), "OpenDash.Face1280x480");
                     });
+                // Whatever the build ships beside the main dashboard under its name, read off the package
+                // rather than listed here, so that a sidecar added later is held to the same rule.
+                sidecars = zip.Entries
+                    .Select(entry => entry.FullName)
+                    .Where(name => name.StartsWith("OpenDash 1280x480/OpenDash 1280x480" + PackageExtractor.DashExtension, StringComparison.Ordinal))
+                    .Select(name => name.Substring("OpenDash 1280x480/OpenDash 1280x480".Length))
+                    .ToArray();
             }
             Assert.True(before > 0, "the built package should read its own namespace");
+            // The two #456 found left behind, so that the rule below is never checked against nothing.
+            Assert.Contains(".djson.png", sidecars);
+            Assert.Contains(".djson.ressources", sidecars);
 
             using (var stream = File.OpenRead(package))
             {
@@ -544,6 +613,8 @@ namespace OpenDashPlugin.Tests
 
             var folder = Path.Combine(root, PackageExtractor.DashTemplates, "OpenDash Rim");
             Assert.True(File.Exists(Path.Combine(folder, "OpenDash Rim.djson")));
+            foreach (var suffix in sidecars) Assert.True(File.Exists(Path.Combine(folder, "OpenDash Rim" + suffix)), "OpenDash Rim" + suffix + " is missing");
+            Assert.Empty(NamedAfter(folder, "OpenDash 1280x480"));
             var after = 0;
             foreach (var file in Directory.GetFiles(folder, "*" + PackageExtractor.DashExtension, SearchOption.AllDirectories))
             {

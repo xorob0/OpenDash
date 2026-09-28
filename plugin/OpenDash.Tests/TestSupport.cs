@@ -31,7 +31,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A package shaped like a real one for ADR 0017: bindings to its namespace in the main dashboard and in
-        /// a widget, so that a second screen's copy of it has something to rewrite.</summary>
+        /// a widget, so that a second screen's copy of it has something to rewrite, and the sidecars SimHub finds by each
+        /// one's name -- the main dashboard's thumbnail, images and car classes, and the widget's own metadata and images.</summary>
         public static MemoryStream Instanceable(string folder, string ns, string version = "1.0.0")
         {
             var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},"
@@ -42,11 +43,34 @@ namespace OpenDashPlugin.Tests
             {
                 Add(zip, folder + "/" + folder + ".djson", main);
                 Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"" + folder + "\",\"DashboardVersion\":\"" + version + "\"}");
+                Add(zip, folder + "/" + folder + ".djson.png", "thumbnail");
+                Add(zip, folder + "/" + folder + ".djson.carclasses", "[]");
+                AddBytes(zip, folder + "/" + folder + ".djson.ressources", Resources("trend-down.png", "trend-up.png"));
                 Add(zip, folder + "/zoneface-module.djson", widget);
+                Add(zip, folder + "/zoneface-module.djson.metadata", "{\"Title\":\"" + folder + " zoneface-module\"}");
+                AddBytes(zip, folder + "/zoneface-module.djson.ressources", Resources("trend-up.png"));
                 Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
             }
             stream.Position = 0;
             return stream;
+        }
+
+        /// <summary>A .ressources sidecar: a zip holding each image at its root under the image's own name.</summary>
+        private static byte[] Resources(params string[] images)
+        {
+            using (var stream = new MemoryStream())
+            {
+                using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var image in images) Add(zip, image, "png:" + image);
+                }
+                return stream.ToArray();
+            }
+        }
+
+        private static void AddBytes(ZipArchive zip, string name, byte[] content)
+        {
+            using (var entry = zip.CreateEntry(name).Open()) entry.Write(content, 0, content.Length);
         }
 
         public static void Add(ZipArchive zip, string name, string content)

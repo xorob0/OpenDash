@@ -18,19 +18,18 @@ import {
   carPosition,
   positionDigits,
   classOpponentCount,
-  clock,
   currentLap,
   fieldSize,
   incidents,
-  isTimedSession,
   lapsLeft,
   player,
   playerClass,
   positionDrawn,
-  sessionTimeLeft,
+  sessionClock,
   sessionType,
   showsTimeLeft,
   totalLaps,
+  untimedMark,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
@@ -80,7 +79,8 @@ export const session = defineModule('session', (ctx) => {
           }, { visibleBind: not(time) }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',
-            bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')),
+            bind: sessionClock(),
+            mark: untimedMark(),
             chars: CHARS.clock,
             fs: d.mid,
           }, { visibleBind: time }),
