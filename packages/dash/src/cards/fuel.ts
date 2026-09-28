@@ -3,8 +3,9 @@ import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { defineCard } from './card.ts';
 import { FUEL_CHARS, FUEL_INT_DIGITS } from './chars.ts';
+import { fuelUnit } from '../second/values.ts';
 
-const { game, eq, str, iff, fmt, add, mul, num, digitCount, round } = ncalc;
+const { game, fmt, add, mul, num, digitCount, round } = ncalc;
 
 export const fuel = defineCard('fuel', (slot, rung, prefix, meta) => {
   const f = game('Fuel');
@@ -17,7 +18,7 @@ export const fuel = defineCard('fuel', (slot, rung, prefix, meta) => {
     {
       kind: 'unit',
       sample: 'L',
-      bind: iff(eq(game('FuelUnit'), str('Gallons')), str('GAL'), str('L')),
+      bind: fuelUnit(),
       after: { digits: FUEL_INT_DIGITS, specials: 1 },
       // x + (integer digits + 1 decimal) * digit cell + one '.' cell + gap
       leftBind: ({ x, mono, gap }) =>

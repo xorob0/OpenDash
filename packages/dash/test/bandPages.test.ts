@@ -266,7 +266,7 @@ describe('the fields the catalogue draws on each page', () => {
       expect(gap.rect.left - (position.rect.left + position.rect.width)).toBe(8);
     }
     // And the page says what it is, because P3 P4 P5 name the cars rather than the page.
-    expect(named(items, 'word').text).toBe('RELATIVE');
+    expect(named(items, 'word').text).toBe('Relative');
     expect(named(items, 'word').rect.left).toBeLessThan(named(items, 'ahead.position').rect.left);
     // The driver's own position and gap are the primary text; the two cars beside him are not.
     expect(named(items, 'you.position').textColor).toBe(ds.color.text.primary);
@@ -622,11 +622,11 @@ describe('what a page does when the band is too narrow for all of it', () => {
     const KEEPS = {
       '1920x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
       '1280x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
-      '1280x400': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+      '1280x400': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
       '1280x720': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
       '850x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
       '800x286': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
-      '600x686': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
+      '600x686': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
     } as const;
     for (const [face, keeps] of Object.entries(KEEPS)) {
       expect({ face, keeps: keptIds(pageTexts(face as keyof typeof BANDS, 'fuel')) }).toEqual({ face, keeps: [...keeps] });

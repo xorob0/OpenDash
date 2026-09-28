@@ -232,8 +232,8 @@ const speedRuns = (prefix: string, fs: number, unitFs: number): Run[] => [
     bind: fmt(speed(), '0'),
   },
   // The written unit rather than the enum. `SpeedLocalUnit` reads `KMH` or `MPH`, so binding it
-  // raw drew `KMH` where every sheet writes `KM/H`; `speedUnit` is the one place that mapping lives.
-  { kind: 'label', name: `${prefix}speed.unit`, text: 'KM/H', fs: unitFs, widest: 'KM/H', bind: speedUnit() },
+  // raw drew `KMH` where every sheet writes `km/h`; `speedUnit` is the one place that mapping lives.
+  { kind: 'label', name: `${prefix}speed.unit`, text: 'km/h', fs: unitFs, widest: 'km/h', bind: speedUnit() },
 ];
 
 /** The revs and their unit, in the secondary ink the canvas draws them in. */
@@ -303,7 +303,7 @@ function speedPage(frame: Rect, prefix: string): Item[] {
 /** The gear as A3 draws it: a quarter of the column, in the secondary ink, its label beside it. */
 const gearRuns = (prefix: string, fs: number, labelFs: number): Run[] => [
   { kind: 'value', name: `${prefix}gear`, sample: '4', fs, chars: GEAR_CHARS, mono: gearCells(fs), color: ds.color.text.secondary, bind: game('Gear') },
-  { kind: 'label', name: `${prefix}gear.label`, text: 'GEAR', fs: labelFs, widest: 'GEAR', color: ds.color.text.label },
+  { kind: 'label', name: `${prefix}gear.label`, text: 'Gear', fs: labelFs, widest: 'Gear', color: ds.color.text.label },
 ];
 
 /**

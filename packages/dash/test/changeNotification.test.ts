@@ -92,9 +92,9 @@ describe('the box', () => {
   test('the name is on the left at the sheet’s padding, and the reading is 64 px', () => {
     const label = named('bias', 'label') as TextItem;
     const value = named('bias', 'value') as TextItem;
-    // Upper-cased as every label on a face is, which is what the sheet draws.
+    // In sentence case, as every label on a face is written.
     expect({ text: label.text, left: label.rect.left, size: label.fontSize }).toEqual({
-      text: 'BRAKE BIAS',
+      text: 'Brake bias',
       left: frame.left + CHANGE_NOTIFICATION_PAD_X,
       size: ds.size.label,
     });
@@ -127,7 +127,7 @@ describe('the box', () => {
     for (const value of TRACKED_VALUES) {
       const label = named(value.id, 'label') as TextItem;
       const reading = named(value.id, 'value') as TextItem;
-      const text = Math.ceil(measureText('BarlowMedium', label.text.toUpperCase(), label.fontSize));
+      const text = Math.ceil(measureText('BarlowMedium', label.text, label.fontSize));
       expect({ id: value.id, clear: label.rect.left + text < reading.rect.left }).toMatchObject({ clear: true });
     }
   });

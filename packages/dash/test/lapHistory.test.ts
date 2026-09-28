@@ -79,7 +79,7 @@ describe('the columns the catalogue draws', () => {
   });
 
   test('the header names the columns the row draws, and no more', () => {
-    expect(textsIn(items).filter((i) => i.name.startsWith('head.')).map((i) => i.text)).toEqual(['LAP', 'TIME', 'Δ BEST']);
+    expect(textsIn(items).filter((i) => i.name.startsWith('head.')).map((i) => i.text)).toEqual(['Lap', 'Time', 'Δ best']);
   });
 
   test('a narrower shape lists lap and time alone: the catalogue draws fuel there and SimHub publishes none', () => {

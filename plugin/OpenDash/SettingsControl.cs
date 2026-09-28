@@ -157,7 +157,7 @@ namespace OpenDashPlugin
             return scroller;
         }
 
-        /// <summary>72 px: the segment mark and the wordmark on the left, "PLUGIN" and the version on the right.</summary>
+        /// <summary>72 px: the segment mark and the wordmark on the left, "Plugin" and the version on the right.</summary>
         private FrameworkElement BuildHeader()
         {
             var wordmark = Ui.HStack(0,
@@ -484,7 +484,7 @@ namespace OpenDashPlugin
 
         // --- Footer -----------------------------------------------------------------------------
 
-        /// <summary>56 px, rule on top: Documentation and Report an issue links, "MIT LICENCE" on the right.</summary>
+        /// <summary>56 px, rule on top: Documentation and Report an issue links, "MIT licence" on the right.</summary>
         private FrameworkElement BuildFooter()
         {
             var links = Ui.HStack(24, BuildLink("Documentation", DocumentationUrl), BuildLink("Report an issue", IssuesUrl));

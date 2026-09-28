@@ -46,12 +46,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_kind_without_an_icon_is_written_on_the_size_line()
         {
-            Assert.Equal("slots", PanelCopy.KindWord(Contract.KindSlots));
+            Assert.Equal("Slots", PanelCopy.KindWord(Contract.KindSlots));
             Assert.Null(PanelCopy.KindWord(Contract.KindFace));
             Assert.Null(PanelCopy.KindWord(Contract.KindPitWall));
             Assert.Null(PanelCopy.KindWord(Contract.KindCompanion));
 
-            Assert.Equal("slots · 1280 × 480", PanelCopy.SizeLine(Contract.KindSlots, "1280 × 480"));
+            Assert.Equal("Slots · 1280 × 480", PanelCopy.SizeLine(Contract.KindSlots, "1280 × 480"));
             Assert.Equal("1280 × 480", PanelCopy.SizeLine(Contract.KindFace, "1280 × 480"));
         }
 

@@ -166,8 +166,8 @@ describe('shedding comes before shrinking', () => {
     expect(itemAt(SHAPE_ARCHETYPES.wide, 's1.label')?.bindings?.Text?.formula).toContain('−');
     expect(itemAt(SHAPE_ARCHETYPES.tallNarrow, 's1.label')?.bindings?.Text).toBeUndefined();
     // And the tall drawing writes one word where the wider ones write two.
-    expect(itemAt(SHAPE_ARCHETYPES.wide, 'sessionBest.label')?.text).toBe('SESSION BEST');
-    expect(itemAt(SHAPE_ARCHETYPES.tall, 'sessionBest.label')?.text).toBe('BEST');
+    expect(itemAt(SHAPE_ARCHETYPES.wide, 'sessionBest.label')?.text).toBe('Session best');
+    expect(itemAt(SHAPE_ARCHETYPES.tall, 'sessionBest.label')?.text).toBe('Best');
   });
 
   test('and sheds what its page declares last rather than whichever row is last', () => {

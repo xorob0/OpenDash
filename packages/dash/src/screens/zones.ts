@@ -46,7 +46,7 @@ export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size
   // both kinds and a pit wall carries both at once, so the title is where the two are told apart.
   // The suffix is added here rather than in the catalogue, because the catalogue's name is also the
   // label the plugin puts in its wide-zone dropdown, where a suffix would read as a second page.
-  const title = kind === 'wide' ? `${page.name} · Wide` : page.name;
+  const title = kind === 'wide' ? `${page.name} · wide` : page.name;
   const { items: chrome, body } = zoneFrame(page.id, { frame, title, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
   // A zone dashboard is a pit wall screen, so both kinds label at the pit wall's 13 rather than the
   // face's 15: `PitWallZones.dc.html` writes eighty `.lblt` and not one `.lbl`.

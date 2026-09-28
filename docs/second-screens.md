@@ -229,7 +229,7 @@ The centred dim block those three modules draw says something else too, and it i
 of absence from the table above. Twelve of the
 twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
 view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
-empty table they say `LEADERBOARD · GO INTO A SESSION`, in the same centred dim block, until there is
+empty table they say `Leaderboard · Go into a session`, in the same centred dim block, until there is
 one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
 difference is that this notice goes away on its own. It matters because a dashboard is installed,
 opened and looked at before any session is joined, so the empty state is the product's first

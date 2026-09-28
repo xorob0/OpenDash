@@ -69,17 +69,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[]
                 {
-                    "strip · SimRep MLD, Ascher",
-                    "strip · SimRep MLD, wired from the far end",
-                    "strip · Fanatec wheels in SimHub",
+                    "Strip · SimRep MLD, Ascher",
+                    "Strip · SimRep MLD, wired from the far end",
+                    "Strip · Fanatec wheels in SimHub",
                     // Eight and not nine: 3/10/3 is a named shape and has a row of its own above.
-                    "strip · GridSim Lab GTSL Pro",
-                    "bare runs and brows, 22 lengths",
-                    "strips, one LED at each end, nine lengths",
-                    "strips, two LEDs at each end, nine lengths",
-                    "strips, three LEDs at each end, eight lengths",
-                    "strips, four LEDs at each end, nine lengths",
-                    "strip, five LEDs at each end",
+                    "Strip · GridSim Lab GTSL Pro",
+                    "Bare runs and brows, 22 lengths",
+                    "Strips, one LED at each end, nine lengths",
+                    "Strips, two LEDs at each end, nine lengths",
+                    "Strips, three LEDs at each end, eight lengths",
+                    "Strips, four LEDs at each end, nine lengths",
+                    "Strip, five LEDs at each end",
                 },
                 rows.Select(r => r.Caption));
 
@@ -98,7 +98,7 @@ namespace OpenDashPlugin.Tests
             // The name is read off the members rather than written down, so a length added to strip.ts
             // moves the end of the range instead of leaving it a length short.
             var rows = PanelLightRows.Rows(FullBuild().Concat(new[] { new LightProfile("0-30-0", "OpenDash 0/30/0") }));
-            Assert.Contains(rows, r => r.Name == "OpenDash 0/4/0 … 0/30/0" && r.Caption == "bare runs and brows, 23 lengths");
+            Assert.Contains(rows, r => r.Name == "OpenDash 0/4/0 … 0/30/0" && r.Caption == "Bare runs and brows, 23 lengths");
         }
 
         [Fact]
@@ -120,7 +120,7 @@ namespace OpenDashPlugin.Tests
             // one would read "OpenDash 0/10/0 … 0/10/0", and "bare runs, one lengths" is not English.
             var rows = PanelLightRows.Rows(new[] { new LightProfile("0-10-0", "OpenDash 0/10/0") });
             Assert.Equal("OpenDash 0/10/0", Assert.Single(rows).Name);
-            Assert.Equal("bare run", rows[0].Caption);
+            Assert.Equal("Bare run", rows[0].Caption);
         }
 
         [Fact]
@@ -148,7 +148,7 @@ namespace OpenDashPlugin.Tests
 
             var rows = PanelLightRows.Rows(new[] { new LightProfile("something-else", "OpenDash something else") });
             Assert.Equal("OpenDash something else", Assert.Single(rows).Name);
-            Assert.Equal("strip", rows[0].Caption);
+            Assert.Equal("Strip", rows[0].Caption);
         }
 
         [Fact]
@@ -312,8 +312,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void No_caption_names_hardware_the_generator_does_not()
         {
-            // The captions abbreviate what strip.ts spells out, because the caption is drawn as tracked
-            // uppercase and the full device families are wider than the row. Every word of one still has
+            // The captions abbreviate what strip.ts spells out, because the caption is drawn as a tracked
+            // label and the full device families are wider than the row. Every word of one still has
             // to appear in the generator's own list, so a device renamed there fails here rather than
             // leaving the panel naming hardware that no longer exists.
             var devices = GeneratedWheels().ToDictionary(s => s.Id, s => string.Join(" | ", s.Devices), StringComparer.Ordinal);
@@ -321,7 +321,7 @@ namespace OpenDashPlugin.Tests
             {
                 var spelled = devices[named.Key];
                 var words = named.Value.Split(new[] { ' ', ',', '·' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Where(w => w != "strip");
+                    .Where(w => w != "Strip");
                 foreach (var word in words)
                 {
                     Assert.True(
@@ -347,10 +347,10 @@ namespace OpenDashPlugin.Tests
             var rows = PanelLightRows.Rows(ids.Select(id => new LightProfile(id, null)));
             Assert.Equal(3, rows.Count);
             Assert.Equal("OpenDash 0/4/0 … 0/25/0", rows[0].Name);
-            Assert.Equal("bare runs and brows, 22 lengths", rows[0].Caption);
+            Assert.Equal("Bare runs and brows, 22 lengths", rows[0].Caption);
             Assert.Equal("OpenDash 1/4/1 … 1/12/1", rows[1].Name);
-            Assert.Equal("strips, one LED at each end, nine lengths", rows[1].Caption);
-            Assert.Equal("strips, two LEDs at each end, nine lengths", rows[2].Caption);
+            Assert.Equal("Strips, one LED at each end, nine lengths", rows[1].Caption);
+            Assert.Equal("Strips, two LEDs at each end, nine lengths", rows[2].Caption);
             // Every shape is in exactly one row, which is what stops a profile being offered twice or
             // not at all.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();

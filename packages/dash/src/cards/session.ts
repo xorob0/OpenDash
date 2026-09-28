@@ -35,7 +35,7 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
     slot,
     rung,
     prefix,
-    { text: meta.label, bind: iff(time, str('TIME LEFT'), str('LAP')) },
+    { text: meta.label, bind: iff(time, str('Time left'), str('Lap')) },
     {
       sample: '12',
       bind: iff(time, iff(timed, hms(sessionTimeLeft()), str(TIME_PLACEHOLDER)), fmt(currentLap, '0')),
