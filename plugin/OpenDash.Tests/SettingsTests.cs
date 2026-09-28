@@ -19,7 +19,8 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             Assert.True(settings.ShiftLights);
             Assert.Equal(Contract.RevBarShift, settings.RevBarMode());
-            Assert.Equal("overall", settings.PositionMode);
+            // The place in the driver's own class, which a single-class field reads the same as overall. #432.
+            Assert.Equal("class", settings.PositionMode);
             Assert.Equal("session", settings.DeltaReference);
             Assert.Equal("auto", settings.SessionProgress);
             // The name as the sim reports it, and the driver rather than the team: the two defaults that
@@ -156,14 +157,30 @@ namespace OpenDashPlugin.Tests
         [InlineData("class", "class")]
         [InlineData("Class", "class")]
         [InlineData(" overall ", "overall")]
-        [InlineData("bogus", "overall")]
-        [InlineData("", "overall")]
-        [InlineData(null, "overall")]
+        [InlineData("Overall", "overall")]
+        [InlineData("bogus", "class")]
+        [InlineData("", "class")]
+        [InlineData(null, "class")]
         public void Normalise_restores_unknown_modes_to_the_default(string stored, string expected)
         {
             var settings = new OpenDashSettings { PositionMode = stored };
             settings.Normalise();
             Assert.Equal(expected, settings.PositionMode);
+        }
+
+        [Fact]
+        public void A_saved_overall_is_kept_when_the_default_is_class()
+        {
+            // The default moved to class in #432. A file that says overall is a choice as far as the
+            // plugin can tell, so it is kept rather than migrated; the release note says so instead.
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>("{\"PositionMode\":\"overall\"}");
+            settings.Normalise();
+            Assert.Equal("overall", settings.PositionMode);
+
+            // A file with no position mode at all is a rig that never chose, and it counts in class.
+            var silent = JsonSerializer.Deserialize<OpenDashSettings>("{\"ShiftLights\":true}");
+            silent.Normalise();
+            Assert.Equal("class", silent.PositionMode);
         }
 
         [Fact]

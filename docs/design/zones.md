@@ -325,6 +325,17 @@ The default is Race and Lap on the left, Position and Class on the right. The le
 from the left edge and the right end from the right one, each field flush to the padding on its
 own side, and the class reads "GT3 · P4".
 
+**Position counts what the rig counts; class position is always the class.** The position field is
+the place `PositionMode` asks for, with the count it is out of following it to the class, the same
+reading the session module and the pit wall draw. It used to bind the overall place and field
+whatever the mode said, so a rig counting in class read `16 / 40` in the bar beside `GT3 · P2`.
+The class field is the class under either mode, because what it adds is the class name, and with
+the rig counting overall it is where the class place still reads. Under `class`, which is the
+default since #432, the two fields at the default right end therefore draw the same place, once
+out of the class count and once after the class name; which fields that end carries by default is
+the canvas's question and is left to it. `positionMode.test.ts` evaluates both fields under both
+modes. [#432](https://github.com/xorob0/OpenDash/issues/432).
+
 The bar is drawn at a scale of its own rather than at the zone density ramp's. Every artboard
 gives it a 15 px label in a 13 px row, five pixels under it, six between a value and the dimmer
 "/ 32" after it, and twenty of side padding; what changes with the face is the value, the

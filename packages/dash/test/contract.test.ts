@@ -328,7 +328,7 @@ describe('settings', () => {
     expect(setting.revBarIs('off')).toBe("(isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('off')");
     expect(REV_BAR_MODES).toEqual(['shift', 'rpm', 'off']);
     expect(DEFAULTS.RevBar).toBe('shift');
-    expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'overall')");
+    expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'class')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
     expect(setting.slot(1)).toBe('isnull([OpenDash.Slot01], 12)');
