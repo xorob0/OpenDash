@@ -109,16 +109,65 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("no built-in profiles", LedDeviceSurvey.LogLine(seen));
         }
 
+        /// <summary>
+        /// Only a declined device with some sign of LEDs is named for the picker, in the order seen. A pedal
+        /// set is declined and logged like any other device, and naming it under every strip would be a
+        /// sentence nobody can act on.
+        /// </summary>
         [Fact]
-        public void Only_the_declined_are_named_for_the_picker_in_the_order_seen()
+        public void Only_the_declined_with_a_sign_of_LEDs_are_named_for_the_picker_in_the_order_seen()
         {
             var pedals = new LedDeviceSeen { Name = "Pedals", Kind = "X" };
+            var foreign = new LedDeviceSeen { Name = "Fanatec wheel", ForeignDrivers = new List<string> { "WheelDevice.Leds" } };
+            var broken = new LedDeviceSeen { Name = "Button box", Unreadable = "NullReferenceException: boom" };
             var bare = Wheel();
             bare.Name = "  ";
             bare.LedsDriver = false;
-            var declined = LedDeviceSurvey.Declined(new[] { Wheel(), pedals, null, bare });
-            Assert.Equal(new[] { "Pedals", "A device" }, declined);
+            var declined = LedDeviceSurvey.Declined(new[] { Wheel(), pedals, foreign, null, broken, bare });
+            Assert.Equal(new[] { "Fanatec wheel", "Button box", "A device" }, declined);
             Assert.Empty(LedDeviceSurvey.Declined(null));
+
+            Assert.False(LedDeviceSurvey.ShowsLeds(pedals));
+            Assert.False(LedDeviceSurvey.ShowsLeds(null));
+            Assert.True(LedDeviceSurvey.ShowsLeds(foreign));
+            Assert.True(LedDeviceSurvey.ShowsLeds(broken));
+            Assert.True(LedDeviceSurvey.ShowsLeds(bare));
+            // Still judged, and still logged with its reason.
+            Assert.StartsWith("LED device not offered: \"Pedals\", because it is not an LED module",
+                LedDeviceSurvey.LogLine(pedals));
+        }
+
+        /// <summary>
+        /// A device that throws while being read is judged, logged under its name and id with what it
+        /// threw, and named for the picker, rather than dropped: a plugin's own device is where that is
+        /// likeliest, and it is the device #437 asks after.
+        /// </summary>
+        [Fact]
+        public void A_device_that_could_not_be_read_is_declined_and_says_what_it_threw()
+        {
+            var seen = new LedDeviceSeen
+            {
+                Name = "Fanatec wheel",
+                Id = "device:00000000-0000-0000-0000-000000000002",
+                Kind = "FanaBridge.WheelDevice (FanaBridge)",
+                Unreadable = "NullReferenceException: Object reference not set to an instance of an object.",
+                // Whatever else is filled in, an unreadable device is judged unreadable.
+                LedModule = true,
+                LedsDriver = true,
+                LedsSettings = true,
+            };
+            Assert.Equal(LedDeviceVerdict.Unreadable, LedDeviceSurvey.Judge(seen));
+            var line = LedDeviceSurvey.LogLine(seen);
+            Assert.StartsWith("LED device not offered: \"Fanatec wheel\", because reading it threw: NullReferenceException", line);
+            Assert.Contains("id device:00000000-0000-0000-0000-000000000002", line);
+            Assert.Contains("type FanaBridge.WheelDevice (FanaBridge)", line);
+            // Whether it is connected was not read, so the line does not claim either.
+            Assert.DoesNotContain("connected", line);
+            Assert.Equal(new[] { "Fanatec wheel" }, LedDeviceSurvey.Declined(new[] { seen }));
+
+            var nameless = new LedDeviceSeen { Unreadable = "" };
+            Assert.Equal(LedDeviceVerdict.Unreadable, LedDeviceSurvey.Judge(nameless));
+            Assert.Contains("reading it threw: no message", LedDeviceSurvey.LogLine(nameless));
         }
 
         [Fact]

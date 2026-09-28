@@ -149,12 +149,12 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelLights.NotOffered(null));
             Assert.Null(PanelLights.NotOffered(new string[0]));
             Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.", PanelLights.NotOffered(new[] { "Rim" }));
-            Assert.Equal("Rim and Pedals have no LEDs OpenDash can reach; see SimHub's log.",
-                PanelLights.NotOffered(new[] { "Rim", "Pedals" }));
-            Assert.Equal("Rim, Pedals, Hub and 2 others have no LEDs OpenDash can reach; see SimHub's log.",
-                PanelLights.NotOffered(new[] { "Rim", "Pedals", "Hub", "Shifter", "Handbrake" }));
-            Assert.Equal("Rim, Pedals, Hub and 1 other have no LEDs OpenDash can reach; see SimHub's log.",
-                PanelLights.NotOffered(new[] { "Rim", "Pedals", "Hub", "Shifter" }));
+            Assert.Equal("Rim and Formula rim have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim" }));
+            Assert.Equal("Rim, Formula rim, Hub and 2 others have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box", "GT rim" }));
+            Assert.Equal("Rim, Formula rim, Hub and 1 other have no LEDs OpenDash can reach; see SimHub's log.",
+                PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box" }));
 
             // Nothing passed over: the row reads exactly as it did.
             Assert.Equal(PanelLights.NoDevices, PanelLights.DeviceRowCaption(0, null, new string[0]));

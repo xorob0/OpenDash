@@ -188,19 +188,20 @@ does not do and why, and what to check when it looks wrong.
 ## Wheels made with FanaBridge
 
 FanaBridge is a third-party SimHub plugin that puts Fanatec wheels into SimHub's Devices view,
-with profiles of its own for the wheels it knows and a wizard for the ones it does not. **Whether an OpenDash strip reaches a FanaBridge wheel is not yet known.** It has been
-reported that a strip cannot be added to wheels made with the wizard, and the cause is under
-investigation in [#437](https://github.com/xorob0/OpenDash/issues/437). Nothing below is a fix;
-it is what to look at, and what a report needs.
+with profiles of its own for the wheels it knows and a wizard for the ones it does not.
+**Whether an OpenDash strip reaches a FanaBridge wheel is not yet known.** It has been reported
+that a strip cannot be added to wheels made with the wizard, and the cause is under investigation
+in [#437](https://github.com/xorob0/OpenDash/issues/437). Nothing below is a fix; it is what to
+look at, and what a report needs.
 
 - **Is the wheel in SimHub's Devices view, and can SimHub's own LED editor save a profile to it?**
   If SimHub's own editor cannot, OpenDash will not either: a strip goes into the list that editor
   shows.
 - **Is it in OpenDash's LED device list** on the Lights page's *Add an LED strip* form? A device
-  OpenDash sees and does not offer is named under that list as having no LEDs OpenDash can reach,
-  and the reason is in SimHub's log, `Logs\SimHub.txt`, on the line beginning
-  `[OpenDash] LED device not offered`. Every device OpenDash offers has a line beginning
-  `[OpenDash] LED device offered` as well.
+  with some sign of LEDs that OpenDash sees and does not offer is named under that list as having
+  no LEDs OpenDash can reach. Every device in SimHub's Devices view, named there or not, has a line
+  in SimHub's log, `Logs\SimHub.txt`: one beginning `[OpenDash] LED device not offered` with the
+  reason, or `[OpenDash] LED device offered`.
 - **Are the wheel's built-in profiles switched off?** A device that ships its own profiles and
   lists them shows only those, so OpenDash's is installed and not listed. When OpenDash sees them
   switched on, the line after adding the strip ends in the caution colour with *Turn off built-in
@@ -323,9 +324,10 @@ other dashboards.
   lower slot number.
 - The companion does not change page when you press the button: the binding is on the device,
   not in OpenDash. Open that device's "Controls and events" in SimHub and bind NextScreen.
-- A wheel is in SimHub's Devices view but not in the LED device list when adding a strip: the list
-  names it underneath, and SimHub's log says why on the line beginning `[OpenDash] LED device not
-  offered`. For a wheel made with FanaBridge, see [Wheels made with FanaBridge](#wheels-made-with-fanabridge).
+- A wheel is in SimHub's Devices view but not in the LED device list when adding a strip: SimHub's
+  log says why on the line beginning `[OpenDash] LED device not offered`, and the list names it
+  underneath when OpenDash found any sign of LEDs on it. For a wheel made with FanaBridge, see
+  [Wheels made with FanaBridge](#wheels-made-with-fanabridge).
 - The track map or the radar is empty: both are drawn from SimHub's recorded outline of the
   track, which appears after a lap has been recorded there.
 - A tyre pressure or a temperature reads `--`: iRacing reports pressures from the last pit stop

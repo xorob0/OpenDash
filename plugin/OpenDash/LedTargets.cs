@@ -136,8 +136,9 @@ namespace OpenDashPlugin
         /// two devices rather than as a device and a category.</summary>
         public const string ArduinoName = "Arduino RGB LEDs";
 
-        /// <summary>The names of the devices SimHub has and this list does not offer, for the picker to say.
-        /// The reasons are in SimHub's log, one line per device; see <see cref="LedDeviceSurvey"/>.</summary>
+        /// <summary>The names of the devices SimHub has, this list does not offer, and that show some sign of
+        /// LEDs, for the picker to say. A pedal set or a screen is left to the log. The reasons are in
+        /// SimHub's log, one line for every device; see <see cref="LedDeviceSurvey"/>.</summary>
         public static IList<string> NotOffered()
         {
             return LedDeviceSurvey.Declined(Survey().Select(entry => entry.Seen));
@@ -191,10 +192,28 @@ namespace OpenDashPlugin
                 }
                 catch (Exception e)
                 {
-                    Log.Warn("A device in SimHub could not be read for its LEDs: " + e.Message);
+                    // Dropping it here would be the silence #437 is about, for the device likeliest to
+                    // be the one asked after: a plugin's own. It is judged unreadable and logged like the
+                    // rest, under whatever of its name and id can still be read.
+                    var seen = Unreadable(root, e);
+                    surveyed.Add(new Surveyed { Seen = seen });
+                    Report(seen);
                 }
             }
             return surveyed;
+        }
+
+        /// <summary>What can still be said of a device that threw while being read.</summary>
+        private static LedDeviceSeen Unreadable(DeviceInstance root, Exception e)
+        {
+            var seen = new LedDeviceSeen
+            {
+                Unreadable = e.GetType().Name + ": " + e.Message,
+                Kind = KindOf(root),
+            };
+            try { seen.Name = root.MainDisplayName; } catch (Exception) { }
+            try { seen.Id = LedBar.DeviceId(root.InstanceId); } catch (Exception) { }
+            return seen;
         }
 
         private static IList<DeviceInstance> Roots()
@@ -284,8 +303,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Every public property typed as SimHub's RGB LED driver, or as an LED module's settings, on the
-        /// instances of a device that has no LED module.
+        /// Every public property or field typed as SimHub's RGB LED driver, or as an LED module's settings,
+        /// on the instances of a device that has no LED module. Fields too, because SimHub's own module
+        /// holds its settings in one (`LedModuleDevice.ledModuleSettings`).
         /// </summary>
         /// <remarks>
         /// Read to be logged and for nothing else, and the one place this file uses reflection. A device a
@@ -303,11 +323,11 @@ namespace OpenDashPlugin
                 {
                     foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                     {
-                        if (typeof(RGBLedsDriver).IsAssignableFrom(property.PropertyType)
-                            || typeof(LedModuleSettings).IsAssignableFrom(property.PropertyType))
-                        {
-                            found.Add(type.Name + "." + property.Name);
-                        }
+                        if (HoldsLeds(property.PropertyType)) found.Add(type.Name + "." + property.Name);
+                    }
+                    foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        if (HoldsLeds(field.FieldType)) found.Add(type.Name + "." + field.Name);
                     }
                 }
                 catch (Exception e)
@@ -318,6 +338,11 @@ namespace OpenDashPlugin
             return found;
         }
 
+        private static bool HoldsLeds(Type type)
+        {
+            return typeof(RGBLedsDriver).IsAssignableFrom(type) || typeof(LedModuleSettings).IsAssignableFrom(type);
+        }
+
         private static readonly object ReportLock = new object();
         private static readonly Dictionary<string, string> Reported = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -325,7 +350,7 @@ namespace OpenDashPlugin
         private static void Report(LedDeviceSeen seen)
         {
             var line = LedDeviceSurvey.LogLine(seen);
-            var key = seen.Id ?? seen.Name ?? string.Empty;
+            var key = seen.Id ?? seen.Name ?? seen.Kind ?? string.Empty;
             lock (ReportLock)
             {
                 string previous;

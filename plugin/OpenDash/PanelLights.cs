@@ -90,7 +90,8 @@ namespace OpenDashPlugin
         public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
 
         /// <summary>
-        /// Said beside the picker when SimHub has devices OpenDash did not offer, naming them.
+        /// Said beside the picker when SimHub has devices with some sign of LEDs that OpenDash did not
+        /// offer, naming them. Which devices those are is <see cref="LedDeviceSurvey.Declined"/>'s call.
         /// </summary>
         /// <remarks>
         /// A wheel made in FanaBridge's wizard was plainly in SimHub's Devices view and absent from the

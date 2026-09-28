@@ -7,8 +7,9 @@
 // and `PanelLights.NoDevices` fired only when the whole list was empty, so a wheel made in FanaBridge's
 // wizard that was plainly in SimHub's Devices view was simply absent from OpenDash's picker, and the
 // report could not say which of the two skips it had fallen through (#437). Now every device is judged
-// here, the judgement is written to SimHub's log with what was seen, and the names of the devices that
-// were not offered are said beside the picker.
+// here, the judgement is written to SimHub's log with what was seen, a device that throws while being
+// read is judged as unreadable rather than dropped, and the names of the devices that were not offered
+// and show some sign of LEDs are said beside the picker.
 //
 // Pure, and compiled into OpenDash.Tests: `LedTargets` reads SimHub's types into a `LedDeviceSeen` and
 // this decides what to make of it, so the verdicts and the lines they produce are pinned without SimHub.
@@ -39,6 +40,10 @@ namespace OpenDashPlugin
 
         /// <summary>An LED module whose driver has no settings, so no profile list to install into.</summary>
         NoLedsSettings,
+
+        /// <summary>Reading the device threw, so nothing is known of its LEDs but that it has a name and an
+        /// id. A plugin's own device is where that is likeliest, which is why it is not dropped.</summary>
+        Unreadable,
     }
 
     /// <summary>One root device in SimHub's Devices plugin, as <see cref="LedTargets"/> read it. Plain data
@@ -91,6 +96,10 @@ namespace OpenDashPlugin
         /// module, as "Type.Property". Only ever read to be logged: a driver held somewhere OpenDash does
         /// not look is what cause one would look like, and this says where it is.</summary>
         public IList<string> ForeignDrivers { get; set; } = new List<string>();
+
+        /// <summary>What reading the device threw, when it did. Everything else past the name and the id is
+        /// then unknown.</summary>
+        public string Unreadable { get; set; }
     }
 
     public static class LedDeviceSurvey
@@ -98,6 +107,7 @@ namespace OpenDashPlugin
         /// <summary>What to make of one device.</summary>
         public static LedDeviceVerdict Judge(LedDeviceSeen seen)
         {
+            if (seen != null && seen.Unreadable != null) return LedDeviceVerdict.Unreadable;
             if (seen == null || !seen.LedModule) return LedDeviceVerdict.NotLedModule;
             if (!seen.LedsDriver) return LedDeviceVerdict.NoLedsDriver;
             if (!seen.LedsSettings) return LedDeviceVerdict.NoLedsSettings;
@@ -115,6 +125,8 @@ namespace OpenDashPlugin
                     return "its LED module has no telemetry LED driver (LedsDriver is null)";
                 case LedDeviceVerdict.NoLedsSettings:
                     return "its LED driver has no settings, so there is no profile list to install into";
+                case LedDeviceVerdict.Unreadable:
+                    return "reading it threw: " + Or(seen.Unreadable, "no message");
                 default:
                     return null;
             }
@@ -135,7 +147,7 @@ namespace OpenDashPlugin
             if (seen == null) return "LED device survey: a null device.";
             var parts = new List<string>();
             parts.Add("id " + Or(seen.Id, "none"));
-            parts.Add(seen.Connected ? "connected" : "not connected");
+            if (seen.Unreadable == null) parts.Add(seen.Connected ? "connected" : "not connected");
             parts.Add("type " + Or(seen.Kind, "unknown"));
             if (seen.Instances != null && seen.Instances.Count > 0)
             {
@@ -168,11 +180,32 @@ namespace OpenDashPlugin
             return head + ". " + string.Join("; ", parts) + ".";
         }
 
-        /// <summary>The names of the devices seen and not offered, in the order seen, for the picker.</summary>
+        /// <summary>
+        /// Whether a device shows any sign of having LEDs: an LED module, an RGB LED driver held outside
+        /// one, or a device that could not be read far enough to tell.
+        /// </summary>
+        /// <remarks>
+        /// SimHub's Devices view holds pedals, shifters, screens and bass shakers too, and a pedal set has
+        /// no LEDs to reach. Naming it under every strip's device row would be a sentence the reader can do
+        /// nothing with, which docs/design/voice.md keeps off the panel. It is still judged and still
+        /// logged; only the panel leaves it out.
+        /// </remarks>
+        public static bool ShowsLeds(LedDeviceSeen seen)
+        {
+            if (seen == null) return false;
+            return seen.LedModule
+                || seen.Unreadable != null
+                || (seen.ForeignDrivers != null && seen.ForeignDrivers.Count > 0);
+        }
+
+        /// <summary>
+        /// The names of the devices seen, not offered and showing a sign of LEDs, in the order seen, for
+        /// the picker to name. Every declined device is in the log whether it is named here or not.
+        /// </summary>
         public static IList<string> Declined(IEnumerable<LedDeviceSeen> seen)
         {
             return (seen ?? Enumerable.Empty<LedDeviceSeen>())
-                .Where(s => s != null && Judge(s) != LedDeviceVerdict.Offered)
+                .Where(s => s != null && Judge(s) != LedDeviceVerdict.Offered && ShowsLeds(s))
                 .Select(s => Or(s.Name, "A device"))
                 .ToList();
         }
