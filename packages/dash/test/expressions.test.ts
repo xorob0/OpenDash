@@ -199,6 +199,14 @@ describe('second-screen values', () => {
     expect(values.lapTime('[T]', 1)).toContain(`'${values.noTime(1)}'`);
   });
 
+  test('a missing lap time draws the placeholder rather than throwing (#454)', () => {
+    // SimHub's timespantoseconds answers null for the number 0, and NCalc's `null > 0` throws, which
+    // SimHub draws as an empty field. So the null guard wraps the conversion and never sits inside it.
+    expect(values.hasTime('[T]')).toBe('(isnull(timespantoseconds([T]), 0)) > (0)');
+    expect(values.lapTime('[T]')).not.toContain('timespantoseconds(isnull(');
+    expect(values.sectorTime('[T]')).not.toContain('timespantoseconds(isnull(');
+  });
+
   test('a unit reaches the screen as the word the face draws, not the name of its enum', () => {
     expect(values.speedUnit()).toBe("if((isnull([DataCorePlugin.GameData.SpeedLocalUnit], 'KMH')) = ('MPH'), 'mph', 'km/h')");
     expect(values.fuelUnit()).toContain("'gal'");

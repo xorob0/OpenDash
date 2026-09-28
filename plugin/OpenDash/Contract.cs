@@ -45,6 +45,20 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string UpdateVersion = "UpdateVersion";
 
+        /// <summary>
+        /// The best lap of the player's own class this session, as SimHub named it on the last frame it
+        /// finished: a TimeSpan, or null before anybody in the class has one.
+        /// </summary>
+        /// <remarks>
+        /// Published only because SimHub does not publish it. SimHub keeps the car as
+        /// BestLapSameClassOpponent but declares its properties from an empty frame, where that car is
+        /// null, so the class twin of GameData.BestLapOpponent.BestLapTime never becomes a property. The
+        /// one other way to the time is driverbestlap() of the class-best row, which reads the frame
+        /// SimHub is still building and finds no car whenever a dashboard renders mid-build (#454).
+        /// DataUpdate copies it out of the finished frame instead; see ClassBestLap.cs.
+        /// </remarks>
+        public const string ClassBestLap = "ClassBestLap";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -927,6 +941,9 @@ namespace OpenDashPlugin
             // screen and every idle screen carries the mark. Published rather than chosen. #83.
             yield return UpdateAvailable;
             yield return UpdateVersion;
+            // And the class best, appended for the same reason and published rather than chosen: every
+            // package that draws a session best reads it when the rig counts in class.
+            yield return ClassBestLap;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

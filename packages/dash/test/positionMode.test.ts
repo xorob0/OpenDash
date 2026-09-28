@@ -98,6 +98,17 @@ interface Settings {
   bestIndex?: { field: number; class: number };
   /** The player's last sector 1, in seconds. */
   lastS1?: number;
+  /**
+   * Whether the plugin is attached to publish the class best. It is unless a test says otherwise,
+   * and without it the class reading falls back on the row.
+   */
+  plugin?: boolean;
+  /**
+   * A frame the dashboard renders while SimHub is still building the next one: the published
+   * properties hold the last finished frame, and every `driver*` function, which looks in the frame
+   * being built, finds no leaderboard and answers nothing. #454.
+   */
+  midBuild?: boolean;
 }
 
 /** SimHub's leaderboard functions, answered from {@link GRID}. A row that is not there is null. */
@@ -111,6 +122,10 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     ...(settings.screenFilter === undefined ? {} : { 'OpenDash.PitWallClassOnly': settings.screenFilter }),
     'DataCorePlugin.GameData.BestLapOpponentPosition': bestIndex.field,
     'DataCorePlugin.GameData.BestLapOpponentSameClassPosition': bestIndex.class,
+    // The two times, published from the frame SimHub finished: SimHub's own copy of the field's
+    // best car, and the plugin's copy of the class's, which SimHub does not publish. Null for nobody.
+    'DataCorePlugin.GameData.BestLapOpponent.BestLapTime': BEST[bestIndex.field] ?? null,
+    ...(settings.plugin === false ? {} : { 'OpenDash.ClassBestLap': BEST[bestIndex.class] ?? null }),
     'DataCorePlugin.GameData.Sector1LastLapTime': settings.lastS1 ?? null,
     // The player's own best of the sector, slower than either session best so that only the
     // purple branch can tell the two references apart.
@@ -119,7 +134,9 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
   const classRowAt = (place: number): number => CLASS_ROWS[place - 1] ?? -1;
   return {
     P: (name: string): unknown => properties[name],
-    nz: (value: unknown, fallback?: unknown): unknown => (fallback === undefined ? value === undefined || value === null : (value ?? fallback)),
+    // By arity rather than by whether a fallback came back undefined: `isnull(x, driverbestlap(-1))`
+    // is the two-argument form even on a frame where its fallback finds no car.
+    nz: (...args: unknown[]): unknown => (args.length < 2 ? args[0] === undefined || args[0] === null : (args[0] ?? args[1])),
     IF: (condition: unknown, whenTrue: unknown, whenFalse: unknown): unknown => (condition ? whenTrue : whenFalse),
     FMT: (value: number, pattern: string): string => {
       if (pattern !== '0') throw new Error(`the evaluator knows one format pattern, not ${pattern}`);
@@ -133,7 +150,7 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     driverpositiongain: (row: number): number | undefined => (onGrid(row) ? START[row - 1]! - row : undefined),
     driverpositiongainclass: (row: number): number | undefined => (onGrid(row) ? classStartOf(row) - classPositionOf(row) : undefined),
     driveravailable: (row: number): boolean | undefined => (onGrid(row) ? true : undefined),
-    driverbestlap: (row: number): number | undefined => (onGrid(row) ? BEST[row - 1] : undefined),
+    driverbestlap: (row: number): number | undefined => (onGrid(row) && !settings.midBuild ? BEST[row - 1] : undefined),
     driveriscarinpitlane: (row: number): boolean | undefined => (onGrid(row) ? false : undefined),
     driverisplayer: (row: number): boolean | undefined => (onGrid(row) ? row === PLAYER_ROW : undefined),
     timespantoseconds: (value: number): number => value,
@@ -350,6 +367,24 @@ describe('the session best is the fastest car of the field the rig counts in (#4
     // One class, so SimHub's two properties name the same car.
     const bestIndex = { field: 4, class: 4 };
     expect(evaluate(sessionBestLap(), { positionMode: 'class', bestIndex })).toBe(evaluate(sessionBestLap(), { positionMode: 'overall', bestIndex }));
+  });
+
+  test('a frame drawn while SimHub builds the next one still draws the session best, in either mode (#454)', () => {
+    // What blinked: the time was looked up with driverbestlap(), which finds no car on such a frame.
+    for (const positionMode of ['overall', 'class'] as const) {
+      const steady = evaluate(sessionBestLap(), { positionMode });
+      expect({ positionMode, lap: evaluate(sessionBestLap(), { positionMode, midBuild: true }) }).toEqual({ positionMode, lap: steady });
+    }
+    expect(evaluate(sessionBestLap(), { positionMode: 'overall', midBuild: true })).toBe(BEST[FIELD_BEST_ROW - 1]);
+    expect(evaluate(sessionBestLap(), { positionMode: 'class', midBuild: true })).toBe(BEST[CLASS_BEST_ROW - 1]);
+  });
+
+  test('with no plugin attached the class best falls back on the row, and nobody yet is nothing', () => {
+    expect(evaluate(sessionBestLap(), { positionMode: 'class', plugin: false })).toBe(BEST[CLASS_BEST_ROW - 1]);
+    for (const positionMode of ['overall', 'class'] as const) {
+      // Nothing at all, whichever way the evaluator spells it; `lapTime()` draws its placeholder for either.
+      expect({ positionMode, lap: evaluate(sessionBestLap(), { positionMode, bestIndex: { field: -1, class: -1 } }) ?? null }).toEqual({ positionMode, lap: null });
+    }
   });
 
   test('every field labelled for the session best reads the one row', () => {
