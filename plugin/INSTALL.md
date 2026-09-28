@@ -116,6 +116,10 @@ binder for each, in the Buttons section, so you do not have to go looking in Con
 | Zone A, B, C, D | advances that zone to its next enabled page |
 | Quick glance | while held, shows one chosen page in one chosen zone, and returns on release |
 
+A quick glance is always bound as a hold, whatever press type you pick in SimHub's binding
+dialog: SimHub only tells OpenDash a button was released under that press type, and a glance bound
+any other way would appear and vanish in the same frame.
+
 There is a set of these **per screen**, named for the screen: the actions of the reference face are
 `OpenDash.Face1920x480CycleZoneA` through `CycleZoneD` and `OpenDash.Face1920x480HoldQuickGlance`.
 A rig with one screen binds five of them and can ignore the rest.

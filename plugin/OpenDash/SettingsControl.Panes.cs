@@ -580,7 +580,7 @@ namespace OpenDashPlugin
             }
 
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to return."));
+                Ui.Caption(PanelCopy.FaceGlance));
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons",
@@ -639,7 +639,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to put the zone back."));
+                Ui.Caption(PanelCopy.PitWallGlance));
             glanceText.MaxWidth = 420;
 
             return Ui.VStack(0,

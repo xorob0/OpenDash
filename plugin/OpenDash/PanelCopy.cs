@@ -50,6 +50,26 @@ namespace OpenDashPlugin
         public const string NotInstalled = "Not installed";
         public const string InstallFailed = "Install failed";
 
+        /// <summary>
+        /// The sentence a glance row ends on: the binding is a hold, and the press type the dialog
+        /// offers is not the driver's to choose.
+        /// </summary>
+        /// <remarks>
+        /// SettingsControl.HoldWhilePressed rewrites every mapping made on a glance binder to SimHub's
+        /// `During`, the one press type under which SimHub calls the release, and the dialog opens on
+        /// ShortAndLongPress. The correction stays (#435): a glance bound any other way appears and
+        /// vanishes in one frame, so there is no other choice a driver could make and keep a glance,
+        /// and a warning would leave that binding in place to fail. What changed is that the row says
+        /// so, so a driver who picks a press type and watches it change back has been told why.
+        /// </remarks>
+        public const string GlanceBoundAsHold = "Bound as a hold, whatever press type you pick.";
+
+        /// <summary>The glance row's caption on a face.</summary>
+        public const string FaceGlance = "Hold to show one page, release to return. " + GlanceBoundAsHold;
+
+        /// <summary>The glance row's caption on a pit wall, where the page is lent to one zone.</summary>
+        public const string PitWallGlance = "Hold to show one page, release to put the zone back. " + GlanceBoundAsHold;
+
         /// <summary>The separator the panel joins facts with, which is the canvas's middle dot.</summary>
         private const string Join = " · ";
 

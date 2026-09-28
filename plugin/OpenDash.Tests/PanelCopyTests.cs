@@ -5,6 +5,9 @@
 // sentences. The pairing tests are the point of the table: a verb with the wrong button style is a panel
 // offering an update as though it were an afterthought, or a removal as though it were the thing to do.
 using System;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -131,6 +134,28 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextLabel, absent.StateHex);
             Assert.Equal("Add", absent.Button);
             Assert.Equal(PanelButton.Outline, absent.Style);
+        }
+
+        /// <summary>
+        /// A glance row says the binding is a hold, since the binder rewrites whatever press type the
+        /// dialog was set to (#435), and every glance binder on the panel sits under that sentence.
+        /// </summary>
+        [Fact]
+        public void A_glance_row_says_it_is_bound_as_a_hold()
+        {
+            Assert.Equal("Bound as a hold, whatever press type you pick.", PanelCopy.GlanceBoundAsHold);
+            Assert.Equal("Hold to show one page, release to return. Bound as a hold, whatever press type you pick.", PanelCopy.FaceGlance);
+            Assert.Equal("Hold to show one page, release to put the zone back. Bound as a hold, whatever press type you pick.", PanelCopy.PitWallGlance);
+
+            var panel = string.Join("\n", RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            // The correction the sentence announces is still made, and made to the one press type
+            // SimHub releases on.
+            Assert.Contains("mapping.PressType = PressType.During", panel);
+            var holds = Regex.Matches(panel, @"BuildBinder\([^;]*hold: true\)").Count;
+            Assert.Equal(2, holds);
+            Assert.Contains("Ui.Caption(PanelCopy.FaceGlance)", panel);
+            Assert.Contains("Ui.Caption(PanelCopy.PitWallGlance)", panel);
+            Assert.DoesNotContain("\"Hold to show one page", panel);
         }
 
         /// <summary>One primary per panel: of every pairing the table holds, exactly one is accented.</summary>
