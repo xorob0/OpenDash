@@ -96,6 +96,32 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The sentence after an update to a release that carries the plugin and nothing else (#438). It names the
+        /// restart as the step, never calls the dashboards up to date or absent, and says what happens to an edited
+        /// one on that start.
+        /// </summary>
+        [Fact]
+        public void An_update_whose_dashboards_come_with_the_plugin_says_so()
+        {
+            var plain = UpdateWording.RestartWithDashboards(3, 0, false);
+            Assert.Contains("your 3 dashboards", plain);
+            Assert.Contains("Restart SimHub", plain);
+            Assert.DoesNotContain("up to date", plain);
+            Assert.DoesNotContain("not in this release", plain);
+            Assert.DoesNotContain("edited", plain);
+            Assert.Contains("your dashboard.", UpdateWording.RestartWithDashboards(1, 0, false));
+
+            Assert.Contains("replaces the one you edited", UpdateWording.RestartWithDashboards(3, 1, true));
+            Assert.Contains("Put mine back", UpdateWording.RestartWithDashboards(3, 2, true));
+            Assert.Contains("The 2 you edited are left alone", UpdateWording.RestartWithDashboards(3, 2, false));
+
+            var asked = UpdateWording.ReplaceEditedQuestion(new[] { "OpenDash" }, onRestart: true);
+            Assert.Contains("You have edited 1 dashboard: OpenDash", asked);
+            Assert.Contains("when SimHub restarts", asked);
+            Assert.DoesNotContain("restarts", UpdateWording.ReplaceEditedQuestion(new[] { "OpenDash", "OpenDash 1280x480" }, onRestart: false));
+        }
+
+        /// <summary>
         /// The sentence beside the switch. It is the author's, from design/canvas/Plugin.dc.html, and it is the
         /// only place a user is told in full what leaves their machine, so it says both halves: what is asked for,
         /// and that nothing else goes.

@@ -6,15 +6,13 @@ import { SizeList } from '../../components/SizeList';
 import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
 import { COMPANIONS, FACES, PIT_WALLS } from '../../lib/faces';
 import { weigh } from '../../lib/packages';
-import { FREE_FOREVER, REPO_URL } from '../../lib/site';
+import { FREE_FOREVER, ONLY_WAY_IN, PLUGIN_ZIP, REPO_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: `Download OpenDash ${VERSION}`,
-  description: `The plugin with all 14 dashboards, or 1 file per screen. Windows, SimHub ${SIMHUB_VERSION} or later.`,
+  description: `The plugin, with all 14 dashboards and 63 LED profiles inside it. Windows, SimHub ${SIMHUB_VERSION} or later.`,
 };
-
-const PLUGIN_ZIP = 'OpenDash-plugin.zip';
 
 export default function Download() {
   const plugin = DOWNLOADS.find((d) => d.file === PLUGIN_ZIP);
@@ -58,19 +56,19 @@ export default function Download() {
         </div>
       </Section>
 
-      <Section id="packages" title="One dashboard at a time" lede="Double-click to import: default pages, no settings page, no updates. The LED profiles come with the plugin.">
+      <Section id="packages" title="What the zip carries" lede={`${ONLY_WAY_IN} No screen is a file of its own: add the ones your rig has on the Rig tab.`}>
         <div className={styles.groups}>
           <div className={styles.group}>
             <h3 className="h3">Faces</h3>
-            <SizeList packages={FACES} downloads />
+            <SizeList packages={FACES} />
           </div>
           <div className={styles.group}>
             <h3 className="h3">Companion</h3>
-            <SizeList packages={COMPANIONS} downloads />
+            <SizeList packages={COMPANIONS} />
           </div>
           <div className={styles.group}>
             <h3 className="h3">Pit wall</h3>
-            <SizeList packages={PIT_WALLS} downloads />
+            <SizeList packages={PIT_WALLS} />
           </div>
         </div>
       </Section>
@@ -84,7 +82,7 @@ export default function Download() {
             <a href={REPO_URL} className="link" rel="noopener">
               the repository
             </a>
-            , run <code>bun install</code>, then <code>bun run build</code>. Every package comes out of the build directory.
+            , run <code>bun install</code>, then <code>bun run package</code>. The plugin zip comes out of the build directory with every package inside it, as it does in CI.
           </>
         }
       />

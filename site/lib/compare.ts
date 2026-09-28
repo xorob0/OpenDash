@@ -95,7 +95,9 @@ export const ROWS: CompareRow[] = [
     id: 'noPlugin',
     label: 'Works without the plugin',
     cells: {
-      opendash: cell('yes', 'Every package carries its own defaults.', { word: 'Yes' }),
+      opendash: cell('no', 'The plugin is the only way in. A screen whose plugin is not enabled yet still draws its defaults.', {
+        scope: 'a way in that does not begin with the plugin: a SimHub that cannot take a DLL into its own folder has no route in.',
+      }),
       lovely: cell('no', 'The dashboards cannot run without the plugin. Their words.'),
       dnr: cell('no', 'Without the plugin a dashboard draws a notice screen instead of your data.'),
     },

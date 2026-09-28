@@ -36,11 +36,11 @@ packages/dash/fonts/*.ttf ────────┤
                   build/OpenDash Pit wall/             3 pages and their zone dashboards
                                   v
                   zip  -->  build/OpenDash.simhubdash
-                                  |
-                 +----------------+----------------+
-                 v                                 v
-          GitHub release                 embedded into plugin/  -->  OpenDash.dll
-                                                   v
+                                  v
+                  embedded into plugin/  -->  OpenDash.dll  -->  OpenDash-plugin.zip
+                                  v                               (the one release file)
+              the plugin writes the screens the rig added into SimHub's DashTemplates
+                                  v
               SimHub renders the dashboard; the plugin's properties select what it shows
 ```
 
@@ -178,12 +178,14 @@ with the .NET SDK against the assemblies committed in `plugin/lib/` and uploads 
 SimHub, so visual review remains a human step: the reviewer installs the artifact on a SimHub
 machine, or the author attaches a screenshot from the VM.
 
-On a tag, a release workflow attaches `OpenDash.simhubdash` and `OpenDash-plugin.zip` to the
-GitHub release. The dashboard version in the `.metadata` sidecar, the plugin assembly version
-and the tag are the same string, read from `VERSION`. That file and the newest heading of
-`CHANGELOG.md` are written together by `bun run version <x.y.z>`, and the dash job checks on every
-pull request that the two agree and that `VERSION` is not behind the base's, so a cut whose number
-did not move, or a branch that set it back, fails before it is tagged.
+On a tag, a release workflow attaches `OpenDash-plugin.zip` to the GitHub release, and nothing
+else: the packages and the LED profiles travel between its jobs as an artifact the plugin embeds,
+and the plugin is the only way a user receives them ([scope.md](scope.md), #438). The dashboard
+version in the `.metadata` sidecar, the plugin assembly version and the tag are the same string,
+read from `VERSION`. That file and the newest heading of `CHANGELOG.md` are written together by
+`bun run version <x.y.z>`, and the dash job checks on every pull request that the two agree and that
+`VERSION` is not behind the base's, so a cut whose number did not move, or a branch that set it
+back, fails before it is tagged.
 
 ## Repository layout
 

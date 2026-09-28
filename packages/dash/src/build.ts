@@ -5,8 +5,8 @@
  * contract (every `[OpenDash.X]` read must be a declared property, and one this package's own
  * screen owns or every screen shares, plus the generator's own checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
  * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
- * slots, rung, file }` in `<out>/manifest.json`, which every release publishes beside the packages
- * and which therefore carries a `schemaVersion`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
+ * slots, rung, file }` in `<out>/manifest.json`, which releases published beside the packages until
+ * #438 and which therefore carries a `schemaVersion`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -54,9 +54,9 @@ export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'build');
 export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
 /**
- * The shape of {@link Manifest}, carried in the file itself. The manifest is published with every
- * release rather than kept as build output, so a reader out in the world meets manifests this
- * build never saw: one that knows only version 1 can refuse a 2 it cannot read, instead of
+ * The shape of {@link Manifest}, carried in the file itself. The manifest was published with every
+ * release until #438 made the plugin zip the only release file, so a reader out in the world may
+ * still meet manifests this build never saw: one that knows only version 1 can refuse a 2 it cannot read, instead of
  * guessing at fields that moved. Raise it when an existing field changes meaning or leaves, never
  * for a field that is merely added.
  */
@@ -504,8 +504,8 @@ export function build(opts: BuildOptions = {}): BuildResult {
     log(`wrote ${relative(target)}`);
   }
 
-  // Not zipped and not in `packages`: a profile is a single file the user imports by hand, and
-  // wrapping it in an archive would only add a step. ADR 0013.
+  // Not zipped and not in `packages`: a profile is a single file SimHub takes whole, which the
+  // plugin embeds and hands to SimHub from its Lights page. ADR 0013.
   const ledProfilePath = path.join(out, FLAG_BOX_FILE);
   writeFileSync(ledProfilePath, serializeProfile(ledProfile), 'utf8');
   log(`wrote ${relative(ledProfilePath)}`);

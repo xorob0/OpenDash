@@ -39,6 +39,18 @@ export const FREE_HEADLINE = 'Free, forever.';
 export const FREE_FOREVER = 'OpenDash is 100% free and always will be.';
 export const NOTHING_TO_UNLOCK = 'No licence, no account, nothing to unlock.';
 
+/**
+ * The one file a user is offered. docs/scope.md makes the plugin the only way in (#438): a release
+ * publishes this zip and nothing else a user could import, and this site serves the same.
+ */
+export const PLUGIN_ZIP = 'OpenDash-plugin.zip';
+
+/** The distribution line, which the install and download pages both have to make, and a test says so. */
+export const ONLY_WAY_IN = 'The plugin is the only way in: every dashboard and every LED profile reaches SimHub through it.';
+
+/** What the line costs, said where it is made rather than discovered by the reader it excludes. */
+export const NO_OTHER_ROUTE = 'A SimHub that cannot take a DLL into its own folder cannot run OpenDash. That is a choice, and the scope says what it buys.';
+
 /** The claim about sims, which docs/scope.md limits to iRacing until #102 says otherwise. */
 export const CLAIMED_SIM = 'Tested on iRacing only. Other sims may work and are not claimed.';
 
@@ -70,7 +82,7 @@ export const DIFFERENTIATORS = [
   {
     id: 'design',
     title: 'Modern design and features',
-    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall, and every file runs on its own whether the plugin is there or not.',
+    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall, every one of them set up from one page in SimHub.',
   },
 ] as const;
 

@@ -12,7 +12,7 @@ cp build/*.simhubdash plugin/OpenDash/Resources/
 # Gzipped, keeping the .ledsprofile name. Sixty-three shapes of a third of a megabyte each is twenty
 # megabytes of NCalc in the assembly; the same files pack to about five hundred kilobytes, and
 # FlagBoxProfile.TextOf sniffs gzip's magic so nothing else in the plugin knows the difference. The
-# release still carries the plain files from build/, which is what somebody importing one by hand gets.
+# plain files stay in build/ and are published nowhere: the plugin is the only way in (#438).
 for profile in build/*.ledsprofile; do
   gzip -9 -c "$profile" > "plugin/OpenDash/Resources/$(basename "$profile")"
 done

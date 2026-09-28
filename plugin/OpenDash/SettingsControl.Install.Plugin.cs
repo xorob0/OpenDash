@@ -241,9 +241,7 @@ namespace OpenDashPlugin
                 // settings page is worse than a button that changes what it says.
                 confirmingEdited = true;
                 updateButton.Content = "Replace anyway";
-                updateLine.Text = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
-                    + ": " + string.Join(", ", edited)
-                    + ". Updating replaces your version. A copy is kept, and \"Put mine back\" restores it.";
+                updateLine.Text = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
@@ -293,6 +291,9 @@ namespace OpenDashPlugin
                     // anything is saved. Nothing is rewritten where the title already reads that way.
                     var titles = new SimHubInstallLog();
                     foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
+                    // The yes to replacing edited dashboards is spent by the next start, not by this run, when
+                    // the dashboards come inside the plugin; it is saved with the rest just below.
+                    if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
                     // The record is written in memory by the installer and saved here, on the UI thread, which is
                     // the moment it is safe to serialise the settings.
                     Save();
@@ -378,12 +379,17 @@ namespace OpenDashPlugin
             // time it is drawn rather than only in the moment the download finished. Without this, a
             // driver who says "later" and comes back tomorrow sees a plugin section that looks entirely
             // ordinary and is running the old plugin.
-            if (line == null && PluginUpdate.Pending(plugin.Installer.SimHubRoot)) line = UpdateWording.RestartLater;
+            //
+            // It also outranks "a newer version is available": since #438 an update stages the plugin and
+            // writes no dashboard, so the status that offered the release is still standing afterwards, and
+            // a button left under it would download the same plugin again rather than finish anything.
+            var pending = PluginUpdate.Pending(plugin.Installer.SimHubRoot);
+            if (pending && (line == null || updateStatus.State == UpdateState.UpdateAvailable)) line = UpdateWording.RestartLater;
             updateLine.Text = line ?? string.Empty;
             updateLine.Visibility = line != null && (updateStatus.IsVisible || updateStatus.Line == null) ? Visibility.Visible : Visibility.Collapsed;
             if (updateButton != null)
             {
-                updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+                updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable && !pending ? Visibility.Visible : Visibility.Collapsed;
             }
             // The pill reads this line's answer as well as the disk's, so it is refreshed with it.
             RefreshStatus();

@@ -24,6 +24,26 @@ namespace OpenDashPlugin
         /// <summary>Folders the release does not publish.</summary>
         public IReadOnlyList<string> NotCarried { get; set; } = new string[0];
 
+        /// <summary>
+        /// Folders the release does not publish on their own but carries inside the plugin it staged, which the new
+        /// plugin brings up to date as SimHub starts again.
+        /// </summary>
+        /// <remarks>
+        /// Every folder, for a release cut since #438: a release publishes OpenDash-plugin.zip and nothing else, so
+        /// the dashboards travel inside the assembly and are written by its first start rather than by this run.
+        /// Counting them as "not in this release" told a driver the opposite of what was about to happen.
+        /// </remarks>
+        public IReadOnlyList<string> FollowPlugin { get; set; } = new string[0];
+
+        /// <summary>Of <see cref="FollowPlugin"/>, the folders somebody has edited since OpenDash wrote them.</summary>
+        public IReadOnlyList<string> EditedFollowing { get; set; } = new string[0];
+
+        /// <summary>
+        /// Whether a person said yes to replacing the edited ones, which the caller has to carry across the restart
+        /// (<see cref="EditedConsent"/>): this process is not the one that writes them.
+        /// </summary>
+        public bool ReplaceEditedOnRestart { get; set; }
+
         /// <summary>Folders that were meant to be replaced and could not be.</summary>
         public IReadOnlyList<string> Failed { get; set; } = new string[0];
 
@@ -49,13 +69,18 @@ namespace OpenDashPlugin
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
                 if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced: you have edited all of them. ";
                 else if (Updated.Count == 0 && !PluginStaged) return "There was nothing to replace.";
-                else if (Updated.Count == 0) line = "The dashboards were already up to date. ";
+                else if (Updated.Count == 0 && FollowPlugin.Count == 0) line = "The dashboards were already up to date. ";
                 if (Updated.Count > 0 && HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone: you have edited it. " : HeldBack.Count + " were left alone: you have edited them. ");
                 if (NotCarried.Count > 0) line += (NotCarried.Count == 1 ? "1 is not in this release and was not touched. " : NotCarried.Count + " are not in this release and were not touched. ");
                 // The restart sentence replaces the reopen one rather than joining it: a plugin that is
                 // about to be swapped makes "SimHub does not need restarting" false, and of the two
                 // instructions the restart is the one that also reopens the dashboard.
-                if (PluginStaged) return line + UpdateWording.Restart;
+                if (PluginStaged)
+                {
+                    return line + (FollowPlugin.Count == 0
+                        ? UpdateWording.Restart
+                        : UpdateWording.RestartWithDashboards(FollowPlugin.Count, EditedFollowing.Count, ReplaceEditedOnRestart));
+                }
                 if (PluginReason != null) line += "OpenDash itself could not be updated (" + PluginReason + "). ";
                 return line + UpdateWording.Reopen;
             }
@@ -135,6 +160,12 @@ namespace OpenDashPlugin
         /// <summary>
         /// Downloads what the release carries for the dashboards installed here and installs it.
         /// </summary>
+        /// <remarks>
+        /// Since #438 a release publishes the plugin and nothing else, so what this does for a current release is
+        /// stage the plugin: the dashboards are inside it and are written as it starts, and the outcome says so
+        /// through <see cref="UpdateOutcome.FollowPlugin"/>. The per-dashboard half stays for a release that
+        /// publishes its packages, which every release before #438 did.
+        /// </remarks>
         /// <param name="replaceEdited">
         /// Whether to replace a dashboard somebody has edited since OpenDash wrote it. False unless a person has
         /// been shown what that means and said yes.
@@ -206,6 +237,12 @@ namespace OpenDashPlugin
             // reached on a shutdown that times out or a process that is killed, and the waiter has to
             // outlive both.
             if (staged != null && staged.Ok) PluginUpdate.Launch(installer.SimHubRoot, log);
+            // A release that carries the plugin and nothing else has done nothing when the plugin could not be
+            // staged, which is every release since #438. That is a failure, not "nothing to replace".
+            if (staged != null && !staged.Ok && plan.IsEmpty)
+            {
+                return new UpdateOutcome { Reason = "OpenDash itself could not be put in place (" + staged.Error + ")", NotCarried = plan.NotCarried };
+            }
 
             // Everything is in hand before anything on disk is touched, so a download that fails half way through
             // leaves the machine as it was rather than half updated.
@@ -218,6 +255,16 @@ namespace OpenDashPlugin
             // updated when one of them had not been.
             // A package that could not even be read has no folder name, so the name it was fetched under stands in:
             // telling somebody that "" could not be installed is no better than telling them nothing.
+            // What the release does not publish on its own it carries inside the plugin, once that is staged: the new
+            // assembly embeds every package, and its first start writes each folder whose version it does not
+            // match. Only then, though -- a plugin that could not be staged brings nothing, and those folders really
+            // are not in this release.
+            var pluginStaged = staged != null && staged.Ok;
+            var following = pluginStaged ? plan.NotCarried : new string[0];
+            var editedFollowing = installer.Packages
+                .Where(p => p.Edited && following.Contains(p.FolderName, StringComparer.OrdinalIgnoreCase))
+                .Select(p => p.FolderName)
+                .ToList();
             var failed = target.Packages
                 .Where(p => p.Status == InstallStatus.Failed)
                 .Select(p => p.FolderName ?? FolderOf(plan, p.Name) ?? p.Name)
@@ -228,9 +275,12 @@ namespace OpenDashPlugin
                 Updated = target.Packages.Where(p => p.Extracted).Select(p => p.FolderName).ToList(),
                 HeldBack = target.Packages.Where(p => p.HeldBack).Select(p => p.FolderName).ToList(),
                 Failed = failed,
-                NotCarried = plan.NotCarried,
+                NotCarried = pluginStaged ? new string[0] : plan.NotCarried,
+                FollowPlugin = following,
+                EditedFollowing = editedFollowing,
+                ReplaceEditedOnRestart = replaceEdited && editedFollowing.Count > 0,
                 Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
-                PluginStaged = staged != null && staged.Ok,
+                PluginStaged = pluginStaged,
                 PluginReason = staged == null || staged.Ok ? null : staged.Error,
             };
         }

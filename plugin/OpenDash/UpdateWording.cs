@@ -5,6 +5,7 @@
 // that reads as an error when nothing is wrong, or that tells a driver to restart SimHub when reopening the
 // dashboard is enough, costs more than a failed request does.
 using System;
+using System.Collections.Generic;
 
 namespace OpenDashPlugin
 {
@@ -33,6 +34,49 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string Restart =
             "OpenDash itself was downloaded. Restart SimHub to finish updating.";
+
+        /// <summary>
+        /// What to say when the plugin was staged and the dashboards come inside it, which is every update to a
+        /// release cut since #438.
+        /// </summary>
+        /// <remarks>
+        /// A release publishes OpenDash-plugin.zip and nothing else, so no dashboard is written by the run that
+        /// downloads it: the new plugin embeds them and writes each one whose version it does not match as it
+        /// starts. Saying "the dashboards were already up to date" and that they "are not in this release", which is
+        /// what the run said when this sentence did not exist, was false twice over. It names the outcome and the
+        /// restart and not the mechanism, as docs/design/voice.md asks. An edited dashboard is mentioned because it
+        /// is the one a driver was asked about, and the answer only takes effect on that start too.
+        /// </remarks>
+        public static string RestartWithDashboards(int dashboards, int edited, bool replaceEdited)
+        {
+            var line = "OpenDash itself was downloaded, with "
+                + (dashboards == 1 ? "your dashboard" : "your " + dashboards + " dashboards")
+                + ". Restart SimHub to finish updating.";
+            if (edited <= 0) return line;
+            if (replaceEdited)
+            {
+                return line + (edited == 1 ? " That replaces the one you edited" : " That replaces the " + edited + " you edited")
+                    + ". A copy is kept, and \"Put mine back\" restores it.";
+            }
+            return line + (edited == 1 ? " The one you edited is left alone." : " The " + edited + " you edited are left alone.");
+        }
+
+        /// <summary>
+        /// What the Update button says before it replaces a dashboard somebody has edited.
+        /// </summary>
+        /// <remarks>
+        /// When the release carries the plugin the replacing happens on the next start and not on this press, since
+        /// that start is what writes the dashboards; the sentence says when so that a driver who looks at their
+        /// dashboard straight after pressing does not conclude that the answer was ignored.
+        /// </remarks>
+        public static string ReplaceEditedQuestion(IReadOnlyCollection<string> edited, bool onRestart)
+        {
+            var count = edited == null ? 0 : edited.Count;
+            return "You have edited " + (count == 1 ? "1 dashboard" : count + " dashboards")
+                + ": " + string.Join(", ", edited ?? new string[0])
+                + ". Updating replaces your version" + (onRestart ? " when SimHub restarts" : string.Empty)
+                + ". A copy is kept, and \"Put mine back\" restores it.";
+        }
 
         /// <summary>
         /// The dialog that asks, which is the whole of what was missing.

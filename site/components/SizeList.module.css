@@ -19,21 +19,8 @@
   font-size: var(--size-small);
 }
 
-.get {
-  grid-column: 1 / -1;
-  font-size: var(--size-small);
-}
-
-.notBuilt {
-  color: var(--color-text-secondary);
-}
-
 @media (min-width: 62rem) {
   .row {
     grid-template-columns: 9rem 10rem 1fr;
-  }
-
-  .get {
-    grid-column: auto;
   }
 }
