@@ -344,7 +344,13 @@ export const nameText = (idx: Expr, chars: number, fs: number): Expr => {
 export const nameSampleAt = (fs: number): string => (nameIsUpperCased(fs) ? NAME_SAMPLE.toUpperCase() : NAME_SAMPLE);
 
 /** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
-export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
+export const nameColumnFloor = (fs: number): number => nameColumnFor(SHORTEST_NAME_CHARS, fs);
+
+/**
+ * The width a name column needs to hold `chars` characters at this size, with the pixel `label` leaves
+ * itself: the inverse of the budget `charsThatFit` counts, in characters of the widest glyph.
+ */
+export const nameColumnFor = (chars: number, fs: number): number => Math.ceil(chars * widestGlyph(NAME_FACE).advance * fs) + 1;
 
 /** The size a row sets a name in, which is what a caller measuring the column has to measure at. */
 export const nameSizeForRow = (row: RowSize, board = false): number => (typeof row === 'object' ? row : rowTypeOf(row, board)).name;
