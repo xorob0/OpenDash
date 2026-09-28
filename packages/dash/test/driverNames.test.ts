@@ -17,7 +17,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DRIVER_NAME_FORMATS, type DriverNameFormat } from '../src/contract.ts';
 import { charsThatFit, ELLIPSIS, measureText, widestGlyph, widestOf } from '../src/design/advances.ts';
-import { columnWidths, MIXED_CASE_NAME_SIZE, NAME_FACE, nameColumnFloor, nameIsUpperCased, nameSizeForRow, nameText, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
+import { columnWidths, LIST_ROW_TYPES, MIXED_CASE_NAME_SIZE, NAME_FACE, nameColumnFloor, nameIsUpperCased, nameSizeForRow, nameText, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { driverName, ellipsised } from '../src/second/values.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { fittingColumns, LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
@@ -396,9 +396,12 @@ describe('no list draws a three-letter code', () => {
     // Every size a name is drawn at here is under the bound, so every one of them is shouted. The
     // assertion above is still written as the rule rather than as `true`, since a taller row would
     // earn the sim's own spelling back and nothing should have to remember to allow that.
-    // 15 from the 34 px row up, 13 in the narrow zone's 28 px row, and the opponents page's own 12,
-    // which comes from the density rather than from a row and is the smallest name the build draws.
-    expect([...sizes].sort((a, b) => a - b)).toEqual([12, 13, 15]);
+    // The list ramp's names and no others: 15 from the 34 px row up and 13 in the narrow zone's 28 px
+    // row. The opponents page used to add its own 12, and 13 in a zone, which came from the density
+    // rather than from a row; its name is a list row's now (#341). Every box of this walk has the
+    // width for 15 on every page, so 13 is not among them -- the 800 x 286 face is where it is drawn.
+    const ramp = new Set(LIST_ROW_TYPES.map((type) => type.name));
+    expect({ sizes: [...sizes].sort((a, b) => a - b), onTheRamp: [...sizes].every((fs) => ramp.has(fs)) }).toEqual({ sizes: [15], onTheRamp: true });
     expect(MIXED_CASE_NAME_SIZE).toBe(25);
   });
 
