@@ -8,9 +8,9 @@
  * track is the defect #212 reports about a leaderboard, said of two rows instead of twenty.
  *
  * Each block is a heading, an identity row and a gap row six pixels apart, and the two blocks sit
- * twelve either side of a rule. A block is a hand-built row rather than a rank of fields because
- * two of its three lines are not fields: the identity row is a name, a number and a chip centred on
- * one line, and the gap row is a large value with two small labels on its baseline.
+ * at least twelve either side of a rule. A block is a hand-built row rather than a rank of fields
+ * because two of its three lines are not fields: the identity row is a name, a number and a chip
+ * centred on one line, and the gap row is a large value with two small labels on its baseline.
  *
  * **The two cars shed the same line.** This is the one page whose rank is two of the same thing, so
  * dropping a field from one of them and not the other draws a page that looks broken, and dropping
@@ -32,6 +32,15 @@
  * 13 px name left room for -- since a larger name is not a reason to lose the car's number. The name's
  * box is the eight characters of the shortest format at least, and takes the room the row leaves it
  * up to the ten of the default one.
+ *
+ * **The two blocks grow with the box (#341).** Rule 20 reaches this page as it reaches a rank: the
+ * gap, which is what a driver reads the page for, grows from the density's `big` towards the next
+ * size up the ramp until it meets the height of the box, the width of its row or that size, and
+ * both cars grow together. What the height has left after that is spent as space between the two
+ * cars, either side of the rule, which is what separates the car ahead from the car behind at a
+ * glance -- the relative spends its own slack between its rows for the same reason. Only the gap
+ * grows. The heading and the recaps are labels and keep the size a label is, and the identity row
+ * is typed by the list rule above, whose name stops at 15 and whose number is the list's.
  *
  * A wide box too short to stack two blocks draws them side by side with a vertical rule between
  * them, which is the arrangement the canvas gives the wide zone: 576 by 112 has room for two
@@ -64,7 +73,7 @@ import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
-import { densityOf, rampOf } from '../second/density.ts';
+import { densityOf, nextOnRamp, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
@@ -83,7 +92,10 @@ const { concat, str, fmt } = ncalc;
 /** Between the heading, the identity row and the gap row of one block. */
 const INNER_GAP = 6;
 
-/** Between the two blocks, which is what the rule between them sits in. */
+/**
+ * Between the two blocks, which is what the rule between them sits in: the least of it, the canvas's
+ * twelve, and the space a stacked page spends its slack on once the gap has grown.
+ */
 const BLOCK_GAP = 12;
 
 /** Between the pieces of the identity row: the name, the number and the class chip. */
@@ -246,6 +258,8 @@ interface Measured {
   valueHeight: number;
   gapHeight: number;
   height: number;
+  /** How far the block's WPF box runs below the canvas line box of its last line, which the height holds. */
+  tail: number;
   /** How far the gap row runs across: the gap and the recaps on its baseline, with the gaps between. */
   across: number;
   /** The characters the name's box holds, which is what the cut is counted in; nought where the name is shed. */
@@ -290,6 +304,7 @@ function measure(ctx: ModuleContext, side: Side, box: Column, type: BlockType, k
     valueHeight,
     gapHeight,
     height,
+    tail: gapHeight > 0 ? fieldTail(gapSpec, ctx.density) : 0,
     across: across.reduce((sum, width) => sum + width, 0) + DETAIL_GAP * Math.max(0, across.length - 1),
     chars: name === undefined ? 0 : charsThatFit(NAME_FACE, type.name, name.width),
   };
@@ -361,12 +376,9 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
     return items;
   };
 
-  // No `fill`, which is rule 20 declined on purpose. The canvas names this page's gap at every
-  // shape it draws, 64 on the companion, 46 in a zone and 34 on the compact faces, and those are
-  // exactly the three densities' `big`; a stack that spent its slack on the next rung up would
-  // draw 64 where the sheet writes 46 at every one of them. So the room a tall zone has over its
-  // two blocks stays slack, and the growth chips on the face sheets are read as the size of the
-  // face against the catalogue rather than of the drawing inside it.
+  // No `fill`: the page grows its blocks itself, below, because the two cars have to be typed as
+  // one and the space the growth leaves is spent between them rather than around them, neither of
+  // which a stack's rule 20 does for a row.
   return {
     height,
     draw,
@@ -399,7 +411,11 @@ export const opponents = defineModule('opponents', (ctx) => {
   // Both cars carry the same pieces, so the declaration is read off one of them; the table names
   // this page's fields in pairs for exactly that reason.
   const declared = PIECES.filter((piece) => pageKeeps(`${ahead.id}.${piece}`, ctx));
-  const stacked = (one: Measured): number => (columns ? one.height : 2 * one.height + RULE + 2 * BLOCK_GAP);
+  // Two blocks and the rule, with the canvas's twelve either side of it. Twelve from the line box of
+  // the gap above it rather than from the bottom of its row, which is the row's tail lower: the row
+  // reserves the tail so that WPF's taller box may hang into it, and a rule set under the reserve
+  // would sit the tail further from the car ahead than from the car behind.
+  const stacked = (one: Measured): number => (columns ? one.height : 2 * one.height + RULE + 2 * BLOCK_GAP - one.tail);
   const measured = (type: BlockType, keep: readonly string[]): Measured => measure(ctx, ahead, boxes[0]!, type, keep);
   // A block fits when both of them stack in the height and its gap row fits across its column.
   const fits = (type: BlockType, keep: readonly string[]): boolean => {
@@ -432,7 +448,18 @@ export const opponents = defineModule('opponents', (ctx) => {
       return at.type.gap === canvas.type.gap && same(at.keep, canvas.keep) && same(now.identity.map((cell) => cell.id), had.identity.map((cell) => cell.id)) && now.chars >= least;
     }) ?? canvas;
 
-  const type = settled.type;
+  // Rule 20. A page that has shed nothing and drawn its gap at the density's `big` spends the room it
+  // has left on the gap, a pixel at a time from the next size up the ramp, the first size at which
+  // both blocks still fit being the one taken.
+  let type = settled.type;
+  if (type.gap === d.big && settled.keep.length === declared.length) {
+    for (let size = nextOnRamp(d.big, ctx.density); size > d.big; size--) {
+      if (fits({ ...type, gap: size }, settled.keep)) {
+        type = { ...type, gap: size };
+        break;
+      }
+    }
+  }
   const keep = settled.keep;
 
   const rows = SIDES.map((side, i) => block(ctx, side, boxes[i]!, type, keep));
@@ -446,6 +473,10 @@ export const opponents = defineModule('opponents', (ctx) => {
       BLOCK_GAP,
     );
   }
+  // And what the height has left after the gap is space between the cars, either side of the rule:
+  // the canvas's twelve at least, and the page's whole height where the gap could grow no further.
+  const drawn = measured(type, keep);
+  const between = BLOCK_GAP + Math.max(0, Math.floor((room - stacked(drawn)) / 2));
   /**
    * The rule travels with the block under it, the way delta's rank carries the rule above it: a
    * 1 px line with nothing beneath it is a line drawn for its own sake, and a separate row would
@@ -456,13 +487,14 @@ export const opponents = defineModule('opponents', (ctx) => {
     const { shed } = row;
     return {
       ...row,
-      height: row.height + BLOCK_GAP + RULE,
-      // On the row's own top edge, so that the twelve the stack leaves above it and the twelve it
-      // leaves below are the same twelve the canvas puts either side of the line.
-      draw: (bottom) => [rule(`${ctx.prefix}rule`, ctx.frame.left, bottom - row.height - BLOCK_GAP - RULE, ctx.frame.width, RULE), ...row.draw(bottom)],
+      height: row.height + between + RULE,
+      // On the row's own top edge, and the stack leaves the same space above it less the tail the
+      // row over it already reserves, so the rule is as far from the gap's line box as from the
+      // heading's.
+      draw: (bottom) => [rule(`${ctx.prefix}rule`, ctx.frame.left, bottom - row.height - between - RULE, ctx.frame.width, RULE), ...row.draw(bottom)],
       ...(shed ? { shed: { ...shed, without: (ids: readonly string[]) => ruled(shed.without(ids)) } } : {}),
     };
   };
   const live = [rows[0], ruled(rows[1])].filter((row): row is StackRow => row !== undefined);
-  return stack(ctx.frame, live, ctx.density, BLOCK_GAP);
+  return stack(ctx.frame, live, ctx.density, between - drawn.tail);
 });

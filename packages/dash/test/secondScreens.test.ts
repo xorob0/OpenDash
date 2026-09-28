@@ -27,7 +27,7 @@ import { MODULES, pageBuilder } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
-import { densityForBox } from '../src/second/density.ts';
+import { densityForBox, densityOf, nextOnRamp } from '../src/second/density.ts';
 import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
@@ -37,6 +37,8 @@ import { contentRect } from '../src/second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
 import { leaderboardPlan } from '../src/modules/leaderboard.ts';
 import { relativePlan } from '../src/modules/relative.ts';
+import { drawnAt } from '../src/modules/module.ts';
+import { keepsAt } from '../src/modules/shedding.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
@@ -1032,6 +1034,66 @@ describe('the opponents name is the relative\'s', () => {
           chars: DEFAULT_NAME_CHARS,
         });
       }
+    });
+  }
+});
+
+/**
+ * #341, the growth. The two blocks were rows of a fixed height with a fixed twelve either side of the
+ * rule, so a 445 x 516 zone drew the page it draws at 445 x 282 with 150 px of nothing above it and
+ * below it. Rule 20 reaches the page now, and what is held here is its three edges and where the rest
+ * goes:
+ *
+ * - both cars' gaps are one size, never under the density's `big` and never past the next size up;
+ * - where the gap stopped short of that size on a page that sheds nothing, the box stopped it: the
+ *   height, which leaves the canvas's twelve either side of the rule, or the width, which leaves the
+ *   gap row within a step of the right edge;
+ * - a stacked page spans its body, the height the gap did not take going between the cars, and the
+ *   rule sits in the middle of that space, measured between canvas line boxes as the canvas measures
+ *   its twelve.
+ */
+describe('the opponents blocks grow with their box', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  /** The canvas line box of a text, recovered from the SimHub box `textBox` made of it. */
+  const lineOf = (i: TextItem): number => i.rect.top + 0.1 * i.fontSize;
+  /** How near the right edge a gap row stopped by the width ends: a pixel of type on six cells. */
+  const WIDTH_STEP = 8;
+  /** The canvas's space either side of the rule, which is the least the page leaves there. */
+  const BLOCK = 12;
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const ctx = { frame: box.frame, density: box.density, prefix: '' };
+      const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
+      const text = (name: string): TextItem => items.find((i): i is TextItem => i.kind === 'text' && i.name === name)!;
+      const d = densityOf(box.density);
+      const ceiling = nextOnRamp(d.big, box.density);
+      const [ahead, behind] = [text('ahead.gap.value'), text('behind.gap.value')];
+      expect({ box: box.name, ahead: ahead.fontSize, behind: behind.fontSize }).toEqual({ box: box.name, ahead: behind.fontSize, behind: behind.fontSize });
+      expect({ box: box.name, gap: ahead.fontSize, big: d.big, ceiling, onTheRamp: ahead.fontSize >= d.big && ahead.fontSize <= ceiling }).toMatchObject({ onTheRamp: true });
+
+      const rule = items.find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'rule')!;
+      const stacked = rule.rect.width > rule.rect.height;
+      const bottom = box.frame.top + box.frame.height;
+      const heading = text('behind.heading');
+      const above = stacked ? rule.rect.top - (lineOf(ahead) + ahead.fontSize) : 0;
+      const below = stacked ? lineOf(heading) - (rule.rect.top + rule.rect.height) : 0;
+      if (stacked) {
+        // Within the two pixels the stack keeps at each end for the tail, and the pixel rounding costs.
+        const top = text('ahead.heading').rect.top - box.frame.top;
+        const under = bottom - (behind.rect.top + behind.rect.height);
+        expect({ box: box.name, top, under, spans: top <= 3 && under <= 3 }).toMatchObject({ spans: true });
+        expect({ box: box.name, above, below, centred: Math.abs(above - below) <= 1, twelve: Math.min(above, below) >= BLOCK - 1 }).toMatchObject({ centred: true, twelve: true });
+      }
+
+      const declared = (keepsAt('opponents', drawnAt({ ...ctx, page: 'opponents' })) ?? []).filter((id) => id.startsWith('ahead.')).map((id) => id.slice('ahead.'.length));
+      const drawn = new Set(items.map((i) => i.name).filter((name) => name.startsWith('ahead.')).map((name) => name.split('.')[1]!));
+      if (ahead.fontSize >= ceiling || !declared.every((piece) => drawn.has(piece))) return;
+      const row = items.filter((i) => ['behind.gap.value', 'behind.lastLap', 'behind.rating'].includes(i.name));
+      const right = box.frame.left + box.frame.width - Math.max(...row.map((i) => ('rect' in i ? i.rect.left + i.rect.width : 0)));
+      // Side by side, the height has stopped the gap when the block spans the body from its top.
+      const byHeight = stacked ? Math.min(above, below) <= BLOCK + 1 : text('ahead.heading').rect.top - box.frame.top <= 3;
+      expect({ box: box.name, gap: ahead.fontSize, ceiling, above, right, stopped: byHeight || right <= WIDTH_STEP }).toMatchObject({ stopped: true });
     });
   }
 });
