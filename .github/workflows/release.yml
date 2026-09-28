@@ -86,6 +86,17 @@ jobs:
           name: opendash-dash
           path: plugin/OpenDash/Resources/
 
+      # Gzipped in place, keeping the .ledsprofile name, as scripts/package.sh does for a local build.
+      # Plain, the sixty-three profiles are about twenty megabytes of NCalc in the assembly, and the
+      # zip this job builds is the one file a release hands over (#438).
+      - name: Compress the LED profiles
+        run: |
+          set -euo pipefail
+          for profile in plugin/OpenDash/Resources/*.ledsprofile; do
+            gzip -9 -c "$profile" > "$profile.gz"
+            mv "$profile.gz" "$profile"
+          done
+
       - name: Test plugin logic
         run: dotnet test plugin/OpenDash.Tests
 
