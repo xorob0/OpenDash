@@ -21,8 +21,15 @@ import { ds } from '../src/tokens.ts';
 const header = (width: number, compact: boolean): Item[] =>
   pitWallHeader('h', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · test', page: 1, pages: compact ? 1 : 3, compact });
 
-/** A readout group's items are named `h.<group>.<index>`; the left-hand cluster's are not. */
-const GROUP = /^h\.([a-zA-Z]+)\.\d+$/;
+/**
+ * A readout group's items are named `h.<group>.<index>`; the left-hand cluster's are not.
+ *
+ * A mark is `h.<group>.<index>.mark`, the text that stands in for a value in one state -- the `∞` of
+ * a session with no clock. It belongs to its group and shares its value's box, so it is matched here
+ * rather than left to fall into the left cluster, which is where it first arrived and where it made
+ * the cluster look 195 px wider than the wordmark it is.
+ */
+const GROUP = /^h\.([a-zA-Z]+)\.\d+(?:\.mark)?$/;
 
 const boxed = (items: Item[]): { name: string; rect: Rect }[] => items.flatMap((i) => (i.kind === 'layer' ? [] : [{ name: i.name, rect: i.rect }]));
 
@@ -164,9 +171,32 @@ function expectNoOverlap(spans: { name: string; left: number; right: number }[])
 describe('a pit wall header never draws one text over another', () => {
   for (const page of PAGES) {
     test(page.name, () => {
-      expectNoOverlap(inkSpans(page.items));
+      // Marks are held against their own values below rather than counted as neighbours: a mark and
+      // the value it replaces are drawn in the same place on purpose and never in the same frame.
+      expectNoOverlap(inkSpans(page.items).filter((span) => !span.name.endsWith('.mark')));
     });
   }
+
+  test('a mark is drawn inside the box of the value it stands in for, so it needs no room of its own', () => {
+    // Which is what lets the overlap proof above run over the values alone. `∞` cannot be laid in a
+    // digit cell -- it advances a third wider than one -- so it is a proportional run beside the
+    // clock, and the room it is allowed is the clock's own (#439).
+    let marks = 0;
+    for (const page of PAGES) {
+      const texts = headerTexts(page.items);
+      for (const item of texts.filter((i) => i.name.endsWith('.mark'))) {
+        marks += 1;
+        const value = texts.find((i) => i.name === item.name.slice(0, -'.mark'.length));
+        if (value === undefined) throw new Error(`${item.name} stands in for nothing`);
+        const span = ink(item);
+        const room = { left: value.rect.left, right: value.rect.left + value.rect.width };
+        expect({ mark: item.name, text: item.text, inside: span.left >= room.left && span.right <= room.right }).toMatchObject({ text: '∞', inside: true });
+        // And on the value's own line, at the value's own size, so the two read as one reading.
+        expect({ mark: item.name, top: item.rect.top, fontSize: item.fontSize }).toMatchObject({ top: value.rect.top, fontSize: value.fontSize });
+      }
+    }
+    expect(marks).toBe(PAGES.length);
+  });
 
   test('drops the page name rather than let a readout draw over it', () => {
     // The left cluster is laid out against what the readouts left, and the name is the only text on
@@ -180,6 +210,6 @@ describe('a pit wall header never draws one text over another', () => {
     });
     expect(items.some((i) => i.name === 'long.header.page')).toBe(false);
     expect(items.some((i) => i.name === 'long.header.square1')).toBe(true);
-    expectNoOverlap(inkSpans(items));
+    expectNoOverlap(inkSpans(items).filter((span) => !span.name.endsWith('.mark')));
   });
 });

@@ -39,7 +39,16 @@ export interface MarkOptions {
    */
   width?: number;
   maxWidth?: number;
+  /** The value's own Left binding, for a reading a rank re-centres: the mark moves with it. */
+  leftBind?: Expr;
 }
+
+/**
+ * The same mark, drawn only inside a further condition: the session card draws its clock in one of
+ * two modes, so the mark belongs to that mode as much as to the state. One spelling of the glyph and
+ * one of the state, rather than a second pair written at the call site.
+ */
+export const markWhen = (mark: Mark, also: Expr): Mark => ({ text: mark.text, when: and(also, mark.when) });
 
 /** When the mark is drawn: its own state, inside whatever makes the reading visible at all. */
 export const marked = (mark: Mark, visible?: Expr): Expr => (visible === undefined ? mark.when : and(visible, mark.when));
@@ -69,6 +78,7 @@ export function mark(name: string, spec: Mark, x: number, y: number, fs: number,
     hAlign: opts.hAlign,
     width: opts.width,
     maxWidth: opts.maxWidth,
+    leftBind: opts.leftBind,
     visibleBind: marked(spec, visible),
   });
 }

@@ -34,9 +34,14 @@ describe('cards', () => {
       expect(label.text).toBe(card.label);
       expect(label.fontSize).toBe(15);
       expect(label.textColor).toBe('#5A6069');
-      const values = items.filter((i) => i.kind === 'text' && i.name !== `${card.id}.label` && !i.name.endsWith('denominator') && !i.name.endsWith('unit'));
+      // A mark is the one text of a card that is not laid in cells and cannot be: `∞` advances a
+      // third wider than the digit cell, so the session card's untimed mark is a proportional run
+      // beside its clock rather than a string the clock is bound to (#439).
+      const drawn = items.filter((i) => i.kind === 'text' && i.name !== `${card.id}.label` && !i.name.endsWith('denominator') && !i.name.endsWith('unit'));
+      const values = drawn.filter((i) => !i.name.endsWith('.mark'));
       expect(values.length).toBeGreaterThan(0);
       for (const v of values) if (v.kind === 'text') expect(v.monospace).toBeDefined();
+      for (const m of drawn.filter((i) => i.name.endsWith('.mark'))) if (m.kind === 'text') expect({ name: m.name, mono: m.monospace, widest: m.widest }).toMatchObject({ mono: undefined, widest: m.text });
     }
   });
 

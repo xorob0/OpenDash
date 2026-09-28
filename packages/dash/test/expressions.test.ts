@@ -87,12 +87,20 @@ describe('card expressions', () => {
     const value = formulaOf(textItem('session', 'value'), 'Text');
     expect(value).toBe(`if(${time}, if(${timed}, ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
     expect(value).toContain('/ (3600)');
-    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})), '#33383F', '#F5F7FA')`);
+    // Dim is the clock nobody is counting, which is the session that has not started. An untimed
+    // session is the third state and draws the `∞` mark beside this clock at full strength, so it is
+    // excluded from the dim here rather than folded in with the absence (#439).
+    const untimed = `(${secs}) >= (86400)`;
+    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})) and (!(${untimed})), '#33383F', '#F5F7FA')`);
+    const mark = textItem('session', 'mark');
+    expect({ text: mark.text, mono: mark.monospace, bound: mark.bindings?.Text }).toMatchObject({ text: '∞', mono: undefined, bound: undefined });
+    expect(formulaOf(mark, 'Visible')).toBe(`(${time}) and (${untimed})`);
+    expect(formulaOf(textItem('session', 'value'), 'Visible')).toBe(`!((${time}) and (${untimed}))`);
     const denominator = textItem('session', 'denominator');
     expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format([DataCorePlugin.GameData.TotalLaps], '0'))");
     expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and (([DataCorePlugin.GameData.TotalLaps]) > (0))`);
     expect(formulaOf(denominator, 'Left')).toContain('>= (100), 3');
-    for (const item of ['label', 'value', 'denominator'] as const) {
+    for (const item of ['label', 'value', 'mark', 'denominator'] as const) {
       const expressions = Object.values(textItem('session', item).bindings ?? {}).map((b) => (b && typeof b.formula === 'string' ? b.formula : ''));
       for (const e of expressions) expect(e.replace(/isnull\(\[OpenDash\.SessionProgress\], 'auto'\)/g, '')).not.toContain('OpenDash.');
     }

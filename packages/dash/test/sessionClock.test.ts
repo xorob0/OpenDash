@@ -6,9 +6,16 @@
  * so what is asserted is what a driver sees rather than what a call site was written with. #439.
  */
 import { describe, expect, test } from 'bun:test';
+import { BAR_FIELDS, PROPERTY_PREFIX, barFieldSettingName, type BarSlot } from '../src/contract.ts';
 import { measureText } from '../src/design/advances.ts';
+import { buildLayout } from '../src/dashboard.ts';
+import type { Item, TextItem } from '../src/generator.ts';
+import { LAYOUTS } from '../src/layouts/index.ts';
+import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
+import { ZONE_FACES, buildZoneFace, sizeOf } from '../src/zones/index.ts';
 import { NO_CLOCK, UNTIMED_MARK, UNTIMED_SECONDS, isUntimedSession, sessionClock } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
+import { walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const A_WEEK = 604800;
@@ -69,4 +76,127 @@ describe('the clock the surfaces bind', () => {
       });
     }
   });
+});
+
+/**
+ * Every place a session clock is drawn, over the packages as they ship.
+ *
+ * The bug was one surface out of five drawing the clock its own way, so the claim worth holding is
+ * not that a call site was edited but that no clock anywhere is left without its mark: the dash
+ * faces' bar and session card, the session module on every companion, and the pit wall's header and
+ * Session panel.
+ */
+describe('every session clock a package draws carries its mark', () => {
+  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+
+  /**
+   * A clock and the mark that stands in for it, paired by name, one screen at a time.
+   *
+   * One screen at a time because a face's two arrangements -- with the rev bar and without it -- are
+   * two screens of one dashboard drawing the same names at different heights, so a pair taken across
+   * a whole dashboard could match a mark against the other arrangement's clock.
+   */
+  const clocks = (items: Iterable<Item>): { value: TextItem; mark: TextItem }[] => {
+    const texts = [...items].filter((i): i is TextItem => i.kind === 'text');
+    const pairs: { value: TextItem; mark: TextItem }[] = [];
+    for (const mark of texts.filter((i) => i.name.endsWith('.mark'))) {
+      // A field names its two parts `<field>.value` and `<field>.mark`; a header part and a bar slot
+      // name the mark after the value's own name, so both spellings are looked for.
+      const base = mark.name.slice(0, -'.mark'.length);
+      const value = texts.find((i) => i.name === `${base}.value`) ?? texts.find((i) => i.name === base);
+      if (value === undefined) throw new Error(`${mark.name} stands in for nothing`);
+      pairs.push({ value, mark });
+    }
+    return pairs;
+  };
+
+  /** What a package's clocks are called, without the screen, zone or slot that carries them. */
+  const fieldsOf = (pairs: { mark: TextItem }[]): string[] => [...new Set(pairs.map((p) => p.mark.name.replace(/^.*?([A-Za-z]+)\.mark$/, '$1')))].sort();
+
+  /**
+   * The pair, held to the rule: the mark is drawn in the state the clock cannot read, the clock in
+   * the other two, and never both at once.
+   *
+   * `chosen` is what else has to be true for the reading to be drawn at all -- on the bar, the slot
+   * setting naming this field, since a slot draws all ten of the catalogue and shows one.
+   */
+  const expectPaired = (where: string, pairs: { value: TextItem; mark: TextItem }[], chosen: (markName: string) => Props = () => ({})): void => {
+    for (const { value, mark } of pairs) {
+      // The mark is the glyph, set proportionally and measured from itself; the clock is the cells.
+      expect({ where, mark: mark.name, text: mark.text, mono: mark.monospace, widest: mark.widest, bound: mark.bindings?.Text }).toMatchObject({
+        text: UNTIMED_MARK,
+        mono: undefined,
+        widest: UNTIMED_MARK,
+        bound: undefined,
+      });
+      expect({ where, value: value.name, mono: value.monospace !== undefined }).toMatchObject({ mono: true });
+      // Complementary, and complementary in the sim's terms rather than by string: exactly one of
+      // the two is drawn in each of the three states a session clock has.
+      for (const [secs, drawn] of [[1800, 'value'], [0, 'value'], [A_WEEK, 'mark']] as const) {
+        const props: Props = { ...game(secs), 'OpenDash.SessionProgress': 'time', ...chosen(mark.name) };
+        const shown = ([['value', value], ['mark', mark]] as const).filter(([, item]) => {
+          const formula = item.bindings?.Visible?.formula;
+          if (formula === undefined) return true;
+          return evalNcalc(String(typeof formula === 'string' ? formula : formula.expression), props) === true;
+        });
+        expect({ where, mark: mark.name, secs, shown: shown.map(([which]) => which) }).toEqual({ where, mark: mark.name, secs, shown: [drawn] });
+      }
+      // And it is drawn where the clock is, on the same line and at the same size, inside the room
+      // the clock was given: a mark that needed room of its own would move the field it sits in.
+      expect({ where, mark: mark.name, top: mark.rect.top, fs: mark.fontSize }).toMatchObject({ top: value.rect.top, fs: value.fontSize });
+      const room = { left: value.rect.left, right: value.rect.left + value.rect.width };
+      const ink = measureText(mark.fontWeight === 'Bold' ? 'BarlowCondensedBold' : 'BarlowCondensedSemiBold', UNTIMED_MARK, mark.fontSize);
+      const left = mark.hAlign === 'right' ? mark.rect.left + mark.rect.width - ink : mark.rect.left;
+      expect({ where, mark: mark.name, inside: left >= room.left && left + ink <= room.right }).toMatchObject({ inside: true });
+    }
+  };
+
+  for (const layout of ZONE_FACES) {
+    test(`${layout.folder}: the bar's two clock fields, and the session module in its zones`, () => {
+      const { main, zones } = buildZoneFace(layout, OPTS);
+      const pairs = [main, ...zones].flatMap((dashboard) => dashboard.screens.flatMap((screen) => clocks(walkItems(screen.items))));
+      // Both catalogue clocks, in every slot the face has: a slot draws all ten fields and shows the
+      // one the driver chose, so a face with two fields per end carries four slots' worth. This is
+      // the field the bug was photographed on -- `raceTime` is the default of the first slot. The
+      // 800 x 286 face has no bar at all, and its session module is where its clock is.
+      const bar = fieldsOf(pairs.filter((p) => p.mark.name.includes('bar.')));
+      expect({ face: layout.folder, bar }).toMatchObject({ bar: sizeOf(layout).hasBar ? ['raceTime', 'timeLeft'] : [] });
+      expect({ face: layout.folder, module: fieldsOf(pairs.filter((p) => !p.mark.name.includes('bar.'))) }).toMatchObject({ module: ['timeLeft'] });
+      const chosen = (markName: string): Props => {
+        const slot = /bar\.(Left1|Left2|Right1|Right2)\.([A-Za-z]+)\.mark$/.exec(markName);
+        if (slot === null) return {};
+        const number = BAR_FIELDS.find((f) => f.id === slot[2])?.number;
+        if (number === undefined) throw new Error(`the catalogue has no bar field ${String(slot[2])}`);
+        return { [`${PROPERTY_PREFIX}.${barFieldSettingName(sizeOf(layout), slot[1] as BarSlot)}`]: number };
+      };
+      expectPaired(layout.folder, pairs, chosen);
+    });
+  }
+
+  for (const layout of LAYOUTS) {
+    test(`${layout.folder}: the session card`, () => {
+      const { main, cards } = buildLayout(layout, OPTS);
+      const pairs = [main, cards].flatMap((dashboard) => dashboard.screens.flatMap((screen) => clocks(walkItems(screen.items))));
+      expect({ face: layout.folder, card: fieldsOf(pairs) }).toMatchObject({ card: ['session'] });
+      expect({ face: layout.folder, clocks: pairs.length }).toMatchObject({ clocks: 1 });
+      expectPaired(layout.folder, pairs);
+    });
+  }
+
+  for (const def of SCREEN_PACKAGES) {
+    test(`${def.folder}: every clock of every screen`, () => {
+      const pkg = buildScreenPackage(def, OPTS);
+      let found = 0;
+      for (const dashboard of pkg.dashboards) {
+        for (const screen of dashboard.screens) {
+          const pairs = clocks(walkItems(screen.items));
+          found += pairs.length;
+          expectPaired(`${def.folder} ${dashboard.name} ${screen.name}`, pairs);
+        }
+      }
+      // The pit walls draw one in their header and one in their Session panel, the companions one in
+      // the session module of every page that carries it.
+      expect({ folder: def.folder, found: found > 0 }).toMatchObject({ found: true });
+    });
+  }
 });

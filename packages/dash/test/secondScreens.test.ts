@@ -127,14 +127,32 @@ describe('the packages are built and valid', () => {
       const chrome = (name: string): boolean =>
         name.endsWith('.wordmark.open') || name.endsWith('.wordmark.dash') || (name.includes('.flagFull.') && name.endsWith('.name'));
       let values = 0;
+      let marks = 0;
       for (const dashboard of pkg.dashboards) {
         for (const item of textsOf(dashboard)) {
           if (item.font !== ds.font.data || chrome(item.name)) continue;
+          // A mark is the same kind of text as a flag layer's name and the opposite kind of value: it
+          // says which *state* the reading is in, `∞` for a session with no clock, so the glyph is
+          // fixed by which item it is and the binding that has to be there is the Visible. Bound
+          // Text on one would be a mark asking what it stood for; an unbound Visible would be a mark
+          // drawn over the clock it replaces (#439).
+          if (item.name.endsWith('.mark')) {
+            marks += 1;
+            expect({ dashboard: dashboard.name, item: item.name, text: item.bindings?.Text, visible: item.bindings?.Visible?.formula !== undefined }).toMatchObject({
+              text: undefined,
+              visible: true,
+            });
+            continue;
+          }
           values += 1;
           expect({ dashboard: dashboard.name, item: item.name, text: item.text, bound: item.bindings?.Text?.formula !== undefined }).toMatchObject({ bound: true });
         }
       }
       expect(values).toBeGreaterThan(0);
+      // Every second screen draws a session clock -- the companions through the session module, the
+      // pit walls through their header and their Session panel -- so every one of them carries the
+      // mark that stands in for it.
+      expect(marks).toBeGreaterThan(0);
     });
 
     test(`${def.folder} fits every text in its box`, () => {

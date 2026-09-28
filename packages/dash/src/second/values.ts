@@ -696,8 +696,11 @@ export const UNTIMED_MARK = '∞';
  * from the item beside this one, and this clock is hidden while that mark is shown. Folding the two
  * states into one placeholder is what the four agreeing surfaces did, and it tells a driver in a
  * thirty-lap race that the dash has no reading where it has one.
+ *
+ * `hms` and not {@link clock}: `clock`'s own guard is the lower half of `isTimedSession`'s window, so
+ * writing both nests the same comparison twice in a binding SimHub evaluates every frame.
  */
-export const sessionClock = (): Expr => iff(isTimedSession(), clock(sessionTimeLeft()), str(NO_CLOCK));
+export const sessionClock = (): Expr => iff(isTimedSession(), hms(sessionTimeLeft()), str(NO_CLOCK));
 
 /** The mark that replaces the session clock where the session has no clock. */
 export const untimedMark = (): Mark => ({ text: UNTIMED_MARK, when: isUntimedSession() });
