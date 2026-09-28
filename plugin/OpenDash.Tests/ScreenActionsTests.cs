@@ -173,13 +173,26 @@ namespace OpenDashPlugin.Tests
             var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             var start = source.IndexOf("private void AttachActions(PluginManager pluginManager)", StringComparison.Ordinal);
             Assert.True(start >= 0);
-            var body = source.Substring(start);
+            var end = source.IndexOf("\n        }\n", start, StringComparison.Ordinal);
+            Assert.True(end > start);
+            var body = source.Substring(start, end - start);
             Assert.Contains("ScreenActions.Register(() => Settings,", body);
             Assert.Contains("pluginManager.AddAction(", body);
+            // The one registration in the file, and it is inside ScreenActions.Register's delegate: a second
+            // AddAction with a name spelled by hand, here or anywhere in OpenDash.cs, fails this.
+            Assert.Equal(1, Occurrences(source, ".AddAction("));
+            Assert.Equal(1, Occurrences(body, ".AddAction("));
             Assert.DoesNotContain("this.AddAction(", source);
             Assert.DoesNotContain("Contract.NextModuleActionFor(", source);
             Assert.DoesNotContain("Contract.HoldQuickGlanceActionFor(", source);
             Assert.DoesNotContain("Contract.CycleZoneAction(", source);
+        }
+
+        private static int Occurrences(string text, string needle)
+        {
+            var count = 0;
+            for (var at = text.IndexOf(needle, StringComparison.Ordinal); at >= 0; at = text.IndexOf(needle, at + needle.Length, StringComparison.Ordinal)) count++;
+            return count;
         }
     }
 }
