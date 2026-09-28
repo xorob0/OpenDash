@@ -1,7 +1,6 @@
 {
   "name": "opendash",
   "private": true,
-  "version": "0.1.0",
   "description": "An open-source SimHub dashboard generated from TypeScript and design tokens, with a plugin that installs it and exposes its settings.",
   "license": "MIT",
   "type": "module",

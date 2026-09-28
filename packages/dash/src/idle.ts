@@ -35,8 +35,9 @@
  *
  * ## What it draws
  *
- * The wordmark, the wall clock, and one line naming the state. Nothing else, and in particular no
- * reading that does not exist without a game: a last best lap, the car, the driver and the session are
+ * The wordmark, the wall clock, and one line naming the state -- and, only when there is a release to
+ * offer, the update mark below. Nothing else, and in particular no reading that does not exist without
+ * a game: a last best lap, the car, the driver and the session are
  * all a game's to publish, and a row of dashes where one of them would go is the thing the racing face
  * was already doing wrong. `docs/design/voice.md` is why the line reads "NO GAME RUNNING" rather than
  * a sentence about SimHub waiting for telemetry -- it names the state and leaves the mechanism out.
@@ -46,9 +47,24 @@
  * to be taken apart first. {@link IDLE_BLOCKS} is the list, and {@link idleItems} is the only thing
  * that knows where they go.
  *
- * **The room under the state line is deliberately left empty.** #755 puts "an update is available"
- * there, this being the one dashboard surface where a message costs nothing, and it is out of scope
- * here: a fourth block on the end of the stack is all it should need.
+ * ## The update mark
+ *
+ * One more line, and not part of the stack: when the plugin has heard of a newer release, a small label
+ * in the corner says so and says where to take it -- `UPDATE TO 0.4.0 IN SIMHUB`. #755. This is the one
+ * dashboard surface where a message costs nothing, because nobody is driving while it is up, and the
+ * racing screens never carry it.
+ *
+ * It is a corner rather than a fourth block, which is where this comment used to say it would go,
+ * because the ticket asks for a mark small enough to ignore and a line in the stack is read as part of
+ * what the screen is saying. The bottom-right corner on a rectangle; on a round face, which has no
+ * corner, the lowest line the disc holds it on. It is drawn only where it fits without touching the
+ * stack, and shed otherwise -- the same rule every block follows -- and `idle.test.ts` records that every
+ * package the build emits keeps it.
+ *
+ * It is silent in every case but one. `OpenDash.UpdateAvailable` gates it with an `isnull()` default of
+ * false, so a package running without the plugin draws nothing, and the plugin publishes false with the
+ * update check switched off, before any answer, and once the rig runs the release; the absence of the
+ * plugin is never a condition that triggers anything.
  */
 import type { Hex, Rect, Screen, TextItem } from './generator.ts';
 import { wordmark, wordmarkWidth } from './components/wordmark.ts';
@@ -58,6 +74,8 @@ import { centre, distance, rect, type Circle } from './design/geometry.ts';
 import { label } from './elements/label.ts';
 import { numeral } from './elements/numeral.ts';
 import { CHARS, localClock } from './second/values.ts';
+import { setting, UPDATE_VERSION_CHARACTERS, UPDATE_VERSION_MAX_LENGTH } from './contract.ts';
+import { ncalc } from './generator.ts';
 import { ds } from './tokens.ts';
 
 /** The screen's name, which is what SimHub's screen list and the plugin's preview show. */
@@ -72,6 +90,22 @@ export const IDLE_SCREEN_NAME = 'Idle';
  * the same thing as one installed with it.
  */
 export const IDLE_STATE = 'No game running';
+
+/**
+ * What the update mark says, around the version it names. Upper case, as every label is, and in the
+ * form `docs/design/voice.md` asks of a message: what to do and where, never how the plugin found out.
+ */
+export const IDLE_UPDATE_LEAD = 'UPDATE TO ';
+export const IDLE_UPDATE_TAIL = ' IN SIMHUB';
+/** The same message with no version to name, which is what a version too long for the box draws. */
+export const IDLE_UPDATE_BARE = 'UPDATE AVAILABLE IN SIMHUB';
+
+/** The mark's size and ink: the small label, in the label grey, so that it is there to be ignored. */
+const UPDATE_SIZE = ds.size.labelSm;
+const UPDATE_COLOR = ds.color.text.label;
+
+/** How far the mark keeps from the stack's ink, so the two never read as one line. */
+const UPDATE_CLEARANCE = ds.space[4];
 
 /** The design-time sample of the clock; the binding writes the real one. */
 const CLOCK_SAMPLE = '14:32';
@@ -192,6 +226,79 @@ function stack(blocks: readonly IdleBlock[], step: IdleStep, prefix: string, cx:
   return { items, ink };
 }
 
+/**
+ * The widest text the update mark's binding can draw: the plugin's longest version
+ * (`UPDATE_VERSION_MAX_LENGTH`) in the widest character it may be written in, between the lead and the
+ * tail -- or the bare message, should that ever be the wider.
+ *
+ * Measured rather than sampled, because the version is the plugin's and a sample is one version out of
+ * all of them; the plugin holds its end of the bound in `UpdateMark.Shown`.
+ */
+export function updateMarkWidest(fs: number = UPDATE_SIZE): string {
+  const widestChar = [...UPDATE_VERSION_CHARACTERS].reduce((a, b) => (measureText('BarlowMedium', b, fs) > measureText('BarlowMedium', a, fs) ? b : a));
+  const named = `${IDLE_UPDATE_LEAD}${widestChar.repeat(UPDATE_VERSION_MAX_LENGTH)}${IDLE_UPDATE_TAIL}`;
+  return measureText('BarlowMedium', named, fs) >= measureText('BarlowMedium', IDLE_UPDATE_BARE, fs) ? named : IDLE_UPDATE_BARE;
+}
+
+/**
+ * The mark's text: the version when the plugin names one, and the bare message when it publishes an
+ * empty string, which it does for a version longer than the box was measured for.
+ */
+export function updateMarkText(): string {
+  const { concat, eq, iff, str } = ncalc;
+  const version = setting.updateVersion();
+  return iff(eq(version, str('')), str(IDLE_UPDATE_BARE), concat(str(IDLE_UPDATE_LEAD), version, str(IDLE_UPDATE_TAIL)));
+}
+
+/** Whether the mark is drawn: only when the plugin says a newer release exists. */
+export const updateMarkVisible = (): string => ncalc.eq(setting.updateAvailable(), 'true');
+
+const overlaps = (a: Rect, b: Rect, gap: number): boolean =>
+  a.left < b.left + b.width + gap && b.left < a.left + a.width + gap && a.top < b.top + b.height + gap && b.top < a.top + a.height + gap;
+
+/**
+ * The update mark, in the corner of the frame, or nothing where it cannot be drawn clear of the stack.
+ *
+ * The box is measured from {@link updateMarkWidest} and is the ink the fit is judged on, which is
+ * generous for every version but the widest and exact for that one: the text is right aligned on a
+ * rectangle so that a short version still sits in the corner, and centred on a disc.
+ */
+function updateMark(spec: IdleSpec, stackInk: readonly Rect[]): TextItem[] {
+  const name = `${spec.prefix ?? 'idle.'}update`;
+  const fs = UPDATE_SIZE;
+  const widest = updateMarkWidest(fs);
+  const width = Math.ceil(measureText('BarlowMedium', widest, fs)) + 2;
+  const disc = spec.disc;
+  const room = rect(spec.frame.left + IDLE_MARGIN, spec.frame.top + IDLE_MARGIN, spec.frame.width - 2 * IDLE_MARGIN, spec.frame.height - 2 * IDLE_MARGIN);
+  // The line box's height and its offset from the canvas y it is asked for, read off a label drawn at 0.
+  const probe = label(name, IDLE_UPDATE_BARE, 0, 0, width, { size: fs });
+  let x: number;
+  let bottom: number;
+  if (disc) {
+    // The lowest line whose two bottom corners the disc still holds, centred on the disc.
+    x = Math.round(disc.cx - width / 2);
+    bottom = Math.floor(disc.cy + Math.sqrt(Math.max(0, disc.r * disc.r - (width / 2) ** 2)));
+  } else {
+    x = room.left + room.width - width;
+    bottom = room.top + room.height;
+  }
+  bottom = Math.min(bottom, room.top + room.height);
+  const y = bottom - (probe.rect.top + probe.rect.height);
+  const item = label(name, IDLE_UPDATE_BARE, x, y, width, {
+    size: fs,
+    color: UPDATE_COLOR,
+    hAlign: disc ? 'center' : 'right',
+    bind: updateMarkText(),
+    widest,
+    visibleBind: updateMarkVisible(),
+  });
+  const box = item.rect;
+  if (!inside(room, box) || !inside(spec.frame, box)) return [];
+  if (disc && corners(box).some((c) => distance(c, { x: disc.cx, y: disc.cy }) > disc.r)) return [];
+  if (stackInk.some((ink) => overlaps(ink, box, UPDATE_CLEARANCE))) return [];
+  return [item];
+}
+
 /** The union of a set of boxes, which is what a drawing is centred by. */
 const boundsOf = (boxes: readonly Rect[]): Rect => {
   const l = Math.min(...boxes.map((b) => b.left));
@@ -269,16 +376,24 @@ function placed(blocks: readonly IdleBlock[], step: IdleStep, spec: IdleSpec): I
  * somebody adds later gets the wordmark rather than an exception.
  */
 export function idleItems(spec: IdleSpec): TextItem[] {
+  // The stack first and the mark after it, so the mark can never cost the stack a rung: it goes in the
+  // room the stack leaves, or it does not go.
+  const drawing = idleStack(spec);
+  return [...drawing.items, ...updateMark(spec, drawing.ink)];
+}
+
+/** The stack at the largest step that fits, shedding from the end when none does. */
+function idleStack(spec: IdleSpec): IdleDrawing {
   for (let keep = IDLE_BLOCKS.length; keep > 0; keep--) {
     const blocks = IDLE_BLOCKS.slice(0, keep);
     for (const step of IDLE_STEPS) {
       const drawing = placed(blocks, step, spec);
-      if (fits(drawing, spec)) return drawing.items;
+      if (fits(drawing, spec)) return drawing;
     }
   }
   // The wordmark alone at the smallest step, on a frame no larger than a few words. Returned rather
   // than thrown, because a screen that draws nothing is worse than one that draws its own name large.
-  return placed(['wordmark'], IDLE_STEPS[IDLE_STEPS.length - 1]!, spec).items;
+  return placed(['wordmark'], IDLE_STEPS[IDLE_STEPS.length - 1]!, spec);
 }
 
 export interface IdleScreenSpec extends IdleSpec {

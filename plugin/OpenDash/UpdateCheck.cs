@@ -47,6 +47,17 @@ namespace OpenDashPlugin
             || (Manual && (State == UpdateState.UpToDate || State == UpdateState.Unreachable));
 
         public string Line => UpdateWording.Line(this);
+
+        /// <summary>The same answer, owed to a person who pressed the button: see <see cref="Manual"/>.</summary>
+        public UpdateStatus AsManual() => new UpdateStatus
+        {
+            State = State,
+            InstalledVersion = InstalledVersion,
+            LatestVersion = LatestVersion,
+            Notes = Notes,
+            Url = Url,
+            Manual = true,
+        };
     }
 
     public static class UpdateCheck
@@ -93,6 +104,17 @@ namespace OpenDashPlugin
 
         /// <summary>Not within a day of the last answer, which ADR 0012 sets and nothing else depends on.</summary>
         public static readonly TimeSpan Interval = TimeSpan.FromHours(24);
+
+        /// <summary>
+        /// Whether an automatic check may still ask in this start of SimHub: once, and never again after it.
+        /// </summary>
+        /// <remarks>
+        /// ShouldCheck's interval moves only on a real answer, so after an unreachable one it keeps saying yes,
+        /// and without this a rig with no network asked again from the panel as soon as the check Init queued
+        /// had failed, and once more every time the panel was built. ADR 0012 says at most once per start and
+        /// no repeated retry. A press of the button is a person asking, so it is not held to this. #755.
+        /// </remarks>
+        public static bool MayAskThisStart(bool manual, bool automaticAlreadyAsked) => manual || !automaticAlreadyAsked;
 
         /// <summary>
         /// Whether a request may be constructed at all. The setting is read here, before anything is built, so

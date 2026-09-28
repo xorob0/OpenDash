@@ -198,6 +198,15 @@ It draws the **wordmark**, not the mark, and it draws it only while there is not
 game is running, the screen would otherwise be a rev bar at zero, and saying whose dashboard this is
 costs a driver nothing. The moment a game starts SimHub is back on the face, where the rule holds.
 
+It carries one more thing on the same reasoning, and only when there is something to say: when the
+plugin has found a newer release, a small label in the corner reads `UPDATE TO 0.4.0 IN SIMHUB`
+(#755). The small label size in the label grey, bottom right on a rectangle and at the foot of the disc
+on a round face, so it is there to be ignored. **The canvas does not draw it yet**: its one idle
+artboard, in `PagesAndAlerts.dc.html`, has the wordmark and a state line and no mark, so the size,
+the grey, the corner and the wording are the code's choice from the tokens and owe the canvas a
+drawing. The artboard's state line also still reads "Waiting for iRacing" where the screen reads "No
+game running", which #763 chose and this does not change.
+
 ## Open questions
 
 Shift-light thresholds are settled, and no longer the way this section first said. They are the

@@ -42,8 +42,11 @@ namespace OpenDashPlugin.Tests
             var unreachable = Contract.SharedPropertyNames()
                 // The twelve slots are the card face's own and sit on that screen's pane, which writes
                 // them through Contract.SlotProperty rather than by name. ShiftLights has no control
-                // because RevBar supersedes it and SetRevBar writes both; the two cannot disagree.
+                // because RevBar supersedes it and SetRevBar writes both; the two cannot disagree. The
+                // idle screen's two are published rather than chosen, and the one setting behind them is
+                // the update check's switch on the Install tab (#755).
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
+                .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion)
                 .Where(name => !sources.Contains("Settings." + name) && !sources.Contains("Set" + name))
                 .ToArray();
             Assert.Equal(Array.Empty<string>(), unreachable);

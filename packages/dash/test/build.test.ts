@@ -104,9 +104,13 @@ describe('contract', () => {
     // The two driver-name settings are shared and are not in the list, for a third reason: a card
     // face names nobody. No card lists other cars, so nothing on it asks how a driver is written,
     // where the zone face's leaderboard, relative and opponents pages all do. A shared property a
-    // screen *may* read is not one it has to.
+    // screen *may* read is not one it has to. The idle screen's two are read here like every shared
+    // one, by the update mark every package's idle screen carries (#755).
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
-    const unread = new Set([...zoneProperties(), `${PROPERTY_PREFIX}.${DRIVER_NAME_FORMAT_SETTING}`, `${PROPERTY_PREFIX}.${DRIVER_NAME_TEAM_SETTING}`]);
+    const unread = new Set([
+      ...zoneProperties(),
+      ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`),
+    ]);
     const zoneProps = new Set(zoneProperties());
     const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_FLASHES, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);
     expect([...all].sort()).toEqual([...[...dashProperties()].filter((p) => !unread.has(p)), ...carBar].sort());

@@ -70,6 +70,10 @@ import {
   setting,
   SLOT_MAX,
   slotSettingName,
+  UPDATE_AVAILABLE,
+  UPDATE_VERSION,
+  UPDATE_VERSION_CHARACTERS,
+  UPDATE_VERSION_MAX_LENGTH,
 } from '../src/contract.ts';
 import { CARDS } from '../src/cards/index.ts';
 
@@ -124,12 +128,12 @@ describe('settings', () => {
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
     ]);
-    // The lone 4 is RevBar, the blue flag detail and the two that decide how a driver is named, which
-    // every screen shares with the four modes and the twelve slots.
+    // The lone 6 is RevBar, the blue flag detail, the two that decide how a driver is named and the
+    // idle screen's two, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        4 +
+        6 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -166,8 +170,9 @@ describe('settings', () => {
     // bar's gate had to be published as well, the rig-wide rev light style it first read having
     // had no writer in the panel since the styles went per bar, and 344 before the same bar had
     // to be told whether the car has a flash to give at all, because 47 of the 85 measured cars
-    // publish none and OpenDash's own redline flash was going out with them.
-    expect(props).toHaveLength(345);
+    // publish none and OpenDash's own redline flash was going out with them. And 345 before the
+    // idle screen could say that a newer release exists, and which (#755).
+    expect(props).toHaveLength(347);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -184,6 +189,10 @@ describe('settings', () => {
     // formats reads best is a fact about the reader, not about the screen they are reading.
     expect(props[6 + SLOT_MAX]).toBe('OpenDash.DriverNameFormat');
     expect(props[7 + SLOT_MAX]).toBe('OpenDash.DriverNameTeam');
+    // And the idle screen's two, appended for the same reason and shared because every package ends
+    // with an idle screen. Published rather than chosen. #755.
+    expect(props[8 + SLOT_MAX]).toBe('OpenDash.UpdateAvailable');
+    expect(props[9 + SLOT_MAX]).toBe('OpenDash.UpdateVersion');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -280,6 +289,8 @@ describe('settings', () => {
         BLUE_FLAG_DETAIL_SETTING,
         DRIVER_NAME_FORMAT_SETTING,
         DRIVER_NAME_TEAM_SETTING,
+        UPDATE_AVAILABLE,
+        UPDATE_VERSION,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -513,6 +524,15 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const bool DefaultDriverNameTeam = ${String(DEFAULTS.DriverNameTeam)};`);
     expect(panelSource()).toContain('Contract.DriverNameFormats');
     expect(panelSource()).toContain('Settings.DriverNameTeam');
+    // The idle screen's two, attached and bounded alike on both sides: the mark's box is measured here
+    // for the longest version the plugin will publish, so the plugin's bound and this one are one bound.
+    expect(source).toContain(`public const string ${UPDATE_AVAILABLE} = "${UPDATE_AVAILABLE}";`);
+    expect(source).toContain(`public const string ${UPDATE_VERSION} = "${UPDATE_VERSION}";`);
+    expect(source).toContain(`public const int UpdateVersionMaxLength = ${UPDATE_VERSION_MAX_LENGTH};`);
+    expect(source).toContain(`public const string UpdateVersionCharacters = "${UPDATE_VERSION_CHARACTERS}";`);
+    for (const name of [UPDATE_AVAILABLE, UPDATE_VERSION]) {
+      expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
+    }
     for (const name of [DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING]) {
       expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
     }

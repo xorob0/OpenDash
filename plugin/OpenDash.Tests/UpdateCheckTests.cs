@@ -51,6 +51,25 @@ namespace OpenDashPlugin.Tests
             Assert.True(UpdateCheck.ShouldCheck(true, future, Now, manual: false));
         }
 
+        // MayAskThisStart
+
+        [Fact]
+        public void An_automatic_check_asks_once_per_start_even_after_an_answer_nobody_could_read()
+        {
+            // The interval does not move on an unreachable answer, so ShouldCheck alone would let the panel ask
+            // again straight after Init's check failed. #755.
+            Assert.True(UpdateCheck.ShouldCheck(true, 0, Now, manual: false));
+            Assert.True(UpdateCheck.MayAskThisStart(manual: false, automaticAlreadyAsked: false));
+            Assert.False(UpdateCheck.MayAskThisStart(manual: false, automaticAlreadyAsked: true));
+        }
+
+        [Fact]
+        public void A_press_of_the_button_is_not_held_to_once_per_start()
+        {
+            Assert.True(UpdateCheck.MayAskThisStart(manual: true, automaticAlreadyAsked: true));
+            Assert.True(UpdateCheck.MayAskThisStart(manual: true, automaticAlreadyAsked: false));
+        }
+
         // ComparableInstalled
 
         [Fact]

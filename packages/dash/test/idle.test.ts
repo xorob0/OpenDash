@@ -14,7 +14,11 @@
 import { describe, expect, test } from 'bun:test';
 import { composePackages } from '../src/build.ts';
 import { rect } from '../src/design/geometry.ts';
-import { IDLE_BLOCKS, IDLE_MARGIN, IDLE_SCREEN_NAME, IDLE_STATE, idleItems, idleScreen } from '../src/idle.ts';
+import { IDLE_BLOCKS, IDLE_MARGIN, IDLE_SCREEN_NAME, IDLE_STATE, IDLE_UPDATE_BARE, idleItems, idleScreen, updateMarkText, updateMarkVisible, updateMarkWidest } from '../src/idle.ts';
+import { UPDATE_AVAILABLE, UPDATE_VERSION, UPDATE_VERSION_MAX_LENGTH } from '../src/contract.ts';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { evalNcalc } from './ncalcEval.ts';
 import { INNER_INSET } from '../src/layouts/round.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { ds } from '../src/tokens.ts';
@@ -119,16 +123,21 @@ describe('every package idles on a screen of its own', () => {
 });
 
 describe('what it draws', () => {
-  test('the wordmark, the clock and the state, and nothing that needs a game', () => {
+  test('the wordmark, the clock, the state and the update mark, and nothing that needs a game', () => {
     for (const { folder, main } of MAINS) {
       const items = textsOf(idleOf(main));
       const names = items.map((i) => i.name);
-      expect({ folder, names }).toEqual({ folder, names: ['idle.wordmark.open', 'idle.wordmark.dash', 'idle.clock', 'idle.state'] });
-      // One binding on the whole screen, and it is SimHub's own clock. Anything else -- a best lap, a
-      // car, a driver, a session -- is a game's to publish, and a screen shown because no game is
-      // running would draw it as a dash.
+      // The mark on every package: it is shed where it cannot be drawn clear of the stack, and nothing
+      // the build emits is such a frame. A package that lost it would say so here.
+      expect({ folder, names }).toEqual({ folder, names: ['idle.wordmark.open', 'idle.wordmark.dash', 'idle.clock', 'idle.state', 'idle.update'] });
+      // Three bindings on the whole screen: SimHub's own clock, and the mark's text and visibility,
+      // which are the plugin's. Anything else -- a best lap, a car, a driver, a session -- is a game's to
+      // publish, and a screen shown because no game is running would draw it as a dash.
       const bound = items.flatMap((i) => Object.entries(i.bindings ?? {}).map(([target, b]) => `${i.name}.${target}=${typeof b?.formula === 'string' ? b.formula : b?.formula.expression}`));
-      expect({ folder, bound }).toEqual({ folder, bound: ["idle.clock.Text=format([DataCorePlugin.CurrentDateTime], 'HH:mm')"] });
+      expect({ folder, bound }).toEqual({
+        folder,
+        bound: ["idle.clock.Text=format([DataCorePlugin.CurrentDateTime], 'HH:mm')", `idle.update.Text=${updateMarkText()}`, `idle.update.Visible=${updateMarkVisible()}`],
+      });
     }
   });
 
@@ -267,13 +276,84 @@ describe('it fits every frame the build emits', () => {
 });
 
 describe('it costs the packages nothing they were not already carrying', () => {
-  test('the idle screen draws no property of the plugin’s, so no package reads a setting for it', () => {
-    // A face reads its own group and the shared settings; an idle screen that read one would be a
-    // screen whose content depends on a plugin the package does not require.
+  test('the idle screen reads the plugin for the update mark and nothing else', () => {
+    // An idle screen whose content depended on a plugin setting would be a screen that changes with a
+    // plugin the package does not require. The mark is the one exception, and it is an exception only
+    // in the direction of silence: both reads carry a default that draws nothing (below).
     for (const { folder, main } of MAINS) {
       const items = itemsOf({ ...main, screens: [idleOf(main)] });
       const properties = items.flatMap((i) => Object.values(i.bindings ?? {}).map((b) => (typeof b?.formula === 'string' ? b.formula : (b?.formula.expression ?? ''))));
-      expect({ folder, opendash: properties.filter((p) => p.includes('[OpenDash.')) }).toEqual({ folder, opendash: [] });
+      const read = [...new Set(properties.flatMap((p) => [...p.matchAll(/\[(OpenDash\.[A-Za-z0-9]+)\]/g)].map((m) => m[1]!)))].sort();
+      expect({ folder, read }).toEqual({ folder, read: [`OpenDash.${UPDATE_AVAILABLE}`, `OpenDash.${UPDATE_VERSION}`] });
     }
+  });
+});
+
+describe('the update mark', () => {
+  const AVAILABLE = `OpenDash.${UPDATE_AVAILABLE}`;
+  const VERSION = `OpenDash.${UPDATE_VERSION}`;
+  const shown = (props: Record<string, unknown>): string | null => (evalNcalc(updateMarkVisible(), props) === true ? String(evalNcalc(updateMarkText(), props)) : null);
+
+  test('without the plugin it draws nothing: the absence of the plugin triggers nothing', () => {
+    // ADR 0003's promise, and the ticket's rule in particular: a user running the dashboard alone is a
+    // supported user, not an incomplete installation.
+    expect(shown({})).toBeNull();
+  });
+
+  test('it is silent whenever the plugin says there is nothing to offer', () => {
+    // Up to date, the check switched off, no answer yet, no network: the plugin publishes false for all
+    // of them (UpdateMark in the plugin, and UpdateMarkTests.cs), and false is silence here.
+    expect(shown({ [AVAILABLE]: false, [VERSION]: '' })).toBeNull();
+    expect(shown({ [AVAILABLE]: false, [VERSION]: '0.4.0' })).toBeNull();
+  });
+
+  test('it names the release and where to take it, and says so without a number it could not fit', () => {
+    expect(shown({ [AVAILABLE]: true, [VERSION]: '0.4.0' })).toBe('UPDATE TO 0.4.0 IN SIMHUB');
+    expect(shown({ [AVAILABLE]: true, [VERSION]: '0.10.0-rc.10' })).toBe('UPDATE TO 0.10.0-rc.10 IN SIMHUB');
+    expect(shown({ [AVAILABLE]: true, [VERSION]: '' })).toBe(IDLE_UPDATE_BARE);
+    expect(shown({ [AVAILABLE]: true })).toBe(IDLE_UPDATE_BARE);
+  });
+
+  test('its box holds the longest version the plugin will publish, and the version this repository is at', () => {
+    const version = readFileSync(join(import.meta.dir, '..', '..', '..', 'VERSION'), 'utf8').trim();
+    expect(version.length).toBeLessThanOrEqual(UPDATE_VERSION_MAX_LENGTH);
+    const widest = updateMarkWidest();
+    for (const { folder, main } of MAINS) {
+      const mark = textsOf(idleOf(main)).find((i) => i.name === 'idle.update')!;
+      expect({ folder, widest: mark.widest }).toEqual({ folder, widest });
+      for (const drawn of [shown({ [AVAILABLE]: true, [VERSION]: version })!, IDLE_UPDATE_BARE]) {
+        expect({ folder, drawn, fits: measureText('BarlowMedium', drawn, mark.fontSize) <= mark.rect.width }).toMatchObject({ fits: true });
+      }
+    }
+  });
+
+  test('it is small, in the corner, and clear of everything else on the screen', () => {
+    for (const { folder, main } of MAINS) {
+      const items = textsOf(idleOf(main));
+      const mark = items.find((i) => i.name === 'idle.update')!;
+      // Small enough to ignore: the small label, in the label grey, never larger than the state line.
+      expect({ folder, size: mark.fontSize, color: mark.textColor }).toEqual({ folder, size: ds.size.labelSm, color: ds.color.text.label });
+      // Clear of the stack, measured on the boxes rather than the letters, which is the stricter of the two.
+      for (const other of items.filter((i) => i !== mark)) {
+        const a = mark.rect;
+        const b = other.rect;
+        const apart = a.left >= b.left + b.width || b.left >= a.left + a.width || a.top >= b.top + b.height || b.top >= a.top + a.height;
+        expect({ folder, other: other.name, apart }).toMatchObject({ apart: true });
+      }
+      // In the corner: the bottom margin on every shape, and the right margin on a rectangle, where the
+      // text is right aligned so that a short version still sits in it.
+      const bottom = mark.rect.top + mark.rect.height;
+      if (ROUND.has(folder)) {
+        expect({ folder, hAlign: mark.hAlign, centred: Math.abs(mark.rect.left + mark.rect.width / 2 - main.width / 2) <= 1 }).toMatchObject({ hAlign: 'center', centred: true });
+        expect({ folder, low: bottom > main.height * 0.75 }).toMatchObject({ low: true });
+      } else {
+        expect({ folder, hAlign: mark.hAlign, right: mark.rect.left + mark.rect.width, bottom }).toEqual({ folder, hAlign: 'right', right: main.width - IDLE_MARGIN, bottom: main.height - IDLE_MARGIN });
+      }
+    }
+  });
+
+  test('a frame with no room for it sheds it rather than crowding the stack', () => {
+    // The 320 x 64 strip keeps the wordmark alone, and the mark goes before it would touch it.
+    expect(idleItems({ frame: rect(0, 0, 320, 64) }).map((i) => i.name)).not.toContain('idle.update');
   });
 });

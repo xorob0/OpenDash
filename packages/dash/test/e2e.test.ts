@@ -823,6 +823,24 @@ describe('command line', () => {
     expect(readVersion()).toBe(readFileSync(join(import.meta.dir, '..', '..', '..', 'VERSION'), 'utf8').trim());
     expect(() => readVersion(join(root, 'missing'))).toThrow(/cannot read/);
   });
+
+  test('VERSION is the only place the version is written', () => {
+    // The packages' sidecars read it through readVersion, the plugin's assembly through
+    // Directory.Build.props, and the update check compares the two, so a second copy anywhere is a
+    // number that can disagree with the one that ships. Each package.json carried `0.1.0` long after
+    // the project had moved past it, which nothing read and anybody could have believed (#755).
+    const repo = join(import.meta.dir, '..', '..', '..');
+    for (const manifest of ['package.json', 'packages/dash/package.json', 'packages/generator/package.json', 'site/package.json']) {
+      const parsed = JSON.parse(readFileSync(join(repo, manifest), 'utf8')) as Record<string, unknown>;
+      expect({ manifest, version: parsed.version }).toEqual({ manifest, version: undefined });
+    }
+    const props = readFileSync(join(repo, 'plugin', 'Directory.Build.props'), 'utf8');
+    expect(props).toContain("<Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>");
+    for (const project of ['plugin/OpenDash/OpenDash.csproj', 'plugin/OpenDash.Tests/OpenDash.Tests.csproj']) {
+      const text = readFileSync(join(repo, project), 'utf8');
+      expect({ project, overrides: /<(Version|VersionPrefix|AssemblyVersion|FileVersion|InformationalVersion)>/.test(text) }).toEqual({ project, overrides: false });
+    }
+  });
 });
 
 /**

@@ -31,6 +31,8 @@ OpenDash.RevBar
 OpenDash.BlueFlagDetail
 OpenDash.DriverNameFormat
 OpenDash.DriverNameTeam
+OpenDash.UpdateAvailable
+OpenDash.UpdateVersion
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart
