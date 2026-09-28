@@ -252,7 +252,10 @@ started watching cannot be told from an untouched folder.
 
 The plugin can also tell you when a newer release exists. It asks GitHub once a day, sends nothing
 that identifies you, and can be switched off in the Dashboard section, in which case nothing is
-fetched at all. Nothing is ever installed without being asked for.
+fetched at all. Nothing is ever installed without being asked for. When you press Update, it
+downloads the new plugin with the dashboards inside it and asks you to restart SimHub; that start
+brings the dashboards up to date as described above, and replaces one you edited only if you said
+yes when Update asked.
 
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
 with a wheel button, under the same dashboard names. Your old face is no longer published: the plugin

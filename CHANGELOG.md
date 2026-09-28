@@ -7,7 +7,9 @@ offered.
 
 Each release carries `OpenDash-plugin.zip` and nothing else. The plugin is the only way in: the
 dashboards and the LED profiles are embedded in it, and every one of them reaches SimHub through its
-panel (#438).
+panel (#438). The Update button fetches that zip, and the dashboards come up to date on the restart
+it asks for. A plugin older than 0.3.0-rc.3 cannot replace itself and finds nothing else to update,
+so it has to be updated by hand from the zip.
 
 Until then a release also carried one `.simhubdash` per package, including the `OpenDash slots
 <size>` card faces the plugin does not install, and from 0.2.0-rc.2 one `.ledsprofile` per LED
