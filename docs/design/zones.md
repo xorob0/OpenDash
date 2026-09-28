@@ -696,16 +696,19 @@ the answer. What that comes to, face by face, is what the build emits rather tha
 | --- | --- | --- | --- |
 | 1920 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
 | 1280 × 480 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
-| 1280 × 400 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap and last lap |
+| 1280 × 400 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
 | 1280 × 720 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
 | 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
 | 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 600 × 686 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap and last lap |
+| 600 × 686 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
 
 The last column is the change #387 made and not the shedding: 1280 × 480 and 1280 × 720 were already
 five fields and drew the same five less the margin, so the margin costs them one. 1280 × 400 and the
-nano-portrait 600 drew all six, so the margin costs those two both consumptions — a whole field more
-than the rest, which is the price of a signed figure in a band that was already full. Every face keeps
+nano-portrait 600 drew all six, so the margin cost those two both consumptions — a whole field more
+than the rest, which is the price of a signed figure in a band that was already full. Both have since
+had the per lap back: a field is as wide as the wider of its value and its label, and labels written in
+sentence case rather than capitals ([#422](https://github.com/xorob0/OpenDash/issues/422)) left each
+band room for a sixth. Every face keeps
 the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
 `bandPages.test.ts` pins this table, because nothing else would notice it going stale.
 

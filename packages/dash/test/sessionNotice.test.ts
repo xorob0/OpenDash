@@ -68,7 +68,7 @@ describe('the condition is one expression', () => {
 
   test('the page called Session says the instruction once rather than stuttering its own name', () => {
     expect(sessionNotice({ name: 'Session' })).toBe(SESSION_REASON);
-    expect(sessionNotice({ name: 'Leaderboard' })).toBe(`LEADERBOARD · ${SESSION_REASON}`);
+    expect(sessionNotice({ name: 'Leaderboard' })).toBe(`Leaderboard · ${SESSION_REASON}`);
   });
 });
 

@@ -1,6 +1,6 @@
 /**
- * Card 11, Tyre pressures: the four corners from the last stop in SimHub's unit (Psi, Kpa or
- * Bar, upper-cased in the label), drawn in text.primary as the canvas does; `--` when 0.
+ * Card 11, Tyre pressures: the four corners from the last stop in SimHub's unit (psi, kPa or
+ * bar, spelled in the label by `pressureUnit`), drawn in text.primary as the canvas does; `--` when 0.
  * One decimal wherever the grid column holds `ddd.d`. Where it does not, the widest values give
  * up their decimal first: integers from 100 (kPa) when only `dd.d` fits, integers from 10 (psi
  * and kPa, bar keeping its decimal) when only `ddd` fits. The tier is picked per layout from the
@@ -18,8 +18,9 @@ import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { PRESSURE_CHARS } from './chars.ts';
 import { TYRE_CORNERS } from './tyreTemps.ts';
+import { pressureUnit } from '../second/values.ts';
 
-const { game, isnull, eq, lt, num, iff, str, fmt, concat, ucase } = ncalc;
+const { game, isnull, eq, lt, num, iff, str, fmt, concat } = ncalc;
 
 export interface PressureTier {
   /** Values from here up are shown as integers; below it they keep one decimal. */
@@ -64,14 +65,14 @@ function cell(corner: (typeof TYRE_CORNERS)[number], sample: number, tier: Press
   };
 }
 
-/** The unit in the label; "KPA" is the widest of Psi, Kpa and Bar. */
-const labelUnit = ucase(isnull(game('TyrePressureUnit'), str('Psi')));
+/** The unit in the label, in the one spelling `values.ts` gives it; "kPa" is the widest of the three. */
+const labelUnit = pressureUnit();
 
 /** Longest first: the stop note, then the unit, go as the card narrows. */
 const labelForms = (label: string) => [
-  { sample: label, widest: 'PRESSURES KPA · LAST STOP', bind: concat(str('PRESSURES '), labelUnit, str(' · LAST STOP')) },
-  { sample: 'PRESSURES PSI', widest: 'PRESSURES KPA', bind: concat(str('PRESSURES '), labelUnit) },
-  { sample: 'PSI', widest: 'KPA', bind: labelUnit },
+  { sample: label, widest: 'Pressures kPa · last stop', bind: concat(str('Pressures '), labelUnit, str(' · last stop')) },
+  { sample: 'Pressures psi', widest: 'Pressures kPa', bind: concat(str('Pressures '), labelUnit) },
+  { sample: 'psi', widest: 'kPa', bind: labelUnit },
 ];
 
 export const tyrePressures = defineCard('tyrePressures', (slot, rung, prefix, meta) => {

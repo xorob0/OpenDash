@@ -902,19 +902,19 @@ export interface CardMeta {
 
 /** The cards in card-number order. The plugin ships the same list in Contract.cs. */
 export const CARD_CATALOGUE: readonly CardMeta[] = [
-  { number: 0, id: 'currentLap', label: 'CURRENT', displayName: 'Current lap' },
-  { number: 1, id: 'lastLap', label: 'LAST', displayName: 'Last lap' },
-  { number: 2, id: 'bestLap', label: 'BEST', displayName: 'Best lap' },
-  { number: 3, id: 'delta', label: 'DELTA', displayName: 'Delta' },
-  { number: 4, id: 'position', label: 'POSITION', displayName: 'Position' },
-  { number: 5, id: 'session', label: 'LAP', displayName: 'Session' },
-  { number: 6, id: 'fuel', label: 'FUEL', displayName: 'Fuel' },
-  { number: 7, id: 'fuelLaps', label: 'FUEL LAPS', displayName: 'Fuel laps' },
+  { number: 0, id: 'currentLap', label: 'Current', displayName: 'Current lap' },
+  { number: 1, id: 'lastLap', label: 'Last', displayName: 'Last lap' },
+  { number: 2, id: 'bestLap', label: 'Best', displayName: 'Best lap' },
+  { number: 3, id: 'delta', label: 'Delta', displayName: 'Delta' },
+  { number: 4, id: 'position', label: 'Position', displayName: 'Position' },
+  { number: 5, id: 'session', label: 'Lap', displayName: 'Session' },
+  { number: 6, id: 'fuel', label: 'Fuel', displayName: 'Fuel' },
+  { number: 7, id: 'fuelLaps', label: 'Fuel laps', displayName: 'Fuel laps' },
   { number: 8, id: 'tc', label: 'TC', displayName: 'TC' },
   { number: 9, id: 'abs', label: 'ABS', displayName: 'ABS' },
-  { number: 10, id: 'tyreTemps', label: 'TYRES °C · LAST STOP', displayName: 'Tyre temps' },
-  { number: 11, id: 'tyrePressures', label: 'PRESSURES PSI · LAST STOP', displayName: 'Tyre pressures' },
-  { number: 12, id: 'speed', label: 'SPEED', displayName: 'Speed' },
+  { number: 10, id: 'tyreTemps', label: 'Tyres °C · last stop', displayName: 'Tyre temps' },
+  { number: 11, id: 'tyrePressures', label: 'Pressures psi · last stop', displayName: 'Tyre pressures' },
+  { number: 12, id: 'speed', label: 'Speed', displayName: 'Speed' },
 ];
 
 export function cardMeta(id: string): CardMeta {

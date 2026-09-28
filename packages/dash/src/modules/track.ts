@@ -20,7 +20,7 @@ import { ds } from '../tokens.ts';
 import { GRIP_WIDEST, trackGrip, trackLengthKm, trackName } from '../second/values.ts';
 import { defineModule } from './module.ts';
 
-const { concat, fmt, str, ucase } = ncalc;
+const { concat, fmt, str } = ncalc;
 
 /**
  * The line the circuit is drawn with, cut from the map the way the gear's cell is cut from its box.
@@ -78,16 +78,16 @@ export const track = defineModule('track', (ctx) => {
   };
   if (!titled) return [map];
   // The state is the right half of the canvas's header row. Its box is measured for the longest
-  // word the binding can produce rather than for "DRY", and the name gives up exactly that much
+  // word the binding can produce rather than for "Dry", and the name gives up exactly that much
   // plus the canvas's 12 px: a name and a state competing for one 245 px line is where WPF clips
   // whichever it draws second.
   const stateWidth = Math.ceil(measureText('BarlowMedium', GRIP_WIDEST, d.labelSm));
   return [
-    label(`${ctx.prefix}title`, 'VALMONT PARK · 4.1 KM', ctx.frame.left, ctx.frame.top, Math.max(0, ctx.frame.width - stateWidth - ds.space[3]), {
+    label(`${ctx.prefix}title`, 'Valmont Park · 4.1 km', ctx.frame.left, ctx.frame.top, Math.max(0, ctx.frame.width - stateWidth - ds.space[3]), {
       size: d.labelSm,
-      bind: concat(ucase(trackName()), str(' · '), fmt(trackLengthKm(), '0.0'), str(' KM')),
+      bind: concat(trackName(), str(' · '), fmt(trackLengthKm(), '0.0'), str(' km')),
     }),
-    label(`${ctx.prefix}state`, 'DRY', ctx.frame.left + ctx.frame.width - stateWidth, ctx.frame.top, stateWidth, {
+    label(`${ctx.prefix}state`, 'Dry', ctx.frame.left + ctx.frame.width - stateWidth, ctx.frame.top, stateWidth, {
       size: d.labelSm,
       hAlign: 'right',
       bind: trackGrip(),

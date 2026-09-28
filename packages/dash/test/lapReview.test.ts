@@ -315,7 +315,7 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
 
   test('the driver line is measured from the widest it can draw, not from its sample', () => {
     const line = textNamed(reference.items, 'driver');
-    expect(line.widest).toBe('YOU · #9999 · P99');
+    expect(line.widest).toBe('You · #9999 · P99');
     expect(measureText('BarlowMedium', line.widest!, line.fontSize)).toBeLessThanOrEqual(line.rect.width);
   });
 });

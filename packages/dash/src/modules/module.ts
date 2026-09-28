@@ -103,23 +103,27 @@ export interface Module extends ModuleMeta {
 }
 
 /** The reason half of a session notice: an instruction, since the reader can act on it. */
-export const SESSION_REASON = 'GO INTO A SESSION';
+export const SESSION_REASON = 'Go into a session';
 
 /**
- * `LEADERBOARD · GO INTO A SESSION`: what a page says in place of its empty table.
+ * `Leaderboard · Go into a session`: what a page says in place of its empty table.
  *
  * Anything with a name, because band D's pages are named the same way and are not modules. The name
  * half is the one `placeholder` drops in a box too short for both, which is why the reason half is
  * an instruction that stands on its own.
  *
  * A page whose name is already a word of the instruction gets the instruction alone. Module 11 is
- * called Session, and "SESSION · GO INTO A SESSION" is the stutter voice.md's governing principle
+ * called Session, and "Session · Go into a session" is the stutter voice.md's governing principle
  * refuses: the header above the box has said the name, so the notice has nothing to add by saying it
- * again. Every other page keeps both halves, since "LAP TIMES" is not in the sentence.
+ * again. Every other page keeps both halves, since "lap times" is not in the sentence.
+ *
+ * Each half is written as a sentence of its own, capital first, because each is drawn alone: the
+ * placeholder sheds the name where the box is short and keeps the instruction.
  */
 export const sessionNotice = (page: { name: string }): string => {
-  const name = page.name.toUpperCase();
-  return SESSION_REASON.split(' ').includes(name) ? SESSION_REASON : `${name} · ${SESSION_REASON}`;
+  // Compared without case, which is a question about the words and not a change to what is drawn.
+  const said = SESSION_REASON.toLowerCase().split(' ').includes(page.name.toLowerCase());
+  return said ? SESSION_REASON : `${page.name} · ${SESSION_REASON}`;
 };
 
 /**

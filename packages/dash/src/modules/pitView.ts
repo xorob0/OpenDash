@@ -190,7 +190,7 @@ const tyresOption = (fs: number): Option => {
     text: 'Tyres',
     stateWidth: Math.ceil(measureText('BarlowMedium', widest, fs)) + LABEL_SLACK,
     state: (name, x, middle) => [
-      label(`${name}.value`, 'RIGHTS', x, middle - fs / 2, Math.ceil(measureText('BarlowMedium', widest, fs)) + LABEL_SLACK, {
+      label(`${name}.value`, 'Rights', x, middle - fs / 2, Math.ceil(measureText('BarlowMedium', widest, fs)) + LABEL_SLACK, {
         size: fs,
         color: ds.color.text.primary,
         bind: pitTyreSelection(),
@@ -214,7 +214,7 @@ export const pitView = defineModule('pitView', (ctx) => {
   /** Each option with the width its label really takes, so the wrap below can be measured. */
   const measured = options.map((option) => ({
     ...option,
-    textWidth: Math.ceil(measureText('BarlowMedium', option.text.toUpperCase(), d.labelSm)) + LABEL_SLACK,
+    textWidth: Math.ceil(measureText('BarlowMedium', option.text, d.labelSm)) + LABEL_SLACK,
   }));
   type Measured = (typeof measured)[number];
   const widthOf = (option: Measured): number => option.textWidth + STATE_GAP + option.stateWidth;

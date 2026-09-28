@@ -84,8 +84,8 @@ export const CAPTIONS: readonly Caption[] = [
  */
 const SHED_FIRST: readonly string[] = ['tread', 'compound', 'tick'];
 
-/** A caption's box: the sentence upper-cased, and the pixel of slack WPF needs not to clip it. */
-const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text.toUpperCase(), fs)) + 1;
+/** A caption's box: the sentence as it is drawn, and the pixel of slack WPF needs not to clip it. */
+const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text, fs)) + 1;
 
 /**
  * The captions the line holds, in the order they are drawn: as many as fit, shed by
@@ -151,7 +151,7 @@ export const tyres = defineModule('tyres', (ctx) => {
             height: CHIP.height,
             size: CHIP.size,
             width: chipWidth,
-            bind: ncalc.ucase(carCompound(player())),
+            bind: carCompound(player()),
           }),
         ];
       }),

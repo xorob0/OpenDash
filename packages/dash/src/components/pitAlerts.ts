@@ -79,7 +79,7 @@ const engineStalled = (): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings
 /** One state of the pit family: what it says, how it is dressed and when it is out. */
 export interface PitAlertSpec {
   id: string;
-  /** Drawn upper-cased, as every band on the face is. */
+  /** Drawn as it is written, in sentence case like every label on the face. */
   label: string;
   /** Filled for the state that is correct, outlined for the four that are not. */
   shape: 'filled' | 'outlined';

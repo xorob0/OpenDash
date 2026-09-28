@@ -198,7 +198,7 @@ const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', '
 const cellChars = (cell: StripCell): Chars => ({ digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
 
 /** Width of the text a label is drawn with, with the pixel of room WPF needs not to clip it. */
-const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text.toUpperCase(), ds.size.label)) + 2;
+const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text, ds.size.label)) + 2;
 
 /**
  * Width a strip cell takes: the artboard's column, widened to a reading that does not fit it and
@@ -292,10 +292,10 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
     for (const spec of BAR_FIELD_SPECS) {
       const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
       const name = `${prefix}${slot}.${spec.id}`;
-      // One field per end is the portrait face, where the artboard has the room for "POS" and not
-      // for "POSITION".
+      // One field per end is the portrait face, where the artboard has the room for "Pos" and not
+      // for "Position".
       const text = opts.fieldsPerEnd === 1 ? (spec.short ?? spec.label) : spec.label;
-      items.push(withMoreBindings(label(`${name}.label`, text.toUpperCase(), x, labelTop, widest, { size: labelFs, hAlign: align }), { Visible: visible }));
+      items.push(withMoreBindings(label(`${name}.label`, text, x, labelTop, widest, { size: labelFs, hAlign: align }), { Visible: visible }));
       // A field of the right end is drawn flush to the right of its slot, as the artboard draws it:
       // the denominator against the padding and the value one gap in front of it.
       const value = valueWidth(spec, valueSize) + boxSlack(valueSize);
@@ -352,7 +352,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         width: w,
         present,
         draw: (at) => [
-          label(`${name}.label`, cell.label.toUpperCase(), at.x, labelTop, w, { size: labelFs, hAlign: 'center', leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+          label(`${name}.label`, cell.label, at.x, labelTop, w, { size: labelFs, hAlign: 'center', leftBind: at.leftAt(), visibleBind: at.visibleBind }),
           numeral(`${name}.value`, cell.sample, at.x, valueTop, valueSize, cellChars(cell), {
             width: w,
             hAlign: 'center',

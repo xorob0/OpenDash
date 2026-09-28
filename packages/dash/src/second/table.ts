@@ -120,7 +120,7 @@ const SPLIT_CLEARANCE = 12;
  * no grid a sim publishes reaches a hundred cars, and the four because it is the widest digit
  * Barlow Medium draws. A `widest` left undeclared is what once turned "NO FLAG" into "NO FLA".
  */
-const SPLIT_COPY = 'CARS NOT SHOWN';
+const SPLIT_COPY = 'cars not shown';
 const SPLIT_WIDEST = `44 ${SPLIT_COPY}`;
 
 /** Side padding of a row: the board's 16, or the catalogue's 6. */
@@ -283,10 +283,10 @@ export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
  * driver — and there is no tighter bound to reach for, these being the marks the bundled faces draw.
  * `advances.test.ts` measures both halves of that, the alphabet that is safe and the marks that are not.
  *
- * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The face
- * upper-cases every other label it draws, the code this column replaced was `LIA`, and the player's
- * own row already says `YOU`, so the column is now the one thing on the row that is not shouted rather
- * than the one thing that is. `docs/design/zones.md` records the divergence.
+ * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The code
+ * this column replaced was `LIA` and the player's own row already says `YOU`; the face's labels, which
+ * were upper-cased too when this was written, are in sentence case since #422, so the name is a glyph's
+ * exception to that rule rather than the rule. `docs/design/zones.md` records the divergence.
  */
 export const MIXED_CASE_NAME_SIZE = dottedLetterSize(NAME_FACE);
 
@@ -796,9 +796,8 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
     const width = widths[i] ?? 0;
     const column = COLUMNS[id];
     const text = column.header;
-    // Measured as `label` draws it: a header carries no binding, so it is upper-cased on the way in
-    // and a box measured from the canvas's own capitalisation is a box the drawn text overruns.
-    const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
+    // Measured as `label` draws it, which is in the case it is written in.
+    const drawn = Math.ceil(measureText('BarlowMedium', text, d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
     items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
     x += width + cellGap;

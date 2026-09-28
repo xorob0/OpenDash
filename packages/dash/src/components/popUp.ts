@@ -96,7 +96,7 @@ export interface PopUpText {
 export interface PopUpLabel {
   text: string;
   bind?: Expr;
-  /** The widest text `bind` can draw, upper-cased as it will be drawn. */
+  /** The widest text `bind` can draw, in the case it will be drawn in. */
   widest?: string;
 }
 
@@ -114,8 +114,8 @@ export interface PopUpSpec {
   flashMs?: number;
 }
 
-/** What a label draws, which is upper-cased unless a binding writes it. */
-const labelText = (spec: PopUpLabel): string => (spec.bind ? (spec.widest ?? spec.text) : spec.text.toUpperCase());
+/** What a label draws: its text, or the widest its binding can write. */
+const labelText = (spec: PopUpLabel): string => (spec.bind ? (spec.widest ?? spec.text) : spec.text);
 
 /** Width of a run at a size: its cells when it has a budget, its measured advances otherwise. */
 const runWidth = (text: PopUpText, fs: number): number =>

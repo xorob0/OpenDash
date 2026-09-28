@@ -1026,8 +1026,8 @@ describe('the bar draws the catalogue the artboard writes', () => {
   test('and shortens the one label the portrait artboard shortens', () => {
     const labelOn = (face: typeof zoneFace600x686, slot: string): string =>
       faceItems(face).find((i): i is TextItem => i.kind === 'text' && i.name === `bar.${slot}.position.label`)!.text;
-    expect(labelOn(zoneFace600x686, 'Right1')).toBe('POS');
-    expect(labelOn(zoneFace1920x480, 'Right1')).toBe('POSITION');
+    expect(labelOn(zoneFace600x686, 'Right1')).toBe('Pos');
+    expect(labelOn(zoneFace1920x480, 'Right1')).toBe('Position');
   });
 });
 
