@@ -940,3 +940,35 @@ describe('what a released plugin embeds', () => {
     expect(script).not.toMatch(/^\s*case .*OpenDash slots/m);
   });
 });
+
+/**
+ * What a release hands a user, which since #438 is the plugin and nothing else: every dashboard and
+ * every profile reaches SimHub through the panel, so no `.simhubdash`, `.ledsprofile` or manifest of
+ * them is attached to a tag. That is also what takes the card faces out of a user's reach rather
+ * than only out of the plugin: the manifest test above still finds all eight in the build, for a
+ * comparison on a rig, and the only route a user had to one was the release file this stopped
+ * publishing.
+ *
+ * Read from the workflow rather than restated, for the reason the embedding test above reads the
+ * csproj: a glob added back to `files:` publishes silently.
+ */
+describe('what a release publishes', () => {
+  const workflow = readFileSync(join(import.meta.dir, '..', '..', '..', '.github', 'workflows', 'release.yml'), 'utf8');
+  const published = (/^\s*files: \|\n((?:\s+\S.*\n)+?)\s*body_path:/m.exec(workflow)?.[1] ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+
+  test('the plugin zip and nothing a user could import by hand', () => {
+    expect(published).toEqual(['build/OpenDash-plugin.zip']);
+  });
+
+  test('the zip is always made by the script that puts the font licence beside the DLL', () => {
+    // The licence travels inside every package too (expectedFiles above), so dropping it from the
+    // release files lost nothing, provided the zip keeps carrying it.
+    expect(workflow).toContain('bash plugin/scripts/package-plugin.sh');
+    expect(workflow).not.toMatch(/zip -j build\/OpenDash-plugin\.zip/);
+    const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'plugin', 'scripts', 'package-plugin.sh'), 'utf8');
+    expect(script).toMatch(/^zip -j -q "\$out" "\$dll" "\$install_md" "\$licence"$/m);
+  });
+});

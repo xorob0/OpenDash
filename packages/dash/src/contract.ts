@@ -184,8 +184,9 @@ export const DEFAULTS = {
  * Of the faces the plugin installs, read by `OpenDash 480 round` and `OpenDash 800 round` alone --
  * the 480 takes the first two and the 800 the first six. The eight `OpenDash slots <size>` packages
  * read them as well, each reading `layout.slots.length` of them, which `layouts.test.ts` asserts;
- * they are published with every release but excluded from the plugin's embedded resources. No zone
- * face reads any of them. They are not deprecated; see the note over {@link FACE_SIZES}.
+ * they are built for a comparison on a rig, excluded from the plugin's embedded resources and
+ * published by no release (#438). No zone face reads any of them. They are not deprecated; see the
+ * note over {@link FACE_SIZES}.
  */
 export function slotSettingName(slot: number): string {
   assertSlot(slot);
@@ -450,8 +451,8 @@ export const setting = {
 //
 // Additive. `Slot01` to `Slot12` stay declared and stay tested, and they are not on their way out:
 // of the installed faces they drive `OpenDash 480 round` and `OpenDash 800 round` alone, the 480
-// reading the first two and the 800 the first six, and the eight published `OpenDash slots <size>`
-// card faces read four to twelve of them besides. No zone face reads one. README.md publishes the
+// reading the first two and the 800 the first six, and the eight `OpenDash slots <size>` card
+// faces, built for a comparison on a rig and published nowhere, read four to twelve of them besides. No zone face reads one. README.md publishes the
 // twelve as properties another dashboard or an LED profile may read. A round face becomes zones on a
 // ring after 1.0 (#145), and that release is the one that would carry a warning about the twelve;
 // none is promised before it (#170).
