@@ -307,7 +307,8 @@ cell would hold the dot and the letters, but only by spacing them as digits.
 
 The same answer covers a **mark**, which is what a reading draws in place of its value in a state
 that has no figure: `∞` where a session has no clock (#439). Measured it is 0.651 em in SemiBold
-against a 0.47 em digit cell, further over than any glyph in the banned set, so the mark is a
+against a 0.47 em digit cell — a third over, which is the same thing that bans the eight glyphs
+above, four of which (`%`, `@`, `W` and `m`) are wider still — so the mark is a
 proportional run in the value's own box, on the value's line and at the value's size, with the value
 hidden while it is drawn. A clock and its mark are therefore two items in one place and never both
 drawn — monospace is a property of the item, and no binding makes a cell wide for one reading and

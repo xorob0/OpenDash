@@ -676,10 +676,12 @@ export const NO_CLOCK = `-:--:--`;
  *
  * It is not drawn through a monospace cell and cannot be. Rule 19: the cell is cut for the widest
  * ink a digit draws, 0.47 em in SemiBold and 0.49 in Bold, and this glyph advances 0.651 and 0.658
- * em in those faces -- a third over the cell in both, which is further over it than any character
- * `font.cell.excluded` names. So the clock and the mark are two items in one place, the clock
- * monospaced and the mark proportional, and {@link untimedMark} is the pair's switch. See
- * `elements/mark.ts`.
+ * em in those faces -- a third over the cell in both, which is why it cannot be a cell, the same
+ * reason the eight characters `font.cell.excluded` names cannot. It is not the widest thing the
+ * cells have refused and no claim here needs it to be: four of those eight -- `%`, `@`, `W` and `m`
+ * -- advance further than it in both faces.
+ * So the clock and the mark are two items in one place, the clock monospaced and the mark
+ * proportional, and {@link untimedMark} is the pair's switch. See `elements/mark.ts`.
  */
 export const UNTIMED_MARK = '∞';
 

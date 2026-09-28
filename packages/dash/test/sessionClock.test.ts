@@ -43,6 +43,18 @@ describe('the mark an untimed session draws is measured before it is drawn', () 
     }
   });
 
+  test('it overruns the cell for the reason the banned set does, and is not the widest thing banned', () => {
+    // The claim worth holding is the one above -- a third over the cell, so not a cell -- and not a
+    // ranking against `font.cell.excluded`. An earlier draft of this fix wrote that the mark was
+    // further over the cell than anything in that set; it is not, and a reader taking that from the
+    // comment would believe the cells have never refused anything wider. Half the set is wider.
+    for (const face of ['BarlowCondensedSemiBold', 'BarlowCondensedBold'] as const) {
+      const em = (ch: string): number => measureText(face, ch, 1000) / 1000;
+      const wider = [...ds.font.cell.excluded].filter((ch) => em(ch) > em(UNTIMED_MARK)).sort();
+      expect({ face, wider }).toEqual({ face, wider: ['%', '@', 'W', 'm'] });
+    }
+  });
+
   test('the cells were not widened for it either, which is what the ratio above would cost', () => {
     // The alternative the measurement rules out. The mark is one glyph and the clock beside it is
     // eight cells, so holding the mark in a cell widens `12:34:56` by a third wherever it is drawn.
