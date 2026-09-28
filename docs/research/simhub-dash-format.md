@@ -692,6 +692,17 @@ Three shapes are worth knowing before writing an expression by hand:
 
 When SimHub is upgraded, the table is re-derived by decompiling rather than edited by hand.
 
+### `timespantoseconds` of a number is null, and `null > 0` throws
+
+Measured for #454 against the `NCalc.dll` SimHub 9.12.6 ships, with SimHub's `isnull` and
+`timespantoseconds` reproduced from the decompile.
+
+- `timespantoseconds(x)` answers a TimeSpan's seconds and **null for anything else**, the number `0`
+  included. So `timespantoseconds(isnull(t, 0))` is null whenever `t` is.
+- NCalc's `null > 0` throws `ArgumentNullException`, and a throwing expression draws the empty string.
+- The guard therefore wraps the conversion: `isnull(timespantoseconds(t), 0) > 0` is false for a
+  null, a zero and a missing time alike, and `hasTime` in `second/values.ts` is written that way.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

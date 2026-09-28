@@ -134,8 +134,17 @@ export const CHARS = {
   lapOfTotal: { digits: 6, specials: 3 } as Chars,
 };
 
-/** True when a TimeSpan holds a real lap time rather than the unset `00:00:00`. */
-export const hasTime = (ts: Expr): Expr => gt(timespanToSeconds(isnull(ts, num(0))), num(0));
+/**
+ * True when a TimeSpan holds a real lap time rather than the unset `00:00:00` or nothing at all.
+ *
+ * **The guard goes outside the conversion.** SimHub's `timespantoseconds` answers null for anything
+ * that is not a TimeSpan, the number `0` included, so `timespantoseconds(isnull(ts, 0))` is null
+ * whenever `ts` is, and NCalc's `null > 0` throws (`ArgumentNullException`, measured against the
+ * NCalc.dll SimHub 9.12.6 ships). A throwing expression draws the empty string, so every lap time
+ * with no value behind it drew nothing where it should have drawn {@link noTime}, and a value that
+ * came and went drew a field that vanished and came back. #454.
+ */
+export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
 
 /** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
 export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
