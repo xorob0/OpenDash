@@ -37,7 +37,7 @@ The four shift RPMs, the redline and the forward-gear count are `{{placeholders}
 | | What it holds still |
 |---|---|
 | `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · Go into a session` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
-| `untimed` | A lap-counted race that publishes no session clock, which is what iRacing publishes for one. It is the scenario for the laps form of #387's fuel margin, and for the session page counting laps rather than time. Also `green`'s held lap. |
+| `untimed` | A lap-counted race that publishes no session clock, which is what iRacing publishes for one. It is the scenario for the laps form of #387's fuel margin, for the session page counting laps rather than time, and for #439's `∞` where a clock would go. Also `green`'s held lap. |
 
 Neither has a committed trace; `UNTRACED_SCENARIOS` in [scripts/emulator.ts](../../../scripts/emulator.ts)
 says why, and `bun run record nosession untimed` is what removes them from that list.
@@ -70,18 +70,23 @@ The first is that five committed traces are recordings of it (`race`, `green`, `
 correction would leave the shipped captures, previews and clips showing a session clock the scenario
 no longer publishes.
 
-The second is that the correction has a bug behind it. `zones/bar.ts` draws its `raceTime` and
-`timeLeft` fields as `clock(sessionTimeLeft())` with no `isTimedSession()` guard, unlike the session
-card, the session module, the pit wall header and the pit wall's own time field, which all have one —
-and `raceTime` is the default of the bar's first slot. So a week of time left is drawn as
-`168:00:00`, seven digit cells in a budget of six, and WPF takes the last glyph off it. That is what
-a photograph of `untimed` shows today, on every package, and it is the bar that is wrong: every
-iRacing lap race does this already.
+The second is the bug the correction had behind it, which this scenario is what found. `zones/bar.ts`
+drew its `raceTime` and `timeLeft` fields as `clock(sessionTimeLeft())` with no `isTimedSession()`
+guard, unlike the session card, the session module, the pit wall header and the pit wall's own time
+field, which all had one — and `raceTime` is the default of the bar's first slot. So a week of time
+left was drawn as `168:00:00`, seven digit cells in a budget of six, and WPF took the last glyph off
+it, on every package and in every iRacing lap race. Correcting the base fixture in place would have
+put that into every capture in the same breath.
 
-That bug is a defect of the dashboard rather than of this directory, so it is also listed with the
-other silent failures in [docs/dev-loop.md](../../../docs/dev-loop.md), which is where somebody
-looking at a surprising capture looks. It has no ticket yet and wants one; the fix is the guard the
-other four places already write, on both bar fields, plus the snapshot refresh.
+Fixed in #439, and the scenario is now what shows the fix: every surface reads `sessionClock()` and
+draws `∞` where a session has no clock, so `untimed` photographs `RACE ∞` and `LEFT ∞` with nothing
+clipped. The session module and the session card follow `SessionProgress`, which is `auto` by
+default and resolves to laps here, so those two draw the lap unless the setting is forced to `time`.
+`-:--:--` belongs to neither this scenario nor `nosession`: it is what a clock reads where
+`SessionTimeLeft` is at or below zero, and `nosession` blanks the session type while inheriting the
+base fixture's running clock, so no scenario committed here publishes the placeholder. The entry in
+[docs/dev-loop.md](../../../docs/dev-loop.md)'s list of silent failures says the same, since that is
+where somebody looking at a surprising capture looks.
 
 ## The other scenarios
 

@@ -29,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clutch, deltaColour, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
@@ -93,7 +93,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
         ctxOf(body, `${name}.`),
         'left',
         'Race',
-        { sample: '0:42:15', bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')), chars: CHARS.clock, fs: d.mid },
+        { sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock, fs: d.mid },
         { labelBind: sessionType(), labelWidest: WIDEST_SESSION_LABEL },
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {

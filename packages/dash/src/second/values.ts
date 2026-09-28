@@ -11,6 +11,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
+import type { Mark } from '../elements/mark.ts';
 import { flagBox, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
@@ -29,6 +30,7 @@ const {
   gt,
   lt,
   ge,
+  le,
   and,
   concat,
   fmt,
@@ -697,9 +699,72 @@ export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
 export const completedLaps = (): Expr => isnull(game('CompletedLaps'), num(0));
 export const totalLaps = (): Expr => isnull(game('TotalLaps'), num(0));
 export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
-/** iRacing reports a week of time left when a session is not timed. */
+/**
+ * The longest session clock taken at its word: a day, and a day inclusive.
+ *
+ * iRacing reports a week of time left -- 604800 s, `Irsdk.UnlimitedTime` -- for a session that has
+ * no clock, and nothing SimHub publishes says "untimed" in words, so the sentinel has to be read as
+ * a threshold rather than matched. A day is where the threshold sits, and **exactly** a day is on
+ * the timed side of it, because the 24-hour races are the longest real clocks anybody drives:
+ * Daytona, Le Mans and the Nürburgring are 86400 s exactly, and `SessionTimeRemain` equals
+ * `SessionTimeTotal` until the clock starts, so a boundary that excluded 86400 would have a 24-hour
+ * race open by announcing it has no end -- in the one class of race where time left is the whole
+ * point. `24:00:00` is six digit cells and two separators, which is {@link CHARS.clock} exactly, so
+ * including the boundary costs no width anywhere.
+ *
+ * What the threshold still gets wrong is the other direction: a real clock longer than a day -- a
+ * 25-hour race, a multi-day league session -- reads the mark for its whole length. That is the
+ * trade this constant has always made, and no property distinguishes the two cases.
+ */
 export const UNTIMED_SECONDS = 86400;
-export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), lt(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+
+/**
+ * A session the sim has given, which has no clock: iRacing's week of `SessionTimeLeft` in a
+ * lap-limited race. The other half of {@link isTimedSession}'s window, and the state the two used
+ * to be folded into. Strictly above the threshold, so a 24-hour race draws its clock; see
+ * {@link UNTIMED_SECONDS} for which side of the line each length of race falls on.
+ */
+export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SECONDS));
+
+/** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
+export const NO_CLOCK = `-:--:--`;
+
+/**
+ * The mark a session clock reads where the session has no clock at all, U+221E.
+ *
+ * It is not drawn through a monospace cell and cannot be. Rule 19: the cell is cut for the widest
+ * ink a digit draws, 0.47 em in SemiBold and 0.49 in Bold, and this glyph advances 0.651 and 0.658
+ * em in those faces -- a third over the cell in both, which is why it cannot be a cell, the same
+ * reason the eight characters `font.cell.excluded` names cannot. It is not the widest thing the
+ * cells have refused and no claim here needs it to be: four of those eight -- `%`, `@`, `W` and `m`
+ * -- advance further than it in both faces.
+ * So the clock and the mark are two items in one place, the clock monospaced and the mark
+ * proportional, and {@link untimedMark} is the pair's switch. See `elements/mark.ts`.
+ */
+export const UNTIMED_MARK = '∞';
+
+/**
+ * The session clock every surface draws: how long is left while the session is timed, and the unset
+ * clock when there is no session.
+ *
+ * One spelling of a rule that had five, four of which agreed. `zones/bar.ts` was the fifth and drew
+ * `clock(sessionTimeLeft())` bare, so a lap race's week of time left reached the bar's six-digit
+ * budget as `168:00:00` and WPF took the last glyph off it -- every iRacing lap race, on the default
+ * field of the default slot (#439).
+ *
+ * The untimed session is *not* this expression's business: it draws {@link UNTIMED_MARK} instead,
+ * from the item beside this one, and this clock is hidden while that mark is shown. Folding the two
+ * states into one placeholder is what the four agreeing surfaces did, and it tells a driver in a
+ * thirty-lap race that the dash has no reading where it has one.
+ *
+ * `hms` and not {@link clock}: `clock`'s own guard is the lower half of `isTimedSession`'s window, so
+ * writing both nests the same comparison twice in a binding SimHub evaluates every frame.
+ */
+export const sessionClock = (): Expr => iff(isTimedSession(), hms(sessionTimeLeft()), str(NO_CLOCK));
+
+/** The mark that replaces the session clock where the session has no clock. */
+export const untimedMark = (): Mark => ({ text: UNTIMED_MARK, when: isUntimedSession() });
 
 /**
  * Whether a page shows how much time is left rather than which lap it is, per `SessionProgress`.
