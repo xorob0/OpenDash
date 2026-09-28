@@ -1,7 +1,8 @@
 # Changelog
 
 Every release is the tag `v<VERSION>`, where `VERSION` is the one version string of the project.
-The release workflow refuses a tag that does not match it. A version carrying a suffix such as
+The release workflow refuses a tag that does not match it, and `bun run version <x.y.z>` writes
+`VERSION` and the heading of its section here together. A version carrying a suffix such as
 `-rc.2` publishes as a pre-release, so a candidate is never the download a first-time user is
 offered.
 
