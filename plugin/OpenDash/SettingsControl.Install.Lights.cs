@@ -212,22 +212,38 @@ namespace OpenDashPlugin
         /// the device it names, and reports the row as it then stands.
         /// </summary>
         /// <remarks>
-        /// The census is read again at the press rather than carried from the draw, so a strip updated or
-        /// removed on the Lights tab in between is not rewritten from a stale answer. Each bar goes
-        /// through InstallBar, the same install adding or moving it runs, so an update writes exactly
-        /// what adding the strip today would write: its own name, its own id, its own properties.
+        /// The census is read again at the press rather than carried from the draw, so what is rewritten
+        /// is what SimHub holds when the button is pressed, which SimHub's own editor may have changed
+        /// since the tab was drawn. Each bar goes through InstallBar, the same install adding or moving it
+        /// runs, so an update writes exactly what adding the strip today would write: its own name, its
+        /// own id, its own properties.
+        ///
+        /// A bar whose device SimHub no longer has is left alone, and the press reports that it failed
+        /// with the reason in SimHub's log. InstallBar takes the bar's copy out of every device before it
+        /// installs into the one the bar names, so running it there would remove a strip that still
+        /// lights and put nothing in its place.
         /// </remarks>
         private FlagBoxPlan UpdateBars(IReadOnlyList<string> shapeIds, IDictionary<string, string> embedded)
         {
             bool reachable;
-            var outdated = PanelLightRows.Outdated(shapeIds, BarCensus(embedded, out reachable));
+            var outdated = PanelLightRows.OutdatedBars(shapeIds, BarCensus(embedded, out reachable));
             var results = new List<FlagBoxPlan>();
             foreach (var bar in outdated)
             {
                 string json;
-                results.Add(embedded.TryGetValue(bar.Shape, out json)
-                    ? InstallBar(bar, json)
-                    : new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
+                if (!embedded.TryGetValue(bar.Shape, out json))
+                {
+                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
+                }
+                else if (LedTargets.Find(bar.Device) == null)
+                {
+                    Log.Warn("The profile for " + bar.Name + " was not updated: the LED device it names is no longer in SimHub.");
+                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.Failed });
+                }
+                else
+                {
+                    results.Add(InstallBar(bar, json));
+                }
             }
             if (results.Any(plan => plan.State != FlagBoxInstallState.UpToDate)) return FlagBoxInstallPlan.Combine(results);
             return PanelLightRows.RowPlan(shapeIds, BarCensus(embedded, out reachable), reachable);

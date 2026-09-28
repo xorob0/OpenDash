@@ -413,7 +413,7 @@ namespace OpenDashPlugin
         /// profile was taken out of SimHub by hand, which is the driver's decision rather than a version to
         /// bring forward.
         /// </remarks>
-        public static IList<LedBar> Outdated(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
+        public static IList<LedBar> OutdatedBars(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
         {
             return Members(shapeIds, bars)
                 .Where(entry => entry.Value.State == FlagBoxInstallState.Outdated)

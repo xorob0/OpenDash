@@ -319,11 +319,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.3.0", plan.EmbeddedVersion);
             // Two strips at two versions: the pill names neither rather than one of them.
             Assert.Null(plan.InstalledVersion);
-            Assert.Equal(new[] { rim }, PanelLightRows.Outdated(sideThree, Census(new[] { rim, dash, gone }, arduino)));
+            Assert.Equal(new[] { rim }, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
 
             // Gone has no copy anywhere, and neither pulls the row down to Not installed nor is rewritten
             // by an Update: there is nothing of it in SimHub to bring forward.
-            Assert.DoesNotContain(gone, PanelLightRows.Outdated(sideThree, Census(new[] { rim, dash, gone }, arduino)));
+            Assert.DoesNotContain(gone, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
 
             // A strip installed before strips carried a version is older too, because nothing says it is
             // current; its copy names no version and the row invents none.
@@ -331,10 +331,10 @@ namespace OpenDashPlugin.Tests
             var alone = PanelLightRows.RowPlan(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino), true);
             Assert.Equal(FlagBoxInstallState.Outdated, alone.State);
             Assert.Null(alone.InstalledVersion);
-            Assert.Equal(new[] { unstamped }, PanelLightRows.Outdated(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino)));
+            Assert.Equal(new[] { unstamped }, PanelLightRows.OutdatedBars(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino)));
 
             // And a row whose strips are all current has nothing to update.
-            Assert.Empty(PanelLightRows.Outdated(new[] { "3-12-3" }, Census(new[] { rim, dash, gone }, arduino)));
+            Assert.Empty(PanelLightRows.OutdatedBars(new[] { "3-12-3" }, Census(new[] { rim, dash, gone }, arduino)));
         }
 
         /// <summary>No LED device could be read: the row says so rather than Not installed.</summary>
