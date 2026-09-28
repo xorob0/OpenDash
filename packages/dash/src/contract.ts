@@ -151,6 +151,23 @@ export const UPDATE_AVAILABLE = 'UpdateAvailable';
  */
 export const UPDATE_VERSION = 'UpdateVersion';
 
+/**
+ * The best lap of the player's own class this session, as SimHub named it on the last complete
+ * frame: a TimeSpan, or null before anybody in the class has one.
+ *
+ * Published rather than chosen, like {@link UPDATE_AVAILABLE}, and published only because SimHub
+ * does not publish it. SimHub keeps the car as `BestLapSameClassOpponent` and declares its
+ * properties from an empty frame at startup, where that car is null, so the class twin of
+ * `DataCorePlugin.GameData.BestLapOpponent.BestLapTime` never exists as a property.
+ *
+ * The only other route to the time is `driverbestlap()` of the class-best row, and that function
+ * reads the frame SimHub is still building rather than the one it last published, so it finds no
+ * car on any frame the dash happens to render mid-build (#454). The plugin copies the time out in
+ * `DataUpdate`, where the frame is complete and nothing is building the next one. See
+ * `sessionBestLap` in `second/values.ts`.
+ */
+export const CLASS_BEST_LAP = 'ClassBestLap';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -256,7 +273,9 @@ export function dashProperties(): string[] {
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
   // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
   // ends with an idle screen, and the group is pinned in order. #83.
-  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION];
+  // And the class best after them, published for the same reason and read by every package that
+  // draws a session best.
+  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION, CLASS_BEST_LAP];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 

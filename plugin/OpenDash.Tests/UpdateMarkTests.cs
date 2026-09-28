@@ -170,8 +170,10 @@ namespace OpenDashPlugin.Tests
             var shared = Contract.SharedPropertyNames().ToList();
             Assert.Contains(Contract.UpdateAvailable, shared);
             Assert.Contains(Contract.UpdateVersion, shared);
-            // Appended, so every name that shipped before them keeps its index.
-            Assert.Equal(new[] { Contract.UpdateAvailable, Contract.UpdateVersion }, shared.Skip(shared.Count - 2));
+            // Appended together, so every name that shipped before them keeps its index.
+            var at = shared.IndexOf(Contract.UpdateAvailable);
+            Assert.Equal(new[] { Contract.UpdateAvailable, Contract.UpdateVersion }, shared.Skip(at).Take(2));
+            Assert.Equal(shared.Count - 3, at);
         }
     }
 }

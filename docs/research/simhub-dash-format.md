@@ -703,6 +703,26 @@ Measured for #454 against the `NCalc.dll` SimHub 9.12.6 ships, with SimHub's `is
 - The guard therefore wraps the conversion: `isnull(timespantoseconds(t), 0) > 0` is false for a
   null, a zero and a missing time alike, and `hasTime` in `second/values.ts` is written that way.
 
+### A function reads a different frame from a property
+
+Established for #454 by decompiling `GameManagerBase`, `PluginManager` and `DataCorePlugin`.
+
+- **SimHub builds each frame in place.** Every tick starts with `data.GameNewData = new StatusData(...)`
+  and fills that object over the rest of the tick: `Opponents` is null until `GD_Opponents()`
+  returns, then briefly unsorted, and `BestLapOpponentPosition` is -1 until `ComputeOpponentsData`
+  has run. `NCalcEngineBase.lastData` is the same `GameData` object, so **every function that reads
+  `lastData?.NewData` sees the frame under construction** on a dashboard that renders mid-tick. That
+  is the whole `driver*` family, the `getbest*` family, `getplayerleaderboardposition` and the rest.
+- **A `GameData.*` property reads the last finished frame.** `DataCorePlugin` publishes `GameData` from
+  its own `lastData`, which it sets to `data.NewData` in its `DataUpdate`, after the frame is built.
+- So the two can disagree for a frame, and a function can answer nothing where the property beside it
+  has a value. A field that must not blink reads properties only.
+- `GameData` is declared once, by reflection, from an empty `StatusData(InitializeArrays: true)`.
+  A member that is null on that frame is never declared, whatever it holds later: `BestLapOpponent`
+  is initialised there and declared, hidden, with all its `Opponent` members
+  (`GameData.BestLapOpponent.BestLapTime`); `BestLapSameClassOpponent` is not initialised and has no
+  property at all.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

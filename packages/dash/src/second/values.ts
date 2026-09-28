@@ -11,7 +11,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
-import { flagBox, setting } from '../contract.ts';
+import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -315,8 +315,29 @@ export const sessionBestRow = (inClass: Expr | boolean = classMode()): Expr => {
   return iff(ge(index, num(0)), add(index, num(1)), num(-1));
 };
 
-/** The session's best lap, which is the best lap of that car: of the player's class, counting in class. */
-export const sessionBestLap = (): Expr => driver('bestlap', sessionBestRow());
+/**
+ * The session's best lap: of the whole field, or of the player's class when the rig counts in class.
+ *
+ * **Never `driverbestlap()` of {@link sessionBestRow}**, which is what this was when a rig reported
+ * the session best flashing on joining a session and through the first timed lap (#454). The row
+ * comes from a published property, and SimHub publishes a property from the last frame it finished.
+ * `driverbestlap()` instead reads `lastData.NewData`, the frame SimHub is building, and SimHub builds
+ * each frame in place: at the start of every tick `NewData` is a fresh object with no leaderboard,
+ * which it fills in over the course of the tick. A dashboard renders on its own thread, so a frame it
+ * draws mid-build finds no car at the row and gets null, which {@link lapTime} used to draw as an
+ * empty field. It is the same race the property read above already took the row out of. The race is
+ * read from the decompiled 9.12.6; the emulator on the test VM did not produce it, so what a rig
+ * sees is argued from SimHub's code rather than filmed.
+ *
+ * So the time is read from a published property as well. For the field SimHub has one:
+ * `BestLapOpponent` is declared under `GameData` like any other member, because the empty frame
+ * SimHub declares its properties from carries a blank car there, and the read is null-safe the whole
+ * way down. For the class it has none: `BestLapSameClassOpponent` is null on that frame, so the plugin
+ * copies that car's time out of the finished frame as {@link CLASS_BEST_LAP}. Without the plugin the
+ * class reading falls back on the row, which is right on every frame SimHub is not mid-build.
+ */
+export const sessionBestLap = (): Expr =>
+  iff(classMode(), isnull(prop(propertyName(CLASS_BEST_LAP)), driver('bestlap', sessionBestRow(true))), game('BestLapOpponent.BestLapTime'));
 
 /**
  * The session's best time through one sector, of the field or of the player's own class as
