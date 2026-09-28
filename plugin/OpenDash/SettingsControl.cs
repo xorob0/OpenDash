@@ -99,8 +99,9 @@ namespace OpenDashPlugin
                 plugin.UpdateChecked += ShowUpdateAnswer;
             };
             Unloaded += (sender, args) => plugin.UpdateChecked -= ShowUpdateAnswer;
-            // Init has already queued the day's check, so this asks only when that one has not happened:
-            // never on the startup path, never within the day, and never at all unless the setting says so.
+            // Init has already queued the day's check, so this asks only when that one did not start: never on
+            // the startup path, never within the day, never twice in one start even when the first found no
+            // network, and never at all unless the setting says so. A check still in flight answers here too.
             // A background check that finds nothing shows nothing.
             Check(manual: false);
         }

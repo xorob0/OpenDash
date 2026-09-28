@@ -106,6 +106,17 @@ namespace OpenDashPlugin
         public static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
         /// <summary>
+        /// Whether an automatic check may still ask in this start of SimHub: once, and never again after it.
+        /// </summary>
+        /// <remarks>
+        /// ShouldCheck's interval moves only on a real answer, so after an unreachable one it keeps saying yes,
+        /// and without this a rig with no network asked again from the panel as soon as the check Init queued
+        /// had failed, and once more every time the panel was built. ADR 0012 says at most once per start and
+        /// no repeated retry. A press of the button is a person asking, so it is not held to this. #83.
+        /// </remarks>
+        public static bool MayAskThisStart(bool manual, bool automaticAlreadyAsked) => manual || !automaticAlreadyAsked;
+
+        /// <summary>
         /// Whether a request may be constructed at all. The setting is read here, before anything is built, so
         /// that off means nothing is fetched rather than fetched and discarded.
         /// </summary>

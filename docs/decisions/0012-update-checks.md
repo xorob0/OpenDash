@@ -224,7 +224,10 @@ after somebody has opened the panel is a mark for a driver who already knows. It
 nothing joins the thread SimHub starts on, and a rig with no network starts exactly as fast as one with
 it. Everything else stands -- at most once per start, not within twenty-four hours of the last answer,
 nothing constructed with the setting off -- and the panel no longer asks for itself: it shows the answer
-the plugin's check found, and asks only when that check has not run.
+the plugin's check found, and asks only when that check did not start. "Once per start" is held by the
+plugin rather than by the clock, because the interval moves only on a real answer: an unreachable check
+leaves the clock where it was, and the panel asking again on that account would be exactly the repeated
+retry this record refuses.
 
 **What is remembered.** The check runs once a day and SimHub starts more often than that, so the release
 the last answered check offered is persisted (`OfferedRelease`) and the mark is drawn from it on every

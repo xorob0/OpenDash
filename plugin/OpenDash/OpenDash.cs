@@ -110,6 +110,11 @@ namespace OpenDashPlugin
         /// its answer rather than asking GitHub a second time.</summary>
         private int checking;
 
+        /// <summary>Whether this start's automatic check has been started, whatever it went on to find, so that
+        /// the panel does not ask a second time after an answer nobody could read; see
+        /// UpdateCheck.MayAskThisStart. Read and written only while <see cref="checking"/> is held.</summary>
+        private bool automaticAsked;
+
         /// <summary>The release the idle screen's mark offers, or null; see <see cref="RefreshUpdateMark"/>.</summary>
         private volatile string offeredUpdate;
 
@@ -119,15 +124,23 @@ namespace OpenDashPlugin
         /// <returns>Whether an answer is coming: a check was started, or one already in flight will answer.</returns>
         /// <remarks>
         /// Called by Init once per start and by the panel. ADR 0012 is the whole of the policy and
-        /// UpdateCheck.ShouldCheck the whole of its arithmetic: off means nothing is constructed, let alone
-        /// fetched; automatic means not within a day of the last answer; and nothing here joins the thread it
-        /// was called on, so no network, a hung socket or a refused answer cannot delay SimHub's start. The
-        /// answer lands on the interface thread, which is the one thread that writes the settings.
+        /// UpdateCheck.ShouldCheck and UpdateCheck.MayAskThisStart the whole of its arithmetic: off means nothing
+        /// is constructed, let alone fetched; automatic means not within a day of the last answer and only once
+        /// per start, answered or not, though a check in flight answers whoever asks while it runs; and nothing
+        /// here joins the thread it was called on, so no network, a hung socket or a refused answer cannot delay
+        /// SimHub's start. The answer lands on the interface thread, which is the one thread that writes the
+        /// settings.
         /// </remarks>
         public bool StartUpdateCheck(bool manual)
         {
             if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return false;
             if (System.Threading.Interlocked.CompareExchange(ref checking, 1, 0) != 0) return true;
+            if (!UpdateCheck.MayAskThisStart(manual, automaticAsked))
+            {
+                System.Threading.Interlocked.Exchange(ref checking, 0);
+                return false;
+            }
+            if (!manual) automaticAsked = true;
             var installed = UpdateCheck.ComparableInstalled(Installer.InstalledVersion, Version);
             var enabled = Settings.CheckForUpdates;
             var ticks = Settings.LastUpdateCheckTicks;
