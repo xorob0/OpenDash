@@ -517,66 +517,37 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The actions a driver binds to a wheel button: five per face, one per zone and one held for a
-        /// glance, and two per companion, the next module and a glance held on the same idiom.
+        /// The actions a driver binds to a wheel button, which are exactly the ones
+        /// Contract.ScreenActionNames lists for the rig's screens: five per face, one per zone and one
+        /// held for a glance; the glance alone on a pit wall; and nothing on a companion, which SimHub
+        /// pages itself. ScreenActions walks that list and says what each name does, so the list and
+        /// the registration cannot disagree, and ScreenActionsTests holds what arrives here.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
         /// a style choice. The extension method assigns null over the release callback before passing
         /// it on -- `AddAction(actionName, typeof(T), actionStart, actionEnd = null)`, an assignment
         /// and not a default -- so an action registered that way can never be released. It is written
-        /// down in docs/research/simhub-dash-format.md. All five go through the manager, the four that
-        /// need no release included, so that nobody has to remember which is which.
+        /// down in docs/research/simhub-dash-format.md. Every action goes through the manager, the ones
+        /// that need no release included, so that nobody has to remember which is which.
+        ///
+        /// The rig's screens and not the catalogue's. An action a rig does not have is a button a
+        /// driver may already have assigned, left bound to nothing, which is why this used to register
+        /// all eight face sizes whatever the rig was -- but a namespace a user typed cannot be
+        /// enumerated ahead of time, so the rig is the only list there is once screens are instances
+        /// (ADR 0017). The panel warns before a remove that a button bound to that screen will go
+        /// quiet, which is the cost said out loud rather than designed around.
         ///
         /// An action only changes the live page. It does not save: the page a zone is showing is live
         /// state, and Init puts every zone back on the page it opens on.
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            // The rig's faces and not the catalogue's. An action a rig does not have is a button a
-            // driver may already have assigned, left bound to nothing, which is why this used to
-            // register all eight sizes whatever the rig was -- but a namespace a user typed cannot be
-            // enumerated ahead of time, so the rig is the only list there is once screens are
-            // instances (ADR 0017). The panel warns before a remove that a button bound to that screen
-            // will go quiet, which is the cost said out loud rather than designed around.
-            foreach (var screen in Settings.FaceScreens())
-            {
-                var ns = screen.Namespace;
-                foreach (var letter in Contract.FaceZoneLetters)
-                {
-                    var captured = letter;
-                    pluginManager.AddAction(Contract.CycleZoneAction(ns, captured), typeof(OpenDash), (manager, name) => Settings.CycleScreenZone(ns, captured), null);
-                }
+            ScreenActions.Register(() => Settings, (name, press, release) =>
                 pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(ns),
+                    name,
                     typeof(OpenDash),
-                    (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
-                    (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
-            }
-            // A companion has two of its own: one that advances it past the modules the rotation
-            // leaves off, and one held for a glance, which is the same pair a face has under other
-            // names. They go through the manager for the same reason the face's do.
-            //
-            // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
-            // but the canvas asks for a page called up on demand over a zone's assigned one and the
-            // hold is the same gesture under whatever SimHub binds it to.
-            foreach (var screen in Settings.RigScreens())
-            {
-                if (screen == null) continue;
-                var ns = screen.Namespace;
-                if (screen.IsCompanion)
-                {
-                    pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
-                }
-                else if (!screen.IsPitWall)
-                {
-                    continue;
-                }
-                pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(ns),
-                    typeof(OpenDash),
-                    (manager, name) => Settings.BeginScreenGlance(ns),
-                    (manager, name) => Settings.EndScreenGlance(ns));
-            }
+                    (manager, action) => press(),
+                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release())));
         }
     }
 }

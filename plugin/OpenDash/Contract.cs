@@ -1096,18 +1096,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Every action the plugin registers, in registration order: five per face that ships.
+        /// The actions of every stock face size, five apiece: the catalogue's names, not what the
+        /// plugin registers.
         /// </summary>
         /// <remarks>
         /// Per face and not five in total, because two faces on one rig have to cycle apart, which is
-        /// the same reason their properties are prefixed. The cost is that SimHub's binding list holds
-        /// five entries for every face rather than five altogether, and a driver with one screen will
-        /// see the four they do not have.
+        /// the same reason their properties are prefixed.
         ///
-        /// Every face and not the rig's, which is where the actions part company with the properties.
-        /// A property a rig does not have is one a binding reads through isnull and falls back on; an
-        /// action a rig does not have is a button a driver already assigned, left bound to nothing. The
-        /// first costs a default, the second costs somebody their wheel.
+        /// This used to be the registration itself, every face whether the rig had it or not, on the
+        /// argument that an action a rig does not have is a button a driver already assigned, left
+        /// bound to nothing. That stopped being possible when screens became instances (ADR 0017): a
+        /// namespace a user typed cannot be listed ahead of time, so OpenDash.AttachActions registers
+        /// the rig's screens, each through <see cref="ScreenActionNames"/>, and says there what the
+        /// cost is. What is left here is the names of the stock faces, which is what the tests of the
+        /// naming read.
         /// </remarks>
         public static IEnumerable<string> ActionNames()
         {
@@ -1421,21 +1423,24 @@ namespace OpenDashPlugin
             return NormaliseChoice(format, CompanionFlagFormats, DefaultCompanionFlagFormat);
         }
 
-        /// <summary>Every action one companion registers, in registration order.</summary>
         /// <summary>
-        /// None. A companion is paged by SimHub, not by OpenDash.
+        /// Every action one companion registers, which is none: a companion is paged by SimHub, not by
+        /// OpenDash.
         /// </summary>
         /// <remarks>
         /// There were two -- next module, and hold for a glance -- and both moved `CompanionPage`,
         /// which is what the screens were gated on. That gate is why a tap did nothing: SimHub's only
         /// touch gesture maps a tap to the previous or next screen, and its navigation walks the
         /// screens whose expression is true, so with one of twenty-one enabled there was nowhere to
-        /// go. The rotation alone gates them now, so SimHub's own per-dashboard "Next screen" binding
-        /// pages a companion from a wheel button and a tap pages it from the screen.
+        /// go. The rotation alone gates them now, so SimHub's own NextScreen and PreviousScreen,
+        /// bound in the Controls and events of the device the companion runs on, page it from a wheel
+        /// button, and a tap pages it from the screen.
         ///
         /// Registering an action that no longer moves anything would put a dead row in SimHub's
-        /// Controls and events, which is worse than not offering one. #362 is where they come back if
-        /// SimHub ever gives a plugin a way to choose the screen itself.
+        /// Controls and events, which is worse than not offering one. OpenDash.AttachActions registers
+        /// this list and nothing beside it, so that is true of SimHub and not only of the list; until
+        /// #435 it decided per kind for itself and registered both anyway. #362 is where they come
+        /// back if SimHub ever gives a plugin a way to choose the screen itself.
         /// </remarks>
         public static IEnumerable<string> CompanionActionNames(string ns)
         {
