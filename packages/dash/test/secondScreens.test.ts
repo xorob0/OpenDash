@@ -4,7 +4,7 @@
  * every box to WPF as a hard clip whatever screen it is on.
  */
 import { describe, expect, test } from 'bun:test';
-import { measureText, type MeasuredFace } from '../src/design/advances.ts';
+import { charsThatFit, measureText, type MeasuredFace } from '../src/design/advances.ts';
 import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   COMPANION_PAGE_SETTING,
@@ -34,8 +34,9 @@ import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
-import { leaderboardPlan } from '../src/modules/leaderboard.ts';
+import { columnSpans, NAME_FACE, rowSlack, SHORTEST_NAME_CHARS, type ColumnId, type ListPlan } from '../src/second/table.ts';
+import { LEADERBOARD_COLUMNS, leaderboardPlan } from '../src/modules/leaderboard.ts';
+import { pageColumns } from '../src/modules/module.ts';
 import { relativePlan } from '../src/modules/relative.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
@@ -677,6 +678,67 @@ describe('every list cell fits its column', () => {
       }
     });
   }
+});
+
+/**
+ * #340: the leaderboard at every zone the build produces keeps its gap, inside its box, and gives up
+ * only what the rule at `LEADERBOARD_COLUMNS` lets it, in that rule's order.
+ *
+ * The check above holds each cell against the column it was laid out in, which a row passes whatever
+ * columns it kept; a leaderboard that had shed its gap would pass it with one column fewer to measure.
+ * So the columns are measured here as a set, at each box: which ones the shape declared, which ones the
+ * box then took away, and where the gap ended up. The boxes where the box took anything, or where the
+ * name was cut below the floor the shortest format needs, are listed by name, so that a box joining
+ * either list is a diff to be read rather than a change nobody saw.
+ */
+describe('the leaderboard keeps its gap at every zone the build produces', () => {
+  /** The plan the page makes at a box, and the shape's own declaration it made it from. */
+  const planAt = (box: { name: string; frame: Rect; density: Density }) => {
+    const ctx = { frame: box.frame, density: box.density, prefix: '', page: 'leaderboard' };
+    const plan = leaderboardPlan(ctx);
+    return { plan, declared: pageColumns(LEADERBOARD_COLUMNS, ctx), spans: columnSpans(plan.columns, box.frame, box.density, plan.rowType) };
+  };
+
+  /** What a box took beyond its shape: step 2's columns, and step 3's cut below the name's floor. */
+  const givenAt = (box: { name: string; frame: Rect; density: Density }): string[] => {
+    const { plan, declared, spans } = planAt(box);
+    const shed = declared.filter((id) => !plan.columns.includes(id));
+    const name = spans.find((span) => span.id === 'name');
+    const chars = name ? charsThatFit(NAME_FACE, plan.rowType.name, name.width) : 0;
+    return [...(shed.length > 0 ? [`${box.name}: sheds ${shed.join(' ')}`] : []), ...(chars < SHORTEST_NAME_CHARS ? [`${box.name}: cuts the name to ${chars}`] : [])];
+  };
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const { plan, declared, spans } = planAt(box);
+      const at = { box: box.name, declared: declared.join(' '), kept: plan.columns.join(' ') };
+      // The three the page is, whatever else it gave up, and nothing kept that the shape did not ask for.
+      for (const id of ['pos', 'name', 'gap'] as const) expect({ ...at, id, kept: plan.columns.includes(id) }).toMatchObject({ kept: true });
+      expect(plan.columns).toEqual(declared.filter((id) => plan.columns.includes(id)));
+      // And the gap last, its right edge inside the box, the fixed columns leaving the name room to spare.
+      const gap = spans[spans.length - 1]!;
+      const right = gap.left + gap.width;
+      const edge = box.frame.left + box.frame.width;
+      const slack = rowSlack(plan.columns, box.frame.width, box.density, plan.rowType);
+      expect({ ...at, last: gap.id, right, edge, slack, inside: right <= edge && slack >= 0 }).toMatchObject({ last: 'gap', inside: true });
+    });
+  }
+
+  test('and gives way beyond its shape in these boxes, and no others', () => {
+    // The 639 x 338 pit wall zone is `wide` and declares both lap times; it draws the last lap and not the
+    // best, which is step 2 taking the rightmost droppable column. The six narrow faces are step 3: the
+    // position, the name and the gap are all `tall narrow` declares, so the name is cut to what is left.
+    // No box takes step 4.
+    expect(moduleBoxes().flatMap(givenAt)).toEqual([
+      'OpenDash Pit wall zone-639x338: sheds best',
+      'face-274x328: cuts the name to 6',
+      'face-274x366: cuts the name to 6',
+      'face-249x328: cuts the name to 4',
+      'face-249x366: cuts the name to 4',
+      'face-269x194: cuts the name to 6',
+      'face-269x226: cuts the name to 6',
+    ]);
+  });
 });
 
 /**
