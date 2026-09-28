@@ -120,7 +120,7 @@ const SPLIT_CLEARANCE = 12;
  * no grid a sim publishes reaches a hundred cars, and the four because it is the widest digit
  * Barlow Medium draws. A `widest` left undeclared is what once turned "NO FLAG" into "NO FLA".
  */
-const SPLIT_COPY = 'CARS NOT SHOWN';
+const SPLIT_COPY = 'cars not shown';
 const SPLIT_WIDEST = `44 ${SPLIT_COPY}`;
 
 /** Side padding of a row: the board's 16, or the catalogue's 6. */
@@ -306,10 +306,10 @@ export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
  * driver — and there is no tighter bound to reach for, these being the marks the bundled faces draw.
  * `advances.test.ts` measures both halves of that, the alphabet that is safe and the marks that are not.
  *
- * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The face
- * upper-cases every other label it draws, the code this column replaced was `LIA`, and the player's
- * own row already says `YOU`, so the column is now the one thing on the row that is not shouted rather
- * than the one thing that is. `docs/design/zones.md` records the divergence.
+ * What it costs is the catalogue: every artboard draws `Liam Byrne` in the driver column. The code
+ * this column replaced was `LIA` and the player's own row already says `YOU`; the face's labels, which
+ * were upper-cased too when this was written, are in sentence case since #422, so the name is a glyph's
+ * exception to that rule rather than the rule. `docs/design/zones.md` records the divergence.
  */
 export const MIXED_CASE_NAME_SIZE = dottedLetterSize(NAME_FACE);
 
@@ -444,6 +444,17 @@ const measuredInList = (ctx: CellContext, inClass: (idx: Expr) => Expr, whole: (
   if (ctx.mode === 'class') return inClass(ctx.idx);
   return ctx.inClass === undefined ? whole(ctx.idx) : iff(ctx.inClass, inClass(ctx.idx), whole(ctx.idx));
 };
+
+/**
+ * Whether the rows a cell is drawn among are the player's own class, as {@link measuredInList}
+ * answers it, for a cell that asks which field it belongs to rather than which car is above it.
+ *
+ * The purple on `Best` is the one: it marks the fastest car of the field the list draws, so a board
+ * filtered to one class by its own zone setting, with the rig counting overall, still has a purple
+ * row rather than a purple on an LMP2 it never draws (#433). A block whose rows are always the whole
+ * field, a split list's two, is the whole field's.
+ */
+const drawsOneClass = (ctx: CellContext): Expr | boolean => (ctx.mode === 'class' ? true : (ctx.inClass ?? false));
 
 /**
  * A numeral cell, vertically centred in the row.
@@ -654,7 +665,7 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
-        colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
+        colorBind: iff(carIsSessionBest(ctx.idx, drawsOneClass(ctx)), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
   // The three samples are one lap's sectors and they add up to the `last` sample beside them, the
@@ -952,9 +963,8 @@ function headerRow(spec: TableSpec, spans: readonly ColumnSpan[], top: number, g
   spans.forEach(({ id, left: x, width }) => {
     const column = COLUMNS[id];
     const text = column.header;
-    // Measured as `label` draws it: a header carries no binding, so it is upper-cased on the way in
-    // and a box measured from the canvas's own capitalisation is a box the drawn text overruns.
-    const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
+    // Measured as `label` draws it, which is in the case it is written in.
+    const drawn = Math.ceil(measureText('BarlowMedium', text, d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
     items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
   });

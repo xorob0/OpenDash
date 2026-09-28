@@ -131,6 +131,32 @@ export const DRIVER_NAME_FORMAT_SETTING = 'DriverNameFormat';
  */
 export const DRIVER_NAME_TEAM_SETTING = 'DriverNameTeam';
 
+/**
+ * Whether a newer OpenDash than the rig runs exists, as the plugin last heard from GitHub. #83.
+ *
+ * Published rather than chosen, like {@link CAR_LADDER_CHOSEN}, and read by one surface: the idle
+ * screen, the one dashboard surface that may carry a message because nobody is driving while it is
+ * up. False with the update check switched off, false before any answer and once the rig has caught
+ * up, and false through its `isnull()` default with no plugin at all -- the absence of the plugin
+ * never triggers anything, which is the ticket's rule as much as ADR 0003's.
+ */
+export const UPDATE_AVAILABLE = 'UpdateAvailable';
+
+/**
+ * The version the idle screen's mark names, or `''` when it has none to name.
+ *
+ * The plugin publishes a version only when it is at most {@link UPDATE_VERSION_MAX_LENGTH} characters
+ * of {@link UPDATE_VERSION_CHARACTERS}, and an empty string for anything else, so the mark's box can be
+ * measured for the longest version it will ever be handed rather than for the one a sample shows.
+ */
+export const UPDATE_VERSION = 'UpdateVersion';
+
+/** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
+export const UPDATE_VERSION_MAX_LENGTH = 12;
+
+/** The characters a published version may be written in: semver's, which is what `VERSION` holds. */
+export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -160,7 +186,11 @@ export const RETIRED_LED_CENTRE = 'rpmOnly';
 export const DEFAULTS = {
   ShiftLights: true,
   RevBar: 'shift' as RevBarMode,
-  PositionMode: 'overall' as PositionMode,
+  // The place a driver is racing for, which in a multiclass race is the place in their own class: a
+  // driver second of class drawn as P16 is shown a number that is not theirs. A single-class field
+  // makes the two readings identical, so counting the whole field buys nothing there and is wrong
+  // everywhere else. Overall remains the other choice of the setting. #432.
+  PositionMode: 'class' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
@@ -184,8 +214,9 @@ export const DEFAULTS = {
  * Of the faces the plugin installs, read by `OpenDash 480 round` and `OpenDash 800 round` alone --
  * the 480 takes the first two and the 800 the first six. The eight `OpenDash slots <size>` packages
  * read them as well, each reading `layout.slots.length` of them, which `layouts.test.ts` asserts;
- * they are published with every release but excluded from the plugin's embedded resources. No zone
- * face reads any of them. They are not deprecated; see the note over {@link FACE_SIZES}.
+ * they are built for a comparison on a rig, excluded from the plugin's embedded resources and
+ * published by no release (#438). No zone face reads any of them. They are not deprecated; see the
+ * note over {@link FACE_SIZES}.
  */
 export function slotSettingName(slot: number): string {
   assertSlot(slot);
@@ -223,7 +254,10 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING].map(propertyName), ...zoneProperties()];
+  // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
+  // ends with an idle screen, and the group is pinned in order. #83.
+  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION];
+  return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -394,7 +428,7 @@ export const setting = {
   revBar: (): Expr => isnull(prop(propertyName(REV_BAR_SETTING)), iff(setting.shiftLights(), str('shift'), str('rpm'))),
   /** `isnull([OpenDash.RevBar], ...) = 'off'`: whether the face is in the given rev bar mode. */
   revBarIs: (mode: RevBarMode): Expr => eq(setting.revBar(), str(mode)),
-  /** `isnull([OpenDash.PositionMode], 'overall')` */
+  /** `isnull([OpenDash.PositionMode], 'class')`, the fallback being what a package draws with no plugin. #432. */
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
@@ -429,6 +463,10 @@ export const setting = {
   driverNameFormatIs: (format: DriverNameFormat): Expr => eq(setting.driverNameFormat(), str(format)),
   /** `isnull([OpenDash.DriverNameTeam], false)`: whether a list names the team rather than the driver. */
   driverNameTeam: (): Expr => isnull(prop(propertyName(DRIVER_NAME_TEAM_SETTING)), String(DEFAULTS.DriverNameTeam)),
+  /** `isnull([OpenDash.UpdateAvailable], false)`: whether the idle screen says an update exists. */
+  updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
+  /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */
+  updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
@@ -450,8 +488,8 @@ export const setting = {
 //
 // Additive. `Slot01` to `Slot12` stay declared and stay tested, and they are not on their way out:
 // of the installed faces they drive `OpenDash 480 round` and `OpenDash 800 round` alone, the 480
-// reading the first two and the 800 the first six, and the eight published `OpenDash slots <size>`
-// card faces read four to twelve of them besides. No zone face reads one. README.md publishes the
+// reading the first two and the 800 the first six, and the eight `OpenDash slots <size>` card
+// faces, built for a comparison on a rig and published nowhere, read four to twelve of them besides. No zone face reads one. README.md publishes the
 // twelve as properties another dashboard or an LED profile may read. A round face becomes zones on a
 // ring after 1.0 (#145), and that release is the one that would carry a warning about the twelve;
 // none is promised before it (#170).
@@ -902,19 +940,19 @@ export interface CardMeta {
 
 /** The cards in card-number order. The plugin ships the same list in Contract.cs. */
 export const CARD_CATALOGUE: readonly CardMeta[] = [
-  { number: 0, id: 'currentLap', label: 'CURRENT', displayName: 'Current lap' },
-  { number: 1, id: 'lastLap', label: 'LAST', displayName: 'Last lap' },
-  { number: 2, id: 'bestLap', label: 'BEST', displayName: 'Best lap' },
-  { number: 3, id: 'delta', label: 'DELTA', displayName: 'Delta' },
-  { number: 4, id: 'position', label: 'POSITION', displayName: 'Position' },
-  { number: 5, id: 'session', label: 'LAP', displayName: 'Session' },
-  { number: 6, id: 'fuel', label: 'FUEL', displayName: 'Fuel' },
-  { number: 7, id: 'fuelLaps', label: 'FUEL LAPS', displayName: 'Fuel laps' },
+  { number: 0, id: 'currentLap', label: 'Current', displayName: 'Current lap' },
+  { number: 1, id: 'lastLap', label: 'Last', displayName: 'Last lap' },
+  { number: 2, id: 'bestLap', label: 'Best', displayName: 'Best lap' },
+  { number: 3, id: 'delta', label: 'Delta', displayName: 'Delta' },
+  { number: 4, id: 'position', label: 'Position', displayName: 'Position' },
+  { number: 5, id: 'session', label: 'Lap', displayName: 'Session' },
+  { number: 6, id: 'fuel', label: 'Fuel', displayName: 'Fuel' },
+  { number: 7, id: 'fuelLaps', label: 'Fuel laps', displayName: 'Fuel laps' },
   { number: 8, id: 'tc', label: 'TC', displayName: 'TC' },
   { number: 9, id: 'abs', label: 'ABS', displayName: 'ABS' },
-  { number: 10, id: 'tyreTemps', label: 'TYRES °C · LAST STOP', displayName: 'Tyre temps' },
-  { number: 11, id: 'tyrePressures', label: 'PRESSURES PSI · LAST STOP', displayName: 'Tyre pressures' },
-  { number: 12, id: 'speed', label: 'SPEED', displayName: 'Speed' },
+  { number: 10, id: 'tyreTemps', label: 'Tyres °C · last stop', displayName: 'Tyre temps' },
+  { number: 11, id: 'tyrePressures', label: 'Pressures psi · last stop', displayName: 'Tyre pressures' },
+  { number: 12, id: 'speed', label: 'Speed', displayName: 'Speed' },
 ];
 
 export function cardMeta(id: string): CardMeta {
@@ -1006,15 +1044,19 @@ export function moduleSettingName(number: number): string {
 }
 
 /**
- * `CompanionPage`: the module a companion is showing, as a 0-based page index.
+ * `CompanionPage`: the module a companion was built to show, as a 0-based page index.
  *
- * It is the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin holds and the
- * dashboard follows, moved by the `CompanionNextModule` action and by the held glance. The start
- * module and the glance module are *not* properties beside it, and deliberately so -- a second-screen
- * property has to be read by a package, which `secondScreens.test.ts` enforces, and nothing on the
- * screen reads either of them: a start page is applied once by `Init` and a glance is a value the
- * hold copies into this one and copies back on release. That is the idiom the pit wall's own glance
- * landed on, and one idiom is enough.
+ * It was the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin held and the
+ * dashboard followed, which a `CompanionNextModule` action and a held glance used to step. **Nothing
+ * moves it today.** A companion registers no action, because SimHub's own NextScreen and
+ * PreviousScreen page it (#435), and no screen reads it, which is the next constant. The plugin still
+ * publishes it and writes the start module into it when it forces that module through
+ * `CompanionOpenOn`, which is bookkeeping nothing reads. The code that stepped it is kept in the
+ * plugin for #362, which is where the action and the glance come back if SimHub ever lets a plugin
+ * choose the screen.
+ *
+ * The start module and the glance module are *not* properties beside it, and deliberately so -- a
+ * second-screen property has to be read by a package, which `secondScreens.test.ts` enforces.
  */
 export const COMPANION_PAGE_SETTING = 'CompanionPage';
 
@@ -1314,7 +1356,11 @@ export const secondScreen = {
   companionPage: (): Expr => isnull(prop(propertyName(COMPANION_PAGE_SETTING)), num(DEFAULT_COMPANION_PAGE)),
   /**
    * A module's screen is enabled when the rotation leaves it on *and* it is the page the plugin is
-   * showing, which is what makes the companion one screen at a time rather than a ring SimHub pages.
+   * showing, which is what made the companion one screen at a time rather than a ring SimHub pages.
+   *
+   * No screen is gated on it now -- `moduleLive` below is what the companion reads, so that SimHub
+   * pages it and a tap works -- and nothing moves the page it reads. It is kept, with `companionPage`,
+   * for #362. What follows is why it was built as it was.
    *
    * Both halves earn their place. The page is what a wheel button moves, so it is what decides which
    * of the twenty-one is up; the rotation is still asked, so that a driver with no plugin sees the

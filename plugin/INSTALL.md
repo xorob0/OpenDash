@@ -20,15 +20,16 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    The same from PowerShell: `Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"`.
 4. Start SimHub. It notices the new plugin and asks whether to enable it; accept. If SimHub
    asks to restart, restart it.
-5. "OpenDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
-   should say "OpenDash <version> · 14 dashboards" and "Up to date", which means every dashboard
-   was extracted into its own folder under `DashTemplates` on that start (`OpenDash`,
-   `OpenDash 1280x480` and so on, see Sizes below).
-6. Assign a dashboard to a display. Pick the size that matches the display from the Sizes table;
-   OpenDash is a normal SimHub dashboard from here on: in Dash Studio the sizes are listed as
-   "OpenDash", "OpenDash 1280x480" and so on, and you open one in a window, send it to a USB or
-   HDMI display, or point a phone or tablet at it exactly like any other dashboard. Nothing in
-   the plugin launches it; that is SimHub's job.
+5. "OpenDash" now appears in SimHub's left menu. Open it on the **Rig** tab, which starts empty:
+   the plugin writes no dashboard until you add a screen, so a first start puts nothing new in
+   SimHub's dashboard list. Press **Add a screen**, choose its kind and the size that matches the
+   display from Sizes below, and the plugin writes that one dashboard into its own folder under
+   `DashTemplates` (`OpenDash 1280x480` for the first screen of that size). Add one screen per
+   display, then restart SimHub, which reads its list of dashboards only when it starts.
+6. Assign each dashboard to its display. OpenDash is a normal SimHub dashboard from here on: in
+   Dash Studio the sizes are listed as "OpenDash", "OpenDash 1280x480" and so on, and you open one
+   in a window, send it to a USB or HDMI display, or point a phone or tablet at it exactly like any
+   other dashboard. Nothing in the plugin launches it; that is SimHub's job.
 
 ## The face
 
@@ -116,6 +117,10 @@ binder for each, in the Buttons section, so you do not have to go looking in Con
 | Zone A, B, C, D | advances that zone to its next enabled page |
 | Quick glance | while held, shows one chosen page in one chosen zone, and returns on release |
 
+A quick glance is always bound as a hold, whatever press type you pick in SimHub's binding
+dialog: SimHub only tells OpenDash a button was released under that press type, and a glance bound
+any other way would appear and vanish in the same frame.
+
 There is a set of these **per screen**, named for the screen: the actions of the reference face are
 `OpenDash.Face1920x480CycleZoneA` through `CycleZoneD` and `OpenDash.Face1920x480HoldQuickGlance`.
 A rig with one screen binds five of them and can ignore the rest.
@@ -131,10 +136,12 @@ The companion shows one module at a time: a big, calm page for a phone or a tabl
 wheel. There are twenty-one modules, listed on the OpenDash page under Companion, and each has
 its own switch. A module that is off is skipped entirely.
 
-Paging is SimHub's, not OpenDash's. In SimHub, open the device or window the companion runs on,
-go to its "Controls and events" and bind a wheel button to **NextScreen** (and another to
-**PreviousScreen** if you want to go back). Those are per-device bindings, so the button that
-pages your companion does not page your dash.
+Paging is SimHub's, not OpenDash's, so OpenDash registers no action for a companion. Tap the left
+or right half of the screen to change module. For a wheel button, open the device or window the
+companion runs on in SimHub, go to its "Controls and events", and bind **NextScreen**, with
+**PreviousScreen** to go back. Those bindings belong to that device, so the button that pages your
+companion does not page your dash. The OpenDash page says the same under the companion's Module
+paging.
 
 Three modules are off when you install: **Energy**, **Damage** and **Track rivals**. iRacing
 publishes no virtual energy, no damage values at all and nothing a segment-by-segment rival
@@ -185,6 +192,36 @@ looks broken when it is not.
 [docs/flag-box.md](../docs/flag-box.md) is the full guide: what every picture means, what the box
 does not do and why, and what to check when it looks wrong.
 
+## Wheels made with FanaBridge
+
+FanaBridge is a third-party SimHub plugin that puts Fanatec wheels into SimHub's Devices view,
+with profiles of its own for the wheels it knows and a wizard for the ones it does not.
+**Whether an OpenDash strip reaches a FanaBridge wheel is not yet known.** It has been reported
+that a strip cannot be added to wheels made with the wizard, and the cause is under investigation
+in [#437](https://github.com/xorob0/OpenDash/issues/437). Nothing below is a fix; it is what to
+look at, and what a report needs.
+
+- **Is the wheel in SimHub's Devices view, and can SimHub's own LED editor save a profile to it?**
+  If SimHub's own editor cannot, OpenDash will not either: a strip goes into the list that editor
+  shows.
+- **Is it in OpenDash's LED device list** on the Lights page's *Add an LED strip* form? A device
+  with some sign of LEDs that OpenDash sees and does not offer is named under that list as having
+  no LEDs OpenDash can reach. Every device in SimHub's Devices view, named there or not, has a line
+  in SimHub's log, `Logs\SimHub.txt`: one beginning `[OpenDash] LED device not offered` with the
+  reason, or `[OpenDash] LED device offered`.
+- **Are the wheel's built-in profiles switched off?** A device that ships its own profiles and
+  lists them shows only those, so OpenDash's is installed and not listed. When OpenDash sees them
+  switched on, the line after adding the strip ends in the caution colour with *Turn off built-in
+  profiles on your device, or OpenDash's will not be listed.* Switch them off on the wheel's LED
+  page in SimHub and select the strip's profile there.
+- **Does the strip survive a SimHub restart?** A strip whose device row reads *The device it was on
+  (no longer on this rig)* after a restart is pointed at a device id SimHub no longer has.
+
+If it still does not work, add to #437 what each of those showed, the `[OpenDash] LED device` lines
+from the log, the exact line OpenDash printed after adding the strip, your FanaBridge version, and
+whether the wheel is one FanaBridge supports or one made with its wizard. The same test on a wheel
+FanaBridge supports natively, if you have one, is the most useful comparison there is.
+
 ## Settings
 
 Every change on the OpenDash page takes effect immediately on a running dashboard; there is
@@ -228,8 +265,8 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
 each slot of those faces, and they stay: the round faces keep the twelve-slot design on purpose, and
 the release that gives them zones is the one that will say what happens to the twelve properties. The
-`OpenDash slots <size>` faces published with each release read them as well, four to twelve each, so
-if you have installed one of those by hand it is reading the twelve too.
+`OpenDash slots <size>` faces that earlier releases published read them as well, four to twelve each,
+so one you installed by hand from such a release is reading the twelve too.
 
 `OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
 `OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
@@ -251,13 +288,17 @@ started watching cannot be told from an untouched folder.
 
 The plugin can also tell you when a newer release exists. It asks GitHub once a day, sends nothing
 that identifies you, and can be switched off in the Dashboard section, in which case nothing is
-fetched at all. Nothing is ever installed without being asked for.
+fetched at all. Nothing is ever installed without being asked for. When you press Update, it
+downloads the new plugin with the dashboards inside it and asks you to restart SimHub; that start
+brings the dashboards up to date as described above, and replaces one you edited only if you said
+yes when Update asked.
 
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
-with a wheel button, under the same dashboard names. Your old face is still published with each
-release as `OpenDash slots <size>.simhubdash`, so you can install one by hand if you prefer it.
-Your slot settings are not lost; they still drive the two round faces, and they drive an
-`OpenDash slots <size>` face too if you install one.
+with a wheel button, under the same dashboard names. Your old face is no longer published: the plugin
+is the only way in, and the twelve-slot faces are built only so that the two designs can be compared
+from a local build until the card faces are retired. Your slot settings are not lost; they still
+drive the two round faces, and an `OpenDash slots <size>` face you installed by hand from an earlier
+release keeps reading them.
 
 ## Uninstall
 
@@ -293,7 +334,13 @@ other dashboards.
   on the 480 and six on the 800, so a card in a higher slot is never drawn. Assign the card to a
   lower slot number.
 - The companion does not change page when you press the button: the binding is on the device,
-  not in OpenDash. Open that device's "Controls and events" in SimHub and bind NextScreen.
+  not in OpenDash. Open the "Controls and events" of the device or window the companion runs on
+  and bind NextScreen there; a button bound on your dash's device pages the dash and not the
+  companion.
+- A wheel is in SimHub's Devices view but not in the LED device list when adding a strip: SimHub's
+  log says why on the line beginning `[OpenDash] LED device not offered`, and the list names it
+  underneath when OpenDash found any sign of LEDs on it. For a wheel made with FanaBridge, see
+  [Wheels made with FanaBridge](#wheels-made-with-fanabridge).
 - The track map or the radar is empty: both are drawn from SimHub's recorded outline of the
   track, which appears after a lap has been recorded there.
 - A tyre pressure or a temperature reads `--`: iRacing reports pressures from the last pit stop

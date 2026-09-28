@@ -62,8 +62,8 @@ const labelUnit = perUnit(str('°F'), str('K'), str('°C'));
 
 /** Longest first: the stop note goes when the card is too narrow to hold it. */
 const labelForms = (label: string) => [
-  { sample: label, widest: 'TYRES °C · LAST STOP', bind: concat(str('TYRES '), labelUnit, str(' · LAST STOP')) },
-  { sample: 'TYRES °C', widest: 'TYRES °C', bind: concat(str('TYRES '), labelUnit) },
+  { sample: label, widest: 'Tyres °C · last stop', bind: concat(str('Tyres '), labelUnit, str(' · last stop')) },
+  { sample: 'Tyres °C', widest: 'Tyres °C', bind: concat(str('Tyres '), labelUnit) },
 ];
 
 export const tyreTemps = defineCard('tyreTemps', (slot, rung, prefix, meta) => {

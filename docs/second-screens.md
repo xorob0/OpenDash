@@ -143,11 +143,37 @@ three cars called P1 in an order that is not the order of any of the numbers, wh
 leaderboard; the numbers a column shows and the cars it shows them against are one question and
 are answered together.
 
+`class` is also the default since #432, on both sides of the contract and in the fallback every
+expression carries for a package with no plugin attached. A driver second of their class in a
+multiclass race read `P16` under the old default, which is the number of a race they are not in; a
+single-class field reads the same place and the same count either way, so counting the whole field
+bought nothing there. A settings file that already says `overall` keeps it, since a saved value is
+a choice as far as the plugin can tell, and the release note says so rather than a migration.
+
 A zone carries a filter of its own, which is a different question and stays one. `ZoneBClassOnly`,
 `ZoneCClassOnly` and the pit wall's `PitWallClassOnly` say who is in the list without saying how
 they are numbered, so a zone filtered to one class while the rig counts overall lists that class by
 its overall places, which on a multi-class grid is a legitimate thing to want. A list is filtered
 when either answer is yes, and `rowsInClass` in `second/values.ts` is where the two meet.
+
+The session best follows the same setting, because it is a reference the driver measures against
+and a GT3 driver cannot act on an LMP2's lap. Counting in class, the `Session best` field of the
+Lap times module, the Sectors module and the pit wall's track panel reads the fastest lap of the
+player's own class, from SimHub's `BestLapOpponentSameClassPosition`; and a sector draws purple
+against the class's best split, `getbestsplittime_playerclassonly`, which is also what the Sectors
+module's `Best S1` to `Best S3` read. Counting overall, every one of them reads the whole field.
+
+The purple on a leaderboard's `Best` column asks the wider question a list asks, because it marks
+the fastest car of the rows the list draws: it falls on the class's fastest car wherever the rows
+are the player's class, by the rig's setting or by the zone's own filter, so a board filtered to one
+class has a purple row even while the rig counts overall. A split list, whose two blocks are always
+the overall leaderboard, paints the field's fastest.
+
+The label is still `Session best`, and that is an open question for the canvas rather than a
+decision taken here (#433). Keeping the word treats the mode as a rig-wide setting the driver chose;
+the alternative, following `referenceLabel()`, is to say `Class best` while counting in class,
+which the narrow shapes that already shorten the label to `Best` would have to shorten again. Until
+the canvas settles it the build draws the word the canvas draws.
 
 The filter is a lookup swap rather than a row set built somewhere else: SimHub has a class-only
 twin of each of the two functions a table addresses its rows through, so the same rows are drawn
@@ -222,7 +248,7 @@ The centred dim block those three modules draw says something else too, and it i
 of absence from the table above. Twelve of the
 twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
 view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
-empty table they say `LEADERBOARD · GO INTO A SESSION`, in the same centred dim block, until there is
+empty table they say `Leaderboard · Go into a session`, in the same centred dim block, until there is
 one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
 difference is that this notice goes away on its own. It matters because a dashboard is installed,
 opened and looked at before any session is joined, so the empty state is the product's first

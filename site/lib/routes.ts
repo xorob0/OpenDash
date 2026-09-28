@@ -18,7 +18,7 @@ export const ROUTES = {
   pages: { path: '/pages', anchors: ['catalogue', 'face', 'glance'], changeFrequency: 'monthly' },
   lights: { path: '/lights', anchors: ['car', 'strips', 'strip-shows', 'flag-box', 'tab'], changeFrequency: 'monthly' },
   compare: { path: '/compare', anchors: ['table', 'scheduled'], changeFrequency: 'monthly' },
-  install: { path: '/install', anchors: ['plugin', 'after', 'nothing-showing', 'manual'], changeFrequency: 'monthly' },
+  install: { path: '/install', anchors: ['plugin', 'after', 'nothing-showing', 'only-way'], changeFrequency: 'monthly' },
   download: { path: '/download', anchors: ['plugin', 'packages', 'source', 'releases'], changeFrequency: 'weekly' },
 } as const satisfies Record<string, Route>;
 

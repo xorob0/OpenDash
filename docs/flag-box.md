@@ -13,8 +13,9 @@ An **8x8 WS2812b matrix** on an Arduino — 64 addressable LEDs on one data pin,
 These are sold ready made by several small makers and printed by plenty of people from the free
 models. SimHub drives them natively; OpenDash only supplies what they show.
 
-You also need SimHub itself, and OpenDash's plugin if you want to change any of the settings from
-the panel. The profile works without the plugin: every setting it reads has a default built in.
+You also need SimHub itself and OpenDash's plugin, which is where the profile comes from: no
+release publishes the file on its own. Every setting the profile reads has a default built in, so it
+draws before anything on the panel has been changed.
 
 ## 1. Add the device in SimHub, and set its position first
 

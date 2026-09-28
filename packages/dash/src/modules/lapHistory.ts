@@ -124,8 +124,8 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
   const heading = (name: string, text: string, left: number, width: number, hAlign?: 'right'): Item =>
     label(`${ctx.prefix}head.${name}`, text, left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, width, { size: d.labelSm, hAlign });
   return [
-    ...(head ? [heading('lap', 'LAP', left, lapWidth), heading('time', 'TIME', timeX, timeWidth)] : []),
-    ...(head && drawsDelta ? [heading('delta', 'Δ BEST', deltaX, deltaWidth, 'right')] : []),
+    ...(head ? [heading('lap', 'Lap', left, lapWidth), heading('time', 'Time', timeX, timeWidth)] : []),
+    ...(head && drawsDelta ? [heading('delta', 'Δ best', deltaX, deltaWidth, 'right')] : []),
     { kind: 'layer', name: `${ctx.prefix}rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight, repeatLeftOffset: 0 },
   ];
 });

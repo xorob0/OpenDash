@@ -112,8 +112,8 @@ describe('the fuel margin on the fuel module', () => {
     expect(marginOn(fuelItems, telemetry({ ...both, sessionSeconds: A_WEEK, progress: 'time' })).value).toBe(NO_VALUE);
     // The unit says which, since the same box means laps on one grid and minutes on the next.
     const unit = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toEnd.unit', 'Text'), props);
-    expect(unit(telemetry({ progress: 'laps' }))).toBe('LAPS');
-    expect(unit(telemetry({ sessionSeconds: 1200, progress: 'auto' }))).toBe('MIN');
+    expect(unit(telemetry({ progress: 'laps' }))).toBe('laps');
+    expect(unit(telemetry({ sessionSeconds: 1200, progress: 'auto' }))).toBe('min');
   });
 
   test('it says nothing before a lap has said what one costs, and nothing in a race with no end', () => {

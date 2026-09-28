@@ -1,7 +1,8 @@
-# The showcase site, and the packages it hands out.
+# The showcase site, and the plugin it hands out.
 #
-# The site serves the .simhubdash files and OpenDash-plugin.zip itself rather than linking to a
-# release, so the files have to come from somewhere. They come from this image: the first two
+# The site serves OpenDash-plugin.zip itself rather than linking to a release, so the file has to
+# come from somewhere. It is the one file: the plugin is the only way in (docs/scope.md, #438), and
+# the packages and LED profiles the build writes reach a user inside it. They come from this image: the first two
 # stages are the repository's own build commands, run against the source the site is being built
 # from, and the third copies what they produced into the site's public folder. That means the
 # download button always hands over exactly what this commit produces — there is no second place
@@ -75,14 +76,12 @@ COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile
 COPY media ./media
 COPY site ./site
-# Everything the site hands out, in the one place next/static serves from.
+# The build output the generators read (the manifest says which screens exist), and the one file the
+# site hands out, in the one place next/static serves from. Only the zip is copied into downloads:
+# a .simhubdash or a .ledsprofile on disk that no page links to is a download waiting to be guessed
+# at, and offering one is the route #438 closed.
 COPY --from=artifacts /repo/build /repo/build
-# The superseded card faces are built for comparison on a rig and are not a size anybody should
-# install, so they are built but never offered; lib/packages.ts filters them out of the listing for
-# the same reason, and a file on disk that no page links to is a download waiting to be guessed at.
 RUN mkdir -p site/public/downloads \
- && cp /repo/build/*.simhubdash site/public/downloads/ \
- && rm -f 'site/public/downloads/OpenDash slots '*.simhubdash \
  && cp /repo/build/OpenDash-plugin.zip site/public/downloads/ \
  && cp /repo/build/flag-box.svg site/public/flag-box.svg
 

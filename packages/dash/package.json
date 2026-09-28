@@ -1,6 +1,5 @@
 {
   "name": "@opendash/dash",
-  "version": "0.1.0",
   "private": true,
   "description": "OpenDash itself: design tokens in code, cards, hero, layouts and the build that produces the .simhubdash packages.",
   "license": "MIT",

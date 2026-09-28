@@ -13,7 +13,7 @@
  * `isInPitLane()`; the fifth is by definition outside it.
  *
  * **The ranking is what is stopping the car, worst first.** A dead engine, then a switch the driver
- * has to move, then the correct state last: `PIT LIMITER` is information and everything above it is
+ * has to move, then the correct state last: `Pit limiter` is information and everything above it is
  * a mistake. The pit alerts are not ranked against the race alerts, because the two draw in
  * different rectangles and never contend: band D holds the flag while this rectangle holds the pit
  * state, and a driver serving a stop under a full-course caution needs both. In the full-screen flag
@@ -79,7 +79,7 @@ const engineStalled = (): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings
 /** One state of the pit family: what it says, how it is dressed and when it is out. */
 export interface PitAlertSpec {
   id: string;
-  /** Drawn upper-cased, as every band on the face is. */
+  /** Drawn as it is written, in sentence case like every label on the face. */
   label: string;
   /** Filled for the state that is correct, outlined for the four that are not. */
   shape: 'filled' | 'outlined';

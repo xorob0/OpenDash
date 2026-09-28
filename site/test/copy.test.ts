@@ -9,7 +9,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { DIFFERENTIATORS, FREE_FOREVER } from '../lib/site.ts';
+import { DIFFERENTIATORS, FREE_FOREVER, NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP } from '../lib/site.ts';
 
 const site = path.resolve(import.meta.dir, '..');
 const read = (rel: string): string => readFileSync(path.join(site, rel), 'utf8');
@@ -76,6 +76,44 @@ describe('the first screen', () => {
   });
 });
 
+/**
+ * The plugin is the only way in (docs/scope.md, #438). The site used to offer a second route, one
+ * `.simhubdash` per screen to double-click, on the install page, the download page and under the
+ * picker; this is what notices if any of it comes back, or if the line moves to a page that is not
+ * the one a reader looking for another route lands on.
+ */
+describe('the way in', () => {
+  test.each(['app/install/page.tsx', 'app/download/page.tsx'])('%s makes the line', (page) => {
+    expect(read(page)).toContain('ONLY_WAY_IN');
+  });
+
+  test('the install page says what the line costs', () => {
+    expect(read('app/install/page.tsx')).toContain('NO_OTHER_ROUTE');
+    expect(NO_OTHER_ROUTE).toContain('DLL');
+    expect(ONLY_WAY_IN).toContain('only way in');
+  });
+
+  test('the one download is the plugin zip', () => {
+    expect(PLUGIN_ZIP).toBe('OpenDash-plugin.zip');
+    const offenders: string[] = [];
+    for (const f of ALL_SOURCES) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/\/downloads\/(\$\{[^}]+\}|[^'"`\s]+)/g)) {
+        if (m[1] !== '${PLUGIN_ZIP}' && m[1] !== PLUGIN_ZIP) offenders.push(`${path.relative(site, f)}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('no source offers a dashboard or a profile as a file of its own', () => {
+    const offenders = ALL_SOURCES.filter((f) => /\.simhubdash(?!\.com)|\.ledsprofile\b|by hand|double-click/i.test(readFileSync(f, 'utf8'))).map((f) => path.relative(site, f));
+    expect(offenders).toEqual([]);
+  });
+
+  test('no reason to switch claims a file runs without the plugin', () => {
+    for (const d of DIFFERENTIATORS) expect({ id: d.id, claims: /without the plugin|on its own/i.test(d.body) }).toEqual({ id: d.id, claims: false });
+  });
+});
+
 describe('the footer', () => {
   test('links the repository', () => {
     expect(read('components/Footer.tsx')).toContain('href={REPO_URL}');
@@ -83,6 +121,34 @@ describe('the footer', () => {
 
   test('is on every page', () => {
     expect(read('app/layout.tsx')).toContain('<Footer />');
+  });
+});
+
+/**
+ * Where a companion's paging is bound, which the plugin's pane and plugin/INSTALL.md also say (#435).
+ * SimHub pages a companion, so the button is bound in the Controls and events of the device it runs
+ * on, and that binding is the device's: the button paging the phone does not page the dash. A driver
+ * looks here before the plugin is open, so the place has to be here and not only the action. The
+ * page is read as text with its markup and its line breaks folded away, since a phrase may cross a
+ * `<code>` or a wrap.
+ */
+describe('the install page on paging a companion', () => {
+  const text = read('app/install/page.tsx')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\{' '\}/g, ' ')
+    .replace(/\s+/g, ' ');
+  const guide = readFileSync(path.join(site, '..', 'plugin', 'INSTALL.md'), 'utf8').replace(/\*\*/g, '').replace(/\s+/g, ' ');
+
+  test.each([
+    'Tap the left or right half of the screen to change module.',
+    'open the device or window the companion runs on in SimHub, go to its',
+    'Controls and events',
+    'NextScreen, with PreviousScreen to go back.',
+    'Those bindings belong to that device, so the button that pages',
+    'does not page your dash.',
+  ])('says, as the guide does, %p', (phrase) => {
+    expect(text.toLowerCase()).toContain(phrase.toLowerCase());
+    expect(guide.toLowerCase()).toContain(phrase.toLowerCase());
   });
 });
 

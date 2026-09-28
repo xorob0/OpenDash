@@ -14,7 +14,7 @@ import { band } from '../elements/band.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { field, fieldRowFitted, fieldWidth, type FieldSpec } from './field.ts';
-import { CHARS, hasTime, sectorDelta, sectorLast, sectorTime } from './values.ts';
+import { CHARS, hasTime, sectorDelta, sectorLast, sectorTime, sessionBestSplit } from './values.ts';
 
 const { iff, and, lt, le, gt, eq, str, num, signed, concat, timespanToSeconds, isnull } = ncalc;
 
@@ -22,7 +22,9 @@ export const SECTORS = [1, 2, 3] as const;
 
 /**
  * A sector's colour: purple when it equals the session's best split, green when it matched or beat
- * your own best of that sector, red when it did not, dim when there is no time yet.
+ * your own best of that sector, red when it did not, dim when there is no time yet. The session's
+ * best split is the player's own class's when the rig counts in class (#433), through
+ * `sessionBestSplit`, so a GT3 sector can draw purple while an LMP2 is on track.
  *
  * Zero is green rather than red, and that is the whole of the boundary. A sector the driver has
  * just improved becomes their own best of that sector, so `Sector<n>BestTime` equals
@@ -33,7 +35,7 @@ export const SECTORS = [1, 2, 3] as const;
 export function sectorColour(sector: number): Expr {
   const last = sectorLast(sector);
   const delta = sectorDelta(sector);
-  const best = ncalc.bestSplitTime(sector);
+  const best = sessionBestSplit(sector);
   const isSessionBest = and(hasTime(best), hasTime(last), lt(ncalc.abs(ncalc.sub(timespanToSeconds(last), timespanToSeconds(isnull(best, num(0))))), num(0.0005)));
   return iff(
     ncalc.not(hasTime(last)),

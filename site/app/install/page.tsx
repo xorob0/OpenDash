@@ -1,19 +1,16 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Actions, Primary, Secondary } from '../../components/Buttons';
+import { Actions, Primary } from '../../components/Buttons';
 import { Section } from '../../components/Section';
 import { Steps } from '../../components/Steps';
 import { DOWNLOADS, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
 import { weigh } from '../../lib/packages';
-import { SIMHUB_URL } from '../../lib/site';
+import { NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP, SCOPE_URL, SIMHUB_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Install OpenDash in SimHub',
-  description: 'The plugin installs every dashboard and every LED profile in four steps.',
+  description: 'The plugin installs every dashboard and every LED profile in five steps.',
 };
-
-const PLUGIN_ZIP = 'OpenDash-plugin.zip';
 
 export default function Install() {
   const plugin = DOWNLOADS.find((d) => d.file === PLUGIN_ZIP);
@@ -58,7 +55,11 @@ export default function Install() {
                 </>
               ),
             },
-            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install. Every dashboard is in Dash Studio.' },
+            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.' },
+            {
+              title: 'Add your screens on the Rig tab, then restart SimHub.',
+              body: 'The Rig starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
+            },
           ]}
         />
       </Section>
@@ -69,13 +70,32 @@ export default function Install() {
             <strong>Assign a dashboard to a display in Dash Studio.</strong> A DDU, a USB screen, or a phone on the network, like any other dashboard.
           </li>
           <li>
-            <strong>Add your screen on the Rig tab.</strong> Pick the size, choose the pages for each zone, bind the wheel buttons.
+            <strong>Set each screen up on the Rig tab.</strong> Choose the pages for each zone and bind the wheel buttons.
           </li>
           <li>
             <strong>Every screen keeps its own settings.</strong> A face on the wheel and a face beside it are set up apart.
           </li>
           <li>
             <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Updating is one click, then restart SimHub.
+          </li>
+        </ul>
+      </Section>
+
+      <Section
+        id="companion-paging"
+        title="Paging a companion"
+        lede="SimHub pages a companion, not OpenDash, so its button is bound on the device and not on the OpenDash page."
+      >
+        <ul className={`rows ${styles.points}`}>
+          <li>
+            <strong>By touch.</strong> Tap the left or right half of the screen to change module.
+          </li>
+          <li>
+            <strong>By a wheel button.</strong> Open the device or window the companion runs on in SimHub, go to its Controls and events, and bind{' '}
+            <code>NextScreen</code>, with <code>PreviousScreen</code> to go back.
+          </li>
+          <li>
+            <strong>One device at a time.</strong> Those bindings belong to that device, so the button that pages the companion does not page your dash.
           </li>
         </ul>
       </Section>
@@ -105,21 +125,19 @@ export default function Install() {
           <li>
             <strong>A wheel button does nothing.</strong> Bind the action of the screen you are looking at. Each screen has its own.
           </li>
+          <li>
+            <strong>The companion does not change page.</strong> Bind <code>NextScreen</code> in the Controls and events of the device the companion runs on, not your
+            dash&apos;s.
+          </li>
         </ul>
       </Section>
 
-      <Section
-        id="manual"
-        title="Or one dashboard by hand"
-        lede="Double-click a .simhubdash and SimHub imports it: the default pages, no settings page, no updates. The plugin is the better way in."
-      >
-        <Actions>
-          <Secondary href="/download#packages">The files, one by one</Secondary>
-        </Actions>
-        <p className={`prose ${styles.after}`}>
-          <Link href="/screens#faces" className="link">
-            Find your size first
-          </Link>
+      <Section id="only-way" title="There is no other way in" lede={ONLY_WAY_IN}>
+        <p className="prose">
+          {NO_OTHER_ROUTE}{' '}
+          <a href={SCOPE_URL} className="link" rel="noopener">
+            Read the scope
+          </a>
           .
         </p>
       </Section>

@@ -86,10 +86,23 @@ namespace OpenDashPlugin
             FontFamily = PanelFonts.Label;
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
+            // What the idle screen's mark says, so a driver who read it there finds the same offer here.
+            updateStatus = UpdateMark.Opening(Settings.CheckForUpdates, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.Installer.InstalledVersion);
             Content = BuildPage();
             ShowTab(tab);
-            // Opening the page is the earliest a check may run: never on the startup path, and never at
-            // all unless the setting says so. A background check that finds nothing shows nothing.
+            // The answers arrive from the plugin, which asks for Init and for this page alike. Held only
+            // while the page is on screen, so a page SimHub has let go of is not kept alive by the plugin.
+            plugin.UpdateChecked += ShowUpdateAnswer;
+            Loaded += (sender, args) =>
+            {
+                plugin.UpdateChecked -= ShowUpdateAnswer;
+                plugin.UpdateChecked += ShowUpdateAnswer;
+            };
+            Unloaded += (sender, args) => plugin.UpdateChecked -= ShowUpdateAnswer;
+            // Init has already queued the day's check, so this asks only when that one did not start: never on
+            // the startup path, never within the day, never twice in one start even when the first found no
+            // network, and never at all unless the setting says so. A check still in flight answers here too.
+            // A background check that finds nothing shows nothing.
             Check(manual: false);
         }
 
@@ -144,7 +157,7 @@ namespace OpenDashPlugin
             return scroller;
         }
 
-        /// <summary>72 px: the segment mark and the wordmark on the left, "PLUGIN" and the version on the right.</summary>
+        /// <summary>72 px: the segment mark and the wordmark on the left, "Plugin" and the version on the right.</summary>
         private FrameworkElement BuildHeader()
         {
             var wordmark = Ui.HStack(0,
@@ -238,6 +251,8 @@ namespace OpenDashPlugin
             reinstallButton = null;
             statusHost = null;
             dashboardTitle = null;
+            // A press waiting for its listing drew into a column that has just gone.
+            pendingApply = null;
         }
 
         /// <summary>Redraws the tab that is showing, after something changed the rig under it.</summary>
@@ -451,6 +466,12 @@ namespace OpenDashPlugin
         ///
         /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
         /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
+        ///
+        /// Decided in #435, and kept as a correction rather than turned into a warning: a warning
+        /// would leave in place a binding that cannot hold anything, and there is no press type but
+        /// `During` a driver could choose and still have a glance. It is the one place OpenDash does
+        /// not let SimHub's own control mean what it says, so the row says it instead of doing it
+        /// silently: every glance row's caption ends on PanelCopy.GlanceBoundAsHold.
         /// </summary>
         private static void HoldWhilePressed(ControlsEditor editor)
         {
@@ -469,7 +490,7 @@ namespace OpenDashPlugin
 
         // --- Footer -----------------------------------------------------------------------------
 
-        /// <summary>56 px, rule on top: Documentation and Report an issue links, "MIT LICENCE" on the right.</summary>
+        /// <summary>56 px, rule on top: Documentation and Report an issue links, "MIT licence" on the right.</summary>
         private FrameworkElement BuildFooter()
         {
             var links = Ui.HStack(24, BuildLink("Documentation", DocumentationUrl), BuildLink("Report an issue", IssuesUrl));

@@ -145,51 +145,62 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Asks, off the UI thread, and shows whatever came back.
+        /// Asks, off the UI thread, and shows whatever came back when it does.
         /// </summary>
         /// <remarks>
-        /// Nothing here blocks: a socket that never answers would otherwise freeze the settings page, and on the
-        /// thread SimHub calls Init on it would freeze SimHub's start. The answer may land after the tab it was
-        /// asked from has gone, so every control it writes to is checked first.
+        /// The plugin does the asking (OpenDash.StartUpdateCheck), because Init asks too and the idle screen's
+        /// mark reads the same answer; the panel only says "Checking for updates…" when an answer is actually
+        /// coming, and draws it in <see cref="ShowUpdateAnswer"/>. Nothing here blocks: a socket that never
+        /// answers would otherwise freeze the settings page.
         /// </remarks>
-        private void Check(bool manual)
+        /// <returns>Whether an answer is coming.</returns>
+        private bool Check(bool manual)
         {
-            if (!Settings.CheckForUpdates && !manual) return;
-            // Whether a request will be made is decided here rather than on the background thread, because saying
-            // "Checking for updates…" and then not checking left the panel on that sentence for as long as it was
-            // open, and hid an offer it had already found.
-            if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return;
+            if (!Settings.CheckForUpdates && !manual) return false;
+            // Whether a request will be made is decided before saying so, because saying "Checking for updates…"
+            // and then not checking left the panel on that sentence for as long as it was open, and hid an offer
+            // it had already found.
+            if (!plugin.StartUpdateCheck(manual)) return false;
 
+            askedManually |= manual;
             if (checkButton != null) checkButton.IsEnabled = false;
             updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
             RefreshUpdateLine();
+            return true;
+        }
 
-            var installed = UpdateCheck.ComparableInstalled(plugin.Installer.InstalledVersion, OpenDash.Version);
-            UpdateService.InBackground(() =>
+        /// <summary>
+        /// Draws a check's answer, which arrives on the interface thread and may land after the tab it was asked
+        /// from has gone, so every control it writes to is checked first.
+        /// </summary>
+        private void ShowUpdateAnswer(UpdateStatus answer)
+        {
+            var manual = askedManually;
+            askedManually = false;
+            // The check Init queued can land while an update is installing, and the line and the buttons are
+            // the install's until it finishes; what it says about the rig afterwards is its own to decide.
+            if (applying) return;
+            if (answer == null)
             {
-                var ticks = Settings.LastUpdateCheckTicks;
-                var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
-                Dispatcher.Invoke(() =>
+                // The service declined after all. Whatever was showing before is still the truth.
+                if (updateStatus.State == UpdateState.Checking)
                 {
-                    if (answer == null)
-                    {
-                        // The service declined after all. Whatever was showing before is still the truth.
-                        updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
-                    }
-                    if (answer != null)
-                    {
-                        updateStatus = answer;
-                        if (ticks != Settings.LastUpdateCheckTicks)
-                        {
-                            Settings.LastUpdateCheckTicks = ticks;
-                            Save();
-                        }
-                    }
-                    if (checkButton != null) checkButton.IsEnabled = true;
-                    confirmingEdited = false;
-                    RefreshUpdateLine();
-                });
-            }, new SimHubInstallLog());
+                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                }
+            }
+            else
+            {
+                // A press answered by the check Init had already started is still a press, and a person who
+                // pressed is owed "you have the newest release" where a background check says nothing.
+                updateStatus = manual && !answer.Manual ? answer.AsManual() : answer;
+            }
+            if (checkButton != null) checkButton.IsEnabled = true;
+            confirmingEdited = false;
+            RefreshUpdateLine();
+            // An Update pressed on the remembered offer, now that the listing it needed has come back.
+            var host = pendingApply;
+            pendingApply = null;
+            if (host != null && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null) ApplyUpdate(host);
         }
 
         /// <summary>
@@ -202,6 +213,15 @@ namespace OpenDashPlugin
             if (applying) return;
 
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            if (release == null && updateStatus.State == UpdateState.UpdateAvailable && pendingApply == null)
+            {
+                // The offer is the remembered one (UpdateMark.Opening): the release is known and its assets are
+                // not, since a download URL expires within the hour and none is kept between runs. The press is
+                // a request, so the listing is asked for now and the update applied when it answers.
+                pendingApply = progressHost;
+                if (Check(manual: true)) return;
+                pendingApply = null;
+            }
             if (release == null)
             {
                 // Nothing to act on, so the line says so and the button is put back where the status says it
@@ -221,9 +241,7 @@ namespace OpenDashPlugin
                 // settings page is worse than a button that changes what it says.
                 confirmingEdited = true;
                 updateButton.Content = "Replace anyway";
-                updateLine.Text = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
-                    + ": " + string.Join(", ", edited)
-                    + ". Updating replaces your version. A copy is kept, and \"Put mine back\" restores it.";
+                updateLine.Text = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
@@ -273,10 +291,16 @@ namespace OpenDashPlugin
                     // anything is saved. Nothing is rewritten where the title already reads that way.
                     var titles = new SimHubInstallLog();
                     foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
+                    // The yes to replacing edited dashboards is spent by the next start, not by this run, when
+                    // the dashboards come inside the plugin; it is saved with the rest just below.
+                    if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
                     // The record is written in memory by the installer and saved here, on the UI thread, which is
                     // the moment it is safe to serialise the settings.
                     Save();
                     plugin.Installer.Refresh();
+                    // The idle screen's mark compares the release it offers with what the rig now runs, and
+                    // the dashboards have just moved.
+                    plugin.RefreshUpdateMark();
                     RefreshRestoreButton();
                     if (outcome.Ok && outcome.Updated.Count > 0)
                     {
@@ -355,12 +379,17 @@ namespace OpenDashPlugin
             // time it is drawn rather than only in the moment the download finished. Without this, a
             // driver who says "later" and comes back tomorrow sees a plugin section that looks entirely
             // ordinary and is running the old plugin.
-            if (line == null && PluginUpdate.Pending(plugin.Installer.SimHubRoot)) line = UpdateWording.RestartLater;
+            //
+            // It also outranks "a newer version is available": since #438 an update stages the plugin and
+            // writes no dashboard, so the status that offered the release is still standing afterwards, and
+            // a button left under it would download the same plugin again rather than finish anything.
+            var pending = PluginUpdate.Pending(plugin.Installer.SimHubRoot);
+            if (pending && (line == null || updateStatus.State == UpdateState.UpdateAvailable)) line = UpdateWording.RestartLater;
             updateLine.Text = line ?? string.Empty;
             updateLine.Visibility = line != null && (updateStatus.IsVisible || updateStatus.Line == null) ? Visibility.Visible : Visibility.Collapsed;
             if (updateButton != null)
             {
-                updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+                updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable && !pending ? Visibility.Visible : Visibility.Collapsed;
             }
             // The pill reads this line's answer as well as the disk's, so it is refreshed with it.
             RefreshStatus();

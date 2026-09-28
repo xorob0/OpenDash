@@ -72,7 +72,7 @@ describe('the telemetry traces', () => {
 
   test('labels the pedals in the canvas order and keeps the legend inside the panel', () => {
     const legend = PAGE.items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('telemetry.pedals.') && i.name.endsWith('.legend'));
-    expect(legend.map((i) => i.text)).toEqual(['THROTTLE', 'BRAKE', 'CLUTCH']);
+    expect(legend.map((i) => i.text)).toEqual(['Throttle', 'Brake', 'Clutch']);
     // The canvas puts the legend on the title row, beside the title. `trace` only draws it under
     // the plot, which is a `second/trace.ts` option this file does not own; what is pinned here is
     // that it stays within the panel it belongs to rather than landing on the rule or the panel
@@ -90,7 +90,7 @@ describe('the telemetry traces', () => {
     // lap-distance axis to label and no window length the dashboard can promise. The canvas asks
     // for "0 %", "Lap distance" and "100 %"; the left label in particular read "0 %" over a time
     // axis, where a percentage of a lap means nothing.
-    expect(['telemetry.axisStart', 'telemetry.axisName', 'telemetry.axisEnd'].map(textOf)).toEqual(['EARLIER', 'TIME', 'NOW']);
+    expect(['telemetry.axisStart', 'telemetry.axisName', 'telemetry.axisEnd'].map(textOf)).toEqual(['Earlier', 'Time', 'Now']);
   });
 
   test('leaves the foot of the column as background rather than growing the last panel', () => {

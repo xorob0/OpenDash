@@ -1,7 +1,7 @@
 # ADR 0003: Plugin settings reach the dashboard through SimHub properties
 
 **Date:** 2026-09-10
-**Status:** Accepted
+**Status:** Accepted. Its first consequence is amended below (#438).
 
 ## Context
 
@@ -36,6 +36,14 @@ Nothing is regenerated at runtime, and SimHub remains the only renderer, so
 The dashboard must work without the plugin. Every expression that reads an `OpenDash` property
 falls back to the default, and the standalone `.simhubdash` is a complete product with the
 default layout.
+
+**Amended 2026-09-28 (#438).** The paragraph above no longer describes a promise. A release
+publishes `OpenDash-plugin.zip` and nothing else, so no `.simhubdash` reaches a user except through
+the plugin, and the standalone package is not a product anybody is offered. The fallback itself
+stays exactly as it is: every read of an `OpenDash` property keeps its `isnull()` default, which now
+answers to a rig on which the plugin is present and not yet enabled, where a face drawing its
+defaults is a better answer than a face drawing nothing. [scope.md](../scope.md) records the line
+and what it costs.
 
 The settings contract is a public interface. Property names and value sets are part of the
 scope document, a validator checks that every property read by a binding is declared, and

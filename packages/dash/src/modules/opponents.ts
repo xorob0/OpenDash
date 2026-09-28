@@ -170,8 +170,8 @@ interface Side {
 }
 
 const SIDES: readonly Side[] = [
-  { id: 'ahead', offset: -1, heading: 'AHEAD', position: 3, gap: `${MINUS}1.342`, colour: ds.purpose.delta.faster },
-  { id: 'behind', offset: 1, heading: 'BEHIND', position: 5, gap: '+0.722', colour: ds.purpose.delta.slower },
+  { id: 'ahead', offset: -1, heading: 'Ahead', position: 3, gap: `${MINUS}1.342`, colour: ds.purpose.delta.faster },
+  { id: 'behind', offset: 1, heading: 'Behind', position: 5, gap: '+0.722', colour: ds.purpose.delta.slower },
 ];
 
 /** One cell of the identity row: the name's box, the number's cell or the class chip. */

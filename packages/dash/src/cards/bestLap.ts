@@ -1,4 +1,8 @@
-/** Card 2, Best lap: the session best as m:ss.fff, dim glyphs when there is none. */
+/**
+ * Card 2, Best lap: the player's own best lap of the session as m:ss.fff, dim glyphs when there is
+ * none. `BestLapTime` is the player's best and not the field's; the field's is `sessionBestLap()` in
+ * `second/values.ts`, which is a different number and follows `PositionMode`.
+ */
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { ds } from '../tokens.ts';

@@ -134,18 +134,18 @@ export const lapReviewWanted = (face: FaceSize): Expr =>
 export const lapReviewOut = (face: FaceSize): Expr => and(lapReviewWanted(face), lapReviewAtTheLine());
 
 /** The lap just finished, which is the lap the panel is about. */
-const lapNumber = (): Expr => concat(str('LAP '), fmt(completedLaps(), '0'));
+const lapNumber = (): Expr => concat(str('Lap '), fmt(completedLaps(), '0'));
 
 /**
- * `YOU · #12 · P4`: who the lap belongs to, the car number and the place it left you in.
+ * `You · #12 · P4`: who the lap belongs to, the car number and the place it left you in.
  *
- * `YOU` is written rather than bound to the driver's own name, which is what the artboard draws:
+ * `You` is written rather than bound to the driver's own name, which is what the artboard draws:
  * the panel is over your own gear and the one thing it cannot be about is somebody else.
  */
-const driverLine = (): Expr => concat(str('YOU · #'), carNumber(player()), str(' · '), positionLabelled(player()));
+const driverLine = (): Expr => concat(str('You · #'), carNumber(player()), str(' · '), positionLabelled(player()));
 
 /** The widest the driver line can draw: `CHARS.carNumber`'s four digits and a two-digit place. */
-export const WIDEST_DRIVER_LINE = 'YOU · #9999 · P99';
+export const WIDEST_DRIVER_LINE = 'You · #9999 · P99';
 
 /**
  * The lap just finished against the best of the session, which the lap-history plugin publishes per
@@ -209,9 +209,9 @@ const fuelField = (prefix: string, id: string, caption: string, value: Expr, sam
 const lapField = (prefix: string, fs: number = densityOf(DENSITY).hero): FieldSpec => ({
   name: `${prefix}.lap`,
   id: 'lap',
-  label: 'LAP 12',
+  label: 'Lap 12',
   labelBind: lapNumber(),
-  labelWidest: 'LAP 999',
+  labelWidest: 'Lap 999',
   value: { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs },
 });
 
@@ -303,7 +303,7 @@ function driverGroup(prefix: string, left: number, bottom: number, width: number
   const stripBottom = (fit.deltas ? bottom - rowHeight(deltas, DENSITY) : bottom) - LAP_REVIEW_STACK_GAP;
   const strip = rect(left, stripBottom - LAP_REVIEW_STRIP_HEIGHT, Math.min(width, LAP_REVIEW_STRIP_WIDTH), LAP_REVIEW_STRIP_HEIGHT);
   return [
-    label(`${prefix}.driver`, 'YOU · #12 · P4', left, strip.top - LAP_REVIEW_STACK_GAP - d.label, width, {
+    label(`${prefix}.driver`, 'You · #12 · P4', left, strip.top - LAP_REVIEW_STACK_GAP - d.label, width, {
       bind: driverLine(),
       widest: WIDEST_DRIVER_LINE,
     }),

@@ -87,6 +87,136 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// The one update service, shared by the check that runs from Init and the panel, so the releases a
+        /// check found are the ones the panel's Update button applies whichever of the two asked.
+        /// </summary>
+        public UpdateService Updates =>
+            updates ?? (updates = new UpdateService(new ReleaseClient(Version), new SimHubInstallLog()));
+
+        private UpdateService updates;
+
+        /// <summary>What this session's last completed check concluded, or null before one has. The panel opens
+        /// on it, so a panel opened after the background check shows the answer that check found.</summary>
+        public UpdateStatus LastUpdateStatus { get; private set; }
+
+        /// <summary>
+        /// Raised on the interface thread when a check started by <see cref="StartUpdateCheck"/> has finished,
+        /// with its answer, or with null when the service declined to ask after all.
+        /// </summary>
+        public event Action<UpdateStatus> UpdateChecked;
+
+        /// <summary>1 while a check is in flight, so that the panel opening during the one Init queued waits for
+        /// its answer rather than asking GitHub a second time.</summary>
+        private int checking;
+
+        /// <summary>Whether this start's automatic check has been started, whatever it went on to find, so that
+        /// the panel does not ask a second time after an answer nobody could read; see
+        /// UpdateCheck.MayAskThisStart. Read and written only while <see cref="checking"/> is held.</summary>
+        private bool automaticAsked;
+
+        /// <summary>The release the idle screen's mark offers, or null; see <see cref="RefreshUpdateMark"/>.</summary>
+        private volatile string offeredUpdate;
+
+        /// <summary>
+        /// Asks GitHub for the newest release, off the calling thread, when the setting and the interval allow.
+        /// </summary>
+        /// <returns>Whether an answer is coming: a check was started, or one already in flight will answer.</returns>
+        /// <remarks>
+        /// Called by Init once per start and by the panel. ADR 0012 is the whole of the policy and
+        /// UpdateCheck.ShouldCheck and UpdateCheck.MayAskThisStart the whole of its arithmetic: off means nothing
+        /// is constructed, let alone fetched; automatic means not within a day of the last answer and only once
+        /// per start, answered or not, though a check in flight answers whoever asks while it runs; and nothing
+        /// here joins the thread it was called on, so no network, a hung socket or a refused answer cannot delay
+        /// SimHub's start. The answer lands on the interface thread, which is the one thread that writes the
+        /// settings.
+        /// </remarks>
+        public bool StartUpdateCheck(bool manual)
+        {
+            if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return false;
+            if (System.Threading.Interlocked.CompareExchange(ref checking, 1, 0) != 0) return true;
+            if (!UpdateCheck.MayAskThisStart(manual, automaticAsked))
+            {
+                System.Threading.Interlocked.Exchange(ref checking, 0);
+                return false;
+            }
+            if (!manual) automaticAsked = true;
+            var installed = UpdateCheck.ComparableInstalled(Installer.InstalledVersion, Version);
+            var enabled = Settings.CheckForUpdates;
+            var ticks = Settings.LastUpdateCheckTicks;
+            UpdateService.InBackground(() =>
+            {
+                UpdateStatus answer = null;
+                try
+                {
+                    answer = Updates.Check(installed, enabled, ref ticks, DateTime.UtcNow, manual);
+                }
+                finally
+                {
+                    var answered = answer;
+                    var answeredTicks = ticks;
+                    OnInterfaceThread(() => ConcludeUpdateCheck(answered, answeredTicks));
+                }
+            }, new SimHubInstallLog());
+            return true;
+        }
+
+        private void ConcludeUpdateCheck(UpdateStatus answer, long ticks)
+        {
+            System.Threading.Interlocked.Exchange(ref checking, 0);
+            if (answer != null)
+            {
+                LastUpdateStatus = answer;
+                var remembered = UpdateMark.Remember(Settings.OfferedRelease, answer);
+                if (ticks != Settings.LastUpdateCheckTicks || remembered != Settings.OfferedRelease)
+                {
+                    Settings.LastUpdateCheckTicks = ticks;
+                    Settings.OfferedRelease = remembered;
+                    SaveSettings();
+                }
+            }
+            RefreshUpdateMark();
+            try
+            {
+                UpdateChecked?.Invoke(answer);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Showing the update check's answer failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// Recomputes what the idle screen's mark offers from the remembered answer and what the rig runs.
+        /// </summary>
+        /// <remarks>
+        /// Computed here, when either side moves, rather than in the delegates: SimHub reads a delegate far more
+        /// often than a check finishes or an update lands, and the installed version is not free to work out.
+        /// The switch is the exception and is read live by the delegates, so turning the check off silences the
+        /// mark on the next frame rather than on the next check.
+        /// </remarks>
+        public void RefreshUpdateMark()
+        {
+            var installed = UpdateMark.Installed(Installer.InstalledVersion, Version, PluginUpdate.Pending(Installer.SimHubRoot));
+            offeredUpdate = UpdateMark.Offered(Settings.OfferedRelease, installed);
+        }
+
+        /// <summary>The release the idle screen's mark offers whatever the switch says, or null; the panel reads
+        /// it so that the two say the same thing.</summary>
+        public string OfferedUpdate => offeredUpdate;
+
+        /// <summary>Runs work on SimHub's interface thread, or here when there is none.</summary>
+        private static void OnInterfaceThread(Action work)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null)
+            {
+                work();
+                return;
+            }
+            dispatcher.BeginInvoke(work);
+        }
+
         public void Init(PluginManager pluginManager)
         {
             Log.Info("OpenDash plugin " + Version + " starting");
@@ -111,7 +241,12 @@ namespace OpenDashPlugin
                 // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
                 // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
                 Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
-                Installer.EnsureInstalled(false);
+                // A driver who said yes to replacing their edited dashboards said it to the plugin that
+                // downloaded this one, and this start is what writes them (#438); see EditedConsent.
+                var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
+                if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
+                Installer.EnsureInstalled(false, replaceEdited);
+                if (EditedConsent.Forget(Settings.ReplaceEditedFor, Version, PluginUpdate.Pending(Installer.SimHubRoot))) Settings.ReplaceEditedFor = null;
                 WriteScreenFolders();
             }
             catch (Exception ex)
@@ -129,6 +264,18 @@ namespace OpenDashPlugin
             }
             AttachProperties();
             AttachActions(pluginManager);
+            try
+            {
+                // What the idle screen's mark says before anything is asked: the release the last answered
+                // check offered, compared with what this rig now runs. Then the day's check itself, queued
+                // rather than run, so that a rig with no network starts exactly as fast as one with it.
+                RefreshUpdateMark();
+                StartUpdateCheck(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Starting the update check failed", ex);
+            }
             try
             {
                 // Off the startup thread because it reads a folder, and it does no more than that:
@@ -460,6 +607,10 @@ namespace OpenDashPlugin
             // `L. Byrne` reads it on both. #385.
             this.AttachDelegate(Contract.DriverNameFormat, () => Settings.DriverNameFormat);
             this.AttachDelegate(Contract.DriverNameTeam, () => Settings.DriverNameTeam);
+            // And the idle screen's mark, shared because every package ends with an idle screen. The switch is
+            // read live and the offer is computed when it changes; see RefreshUpdateMark. #83.
+            this.AttachDelegate(Contract.UpdateAvailable, () => UpdateMark.Available(Settings.CheckForUpdates, offeredUpdate));
+            this.AttachDelegate(Contract.UpdateVersion, () => UpdateMark.Shown(Settings.CheckForUpdates, offeredUpdate));
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -517,66 +668,37 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The actions a driver binds to a wheel button: five per face, one per zone and one held for a
-        /// glance, and two per companion, the next module and a glance held on the same idiom.
+        /// The actions a driver binds to a wheel button, which are exactly the ones
+        /// Contract.ScreenActionNames lists for the rig's screens: five per face, one per zone and one
+        /// held for a glance; the glance alone on a pit wall; and nothing on a companion, which SimHub
+        /// pages itself. ScreenActions walks that list and says what each name does, so the list and
+        /// the registration cannot disagree, and ScreenActionsTests holds what arrives here.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
         /// a style choice. The extension method assigns null over the release callback before passing
         /// it on -- `AddAction(actionName, typeof(T), actionStart, actionEnd = null)`, an assignment
         /// and not a default -- so an action registered that way can never be released. It is written
-        /// down in docs/research/simhub-dash-format.md. All five go through the manager, the four that
-        /// need no release included, so that nobody has to remember which is which.
+        /// down in docs/research/simhub-dash-format.md. Every action goes through the manager, the ones
+        /// that need no release included, so that nobody has to remember which is which.
+        ///
+        /// The rig's screens and not the catalogue's. An action a rig does not have is a button a
+        /// driver may already have assigned, left bound to nothing, which is why this used to register
+        /// all eight face sizes whatever the rig was -- but a namespace a user typed cannot be
+        /// enumerated ahead of time, so the rig is the only list there is once screens are instances
+        /// (ADR 0017). The panel warns before a remove that a button bound to that screen will go
+        /// quiet, which is the cost said out loud rather than designed around.
         ///
         /// An action only changes the live page. It does not save: the page a zone is showing is live
         /// state, and Init puts every zone back on the page it opens on.
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            // The rig's faces and not the catalogue's. An action a rig does not have is a button a
-            // driver may already have assigned, left bound to nothing, which is why this used to
-            // register all eight sizes whatever the rig was -- but a namespace a user typed cannot be
-            // enumerated ahead of time, so the rig is the only list there is once screens are
-            // instances (ADR 0017). The panel warns before a remove that a button bound to that screen
-            // will go quiet, which is the cost said out loud rather than designed around.
-            foreach (var screen in Settings.FaceScreens())
-            {
-                var ns = screen.Namespace;
-                foreach (var letter in Contract.FaceZoneLetters)
-                {
-                    var captured = letter;
-                    pluginManager.AddAction(Contract.CycleZoneAction(ns, captured), typeof(OpenDash), (manager, name) => Settings.CycleScreenZone(ns, captured), null);
-                }
+            ScreenActions.Register(() => Settings, (name, press, release) =>
                 pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(ns),
+                    name,
                     typeof(OpenDash),
-                    (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
-                    (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
-            }
-            // A companion has two of its own: one that advances it past the modules the rotation
-            // leaves off, and one held for a glance, which is the same pair a face has under other
-            // names. They go through the manager for the same reason the face's do.
-            //
-            // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
-            // but the canvas asks for a page called up on demand over a zone's assigned one and the
-            // hold is the same gesture under whatever SimHub binds it to.
-            foreach (var screen in Settings.RigScreens())
-            {
-                if (screen == null) continue;
-                var ns = screen.Namespace;
-                if (screen.IsCompanion)
-                {
-                    pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
-                }
-                else if (!screen.IsPitWall)
-                {
-                    continue;
-                }
-                pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(ns),
-                    typeof(OpenDash),
-                    (manager, name) => Settings.BeginScreenGlance(ns),
-                    (manager, name) => Settings.EndScreenGlance(ns));
-            }
+                    (manager, action) => press(),
+                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release())));
         }
     }
 }

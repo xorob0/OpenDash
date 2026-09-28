@@ -159,6 +159,8 @@ describe('no package calls a SimHub function that can throw', () => {
     // And the replacement is genuinely read, so this cannot pass by the session best having been
     // dropped from every package instead.
     expect(formulas.some((f) => f.includes('GameData.BestLapOpponentPosition'))).toBe(true);
+    // And its class twin, which is what the same fields read when the rig counts in class (#433).
+    expect(formulas.some((f) => f.includes('GameData.BestLapOpponentSameClassPosition'))).toBe(true);
   });
 });
 

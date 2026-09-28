@@ -50,7 +50,7 @@ const SECTOR_SAMPLES = ['−0.29', '−0.23', '+0.31'] as const;
 const RULE_HEIGHT = 1;
 
 /** The longest caption the reference setting can produce, which is what its box is measured by. */
-const CAPTION_WIDEST = 'VS ALL-TIME BEST';
+const CAPTION_WIDEST = 'vs all-time best';
 
 export const delta = defineModule('delta', (ctx) => {
   const d = densityOf(ctx.density);
@@ -71,8 +71,8 @@ export const delta = defineModule('delta', (ctx) => {
     colorBind: deltaColour(value),
     drawn: drawnFigure({ value, digits: CHARS.delta.digits - 3, decimals: 2, signed: true }),
   };
-  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'VS SESSION BEST', widest: CAPTION_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
-  const below = fld(ctx, 'delta', 'VS SESSION BEST', number, { labelBind: referenceLabel(), labelWidest: CAPTION_WIDEST, labelBelow: true });
+  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: CAPTION_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
+  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: CAPTION_WIDEST, labelBelow: true });
   const captionBelow = ctx.density === 'compact' || fieldWidth(beside, ctx.density) > ctx.frame.width;
   // 34 px on both of the canvas's ramps, which is the small rank of the companion and the middle
   // one of a zone; a compact zone steps the pair down together.
@@ -110,9 +110,9 @@ export const delta = defineModule('delta', (ctx) => {
               const y = bottom - scaleHeight;
               const marks: { text: string; color?: string }[] = [
                 { text: `−${DELTA_RANGE.toFixed(1)}` },
-                { text: 'FASTER', color: ds.purpose.delta.faster },
+                { text: 'Faster', color: ds.purpose.delta.faster },
                 { text: '0' },
-                { text: 'SLOWER', color: ds.purpose.delta.slower },
+                { text: 'Slower', color: ds.purpose.delta.slower },
                 { text: `+${DELTA_RANGE.toFixed(1)}` },
               ];
               // Space-between, as the canvas sets the row: the outer two on the ends of the bar

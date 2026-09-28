@@ -758,6 +758,16 @@ namespace OpenDashPlugin
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
 
+        /// <summary>The release the last answered check offered, or null when it found this rig current. Persisted
+        /// because the check runs once a day and SimHub starts more often than that, and the idle screen's mark is
+        /// read from it on every start between; see UpdateMark.Remember. #83.</summary>
+        public string OfferedRelease { get; set; }
+
+        /// <summary>The release a person said yes to replacing their edited dashboards for, or null. Written when an
+        /// update stages the plugin, read and cleared by that plugin's first start, which is what writes the
+        /// dashboards; see EditedConsent.</summary>
+        public string ReplaceEditedFor { get; set; }
+
         /// <summary>Fingerprint of each dashboard folder as OpenDash last wrote it, keyed by folder name. An entry
         /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
         /// rather than beside the dashboard so that nothing OpenDash writes into DashTemplates can confuse SimHub's
@@ -1180,7 +1190,8 @@ namespace OpenDashPlugin
             return screen == null ? Contract.DefaultCompanionStart : screen.CycleModule();
         }
 
-        /// <summary>Holds, and releases, one companion's glance.</summary>
+        /// <summary>Holds, and releases, one screen's glance, whatever its kind. A namespace the rig no
+        /// longer holds does nothing, since its action stays bound until SimHub restarts.</summary>
         public void BeginScreenGlance(string ns)
         {
             var screen = ScreenByNamespace(ns);
@@ -1272,9 +1283,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Advances one zone of one screen, and returns the page it landed on.</summary>
+        /// <remarks>
+        /// A screen the rig no longer holds is left alone and reads its default, rather than cycling the
+        /// shared orphan ScreenFace hands the property readers: its button stays bound until SimHub
+        /// restarts, and a press on it would otherwise move a default every other removed face reads.
+        /// </remarks>
         public int CycleScreenZone(string ns, string letter)
         {
-            return ScreenFace(ns).Cycle(letter);
+            var screen = ScreenByNamespace(ns);
+            if (screen == null || screen.Face == null) return ScreenFace(ns).Zone(letter);
+            return screen.Face.Cycle(letter);
         }
 
         /// <summary>Every zone of every face back on the page it opens on, which is what Init does.</summary>

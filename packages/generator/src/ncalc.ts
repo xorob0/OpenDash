@@ -248,6 +248,13 @@ export const bestLapPositionInClass = (): Expr => 'getbestlapopponentleaderboard
 export const bestSplitTime = (sector: number): Expr => `getbestsplittime(${num(sector)})`;
 
 /**
+ * `getbestsplittime_playerclassonly(sector)`: the best of that sector among the player's own class,
+ * or null. Null-safe all the way down in SimHub (`lastData?.NewData?.BestSessionSplitsPlayerClass?`
+ * and a `TimeSpan?` back), so unlike the best-lap position functions it cannot throw.
+ */
+export const bestSplitTimeInClass = (sector: number): Expr => `getbestsplittime_playerclassonly(${num(sector)})`;
+
+/**
  * `repeatindex()`: which copy of a repeated layer an expression is being evaluated for, 1 for
  * the original row. `depth` addresses an outer repeated layer when layers nest.
  */
