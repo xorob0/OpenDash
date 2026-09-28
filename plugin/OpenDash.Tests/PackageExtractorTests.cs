@@ -280,19 +280,108 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Fonts_are_skipped_when_the_same_name_or_the_same_bytes_exist()
+        public void A_face_already_there_in_the_same_bytes_is_not_copied_again_under_any_name()
         {
             var fonts = Path.Combine(root, "DashFonts");
             Directory.CreateDirectory(fonts);
-            File.WriteAllText(Path.Combine(fonts, "Barlow-Medium.ttf"), "older bytes, same name");
+            File.WriteAllText(Path.Combine(fonts, "Barlow-Medium.ttf"), "font-a");
             File.WriteAllText(Path.Combine(fonts, "Renamed.ttf"), "font-b");
 
             InstallResult result;
             using (var package = Package("OpenDash", "0.2.0")) result = PackageExtractor.Install(package, root, null);
 
             Assert.Equal(0, result.FontsCopied);
-            Assert.Equal("older bytes, same name", File.ReadAllText(Path.Combine(fonts, "Barlow-Medium.ttf")));
             Assert.False(File.Exists(Path.Combine(fonts, "BarlowCondensed-Bold.ttf")));
+            Assert.False(Directory.Exists(Path.Combine(fonts, PackageExtractor.FontBackups)));
+        }
+
+        /// <summary>
+        /// A face whose bytes changed under its name reaches the rig, and the one it replaces is kept.
+        /// </summary>
+        /// <remarks>
+        /// This used to be skipped, which is SimHub's importer's rule, and it meant a rig that had a face never got
+        /// a newer build of it: the faces have changed under their names before, and every text is measured against
+        /// the faces its package carries. The older one is moved rather than overwritten, into the folder SimHub
+        /// itself retires fonts to, because a running SimHub may have it mapped.
+        /// </remarks>
+        [Fact]
+        public void A_face_whose_bytes_changed_under_its_name_replaces_the_one_there_which_is_set_aside()
+        {
+            var fonts = Path.Combine(root, "DashFonts");
+            Directory.CreateDirectory(fonts);
+            File.WriteAllText(Path.Combine(fonts, "Barlow-Medium.ttf"), "older bytes, same name");
+            var log = new ListLog();
+
+            InstallResult result;
+            using (var package = Package("OpenDash", "0.2.0")) result = PackageExtractor.Install(package, root, log);
+
+            Assert.Equal(2, result.FontsCopied);
+            Assert.Equal("font-a", File.ReadAllText(Path.Combine(fonts, "Barlow-Medium.ttf")));
+            Assert.Equal("font-b", File.ReadAllText(Path.Combine(fonts, "BarlowCondensed-Bold.ttf")));
+            Assert.Equal("older bytes, same name", File.ReadAllText(Path.Combine(fonts, PackageExtractor.FontBackups, "Barlow-Medium.ttf")));
+            Assert.Contains("info: Replaced font Barlow-Medium.ttf", log.Lines);
+            Assert.Contains("info: Installed font BarlowCondensed-Bold.ttf", log.Lines);
+        }
+
+        /// <summary>
+        /// A face that cannot be moved out of the way is kept, and the rest of the install carries on.
+        /// </summary>
+        /// <remarks>
+        /// What a rig meets is SimHub holding the file; what a runner here can stage is a backup folder it may not
+        /// write into, which fails the same move. A face that could not be replaced still draws, so it is not a
+        /// reason to fail a dashboard over.
+        /// </remarks>
+        [DeniedPathFact]
+        public void A_face_that_cannot_be_set_aside_is_kept_and_the_other_faces_still_arrive()
+        {
+            var fonts = Path.Combine(root, "DashFonts");
+            var backups = Path.Combine(fonts, PackageExtractor.FontBackups);
+            Directory.CreateDirectory(backups);
+            File.WriteAllText(Path.Combine(fonts, "Barlow-Medium.ttf"), "older bytes, same name");
+            var log = new ListLog();
+
+            InstallResult result;
+            using (var denied = new DeniedPaths())
+            {
+                denied.Deny(backups);
+                using (var package = Package("OpenDash", "0.2.0")) result = PackageExtractor.Install(package, root, log);
+            }
+
+            Assert.Equal(1, result.FontsCopied);
+            Assert.Equal("older bytes, same name", File.ReadAllText(Path.Combine(fonts, "Barlow-Medium.ttf")));
+            Assert.Equal("font-b", File.ReadAllText(Path.Combine(fonts, "BarlowCondensed-Bold.ttf")));
+            Assert.Contains(log.Lines, line => line.StartsWith("warn: Kept the older Barlow-Medium.ttf", StringComparison.Ordinal));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// A face is stamped with the time it was written, not the time the package gave it.
+        /// </summary>
+        /// <remarks>
+        /// Every entry of a built package carries one fixed time, which extraction and the copy both keep. The
+        /// caches in front of a font file are keyed on its path, size and time, so a newer face written over an
+        /// older one of the same size would otherwise look to them like the file they already know.
+        /// </remarks>
+        [Fact]
+        public void A_face_is_stamped_with_the_time_it_was_written()
+        {
+            var packaged = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+            {
+                Add(zip, "OpenDash/OpenDash.djson", "{\"Version\":2}");
+                Add(zip, "OpenDash/OpenDash.djson.metadata", "{\"DashboardVersion\":\"0.2.0\"}");
+                var face = zip.CreateEntry("OpenDash/_SHFonts/openDashDisplay-Light.ttf");
+                face.LastWriteTime = packaged;
+                using (var writer = new StreamWriter(face.Open())) writer.Write("light");
+            }
+            stream.Position = 0;
+            var before = DateTime.UtcNow.AddMinutes(-1);
+
+            PackageExtractor.Install(stream, root, null);
+
+            var written = File.GetLastWriteTimeUtc(Path.Combine(root, "DashFonts", "openDashDisplay-Light.ttf"));
+            Assert.True(written > before, "the face kept the package's time, " + written.ToString("o"));
         }
 
         [Fact]

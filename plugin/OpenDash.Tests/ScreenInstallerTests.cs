@@ -5,6 +5,7 @@
 // chosen, which from the outside is indistinguishable from the dashboards having disappeared.
 using System;
 using System.IO;
+using System.IO.Compression;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -106,6 +107,51 @@ namespace OpenDashPlugin.Tests
             Assert.False(ScreenInstaller.Retitle(null, root, record, null));
             Assert.False(ScreenInstaller.Retitle(new ScreenInstance { Folder = null, Name = "Rim" }, root, record, null));
             Assert.False(ScreenInstaller.Retitle(new ScreenInstance { Folder = "OpenDash Rim", Name = "Rim" }, root, record, null));
+        }
+
+        /// <summary>
+        /// A screen added from the Rig tab brings its package's faces with it, onto a SimHub that has none of them.
+        /// </summary>
+        /// <remarks>
+        /// #441 asked whether this path, which writes every screen a rig adds and never asks SimHub to reload its
+        /// fonts, was where a face went missing. It copies them: the panel asks for a restart after adding a
+        /// screen, because SimHub reads its dashboard list at startup, and that restart is also what loads a face
+        /// copied here. The same face a stock screen already brought is not copied twice.
+        /// </remarks>
+        [Fact]
+        public void A_screen_added_from_the_rig_tab_copies_the_faces_its_package_carries()
+        {
+            const string package = "OpenDash 1280x480.simhubdash";
+            var zip = new MemoryStream();
+            using (var archive = new ZipArchive(zip, ZipArchiveMode.Create, true))
+            {
+                SyntheticPackage.Add(archive, Folder + "/" + Folder + ".djson", "{\"Version\":2,\"A\":\"isnull([OpenDash.Face1280x480ZoneA],0)\"}");
+                SyntheticPackage.Add(archive, Folder + "/" + Folder + ".djson.metadata", "{\"Title\":\"" + Folder + "\",\"DashboardVersion\":\"1.0.0\"}");
+                SyntheticPackage.Add(archive, Folder + "/_SHFonts/openDashDisplay-Bold.ttf", "font-bold");
+                SyntheticPackage.Add(archive, Folder + "/_SHFonts/openDashDisplay-Light.ttf", "font-light");
+            }
+            zip.Position = 0;
+            var packages = new MemoryPackageSource().Add(package, zip);
+            var rim = new ScreenInstance
+            {
+                Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash Rim", Name = "Rim", Namespace = "Rim", Package = package,
+            };
+            var fonts = Path.Combine(root, PackageExtractor.DashFonts);
+            Assert.False(Directory.Exists(fonts));
+
+            var written = ScreenInstaller.Write(rim, packages, root, new MemoryFolderRecord(), null);
+
+            Assert.True(written.Ok, written.Error);
+            Assert.True(written.Written);
+            Assert.Equal("font-bold", File.ReadAllText(Path.Combine(fonts, "openDashDisplay-Bold.ttf")));
+            Assert.Equal("font-light", File.ReadAllText(Path.Combine(fonts, "openDashDisplay-Light.ttf")));
+
+            var second = new ScreenInstance
+            {
+                Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash Pod", Name = "Pod", Namespace = "Pod", Package = package,
+            };
+            Assert.True(ScreenInstaller.Write(second, packages, root, new MemoryFolderRecord(), null).Written);
+            Assert.Equal(2, Directory.GetFiles(fonts, "*.ttf").Length);
         }
     }
 }

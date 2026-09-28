@@ -1,5 +1,5 @@
 // PackageExtractor.cs: installs a .simhubdash the way SimHub's own importer does (ImportDashWindow):
-// extract, find <folder>/<folder>.djson, replace DashTemplates/<folder>, copy missing fonts to DashFonts.
+// extract, find <folder>/<folder>.djson, replace DashTemplates/<folder>, copy its fonts to DashFonts.
 // Framework-only IO with an injected log, so that the tests exercise it on Linux against a fake SimHub root.
 using System;
 using System.Collections.Generic;
@@ -328,7 +328,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Extracts the package into DashTemplates, replacing an existing folder (kept as <folder>_backup.zip),
-        /// and copies the package fonts that DashFonts does not have yet. Throws on failure; the caller logs and reports.</summary>
+        /// and copies the package fonts that DashFonts does not have in those bytes. Throws on failure; the caller logs and reports.</summary>
         /// <param name="holdsAuthoredWork">
         /// True when the folder being replaced is one somebody has edited, so the copy set aside must outlive the
         /// next install rather than being reclaimed by it.
@@ -578,8 +578,33 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Copies the package's TTFs into DashFonts unless a file with the same name or the same bytes is there,
-        /// which is the rule SimHub's importer applies. Returns the number of files copied.</summary>
+        /// <summary>Where a face replaced in DashFonts is kept: the folder SimHub itself moves the fonts it retires to, and
+        /// one that neither SimHub's font list nor WPF looks inside.</summary>
+        public const string FontBackups = "_Backups";
+
+        /// <summary>
+        /// Copies the package's TTFs into DashFonts, replacing a face of the same name whose bytes differ, and returns
+        /// how many files it wrote.
+        /// </summary>
+        /// <remarks>
+        /// A face whose bytes are already there, under any name, is skipped, which is half of the rule SimHub's
+        /// importer applies and keeps DashFonts free of the duplicates SimHub would otherwise set aside at its next
+        /// start. The other half, skipping any face whose name is taken, is not followed. It meant that a face whose
+        /// bytes change under its name never reached a rig that had the old one, and the faces have changed under
+        /// their names before (#159); every text of every package is measured against the faces that package
+        /// carries, so a rig drawing an older build of one clips glyphs the tests say fit, silently.
+        ///
+        /// The face being replaced is moved into DashFonts/_Backups rather than overwritten, because a running
+        /// SimHub may hold it: WPF maps a face file it has drawn from, and Windows refuses to write a mapped file
+        /// while still letting it be renamed. When even the move is refused the older face is left in place and
+        /// the next install tries again, since a face that could not be replaced is still a face that draws.
+        ///
+        /// What is written is stamped with the time it was written. Every entry of a package carries the same
+        /// fixed time, and the caches in front of a font file are keyed on its path, size and time -- SimHub's
+        /// FontsAnalyzer names and DirectWrite's file references both -- so a replacement at the same path with
+        /// the same time and, for a face whose names were rewritten in place, the same size would be taken for
+        /// the file it replaced.
+        /// </remarks>
         public static int CopyFonts(string packageFontsFolder, string dashFontsFolder, IInstallLog log)
         {
             log = log ?? NullInstallLog.Instance;
@@ -591,13 +616,37 @@ namespace OpenDashPlugin
             {
                 var name = Path.GetFileName(font);
                 var destination = Path.Combine(dashFontsFolder, name);
-                if (File.Exists(destination)) continue;
                 if (existing.Any(other => SameBytes(other, font))) continue;
+                var replacing = File.Exists(destination);
+                if (replacing && !SetFaceAside(destination, dashFontsFolder, log)) continue;
                 File.Copy(font, destination, false);
+                File.SetLastWriteTimeUtc(destination, DateTime.UtcNow);
                 copied++;
-                log.Info("Installed font " + name);
+                log.Info((replacing ? "Replaced font " : "Installed font ") + name);
             }
             return copied;
+        }
+
+        /// <summary>Moves a face out of DashFonts into its _Backups folder, and reports whether it could.</summary>
+        private static bool SetFaceAside(string face, string dashFontsFolder, IInstallLog log)
+        {
+            var name = Path.GetFileName(face);
+            try
+            {
+                var backups = Path.Combine(dashFontsFolder, FontBackups);
+                Directory.CreateDirectory(backups);
+                var kept = Path.Combine(backups, name);
+                // One copy per name, which is how SimHub keeps the fonts it moves there itself.
+                if (File.Exists(kept)) File.Delete(kept);
+                File.Move(face, kept);
+                log.Info("Set the older " + name + " aside in " + kept);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                log.Warn("Kept the older " + name + ", which could not be moved (" + ex.Message + "); the next install replaces it.");
+                return false;
+            }
         }
 
         private static bool SameBytes(string a, string b)
