@@ -8,17 +8,25 @@
   // `showsTimeLeft`, so it reads minutes where the session has a clock and laps where it does not --
   // Fuel_RemainingLaps against RemainingLaps -- and every scenario here published a clock, including
   // the 30-lap race. Expect about "−4.8 LAPS" in the danger red on the fuel page and on band D
-  // (thirteen laps in the tank against eighteen to run), the session page counting laps rather than
-  // time left, and the pit wall's LEFT reading "-:--:--".
+  // (thirteen laps in the tank against eighteen to run), and the session page counting laps rather
+  // than time left.
   //
-  // Expect the bar's Race time field to be clipped, and read that as a bug in the bar rather than in
-  // this scenario. `zones/bar.ts` draws `raceTime` and `timeLeft` as `clock(sessionTimeLeft())` with
-  // no `isTimedSession()` guard, where the session card, the session module, the pit wall header and
-  // the pit wall's own field all have one -- and `raceTime` is the default of the bar's first slot.
-  // A week of time left is therefore drawn as "168:00:00", seven digit cells in a budget of six, and
-  // WPF takes the last glyph off it. Every iRacing lap race does this today; the scenario is what
-  // makes it visible. It is in docs/dev-loop.md with the other failures that are silent, so that a
-  // VM pass expects the clipped field rather than reporting it as new; it has no ticket yet.
+  // Expect the "∞" mark wherever a clock is drawn unconditionally: the bar's Race and Time left
+  // fields ("RACE ∞"), the pit wall header's "LEFT ∞" and the pit wall's Session panel. The session
+  // module and the session card are the two that follow `SessionProgress`, which is `auto` by default
+  // and resolves to laps here, so on stock settings those two draw the lap rather than the mark --
+  // force the setting to `time` to see the mark on them. Nothing is clipped anywhere. This is the
+  // scenario that found #439 and the one that shows its fix: `zones/bar.ts` used to draw
+  // `raceTime` and `timeLeft` as `clock(sessionTimeLeft())` with no guard, so a week of time left was
+  // drawn as "168:00:00", seven digit cells in a budget of six, and WPF took the last glyph off it on
+  // every package. Every surface now reads `sessionClock()` and carries the mark. A clipped clock
+  // here is a regression.
+  //
+  // `-:--:--` is not this scenario's reading, and it is not `nosession`'s either: it is what a clock
+  // reads where `SessionTimeLeft` is at or below zero, which is the lower bound of `isTimedSession`.
+  // `nosession` blanks the session *type* and inherits green's clock, so it still counts down -- the
+  // bar reads "RACE 0:25:20" there. Nothing committed here publishes a zero clock, so the placeholder
+  // is held by `sessionClock.test.ts` rather than photographed; do not go looking for it on the VM.
   "extends": "green.json",
   "name": "Lap-counted race with no session clock, P3 of 24",
   "yaml": {
