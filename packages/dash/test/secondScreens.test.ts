@@ -34,6 +34,9 @@ import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
+import { columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
+import { leaderboardPlan } from '../src/modules/leaderboard.ts';
+import { relativePlan } from '../src/modules/relative.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
@@ -617,6 +620,57 @@ describe('every module fits the box it is given', () => {
           if (item.kind === 'layer') continue;
           expect({ module: module.id, item: item.name, rect: item.rect, inside: insideBox(item, box.frame) }).toMatchObject({ inside: true });
         }
+      }
+    });
+  }
+});
+
+/**
+ * #328: a list row answers its box with type as well as with rows, so its cells are wider in one box
+ * than in another, and each of them has to stay inside the column it was laid out for.
+ *
+ * The check above holds every item inside the frame, which a cell can pass while overrunning the
+ * column beside it: a 34 px gap is 13 px wider than a 24 px one and a 15 px name wider than a 13 px
+ * one, and the row they share is laid out once. So this lays the row out the way `table()` does, from
+ * the plan the page itself made, and holds every cell against its own column at every shape the build
+ * hands a module -- the box, and what the cell draws inside it, being measured separately.
+ */
+describe('every list cell fits its column', () => {
+  const PLANS: [string, (ctx: { frame: Rect; density: Density; prefix: string; page: string }) => ListPlan][] = [
+    ['relative', relativePlan],
+    ['leaderboard', leaderboardPlan],
+  ];
+  /** The column an item of a row belongs to: `.row.pos`, `.row.class.label`, `.row.pitChip.fill`. */
+  const columnOf = (name: string): ColumnId | undefined => {
+    const id = /\.row\.([a-zA-Z0-9]+)/.exec(name)?.[1];
+    if (id === undefined || id === 'background' || id === 'rule') return undefined;
+    return (id === 'pitChip' ? 'pit' : id) as ColumnId;
+  };
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      for (const [id, planOf] of PLANS) {
+        const ctx = { frame: box.frame, density: box.density, prefix: '' };
+        // Planned as the page plans itself, which is as its own page: `defineModule` names it.
+        const plan = planOf({ ...ctx, page: id });
+        const spans = new Map(columnSpans(plan.columns, box.frame, box.density, plan.rowType).map((span) => [span.id, span]));
+        const module = MODULES.find((m) => m.id === id)!;
+        let measured = 0;
+        for (const item of module.build(ctx).flatMap((i) => [...walkItems([i])])) {
+          if (item.kind === 'layer') continue;
+          const column = columnOf(item.name);
+          if (column === undefined) continue;
+          const span = spans.get(column);
+          expect({ id, box: box.name, item: item.name, column, laidOut: span !== undefined }).toMatchObject({ laidOut: true });
+          if (!span) continue;
+          const r = item.rect;
+          measured += 1;
+          expect({ id, box: box.name, item: item.name, rect: r, span, inside: r.left >= span.left && r.left + r.width <= span.left + span.width + 1 }).toMatchObject({ inside: true });
+          if (item.kind !== 'text') continue;
+          const width = drawnWidth(item);
+          expect({ id, box: box.name, item: item.name, fs: item.fontSize, text: drawnText(item), width, box_: r.width, fits: width <= r.width }).toMatchObject({ fits: true });
+        }
+        expect({ id, box: box.name, measured: measured > 0 }).toMatchObject({ measured: true });
       }
     });
   }

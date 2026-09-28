@@ -1,6 +1,7 @@
 /**
- * Module 14, Leaderboard: the order of the race, overall or in the player's class. The row set fits
- * the box, so the same module is seven rows on a companion page and four in a short zone.
+ * Module 14, Leaderboard: the order of the race, overall or in the player's class. The page declares
+ * how many rows it lists at each shape and a box too short for them lists fewer, so the same module is
+ * seven rows on a companion page and four in a short zone.
  *
  * Two settings say "class" here and since #212 they meet, in one direction. `PositionMode` is the
  * rig's own and it filters the rows it numbers, a column of class positions drawn over the whole
@@ -13,9 +14,10 @@
  * then the chip and the number. The gap outlives both, because a leaderboard without a gap is a
  * list of names.
  */
-import { columnWidths, nameFloorForRow, table, tableRowHeight, type ColumnId } from '../second/table.ts';
-import { defineModule, pageColumns } from './module.ts';
+import { columnWidths, listPlan, nameFloorForRow, table, tableRowHeight, type ColumnId, type ListPlan, type RowSize } from '../second/table.ts';
+import { defineModule, drawnAt, pageColumns, type ModuleContext } from './module.ts';
 import type { Density } from '../second/density.ts';
+import type { Archetype } from './shedding.ts';
 
 /**
  * Every column this page has, in drawing order. Which of them a shape keeps is `shedding.ts`.
@@ -60,7 +62,7 @@ const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'name', 'gap'];
  * which is what #385 asked for; a row with nothing left to shed draws the name ellipsised to the
  * column it has.
  */
-export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): ColumnId[] {
+export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: RowSize): ColumnId[] {
   const kept = [...columns];
   const h = rowHeight ?? tableRowHeight(density);
   const floor = nameFloorForRow(h);
@@ -78,17 +80,49 @@ export function fittingColumns(columns: readonly ColumnId[], width: number, dens
   return kept;
 }
 
+/**
+ * How many rows the leaderboard lists at each shape, which is the count the drawings give it.
+ *
+ * `ZoneCatalogue.dc.html` draws six rows at `wide`, at `grid` and at `tall`, and eight at `tall
+ * narrow`; the companion artboard draws seven. Three of the four are taken as drawn, and two are not:
+ *
+ * - **`wide` is seven**, the companion's count rather than the zone sheet's six, because the `wide` row
+ *   of zones.md section 5 is the page's fullest form and carries what the companion artboard gives it.
+ *   The companion's own page is a `wide` box, so this is also the count that keeps it drawing what its
+ *   artboard draws, where it used to draw eight.
+ * - **`tall` is eleven**, where the catalogue draws six. `SHAPE_ARCHETYPES` defines the shape as the one
+ *   where *a list grows rows*, and the catalogue's own relative does, to eleven, in the same 360 x 470
+ *   box; the leaderboard's six there leave 250 px of that box empty under a `justify-content: center`.
+ *   Eleven is the count the other list takes at the shape, so the two list pages of a tall zone are one
+ *   length. The canvas owes the redraw.
+ *
+ * Which of the order a zone should show — the head of the field, or the cars around the player the way a
+ * split board does — is #340's question, and the count is the half of it that belongs to #328.
+ */
+const ROWS: Record<Archetype, number> = { wide: 7, grid: 6, tallNarrow: 8, tall: 11 };
+
+/** The leaderboard's plan for this box: its declared rows, the type they carry and the columns kept. */
+export const leaderboardPlan = (ctx: ModuleContext): ListPlan =>
+  listPlan(ctx.frame, {
+    density: ctx.density,
+    header: drawsHeader(ctx.density),
+    columns: pageColumns(LEADERBOARD_COLUMNS, ctx),
+    rows: ROWS[drawnAt(ctx)],
+    fit: fittingColumns,
+  });
+
 export const leaderboard = defineModule('leaderboard', (ctx) => {
-  const header = drawsHeader(ctx.density);
-  const rowHeight = tableRowHeight(ctx.density);
+  const plan = leaderboardPlan(ctx);
   return table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
-    columns: fittingColumns(pageColumns(LEADERBOARD_COLUMNS, ctx), ctx.frame.width, ctx.density, rowHeight),
+    columns: plan.columns,
     mode: 'full',
     density: ctx.density,
-    rowHeight,
-    header,
+    rows: plan.rows,
+    rowHeight: plan.rowHeight,
+    rowType: plan.rowType,
+    header: drawsHeader(ctx.density),
     classOnly: ctx.classOnly,
   });
 });
