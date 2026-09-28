@@ -55,6 +55,27 @@ namespace OpenDashPlugin.Tests
             return stream;
         }
 
+        /// <summary>A card face the way the dash build writes one: sized in its sidecar, which is where the catalogue reads
+        /// a round face's size from, and reading only properties every screen shares, so that it names no namespace of its
+        /// own for a copy to rewrite.</summary>
+        public static MemoryStream CardFace(string folder, int width, int height, string version)
+        {
+            var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},\"A\":\"isnull([OpenDash.RevBar],0)\"}";
+            var cards = "{\"Version\":2,\"B\":\"isnull([OpenDash.Slot1],0)\"}";
+            var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+            {
+                Add(zip, folder + "/" + folder + ".djson", main);
+                Add(zip, folder + "/" + folder + ".djson.metadata",
+                    "{\"Title\":\"" + folder + "\",\"Width\":" + width + ",\"Height\":" + height + ",\"DashboardVersion\":\"" + version + "\"}");
+                Add(zip, folder + "/" + folder + ".djson.png", "thumbnail");
+                Add(zip, folder + "/cards.djson", cards);
+                Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
+            }
+            stream.Position = 0;
+            return stream;
+        }
+
         /// <summary>A .ressources sidecar: a zip holding each image at its root under the image's own name.</summary>
         private static byte[] Resources(params string[] images)
         {

@@ -317,7 +317,15 @@ namespace OpenDashPlugin
         /// <summary>
         /// A screen made from a package, taking the stock namespace and folder when the rig has neither.
         /// </summary>
+        /// <remarks>
+        /// Neither, and not only the namespace. For every kind but one the two go together, since the first screen
+        /// of a size is given both at once and keeps both. A card face migrated from a settings file older than ADR
+        /// 0017, however, was given a namespace from its folder, the size being unknown then, so it holds its
+        /// package's folder under a namespace its size does not spell, and only the folder says that the package is
+        /// already on the rig; asked about the namespace alone, this handed that folder to a second screen (#474).
+        /// </remarks>
         /// <param name="taken">The namespaces the rig already holds, so a second screen at a size gets its own.</param>
+        /// <param name="folders">The folders the rig already holds, so no two screens are handed the same one.</param>
         public static ScreenInstance NewScreen(PackageEntry entry, string name, IEnumerable<string> taken, IEnumerable<string> folders = null)
         {
             var screen = new ScreenInstance
@@ -329,7 +337,8 @@ namespace OpenDashPlugin
                 Package = entry.Package,
             };
             var used = new HashSet<string>(taken ?? new string[0], StringComparer.OrdinalIgnoreCase);
-            if (!used.Contains(screen.StockNamespace))
+            var held = new HashSet<string>(folders ?? new string[0], StringComparer.OrdinalIgnoreCase);
+            if (!used.Contains(screen.StockNamespace) && !held.Contains(entry.Folder))
             {
                 // The first screen at a size takes the stock package byte for byte: same namespace, same
                 // folder, nothing rewritten. This is the whole of the pre-ADR-0017 behaviour and it is

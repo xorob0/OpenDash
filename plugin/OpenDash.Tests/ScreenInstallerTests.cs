@@ -129,12 +129,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("openDash Rim", rim.Folder);
             Assert.Equal("Rim", rim.Namespace);
 
-            // A slots face spells its namespace from its folder, and it stays the stock screen of the folder it holds.
+            // Nor does a card face's namespace, which comes from its kind and its size rather than its folder (#474),
+            // whether it is the one its size spells or one a migration took from the folder when no size was known.
             var round = new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Folder = "openDash 480 round" };
             round.Namespace = round.StockNamespace;
             Assert.True(round.SpellFolderAs("OpenDash 480 round"));
-            Assert.Equal("SlotsOpenDash480Round", round.Namespace);
+            Assert.Equal("Slots480x480", round.Namespace);
             Assert.True(round.IsStock);
+            var migrated = new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Namespace = "SlotsopenDash480Round", Folder = "openDash 480 round" };
+            Assert.True(migrated.SpellFolderAs("OpenDash 480 round"));
+            Assert.Equal("OpenDash 480 round", migrated.Folder);
+            Assert.Equal("SlotsopenDash480Round", migrated.Namespace);
 
             Assert.False(new ScreenInstance { Folder = null }.SpellFolderAs("OpenDash 850x480"));
             Assert.False(wheel.SpellFolderAs(null));
