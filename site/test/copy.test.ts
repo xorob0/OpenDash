@@ -9,7 +9,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { DIFFERENTIATORS, FREE_FOREVER } from '../lib/site.ts';
+import { DIFFERENTIATORS, FREE_FOREVER, NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP } from '../lib/site.ts';
 
 const site = path.resolve(import.meta.dir, '..');
 const read = (rel: string): string => readFileSync(path.join(site, rel), 'utf8');
@@ -73,6 +73,44 @@ describe('the first screen', () => {
   test('names three reasons', () => {
     expect(first).toContain('DIFFERENTIATORS');
     expect(DIFFERENTIATORS.length).toBe(3);
+  });
+});
+
+/**
+ * The plugin is the only way in (docs/scope.md, #438). The site used to offer a second route, one
+ * `.simhubdash` per screen to double-click, on the install page, the download page and under the
+ * picker; this is what notices if any of it comes back, or if the line moves to a page that is not
+ * the one a reader looking for another route lands on.
+ */
+describe('the way in', () => {
+  test.each(['app/install/page.tsx', 'app/download/page.tsx'])('%s makes the line', (page) => {
+    expect(read(page)).toContain('ONLY_WAY_IN');
+  });
+
+  test('the install page says what the line costs', () => {
+    expect(read('app/install/page.tsx')).toContain('NO_OTHER_ROUTE');
+    expect(NO_OTHER_ROUTE).toContain('DLL');
+    expect(ONLY_WAY_IN).toContain('only way in');
+  });
+
+  test('the one download is the plugin zip', () => {
+    expect(PLUGIN_ZIP).toBe('OpenDash-plugin.zip');
+    const offenders: string[] = [];
+    for (const f of ALL_SOURCES) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/\/downloads\/(\$\{[^}]+\}|[^'"`\s]+)/g)) {
+        if (m[1] !== '${PLUGIN_ZIP}' && m[1] !== PLUGIN_ZIP) offenders.push(`${path.relative(site, f)}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('no source offers a dashboard or a profile as a file of its own', () => {
+    const offenders = ALL_SOURCES.filter((f) => /\.simhubdash(?!\.com)|\.ledsprofile\b|by hand|double-click/i.test(readFileSync(f, 'utf8'))).map((f) => path.relative(site, f));
+    expect(offenders).toEqual([]);
+  });
+
+  test('no reason to switch claims a file runs without the plugin', () => {
+    for (const d of DIFFERENTIATORS) expect({ id: d.id, claims: /without the plugin|on its own/i.test(d.body) }).toEqual({ id: d.id, claims: false });
   });
 });
 

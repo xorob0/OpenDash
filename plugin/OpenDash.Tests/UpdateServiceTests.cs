@@ -410,6 +410,115 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("not in this release", outcome.Line);
         }
 
+        // A release that carries the plugin and nothing else (#438)
+
+        private const string PluginUrl = "https://example.invalid/OpenDash-plugin.zip";
+
+        private static string PluginOnlyListing(string tag) =>
+            "[{\"tag_name\":\"" + tag + "\",\"prerelease\":false,\"draft\":false,\"body\":\"notes\",\"assets\":["
+            + "{\"name\":\"" + PluginUpdate.AssetName + "\",\"browser_download_url\":\"" + PluginUrl + "\",\"size\":1}]}]";
+
+        private static byte[] PluginZip(params string[] entries)
+        {
+            using (var buffer = new MemoryStream())
+            {
+                using (var zip = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, true))
+                {
+                    foreach (var name in entries)
+                    {
+                        using (var writer = new StreamWriter(zip.CreateEntry(name).Open())) writer.Write("bytes of " + name);
+                    }
+                }
+                return buffer.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// What every update to a release cut since #438 is: the plugin is staged, no dashboard is written by this
+        /// run, and the sentence says the dashboards come with the plugin. It used to say they were already up to
+        /// date and not in this release, both false, since the new plugin's first start writes them.
+        /// </summary>
+        [Fact]
+        public void A_release_carrying_only_the_plugin_says_the_dashboards_come_with_it()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip("INSTALL.md", PluginUpdate.DllName, "OFL.txt");
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.True(outcome.Ok);
+            Assert.True(outcome.PluginStaged);
+            Assert.Empty(outcome.Updated);
+            Assert.Empty(outcome.NotCarried);
+            Assert.Equal(new[] { "OpenDash", SmallFolder }, outcome.FollowPlugin);
+            Assert.False(outcome.ReplaceEditedOnRestart);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal(UpdateWording.RestartWithDashboards(2, 0, false), outcome.Line);
+            Assert.DoesNotContain("not in this release", outcome.Line);
+            Assert.DoesNotContain("already up to date", outcome.Line);
+            Assert.True(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// The yes to "replace your version" is given here and spent by the next start, which is what writes the
+        /// dashboards. The run replaces nothing, and says what the answer will do and when.
+        /// </summary>
+        [Fact]
+        public void A_yes_to_replacing_an_edited_dashboard_is_handed_to_the_start_that_writes_it()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("0.1.0", record, "OpenDash", SmallFolder);
+            var mine = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
+            File.WriteAllText(mine, "{\"mine\":true}");
+            installer.Refresh();
+
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var yes = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(yes.Ok);
+            Assert.Equal(new[] { "OpenDash" }, yes.EditedFollowing);
+            Assert.True(yes.ReplaceEditedOnRestart);
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(mine));
+            Assert.Contains("replaces the one you edited", yes.Line);
+
+            var no = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+            Assert.False(no.ReplaceEditedOnRestart);
+            Assert.Contains("The one you edited is left alone", no.Line);
+        }
+
+        /// <summary>
+        /// A plugin-only release whose plugin could not be staged has done nothing at all, which is a failure to
+        /// report rather than "There was nothing to replace".
+        /// </summary>
+        [Fact]
+        public void A_plugin_only_release_whose_plugin_cannot_be_staged_is_a_failure()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip("INSTALL.md", "OFL.txt");
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.False(outcome.PluginStaged);
+            Assert.Empty(outcome.FollowPlugin);
+            Assert.Contains("did not finish", outcome.Line);
+            Assert.Contains("OpenDash itself could not be put in place", outcome.Line);
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
         // What the bar is told
 
         /// <summary>

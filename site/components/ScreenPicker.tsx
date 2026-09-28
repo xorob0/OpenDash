@@ -17,7 +17,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { PickerFace } from '../lib/faces';
-import { sizeLabel, weigh } from '../lib/packages';
+import { sizeLabel } from '../lib/packages';
 import { INSTALL } from '../lib/site';
 import styles from './ScreenPicker.module.css';
 
@@ -103,18 +103,7 @@ export function ScreenPicker({ faces, initial }: ScreenPickerProps) {
         <Link href={INSTALL.href} className={styles.install}>
           {INSTALL.label} the plugin
         </Link>
-        <span className={styles.file}>
-          Every size comes with it.{' '}
-          {face.bytes !== undefined ? (
-            <>
-              Or just{' '}
-              <a href={`/downloads/${face.file}`} download className="link">
-                {face.file} <span className="num">{weigh(face.bytes)}</span>
-              </a>
-              .
-            </>
-          ) : null}
-        </span>
+        <span className={styles.file}>Every size comes with it. Add yours on the Rig tab.</span>
       </p>
     </div>
   );

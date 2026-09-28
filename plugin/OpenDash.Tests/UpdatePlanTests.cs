@@ -134,5 +134,33 @@ namespace OpenDashPlugin.Tests
                 try { Directory.Delete(root, true); } catch { }
             }
         }
+
+        // Carrying a yes across the restart (#438)
+
+        [Fact]
+        public void A_yes_is_spent_by_the_plugin_it_was_given_for_and_by_no_other()
+        {
+            Assert.True(EditedConsent.AppliesNow("0.3.0", "0.3.0"));
+            Assert.True(EditedConsent.AppliesNow("v0.3.0", "0.3.0"));
+            // The old plugin, started again before the swap happened, must not spend it on its own dashboards.
+            Assert.False(EditedConsent.AppliesNow("0.3.0", "0.3.0-rc.7"));
+            // Nor may a later version inherit it.
+            Assert.False(EditedConsent.AppliesNow("0.3.0", "0.3.1"));
+            Assert.False(EditedConsent.AppliesNow(null, "0.3.0"));
+            Assert.False(EditedConsent.AppliesNow("0.3.0", null));
+        }
+
+        [Fact]
+        public void A_yes_is_kept_only_while_the_swap_that_would_bring_its_version_is_waiting()
+        {
+            // Spent.
+            Assert.True(EditedConsent.Forget("0.3.0", "0.3.0", swapPending: false));
+            // The old plugin, the swap still to come: kept for the start after it.
+            Assert.False(EditedConsent.Forget("0.3.0", "0.3.0-rc.7", swapPending: true));
+            // The old plugin, and nothing waiting: the swap did not happen and will not, so the answer is stale.
+            Assert.True(EditedConsent.Forget("0.3.0", "0.3.0-rc.7", swapPending: false));
+            // Nothing to forget.
+            Assert.False(EditedConsent.Forget(null, "0.3.0", swapPending: false));
+        }
     }
 }

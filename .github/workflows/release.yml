@@ -1,5 +1,7 @@
 # release.yml: on a tag v*, checks the tag against VERSION, runs the same build steps as ci.yml,
-# then publishes a GitHub release carrying every .simhubdash package and OpenDash-plugin.zip.
+# then publishes a GitHub release carrying OpenDash-plugin.zip and nothing else. The plugin is the
+# only way in (docs/scope.md, #438): the packages and the LED profiles are built here because the
+# plugin embeds them, and they travel between jobs as an artefact, never as a release file.
 # A tag whose version carries a pre-release suffix (v0.1.0-rc.1) publishes as a pre-release, so a
 # release candidate is never the download a first-time user is offered.
 # Only the final job holds a token that can write to the repository.
@@ -52,6 +54,9 @@ jobs:
       - name: Build dashboard packages
         run: bun run build
 
+      # What the plugin job embeds, and only that. The font licence is not here because it does not
+      # need to be: every .simhubdash carries its own OFL.txt beside its faces, and
+      # package-plugin.sh puts packages/dash/fonts/OFL.txt into the zip beside the DLL.
       - name: Upload dashboard packages
         uses: actions/upload-artifact@v4
         with:
@@ -59,10 +64,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/*.ledsprofile
-            build/flag-box.svg
-            build/manifest.json
             build/fonts/*.ttf
-            build/fonts/OFL.txt
           if-no-files-found: error
 
   plugin:
@@ -84,21 +86,29 @@ jobs:
           name: opendash-dash
           path: plugin/OpenDash/Resources/
 
+      # Gzipped in place, keeping the .ledsprofile name, as scripts/package.sh does for a local build.
+      # Plain, the sixty-three profiles are about twenty megabytes of NCalc in the assembly, and the
+      # zip this job builds is the one file a release hands over (#438).
+      - name: Compress the LED profiles
+        run: |
+          set -euo pipefail
+          for profile in plugin/OpenDash/Resources/*.ledsprofile; do
+            gzip -9 -c "$profile" > "$profile.gz"
+            mv "$profile.gz" "$profile"
+          done
+
       - name: Test plugin logic
         run: dotnet test plugin/OpenDash.Tests
 
       - name: Build plugin
         run: dotnet build plugin/OpenDash -c Release
 
+      # Always the script, never a hand-rolled zip: it is what puts the font licence beside the DLL,
+      # and the zip is now the one file a release hands over.
       - name: Package plugin
         run: |
           set -euo pipefail
-          if [ -f plugin/scripts/package-plugin.sh ]; then
-            bash plugin/scripts/package-plugin.sh
-          else
-            mkdir -p build
-            zip -j build/OpenDash-plugin.zip plugin/OpenDash/bin/Release/net48/OpenDash.dll plugin/INSTALL.md
-          fi
+          bash plugin/scripts/package-plugin.sh
           ls -l build/OpenDash-plugin.zip
 
       - name: Upload plugin
@@ -124,15 +134,9 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
-      # The dash artifact is rooted at build/ (its paths share that ancestor), so it lands as
-      # build/OpenDash.simhubdash. The plugin artifact is rooted at the repository, so downloading
-      # it into the workspace restores build/OpenDash-plugin.zip.
-      - name: Download dashboard packages
-        uses: actions/download-artifact@v4
-        with:
-          name: opendash-dash
-          path: build/
-
+      # The plugin artifact is rooted at the repository, so downloading it into the workspace
+      # restores build/OpenDash-plugin.zip. The dash artifact is not downloaded: nothing in it is
+      # published.
       - name: Download plugin
         uses: actions/download-artifact@v4
         with:
@@ -152,11 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/*.simhubdash
-            build/*.ledsprofile
             build/OpenDash-plugin.zip
-            build/fonts/OFL.txt
-            build/manifest.json
           body_path: release-body.md
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, '-') }}

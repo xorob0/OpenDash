@@ -3,7 +3,7 @@
 **Date:** 2026-09-12
 **Status:** Accepted. Moves the "network update checks" line in [scope.md](../scope.md) and is the
 record [ADR 0003](0003-plugin-settings-through-properties.md) leaves room for, since a plugin that
-fetches is still a plugin that does not render.
+fetches is still a plugin that does not render. Amended 2026-09-19 and 2026-09-28 (#438), below.
 
 ## Context
 
@@ -34,7 +34,8 @@ the reason below.
 
 **`build/manifest.json` is not attached to a release.** Only `build/*.simhubdash` and
 `build/OpenDash-plugin.zip` are. The manifest, the fonts and the bare DLL are workflow artefacts
-that no consumer can fetch, so the release itself is the only feed there is.
+that no consumer can fetch, so the release itself is the only feed there is. (Since #438 a release
+attaches `OpenDash-plugin.zip` alone; see the last amendment.)
 
 **The release body is the changelog.** It was GitHub's generated summary, a list of commits and
 pull requests whose shape this repository does not control; #76 replaced it with the section of
@@ -146,7 +147,8 @@ answer would be caching a static file rather than an OpenDash server.
 #82 and #157 become writable, and with them the cheapest distribution improvement available:
 a user who already has OpenDash installed is exactly the user a dashboard manager does not help.
 The promise that a `.simhubdash` is a complete product on its own is untouched, since a package
-still installs and renders with no plugin and no network.
+still installs and renders with no plugin and no network. (That promise has since been withdrawn by
+#438 and [scope.md](../scope.md); see the last amendment.)
 
 What is sent is small enough to state in full, which is the property that makes the reversal
 defensible rather than merely convenient.
@@ -236,3 +238,43 @@ caught up stops being told at once; an answer nobody could read changes nothing 
 switch silences the mark the moment it is turned off. The panel opens on the same offer, and its Update
 button fetches the listing it needs before applying, since the download URLs the listing carries expire
 within the hour and none is kept between runs.
+
+## Amended, 2026-09-28: a release carries the plugin, and the dashboards come inside it
+
+#438 made the plugin the only way in, and a release now publishes `OpenDash-plugin.zip` and nothing
+else. The one-click update was written for a release that also attached one `.simhubdash` per
+package: it looked each installed folder up among the assets, downloaded what it found and wrote it
+on the spot, and staged the plugin beside that. Against a plugin-only release every folder comes back
+as not published, so the update stages the plugin and writes no dashboard.
+
+That is the right thing for it to do, since the new plugin embeds every dashboard and its first
+start writes each one whose version it does not match, exactly as a hand replacement of the DLL
+always has. What was wrong was what it said and what it forgot. The run reported "The dashboards
+were already up to date. N are not in this release and were not touched", both false. And the yes a
+driver gave to "Updating replaces your version" was spent on a run that replaced nothing, so the
+start that did write the dashboards held every edited one back, and the new plugin ran against old
+dashboards -- the mismatch the plugin half of the update was added to prevent.
+
+**So the dashboards are said to follow the plugin.** A folder the release does not publish on its
+own, once the plugin is staged, is counted as coming with it (`UpdateOutcome.FollowPlugin`) and not
+as missing, and the sentence says the dashboards were downloaded with OpenDash and that restarting
+SimHub finishes the update. A plugin-only release whose plugin cannot be staged has done nothing, and
+says so as a failure rather than as "nothing to replace". The Update button stays away while a swap
+is pending, since pressing it again would only download the same plugin.
+
+**And the yes is carried to the start that writes them.** It is saved in the settings as the version
+it was given for, and honoured only by a plugin of exactly that version (`EditedConsent`), which then
+forgets it. The old plugin starting again before the swap has happened cannot spend it on its own
+dashboards, and a later version cannot inherit it; once no swap is waiting, an answer for a version
+that is not running is stale and is dropped. The question itself says the replacing happens when
+SimHub restarts.
+
+The per-dashboard half stays, for a release that attaches its packages, which is every release cut
+before #438. No release cut from `main` exercises it any more.
+
+**What cannot be fixed from here.** An installed plugin runs its own copy of this code. A plugin from
+0.3.0-rc.3 up to 0.3.0-rc.7 stages the new plugin correctly but still says the dashboards were up to
+date and not in this release, and cannot carry a yes across the restart, so an edited dashboard is
+held back on that start and "Reinstall" is how to replace it. A plugin older than 0.3.0-rc.3 cannot
+replace itself at all, and against a release with no dashboards it finds nothing to replace: it has
+to be updated by hand from `OpenDash-plugin.zip`, as `plugin/INSTALL.md` describes.

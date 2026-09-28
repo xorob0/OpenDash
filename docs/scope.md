@@ -11,10 +11,11 @@ contributor or an agent should read first, and the one that has to be amended wh
 > **The face has been rebuilt.** The zone model described below is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)), and since
 > 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
-> faces, and the twelve-slot ones they replaced are published as `OpenDash slots <size>` for anyone
-> who wants the old design back. The two round faces ship on the card model, and that is a decision
-> rather than a gap: a round face becomes zones on a ring after 1.0, and until it does it stays the
-> design it is (#145).
+> faces. The twelve-slot ones they replaced are still built as `OpenDash slots <size>`, and they are
+> what they already were in practice: a comparison built for a rig from a local build, installed by
+> nothing and published nowhere (#438), until #146 deletes them. The two round faces ship on the card
+> model, and that is a decision rather than a gap: a round face becomes zones on a ring after 1.0,
+> and until it does it stays the design it is (#145).
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
@@ -24,7 +25,9 @@ contributor or an agent should read first, and the one that has to be amended wh
 OpenDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
 released under the MIT licence. It consists of fourteen dashboards covering three kinds of
 screen, together with a SimHub plugin that installs them and exposes the settings which decide
-what they show. It is free, and bounties or donations may follow later.
+what they show. It is free, and bounties or donations may follow later. The plugin is the only
+way in: a release publishes `OpenDash-plugin.zip` and nothing a user could import by hand, and every
+dashboard and every LED profile reaches SimHub through the plugin's panel (#438).
 
 The dashboards are generated from TypeScript and design tokens rather than drawn in SimHub's
 editor. A generator emits the `.djson` scene graph, the build packs it into a `.simhubdash`, and
@@ -39,6 +42,7 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 | Supported sim | iRacing |
 | Screens | ten dash faces, two companions, two pit walls |
 | Plugin | .NET Framework 4.8, code-only WPF, builds on Linux |
+| Distribution | `OpenDash-plugin.zip` only; the packages and profiles travel inside it |
 | Licence | MIT |
 
 Other sims will very probably work, because SimHub normalises the common fields into
@@ -208,16 +212,18 @@ the only readers are the two round ones: `OpenDash 480 round` reads the first tw
 `OpenDash 800 round` the first six, and every rectangular face the plugin installs is zones. The
 eight `OpenDash slots <size>` packages of the banner above read them too, four to twelve each and
 all twelve at 1920 x 480 and 1280 x 720, because they are the card faces the zone faces replaced;
-they are published rather than installed, and the csproj keeps them out of the plugin's resources.
-That is the other reason the card path is not retired at 1.0, the first being the round faces
-(#146). The twelve are not deprecated and no release is promised to remove them; the release that
+the csproj keeps them out of the plugin's resources and no release publishes them, so they are
+built for a comparison on a rig and are no reason to keep anything. The one reason the card path is
+not retired at 1.0 is the round faces (#146). The twelve are not deprecated and no release is promised to remove them; the release that
 converts a round face to zones on a ring, which is after 1.0, is the one that says what becomes of
 them (#170).
 
-Every expression that reads an `OpenDash` property wraps it in `isnull()` with the default, so a
-user who installs only a `.simhubdash` gets the default layout and the default modes. That is a
-standing requirement rather than a convenience: a package has to be a complete product on its
-own.
+Every expression that reads an `OpenDash` property wraps it in `isnull()` with the default, and it
+stays that way, although what it answers to has changed. No package is offered without the plugin
+any more (#438), so the wrapping is not a promise that one stands on its own. It is the answer to
+the ordinary state of a rig on which the plugin is present and not yet enabled, which
+[plugin/INSTALL.md](../plugin/INSTALL.md)'s troubleshooting describes, and a face drawing its
+defaults there is a better answer than a face drawing nothing.
 
 ## What is deliberately not built
 
@@ -244,8 +250,9 @@ Two things fall outside that and are honestly labelled rather than quietly empty
 which only Le Mans Ultimate publishes, and strength of field, which SimHub does not expose at all.
 
 The line moves if a derivation is shared widely enough to need a name, or if something genuinely
-needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
-standalone package is the property worth defending.
+needs memory between frames. The first is a JavaScript binding before it is a plugin: a package no
+longer stands on its own (#438), but a derivation in the expression still draws on a rig whose
+plugin is not yet enabled, and one in the plugin does not.
 
 **Personalisation that changes the layout.** Colour is no longer refused:
 [ADR 0011](decisions/0011-personalisation.md) settled how far personalisation reaches, and the
@@ -269,6 +276,15 @@ opens on entering the lane and is gone on leaving it. Until it lands, every scre
 `PitScreen` beside its in-game role, so SimHub keeps the dashboard up during a stop, and the pit
 family on the face -- the limiter banner over zone A and the stop alerts over the same zone -- is what
 a driver in the box reads.
+
+**A way in that does not begin with the plugin.** A release publishes `OpenDash-plugin.zip` and
+nothing a user could import by hand: no `.simhubdash`, no `.ledsprofile`, and no manifest listing
+them. The build still writes all of it, because the plugin embeds it; what stopped is offering it as
+a download (#438). It buys one writer into `DashFonts` instead of two, a strip profile installed in
+the shape [ADR 0017](decisions/0017-a-screen-is-an-instance.md) gives it rather than the
+pre-instance shape a hand import carried, and a support conversation that does not begin by
+establishing which route a user took. It costs this, chosen rather than discovered: **a user who
+cannot put a DLL into SimHub's own folder, or who will not, has no route in at all.**
 
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 

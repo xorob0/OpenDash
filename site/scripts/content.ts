@@ -18,11 +18,15 @@
  *   packages/dash/src/zones/index.ts       the base face and the rectangles of its parts
  *   VERSION                                the one version string
  *   CHANGELOG.md                           the release history
- *   build/*.simhubdash, OpenDash-plugin.zip  what there is to download, and how big
+ *   build/OpenDash-plugin.zip              what there is to download, and how big
  *
- * and writes lib/content.generated.ts. `build/` is only populated after `bun run build` at the
+ * and writes lib/content.generated.ts. `build/` is only populated after `bun run package` at the
  * repository root, which the Dockerfile runs in an earlier stage; when it is missing the downloads
  * come back empty and the Downloads page says so rather than inventing a file.
+ *
+ * The plugin zip is the only download (#438). The build still writes a `.simhubdash` per package
+ * and a `.ledsprofile` per shape, because the plugin embeds them, and the manifest still lists them,
+ * which is how the site knows which screens there are; none of them is a file the site hands out.
  *
  * The functions are exported and pure so that test/content.test.ts can hold them against the
  * modules they read, without the generated file having to exist.
@@ -44,25 +48,29 @@ import { ALL_SHAPES, LEGACY_SHAPES, type StripShape } from '../../packages/dash/
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
 import type { ZoneLayout } from '../../packages/dash/src/zones/layout.ts';
 import { sectionFor, versionsIn } from '../../scripts/changelog.ts';
+import { PLUGIN_ZIP } from '../lib/site.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const buildDir = path.join(repoRoot, 'build');
 const outPath = path.resolve(import.meta.dir, '..', 'lib', 'content.generated.ts');
 
-/** A package the site shows. The manifest's shape, minus the fields only the plugin cares about. */
+/**
+ * A package the site shows. The manifest's shape, minus the fields only the plugin cares about, and
+ * minus its file name: a package is a screen the plugin installs, not a file anybody downloads.
+ */
 export interface SitePackage {
   folder: string;
   kind: 'dash' | 'companion' | 'pitwall';
   width: number;
   height: number;
-  file: string;
   /** Round faces are the display itself; the site frames them in a circle rather than a rectangle. */
   round: boolean;
 }
 
 /**
- * The card faces are built beside the zone faces only so the two can be compared, and #146
- * deletes them. They are not a size anybody should install, so the site never lists them.
+ * The card faces are built beside the zone faces only so the two can be compared on a rig, and
+ * #146 deletes them. The plugin does not install them and no release publishes them, so the site
+ * never lists them.
  */
 export const SUPERSEDED = /^OpenDash slots /;
 
@@ -85,7 +93,7 @@ export interface Manifest {
 export function sitePackages(manifest: { packages: ManifestEntry[] }): SitePackage[] {
   return manifest.packages
     .filter((p) => !SUPERSEDED.test(p.folder))
-    .map(({ folder, kind, width, height, file }) => ({ folder, kind, width, height, file, round: /round/.test(folder) }));
+    .map(({ folder, kind, width, height }) => ({ folder, kind, width, height, round: /round/.test(folder) }));
 }
 
 /** A downloadable file: what it is called and what it weighs. */
@@ -94,12 +102,11 @@ export interface Download {
   bytes: number;
 }
 
+/** What there is to download: the plugin zip when the build made one, and nothing else in `dir`. */
 export function downloads(dir: string): Download[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => f.endsWith('.simhubdash') || f === 'OpenDash-plugin.zip')
-    .filter((f) => !SUPERSEDED.test(f))
-    .sort()
+    .filter((f) => f === PLUGIN_ZIP)
     .map((file) => ({ file, bytes: statSync(path.join(dir, file)).size }));
 }
 

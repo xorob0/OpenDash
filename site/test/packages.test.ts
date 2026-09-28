@@ -36,7 +36,6 @@ describe('reading order', () => {
     kind,
     width,
     height,
-    file: `${folder}.simhubdash`,
     round: /round/.test(folder),
   });
 

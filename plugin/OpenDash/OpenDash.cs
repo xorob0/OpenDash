@@ -241,7 +241,12 @@ namespace OpenDashPlugin
                 // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
                 // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
                 Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
-                Installer.EnsureInstalled(false);
+                // A driver who said yes to replacing their edited dashboards said it to the plugin that
+                // downloaded this one, and this start is what writes them (#438); see EditedConsent.
+                var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
+                if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
+                Installer.EnsureInstalled(false, replaceEdited);
+                if (EditedConsent.Forget(Settings.ReplaceEditedFor, Version, PluginUpdate.Pending(Installer.SimHubRoot))) Settings.ReplaceEditedFor = null;
                 WriteScreenFolders();
             }
             catch (Exception ex)
