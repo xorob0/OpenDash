@@ -44,8 +44,8 @@ times and the relative, and the band across the foot.
 **The large face, 1280 x 480.** The same five parts and 430 px more width, which the page spends
 rather than stretches. A page is laid out for the box it is given rather than scaled into it, so
 the wider zone shows more of the page: the relative carries the car number and the class beside
-every driver here, which the base has no room for. The base spends what it saves on rows instead,
-listing nine cars in the relative where this lists seven at a taller row. The lap times are larger here than on
+every driver here, which the base has no room for. Both list the seven cars the relative declares,
+and the base spends the height on a taller row and a larger name rather than on more cars. The lap times are larger here than on
 the base because the zone is 180 px wider, not because anything was stretched into it — a rank
 grows to the next size on its own ramp and stops.
 
