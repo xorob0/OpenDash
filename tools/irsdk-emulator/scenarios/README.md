@@ -80,7 +80,11 @@ put that into every capture in the same breath.
 
 Fixed in #439, and the scenario is now what shows the fix: every surface reads `sessionClock()` and
 draws `∞` where a session has no clock, so `untimed` photographs `RACE ∞` and `LEFT ∞` with nothing
-clipped. `-:--:--` belongs to `nosession`. The entry in
+clipped. The session module and the session card follow `SessionProgress`, which is `auto` by
+default and resolves to laps here, so those two draw the lap unless the setting is forced to `time`.
+`-:--:--` belongs to neither this scenario nor `nosession`: it is what a clock reads where
+`SessionTimeLeft` is at or below zero, and `nosession` blanks the session type while inheriting the
+base fixture's running clock, so no scenario committed here publishes the placeholder. The entry in
 [docs/dev-loop.md](../../../docs/dev-loop.md)'s list of silent failures says the same, since that is
 where somebody looking at a surprising capture looks.
 

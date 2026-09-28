@@ -203,6 +203,9 @@ session module, the pit wall header and the pit wall's own time field all had on
 the default of the bar's first slot. iRacing publishes a week of time left for a session that has no
 clock, so the field drew `168:00:00`, seven digit cells in a budget of six, and WPF took the last
 glyph off it on all 22 packages. Fixed in #439: every surface now reads `sessionClock()` and draws
-`∞` where the session has no clock, `-:--:--` only where there is no session at all. So on
+`∞` where the session has no clock, `-:--:--` only where the clock is at or below zero. So on
 `untimed` the bar reads `RACE ∞` and nothing is clipped; a clipped clock there is a regression, and a
-clipped anything else is most likely the off-screen window above.
+clipped anything else is most likely the off-screen window above. The two surfaces that follow
+`SessionProgress`, the session module and the session card, draw the lap on `untimed` under the
+default `auto` and show the mark only when the setting is forced to `time`; and no scenario publishes
+a zero clock, so `-:--:--` is not a thing to look for on the VM at all.
