@@ -337,7 +337,7 @@ namespace OpenDashPlugin
                         Save();
                     });
                 return Ui.VStack(4,
-                    BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
+                    BuildLedDeviceRow(LedTargets.All(), LedTargets.NotOffered(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Centre display", "The LEDs at each end are not affected.", centre),
                     Ui.Row("Rev light style", "Car-specific copies the car you are driving.", style),
                     Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
@@ -370,12 +370,16 @@ namespace OpenDashPlugin
         /// A bar pointed at a device SimHub no longer has keeps its own entry at the top of the list,
         /// labelled as gone. Dropping it would silently re-point the bar at whatever sorted first, which
         /// is the class of bug this whole picker exists to close.
+        ///
+        /// A device SimHub has and OpenDash did not offer is named under the row in every shape, with
+        /// the reason in SimHub's log: a wheel missing from the picker with nothing said about it is how
+        /// #437 was reported, and the line would have answered it.
         /// </remarks>
-        private static FrameworkElement BuildLedDeviceRow(IList<LedTarget> targets, string current, Action<string> chosen)
+        private static FrameworkElement BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, Action<string> chosen)
         {
             if (targets.Count == 0)
             {
-                return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.NoDevices, new Border());
+                return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.DeviceRowCaption(0, null, declined), new Border());
             }
 
             var ids = targets.Select(t => t.Id).ToList();
@@ -389,10 +393,11 @@ namespace OpenDashPlugin
 
             if (targets.Count == 1 && known)
             {
-                return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.OneDevice(labels[0]), new Border());
+                return Ui.Row(PanelLights.BarDeviceTitle,
+                    PanelLights.DeviceRowCaption(targets.Count, PanelLights.OneDevice(labels[0]), declined), new Border());
             }
 
-            var row = Ui.Row(PanelLights.BarDeviceTitle, PanelLights.BarDeviceCaption,
+            var row = Ui.Row(PanelLights.BarDeviceTitle, PanelLights.DeviceRowCaption(targets.Count, PanelLights.BarDeviceCaption, declined),
                 BuildChoice(ids.ToArray(), labels.ToArray(), current, 260, chosen));
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -512,7 +517,7 @@ namespace OpenDashPlugin
             var targets = LedTargets.All();
             var preferred = LedTargets.Preferred();
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
-            var deviceRow = BuildLedDeviceRow(targets, device, value => device = value);
+            var deviceRow = BuildLedDeviceRow(targets, LedTargets.NotOffered(), device, value => device = value);
 
             var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption,
                 BuildSegmented(

@@ -30,16 +30,22 @@
 // given device is cannot be read off the public surface, both are public, and both are what SimHub does
 // itself, so both are called.
 //
+// A device that is walked and not offered is not dropped in silence any more: every root device is
+// judged by LedDeviceSurvey, which is pure and tested, and what was seen of it is written to SimHub's log
+// with the reason (#437). The one use of reflection in this file is there, and only to be logged.
+//
 // Needs SimHub types, so it is NOT compiled into OpenDash.Tests. The id vocabulary a settings file holds
 // is on LedBar, which is, and is pinned there.
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using SimHub.Plugins;
 using SimHub.Plugins.Devices;
 using SimHub.Plugins.OutputPlugins.Dash;
 using SimHub.Plugins.OutputPlugins.GraphicalDash.LedModules;
 using LedsSettings = SimHub.Plugins.DataPlugins.RGBDriver.Settings.LedsSettings;
+using RGBLedsDriver = SimHub.Plugins.DataPlugins.RGBDriver.RGBLedsDriver;
 
 namespace OpenDashPlugin
 {
@@ -71,7 +77,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Never null and never throws: a broken chain is an empty list or a list without that device,
         /// which the panel reads as "there is nowhere to put this" and says so. A device whose LED module
-        /// carries no driver is left out rather than offered as a target that cannot hold anything.
+        /// carries no driver is left out rather than offered as a target that cannot hold anything, and
+        /// the log says so; <see cref="NotOffered"/> gives the panel its name.
         /// </remarks>
         public static List<LedTarget> All()
         {
@@ -129,47 +136,203 @@ namespace OpenDashPlugin
         /// two devices rather than as a device and a category.</summary>
         public const string ArduinoName = "Arduino RGB LEDs";
 
+        /// <summary>The names of the devices SimHub has and this list does not offer, for the picker to say.
+        /// The reasons are in SimHub's log, one line per device; see <see cref="LedDeviceSurvey"/>.</summary>
+        public static IList<string> NotOffered()
+        {
+            return LedDeviceSurvey.Declined(Survey().Select(entry => entry.Seen));
+        }
+
         /// <summary>Every LED module of every device SimHub has, connected or not.</summary>
+        /// <remarks>
+        /// Every root device is judged, not only the LED modules, and what was seen of each is logged by
+        /// <see cref="Survey"/>: a device passed over used to be passed over in silence, which is how a
+        /// FanaBridge wheel went missing from the picker with nothing to say whether it was not an LED
+        /// module or was one with no driver (#437).
+        /// </remarks>
         private static IEnumerable<LedTarget> Devices()
         {
-            var modules = Modules();
-            var targets = new List<LedTarget>();
-            foreach (var module in modules)
-            {
-                var settings = module.ledModuleSettings;
-                var driver = settings == null ? null : settings.LedsDriver;
-                if (driver == null || driver.Settings == null) continue;
-                var root = module.RootInstance ?? module;
-                var captured = module;
-                targets.Add(new LedTarget
-                {
-                    Id = LedBar.DeviceId(root.InstanceId),
-                    Name = NameOf(root, settings),
-                    Connected = module.IsConnected,
-                    Settings = driver.Settings,
-                    Save = () => SaveDevice(captured),
-                });
-            }
+            var targets = Survey().Where(entry => entry.Target != null).Select(entry => entry.Target).ToList();
             // Two LED modules under one device would take one id and overwrite each other, so only the
             // first of each is offered. Nothing in SimHub's registry builds such a device today; if one
             // appears, a bar pointed at it lands on its first module rather than at random.
             return targets.GroupBy(t => t.Id, StringComparer.Ordinal).Select(g => g.First());
         }
 
-        private static IList<LedModuleDevice> Modules()
+        /// <summary>One root device: what was seen of it, and the target it gives when it is offered.</summary>
+        private sealed class Surveyed
+        {
+            public LedDeviceSeen Seen;
+            public LedTarget Target;
+        }
+
+        /// <summary>
+        /// Every root device in SimHub's Devices plugin, judged, with the judgement logged when it changes.
+        /// </summary>
+        /// <remarks>
+        /// The walk is the one `GetDevices&lt;LedModuleDevice&gt;()` makes -- in 9.12.6 it is
+        /// `DevicesPluginSettings.Devices.SelectMany(GetInstances).OfType&lt;T&gt;()`, all public --
+        /// written out so that the devices it drops are seen too. A device's first LED module with a usable
+        /// driver is its target; failing that, its first LED module is what the verdict describes.
+        ///
+        /// The panel asks for the list on every redraw, so each device's line is written once and again
+        /// only when it changes: a wheel plugged in, a driver appearing, built-in profiles switched off.
+        /// </remarks>
+        private static List<Surveyed> Survey()
+        {
+            var surveyed = new List<Surveyed>();
+            foreach (var root in Roots())
+            {
+                try
+                {
+                    var entry = Judge(root);
+                    surveyed.Add(entry);
+                    Report(entry.Seen);
+                }
+                catch (Exception e)
+                {
+                    Log.Warn("A device in SimHub could not be read for its LEDs: " + e.Message);
+                }
+            }
+            return surveyed;
+        }
+
+        private static IList<DeviceInstance> Roots()
         {
             try
             {
                 var manager = PluginManager.GetInstance();
                 var devices = manager == null ? null : manager.GetPlugin<DevicesPlugin>();
-                if (devices == null) return new List<LedModuleDevice>();
-                return devices.GetDevices<LedModuleDevice>().Where(d => d != null).ToList();
+                var settings = devices == null ? null : devices.DevicesPluginSettings;
+                if (settings == null || settings.Devices == null) return new List<DeviceInstance>();
+                return settings.Devices.Where(d => d != null).ToList();
             }
             catch (Exception e)
             {
                 Log.Warn("SimHub's devices could not be read for their LEDs: " + e.Message);
-                return new List<LedModuleDevice>();
+                return new List<DeviceInstance>();
             }
+        }
+
+        private static Surveyed Judge(DeviceInstance root)
+        {
+            var instances = (root.GetInstances() ?? Enumerable.Empty<DeviceInstance>()).Where(i => i != null).ToList();
+            var modules = instances.OfType<LedModuleDevice>().ToList();
+            var usable = modules.FirstOrDefault(m => m.ledModuleSettings != null
+                && m.ledModuleSettings.LedsDriver != null
+                && m.ledModuleSettings.LedsDriver.Settings != null);
+            var module = usable ?? modules.FirstOrDefault();
+
+            var seen = new LedDeviceSeen
+            {
+                Name = root.MainDisplayName,
+                Id = LedBar.DeviceId(root.InstanceId),
+                Connected = root.IsConnected,
+                Kind = KindOf(root),
+                Instances = instances.Select(i => i.GetType().Name).ToList(),
+                LedModule = module != null,
+            };
+
+            if (module == null)
+            {
+                seen.ForeignDrivers = ForeignDrivers(instances);
+                return new Surveyed { Seen = seen };
+            }
+
+            var settings = module.ledModuleSettings;
+            var driver = settings == null ? null : settings.LedsDriver;
+            var leds = driver == null ? null : driver.Settings;
+            seen.LedsDriver = driver != null;
+            seen.LedsSettings = leds != null;
+            if (settings != null)
+            {
+                seen.LedCount = settings.Ledcount;
+                if (settings.ButtonsDriver != null) seen.OtherDrivers.Add("buttons");
+                if (settings.EncodersDriver != null) seen.OtherDrivers.Add("encoders");
+                if (settings.RawDriver != null) seen.OtherDrivers.Add("individual LEDs");
+                if (settings.MatrixDriver != null) seen.OtherDrivers.Add("matrix");
+            }
+            if (leds != null)
+            {
+                seen.Profiles = leds.Profiles == null ? (int?)null : leds.Profiles.Count;
+                seen.HasBuiltInProfiles = leds.HasBuiltInProfiles;
+                seen.UseBuiltInProfiles = leds.UseBuiltInProfiles;
+            }
+            if (LedDeviceSurvey.Judge(seen) != LedDeviceVerdict.Offered) return new Surveyed { Seen = seen };
+
+            var owner = module.RootInstance ?? module;
+            var captured = module;
+            return new Surveyed
+            {
+                Seen = seen,
+                Target = new LedTarget
+                {
+                    Id = LedBar.DeviceId(owner.InstanceId),
+                    Name = NameOf(owner, settings),
+                    Connected = module.IsConnected,
+                    Settings = leds,
+                    Save = () => SaveDevice(captured),
+                },
+            };
+        }
+
+        /// <summary>The device's type and the assembly it is from: SimHub's own, or a plugin's.</summary>
+        private static string KindOf(DeviceInstance root)
+        {
+            var type = root.GetType();
+            return type.FullName + " (" + type.Assembly.GetName().Name + ")";
+        }
+
+        /// <summary>
+        /// Every public property typed as SimHub's RGB LED driver, or as an LED module's settings, on the
+        /// instances of a device that has no LED module.
+        /// </summary>
+        /// <remarks>
+        /// Read to be logged and for nothing else, and the one place this file uses reflection. A device a
+        /// plugin registers as a type of its own, holding its LEDs somewhere OpenDash does not look, is
+        /// cause one of #437, and this names where they are held; whether installing there would light
+        /// the device is a question for a rig and not something to act on from a type name.
+        /// </remarks>
+        private static IList<string> ForeignDrivers(IEnumerable<DeviceInstance> instances)
+        {
+            var found = new List<string>();
+            foreach (var instance in instances)
+            {
+                var type = instance.GetType();
+                try
+                {
+                    foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        if (typeof(RGBLedsDriver).IsAssignableFrom(property.PropertyType)
+                            || typeof(LedModuleSettings).IsAssignableFrom(property.PropertyType))
+                        {
+                            found.Add(type.Name + "." + property.Name);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    found.Add(type.Name + " (unreadable: " + e.Message + ")");
+                }
+            }
+            return found;
+        }
+
+        private static readonly object ReportLock = new object();
+        private static readonly Dictionary<string, string> Reported = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>Writes a device's line when it is new or has changed since it was last written.</summary>
+        private static void Report(LedDeviceSeen seen)
+        {
+            var line = LedDeviceSurvey.LogLine(seen);
+            var key = seen.Id ?? seen.Name ?? string.Empty;
+            lock (ReportLock)
+            {
+                string previous;
+                if (Reported.TryGetValue(key, out previous) && string.Equals(previous, line, StringComparison.Ordinal)) return;
+                Reported[key] = line;
+            }
+            Log.Info(line);
         }
 
         /// <summary>The device's name, with the module's own behind it when the two differ: a wheel the

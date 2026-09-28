@@ -89,6 +89,53 @@ namespace OpenDashPlugin
         /// cannot have is a profile anywhere, which is a thing about the rig and not about OpenDash.</summary>
         public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
 
+        /// <summary>
+        /// Said beside the picker when SimHub has devices OpenDash did not offer, naming them.
+        /// </summary>
+        /// <remarks>
+        /// A wheel made in FanaBridge's wizard was plainly in SimHub's Devices view and absent from the
+        /// picker, and nothing on the row said that OpenDash had seen it and passed it over (#437). The
+        /// reason is in SimHub's log, one line per device, and that is where the sentence points: the
+        /// reasons are SimHub's types, which the voice rules keep off the panel. Null when nothing was
+        /// passed over, so a rig whose every device is offered reads exactly as before.
+        /// </remarks>
+        public static string NotOffered(System.Collections.Generic.IList<string> names)
+        {
+            if (names == null || names.Count == 0) return null;
+            return NameList(names) + (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach; see SimHub's log.";
+        }
+
+        /// <summary>At most this many names are spelled out before the rest are counted.</summary>
+        public const int NotOfferedNames = 3;
+
+        /// <summary>
+        /// The caption under the device row, given what it would say on its own and the devices passed over.
+        /// </summary>
+        /// <remarks>
+        /// With no device offered, <see cref="NoDevices"/> would be wrong: it says there is no LED device
+        /// in SimHub while the wheel is there in SimHub's list, which is the report this answers. The
+        /// sentence naming the device replaces it. With one or more offered, it follows whatever the row
+        /// already said.
+        /// </remarks>
+        public static string DeviceRowCaption(int offered, string caption, System.Collections.Generic.IList<string> declined)
+        {
+            var passed = NotOffered(declined);
+            if (passed == null) return offered == 0 ? NoDevices : caption;
+            if (offered == 0 || string.IsNullOrEmpty(caption)) return passed;
+            return caption + " " + passed;
+        }
+
+        private static string NameList(System.Collections.Generic.IList<string> names)
+        {
+            var shown = names.Count > NotOfferedNames ? NotOfferedNames : names.Count;
+            var rest = names.Count - shown;
+            var spelled = new System.Collections.Generic.List<string>();
+            for (var i = 0; i < shown; i++) spelled.Add(names[i]);
+            if (rest > 0) spelled.Add(rest == 1 ? "1 other" : rest + " others");
+            if (spelled.Count == 1) return spelled[0];
+            return string.Join(", ", spelled.GetRange(0, spelled.Count - 1)) + " and " + spelled[spelled.Count - 1];
+        }
+
         /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
         /// happened rather than silently reading as the first device in the list.</summary>
         public const string DeviceGone = "The device it was on (no longer on this rig)";
