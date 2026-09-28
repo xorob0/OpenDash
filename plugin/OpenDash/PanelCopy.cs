@@ -70,6 +70,23 @@ namespace OpenDashPlugin
         /// <summary>The glance row's caption on a pit wall, where the page is lent to one zone.</summary>
         public const string PitWallGlance = "Hold to show one page, release to put the zone back. " + GlanceBoundAsHold;
 
+        /// <summary>
+        /// How a companion is paged, and where the button for it is bound, which is not in OpenDash.
+        /// </summary>
+        /// <remarks>
+        /// SimHub pages a companion, and its NextScreen and PreviousScreen are bound in the Controls and
+        /// events of the device the companion runs on. The panel cannot host that binder the way it
+        /// hosts its own, since SimHub's ControlsEditor binds a plugin action by name and these belong
+        /// to a device, so the sentence names the place rather than only the action: a driver told
+        /// only what to bind was left to find where (#435). plugin/INSTALL.md and the site's install
+        /// page carry the same passage.
+        /// </remarks>
+        public const string CompanionPaging =
+            "Tap the left or right half of the screen to change module. For a wheel button, open the "
+            + "device or window the companion runs on in SimHub, go to its Controls and events, and bind "
+            + "NextScreen, with PreviousScreen to go back. Those bindings belong to that device, so the "
+            + "button that pages the companion does not page your dash.";
+
         /// <summary>The separator the panel joins facts with, which is the canvas's middle dot.</summary>
         private const string Join = " · ";
 

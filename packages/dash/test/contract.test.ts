@@ -456,9 +456,27 @@ describe('plugin mirror', () => {
     expect(panel).not.toContain('screen.CompanionQuickGlance = value');
     // And no binder offers an action the companion no longer registers.
     expect(panel).not.toContain('Contract.NextModuleActionFor(screen.Namespace)');
-    // The sentence that replaced them names both ways a companion is paged.
-    expect(panel).toContain('Tap the left or right half of the screen');
-    expect(panel).toContain('Next screen');
+    // The sentence that replaced them names both ways a companion is paged, and where the button is
+    // bound: the device's own Controls and events, which is not in OpenDash (#435). The words live in
+    // PanelCopy.cs, where PanelCopyTests pins them, and the pane draws them from there.
+    expect(panel).toContain('Ui.Caption(PanelCopy.CompanionPaging, BodyWidth)');
+    const copy = pluginSource('PanelCopy.cs');
+    expect(copy).toContain('Tap the left or right half of the screen');
+    expect(copy).toContain('Controls and events');
+    expect(copy).toContain('NextScreen');
+    expect(copy).toContain('PreviousScreen');
+  });
+
+  /**
+   * And the plugin registers none: `AttachActions` walks the contract's list through ScreenActions
+   * rather than naming a companion's actions itself, which is how it once registered two the contract
+   * said did not exist (#435). ScreenActionsTests holds what the registration passes.
+   */
+  test('the plugin registers the actions the contract lists and names none itself', () => {
+    const plugin = pluginSource('OpenDash.cs');
+    expect(plugin).toContain('ScreenActions.Register(() => Settings,');
+    expect(plugin).not.toContain('Contract.NextModuleActionFor(');
+    expect(pluginSource('ScreenActions.cs')).toContain('screen.ActionNames()');
   });
 
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {
