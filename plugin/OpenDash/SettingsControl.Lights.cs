@@ -449,11 +449,21 @@ namespace OpenDashPlugin
         /// The shapes are read out of the assembly rather than listed here, exactly as the Install tab's
         /// rows are: the census is what this build embedded, so a shape it does not carry is not offered
         /// and cannot be added as a bar whose profile does not exist.
+        ///
+        /// <para>The two numbers cannot say how a wheel is wired, and no second question used to follow
+        /// them, so a Fanatec owner who added a strip here got the plain 3/9/3, which lights only some of
+        /// the wheel's LEDs and starts the bar from the middle of the rim. The Fanatec switch is that
+        /// second question, asked first because it decides the other two (#436).</para>
         /// </remarks>
         private void ShowAddLedBar()
         {
             var shapes = EmbeddedShapes();
-            if (shapes.Count == 0)
+            var census = shapes.Select(entry => entry.Id).ToList();
+            // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
+            // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
+            // "3/9/3" among every other geometry and to know that is what their wheel is called.
+            var sides = PanelLights.BarSides(census);
+            if (sides.Length == 0)
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar,
                     Ui.Caption("This build ships no strip profiles."),
@@ -461,13 +471,12 @@ namespace OpenDashPlugin
                 return;
             }
 
-            // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
-            // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
-            // "3/9/3" among every other geometry and to know that is what their wheel is called.
-            var sides = shapes.Select(entry => entry.Side).Distinct().OrderBy(n => n).ToArray();
             var side = sides.Contains(3) ? 3 : sides[0];
-            var centres = shapes.Where(e => e.Side == side).Select(e => e.Centre).OrderBy(n => n).ToArray();
+            var centres = PanelLights.BarCentres(census, side);
             var centre = centres.Contains(9) ? 9 : centres[0];
+            // The one question the two numbers cannot answer: how the wheel is wired. On, it decides them,
+            // and side and centre keep what the driver chose so that turning it off gives that back.
+            var fanatec = false;
 
             var note = Ui.Caption(string.Empty);
             var name = new TextBox
@@ -480,30 +489,52 @@ namespace OpenDashPlugin
             };
             var typed = false;
             name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
+            var endsHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Right };
             var centreHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Right };
 
             Action refresh = () =>
             {
-                note.Text = PanelLights.BarShapeNote(side, centre);
-                if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre));
+                note.Text = PanelLights.BarShapeNote(side, centre, fanatec);
+                if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec));
             };
             Action showCentres = () =>
             {
-                centres = shapes.Where(e => e.Side == side).Select(e => e.Centre).OrderBy(n => n).ToArray();
+                centres = PanelLights.BarCentres(census, side);
                 // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
                 // of centre follows the choice of ends rather than offering lengths nothing is built for.
                 if (!centres.Contains(centre)) centre = centres.Contains(9) ? 9 : centres[0];
-                centreHost.Content = BuildChoice(
-                    centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    centre.ToString(CultureInfo.InvariantCulture),
+                // With the switch on the choice shows the wheel's nine and cannot be changed. Shown and
+                // not hidden, so that a driver sees what a Fanatec wheel is rather than being told the
+                // number is none of their business.
+                var offered = fanatec ? Including(PanelLights.BarCentres(census, PanelLights.FanatecSide), PanelLights.FanatecCentre) : centres;
+                var choice = BuildChoice(
+                    offered.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    offered.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    (fanatec ? PanelLights.FanatecCentre : centre).ToString(CultureInfo.InvariantCulture),
                     120,
                     value =>
                     {
                         centre = int.Parse(value, CultureInfo.InvariantCulture);
                         refresh();
                     });
+                choice.IsEnabled = !fanatec;
+                centreHost.Content = choice;
                 refresh();
+            };
+            Action showEnds = () =>
+            {
+                var offered = fanatec ? Including(sides, PanelLights.FanatecSide) : sides;
+                var ends = BuildSegmented(
+                    offered.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    offered.Select(n => n == 0 ? "None" : n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    (fanatec ? PanelLights.FanatecSide : side).ToString(CultureInfo.InvariantCulture),
+                    value =>
+                    {
+                        side = int.Parse(value, CultureInfo.InvariantCulture);
+                        showCentres();
+                    });
+                ends.IsEnabled = !fanatec;
+                endsHost.Content = ends;
             };
 
             // Which device gets the profile. SimHub keeps one profile list per LED device, so this is
@@ -514,31 +545,52 @@ namespace OpenDashPlugin
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
             var deviceRow = BuildLedDeviceRow(targets, device, value => device = value);
 
-            var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption,
-                BuildSegmented(
-                    sides.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    sides.Select(n => n == 0 ? "None" : n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    side.ToString(CultureInfo.InvariantCulture),
-                    value =>
+            var rows = new List<UIElement>();
+            // Above the ends and the centre because it decides them, and only in a build that embedded
+            // the profile it selects: a switch for a shape whose profile does not exist would add a bar
+            // that installs nothing.
+            if (PanelLights.OffersFanatec(census))
+            {
+                var fanatecRow = Ui.Row(PanelLights.BarFanatecTitle, PanelLights.BarFanatecCaption,
+                    BuildToggle(false, on =>
                     {
-                        side = int.Parse(value, CultureInfo.InvariantCulture);
+                        fanatec = on;
+                        showEnds();
                         showCentres();
                     }));
+                fanatecRow.HorizontalAlignment = HorizontalAlignment.Stretch;
+                rows.Add(fanatecRow);
+            }
+            var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption, endsHost);
             endsRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             var centreRow = Ui.Row(PanelLights.BarCentreTitle, PanelLights.BarCentreCaption, centreHost);
             centreRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
             nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
+            showEnds();
             showCentres();
 
             var add = Ui.OutlineButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
             add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre), name.Text, device, shapes);
+            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device, shapes);
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
 
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, endsRow, centreRow, note, nameRow, deviceRow,
-                Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
+            rows.Add(endsRow);
+            rows.Add(centreRow);
+            rows.Add(note);
+            rows.Add(nameRow);
+            rows.Add(deviceRow);
+            rows.Add(Ui.Row(new Border(), Ui.HStack(8, cancel, add)));
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, rows.ToArray()));
+        }
+
+        /// <summary>A list of lengths with one more in it, in order: what a locked control shows, so that
+        /// the value it is locked on is always one of its options even in a build that carries the wiring
+        /// and not the plain geometry beside it.</summary>
+        private static int[] Including(int[] values, int value)
+        {
+            return values.Contains(value) ? values : values.Concat(new[] { value }).OrderBy(n => n).ToArray();
         }
 
         private FrameworkElement BuildAddLedBarRow()
@@ -559,31 +611,32 @@ namespace OpenDashPlugin
             return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
         }
 
-        /// <summary>One shape this build embedded: its geometry, and the profile written for it.</summary>
+        /// <summary>One shape this build embedded: its id, and the profile written for it.</summary>
         private sealed class EmbeddedShape
         {
-            public EmbeddedShape(string id, int side, int centre, string json)
+            public EmbeddedShape(string id, string json)
             {
                 Id = id;
-                Side = side;
-                Centre = centre;
                 Json = json;
             }
 
             public string Id { get; private set; }
-            public int Side { get; private set; }
-            public int Centre { get; private set; }
             public string Json { get; private set; }
         }
 
         /// <summary>
-        /// Every A/B/A shape this build embedded, read back as the two numbers it was generated from.
+        /// Every strip profile this build embedded, by the id the generator wrote it under.
         /// </summary>
         /// <remarks>
         /// The census is what is embedded, which is the rule the Install tab's rows already follow: a
         /// shape this build does not carry is not offered and cannot be added as a bar whose profile does
-        /// not exist. The wirings are left out -- a reversed or Fanatec profile is the same geometry
-        /// wired another way and has no place in a question about how many LEDs there are.
+        /// not exist.
+        ///
+        /// Every id, the wirings included. This is the lookup AddLedBar and MoveLedBar resolve a bar's
+        /// profile through as well as the census the add form is drawn from, and it used to drop every
+        /// id with a wiring suffix, so a bar whose shape was `3-9-3-fanatec` found nothing here and a move
+        /// reported that its profile could not be installed (#436). The geometry question still leaves the
+        /// wirings out, where the two numbers are offered: PanelLights.BarSides and BarCentres.
         /// </remarks>
         private static IList<EmbeddedShape> EmbeddedShapes()
         {
@@ -595,11 +648,9 @@ namespace OpenDashPlugin
             {
                 var id = FlagBoxProfile.ShapeIdOf(resource);
                 if (id == null || !seen.Add(id)) continue;
-                var geometry = LightShape.Parse(id);
-                if (geometry == null || geometry.Wiring != null || geometry.Left != geometry.Right) continue;
                 var text = FlagBoxProfile.ResourceText(assembly, resource, log);
                 if (text == null) continue;
-                shapes.Add(new EmbeddedShape(id, geometry.Left, geometry.Centre, text));
+                shapes.Add(new EmbeddedShape(id, text));
             }
             return shapes;
         }

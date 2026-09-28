@@ -8,6 +8,10 @@
 // labels beside it wrong without saying so: the centre drop-down carried a label for a retired fifth
 // value that way, and a segmented bar one label short throws while a tab is being drawn. Pure: no WPF
 // types.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace OpenDashPlugin
 {
     public static class PanelLights
@@ -111,10 +115,98 @@ namespace OpenDashPlugin
             return total + (total == 1 ? " LED in all" : " LEDs in all") + ", as " + shape + ".";
         }
 
+        /// <summary>The same line for the form as it stands, the switch included: on, the two numbers are
+        /// the wheel's whatever the controls held before, and the profile is the Fanatec one.</summary>
+        public static string BarShapeNote(int side, int centre, bool fanatec)
+        {
+            if (!fanatec) return BarShapeNote(side, centre);
+            var plain = BarShapeNote(FanatecSide, FanatecCentre);
+            return plain.Substring(0, plain.Length - 1) + " Fanatec.";
+        }
+
         /// <summary>What a bar of this shape is called before the driver types over it.</summary>
         public static string BarShapeId(int side, int centre)
         {
             return side + "-" + centre + "-" + side;
+        }
+
+        /// <summary>The switch above the two numbers, which decides them when it is on.</summary>
+        public const string BarFanatecTitle = "Fanatec wheel";
+
+        /// <summary>
+        /// The line under it: why a Fanatec wheel is not simply a 3/9/3.
+        /// </summary>
+        /// <remarks>
+        /// The plain 3/9/3 on a Fanatec wheel lights only some of its LEDs and starts the bar from the
+        /// middle of the rim, which is a failure a driver cannot debug, so the line says the one fact that
+        /// tells them this switch is theirs. It is the order SimHub's own Fanatec device presents, nine
+        /// RevLEDs and then six FlagLEDs (0.3.0-rc.3), and nothing to do with the maker's software.
+        /// </remarks>
+        public const string BarFanatecCaption = "SimHub hands a Fanatec wheel's LEDs over in an order of their own.";
+
+        /// <summary>The ends and the centre a Fanatec wheel has, which the switch shows and locks.</summary>
+        public const int FanatecSide = 3;
+
+        public const int FanatecCentre = 9;
+
+        /// <summary>The id `fanatec(3, 9, 3)` in packages/dash/src/leds/strip.ts spells, which is the shape
+        /// the switch adds a bar as.</summary>
+        public static readonly string FanatecShapeId = BarShapeId(FanatecSide, FanatecCentre) + "-" + PanelLightRows.FanatecSuffix;
+
+        /// <summary>
+        /// The id the add form hands to AddLedBar: the two numbers, or the Fanatec profile when the switch
+        /// is on, whatever the two numbers held.
+        /// </summary>
+        public static string BarShapeId(int side, int centre, bool fanatec)
+        {
+            return fanatec ? FanatecShapeId : BarShapeId(side, centre);
+        }
+
+        /// <summary>
+        /// The ends the add form offers, read off every id the build embedded.
+        /// </summary>
+        /// <remarks>
+        /// The census carries every embedded id, the wirings included, because it is also what AddLedBar
+        /// and MoveLedBar look a bar's profile up in, and a bar whose shape is `3-9-3-fanatec` has to find
+        /// it there: a census that dropped it made a move report "could not be installed" about a profile
+        /// the build carries. The question of how many LEDs there are is asked over the plain shapes alone,
+        /// which is where the filter belongs: a reversed or Fanatec profile is the same geometry wired
+        /// another way and has no place in a question about how many LEDs there are.
+        /// </remarks>
+        public static int[] BarSides(IEnumerable<string> census)
+        {
+            return Counted(census).Select(shape => shape.Left).Distinct().OrderBy(n => n).ToArray();
+        }
+
+        /// <summary>The centres the add form offers beside a choice of ends, over the plain shapes alone.</summary>
+        public static int[] BarCentres(IEnumerable<string> census, int side)
+        {
+            return Counted(census).Where(shape => shape.Left == side).Select(shape => shape.Centre).Distinct().OrderBy(n => n).ToArray();
+        }
+
+        /// <summary>
+        /// Whether the add form draws the Fanatec switch: only when the build embedded the profile it
+        /// selects, so that it never offers a shape whose profile does not exist.
+        /// </summary>
+        /// <remarks>
+        /// One switch and not a wiring drop-down. The reversed 4/14/4 is the other wiring the build writes
+        /// and it is deliberately left off the form: a Fanatec switch is what was asked for, one switch is
+        /// clearer than a wiring drop-down with two entries, and the reversed row keeps its place on the
+        /// Install tab. Should a third wiring ever arrive, the switch becomes that drop-down, and this
+        /// paragraph is the reason it was not one from the start (#436).
+        /// </remarks>
+        public static bool OffersFanatec(IEnumerable<string> census)
+        {
+            return census != null && census.Contains(FanatecShapeId, StringComparer.Ordinal);
+        }
+
+        /// <summary>The ids the two numbers are asked over: an A/B/A geometry in the plain wiring.</summary>
+        private static IEnumerable<LightShape> Counted(IEnumerable<string> census)
+        {
+            if (census == null) return Enumerable.Empty<LightShape>();
+            return census
+                .Select(LightShape.Parse)
+                .Where(shape => shape != null && shape.Wiring == null && shape.Left == shape.Right);
         }
 
         /// <summary>
