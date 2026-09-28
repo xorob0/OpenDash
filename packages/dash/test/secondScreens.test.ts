@@ -34,7 +34,7 @@ import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
+import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
 import { leaderboardPlan } from '../src/modules/leaderboard.ts';
 import { relativePlan } from '../src/modules/relative.ts';
 import { contains, rect } from '../src/design/geometry.ts';
@@ -1003,6 +1003,36 @@ describe('the opponents identity row sets its cells side by side', () => {
         }
       });
     }
+  }
+});
+
+/**
+ * #341, the name. The identity row is a name beside a number, which is a list row, and the canvas sets
+ * it as one: 13 over 16 in a zone and 15 over 34 on the companion, two of the steps `LIST_ROW_TYPES`
+ * holds. So how large the name is was answered once, for the relative, and this page takes the same
+ * answer rather than the density's own 13 and 12: a size off the list ramp, never smaller than the
+ * relative draws in the same box, and the ten characters of `Liam Byrne` wherever the row has them,
+ * which is every box the build produces.
+ */
+describe('the opponents name is the relative\'s', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  const ramp = new Set(LIST_ROW_TYPES.map((type) => type.name));
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const ctx = { frame: box.frame, density: box.density, prefix: '' };
+      const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
+      const relative = relativePlan({ ...ctx, page: 'relative' }).rowType.name;
+      const names = ['ahead.name', 'behind.name'].map((name) => items.find((i) => i.name === name)).filter((i): i is TextItem => i?.kind === 'text');
+      // The nano's 156 px body sheds the pair, which `the opponents page keeps both cars` holds.
+      for (const name of names) {
+        expect({ box: box.name, item: name.name, fs: name.fontSize, relative, onTheRamp: ramp.has(name.fontSize), notSmaller: name.fontSize >= relative, chars: name.widest?.length }).toMatchObject({
+          onTheRamp: true,
+          notSmaller: true,
+          chars: DEFAULT_NAME_CHARS,
+        });
+      }
+    });
   }
 });
 

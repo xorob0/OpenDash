@@ -21,6 +21,18 @@
  * Each block still declares what it draws, so that a stack it is ever placed in sheds it by the
  * table rather than by taking the last row off.
  *
+ * **The identity row is a list row, and its name is the relative's (#341).** The canvas sets the
+ * name at 13 px over a 16 px number in a zone and at 15 over 34 on the companion, which are two of
+ * the steps of `LIST_ROW_TYPES`: the same name beside the same number the relative draws. So the
+ * question #328 answered for the relative is answered here by the same rule rather than a second
+ * one. The name is 15 wherever the row can carry it, and the width is the edge, counted in the
+ * characters of the name: where 13 px would hold the ten of `Liam Byrne` the larger name keeps ten,
+ * and where 13 px already cut it the larger name may cost one character and never two
+ * (`nameFloorOf`). It may never cost a piece of the row either -- the number or the class chip a
+ * 13 px name left room for -- since a larger name is not a reason to lose the car's number. The name's
+ * box is the eight characters of the shortest format at least, and takes the room the row leaves it
+ * up to the ten of the default one.
+ *
  * A wide box too short to stack two blocks draws them side by side with a vertical rule between
  * them, which is the arrangement the canvas gives the wide zone: 576 by 112 has room for two
  * columns of everything and for one column of a heading and a gap.
@@ -56,7 +68,7 @@ import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
-import { NAME_FACE, nameColumnFloor, nameSampleAt, nameText } from '../second/table.ts';
+import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
   positionLabelled, carRating, carRelativeGap, listNeighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -97,7 +109,7 @@ const COLUMN_GAP = 48;
 const RULE = 1;
 
 /**
- * The name's box: the canvas's 64 px, or the room the shortest of the four formats needs.
+ * The name's box at its least: the canvas's 64 px, or the room the shortest of the four formats needs.
  *
  * The canvas draws a driver's name here and ellipsises it at 64 px, which WPF cannot do, so this box
  * used to hold a three-letter code instead. It holds a name now (#385), cut in the expression and
@@ -106,7 +118,30 @@ const RULE = 1;
  * `L. B…`. The cell asks for the eight the shortest format needs, and the number and the class chip
  * behind it shed to make room, which is the order `PIECES` already puts them in.
  */
-const nameCellWidth = (fs: number): number => Math.max(NAME_WIDTH, nameColumnFloor(fs));
+const nameCellFloor = (fs: number): number => Math.max(NAME_WIDTH, nameColumnFor(SHORTEST_NAME_CHARS, fs));
+
+/**
+ * And at its most: the ten characters of `Liam Byrne`, which is what the default format makes of the
+ * canvas's own name and the line #339 draws for a list's driver column. A row with room left after
+ * its number and its chip gives it to the name up to here, so that a 600 px zone stops cutting the
+ * default name to `LIAM BY…` with four hundred pixels unspent beside it; past ten the room is left to
+ * the row, a longer name being a trade the rig's format setting makes rather than this box.
+ */
+const nameCellWant = (fs: number): number => Math.max(nameCellFloor(fs), nameColumnFor(DEFAULT_NAME_CHARS, fs));
+
+/**
+ * The sizes the identity row may set a name at, largest first: the name steps of the list ramp.
+ *
+ * Read off `LIST_ROW_TYPES` rather than written here, because the point of #341 is that there is one
+ * answer to how large a driver's name is, and it lives with the list.
+ */
+const NAME_SIZES: readonly number[] = [...new Set(LIST_ROW_TYPES.map((type) => type.name))].sort((a, b) => b - a);
+
+/** What a block is drawn at: the gap's size, and the name's. */
+interface BlockType {
+  gap: number;
+  name: number;
+}
 
 /** The pieces of a block, most important first, which is the order they are shed from the tail of. */
 const PIECES = ['gap', 'name', 'num', 'class', 'lastLap', 'rating'] as const;
@@ -131,6 +166,8 @@ const SIDES: readonly Side[] = [
 interface Cell {
   id: string;
   width: number;
+  /** The most the cell takes of what the row leaves over, which only the name's box asks for. */
+  want?: number;
   height: number;
 }
 
@@ -143,6 +180,10 @@ interface Cell {
  * module is a function of its rectangle and answers one too small by dropping something, so the
  * class goes first and the number after it, which is the order `modules/shedding.ts` names them in.
  *
+ * The cells are shed against their least widths, and what the kept ones leave over then goes to the
+ * cell that wants more, which is the name's box, up to what it wants. So a wider box never sheds a
+ * cell a narrower one kept in order to give the name more letters.
+ *
  * The last cell standing is kept and capped instead of dropped, a row with nothing in it being a
  * worse answer than a code WPF clips; that case needs a box narrower than a three-letter name and
  * no shape the build produces is one.
@@ -153,7 +194,8 @@ function cellsThatFit(cells: readonly Cell[], width: number): Cell[] {
   while (kept.length > 1 && taken() > width) kept.pop();
   const last = kept[0];
   if (kept.length === 1 && last !== undefined && last.width > width) return [{ ...last, width }];
-  return kept;
+  const spare = width - taken();
+  return kept.map((cell) => (cell.want === undefined ? cell : { ...cell, width: Math.min(cell.want, cell.width + spare) }));
 }
 
 /** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
@@ -187,33 +229,79 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id:
   ];
 }
 
-/** One block, at a value size and holding the pieces still kept. */
-function block(ctx: ModuleContext, side: Side, box: { left: number; width: number }, fs: number, keep: readonly string[]): StackRow | undefined {
-  if (keep.length === 0) return undefined;
+/** The box a block is drawn in: the whole frame's width when stacked, a column's beside another. */
+interface Column {
+  left: number;
+  width: number;
+}
+
+/** A block measured before it is drawn: what the page chooses its type and its pieces by. */
+interface Measured {
+  gapSpec: FieldSpec;
+  numSpec: FieldSpec;
+  numberSize: number;
+  following: { id: string; text: string; bind: Expr }[];
+  identity: Cell[];
+  identityHeight: number;
+  valueHeight: number;
+  gapHeight: number;
+  height: number;
+  /** How far the gap row runs across: the gap and the recaps on its baseline, with the gaps between. */
+  across: number;
+  /** The characters the name's box holds, which is what the cut is counted in; nought where the name is shed. */
+  chars: number;
+}
+
+/** The detail the page decides by, and the block draws from. */
+function measure(ctx: ModuleContext, side: Side, box: Column, type: BlockType, keep: readonly string[]): Measured {
   const d = densityOf(ctx.density);
   const idx = listNeighbour(side.offset, ctx.classOnly);
   const has = (piece: string): boolean => keep.includes(piece);
   // The canvas draws the number at the fourth size of the companion ramp and at the last of the
   // zone one, which is not the same rung of the two ladders, so the instrument says which.
   const numberSize = ctx.density === 'companion' ? d.small : d.tiny;
-  const gapSpec: FieldSpec = fld(ctx, `${side.id}.gap`, '', { sample: side.gap, bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs, color: side.colour });
+  const gapSpec: FieldSpec = fld(ctx, `${side.id}.gap`, '', { sample: side.gap, bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs: type.gap, color: side.colour });
   // The hash has gone with the label it was: the canvas draws the number alone in its cell, which
   // is also what the lists do since a `#` overruns a cell cut for digits.
   const numSpec: FieldSpec = fld(ctx, `${side.id}.num`, '', { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: numberSize, color: ds.color.text.label });
   const following = details(ctx, side, keep);
   const identity = cellsThatFit(
     [
-      ...(has('name') ? [{ id: 'name', width: nameCellWidth(d.name), height: d.name }] : []),
+      ...(has('name') ? [{ id: 'name', width: nameCellFloor(type.name), want: nameCellWant(type.name), height: type.name }] : []),
       ...(has('num') ? [{ id: 'num', width: Math.max(NUMBER_WIDTH, fieldWidth(numSpec, ctx.density)), height: numberSize }] : []),
       ...(has('class') ? [{ id: 'class', width: chipWidth(ctx.density), height: d.chipHeight }] : []),
     ],
     box.width,
   );
   const identityHeight = identity.reduce((tallest, cell) => Math.max(tallest, cell.height), 0);
-  const valueHeight = has('gap') ? fs : d.label;
+  const valueHeight = has('gap') ? type.gap : d.label;
   const gapHeight = has('gap') || following.length > 0 ? valueHeight + fieldTail(gapSpec, ctx.density) : 0;
   const lines = [d.label, identityHeight, gapHeight].filter((line) => line > 0);
   const height = lines.reduce((sum, line) => sum + line, 0) + INNER_GAP * (lines.length - 1);
+  const across = [...(has('gap') ? [Math.ceil(valueWidth(gapSpec, d))] : []), ...following.map((detail) => detailWidth(detail.text, d.label))];
+  const name = identity.find((cell) => cell.id === 'name');
+  return {
+    gapSpec,
+    numSpec,
+    numberSize,
+    following,
+    identity,
+    identityHeight,
+    valueHeight,
+    gapHeight,
+    height,
+    across: across.reduce((sum, width) => sum + width, 0) + DETAIL_GAP * Math.max(0, across.length - 1),
+    chars: name === undefined ? 0 : charsThatFit(NAME_FACE, type.name, name.width),
+  };
+}
+
+/** One block, at a type and holding the pieces still kept. */
+function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, keep: readonly string[]): StackRow | undefined {
+  if (keep.length === 0) return undefined;
+  const d = densityOf(ctx.density);
+  const idx = listNeighbour(side.offset, ctx.classOnly);
+  const has = (piece: string): boolean => keep.includes(piece);
+  const { gapSpec, numSpec, numberSize, following, identity, identityHeight, valueHeight, gapHeight, height } = measure(ctx, side, box, type, keep);
 
   const draw = (bottom: number): Item[] => {
     const items: Item[] = [];
@@ -235,11 +323,11 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
         if (cell.id === 'name') {
           // The cell may have been clamped to a box too narrow for what it asked for, so the budget
           // is taken from the width it actually got rather than from the width it wanted.
-          const chars = charsThatFit(NAME_FACE, d.name, cell.width);
-          items.push(label(`${ctx.prefix}${side.id}.name`, nameSampleAt(d.name), x, centred(d.name), cell.width, {
-            size: d.name,
+          const chars = charsThatFit(NAME_FACE, type.name, cell.width);
+          items.push(label(`${ctx.prefix}${side.id}.name`, nameSampleAt(type.name), x, centred(type.name), cell.width, {
+            size: type.name,
             color: ds.color.text.primary,
-            bind: nameText(idx, chars, d.name),
+            bind: nameText(idx, chars, type.name),
             widest: widestOf(NAME_FACE, chars),
           }));
         }
@@ -285,10 +373,13 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
     shed: {
       ids: keep.map((piece) => `${side.id}.${piece}`),
       order: keepsAt(ctx.page, drawnAt(ctx)) ?? keep,
-      without: (ids) => block(ctx, side, box, fs, keep.filter((piece) => !ids.includes(`${side.id}.${piece}`))),
+      without: (ids) => block(ctx, side, box, type, keep.filter((piece) => !ids.includes(`${side.id}.${piece}`))),
     },
   };
 }
+
+/** Whether two lists name the same pieces in the same order. */
+const same = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((piece, i) => piece === b[i]);
 
 export const opponents = defineModule('opponents', (ctx) => {
   const d = densityOf(ctx.density);
@@ -298,7 +389,7 @@ export const opponents = defineModule('opponents', (ctx) => {
   // that way, and any wide box too short to stack two blocks in.
   const columns = ctx.density === 'wide' || (shape.width === 'wide' && shape.height === 'short');
   const width = columns ? Math.floor((ctx.frame.width - 2 * COLUMN_GAP - RULE) / 2) : ctx.frame.width;
-  const boxes = columns
+  const boxes: readonly Column[] = columns
     ? [
         { left: ctx.frame.left, width },
         { left: ctx.frame.left + ctx.frame.width - width, width },
@@ -308,17 +399,43 @@ export const opponents = defineModule('opponents', (ctx) => {
   // Both cars carry the same pieces, so the declaration is read off one of them; the table names
   // this page's fields in pairs for exactly that reason.
   const declared = PIECES.filter((piece) => pageKeeps(`${ahead.id}.${piece}`, ctx));
-  const stacked = (one: number): number => (columns ? one : 2 * one + RULE + 2 * BLOCK_GAP);
-  const tooTall = (fs: number, keep: readonly string[]): boolean => stacked(block(ctx, ahead, boxes[0]!, fs, keep)?.height ?? 0) > room;
-  // Rule 17 in order. The size is the last thing to move and moves for both cars at once, so it is
-  // the largest on the ramp at which two headings and two gaps still fit; what fits beside them is
-  // then cut from the tail of the page's own order.
-  const sizes = rampOf(ctx.density).filter((size) => size <= d.big);
-  const fs = [...sizes].reverse().find((size) => !tooTall(size, ['gap'])) ?? sizes[0] ?? d.big;
-  const keep = [...declared];
-  while (keep.length > 1 && tooTall(fs, keep)) keep.pop();
+  const stacked = (one: Measured): number => (columns ? one.height : 2 * one.height + RULE + 2 * BLOCK_GAP);
+  const measured = (type: BlockType, keep: readonly string[]): Measured => measure(ctx, ahead, boxes[0]!, type, keep);
+  // A block fits when both of them stack in the height and its gap row fits across its column.
+  const fits = (type: BlockType, keep: readonly string[]): boolean => {
+    const one = measured(type, keep);
+    return stacked(one) <= room && one.across <= width;
+  };
 
-  const rows = SIDES.map((side, i) => block(ctx, side, boxes[i]!, fs, keep));
+  /**
+   * Rule 17 in order, for a name of this size. The size is the last thing to move and moves for both
+   * cars at once, so it is the largest on the ramp up to the density's `big` at which two headings
+   * and two gaps still fit; what fits beside them is then cut from the tail of the page's own order.
+   */
+  const settle = (name: number): { type: BlockType; keep: string[] } => {
+    const sizes = rampOf(ctx.density).filter((size) => size <= d.big);
+    const gap = [...sizes].reverse().find((size) => fits({ gap: size, name }, ['gap'])) ?? sizes[0] ?? d.big;
+    const keep = [...declared];
+    while (keep.length > 1 && !fits({ gap, name }, keep)) keep.pop();
+    return { type: { gap, name }, keep };
+  };
+
+  // The name, by the relative's rule. The canvas's own drawing is the smallest step, and a larger one
+  // is taken where it keeps every piece and the gap's size the smaller one kept, and costs the name no
+  // more characters than `nameFloorOf` allows.
+  const canvas = settle(NAME_SIZES[NAME_SIZES.length - 1]!);
+  const had = measured(canvas.type, canvas.keep);
+  const least = nameFloorOf(had.chars);
+  const settled =
+    NAME_SIZES.map(settle).find((at) => {
+      const now = measured(at.type, at.keep);
+      return at.type.gap === canvas.type.gap && same(at.keep, canvas.keep) && same(now.identity.map((cell) => cell.id), had.identity.map((cell) => cell.id)) && now.chars >= least;
+    }) ?? canvas;
+
+  const type = settled.type;
+  const keep = settled.keep;
+
+  const rows = SIDES.map((side, i) => block(ctx, side, boxes[i]!, type, keep));
   if (columns) {
     const height = Math.max(...rows.map((row) => row?.height ?? 0));
     const left = ctx.frame.left + Math.floor((ctx.frame.width - RULE) / 2);
@@ -336,14 +453,13 @@ export const opponents = defineModule('opponents', (ctx) => {
    */
   const ruled = (row: StackRow | undefined): StackRow | undefined => {
     if (row === undefined) return undefined;
-    const { fill, shed } = row;
+    const { shed } = row;
     return {
       ...row,
       height: row.height + BLOCK_GAP + RULE,
       // On the row's own top edge, so that the twelve the stack leaves above it and the twelve it
       // leaves below are the same twelve the canvas puts either side of the line.
       draw: (bottom) => [rule(`${ctx.prefix}rule`, ctx.frame.left, bottom - row.height - BLOCK_GAP - RULE, ctx.frame.width, RULE), ...row.draw(bottom)],
-      ...(fill ? { fill: { ...fill, at: (factor: number) => ruled(fill.at(factor)) } } : {}),
       ...(shed ? { shed: { ...shed, without: (ids: readonly string[]) => ruled(shed.without(ids)) } } : {}),
     };
   };
