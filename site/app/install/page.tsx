@@ -55,7 +55,10 @@ export default function Install() {
                 </>
               ),
             },
-            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.' },
+            {
+              title: 'Start SimHub and enable the plugin.',
+              body: 'Switch OpenDash on, then Show in left main menu, and press Ok. OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.',
+            },
             {
               title: 'Add your screens on the Rig tab, then restart SimHub.',
               body: 'The Rig starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
