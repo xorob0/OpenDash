@@ -92,8 +92,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Keyed on the folder, which is the one identity a package keeps from the dash build through the
-        /// zip into DashTemplates. That makes this a fourth place knowing those folder names, beside
-        /// PrimaryFolder, DashboardInstaller.PrimaryFolder and the layouts' own `folder` fields, so
+        /// zip into DashTemplates. That makes this a third place knowing those folder names, beside
+        /// PrimaryFolder and the layouts' own `folder` fields, so
         /// PackageCatalogueTests reads the dash sources back and fails the build when one is renamed on
         /// one side only.
         ///

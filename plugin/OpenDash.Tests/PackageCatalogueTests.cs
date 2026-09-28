@@ -3,9 +3,9 @@
 //
 // The names are pinned verbatim for the reason PanelCopyTests pins the panel's sentences: they are the
 // first thing a user reads on the tab. The folders are pinned twice over, because the table that carries
-// the names is a fourth place knowing them -- PackageCatalogue.PrimaryFolder,
-// DashboardInstaller.PrimaryFolder and the layouts' own `folder` fields are the others -- and a rename on
-// one side only would leave a row that is silently unnamed rather than a build that fails.
+// the names is a third place knowing them -- PackageCatalogue.PrimaryFolder and the layouts' own `folder`
+// fields are the others -- and a rename on one side only would leave a row that is silently unnamed rather
+// than a build that fails.
 using System;
 using System.Collections.Generic;
 using System.IO;

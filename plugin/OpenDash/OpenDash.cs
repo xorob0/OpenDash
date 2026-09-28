@@ -5,8 +5,11 @@
 // It does read telemetry, for exactly one thing. ADR 0018 reopened ADR 0009 -- "the plugin does not
 // compute" -- for the car's own LED bar, because there is no SimHub property to derive it from, no
 // expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
-// is the whole of that: three values in, one frame of colours out, and nothing else in the plugin
-// reads a telemetry value.
+// is the whole of that: three values in, one frame of colours out.
+//
+// The one other value it reads is SimHub's own, not ours: the best lap of the player's class, which
+// SimHub works out every frame and never publishes. DataUpdate copies it out of the finished frame so
+// a dashboard need not look it up in the one being built; Contract.ClassBestLap says why.
 using System;
 using System.Linq;
 using System.Reflection;
@@ -36,11 +39,11 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Built on first use rather than eagerly, because the record of what OpenDash wrote into each folder lives
-        /// in the settings and the settings are read in Init. The lambda reads Settings each time, so the record
-        /// follows the object the panel replaces when a user changes something.
+        /// in the settings and the settings are read in Init. The lambdas read Settings each time, so the record and
+        /// the rig follow the object the panel replaces when a user changes something.
         /// </summary>
         public DashboardInstaller Installer =>
-            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
+            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)) { Rig = () => Settings.RigScreens() });
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
@@ -86,6 +89,14 @@ namespace OpenDashPlugin
                 return version == null ? "0.0.0" : version.Major + "." + version.Minor + "." + version.Build;
             }
         }
+
+        /// <summary>
+        /// The version this rig runs, which the update check compares, the idle screen's mark compares and every
+        /// line of the panel names. UpdateCheck.RigVersion is the definition; this is the one place it is read
+        /// from, so that none of them can compose it differently from the others (#458).
+        /// </summary>
+        public string RigVersion =>
+            UpdateCheck.RigVersion(Installer.Packages, Settings.RigScreens().Select(screen => screen.Folder), Version);
 
         /// <summary>
         /// The one update service, shared by the check that runs from Init and the panel, so the releases a
@@ -141,7 +152,7 @@ namespace OpenDashPlugin
                 return false;
             }
             if (!manual) automaticAsked = true;
-            var installed = UpdateCheck.ComparableInstalled(Installer.InstalledVersion, Version);
+            var installed = RigVersion;
             var enabled = Settings.CheckForUpdates;
             var ticks = Settings.LastUpdateCheckTicks;
             UpdateService.InBackground(() =>
@@ -197,8 +208,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public void RefreshUpdateMark()
         {
-            var installed = UpdateMark.Installed(Installer.InstalledVersion, Version, PluginUpdate.Pending(Installer.SimHubRoot));
-            offeredUpdate = UpdateMark.Offered(Settings.OfferedRelease, installed);
+            offeredUpdate = UpdateMark.Offered(Settings.OfferedRelease, RigVersion, PluginUpdate.Pending(Installer.SimHubRoot));
         }
 
         /// <summary>The release the idle screen's mark offers whatever the switch says, or null; the panel reads
@@ -236,18 +246,21 @@ namespace OpenDashPlugin
                 // assembly was staged gives up after a while, and a session that reaches here with a
                 // staged assembly is a session where the last swap did not happen. Inert otherwise.
                 PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
-                // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
-                // embeds on every start, so a user who owned one screen found fourteen dashboards in
-                // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
-                // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
-                Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
+                // The rig decides what is written, and the installer reads it for itself (DashboardInstaller.Rig).
+                // Before ADR 0017 this wrote every package the plugin embeds on every start, so a user who owned
+                // one screen found fourteen dashboards in SimHub's list; now a screen exists because somebody
+                // added it. Nothing outside the rig is deleted -- that is a thing a user asks for -- it is simply
+                // no longer rewritten. The sizes are repaired first, because a screen that remembers no package
+                // is matched to one by its kind and its size.
+                var log = new SimHubInstallLog();
+                RepairScreenSizes(log);
                 // A driver who said yes to replacing their edited dashboards said it to the plugin that
                 // downloaded this one, and this start is what writes them (#438); see EditedConsent.
                 var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
                 if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
                 Installer.EnsureInstalled(false, replaceEdited);
                 if (EditedConsent.Forget(Settings.ReplaceEditedFor, Version, PluginUpdate.Pending(Installer.SimHubRoot))) Settings.ReplaceEditedFor = null;
-                WriteScreenFolders();
+                RetitleScreens(log);
             }
             catch (Exception ex)
             {
@@ -295,38 +308,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Writes the folder of any screen that has not got one.
+        /// Puts every screen's name back into the dashboard SimHub lists, where a folder has lost it.
         /// </summary>
         /// <remarks>
-        /// The stock screens are DashboardInstaller's, because their folder is a package's own and it
-        /// keeps them at the embedded version. A screen with a namespace of its own has a folder no
-        /// package writes, so it is written here -- once, when it is missing. A folder somebody deleted
-        /// comes back on the next start, which is the same promise the stock ones have always made; the
-        /// panel offers the same thing on a button for a user who does not want to restart to get it.
-        ///
-        /// Then every screen's name goes back into the dashboard SimHub lists, stock ones included. The
-        /// installer above has just written the stock folders from their packages, which carries the
-        /// package's own title with it, so a screen the driver renamed left SimHub's list under the name
-        /// they knew it by at every single update. Cheap where nothing moved: Retitle compares before it
-        /// writes and does nothing to a folder whose title is already the screen's.
+        /// The installer writes each screen's folder, the first of a size and the second alike, and
+        /// writes the screen's name in as it does; there is no second writer here any more (#455), which
+        /// is what used to leave a second screen of a size on the dashboard it was first written with. What
+        /// is left is the repair for a folder somebody else titled: an older plugin, or the update path,
+        /// which installs what it downloaded under each package's own title. Cheap where nothing moved:
+        /// Retitle compares before it writes and does nothing to a folder whose title is already the screen's.
         /// </remarks>
-        private void WriteScreenFolders()
+        private void RetitleScreens(IInstallLog log)
         {
-            var log = new SimHubInstallLog();
-            RepairScreenSizes(log);
-            foreach (var screen in Settings.RigScreens())
-            {
-                if (!screen.IsStock)
-                {
-                    var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
-                    if (!result.Ok)
-                    {
-                        Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
-                        continue;
-                    }
-                }
-                ScreenInstaller.Retitle(screen, Installer.SimHubRoot, Installer.Record, log);
-            }
+            foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, Installer.SimHubRoot, Installer.Record, log);
         }
 
         /// <summary>
@@ -463,10 +457,28 @@ namespace OpenDashPlugin
         /// </remarks>
         private DateTime? releaseStartModulesAt;
 
+        /// <summary>
+        /// The best lap of the player's class on the last frame SimHub finished, or null. What
+        /// <see cref="Contract.ClassBestLap"/> publishes.
+        /// </summary>
+        /// <remarks>
+        /// Written here, on SimHub's data thread, after the frame is complete and before the next one
+        /// starts; read by a dashboard on its own thread whenever it renders. A TimeSpan? is a reference
+        /// once boxed by the delegate, so the reader sees one frame's value or the next, never half of
+        /// either.
+        /// </remarks>
+        private volatile object classBestLap;
+
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             try
             {
+                // First and on its own, so that nothing the lights do below can leave it stale. A frame
+                // without the game running holds no leaderboard, and neither does the dashboard's field.
+                classBestLap = data != null && data.GameRunning && data.NewData != null
+                    ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
+                    : null;
+
                 if (releaseStartModulesAt != null && DateTime.UtcNow >= releaseStartModulesAt.Value)
                 {
                     releaseStartModulesAt = null;
@@ -611,6 +623,9 @@ namespace OpenDashPlugin
             // read live and the offer is computed when it changes; see RefreshUpdateMark. #83.
             this.AttachDelegate(Contract.UpdateAvailable, () => UpdateMark.Available(Settings.CheckForUpdates, offeredUpdate));
             this.AttachDelegate(Contract.UpdateVersion, () => UpdateMark.Shown(Settings.CheckForUpdates, offeredUpdate));
+            // And the class best, filled by DataUpdate from the frame SimHub has finished. Not a setting:
+            // published because SimHub keeps it and does not publish it. See Contract.ClassBestLap.
+            this.AttachDelegate(Contract.ClassBestLap, () => classBestLap);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

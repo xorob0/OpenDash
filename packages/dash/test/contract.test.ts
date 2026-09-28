@@ -70,6 +70,7 @@ import {
   setting,
   SLOT_MAX,
   slotSettingName,
+  CLASS_BEST_LAP,
   UPDATE_AVAILABLE,
   UPDATE_VERSION,
   UPDATE_VERSION_CHARACTERS,
@@ -128,12 +129,13 @@ describe('settings', () => {
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
     ]);
-    // The lone 6 is RevBar, the blue flag detail, the two that decide how a driver is named and the
-    // idle screen's two, which every screen shares with the four modes and the twelve slots.
+    // The lone 7 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two and the class best, which every screen shares with the four modes and the
+    // twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        6 +
+        7 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -171,8 +173,9 @@ describe('settings', () => {
     // had no writer in the panel since the styles went per bar, and 344 before the same bar had
     // to be told whether the car has a flash to give at all, because 47 of the 85 measured cars
     // publish none and OpenDash's own redline flash was going out with them. And 345 before the
-    // idle screen could say that a newer release exists, and which (#83).
-    expect(props).toHaveLength(347);
+    // idle screen could say that a newer release exists, and which (#83), and 347 before the
+    // plugin had to publish the class best, which SimHub keeps and never publishes.
+    expect(props).toHaveLength(348);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -193,6 +196,8 @@ describe('settings', () => {
     // with an idle screen. Published rather than chosen. #83.
     expect(props[8 + SLOT_MAX]).toBe('OpenDash.UpdateAvailable');
     expect(props[9 + SLOT_MAX]).toBe('OpenDash.UpdateVersion');
+    // And the class best after them, published because SimHub keeps it and does not publish it.
+    expect(props[10 + SLOT_MAX]).toBe('OpenDash.ClassBestLap');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -291,6 +296,7 @@ describe('settings', () => {
         DRIVER_NAME_TEAM_SETTING,
         UPDATE_AVAILABLE,
         UPDATE_VERSION,
+        CLASS_BEST_LAP,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -551,6 +557,9 @@ describe('plugin mirror', () => {
     for (const name of [UPDATE_AVAILABLE, UPDATE_VERSION]) {
       expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
     }
+    // The class best, which the plugin copies out of SimHub's finished frame.
+    expect(source).toContain(`public const string ${CLASS_BEST_LAP} = "${CLASS_BEST_LAP}";`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${CLASS_BEST_LAP},`);
     for (const name of [DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING]) {
       expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
     }

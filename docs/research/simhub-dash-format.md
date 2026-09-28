@@ -50,6 +50,17 @@ OpenDash/
   JavascriptExtensions/        optional .js files loaded into the JavaScript engine
 ```
 
+Every sidecar is found by the main dashboard's file name, and by nothing else. Decompiled from 9.12.6
+on 2026-09-28 for #456: SimHub keeps no list of them, and each one is read as the `.djson`'s own path
+with a suffix appended, the `.metadata` by `GraphicalDashItem`, the `.jpg` or `.png` by `LoadPreview`,
+the `.ressources` by `DashboardImage.GetImageFromRessources` and the `.carclasses` by
+`EditorModel.LoadCarClassOverrides`. `EditorModel.CleanDir` reads a file the same way, taking whatever
+precedes `.djson.` as the dashboard it belongs to, and deletes a sidecar whose dashboard is not beside
+it. A copy of a dashboard under another name has therefore to rename every `<name>.djson.*` with it,
+since a sidecar left under the old name raises no error and is simply never read. Nothing inside a
+sidecar names the dashboard, on the other hand: an image is looked up inside the `.ressources` zip by
+its own `Name` and `Extension`.
+
 The `.metadata` sidecar duplicates the `Metadata` object of the `.djson`:
 
 ```json
@@ -720,6 +731,37 @@ Three shapes are worth knowing before writing an expression by hand:
   right arity — which fails silently like everything else here.
 
 When SimHub is upgraded, the table is re-derived by decompiling rather than edited by hand.
+
+### `timespantoseconds` of a number is null, and `null > 0` throws
+
+Measured for #454 against the `NCalc.dll` SimHub 9.12.6 ships, with SimHub's `isnull` and
+`timespantoseconds` reproduced from the decompile.
+
+- `timespantoseconds(x)` answers a TimeSpan's seconds and **null for anything else**, the number `0`
+  included. So `timespantoseconds(isnull(t, 0))` is null whenever `t` is.
+- NCalc's `null > 0` throws `ArgumentNullException`, and a throwing expression draws the empty string.
+- The guard therefore wraps the conversion: `isnull(timespantoseconds(t), 0) > 0` is false for a
+  null, a zero and a missing time alike, and `hasTime` in `second/values.ts` is written that way.
+
+### A function reads a different frame from a property
+
+Established for #454 by decompiling `GameManagerBase`, `PluginManager` and `DataCorePlugin`.
+
+- **SimHub builds each frame in place.** Every tick starts with `data.GameNewData = new StatusData(...)`
+  and fills that object over the rest of the tick: `Opponents` is null until `GD_Opponents()`
+  returns, then briefly unsorted, and `BestLapOpponentPosition` is -1 until `ComputeOpponentsData`
+  has run. `NCalcEngineBase.lastData` is the same `GameData` object, so **every function that reads
+  `lastData?.NewData` sees the frame under construction** on a dashboard that renders mid-tick. That
+  is the whole `driver*` family, the `getbest*` family, `getplayerleaderboardposition` and the rest.
+- **A `GameData.*` property reads the last finished frame.** `DataCorePlugin` publishes `GameData` from
+  its own `lastData`, which it sets to `data.NewData` in its `DataUpdate`, after the frame is built.
+- So the two can disagree for a frame, and a function can answer nothing where the property beside it
+  has a value. A field that must not blink reads properties only.
+- `GameData` is declared once, by reflection, from an empty `StatusData(InitializeArrays: true)`.
+  A member that is null on that frame is never declared, whatever it holds later: `BestLapOpponent`
+  is initialised there and declared, hidden, with all its `Opponent` members
+  (`GameData.BestLapOpponent.BestLapTime`); `BestLapSameClassOpponent` is not initialised and has no
+  property at all.
 
 ## Sources
 

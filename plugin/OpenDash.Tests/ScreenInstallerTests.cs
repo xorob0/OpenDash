@@ -139,7 +139,8 @@ namespace OpenDashPlugin.Tests
             var fonts = Path.Combine(root, PackageExtractor.DashFonts);
             Assert.False(Directory.Exists(fonts));
 
-            var written = ScreenInstaller.Write(rim, packages, root, new MemoryFolderRecord(), null);
+            var installer = new DashboardInstaller(root, null, packages, new MemoryFolderRecord());
+            var written = installer.Write(rim);
 
             Assert.True(written.Ok, written.Error);
             Assert.True(written.Written);
@@ -150,7 +151,7 @@ namespace OpenDashPlugin.Tests
             {
                 Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash Pod", Name = "Pod", Namespace = "Pod", Package = package,
             };
-            Assert.True(ScreenInstaller.Write(second, packages, root, new MemoryFolderRecord(), null).Written);
+            Assert.True(installer.Write(second).Written);
             Assert.Equal(2, Directory.GetFiles(fonts, "*.ttf").Length);
         }
     }

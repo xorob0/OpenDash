@@ -16,6 +16,7 @@ import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/
 import { band } from '../elements/band.ts';
 import { dot, DOT_SIZE } from '../elements/dot.ts';
 import { label } from '../elements/label.ts';
+import { mark, unmarked, type Mark } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
 import { unit } from '../elements/unit.ts';
@@ -323,7 +324,21 @@ export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone
 export type InlinePart =
   | { kind: 'label'; text: string; bind?: undefined; widest?: undefined; color?: `#${string}`; hAlign?: HAlign; visibleBind?: Expr }
   | { kind: 'label'; text: string; bind: Expr; widest: string; color?: `#${string}`; hAlign?: HAlign; visibleBind?: Expr }
-  | { kind: 'value'; sample: string; bind?: Expr; chars: { digits: number; specials: number }; color?: `#${string}`; colorBind?: Expr; visibleBind?: Expr }
+  | {
+      kind: 'value';
+      sample: string;
+      bind?: Expr;
+      chars: { digits: number; specials: number };
+      color?: `#${string}`;
+      colorBind?: Expr;
+      visibleBind?: Expr;
+      /**
+       * A mark drawn in this value's place, in the value's own box, for a state whose reading is a
+       * glyph no cell can hold: the `∞` of a session with no clock. It takes no width of its own, so
+       * the run is laid out as it was; see `elements/mark.ts`.
+       */
+      mark?: Mark;
+    }
   | { kind: 'block'; width: number; height: number; color: `#${string}`; colorBind?: Expr; visibleBind?: Expr };
 
 /**
@@ -366,10 +381,11 @@ export function inlineGroup(name: string, parts: readonly InlinePart[], fs: numb
               bind: part.bind,
               color: part.color,
               colorBind: part.colorBind,
-              visibleBind: part.visibleBind,
+              visibleBind: unmarked(part.mark, part.visibleBind),
               maxWidth: w,
             }),
           );
+          if (part.mark) items.push(mark(`${name}.${i}.mark`, part.mark, cursor, top, fs, part.visibleBind, { color: part.color, maxWidth: w }));
         }
         cursor += w + gap;
       });

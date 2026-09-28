@@ -78,21 +78,29 @@ describe('card expressions', () => {
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
 
-  test('session resolves its mode from the setting and the 0 < time left < 86400 guard', () => {
+  test('session resolves its mode from the setting and the 0 < time left <= 86400 guard', () => {
     const mode = "isnull([OpenDash.SessionProgress], 'auto')";
     const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
-    const timed = `((${secs}) > (0)) and ((${secs}) < (86400))`;
+    const timed = `((${secs}) > (0)) and ((${secs}) <= (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');
     expect(value).toBe(`if(${time}, if(${timed}, ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
     expect(value).toContain('/ (3600)');
-    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})), '#33383F', '#F5F7FA')`);
+    // Dim is the clock nobody is counting, which is the session that has not started. An untimed
+    // session is the third state and draws the `∞` mark beside this clock at full strength, so it is
+    // excluded from the dim here rather than folded in with the absence (#439).
+    const untimed = `(${secs}) > (86400)`;
+    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})) and (!(${untimed})), '#33383F', '#F5F7FA')`);
+    const mark = textItem('session', 'mark');
+    expect({ text: mark.text, mono: mark.monospace, bound: mark.bindings?.Text }).toMatchObject({ text: '∞', mono: undefined, bound: undefined });
+    expect(formulaOf(mark, 'Visible')).toBe(`(${time}) and (${untimed})`);
+    expect(formulaOf(textItem('session', 'value'), 'Visible')).toBe(`!((${time}) and (${untimed}))`);
     const denominator = textItem('session', 'denominator');
     expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format([DataCorePlugin.GameData.TotalLaps], '0'))");
     expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and (([DataCorePlugin.GameData.TotalLaps]) > (0))`);
     expect(formulaOf(denominator, 'Left')).toContain('>= (100), 3');
-    for (const item of ['label', 'value', 'denominator'] as const) {
+    for (const item of ['label', 'value', 'mark', 'denominator'] as const) {
       const expressions = Object.values(textItem('session', item).bindings ?? {}).map((b) => (b && typeof b.formula === 'string' ? b.formula : ''));
       for (const e of expressions) expect(e.replace(/isnull\(\[OpenDash\.SessionProgress\], 'auto'\)/g, '')).not.toContain('OpenDash.');
     }
@@ -189,6 +197,14 @@ describe('second-screen values', () => {
     expect(values.NO_TIME).toHaveLength('1:42.905'.length);
     expect(values.noTime(1)).toHaveLength('1:42.3'.length);
     expect(values.lapTime('[T]', 1)).toContain(`'${values.noTime(1)}'`);
+  });
+
+  test('a missing lap time draws the placeholder rather than throwing (#454)', () => {
+    // SimHub's timespantoseconds answers null for the number 0, and NCalc's `null > 0` throws, which
+    // SimHub draws as an empty field. So the null guard wraps the conversion and never sits inside it.
+    expect(values.hasTime('[T]')).toBe('(isnull(timespantoseconds([T]), 0)) > (0)');
+    expect(values.lapTime('[T]')).not.toContain('timespantoseconds(isnull(');
+    expect(values.sectorTime('[T]')).not.toContain('timespantoseconds(isnull(');
   });
 
   test('a unit reaches the screen as the word the face draws, not the name of its enum', () => {

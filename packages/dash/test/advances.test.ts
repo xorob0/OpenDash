@@ -9,6 +9,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type MeasuredFace } from '../src/design/advances.ts';
+import { UNTIMED_MARK } from '../src/second/values.ts';
 
 /** Which bundled file each measured face is measured from. */
 const FILES: Record<MeasuredFace, string> = {
@@ -22,7 +23,7 @@ const FILES: Record<MeasuredFace, string> = {
 const FACES = Object.keys(FILES) as MeasuredFace[];
 
 /** Every character any face's table carries, which is the same set for all five. */
-const CHARACTERS = [...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~', '°', '·', '−', '–', 'Δ', ELLIPSIS];
+const CHARACTERS = [...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~', '°', '·', '−', '–', 'Δ', ELLIPSIS, UNTIMED_MARK];
 
 describe('the advance table is the fonts', () => {
   for (const face of FACES) {

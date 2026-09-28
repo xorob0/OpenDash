@@ -66,7 +66,7 @@ namespace OpenDashPlugin
                 Save();
                 if (!on)
                 {
-                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.Installer.InstalledVersion };
+                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.RigVersion };
                 }
                 RefreshUpdateLine();
             });
@@ -164,7 +164,7 @@ namespace OpenDashPlugin
 
             askedManually |= manual;
             if (checkButton != null) checkButton.IsEnabled = false;
-            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
+            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.RigVersion, Manual = manual };
             RefreshUpdateLine();
             return true;
         }
@@ -185,7 +185,7 @@ namespace OpenDashPlugin
                 // The service declined after all. Whatever was showing before is still the truth.
                 if (updateStatus.State == UpdateState.Checking)
                 {
-                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.RigVersion };
                 }
             }
             else
@@ -302,10 +302,7 @@ namespace OpenDashPlugin
                     // the dashboards have just moved.
                     plugin.RefreshUpdateMark();
                     RefreshRestoreButton();
-                    if (outcome.Ok && outcome.Updated.Count > 0)
-                    {
-                        updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
-                    }
+                    updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
                     RefreshStatus();
                     // The button's visibility is computed nowhere but here, so a status that has just stopped
                     // offering an update has to be redrawn or the button outlives the release it was offering.
@@ -450,22 +447,12 @@ namespace OpenDashPlugin
             reinstallButton.IsEnabled = false;
             try
             {
-                plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
+                // Every screen on the rig, a second one of a size included: the installer reads the rig and
+                // writes each folder with the screen's own name and namespace, so there is nothing to add after.
                 var writing = DateTime.UtcNow;
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
                 var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
                 var held = plugin.Installer.Packages.Count(p => p.HeldBack);
-                // The screens with a namespace of their own are written by ScreenInstaller, because no
-                // package carries their folder; the installer above has just done the stock ones.
-                var log = new SimHubInstallLog();
-                foreach (var screen in Settings.RigScreens().Where(s => !s.IsStock))
-                {
-                    if (ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, log, force: true).Written) replaced++;
-                }
-                // And then every screen's own name back over the title its package carries, because the
-                // stock folders above were written byte for byte: without this, pressing Reinstall is
-                // how a driver's names for their screens disappear from SimHub's dashboard list.
-                foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, log);
                 // A font this press put into DashFonts is not drawn until SimHub restarts, so reopening, which is
                 // enough for everything else a reinstall writes, would leave that face missing.
                 var wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
@@ -493,14 +480,14 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Title "OpenDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
-        /// label showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
+        /// <summary>Title "OpenDash <the version the rig runs>" and the status pill: a 6 px dot and a tracked label
+        /// showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
         private void RefreshStatus()
         {
             if (dashboardTitle == null || statusHost == null) return;
             var installer = plugin.Installer;
-            var version = installer.InstalledVersion ?? installer.EmbeddedVersion ?? OpenDash.Version;
-            dashboardTitle.Text = DashboardInstaller.Summary(version);
+            // The version the update line under it names, so that the two cannot disagree.
+            dashboardTitle.Text = DashboardInstaller.Summary(plugin.RigVersion);
 
             // The worse of the two questions this section answers: what is on the disk against what
             // the build carries, and what the daily check found waiting. Reading the first alone told a

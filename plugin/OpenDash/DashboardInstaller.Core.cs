@@ -1,5 +1,7 @@
-// DashboardInstaller.Core.cs: the installer without SimHub. Which packages there are, what sits under DashTemplates for
-// each of them, the per-package decision and install, the worst status across them and the summary the panel shows.
+// DashboardInstaller.Core.cs: the installer without SimHub. Which packages there are, which folders under DashTemplates
+// the rig's screens own and what sits in each, the per-folder decision and install, the worst status across them and
+// the summary the panel shows. It is the one thing that writes a dashboard folder, for a start, a reinstall and a
+// press on the Rig tab alike, so there is one set of rules for when a folder is replaced and when it is held back.
 // Packages come through IPackageSource: the plugin feeds the assembly's embedded resources (DashboardInstaller.cs), the
 // tests feed synthetic zips. Compiled into OpenDash.Tests: no SimHub or WPF types here.
 using System;
@@ -77,13 +79,14 @@ namespace OpenDashPlugin
         public void Set(string folderName, string fingerprint) { }
     }
 
-    /// <summary>What the installer found out about one package on its last run.</summary>
+    /// <summary>What the installer found out about one folder on its last run: a screen's, or a package's own.</summary>
     public sealed class PackageStatus
     {
-        /// <summary>The name in the package source (the embedded resource name).</summary>
+        /// <summary>The name in the package source (the embedded resource name) the folder is written from.</summary>
         public string Name { get; set; }
 
-        /// <summary>The folder under DashTemplates, e.g. "OpenDash 1280x480"; null when the package could not be read.</summary>
+        /// <summary>The folder under DashTemplates, e.g. "OpenDash 1280x480" or "OpenDash Rim (2)"; null when the
+        /// package could not be read.</summary>
         public string FolderName { get; set; }
 
         /// <summary>Null when the package has no readable sidecar version.</summary>
@@ -125,10 +128,6 @@ namespace OpenDashPlugin
     {
         public const string PackageExtension = ".simhubdash";
 
-        /// <summary>The folder of the reference layout (1920 x 480). The panel's version is read from this package when it is
-        /// embedded, from the first package otherwise; every package carries the same version, so it rarely matters.</summary>
-        public const string PrimaryFolder = "OpenDash";
-
         private static readonly IReadOnlyList<PackageStatus> NoPackages = new PackageStatus[0];
 
         private readonly IInstallLog log;
@@ -146,7 +145,7 @@ namespace OpenDashPlugin
 
         public string SimHubRoot { get; }
 
-        /// <summary>The packages this build carries, so the panel can offer them and ScreenInstaller can write one.</summary>
+        /// <summary>The packages this build carries, so the panel can offer them.</summary>
         public IPackageSource PackageSource => packages;
 
 
@@ -178,8 +177,9 @@ namespace OpenDashPlugin
             return Worse(installed, update == UpdateState.UpdateAvailable ? InstallStatus.UpdateAvailable : InstallStatus.UpToDate);
         }
 
-        /// <summary>One entry per package after Refresh or EnsureInstalled, in install order; empty before and when
-        /// nothing is embedded.</summary>
+        /// <summary>One entry per folder after Refresh or EnsureInstalled: every screen on the rig in the rig's order,
+        /// then every package no screen is written from; one per package, in install order, without a rig. Empty
+        /// before and when nothing is embedded.</summary>
         public IReadOnlyList<PackageStatus> Packages { get; private set; } = NoPackages;
 
         /// <summary>How many packages the plugin carries, which is how many dashboards it installs.</summary>
@@ -187,15 +187,10 @@ namespace OpenDashPlugin
 
         public bool HasEmbeddedPackage => PackageCount > 0;
 
-        /// <summary>Folder of the primary package under DashTemplates ("OpenDash"); the panel reads its version.</summary>
-        public string FolderName { get; private set; } = PrimaryFolder;
-
-        /// <summary>Installed version of the primary package. Null when not installed; Versioning.UnknownVersion when
-        /// installed without a readable version.</summary>
-        public string InstalledVersion { get; private set; }
-
-        /// <summary>Embedded version of the primary package; null when the assembly carries no package.</summary>
-        public string EmbeddedVersion { get; private set; }
+        // There is no installed version of the installer as a whole. It used to read one off a primary package, the
+        // 1920 x 480 `OpenDash`, which since ADR 0017 is a folder only the rigs that added that face have; what the
+        // rig runs is a question about the rig's screens and the plugin together, and UpdateCheck.RigVersion answers
+        // it from Packages (#458).
 
         /// <summary>The first failure of the last run; null when every package went through.</summary>
         public string LastError { get; private set; }
@@ -243,19 +238,19 @@ namespace OpenDashPlugin
             Run(force: false, install: false);
         }
 
-        /// <summary>Installs every embedded package that is missing or older than the embedded copy.
-        /// With force, reinstalls all of them. Never throws: failures end up in Status, LastError and Packages.</summary>
         /// <summary>
-        /// Installs what needs installing.
+        /// Installs every folder the rig wants that is missing or older than the embedded copy, a second screen of a
+        /// size exactly as the first; with force, all of them. Never throws: failures end up in Status, LastError and
+        /// Packages.
         /// </summary>
-        /// <param name="force">Install every package whether or not it is current, which is what Reinstall means.</param>
+        /// <param name="force">Install every folder whether or not it is current, which is what Reinstall means.</param>
         /// <param name="replaceEdited">
         /// Replace a folder that has changed since OpenDash wrote it. False everywhere except where a person has been
         /// shown what it means and said yes, because such a folder holds work that deleting it destroys.
         /// </param>
         /// <param name="progress">
-        /// Packages finished over packages to do, from 0 before the first to 1 after the last, or null for a caller
-        /// with nothing to draw. A package is the finest grain there is here, because extracting one is a single
+        /// Folders finished over folders to do, from 0 before the first to 1 after the last, or null for a caller
+        /// with nothing to draw. A folder is the finest grain there is here, because extracting one is a single
         /// call into PackageExtractor and reports nothing until it returns.
         /// </param>
         public void EnsureInstalled(bool force, bool replaceEdited = false, Action<double> progress = null)
@@ -264,7 +259,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The folders the rig actually wants installed, or null for every package the assembly carries.
+        /// The screens whose folders this installer keeps, read afresh at the start of every run, or null for every
+        /// package the assembly carries, each under its own folder.
         /// </summary>
         /// <remarks>
         /// Until ADR 0017 the plugin wrote every package it embeds on every start, so a user who owned
@@ -273,12 +269,27 @@ namespace OpenDashPlugin
         /// left exactly as it is rather than deleted, because removing a screen is something a user
         /// asks for and never something an upgrade decides.
         ///
-        /// Null rather than an empty list for "everything", so that a caller which has not been taught
-        /// about the rig -- the update path, and the tests -- behaves as it always did. An empty rig is
-        /// an empty list and correctly installs nothing: that is a new user, and the panel teaches from
-        /// exactly that state.
+        /// The screens, and not the names of their folders (#455). A list of names said which folders
+        /// were wanted and nothing about what writes them, so the installer went on walking the packages
+        /// and saw only the folder each one installs as it is embedded. A second screen of a size owns a
+        /// folder no package carries, with its properties rewritten on the way in, and it was written by a
+        /// second writer that only ever wrote a missing folder: a plugin update left it on the dashboard it
+        /// was first written with, and nothing said so. A screen carries its package, its folder and the
+        /// namespace its copy reads, which is everything a folder needs, so every folder on the rig now goes
+        /// through the one decision, the one hold-back of an edited folder, the one kept copy and the one
+        /// fingerprint.
+        ///
+        /// A function rather than a list, for the reason SettingsFolderRecord takes one: the panel replaces
+        /// the settings object when the user changes something, and a rig handed over once would be the
+        /// rig as it stood then. Reading it at the start of each run is also what spares every caller from
+        /// handing it over again before each Refresh, which six of them used to do.
+        ///
+        /// Null for "everything", so that a caller which has not been taught about the rig -- the update
+        /// path, which installs exactly what it downloaded, and the tests -- behaves as it always did. An
+        /// empty rig is an empty list and correctly installs nothing: that is a new user, and the panel
+        /// teaches from exactly that state.
         /// </remarks>
-        public IReadOnlyCollection<string> Wanted { get; set; }
+        public Func<IReadOnlyList<ScreenInstance>> Rig { get; set; }
 
         private void Run(bool force, bool install, bool replaceEdited = false, Action<double> progress = null)
         {
@@ -293,16 +304,16 @@ namespace OpenDashPlugin
 
             // Read for every package, so the panel can still say what is installable and at what
             // version; written only for the folders the rig wants.
-            var wanted = Wanted;
-            var results = new List<PackageStatus>(names.Count);
+            var planned = Plan(names);
+            var results = new List<PackageStatus>(planned.Count);
             Report(progress, 0);
-            foreach (var name in names)
+            foreach (var folder in planned)
             {
-                results.Add(Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited));
-                Report(progress, (double)results.Count / names.Count);
+                results.Add(Process(folder, force, install && folder.Wanted, replaceEdited));
+                Report(progress, (double)results.Count / planned.Count);
             }
             Packages = results;
-            // Over the packages the rig wants, and not over every package the plugin embeds.
+            // Over the folders the rig wants, and not over every package the plugin embeds.
             //
             // Since ADR 0017 a screen exists because somebody added it, so a package nobody added is
             // never written -- and aggregating over all of them meant the worst was permanently
@@ -313,32 +324,117 @@ namespace OpenDashPlugin
             //
             // An empty rig aggregates to UpToDate, which is right: a new user has nothing installed and
             // nothing outstanding, and what the panel owes them is the Rig tab, not a red pill.
-            var mine = results.Where(result => Includes(wanted, result.FolderName)).ToList();
+            var mine = results.Where((result, index) => planned[index].Wanted).ToList();
             Status = (mine.Count == 0 ? results.Where(result => result.Status == InstallStatus.Failed) : mine)
                 .Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
 
-            var primary = results.FirstOrDefault(result => result.FolderName == PrimaryFolder) ?? results[0];
-            FolderName = primary.FolderName ?? PrimaryFolder;
-            EmbeddedVersion = primary.EmbeddedVersion;
-            InstalledVersion = primary.InstalledVersion;
-
             if (results.Any(result => result.Extracted)) RefreshSimHubFonts();
         }
 
-        /// <summary>Reads one package, decides, and installs it when asked and needed. Never throws: a failure becomes
-        /// the entry's Error and Failed status, and the other packages are still processed.</summary>
-        private PackageStatus Process(string name, bool force, bool install, bool replaceEdited)
+        /// <summary>
+        /// Writes one screen's folder now, whatever version it holds.
+        /// </summary>
+        /// <remarks>
+        /// The panel's own presses -- adding a screen, renaming or resizing one, writing its dashboard again --
+        /// which used to go through a second writer of their own. They go through the same per-folder routine a
+        /// start does, asked for one folder and told to write it: a press is a person asking, so the version is
+        /// not consulted, and a folder somebody has edited is replaced rather than held back, with the copy kept
+        /// under a name no later install reclaims, which is what the Edit panel's caption says before the press.
+        /// The panel refreshes the installer afterwards, so the status it reads includes what this wrote.
+        /// </remarks>
+        public ScreenInstallResult Write(ScreenInstance screen)
         {
+            var result = new ScreenInstallResult { Folder = screen?.Folder };
+            if (screen == null || string.IsNullOrEmpty(screen.Folder))
+            {
+                result.Error = "That screen has no folder to write.";
+                return result;
+            }
+            var name = ScreenInstaller.PackageNameFor(screen, packages, log);
+            if (name == null)
+            {
+                result.Error = "This build ships no package for a " + screen.SizeLabel + " " + screen.Kind + ".";
+                return result;
+            }
+            var entry = Process(new Planned { Package = name, Screen = ScreenInstaller.TargetFor(screen), Wanted = true }, force: true, install: true, replaceEdited: true);
+            result.Error = entry.Error;
+            result.Written = entry.Extracted;
+            if (entry.Extracted) log.Info("Wrote the screen " + screen.Name + " into " + screen.Folder + ".");
+            return result;
+        }
+
+        /// <summary>One folder a run looks at, and what it is written from.</summary>
+        private sealed class Planned
+        {
+            /// <summary>The name in the package source.</summary>
+            public string Package { get; set; }
+
+            /// <summary>The screen the folder belongs to, or null for a package's own folder written as it is embedded.</summary>
+            public PackageExtractor.ScreenTarget Screen { get; set; }
+
+            /// <summary>Whether a run may write it: the rig has it, or there is no rig to ask.</summary>
+            public bool Wanted { get; set; }
+        }
+
+        /// <summary>
+        /// The folders a run looks at: one per screen on the rig, the first of a size and the second alike, and then
+        /// the folder of every package no screen is written from.
+        /// </summary>
+        /// <remarks>
+        /// The second half is read and never written. It is the catalogue: the panel offers a size the rig does not
+        /// have from it and says at what version, so every embedded package keeps an entry whether or not anybody
+        /// has made a screen from it. A package whose own folder is already a screen's is not listed a second time,
+        /// because the screen's entry is that folder.
+        /// </remarks>
+        private List<Planned> Plan(IReadOnlyList<string> names)
+        {
+            var screens = Rig?.Invoke();
+            if (screens == null) return names.Select(name => new Planned { Package = name, Wanted = true }).ToList();
+
+            var planned = new List<Planned>();
+            foreach (var screen in screens)
+            {
+                if (screen == null || string.IsNullOrWhiteSpace(screen.Folder)) continue;
+                // Two screens never share a folder, since OpenDashSettings.AddScreen refuses it, and a settings file
+                // edited by hand into saying otherwise is no reason to write one folder twice in a run.
+                if (planned.Any(folder => SameFolder(folder.Screen.Folder, screen.Folder))) continue;
+                var package = ScreenInstaller.PackageNameFor(screen, packages, log);
+                if (package == null)
+                {
+                    // ADR 0017 leaves open what a screen whose size has stopped shipping should read as. Until it is
+                    // settled, its folder is left exactly as it is and the log says why.
+                    log.Warn("The screen " + screen.Name + " has no package in this build, so " + screen.Folder + " was left as it is.");
+                    continue;
+                }
+                planned.Add(new Planned { Package = package, Screen = ScreenInstaller.TargetFor(screen), Wanted = true });
+            }
+            foreach (var name in names)
+            {
+                var own = FolderOf(name);
+                if (own != null && planned.Any(folder => folder.Screen != null && SameFolder(folder.Screen.Folder, own))) continue;
+                planned.Add(new Planned { Package = name, Wanted = false });
+            }
+            return planned;
+        }
+
+        /// <summary>Reads one folder's package, decides, and installs it when asked and needed. Never throws: a failure
+        /// becomes the entry's Error and Failed status, and the other folders are still processed.</summary>
+        private PackageStatus Process(Planned planned, bool force, bool install, bool replaceEdited)
+        {
+            var name = planned.Package;
             var entry = new PackageStatus { Name = name };
             try
             {
-                string folder;
+                string own;
                 using (var package = packages.Open(name))
                 {
-                    entry.EmbeddedVersion = PackageExtractor.ReadPackageVersion(package, out folder);
+                    entry.EmbeddedVersion = PackageExtractor.ReadPackageVersion(package, out own);
                 }
-                if (folder == null) throw new InvalidDataException(name + " has no <folder>/<folder>.djson entry.");
+                if (own == null) throw new InvalidDataException(name + " has no <folder>/<folder>.djson entry.");
+                // A screen's folder is its own. For the first screen of a size that is the package's folder; for a
+                // second it is one no package carries, which is why the package alone could never name it.
+                var folder = planned.Screen == null ? own : planned.Screen.Folder;
                 entry.FolderName = folder;
                 entry.InstalledVersion = ReadInstalled(folder);
                 entry.Status = Versioning.Decide(entry.InstalledVersion, entry.EmbeddedVersion);
@@ -369,7 +465,7 @@ namespace OpenDashPlugin
                     var replacingAuthoredWork = entry.Edited;
                     using (var package = packages.Open(name))
                     {
-                        var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork);
+                        var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork, planned.Screen);
                         log.Info("Fonts copied: " + result.FontsCopied);
                         entry.KeptCopy = result.BackupPath;
                     }
@@ -391,22 +487,16 @@ namespace OpenDashPlugin
             {
                 entry.Status = InstallStatus.Failed;
                 entry.Error = ex.Message;
-                log.Error("Installing " + name + " failed: " + ex);
+                log.Error("Installing " + (entry.FolderName ?? name) + " failed: " + ex);
             }
             return entry;
         }
 
-        /// <summary>Whether the rig wants this folder. A null list is "everything", which is what a caller
-        /// that has not been taught about the rig means.</summary>
-        private static bool Includes(IReadOnlyCollection<string> wanted, string folder)
+        /// <summary>Whether two spellings name one folder. Without case, because Windows reads them so, and a rig
+        /// upgraded across #374 spells its stock folders "openDash" where the packages spell them "OpenDash".</summary>
+        private static bool SameFolder(string a, string b)
         {
-            if (wanted == null) return true;
-            if (folder == null) return false;
-            foreach (var name in wanted)
-            {
-                if (string.Equals(name, folder, StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            return false;
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>The folder a package writes, without extracting it. Null when it cannot be read.</summary>
@@ -428,21 +518,18 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// A build that carries no package installs nothing and vouches for nothing on the disk.
+        /// </summary>
+        /// <remarks>
+        /// It used to read the 1920 x 480 folder and call the rig up to date when that one was there, which said
+        /// nothing about any other screen. A folder is measured against the package that writes it, and this build
+        /// has none, so it reports "Not installed" as plugin/OpenDash/Resources/README.md says it does.
+        /// </remarks>
         private void RefreshWithoutPackage()
         {
-            EmbeddedVersion = null;
-            try
-            {
-                InstalledVersion = ReadInstalled(FolderName);
-                Status = InstalledVersion == null ? InstallStatus.NotInstalled : InstallStatus.UpToDate;
-                log.Warn("No .simhubdash is embedded in this build; nothing to install (see plugin/OpenDash/Resources/README.md).");
-            }
-            catch (Exception ex)
-            {
-                Status = InstallStatus.Failed;
-                LastError = ex.Message;
-                log.Error("Reading the installed dashboard failed: " + ex);
-            }
+            Status = InstallStatus.NotInstalled;
+            log.Warn("No .simhubdash is embedded in this build; nothing to install (see plugin/OpenDash/Resources/README.md).");
         }
 
         /// <summary>Reads the folder's files; the interpretation is InstalledVersionFrom. An unreadable sidecar (locked,

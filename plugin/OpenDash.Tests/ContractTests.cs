@@ -81,7 +81,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -109,8 +109,9 @@ namespace OpenDashPlugin.Tests
             // write, and 344 before whether the car flashes at all had to be published beside whether
             // it is flashing now: 47 of the 85 measured cars give no flash, and OpenDash's own redline
             // flash was going out with them. And 345 before the idle screen could say that a newer
-            // release exists, and which (#83).
-            Assert.Equal(347, names.Count);
+            // release exists, and which (#83), and 347 before the plugin had to publish the class best,
+            // which SimHub keeps and never publishes.
+            Assert.Equal(348, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -143,6 +144,8 @@ namespace OpenDashPlugin.Tests
             // ends with an idle screen. Published rather than chosen. #83.
             Assert.Equal("UpdateAvailable", names[20]);
             Assert.Equal("UpdateVersion", names[21]);
+            // And the class best after them, published because SimHub keeps it and does not publish it.
+            Assert.Equal("ClassBestLap", names[22]);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
             // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30

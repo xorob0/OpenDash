@@ -44,9 +44,10 @@ namespace OpenDashPlugin.Tests
                 // them through Contract.SlotProperty rather than by name. ShiftLights has no control
                 // because RevBar supersedes it and SetRevBar writes both; the two cannot disagree. The
                 // idle screen's two are published rather than chosen, and the one setting behind them is
-                // the update check's switch on the Install tab (#83).
+                // the update check's switch on the Install tab (#83). The class best is published from
+                // SimHub's own frame and nobody sets it.
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
-                .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion)
+                .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion && name != Contract.ClassBestLap)
                 .Where(name => !sources.Contains("Settings." + name) && !sources.Contains("Set" + name))
                 .ToArray();
             Assert.Equal(Array.Empty<string>(), unreachable);
