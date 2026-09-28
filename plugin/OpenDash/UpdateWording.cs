@@ -23,6 +23,25 @@ namespace OpenDashPlugin
         public const string Reopen = "Close and reopen the dashboard to see it.";
 
         /// <summary>
+        /// What replaces <see cref="Reopen"/> when the install also wrote a font into DashFonts.
+        /// </summary>
+        /// <remarks>
+        /// Reopening is not enough for a font, which is #441. SimHub reads DashFonts once per run and keeps what it
+        /// read until it closes, so a face written after that is drawn by no dashboard, reopened or not, until
+        /// SimHub starts again; on the VM rc.7's Light wordmark drew in a heavier face after exactly that. Only an
+        /// install that wrote a face says so, since every other one is still seen by reopening, and a restart asked
+        /// for without cause costs a driver a session.
+        /// </remarks>
+        public const string RestartToSee = "Restart SimHub to see it.";
+
+        /// <summary>The sentence that follows an install into a running SimHub: <see cref="Reopen"/>, or
+        /// <see cref="RestartToSee"/> when it wrote a font.</summary>
+        public static string ToSee(bool wroteFonts)
+        {
+            return wroteFonts ? RestartToSee : Reopen;
+        }
+
+        /// <summary>
         /// What to say when the plugin itself was replaced as well.
         /// </summary>
         /// <remarks>

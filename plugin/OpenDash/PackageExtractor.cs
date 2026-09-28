@@ -594,16 +594,19 @@ namespace OpenDashPlugin
         /// their names before (#159); every text of every package is measured against the faces that package
         /// carries, so a rig drawing an older build of one clips glyphs the tests say fit, silently.
         ///
-        /// The face being replaced is moved into DashFonts/_Backups rather than overwritten, because a running
-        /// SimHub may hold it: WPF maps a face file it has drawn from, and Windows refuses to write a mapped file
-        /// while still letting it be renamed. When even the move is refused the older face is left in place and
-        /// the next install tries again, since a face that could not be replaced is still a face that draws.
+        /// The face being replaced is moved into DashFonts/_Backups rather than overwritten. A file of that name is
+        /// not necessarily ours -- Barlow is a public family, and another dashboard may have brought its own build
+        /// of it -- and _Backups is where SimHub itself keeps the fonts it retires. When the move is refused the
+        /// older face is left in place and the next install tries again, since a face that could not be replaced
+        /// is still a face that draws. A running SimHub does not stand in the way: on the VM a face that an open
+        /// dashboard was drawing from was overwritten, and moved out and back, without complaint.
         ///
         /// What is written is stamped with the time it was written. Every entry of a package carries the same
         /// fixed time, and the caches in front of a font file are keyed on its path, size and time -- SimHub's
         /// FontsAnalyzer names and DirectWrite's file references both -- so a replacement at the same path with
         /// the same time and, for a face whose names were rewritten in place, the same size would be taken for
-        /// the file it replaced.
+        /// the file it replaced. The stamp is also how <see cref="FacesWrittenSince"/> tells that an install
+        /// wrote a face at all.
         /// </remarks>
         public static int CopyFonts(string packageFontsFolder, string dashFontsFolder, IInstallLog log)
         {
@@ -625,6 +628,24 @@ namespace OpenDashPlugin
                 log.Info((replacing ? "Replaced font " : "Installed font ") + name);
             }
             return copied;
+        }
+
+        /// <summary>
+        /// How many faces in DashFonts were written at or after <paramref name="sinceUtc"/>, which is how a caller
+        /// tells that the install it just ran put a font into a running SimHub.
+        /// </summary>
+        /// <remarks>
+        /// That is worth knowing because SimHub cannot draw such a face until it restarts (#441). It reads
+        /// DashFonts once per run, through a DirectWrite font collection that is kept for the life of the process
+        /// and that its font refresh does not rebuild, so a face written afterwards is drawn by no dashboard,
+        /// however often it is reopened. Read off the times CopyFonts stamps, so that a face replaced under its
+        /// own name counts as well as a new one.
+        /// </remarks>
+        public static int FacesWrittenSince(string simHubRoot, DateTime sinceUtc)
+        {
+            var folder = Path.Combine(simHubRoot ?? string.Empty, DashFonts);
+            if (!Directory.Exists(folder)) return 0;
+            return Directory.GetFiles(folder, "*.ttf").Count(face => File.GetLastWriteTimeUtc(face) >= sinceUtc);
         }
 
         /// <summary>Moves a face out of DashFonts into its _Backups folder, and reports whether it could.</summary>

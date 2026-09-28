@@ -451,6 +451,7 @@ namespace OpenDashPlugin
             try
             {
                 plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
+                var writing = DateTime.UtcNow;
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
                 var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
                 var held = plugin.Installer.Packages.Count(p => p.HeldBack);
@@ -465,9 +466,12 @@ namespace OpenDashPlugin
                 // stock folders above were written byte for byte: without this, pressing Reinstall is
                 // how a driver's names for their screens disappear from SimHub's dashboard list.
                 foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, log);
+                // A font this press put into DashFonts is not drawn until SimHub restarts, so reopening, which is
+                // enough for everything else a reinstall writes, would leave that face missing.
+                var wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
                 updateLine.Text = held > 0
-                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them."
-                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
+                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them." + (wroteFonts ? " " + UpdateWording.RestartToSee : string.Empty)
+                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.ToSee(wroteFonts);
                 updateLine.Visibility = Visibility.Visible;
             }
             catch (Exception ex)

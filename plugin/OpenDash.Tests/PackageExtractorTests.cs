@@ -355,6 +355,40 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// An install that wrote a face is told from one that did not, a face replaced under its name included.
+        /// </summary>
+        /// <remarks>
+        /// That is what decides whether the panel may say "close and reopen", since a face written into a running
+        /// SimHub is not drawn until it restarts.
+        /// </remarks>
+        [Fact]
+        public void The_faces_an_install_wrote_are_counted_and_the_ones_already_there_are_not()
+        {
+            var first = DateTime.UtcNow;
+            using (var package = Package("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
+            Assert.Equal(2, PackageExtractor.FacesWrittenSince(root, first));
+
+            var second = DateTime.UtcNow;
+            using (var package = Package("OpenDash", "0.2.0")) PackageExtractor.Install(package, root, null);
+            Assert.Equal(0, PackageExtractor.FacesWrittenSince(root, second));
+
+            var newer = new MemoryStream();
+            using (var zip = new ZipArchive(newer, ZipArchiveMode.Create, true))
+            {
+                Add(zip, "OpenDash/OpenDash.djson", "{\"Version\":2}");
+                Add(zip, "OpenDash/OpenDash.djson.metadata", "{\"DashboardVersion\":\"0.3.0\"}");
+                Add(zip, "OpenDash/_SHFonts/Barlow-Medium.ttf", "a newer build of font-a");
+                Add(zip, "OpenDash/_SHFonts/BarlowCondensed-Bold.ttf", "font-b");
+            }
+            newer.Position = 0;
+            var third = DateTime.UtcNow;
+            PackageExtractor.Install(newer, root, null);
+            Assert.Equal(1, PackageExtractor.FacesWrittenSince(root, third));
+
+            Assert.Equal(0, PackageExtractor.FacesWrittenSince(Path.Combine(root, "no SimHub here"), first));
+        }
+
+        /// <summary>
         /// A face is stamped with the time it was written, not the time the package gave it.
         /// </summary>
         /// <remarks>
