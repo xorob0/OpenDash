@@ -47,6 +47,17 @@ namespace OpenDashPlugin
             || (Manual && (State == UpdateState.UpToDate || State == UpdateState.Unreachable));
 
         public string Line => UpdateWording.Line(this);
+
+        /// <summary>The same answer, owed to a person who pressed the button: see <see cref="Manual"/>.</summary>
+        public UpdateStatus AsManual() => new UpdateStatus
+        {
+            State = State,
+            InstalledVersion = InstalledVersion,
+            LatestVersion = LatestVersion,
+            Notes = Notes,
+            Url = Url,
+            Manual = true,
+        };
     }
 
     public static class UpdateCheck

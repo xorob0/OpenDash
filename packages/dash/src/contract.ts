@@ -131,6 +131,32 @@ export const DRIVER_NAME_FORMAT_SETTING = 'DriverNameFormat';
  */
 export const DRIVER_NAME_TEAM_SETTING = 'DriverNameTeam';
 
+/**
+ * Whether a newer OpenDash than the rig runs exists, as the plugin last heard from GitHub. #83.
+ *
+ * Published rather than chosen, like {@link CAR_LADDER_CHOSEN}, and read by one surface: the idle
+ * screen, the one dashboard surface that may carry a message because nobody is driving while it is
+ * up. False with the update check switched off, false before any answer and once the rig has caught
+ * up, and false through its `isnull()` default with no plugin at all -- the absence of the plugin
+ * never triggers anything, which is the ticket's rule as much as ADR 0003's.
+ */
+export const UPDATE_AVAILABLE = 'UpdateAvailable';
+
+/**
+ * The version the idle screen's mark names, or `''` when it has none to name.
+ *
+ * The plugin publishes a version only when it is at most {@link UPDATE_VERSION_MAX_LENGTH} characters
+ * of {@link UPDATE_VERSION_CHARACTERS}, and an empty string for anything else, so the mark's box can be
+ * measured for the longest version it will ever be handed rather than for the one a sample shows.
+ */
+export const UPDATE_VERSION = 'UpdateVersion';
+
+/** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
+export const UPDATE_VERSION_MAX_LENGTH = 12;
+
+/** The characters a published version may be written in: semver's, which is what `VERSION` holds. */
+export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -223,7 +249,10 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING].map(propertyName), ...zoneProperties()];
+  // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
+  // ends with an idle screen, and the group is pinned in order. #83.
+  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION];
+  return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -429,6 +458,10 @@ export const setting = {
   driverNameFormatIs: (format: DriverNameFormat): Expr => eq(setting.driverNameFormat(), str(format)),
   /** `isnull([OpenDash.DriverNameTeam], false)`: whether a list names the team rather than the driver. */
   driverNameTeam: (): Expr => isnull(prop(propertyName(DRIVER_NAME_TEAM_SETTING)), String(DEFAULTS.DriverNameTeam)),
+  /** `isnull([OpenDash.UpdateAvailable], false)`: whether the idle screen says an update exists. */
+  updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
+  /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */
+  updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
