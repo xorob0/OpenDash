@@ -17,11 +17,12 @@
  *
  * The three shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
  * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, and
- * the chequer as a half-height board with no name. Two things differ at this scale and are why the
- * block is not a style of the band. The flash covers the whole frame rather than an inset one,
- * since a block that is the face has no 3 px edge to keep through the dark phase; and the type is
- * measured down rather than set, because a name one label row high is measured against sixty pixels
- * and a name nearly half the face high is measured against the face.
+ * the chequer as a board with no name. Three things differ at this scale and are why the block is
+ * not a style of the band. The flash covers the whole frame rather than an inset one, since a block
+ * that is the face has no 3 px edge to keep through the dark phase; the type is measured down rather
+ * than set, because a name one label row high is measured against sixty pixels and a name nearly
+ * half the face high is measured against the face; and the chequer's checks are counted rather than
+ * sized, because a block can be taller than it is wide and a band never is.
  *
  * The frame is handed in rather than computed here, because a component is a function of a
  * rectangle: `bodyRect` in `zones/layout.ts` is what every face passes, and the same component
@@ -181,24 +182,44 @@ const outlinedFull = (name: string, frame: Rect, colour: Hex, text: string): Ite
 ];
 
 /**
- * The chequer: the band's board at the block's scale, half the block high, opening on the ground one
- * square in, so that the two formats are one flag at two sizes rather than two drawings of it.
+ * How many checks the chequer lays across the block's shorter side.
+ *
+ * Three rather than the band's two. Two across a block that is nearly square is a quartered flag
+ * rather than a chequer, which is what the 600 x 686 face would draw, and two across the portrait
+ * companion is two stripes. The canvas draws the chequer only as a band, so this figure is the
+ * code's own rather than a sheet's; #473.
+ */
+const FLAG_FULL_CHEQUER_ACROSS = 3;
+
+/** The odd count nearest to `n`, and never less than one. */
+const nearestOdd = (n: number): number => Math.max(1, 2 * Math.round((n - 1) / 2) + 1);
+
+/**
+ * The chequer: the band's board at the block's scale, opening on the ground one square in, so that
+ * the two formats are one flag in one phase rather than two drawings of it.
+ *
+ * The checks are counted and each is the block divided by the count. It used to be sized at half the
+ * block high, as the band's is, and the columns cut wherever the block ended, which left every block
+ * but one ending on part of a square and the portrait companion drawing 1.27 squares across: one
+ * whole square and a strip. Now it is three across the shorter side and the nearest odd count along
+ * the longer, so a check is never further from square than the rounding of that count, and the
+ * board is the same at both ends and at the top and bottom, starting and ending on the ground at
+ * every corner.
  */
 function chequeredFull(name: string, frame: Rect): Item[] {
-  const check = frame.height / 2;
-  const columns = Math.ceil(frame.width / check);
+  const along = nearestOdd(Math.max(frame.width, frame.height) / (Math.min(frame.width, frame.height) / FLAG_FULL_CHEQUER_ACROSS));
+  const [columns, rows] = frame.width >= frame.height ? [along, FLAG_FULL_CHEQUER_ACROSS] : [FLAG_FULL_CHEQUER_ACROSS, along];
   const children: Item[] = [band(`${name}.band`, frame, ds.color.surface.base)];
   // The edges are rounded and the squares cut between them, rather than each square being rounded
-  // on its own. A block of odd height puts the check on a half pixel, and a square whose left and
-  // width then round apart ends a pixel past the block: the arrangement without the rev bar is
-  // where that happens, 361 px of body at 1280 x 480.
-  const edge = (k: number, start: number, extent: number): number => Math.min(start + extent, Math.round(start + k * check));
-  for (let row = 0; row < 2; row++) {
-    const top = edge(row, frame.top, frame.height);
-    const height = edge(row + 1, frame.top, frame.height) - top;
+  // on its own, so that the squares meet without a gap or an overlap and the last one ends on the
+  // block's own edge wherever the division leaves a fraction of a pixel.
+  const edge = (k: number, count: number, start: number, extent: number): number => Math.round(start + (k * extent) / count);
+  for (let row = 0; row < rows; row++) {
+    const top = edge(row, rows, frame.top, frame.height);
+    const height = edge(row + 1, rows, frame.top, frame.height) - top;
     for (let col = (row + 1) % 2; col < columns; col += 2) {
-      const left = edge(col, frame.left, frame.width);
-      const width = edge(col + 1, frame.left, frame.width) - left;
+      const left = edge(col, columns, frame.left, frame.width);
+      const width = edge(col + 1, columns, frame.left, frame.width) - left;
       children.push(band(`${name}.r${row}c${String(col).padStart(2, '0')}`, rect(left, top, width, height), ds.purpose.flag.chequer));
     }
   }
