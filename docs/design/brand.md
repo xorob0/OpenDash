@@ -85,11 +85,10 @@ The licence is not incidental. SimHub bundles fonts into `_SHFonts/` inside the 
 shipping the dashboard means redistributing the font files, and anything not under the OFL or
 MIT is disqualified whatever its merits. This ruled out several obvious DIN choices.
 
-Labels are uppercase, small and dim; they should be findable but never compete with values.
-Numerals are weight 600 to 700. Two constraints come from the renderer rather than from taste.
-SimHub text items expose no letter-spacing property, so the tracking tokens apply to the plugin
-panel and to documentation only, and label spacing on the dash face is obtained through case
-and size alone.
+Labels are small and dim; they should be findable but never compete with values. Numerals are
+weight 600 to 700. Two constraints come from the renderer rather than from taste. SimHub text items
+expose no letter-spacing property, so the tracking tokens apply to the plugin panel and to
+documentation only. Tracking is unavailable on the dash face and nothing stands in for it there.
 
 The second is answered. SimHub exposes no OpenType features and Barlow Condensed's digits are
 proportional, so a ticking value would jitter. Every value is therefore drawn in SimHub's own
@@ -114,6 +113,41 @@ it can find, and every advance in `packages/dash/src/design/advances.ts` then me
 never shipped. The build therefore refuses a package that draws a weight it does not carry, so that
 a further weight has to be added to `FACE_FONT_FILES` or `SCREEN_FONT_FILES`, and measured, prior
 to being drawn.
+
+### Case
+
+**Text is written in the case a product writes it in**, on the face, the pit wall, the companion,
+the pop-ups and the panel alike:
+
+- A label is in sentence case: `Fuel left`, `Best lap`, `Session best`, `Est. laps`. A label that
+  continues after a middot continues the sentence, `Tyres °C · last stop`, and a half that is drawn
+  on its own is a sentence of its own, `Damage · Not available in iRacing`.
+- A unit is in the case its symbol has: `km/h`, `mph`, `kPa`, `psi`, `bar`, `L`, `gal`, `°C`, `s`.
+  The spelling lives in one place, the unit words in `packages/dash/src/second/values.ts`, which is
+  where a sim's enum (`KMH`, `Kpa`, `Gallons`) becomes the symbol a driver reads.
+- Capitals are for a word that is a name in capitals on its own account: a flag (`YELLOW FLAG`,
+  `BLUE FLAG`, `MEATBALL`, `SAFETY CAR`), an acronym or a driving aid and the lamps that show them
+  (`RPM`, `ABS`, `TC`, `DRS`, `KERS`, `BB`, `FL`), and a class name on its chip (`GT3`, `LMP2`).
+
+Those capitals are typed in the source string rather than applied by a helper, so that a search for
+a capitalised literal finds every one of them; `label()` draws what it is given, and the panel's
+`Widgets.Label` does the same. The reason is the flag: when every label shouts, the one word that
+should stand out cannot, and an upper-cased unit is a misspelt one, `KPA` being no symbol at all.
+Size, width and colour already tell a label from its value, at three to eight times the label's
+size. Two capitalisations are not a label's and stay: a driver's name on a list row is
+upper-cased at every size a list draws it, for a glyph rather than a style
+([zones.md §10](zones.md#10-where-the-canvas-contradicts-itself)), and a class chip upper-cases the
+class the sim sends. What a sim sends as prose in its own case, a track name, a session type, a grip
+state or a compound, is drawn as it is sent.
+
+**The canvas owes two changes to follow this** ([#422](https://github.com/xorob0/OpenDash/issues/422)).
+Its markup already writes the case that is wanted, `Fuel`, `Est. laps`, `Your best`, `psi`, `km/h`,
+and a stylesheet rule shouts it: `.lbl` and `.lbl-sm` carry `text-transform: uppercase`, which is
+to go. And `font.tracking.label`, the 0.14 em the panel's `Theme.TrackingLabel` mirrors, was sized
+for capitals and wants re-sizing for a sentence-case label, most likely to near nothing. The build
+follows the first already, the spelling being the markup's; it does not move ahead of the second,
+because `design/tokens.json` is the only place a spacing is defined and is not edited from code, so
+the panel keeps 0.14 until the token changes.
 
 ## Form
 
