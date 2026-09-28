@@ -21,8 +21,10 @@ import { rect } from '../src/design/geometry.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { racePage } from '../src/screens/pitwall.ts';
+import { sectorColour } from '../src/second/sectors.ts';
+import { carIsSessionBest, carPosition, fieldSize, player, rowsInClass, sessionBestLap, sessionBestRow } from '../src/second/values.ts';
+import { ds } from '../src/tokens.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
-import { carPosition, fieldSize, player, rowsInClass } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Expr } from '../src/bind.ts';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -63,22 +65,56 @@ const START = [2, 1, 6, 4, 5, 3] as const;
 /** The place a row started in within its own class: its class ordered by where each of them started. */
 const classStartOf = (row: number): number => [...rowsOfClass(GRID[row - 1]!)].sort((a, b) => START[a - 1]! - START[b - 1]!).indexOf(row) + 1;
 
+/**
+ * Each row's best lap, in seconds, chosen so that the field's fastest and the player's class's
+ * fastest are different cars: an LMP2 on row 2 holds the session best, and the fastest GT3 is row 6,
+ * last of its class on the road. A session best that read the field would put the purple on row 2,
+ * which a board of GT3s does not draw at all.
+ */
+const BEST = [99.1, 97.2, 98.9, 100.4, 97.6, 98.4] as const;
+
+/** The leaderboard row holding the fastest lap among some rows, 1-based. */
+const fastestOf = (rows: readonly number[]): number => rows.reduce((a, b) => (BEST[b - 1]! < BEST[a - 1]! ? b : a));
+
+const FIELD_BEST_ROW = fastestOf(GRID.map((_, i) => i + 1));
+const CLASS_BEST_ROW = fastestOf(CLASS_ROWS);
+
+/**
+ * The best time through sector 1, of the field and of the player's class, in seconds. A TimeSpan in
+ * SimHub; the evaluator's `timespantoseconds` is the identity, so a number stands in for one.
+ */
+const BEST_S1 = { field: 27.9, class: 28.4 } as const;
+
 /** What the plugin publishes for one run of the evaluator. */
 interface Settings {
   /** Absent is a package drawn with no plugin attached, which falls back to the contract's default. */
   positionMode: 'overall' | 'class' | undefined;
   /** The pit wall's own class filter, which is a zone filter of the kind a face carries per zone. */
   screenFilter?: boolean;
+  /**
+   * The leaderboard index (0-based, as SimHub publishes it) of the field's and of the class's best
+   * lap. Unset, they are the ones {@link BEST} makes; a single-class race sets them equal.
+   */
+  bestIndex?: { field: number; class: number };
+  /** The player's last sector 1, in seconds. */
+  lastS1?: number;
 }
 
 /** SimHub's leaderboard functions, answered from {@link GRID}. A row that is not there is null. */
 function scopeFor(settings: Settings, repeatIndex: number): Record<string, unknown> {
+  const bestIndex = settings.bestIndex ?? { field: FIELD_BEST_ROW - 1, class: CLASS_BEST_ROW - 1 };
   const properties: Record<string, unknown> = {
     'OpenDash.PositionMode': settings.positionMode,
     'DataCorePlugin.GameData.CarClass': PLAYER_CLASS,
     'DataCorePlugin.GameData.OpponentsCount': GRID.length,
     'DataCorePlugin.GameData.PlayerClassOpponentsCount': CLASS_ROWS.length,
     ...(settings.screenFilter === undefined ? {} : { 'OpenDash.PitWallClassOnly': settings.screenFilter }),
+    'DataCorePlugin.GameData.BestLapOpponentPosition': bestIndex.field,
+    'DataCorePlugin.GameData.BestLapOpponentSameClassPosition': bestIndex.class,
+    'DataCorePlugin.GameData.Sector1LastLapTime': settings.lastS1 ?? null,
+    // The player's own best of the sector, slower than either session best so that only the
+    // purple branch can tell the two references apart.
+    'DataCorePlugin.GameData.Sector1BestTime': 29.0,
   };
   const classRowAt = (place: number): number => CLASS_ROWS[place - 1] ?? -1;
   return {
@@ -97,6 +133,12 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     driverpositiongain: (row: number): number | undefined => (onGrid(row) ? START[row - 1]! - row : undefined),
     driverpositiongainclass: (row: number): number | undefined => (onGrid(row) ? classStartOf(row) - classPositionOf(row) : undefined),
     driveravailable: (row: number): boolean | undefined => (onGrid(row) ? true : undefined),
+    driverbestlap: (row: number): number | undefined => (onGrid(row) ? BEST[row - 1] : undefined),
+    driveriscarinpitlane: (row: number): boolean | undefined => (onGrid(row) ? false : undefined),
+    driverisplayer: (row: number): boolean | undefined => (onGrid(row) ? row === PLAYER_ROW : undefined),
+    timespantoseconds: (value: number): number => value,
+    getbestsplittime: (sector: number): number | null => (sector === 1 ? BEST_S1.field : null),
+    getbestsplittime_playerclassonly: (sector: number): number | null => (sector === 1 ? BEST_S1.class : null),
     getopponentleaderboardposition_playerclassonly: classRowAt,
     getopponentleaderboardposition_aheadbehind: (k: number): number => (onGrid(PLAYER_ROW + k) ? PLAYER_ROW + k : -1),
     getopponentleaderboardposition_aheadbehind_playerclassonly: (k: number): number => classRowAt(classPositionOf(PLAYER_ROW) + k),
@@ -116,7 +158,8 @@ function toJavaScript(formula: string): string {
     .replace(/ or /g, ' || ');
   const unknown = js.replace(/'[^']*'/g, '').match(/\b[a-z][a-z0-9_]*\(/g) ?? [];
   const known = ['nz(', 'if(', 'format(', 'abs(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'driverpositiongain(', 'driverpositiongainclass(',
-    'driveravailable(', 'getplayerleaderboardposition(',
+    'driveravailable(', 'getplayerleaderboardposition(', 'driverbestlap(', 'driveriscarinpitlane(', 'driverisplayer(', 'timespantoseconds(',
+    'getbestsplittime(', 'getbestsplittime_playerclassonly(',
     'getopponentleaderboardposition_playerclassonly(', 'getopponentleaderboardposition_aheadbehind(', 'getopponentleaderboardposition_aheadbehind_playerclassonly('];
   for (const call of unknown) if (!known.includes(call)) throw new Error(`the evaluator does not know ${call})`);
   return js;
@@ -276,6 +319,106 @@ describe('the rig-wide mode is one property', () => {
     // through.
     expect(setting.positionMode()).toContain('OpenDash.PositionMode');
     expect(carPosition(player())).toContain(setting.positionMode());
+  });
+});
+
+describe('the session best is the fastest car of the field the rig counts in (#433)', () => {
+  const OVERALL: Settings = { positionMode: 'overall' };
+  const CLASS: Settings = { positionMode: 'class' };
+
+  test('the grid this block argues from holds the two bests in different classes', () => {
+    // Were the field's fastest car a GT3, every assertion below would pass on the build that read
+    // the whole field.
+    expect({ field: GRID[FIELD_BEST_ROW - 1], klass: GRID[CLASS_BEST_ROW - 1] }).toEqual({ field: 'LMP2', klass: PLAYER_CLASS });
+  });
+
+  test("counting overall, the row and its lap are the whole field's, exactly as before", () => {
+    expect({ row: evaluate(sessionBestRow(), OVERALL), lap: evaluate(sessionBestLap(), OVERALL) }).toEqual({ row: FIELD_BEST_ROW, lap: BEST[FIELD_BEST_ROW - 1] });
+  });
+
+  test("counting in class, they are the fastest car of the player's own class", () => {
+    expect({ row: evaluate(sessionBestRow(), CLASS), lap: evaluate(sessionBestLap(), CLASS) }).toEqual({ row: CLASS_BEST_ROW, lap: BEST[CLASS_BEST_ROW - 1] });
+  });
+
+  test('nobody yet is nobody in either mode, not the first row', () => {
+    for (const positionMode of ['overall', 'class'] as const) {
+      expect({ positionMode, row: evaluate(sessionBestRow(), { positionMode, bestIndex: { field: -1, class: -1 } }) }).toEqual({ positionMode, row: -1 });
+    }
+  });
+
+  test('a single-class race reads the same under either setting', () => {
+    // One class, so SimHub's two properties name the same car.
+    const bestIndex = { field: 4, class: 4 };
+    expect(evaluate(sessionBestLap(), { positionMode: 'class', bestIndex })).toBe(evaluate(sessionBestLap(), { positionMode: 'overall', bestIndex }));
+  });
+
+  test('every field labelled for the session best reads the one row', () => {
+    // The switch sits at the row so that no field can be left reading the other one: the Lap times
+    // module, the Sectors module and the pit wall's track panel all draw `sessionBestLap()`.
+    const fields = [
+      ...flat(build('lapTimes', PAGE.width, PAGE.height)),
+      ...flat(build('sectors', PAGE.width, PAGE.height)),
+      ...flat(racePage(1920, 1080).items),
+    ].filter((i) => i.kind === 'text' && /(^|\.)sessionBest\.value$/.test(i.name));
+    expect(fields.length).toBeGreaterThanOrEqual(3);
+    for (const field of fields) expect({ name: field.name, reads: formulaOf(field, 'Text').includes(sessionBestLap()) }).toEqual({ name: field.name, reads: true });
+  });
+
+  /** The rows of a leaderboard whose `Best` cell is drawn purple, by the position each draws. */
+  function purpleRows(items: readonly Item[], settings: Settings): number[] {
+    const all = flat(items);
+    const stamped = all.find((i) => i.kind === 'layer' && i.name.endsWith('.rows'));
+    if (!stamped || stamped.kind !== 'layer') throw new Error('no stamped rows layer');
+    const row = stamped.children[0]!;
+    const cells = flat([row]);
+    const best = cells.find((i) => i.kind === 'text' && i.name.endsWith('.row.best'));
+    if (!best) throw new Error(`no Best column among ${cells.map((c) => c.name).join(', ')}`);
+    const pos = cells.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.pos'))!;
+    const purple: number[] = [];
+    for (let i = 1; i <= (stamped.repetitions ?? 0) + 1; i++) {
+      if (!evaluate(formulaOf(row, 'Visible'), settings, i)) continue;
+      const colour = best.bindings?.['TextColor'];
+      if (!colour || typeof colour !== 'object' || !('formula' in colour)) throw new Error('the Best cell has no colour binding');
+      if (evaluate(String(colour.formula), settings, i) === ds.purpose.lap.sessionBest) purple.push(placeIn(String(evaluate(formulaOf(pos, 'Text'), settings, i)))!);
+    }
+    return purple;
+  }
+
+  test("a leaderboard counting overall paints the field's fastest car", () => {
+    expect(purpleRows(build('leaderboard', PAGE.width, PAGE.height), OVERALL)).toEqual([FIELD_BEST_ROW]);
+  });
+
+  test('a leaderboard counting in class has a purple row, on the fastest car of that class', () => {
+    // Before #433 this was empty: the purple fell on the LMP2, which a GT3 board does not draw.
+    expect(purpleRows(build('leaderboard', PAGE.width, PAGE.height), CLASS)).toEqual([classPositionOf(CLASS_BEST_ROW)]);
+  });
+
+  test("a board filtered to one class by its own zone, the rig counting overall, paints that class's fastest car", () => {
+    // The rows are the player's class by their overall places, so the purple has to be that class's
+    // best too: the field's would fall on the LMP2, which this board does not draw, and leave it
+    // with no purple row at all.
+    const board = build('leaderboard', PAGE.width, PAGE.height, secondScreen.classOnly());
+    const filtered: Settings = { positionMode: 'overall', screenFilter: true };
+    expect(column(board, filtered)).toEqual(CLASS_ROWS);
+    expect(purpleRows(board, filtered)).toEqual([CLASS_BEST_ROW]);
+  });
+
+  test('the same board with its zone filter off is the whole field again, and so is its purple', () => {
+    const board = build('leaderboard', PAGE.width, PAGE.height, secondScreen.classOnly());
+    expect(purpleRows(board, { positionMode: 'overall', screenFilter: false })).toEqual([FIELD_BEST_ROW]);
+  });
+
+  test('carIsSessionBest answers for exactly one row in each mode', () => {
+    const rows = GRID.map((_, i) => i + 1);
+    const holders = (settings: Settings): number[] => rows.filter((r) => evaluate(carIsSessionBest(String(r)), settings));
+    expect({ overall: holders(OVERALL), inClass: holders(CLASS) }).toEqual({ overall: [FIELD_BEST_ROW], inClass: [CLASS_BEST_ROW] });
+  });
+
+  test("a sector equal to the class's best split is purple counting in class, and is not the field's", () => {
+    const colour = (settings: Settings): unknown => evaluate(sectorColour(1), settings);
+    expect(colour({ ...CLASS, lastS1: BEST_S1.class })).toBe(ds.purpose.lap.sessionBest);
+    expect(colour({ ...OVERALL, lastS1: BEST_S1.class })).not.toBe(ds.purpose.lap.sessionBest);
+    expect(colour({ ...OVERALL, lastS1: BEST_S1.field })).toBe(ds.purpose.lap.sessionBest);
   });
 });
 

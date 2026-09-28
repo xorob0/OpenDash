@@ -440,6 +440,17 @@ const measuredInList = (ctx: CellContext, inClass: (idx: Expr) => Expr, whole: (
 };
 
 /**
+ * Whether the rows a cell is drawn among are the player's own class, as {@link measuredInList}
+ * answers it, for a cell that asks which field it belongs to rather than which car is above it.
+ *
+ * The purple on `Best` is the one: it marks the fastest car of the field the list draws, so a board
+ * filtered to one class by its own zone setting, with the rig counting overall, still has a purple
+ * row rather than a purple on an LMP2 it never draws (#433). A block whose rows are always the whole
+ * field, a split list's two, is the whole field's.
+ */
+const drawsOneClass = (ctx: CellContext): Expr | boolean => (ctx.mode === 'class' ? true : (ctx.inClass ?? false));
+
+/**
  * A numeral cell, vertically centred in the row.
  *
  * A right-aligned cell is drawn right-aligned, which is not the same as a box whose right edge
@@ -648,7 +659,7 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
-        colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
+        colorBind: iff(carIsSessionBest(ctx.idx, drawsOneClass(ctx)), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
   // The three samples are one lap's sectors and they add up to the `last` sample beside them, the

@@ -91,8 +91,8 @@ confirmed in existing dashboards; the shift light thresholds are confirmed by th
 | # | Card | Value | SimHub source | Format and colour |
 |---|---|---|---|---|
 | 0 | Current lap | Running lap time | `CurrentLapTime` | `m:ss.f` |
-| 1 | Last lap | Last lap time | `LastLapTime` | `m:ss.fff`; `state.best` when it equals the session best |
-| 2 | Best lap | Session best lap | `BestLapTime` | `m:ss.fff` |
+| 1 | Last lap | Last lap time | `LastLapTime` | `m:ss.fff`; `state.best` when it equals the player's own best |
+| 2 | Best lap | The player's own best lap of the session | `BestLapTime` | `m:ss.fff` |
 | 3 | Delta | Live delta to the reference lap | `PersistantTrackerPlugin.SessionBestLiveDeltaSeconds` or `PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds`, per `DeltaReference` | `+0.00`; `state.good` when negative, `state.danger` when positive |
 | 4 | Position | Position and car count | `Position` and `OpponentsCount`, or their class equivalents, per `PositionMode` | `3 / 24` |
 | 5 | Session | Lap of total, or time left | `CurrentLap`, `TotalLaps`, `SessionTimeLeft`, per `SessionProgress` | `12 / 30` or `h:mm:ss` |
