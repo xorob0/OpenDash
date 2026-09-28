@@ -152,7 +152,8 @@ export function fittingColumns(columns: readonly ColumnId[], width: number, dens
  *   length. The canvas owes the redraw.
  *
  * Which of the order a zone should show — the head of the field, or the cars around the player the way a
- * split board does — is #340's question, and the count is the half of it that belongs to #328.
+ * split board does — is not decided. #328 left it to #340, which took the columns and not this; the
+ * count is the half of the question that belonged to #328, and the rows are the head of the field.
  */
 const ROWS: Record<Archetype, number> = { wide: 7, grid: 6, tallNarrow: 8, tall: 11 };
 
