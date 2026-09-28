@@ -142,9 +142,10 @@ bar rather than going dark, which is what ADR 0004 records.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are the card in each slot. Of the faces the plugin installs
 the two round ones are the only readers: `OpenDash 480 round` reads the first two and
-`OpenDash 800 round` the first six. The eight `OpenDash slots <size>` packages published beside the
-plugin read them too, four to twelve each -- `OpenDash slots 1920x480` and `OpenDash slots 1280x720`
-all twelve -- so a rig running one of those reads the twelve as well. They are ordinary properties
+`OpenDash 800 round` the first six. The eight `OpenDash slots <size>` packages read them too, four
+to twelve each -- `OpenDash slots 1920x480` and `OpenDash slots 1280x720` all twelve -- so a rig
+still running one from an earlier release reads the twelve as well; they are built now only for a
+comparison on a rig, and no release publishes them. They are ordinary properties
 like the rest, so a dashboard or an LED profile of your own may read them, and they are not
 deprecated and are not being removed. The two round faces keep the twelve-slot design of 0.1.x on
 purpose; a round face becomes zones on a ring after 1.0, and the release that converts it is the one
