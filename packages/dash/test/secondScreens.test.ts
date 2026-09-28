@@ -34,6 +34,9 @@ import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
+import { columnSpans, type ColumnId, type ListPlan } from '../src/second/table.ts';
+import { leaderboardPlan } from '../src/modules/leaderboard.ts';
+import { relativePlan } from '../src/modules/relative.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
@@ -368,8 +371,8 @@ describe('the pit wall', () => {
     };
     const wide = landscape.pkg.dashboards.find((d) => d.name.startsWith('zones-wide'))!;
     const narrow = landscape.pkg.dashboards.find((d) => d.name.startsWith('zones-') && !d.name.startsWith('zones-wide'))!;
-    for (const page of PIT_WALL_WIDE_ZONE_PAGES) expect(titleOf(wide, page.id)).toBe(`${page.name.toUpperCase()} · WIDE`);
-    for (const page of PIT_WALL_ZONE_PAGES) expect(titleOf(narrow, page.id)).toBe(page.name.toUpperCase());
+    for (const page of PIT_WALL_WIDE_ZONE_PAGES) expect(titleOf(wide, page.id)).toBe(`${page.name} · wide`);
+    for (const page of PIT_WALL_ZONE_PAGES) expect(titleOf(narrow, page.id)).toBe(page.name);
   });
 
   test('the portrait page is one screen with four zones', () => {
@@ -559,7 +562,10 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
     if (seen.has(key)) return;
     seen.add(key);
     const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
-    boxes.push({ name: `${owner} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
+    // At the density `screens/zones.ts` builds the zone at, which is the pit wall's `panel` for a
+    // standard zone and not the face's `zone`: a page that answers the pit wall differently is only
+    // measured doing so if the box is asked the question the build asks.
+    boxes.push({ name: `${owner} ${key}`, frame: body, density: wide ? 'wide' : 'panel' });
   };
   // The rectangles the canvas designs a zone on come first, so that they are in the list whether or
   // not a page ever places one of them: a zone is a widget, so the rectangles below are only the
@@ -641,6 +647,57 @@ describe('every module fits the box it is given', () => {
 });
 
 /**
+ * #328: a list row answers its box with type as well as with rows, so its cells are wider in one box
+ * than in another, and each of them has to stay inside the column it was laid out for.
+ *
+ * The check above holds every item inside the frame, which a cell can pass while overrunning the
+ * column beside it: a 34 px gap is 13 px wider than a 24 px one and a 15 px name wider than a 13 px
+ * one, and the row they share is laid out once. So this lays the row out the way `table()` does, from
+ * the plan the page itself made, and holds every cell against its own column at every shape the build
+ * hands a module -- the box, and what the cell draws inside it, being measured separately.
+ */
+describe('every list cell fits its column', () => {
+  const PLANS: [string, (ctx: { frame: Rect; density: Density; prefix: string; page: string }) => ListPlan][] = [
+    ['relative', relativePlan],
+    ['leaderboard', leaderboardPlan],
+  ];
+  /** The column an item of a row belongs to: `.row.pos`, `.row.class.label`, `.row.pitChip.fill`. */
+  const columnOf = (name: string): ColumnId | undefined => {
+    const id = /\.row\.([a-zA-Z0-9]+)/.exec(name)?.[1];
+    if (id === undefined || id === 'background' || id === 'rule') return undefined;
+    return (id === 'pitChip' ? 'pit' : id) as ColumnId;
+  };
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      for (const [id, planOf] of PLANS) {
+        const ctx = { frame: box.frame, density: box.density, prefix: '' };
+        // Planned as the page plans itself, which is as its own page: `defineModule` names it.
+        const plan = planOf({ ...ctx, page: id });
+        const spans = new Map(columnSpans(plan.columns, box.frame, box.density, plan.rowType).map((span) => [span.id, span]));
+        const module = MODULES.find((m) => m.id === id)!;
+        let measured = 0;
+        for (const item of module.build(ctx).flatMap((i) => [...walkItems([i])])) {
+          if (item.kind === 'layer') continue;
+          const column = columnOf(item.name);
+          if (column === undefined) continue;
+          const span = spans.get(column);
+          expect({ id, box: box.name, item: item.name, column, laidOut: span !== undefined }).toMatchObject({ laidOut: true });
+          if (!span) continue;
+          const r = item.rect;
+          measured += 1;
+          expect({ id, box: box.name, item: item.name, rect: r, span, inside: r.left >= span.left && r.left + r.width <= span.left + span.width + 1 }).toMatchObject({ inside: true });
+          if (item.kind !== 'text') continue;
+          const width = drawnWidth(item);
+          expect({ id, box: box.name, item: item.name, fs: item.fontSize, text: drawnText(item), width, box_: r.width, fits: width <= r.width }).toMatchObject({ fits: true });
+        }
+        expect({ id, box: box.name, measured: measured > 0 }).toMatchObject({ measured: true });
+      }
+    });
+  }
+});
+
+/**
  * The zone pages at the frame their kind was designed on.
  *
  * The check above builds the module catalogue, and two of the zone pages are not in it: `web` and
@@ -710,16 +767,15 @@ describe('every tyre reading carries its unit', () => {
    * This used to be a list written beside the test -- `['PSI', 'KPA', 'BAR']` for the pressure --
    * and the assertion asked only whether the declared `widest` was a member of it. That compares a
    * declaration against a second declaration and never against the binding, which is how the
-   * pressure kept `kPa` while `bar`, 0.028 em wider upper-cased, was what a driver with
-   * `TyrePressureUnit = Bar` was drawn. The literals a binding can put on the screen are what
+   * pressure kept `kPa` while `BAR`, 0.028 em wider upper-cased, was what a driver with
+   * `TyrePressureUnit = Bar` was drawn, back when a unit was upper-cased. The literals a binding can put on the screen are what
    * `drawableGlyphs` already collects for the monospaced values, by the same reading of the
    * expression.
    */
   const widestDrawn = (item: TextItem): string | undefined => {
     const wider = (a: string, b: string): string => (measureText(faceOf(item), a, item.fontSize) > measureText(faceOf(item), b, item.fontSize) ? a : b);
-    // A unit is drawn upper-cased, bound or not, which is where the difference between KPA and BAR
-    // lives: `kPa` and `bar` are a hair apart in the case the sim sends them in.
-    const forms = drawableLiterals(bindingExpression(item, 'Text')).map((form) => form.toUpperCase());
+    // A unit is drawn in the case its binding spells it, so it is measured in that case too.
+    const forms = drawableLiterals(bindingExpression(item, 'Text'));
     return forms.length === 0 ? undefined : forms.reduce(wider);
   };
 
@@ -1055,12 +1111,12 @@ describe('the small text that follows a value', () => {
 
   /**
    * The unit is where a binding draws a string the box was never measured for. `L` and `gal` are
-   * the pair: nine pixels of box against the twenty-four `GAL` wants, and the box was the one the
+   * the pair: nine pixels of box against the twenty-four `GAL` wanted, and the box was the one the
    * author typed. Nothing could have caught it, the fit checks measuring the sample the item
    * carries, so the declaration is made compulsory rather than checked afterwards.
    */
   test('a bound unit is measured by the widest it declares', () => {
-    expect(followerOf({ text: 'L', bind: ncalc.str('gal'), widest: 'gal' }, 64).rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowMedium', 'GAL', ds.size.labelSm)));
+    expect(followerOf({ text: 'L', bind: ncalc.str('gal'), widest: 'gal' }, 64).rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowMedium', 'gal', ds.size.labelSm)));
   });
 
   test('and a bound unit that declares none is refused rather than measured on its sample', () => {
@@ -1096,7 +1152,7 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('puts the surface state at the right of that header, measured for its longest reading', () => {
     const [title, state] = build() as [TextItem, TextItem];
-    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'MODERATE', text: 'DRY' });
+    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'Moderate', text: 'Dry' });
     expect(state.bindings?.Text?.formula).toContain('TrackGripStatus');
     // The name gives up the state's width rather than the two sharing the line: WPF clips, it does
     // not reflow, so a long track name would otherwise be drawn straight through "MODERATE".
@@ -1215,7 +1271,7 @@ describe('the inputs page', () => {
     expect(left).toContain('min(max(');
     expect(left).toContain('3.5');
     // Where the two formulas put the mark on a wheel that is straight is expressions.test.ts.
-    expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('STEER');
+    expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('Steer');
   });
 });
 
@@ -1297,7 +1353,7 @@ describe('what iRacing cannot answer', () => {
       const screen = companion.screens.find((s) => s.name === id)!;
       const texts = itemsOf({ ...companion, screens: [screen] }).filter((i): i is TextItem => i.kind === 'text');
       const placeholder = texts.find((t) => t.name.endsWith('.placeholder'));
-      expect({ id, text: placeholder?.text }).toMatchObject({ text: expect.stringContaining('NOT A') });
+      expect({ id, text: placeholder?.text }).toMatchObject({ text: expect.stringContaining('Not a') });
       expect(placeholder?.textColor).toBe(ds.color.text.dim);
     }
   });
@@ -1357,7 +1413,7 @@ describe('the wide car-telemetry page', () => {
 
   test('keeps the legend outside the plot, in the band under the row', () => {
     const legend = named('.legend') as TextItem[];
-    expect(legend.map((i) => i.text)).toEqual(['THROTTLE', 'BRAKE']);
+    expect(legend.map((i) => i.text)).toEqual(['Throttle', 'Brake']);
     // The swatches are drawn boxes and land squarely in the band; a label is a WPF line box and
     // starts a tenth of its size above the line it was given, so it is measured by its foot.
     for (const swatch of named('.swatch')) expect(swatch.rect.top).toBeGreaterThanOrEqual(plot.top + plot.height);
@@ -1365,7 +1421,7 @@ describe('the wide car-telemetry page', () => {
   });
 
   test('lists the cells the catalogue names, in its order and at the size it sets them', () => {
-    expect((named('.label') as TextItem[]).map((i) => i.text)).toEqual(['TC', 'BB', 'MAP', 'ABS']);
+    expect((named('.label') as TextItem[]).map((i) => i.text)).toEqual(['TC', 'BB', 'Map', 'ABS']);
     // Pinned at the sheet's 16 px rather than grown by rule 20, which drew them at 29 and the car
     // number at 41: the grid is a reference beside a trace, and the trace is the reading.
     expect([...new Set((named('.value') as TextItem[]).map((i) => i.fontSize))]).toEqual([16]);

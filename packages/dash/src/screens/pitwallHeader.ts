@@ -34,18 +34,18 @@ import { inlineGroup, type InlinePart } from '../second/header.ts';
 import { CHARS, GRIP_WIDEST, currentLap, incidentLimit, incidents, localClock, sessionClock, sessionType, simClock, totalLaps, trackGrip, untimedMark, windKmh } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
+const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
 /** The three page squares of the landscape dashboard. */
 export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
 /**
- * The longest session name SimHub reports for iRacing, uppercased. `SessionTypeName` passes
+ * The longest session name SimHub reports for iRacing, in the case it reports it. `SessionTypeName` passes
  * iRacing's own `SessionType` through, and "Offline Testing" is the longest of Practice, Lone
  * Qualify, Open Qualify, Warmup, Heat, Consolation and Race.
  */
-const WIDEST_SESSION_NAME = 'OFFLINE TESTING';
+const WIDEST_SESSION_NAME = 'Offline Testing';
 
 /**
  * iRacing writes `IncidentLimit` as a number or as the word "unlimited", which is what a hosted
@@ -54,7 +54,7 @@ const WIDEST_SESSION_NAME = 'OFFLINE TESTING';
 const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 
 /** A lap total wider than three digits is not a race anyone drives. */
-const WIDEST_LAP_TOTAL = 'OF 999';
+const WIDEST_LAP_TOTAL = 'of 999';
 
 /** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
 const WIDEST_LAP_DENOMINATOR = '/ 999';
@@ -82,7 +82,7 @@ interface RunSpec {
  */
 function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { width: number; draw(x: number, top: number): Item[] } {
   const gap = ds.space[2];
-  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label.toUpperCase(), labelSize)) + 2;
+  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label, labelSize)) + 2;
   const runWidth = Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs)) + 2;
   const runOffset = spec.label === undefined ? 0 : labelWidth + gap;
   return {
@@ -151,7 +151,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       ? {
           id: 'lap',
           parts: [
-            { kind: 'label', text: 'LAP' },
+            { kind: 'label', text: 'Lap' },
             { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: { digits: 3, specials: 0 } },
             { kind: 'label', text: '/ 30', widest: WIDEST_LAP_DENOMINATOR, bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
@@ -159,32 +159,32 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       : {
           id: 'session',
           parts: [
-            // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
+            // Sized for "Offline Testing" and drawn from the right, so that the slack a short name
             // leaves falls to the left, into the empty middle of the header, rather than opening a
             // hole between the session name and the lap.
-            { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
+            { kind: 'label', text: 'Race', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: sessionType() },
             { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
-            { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
+            { kind: 'label', text: 'of 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('of '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
         },
     {
       id: 'timeLeft',
       parts: [
-        { kind: 'label', text: 'LEFT' },
+        { kind: 'label', text: 'Left' },
         { kind: 'value', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
       ],
     },
     {
       id: 'incidents',
       parts: [
-        { kind: 'label', text: 'INC' },
+        { kind: 'label', text: 'Inc' },
         { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
         ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
       ],
     },
     {
       id: 'track',
-      run: { label: 'TRACK', sample: 'DRY', widest: GRIP_WIDEST, bind: trackGrip() },
+      run: { label: 'Track', sample: 'Dry', widest: GRIP_WIDEST, bind: trackGrip() },
     },
     {
       id: 'wind',
@@ -203,7 +203,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
           {
             id: 'simClock',
             parts: [
-              { kind: 'label', text: 'SIM' },
+              { kind: 'label', text: 'Sim' },
               { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
             ] as InlinePart[],
           },
@@ -211,7 +211,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     {
       id: 'localClock',
       parts: [
-        { kind: 'label', text: 'LOCAL' },
+        { kind: 'label', text: 'Local' },
         { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
       ],
     },
@@ -231,11 +231,11 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   items.push(...mark.items);
   let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
   const squares = spec.pages > 1 ? spec.pages * PAGE_SQUARE.size + (spec.pages - 1) * PAGE_SQUARE.gap : 0;
-  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
+  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName, d.labelSm)) + 2;
   // The loop leaves `right` a group gap clear of everything it drew, which is the room the cluster
   // has. The squares are counted first because they say which page this is and the name only
   // repeats it, and a name that does not fit goes whole rather than cut to the room: WPF clips
-  // mid-word and the strip would read "PIT WALL · PORTR".
+  // mid-word and the strip would read "Pit wall · portr".
   const room = right - x;
   if (pageWidth + (squares > 0 ? PIT_WALL_HEADER.gap + squares : 0) <= room) {
     items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));

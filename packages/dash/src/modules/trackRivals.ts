@@ -6,6 +6,6 @@
 import { placeholder } from '../second/placeholder.ts';
 import { defineModule } from './module.ts';
 
-export const TRACK_RIVALS_MESSAGE = 'TRACK RIVALS · NOT A SIMHUB VALUE';
+export const TRACK_RIVALS_MESSAGE = 'Track rivals · Not a SimHub value';
 
 export const trackRivals = defineModule('trackRivals', (ctx) => placeholder(ctx.prefix, TRACK_RIVALS_MESSAGE, ctx.frame, ctx.density));

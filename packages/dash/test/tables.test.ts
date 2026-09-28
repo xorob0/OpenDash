@@ -6,10 +6,12 @@
  * between its cells, the size and the width of each of them -- and the count of rows each real zone
  * body gets.
  *
- * **Those counts were the canvas's arithmetic and are now the relative's declaration** (#339): a
- * window of at most five cars either side, at a row stretched to fill the body rather than a block
- * centred in its slack. The leaderboard is therefore the fixture wherever what is being pinned is the
- * canvas's own row, since the relative has taken its row height into its own hands.
+ * **Those counts were the canvas's arithmetic and are now each page's declaration** (#339, #328): the
+ * relative lists three cars either side and five at `tall`, the leaderboard the count the drawings give
+ * it, and both at a row stretched to fill the body rather than a block centred in its slack, carrying
+ * the largest type its height and its width allow. A table stated with no row of its own is therefore
+ * the fixture wherever what is being pinned is the canvas's own row, both pages having taken their row
+ * heights into their own hands.
  *
  * The rules are the ones the pages exist for. A relative puts the player on a row rather than on
  * the line between two, which is why the count is odd; a list page keeps its position and its
@@ -24,7 +26,7 @@ import { fittingColumns } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { densityForBox, type Density } from '../src/second/density.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnWidths, DEFAULT_NAME_CHARS, NAME_FACE, NAME_SAMPLE, nameSizeForRow, rowHeightThatFills, SHORTEST_NAME_CHARS, tableRowHeight } from '../src/second/table.ts';
+import { columnWidths, NAME_FACE, NAME_SAMPLE, nameFloorOf, nameSizeForRow, SHORTEST_NAME_CHARS, table, tableRowHeight } from '../src/second/table.ts';
 import { charsThatFit } from '../src/design/advances.ts';
 import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { walkItems } from '../src/walk.ts';
@@ -71,10 +73,11 @@ const formulaOf = (item: TextItem, target: 'Text' | 'TextColor'): string => {
  * The bodies the face artboards give the relative, which is the zone's rect less its chrome: a
  * 22 px title, 4 px under it and 6 px of padding top and bottom.
  *
- * The counts are the declaration of #339 rather than what `rowCapacity` divided out, and the two
- * differ in one place: zone C of the 1280 x 720 face listed thirteen cars, and the `tall` reference
- * fifteen, where the relative now stops at eleven. Everything else was already under the ceiling and
- * lists what it listed, at a row stretched to fill the body rather than centred in its slack.
+ * The counts are the relative's declaration rather than what `rowCapacity` divided out: seven, which is
+ * three cars either side, and eleven at `tall`, cut to what the body holds at the canvas's row. Zone C
+ * of the 1280 x 720 face listed thirteen cars and the `tall` reference fifteen before #339, and the
+ * medium boxes as many as nine before #328; all of them list what is declared now, at a row stretched
+ * to fill the body rather than centred in its slack.
  */
 const FACE_BODIES = [
   { zone: '469x320', width: 469, height: 282, rows: 7, row: 38 },
@@ -120,33 +123,99 @@ describe('the relative lists the window it declares', () => {
   });
 
   /**
-   * The row fills the body rather than the block being centred in a pool of it — and where it does not,
-   * the name is what it did not fill it for.
+   * The row fills the body rather than the block being centred in a pool of it, on both list pages and
+   * in every box.
    *
    * `table()` centres a declared block, which is right for a list that ran out of cars and wrong for
    * one told to stop counting: eleven rows of 28 px in the 560 px body of the 1280 x 720 face's second
    * arrangement is 328 px of list and 232 px of nothing. Filling it leaves only the remainder of one
-   * division, which is under a row.
+   * division, which is under a pixel a row.
    *
-   * Four boxes do not fill, and they are the whole of the rule's second half. The name column is the
-   * only one that flexes, so a stretch across a type step is paid for out of it, and on the 469 px
-   * bodies that payment is a letter of `Liam Byrne`. A body left short is therefore a claim about the
-   * name, and this asserts the claim rather than the slack: the height that *would* have filled the box
-   * holds fewer characters than the height drawn.
+   * This used to allow four boxes out, where filling the body would have crossed a type step whose car
+   * number took a letter from the name, and the row was held short with the rest left as slack. #328
+   * took the type apart from the height: the row fills its body wherever the type stops, so what those
+   * boxes do not buy in size they buy in space, and there is no exception left to assert.
    */
-  test('and the rows fill the body they are given, unless filling it would cut the name', () => {
-    for (const box of moduleBoxes().filter((b) => b.density !== 'companion')) {
-      const items = MODULES.find((m) => m.id === 'relative')!.build({ frame: box.frame, density: box.density, prefix: '' });
-      const drawn = rowsOf(items);
-      const band = rowBand(items);
-      const used = (drawn.count - 1) * drawn.pitch + band.height;
-      const slack = box.frame.height - used;
-      if (slack >= 0 && slack < band.height) continue;
-      const name = flat(items).find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.name'))!;
-      const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
-      const fills = rowHeightThatFills(box.frame, { density: box.density, header: false }, drawn.count);
-      expect({ box: box.name, slack, drawn: band.height, fills, room, atFills: nameRoom(box, fills), bought: nameRoom(box, fills) < room }).toMatchObject({ bought: true });
+  test('and the rows fill the body they are given, on both pages and in every box', () => {
+    for (const box of moduleBoxes()) {
+      for (const id of ['relative', 'leaderboard']) {
+        const items = MODULES.find((m) => m.id === id)!.build({ frame: box.frame, density: box.density, prefix: '' });
+        const drawn = rowsOf(items);
+        const band = rowBand(items);
+        const body = box.frame.height - (flat(items).some((i) => i.name.includes('.head.')) ? 16 : 0);
+        const slack = body - ((drawn.count - 1) * drawn.pitch + band.height);
+        expect({ id, box: box.name, slack, fills: slack >= 0 && slack < drawn.count }).toMatchObject({ fills: true });
+      }
     }
+  });
+});
+
+/**
+ * #328: a list page declares its rows, and a box with height to spare buys type with it before space.
+ *
+ * The ticket's own pair is the case: a 437 x 214 box and a 437 x 510 one differed only in how many
+ * drivers they listed, at the same 34 px row. They differ in the row now, the taller box listing the
+ * count its shape declares at a row that fills it.
+ */
+describe('a list declares its rows and answers the box with the rest', () => {
+  test('the 437 x 214 and 437 x 510 boxes of the ticket draw different rows, not only more of them', () => {
+    for (const id of ['relative', 'leaderboard']) {
+      const short = rowsOf(build(id, 437, 214, 'zone'));
+      const tall = rowsOf(build(id, 437, 510, 'zone'));
+      expect({ id, short: short.count, tall: tall.count, tallerRow: tall.pitch > short.pitch }).toMatchObject({ tallerRow: true });
+    }
+  });
+
+  test('and a box however tall lists the count its shape declares', () => {
+    // A narrow box is `tall narrow` whatever its height, and a medium one is `tall` from 400 px.
+    const count = (id: string, width: number, height: number): number => rowsOf(build(id, width, height, densityForBox({ width, height }))).count;
+    expect({ relative: count('relative', 250, 900), leaderboard: count('leaderboard', 250, 900) }).toEqual({ relative: 7, leaderboard: 8 });
+    expect({ relative: count('relative', 445, 900), leaderboard: count('leaderboard', 445, 900) }).toEqual({ relative: 11, leaderboard: 11 });
+    expect({ relative: count('relative', 445, 330), leaderboard: count('leaderboard', 445, 330) }).toEqual({ relative: 7, leaderboard: 6 });
+  });
+
+  /**
+   * The ticket's own exception: buying rows is right for the pit wall, where the question is *who is in
+   * the race*. So a pit wall zone's leaderboard lists every car its box holds at the canvas's row rather
+   * than its shape's count, and the 487 x 315 body of the `519 x 359` zone, a `grid` box that would
+   * declare six, lists the eight it listed before #328. The row still fills the body, and the relative,
+   * whose window is its question on either surface, keeps its count.
+   */
+  test('but a pit wall zone lists every car its box holds', () => {
+    for (const density of ['panel', 'wide'] as const) {
+      const board = rowsOf(build('leaderboard', 487, 315, density));
+      expect({ density, rows: board.count, pitch: board.pitch }).toEqual({ density, rows: 8, pitch: 39 });
+      expect({ density, relative: rowsOf(build('relative', 487, 315, density)).count }).toEqual({ density, relative: 7 });
+    }
+    expect(rowsOf(build('leaderboard', 487, 315, 'zone')).count).toBe(6);
+  });
+
+  /**
+   * The harm #328 names, on the base face: the driver name drawn at 13 px on the one column that says
+   * *who*, under however much height the zone had, because the height went on more rows of 28.
+   *
+   * Zone B of the 850 x 480 face is 250 x 290 of body, and 328 without the rev bar. The numerals stay at
+   * 24, since at 34 they would take the name column from 82 px to 61; the name steps up alone, to the
+   * 15 px the canvas draws a name at in its 34 px row, and pays the one character its larger glyph
+   * costs: seven at 13 is `LIAM B…` and six at 15 is `LIAM…`. `nameFloorOf` is the rule that allows the
+   * one and refuses two.
+   */
+  for (const [height, rows] of [[290, [7, 8]], [328, [7, 8]]] as const) {
+    test(`zone B of the 850 x 480 face, ${height} px of body, names its drivers at 15`, () => {
+      for (const [id, count] of [['relative', rows[0]], ['leaderboard', rows[1]]] as const) {
+        const items = build(id, 250, height, 'compact');
+        expect({ id, rows: rowsOf(items).count }).toEqual({ id, rows: count });
+        expect({ id, name: cell(items, 'name').fontSize, pos: cell(items, 'pos').fontSize, gap: cell(items, 'gap').fontSize }).toEqual({ id, name: 15, pos: 24, gap: 24 });
+        expect({ id, room: charsThatFit(NAME_FACE, 15, cell(items, 'name').rect.width) }).toEqual({ id, room: 6 });
+      }
+    });
+  }
+
+  test('a row too short for the larger name keeps the canvas type, and spends nothing it has not got', () => {
+    // The 800 x 286 face's zone B: 156 px of body is five rows of 29, under the 34 px the larger name
+    // needs, so the row is the canvas's 28 px drawing with a pixel of air.
+    const items = build('relative', 245, 156, 'compact');
+    expect({ rows: rowsOf(items).count, name: cell(items, 'name').fontSize, pos: cell(items, 'pos').fontSize }).toEqual({ rows: 5, name: 13, pos: 24 });
   });
 });
 
@@ -162,11 +231,10 @@ function nameRoom(box: { frame: Rect; density: Density }, rowHeight: number): nu
  * The room the relative's declaration leaves the rest of the row, which is the third thing #339 asked
  * to be checked.
  *
- * Stretching the row to fill the body is not free: crossing 34 px takes the position and the gap from
- * 24 to 34 and the car number from 16 to 24, and all three are monospaced columns of a fixed character
- * budget, so every pixel they gain comes out of the one flexible column beside them. The name's room is
- * what `relativeRowPlan` refuses a step for; the chip and the number are what has to still fit once it
- * has chosen.
+ * A larger type is not free: crossing 34 px takes the position and the gap from 24 to 34 and the car
+ * number from 16 to 24, and all three are monospaced columns of a fixed character budget, so every
+ * pixel they gain comes out of the one flexible column beside them. The name's room is what `listPlan`
+ * refuses a step for; the chip and the number are what has to still fit once it has chosen.
  */
 describe('the class chip and the car number fit the room the relative leaves them', () => {
   for (const box of moduleBoxes().filter((b) => b.density !== 'companion')) {
@@ -191,14 +259,14 @@ describe('the class chip and the car number fit the room the relative leaves the
       const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
       const shed = named('num').length === 0 && named('class').length === 0;
       expect({ box: box.name, fs: name.fontSize, width: name.rect.width, room, enough: room >= SHORTEST_NAME_CHARS || shed }).toMatchObject({ enough: true });
-      // And whatever the row ended up at, the stretch is not what made the name shorter. The declared
-      // row is the baseline, `Liam Byrne` is the line, and the guard is the weaker of the two: a box
-      // whose own declared row holds fewer than ten characters is held to what it had. This is the
-      // assertion the first cut of #339 would have failed on four boxes -- zone B of the 1280 x 480 and
-      // 1280 x 400 faces and zone C of the 1280 x 720 in both arrangements -- where a four-pixel taller
-      // row promoted the car number and drew `Liam Byr…` for a name the declared row drew whole.
+      // And whatever type the row ended up at, it did not cost the name more than `nameFloorOf` allows.
+      // The canvas's row is the baseline and `Liam Byrne` is the line: a box whose canvas row held ten
+      // keeps ten, which is the assertion the first cut of #339 would have failed on four boxes -- zone B
+      // of the 1280 x 480 and 1280 x 400 faces and zone C of the 1280 x 720 in both arrangements, where
+      // a taller row promoted the car number and drew `Liam Byr…` for a name the canvas row drew whole --
+      // and a box whose canvas row already cut it may lose one character to a larger name, never two.
       const declared = nameRoom(box, tableRowHeight(box.density));
-      expect({ box: box.name, room, declared, floor: Math.min(DEFAULT_NAME_CHARS, declared), kept: room >= Math.min(DEFAULT_NAME_CHARS, declared) }).toMatchObject({ kept: true });
+      expect({ box: box.name, room, declared, floor: nameFloorOf(declared), kept: room >= nameFloorOf(declared) }).toMatchObject({ kept: true });
     });
   }
 });
@@ -210,7 +278,9 @@ describe('the class chip and the car number fit the room the relative leaves the
  * canvas writes in the column, what the traces carry, and what `full` -- the format a rig that never
  * opens the setting gets -- makes of that entry. Ten characters. A box whose column is narrower than
  * that ellipsises it and says so in the row of zones.md section 10 that tabulates the budgets; what no
- * box may do is hold ten at the row the density declares and then lose one to a taller row.
+ * box may do is hold ten at the row the density declares and then lose one to a taller row. A box that
+ * never held it may lose one character more to a larger name, which is #328's trade and `nameFloorOf`'s
+ * rule, and loses no more than that.
  */
 test('the default format draws Liam Byrne whole on every box whose declared row held it', () => {
   const short: string[] = [];
@@ -220,8 +290,10 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
     const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
     if (room >= NAME_SAMPLE.length) continue;
     short.push(box.name);
-    // The column was already short of ten at the declared row, so the row is not what cost the letter.
-    expect({ box: box.name, room, declared: nameRoom(box, tableRowHeight(box.density)) }).toMatchObject({ declared: room });
+    // The column was already short of ten at the declared row, so the row is not what cost the name its
+    // tenth letter; what the row may have cost is the one character `nameFloorOf` allows a larger name.
+    const declared = nameRoom(box, tableRowHeight(box.density));
+    expect({ box: box.name, room, declared, short: declared < NAME_SAMPLE.length, kept: room >= nameFloorOf(declared) }).toMatchObject({ short: true, kept: true });
   }
   // The five narrow boxes, named so that one being added or leaving is a diff rather than a silence:
   // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements, and the companion's
@@ -237,11 +309,22 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
   ]);
 });
 
+/**
+ * A table stated with no row of its own, which is the canvas's row at the density.
+ *
+ * The fixture for what the drawing states, since neither list page draws it as stated any more: since
+ * #328 both declare their rows and stretch them to fill the body, so what a page draws is the canvas's
+ * row plus the space its box leaves over.
+ */
+const canvasTable = (width: number, height: number, density: Density): Item[] => {
+  const frame = rect(0, 0, width, height);
+  return table({ name: 'table', frame, columns: fittingColumns(LEADERBOARD_COLUMNS, width, density), mode: 'full', density, header: false });
+};
+
 describe('the row the canvas draws', () => {
   // The wide catalogue drawing, whose row is stated column by column on ZoneCatalogue: 34 px tall,
   // padded 0 6, cells 12 apart, position and gap at 34 and the car number and the name beneath them.
-  // The leaderboard is the fixture, the relative having taken its row height into its own hands.
-  const items = build('leaderboard', 600, 242, 'zone');
+  const items = canvasTable(600, 242, 'zone');
 
   test('is 34 px tall with 6 px of side padding and 12 px between its cells', () => {
     expect(rowBand(items).height).toBe(34);
@@ -262,7 +345,7 @@ describe('the row the canvas draws', () => {
   });
 
   test('and steps the numerals down one in the 28 px row a narrow zone takes, keeping the name at 13', () => {
-    const narrow = build('leaderboard', 274, 262, 'compact');
+    const narrow = canvasTable(274, 262, 'compact');
     expect(rowBand(narrow).height).toBe(28);
     expect(cell(narrow, 'pos').fontSize).toBe(24);
     expect(cell(narrow, 'gap').fontSize).toBe(24);

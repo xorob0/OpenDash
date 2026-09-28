@@ -45,7 +45,7 @@ export interface Follower {
   /**
    * The longest text `bind` can produce, and what the follower is measured by. Without it a bound
    * follower is measured by the sample it happens to carry, which is how the delta's caption came
-   * to reserve the width of "VS SESSION BEST" and draw "VS ALL-TIME BEST" into it.
+   * to reserve the width of "vs session best" and draw "vs all-time best" into it.
    */
   widest?: string;
   bind?: Expr;
@@ -143,15 +143,15 @@ export const followerSize = (follower: Follower, d: DensitySpec, valueFs: number
   follower.size ?? (follower.kind === 'denominator' ? denominatorSize(valueFs) : d.labelSm);
 
 /**
- * Width of a field's follower. A unit is a proportional label drawn upper-cased, bound or not, so
- * it is measured upper-cased too: "s" and "S" are not the same width, and neither are "km/h" and
- * "KM/H". A denominator is a numeral, so it is measured in the monospace cells its size cuts, which
+ * Width of a field's follower. A unit is a proportional label drawn in its symbol's own case, bound
+ * or not, so it is measured in that case too: "s" and "S" are not the same width, and neither are
+ * "km/h" and "KM/H". A denominator is a numeral, so it is measured in the monospace cells its size cuts, which
  * is wider than its advances and never clips.
  *
  * A bound unit has to say what it can draw. Its width comes from the advances of one string, and a
  * binding draws a string nobody measured: the fuel unit is the case, bound to "L" or "gal" and
  * measured on whichever of the two the author happened to type, so a driver on a gallons profile
- * read a nine-pixel box with "GAL" in it. There is no measuring what a binding returns, so the
+ * read a nine-pixel box with "gal" in it. There is no measuring what a binding returns, so the
  * declaration is the only place the answer can be, and a binding without one is refused rather than
  * measured on its sample. The denominator is outside this: its cells are cut to the same two-digit
  * budget `CHARS.position` gives a field size, so the sample and the binding take the same room.
@@ -165,7 +165,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
   if (follower.bind !== undefined && follower.widest === undefined) {
     throw new Error(`follower ${JSON.stringify(follower.text)} is bound and declares no widest; a bound unit is measured by what it can draw, not by its sample`);
   }
-  const drawn = (follower.widest ?? follower.text).toUpperCase();
+  const drawn = follower.widest ?? follower.text;
   return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
 }
 
@@ -204,7 +204,7 @@ export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
 export function fieldWidth(spec: FieldSpec, density: Density): number {
   const d = densityOf(density);
   const text = spec.labelWidest ?? spec.label;
-  const labelW = text === '' ? 0 : measureText('BarlowMedium', text.toUpperCase(), d.label);
+  const labelW = text === '' ? 0 : measureText('BarlowMedium', text, d.label);
   return Math.ceil(Math.max(labelW, valueWidth(spec, d)));
 }
 

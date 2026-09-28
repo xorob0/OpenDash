@@ -105,7 +105,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
   const textY = frame.top + (frame.height - d.label) / 2;
   const valueY = canvasYForBaseline(canvasBaseline(textY, d.label), fs);
   const items: Item[] = [];
-  const nameWidth = Math.ceil(measureText('BarlowMedium', spec.moduleName.toUpperCase(), d.label));
+  const nameWidth = Math.ceil(measureText('BarlowMedium', spec.moduleName, d.label));
   items.push(label(`${name}.module`, spec.moduleName, frame.left + COMPANION_HEADER.padX, textY, nameWidth + 2, { size: d.label, color: ds.color.text.primary }));
   const counter = `${spec.page} / ${spec.pages}`;
   items.push(
@@ -349,7 +349,7 @@ export type InlinePart =
 export function inlineGroup(name: string, parts: readonly InlinePart[], fs: number, density: Density, gap = ds.space[2]): { width: number; draw(x: number, top: number): Item[] } {
   const d = densityOf(density);
   const widths = parts.map((part) => {
-    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', (part.widest ?? part.text).toUpperCase(), d.labelSm)) + 2;
+    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.widest ?? part.text, d.labelSm)) + 2;
     if (part.kind === 'block') return part.width;
     return monoWidth(cells('SemiBold', fs), part.chars) + 4;
   });

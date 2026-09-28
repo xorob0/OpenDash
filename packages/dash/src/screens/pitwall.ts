@@ -35,7 +35,7 @@ import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game, signed, raw } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game, signed, raw } = ncalc;
 
 /** A pit wall panel draws at zone density with the pit wall's own label: 24 px numerals, 13 px labels. */
 const DENSITY = 'panel' as const;
@@ -68,7 +68,7 @@ function panelRow(body: Rect, specs: readonly FieldSpec[], gap?: number): Item[]
  * `pitwallHeader.ts` measures the same list for the same property; the two constants stay apart
  * because neither file owns the other, and `values.ts` is where a third consumer would put it.
  */
-const WIDEST_SESSION_LABEL = 'OFFLINE TESTING';
+const WIDEST_SESSION_LABEL = 'Offline Testing';
 
 /**
  * The session panel: how long is left, where you are in the field, where you are in your class.
@@ -94,7 +94,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
         'left',
         'Race',
         { sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock, fs: d.mid },
-        { labelBind: ucase(sessionType()), labelWidest: WIDEST_SESSION_LABEL },
+        { labelBind: sessionType(), labelWidest: WIDEST_SESSION_LABEL },
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
@@ -132,9 +132,9 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Lap delta' });
   const value = referenceDelta();
-  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'VS SESSION BEST', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
+  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'vs session best', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
     labelBind: referenceLabel(),
-    labelWidest: 'VS ALL-TIME BEST',
+    labelWidest: 'vs all-time best',
   });
   const deltaWidth = 160;
   // `Panels.dc.html`'s track, which the gauge's own overhangs then turn into 20 px graduations and
@@ -211,8 +211,8 @@ const TRACK_LINE_GAP = 10;
  * them, and are not repeated here. Road comes before Air, as both sheets order them.
  *
  * **The whole body is gated on there being a session, and the panel says so once (#406).** The map
- * is the track module, which carries its own notice, and letting it draw that notice here put "TRACK
- * · GO INTO A SESSION" in the left half of the panel with a SESSION BEST label and a lap time
+ * is the track module, which carries its own notice, and letting it draw that notice here put "Track
+ * · Go into a session" in the left half of the panel with a Session best label and a lap time
  * unhidden 20 px to the right of the sentence -- one panel telling the reader there is nothing to
  * read while showing them something. So the module is built with `notice: false` and the panel gates
  * the map and the field column together, centring one notice in the body. Every reading in the
@@ -311,8 +311,8 @@ export const TELEMETRY_TRACES: { id: string; title: string; titleBind?: Expr; ti
   {
     id: 'speed',
     title: 'Speed · km/h',
-    titleBind: concat(str('SPEED · '), ucase(speedUnit())),
-    titleWidest: 'SPEED · KM/H',
+    titleBind: concat(str('Speed · '), speedUnit()),
+    titleWidest: 'Speed · km/h',
     plot: 180,
     series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }],
   },
@@ -358,7 +358,7 @@ export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TR
   const { items, body } = panel(name, {
     frame,
     title: spec.title,
-    ...(spec.titleBind ? { titleBind: spec.titleBind, titleWidest: spec.titleWidest ?? spec.title.toUpperCase() } : {}),
+    ...(spec.titleBind ? { titleBind: spec.titleBind, titleWidest: spec.titleWidest ?? spec.title } : {}),
   });
   return [...items, ...trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 })];
 }

@@ -38,19 +38,19 @@ namespace OpenDashPlugin
 
         public static readonly IReadOnlyList<Card> All = new[]
         {
-            new Card(0, "currentLap", "CURRENT", "Current lap", "Running lap time."),
-            new Card(1, "lastLap", "LAST", "Last lap", "Last lap time, purple when it is the session best."),
-            new Card(2, "bestLap", "BEST", "Best lap", "Session best lap time."),
-            new Card(3, "delta", "DELTA", "Delta", "Live delta to the reference lap."),
-            new Card(4, "position", "POSITION", "Position", "Position and car count, overall or in class."),
-            new Card(5, "session", "LAP", "Session", "Lap of total, or time left."),
-            new Card(6, "fuel", "FUEL", "Fuel", "Fuel remaining."),
-            new Card(7, "fuelLaps", "FUEL LAPS", "Fuel laps", "Laps remaining on the fuel you have."),
+            new Card(0, "currentLap", "Current", "Current lap", "Running lap time."),
+            new Card(1, "lastLap", "Last", "Last lap", "Last lap time, purple when it is the session best."),
+            new Card(2, "bestLap", "Best", "Best lap", "Session best lap time."),
+            new Card(3, "delta", "Delta", "Delta", "Live delta to the reference lap."),
+            new Card(4, "position", "Position", "Position", "Position and car count, overall or in class."),
+            new Card(5, "session", "Lap", "Session", "Lap of total, or time left."),
+            new Card(6, "fuel", "Fuel", "Fuel", "Fuel remaining."),
+            new Card(7, "fuelLaps", "Fuel laps", "Fuel laps", "Laps remaining on the fuel you have."),
             new Card(8, "tc", "TC", "TC", "Traction control level."),
             new Card(9, "abs", "ABS", "ABS", "ABS level."),
-            new Card(10, "tyreTemps", "TYRES °C · LAST STOP", "Tyre temps", "Four tyre temperatures from the last stop."),
-            new Card(11, "tyrePressures", "PRESSURES PSI · LAST STOP", "Tyre pressures", "Four tyre pressures from the last stop."),
-            new Card(12, "speed", "SPEED", "Speed", "Current speed."),
+            new Card(10, "tyreTemps", "Tyres °C · last stop", "Tyre temps", "Four tyre temperatures from the last stop."),
+            new Card(11, "tyrePressures", "Pressures psi · last stop", "Tyre pressures", "Four tyre pressures from the last stop."),
+            new Card(12, "speed", "Speed", "Speed", "Current speed."),
         };
 
         public static bool IsValidNumber(int number) => number >= 0 && number < All.Count;

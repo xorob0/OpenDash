@@ -83,7 +83,7 @@ describe('card expressions', () => {
     const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
     const timed = `((${secs}) > (0)) and ((${secs}) < (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
-    expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'TIME LEFT', 'LAP')`);
+    expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');
     expect(value).toBe(`if(${time}, if(${timed}, ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
     expect(value).toContain('/ (3600)');
@@ -120,10 +120,10 @@ describe('card expressions', () => {
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
     const left = formulaOf(textItem('fuel', 'unit'), 'Left');
     expect(left).toMatch(/\+ \(1\)\) \* \(31\)\) \+ \(17\) \+ \(8\)$/);
-    // Through `ucase`, which is what makes a unit the sim spells match the style the canvas sets
-    // on every small label. The element cannot know that this particular expression already
-    // returns capitals, and a unit that arrives in the sim's own case is the reason it is there.
-    expect(formulaOf(textItem('fuel', 'unit'), 'Text')).toBe("ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))");
+    // Through `fuelUnit`, the one place the sim's enum becomes the symbol a driver reads, and in the
+    // symbol's own case: nothing upper-cases a unit any longer.
+    expect(formulaOf(textItem('fuel', 'unit'), 'Text')).toBe(values.fuelUnit());
+    expect(formulaOf(textItem('fuel', 'unit'), 'Text')).not.toContain('ucase');
   });
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
@@ -168,7 +168,7 @@ describe('card expressions', () => {
     );
   });
 
-  test('tyre temps convert thresholds per unit and tyre pressures upper-case the unit', () => {
+  test('tyre temps convert thresholds per unit and tyre pressures spell the unit as its symbol', () => {
     const colour = formulaOf(textItem('tyreTemps', 'fr'), 'TextColor');
     // The card and the wheel cell had a threshold table each, written with the same numbers and
     // free to drift apart; there is one table now, and this is what says so.
@@ -179,7 +179,7 @@ describe('card expressions', () => {
     expect(colour).toContain("('Kelvin'), 373, 100");
     expect(formulaOf(textItem('tyreTemps', 'label'), 'Text')).toContain("'°F'");
     expect(formulaOf(textItem('tyrePressures', 'label'), 'Text')).toBe(
-      "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')",
+      `('Pressures ') + (${values.pressureUnit()}) + (' · last stop')`,
     );
     expect(formulaOf(textItem('tyrePressures', 'rr'), 'Text')).toContain("format(isnull([DataCorePlugin.GameData.TyrePressureRearRight], 0), '0.0')");
   });
@@ -231,9 +231,9 @@ describe('second-screen values', () => {
     );
   });
 
-  test('the grip status is upper-cased, and MODERATE is the word a box is cut for', () => {
-    expect(values.trackGrip()).toBe("ucase(isnull([DataCorePlugin.GameData.TrackGripStatus], '--'))");
-    expect(values.GRIP_WIDEST).toBe('MODERATE');
+  test('the grip status is drawn as the sim words it, and Moderate is the word a box is cut for', () => {
+    expect(values.trackGrip()).toBe("isnull([DataCorePlugin.GameData.TrackGripStatus], '--')");
+    expect(values.GRIP_WIDEST).toBe('Moderate');
   });
 
   test('a low tank is one sentence, against the threshold every light reads', () => {
@@ -592,7 +592,7 @@ describe('module expressions', () => {
   });
 
   test('the lap times delta names the best it is against and is signed the same way', () => {
-    expect(moduleItem('lapTimes', 'delta.label').text).toBe('DELTA TO YOUR BEST');
+    expect(moduleItem('lapTimes', 'delta.label').text).toBe('Delta to your best');
     const value = moduleItem('lapTimes', 'delta.value');
     expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
     expect(value.text).toBe('\u22120.21');

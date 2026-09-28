@@ -1016,9 +1016,9 @@ export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0
 export const trackName = (): Expr => isnull(game('TrackName'), str(''));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
 /** The widest word the grip status takes, which is what a field measures its box against. */
-export const GRIP_WIDEST = 'MODERATE';
-/** The track's grip, upper-cased into the label face; `--` where the sim reports none. */
-export const trackGrip = (): Expr => ucase(isnull(game('TrackGripStatus'), str(NO_VALUE)));
+export const GRIP_WIDEST = 'Moderate';
+/** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
+export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**
@@ -1163,10 +1163,10 @@ export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), n
  * and what a box is measured by is whichever of them is widest.
  *
  * Four bits give sixteen selections and the drawing names six, so the ladder below answers the
- * pairs a driver asks for by name and calls the ten that are left `SOME`. Which corners those are
+ * pairs a driver asks for by name and calls the ten that are left `Some`. Which corners those are
  * is what the four corner toggles drawn beside the summary still say.
  */
-export const TYRE_SELECTIONS: readonly string[] = ['NONE', 'ALL', 'FRONTS', 'REARS', 'LEFTS', 'RIGHTS', 'SOME'];
+export const TYRE_SELECTIONS: readonly string[] = ['None', 'All', 'Fronts', 'Rears', 'Lefts', 'Rights', 'Some'];
 
 /** Which corners the next stop changes, as the one word the catalogue writes beside `Tyres`. */
 export const pitTyreSelection = (): Expr => {
@@ -1177,14 +1177,14 @@ export const pitTyreSelection = (): Expr => {
   const both = (pair: Expr, other: Expr): Expr => and(eq(pair, num(2)), eq(other, num(0)));
   return iff(
     eq(add(fronts, rears), num(0)),
-    str('NONE'),
+    str('None'),
     iff(
       eq(add(fronts, rears), num(4)),
-      str('ALL'),
+      str('All'),
       iff(
         both(fronts, rears),
-        str('FRONTS'),
-        iff(both(rears, fronts), str('REARS'), iff(both(lefts, rights), str('LEFTS'), iff(both(rights, lefts), str('RIGHTS'), str('SOME')))),
+        str('Fronts'),
+        iff(both(rears, fronts), str('Rears'), iff(both(lefts, rights), str('Lefts'), iff(both(rights, lefts), str('Rights'), str('Some')))),
       ),
     ),
   );
@@ -1246,7 +1246,7 @@ export const allTimeBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin
 export const referenceDelta = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), allTimeBestDelta(), sessionBestDelta());
 
 /** The label that says which reference the delta is against. */
-export const referenceLabel = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), str('VS ALL-TIME BEST'), str('VS SESSION BEST'));
+export const referenceLabel = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), str('vs all-time best'), str('vs session best'));
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);
 export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTime`);

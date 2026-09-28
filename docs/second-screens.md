@@ -143,6 +143,13 @@ three cars called P1 in an order that is not the order of any of the numbers, wh
 leaderboard; the numbers a column shows and the cars it shows them against are one question and
 are answered together.
 
+`class` is also the default since #432, on both sides of the contract and in the fallback every
+expression carries for a package with no plugin attached. A driver second of their class in a
+multiclass race read `P16` under the old default, which is the number of a race they are not in; a
+single-class field reads the same place and the same count either way, so counting the whole field
+bought nothing there. A settings file that already says `overall` keeps it, since a saved value is
+a choice as far as the plugin can tell, and the release note says so rather than a migration.
+
 A zone carries a filter of its own, which is a different question and stays one. `ZoneBClassOnly`,
 `ZoneCClassOnly` and the pit wall's `PitWallClassOnly` say who is in the list without saying how
 they are numbered, so a zone filtered to one class while the rig counts overall lists that class by
@@ -222,7 +229,7 @@ The centred dim block those three modules draw says something else too, and it i
 of absence from the table above. Twelve of the
 twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
 view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
-empty table they say `LEADERBOARD · GO INTO A SESSION`, in the same centred dim block, until there is
+empty table they say `Leaderboard · Go into a session`, in the same centred dim block, until there is
 one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
 difference is that this notice goes away on its own. It matters because a dashboard is installed,
 opened and looked at before any session is joined, so the empty state is the product's first

@@ -19,7 +19,7 @@ import { cardFrame, centredTop } from './frame.ts';
 export const READOUT_GAP = 5;
 
 export interface LabelSpec {
-  /** Literal text (upper-cased) or, with `bind`, the design-time sample. */
+  /** Literal text, drawn as written, or, with `bind`, the design-time sample. */
   text: string;
   bind?: Expr;
 }

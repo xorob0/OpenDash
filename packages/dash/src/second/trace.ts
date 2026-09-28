@@ -128,7 +128,7 @@ export function legend(name: string, series: readonly Series[], x: number, y: nu
   const items: Item[] = [];
   let cursor = x;
   for (const s of series) {
-    const width = Math.ceil(measureText('BarlowMedium', s.name.toUpperCase(), d.labelSm));
+    const width = Math.ceil(measureText('BarlowMedium', s.name, d.labelSm));
     const takes = SWATCH.width + SWATCH_GAP + width;
     if (maxWidth !== undefined && cursor - x + takes > maxWidth) break;
     items.push(band(`${name}.${s.name}.swatch`, rect(cursor, Math.round(y + d.labelSm / 2), SWATCH.width, SWATCH.height), s.color));
@@ -141,7 +141,7 @@ export function legend(name: string, series: readonly Series[], x: number, y: nu
 /** Width a legend takes, so a caller can right-align it in a panel title row. */
 export const legendWidth = (series: readonly Series[], density: Density): number => {
   const d = densityOf(density);
-  const total = series.reduce((w, s) => w + SWATCH.width + SWATCH_GAP + Math.ceil(measureText('BarlowMedium', s.name.toUpperCase(), d.labelSm)) + LEGEND_GAP, 0);
+  const total = series.reduce((w, s) => w + SWATCH.width + SWATCH_GAP + Math.ceil(measureText('BarlowMedium', s.name, d.labelSm)) + LEGEND_GAP, 0);
   return Math.max(0, total - LEGEND_GAP);
 };
 

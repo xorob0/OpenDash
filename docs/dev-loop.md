@@ -156,7 +156,7 @@ wordmark's "open" draws correctly in Light, which was the one weight a package s
 have had to synthesise and the one case the advances cannot predict.
 
 **The neighbouring state is not this one.** A game running with no session named keeps the racing
-face and fills the timing pages with `… · GO INTO A SESSION` (#406); the wordmark and the clock mean
+face and fills the timing pages with `… · Go into a session` (#406); the wordmark and the clock mean
 no game at all. `bun run dev --scenario nosession` is how to reach the first, and stopping the
 emulator is how to reach the second.
 

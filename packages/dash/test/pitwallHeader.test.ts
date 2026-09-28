@@ -57,30 +57,30 @@ describe('the pit wall header', () => {
 
   test('draws the track state as a word rather than in the digit cells', () => {
     const track = partsOf(header(1920, false), 'track');
-    expect(track.map((i) => i.text)).toEqual(['TRACK', 'DRY']);
+    expect(track.map((i) => i.text)).toEqual(['Track', 'Dry']);
     const state = track[1]!;
     // Measured from "MODERATE", the longest grip status iRacing reports, and proportional for the
     // same reason as the wind: the "m" overruns the digit cell the numerals are built from.
-    expect({ widest: state.widest, fontSize: state.fontSize, monospace: state.monospace }).toEqual({ widest: 'MODERATE', fontSize: 24, monospace: undefined });
+    expect({ widest: state.widest, fontSize: state.fontSize, monospace: state.monospace }).toEqual({ widest: 'Moderate', fontSize: 24, monospace: undefined });
   });
 
   test('reads the lap rather than the session on the portrait page, and drops the wind and the track state', () => {
     expect(readoutGroups(header(1080, true)).map((g) => g.id)).toEqual(['lap', 'timeLeft', 'incidents', 'localClock']);
-    expect(partsOf(header(1080, true), 'lap').map((i) => i.text)).toEqual(['LAP', '12', '/ 30']);
+    expect(partsOf(header(1080, true), 'lap').map((i) => i.text)).toEqual(['Lap', '12', '/ 30']);
   });
 
   test('keeps the incident limit and the sim clock on the landscape pages and sheds both on the portrait one', () => {
-    expect(partsOf(header(1920, false), 'incidents').map((i) => i.text)).toEqual(['INC', '3x', '/ 17']);
-    expect(partsOf(header(1080, true), 'incidents').map((i) => i.text)).toEqual(['INC', '3x']);
+    expect(partsOf(header(1920, false), 'incidents').map((i) => i.text)).toEqual(['Inc', '3x', '/ 17']);
+    expect(partsOf(header(1080, true), 'incidents').map((i) => i.text)).toEqual(['Inc', '3x']);
     expect(partsOf(header(1080, true), 'simClock')).toEqual([]);
   });
 
   test('names each clock in front of its own value, and never behind it', () => {
     // The strip read "14:32 LOCAL 15:07 SIM" and was reported from a rig as not saying which clock
     // was the real one; every other group on it names itself first, and now these two do as well.
-    expect(partsOf(header(1920, false), 'simClock').map((i) => i.text)).toEqual(['SIM', '15:07']);
-    expect(partsOf(header(1920, false), 'localClock').map((i) => i.text)).toEqual(['LOCAL', '14:32']);
-    expect(partsOf(header(1080, true), 'localClock').map((i) => i.text)).toEqual(['LOCAL', '14:32']);
+    expect(partsOf(header(1920, false), 'simClock').map((i) => i.text)).toEqual(['Sim', '15:07']);
+    expect(partsOf(header(1920, false), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32']);
+    expect(partsOf(header(1080, true), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32']);
   });
 
   test('draws no flag on the strip', () => {

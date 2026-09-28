@@ -156,11 +156,11 @@ const readings = (q: Quantity): Quantity[] => (q.also ? [q, q.also] : [q]);
 /**
  * The unit's box: the canvas's 22 px, or what the widest unit the binding can produce really needs.
  *
- * Measured upper-cased, which is how a unit is drawn: "kPa" fits the canvas's cell and "KPA" is a
- * twentieth of a pixel past it.
+ * Measured in the symbol's own case, which is how a unit is drawn: "kPa" fits the canvas's cell,
+ * where the "KPA" a unit was once upper-cased to is a twentieth of a pixel past it.
  */
 const unitBox = (q: Quantity, d: DensitySpec): number =>
-  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', (q.unit.widest ?? q.unit.text).toUpperCase(), d.labelSm)) + 1);
+  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', q.unit.widest ?? q.unit.text, d.labelSm)) + 1);
 
 const valueWidth = (q: Quantity): number => monoWidth(cells('SemiBold', q.fs), q.chars);
 
@@ -256,12 +256,12 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       sample: sample.pressure,
       bind: iff(eq(pressure, num(0)), str(NO_VALUE), fmt(pressure, '0.0')),
       color: ds.purpose.tyre.pressure,
-      // `bar` and not `kPa`: `pressureUnit` draws one of three spellings and a unit is drawn
-      // upper-cased, where Barlow Medium gives BAR 1.867 em against KPA's 1.839, so the driver the
-      // box has to hold is the one who has set bar. The pixel of slack absorbs the difference today,
-      // and a `widest` that is not the widest is wrong whatever it costs today -- the same fault the
-      // tyre temps card's `TYRES °F` was.
-      unit: { text: 'psi', widest: 'bar', bind: pressureUnit() },
+      // `kPa`: `pressureUnit` draws one of three spellings in the symbol's own case, where Barlow
+      // Medium gives kPa 1.622 em against bar's 1.441 and psi's 1.300, so the driver the box has to
+      // hold is the one who has set kilopascals. While a unit was upper-cased it was BAR, and a
+      // `widest` that is not the widest is wrong whatever it costs -- the same fault the tyre temps
+      // card's `TYRES °F` was.
+      unit: { text: 'psi', widest: 'kPa', bind: pressureUnit() },
       drawn: drawnValue(pressure, CHARS.pressure.digits - 1, 1),
       // Wide zone page 5 is "Tyres with both pressure units", and it is the only box the catalogue
       // gives a corner enough width for a second reading; every other density draws the sim's own.

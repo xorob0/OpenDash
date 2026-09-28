@@ -19,9 +19,10 @@ dotnet build plugin/OpenDash -c Release
 
 The output is `plugin/OpenDash/bin/Release/net48/OpenDash.dll`. It builds on Linux against the
 reference assemblies; it only runs inside SimHub on Windows. The assembly version comes from
-`/VERSION` through `Directory.Build.props`. MSBuild does not notice a removed resource: after
-deleting a package from `Resources/`, build with `--no-incremental` or the old DLL, package
-included, stays in place.
+`/VERSION` through `Directory.Build.props`, and `bun run version <x.y.z>` is how that file changes
+(see [CONTRIBUTING.md](../CONTRIBUTING.md#cutting-a-release)). MSBuild does not notice a removed
+resource: after deleting a package from `Resources/`, build with `--no-incremental` or the old DLL,
+package included, stays in place.
 
 ## Test
 
