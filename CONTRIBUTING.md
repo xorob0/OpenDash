@@ -173,6 +173,34 @@ A rectangular face declares the rects of its five parts and nothing else. What e
 the plugin's business, and the pages themselves are written once and answer to whatever box they
 are given.
 
+## Cutting a release
+
+A release is the tag `v<VERSION>`, and `VERSION` at the root is the one version string of the
+project: the build stamps it into every package's sidecar, `plugin/Directory.Build.props` makes it
+the assembly version of `OpenDash.dll`, and the release workflow refuses a tag that does not match
+it. It is changed in one way only:
+
+```bash
+bun run version 0.3.0-rc.8     # VERSION, and a dated heading at the top of CHANGELOG.md
+bun run version --check        # VERSION and CHANGELOG.md agree
+```
+
+The first writes the number and the changelog heading together, dated today (`--date` names
+another day), and refuses a version that does not rank above the current one in the order the
+plugin uses. That refusal is the point of it: the plugin installs its embedded dashboards only over
+an older copy, so a number that did not move leaves every rig on the old dashboard with nothing to
+say why. Running it again with the same version re-dates the heading and keeps the notes under it.
+
+Then write the notes under the heading, for a driver rather than for a reviewer, since that section
+is what the release page says. `bun run version --check` fails until the section has something in
+it, and CI runs the same check on every pull request, so a `VERSION` and a changelog that disagree
+are caught on the branch rather than when the tag is pushed.
+
+A cut is one commit, `Cut <version>: <theme>`, carrying `VERSION` and the section, on a branch named
+`release-<version>`, since a cut has no ticket. Once it is merged, pushing the tag `v<version>` on
+that commit publishes the release: a suffix such as `-rc.8` makes it a pre-release, and the body is
+the section, which `scripts/changelog.ts` extracts.
+
 ## Verified SimHub behaviour
 
 Before assuming how SimHub reads a property or renders an item, check

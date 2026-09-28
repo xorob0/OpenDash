@@ -37,6 +37,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # On every pull request, not only on a tag: the release workflow finds a VERSION that
+      # disagrees with CHANGELOG.md only once the tag is pushed, and the plugin installs a dashboard
+      # only over an older one, so a number that did not move is a rig left on its old dashboard.
+      # `bun run version <x.y.z>` writes both; see scripts/version.ts.
+      - name: Check VERSION against the changelog
+        run: bun run version --check
+
       - name: Typecheck
         run: bun run typecheck
 
