@@ -334,42 +334,7 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         private static MemoryStream Instanceable(string folder, string ns)
         {
-            var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},"
-                + "\"A\":\"isnull([OpenDash." + ns + "ZoneA],0)\",\"B\":\"isnull([OpenDash." + ns + "ZoneBPages],0)\"}";
-            var widget = "{\"Version\":2,\"C\":\"isnull([OpenDash." + ns + "ZoneC],0)\"}";
-            var stream = new MemoryStream();
-            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
-            {
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson", main);
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"" + folder + "\",\"DashboardVersion\":\"1.0.0\"}");
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson.png", "thumbnail");
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson.carclasses", "[]");
-                AddBytes(zip, folder + "/" + folder + ".djson.ressources", Resources("trend-down.png", "trend-up.png"));
-                SyntheticPackage.Add(zip, folder + "/zoneface-module.djson", widget);
-                SyntheticPackage.Add(zip, folder + "/zoneface-module.djson.metadata", "{\"Title\":\"" + folder + " zoneface-module\"}");
-                AddBytes(zip, folder + "/zoneface-module.djson.ressources", Resources("trend-up.png"));
-                SyntheticPackage.Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
-            }
-            stream.Position = 0;
-            return stream;
-        }
-
-        /// <summary>A .ressources sidecar: a zip holding each image at its root under the image's own name.</summary>
-        private static byte[] Resources(params string[] images)
-        {
-            using (var stream = new MemoryStream())
-            {
-                using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
-                {
-                    foreach (var image in images) SyntheticPackage.Add(zip, image, "png:" + image);
-                }
-                return stream.ToArray();
-            }
-        }
-
-        private static void AddBytes(ZipArchive zip, string name, byte[] content)
-        {
-            using (var entry = zip.CreateEntry(name).Open()) entry.Write(content, 0, content.Length);
+            return SyntheticPackage.Instanceable(folder, ns);
         }
 
         /// <summary>Every file below a folder whose name begins with the given one, whatever its case.</summary>
@@ -457,7 +422,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(File.Exists(Path.Combine(folder, "zoneface-module.djson.ressources")));
 
             // The renames happen in staging, before the folder is moved into place, so the fingerprint
-            // ScreenInstaller.Write takes afterwards is of the renamed folder. The next start retitles every
+            // the installer records afterwards is of the renamed folder. The next start retitles every
             // screen and finds nothing to change here, so the screen still reads as the one OpenDash wrote
             // rather than as somebody's edit the update path would have to hold back.
             var recorded = FolderFingerprint.Of(folder);

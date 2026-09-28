@@ -496,6 +496,39 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A second screen of a size follows the plugin like the first (#455). No release publishes its folder on
+        /// its own, and it used to be left out of the count altogether, because the installer the plan is read from
+        /// had no entry for it; the start that followed then left it on the old dashboard as well.
+        /// </summary>
+        [Fact]
+        public void A_second_screen_of_a_size_is_among_the_dashboards_that_follow_the_plugin()
+        {
+            const string package = "OpenDash 850x480.simhubdash";
+            var wheel = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Face850x480", Name = "Tim wheel", Folder = "OpenDash 850x480", Package = package };
+            var rim = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Rim2", Name = "Rim (2)", Folder = "OpenDash Rim (2)", Package = package };
+            var source = new DownloadedPackageSource().Add(package, SyntheticPackage.Instanceable("OpenDash 850x480", "Face850x480", "0.1.0").ToArray());
+            var installer = new DashboardInstaller(root, null, source, new MemoryFolderRecord()) { Rig = () => new[] { wheel, rim } };
+            installer.EnsureInstalled(false);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash Rim (2)", "OpenDash Rim (2).djson"), "{\"mine\":true}");
+            installer.Refresh();
+
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(outcome.Ok);
+            Assert.Equal(new[] { "OpenDash 850x480", "OpenDash Rim (2)" }, outcome.FollowPlugin);
+            // And the yes to replacing it is carried across the restart for it as well.
+            Assert.Equal(new[] { "OpenDash Rim (2)" }, outcome.EditedFollowing);
+            Assert.True(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(UpdateWording.RestartWithDashboards(2, 1, true), outcome.Line);
+        }
+
+        /// <summary>
         /// A plugin-only release whose plugin could not be staged has done nothing at all, which is a failure to
         /// report rather than "There was nothing to replace".
         /// </summary>

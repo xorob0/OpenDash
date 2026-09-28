@@ -447,21 +447,11 @@ namespace OpenDashPlugin
             reinstallButton.IsEnabled = false;
             try
             {
-                plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
+                // Every screen on the rig, a second one of a size included: the installer reads the rig and
+                // writes each folder with the screen's own name and namespace, so there is nothing to add after.
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
                 var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
                 var held = plugin.Installer.Packages.Count(p => p.HeldBack);
-                // The screens with a namespace of their own are written by ScreenInstaller, because no
-                // package carries their folder; the installer above has just done the stock ones.
-                var log = new SimHubInstallLog();
-                foreach (var screen in Settings.RigScreens().Where(s => !s.IsStock))
-                {
-                    if (ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, log, force: true).Written) replaced++;
-                }
-                // And then every screen's own name back over the title its package carries, because the
-                // stock folders above were written byte for byte: without this, pressing Reinstall is
-                // how a driver's names for their screens disappear from SimHub's dashboard list.
-                foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, log);
                 updateLine.Text = held > 0
                     ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them."
                     : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
