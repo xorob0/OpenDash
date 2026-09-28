@@ -83,7 +83,7 @@ describe('card expressions', () => {
     const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
     const timed = `((${secs}) > (0)) and ((${secs}) < (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
-    expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'TIME LEFT', 'LAP')`);
+    expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');
     expect(value).toBe(`if(${time}, if(${timed}, ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
     expect(value).toContain('/ (3600)');
