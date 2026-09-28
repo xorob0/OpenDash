@@ -10,9 +10,8 @@ import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { SECTORS, sectorSpecs, sectorStrip } from '../second/sectors.ts';
-import { CHARS, bestLap, lapTime, lastLap, sectorTime, sessionBestLap } from '../second/values.ts';
+import { CHARS, bestLap, lapTime, lastLap, sectorTime, sessionBestLap, sessionBestSplit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ncalc } from '../generator.ts';
 import { blockRow, defineModule, fieldsRow, fld, shapeIn } from './module.ts';
 import { archetypeOf } from './shedding.ts';
 
@@ -56,7 +55,8 @@ export const sectors = defineModule('sectors', (ctx) => {
         SECTORS.map((sector) =>
           fld(ctx, `bestS${sector}`, `Best S${sector}`, {
             sample: BEST_SAMPLES[sector - 1] ?? '0.00',
-            bind: sectorTime(ncalc.bestSplitTime(sector), 2),
+            // The split the strip's purple is measured against, so it follows the same field.
+            bind: sectorTime(sessionBestSplit(sector), 2),
             chars: CHARS.sector,
             fs: d.small,
             color: ds.purpose.lap.sessionBest,

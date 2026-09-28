@@ -149,6 +149,16 @@ they are numbered, so a zone filtered to one class while the rig counts overall 
 its overall places, which on a multi-class grid is a legitimate thing to want. A list is filtered
 when either answer is yes, and `rowsInClass` in `second/values.ts` is where the two meet.
 
+The session best follows the same setting, because it is a reference the driver measures against
+and a GT3 driver cannot act on an LMP2's lap. Counting in class, the `Session best` field of the
+Lap times module, the Sectors module and the pit wall's track panel reads the fastest lap of the
+player's own class, from SimHub's `BestLapOpponentSameClassPosition`; the purple on a leaderboard's
+`Best` column falls on that car, so a board filtered to one class still has a purple row; and a
+sector draws purple against the class's best split, `getbestsplittime_playerclassonly`, which is
+also what the Sectors module's `Best S1` to `Best S3` read. Counting overall, every one of them
+reads the whole field. The label stays `Session best`: the mode is a rig-wide setting the driver
+chose, and the narrow shapes that already shorten it to `Best` have no room for `Class best` (#433).
+
 The filter is a lookup swap rather than a row set built somewhere else: SimHub has a class-only
 twin of each of the two functions a table addresses its rows through, so the same rows are drawn
 either way and only the car each one carries moves. The rows a short class leaves over are hidden

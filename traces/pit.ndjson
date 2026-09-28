@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning","DataCorePlugin.GameData.BestLapOpponentSameClassPosition"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -8,6 +8,7 @@
 {"p":"DataCorePlugin.GameData.ABSLevel","v":2}
 {"p":"DataCorePlugin.GameData.AirTemperature","v":22.8}
 {"p":"DataCorePlugin.GameData.BestLapOpponentPosition","v":5}
+{"p":"DataCorePlugin.GameData.BestLapOpponentSameClassPosition","v":-1}
 {"p":"DataCorePlugin.GameData.BestLapTime","t":"timespan","v":"00:01:37.9050000"}
 {"p":"DataCorePlugin.GameData.Brake","v":0}
 {"p":"DataCorePlugin.GameData.BrakeBias","v":54.5}

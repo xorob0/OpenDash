@@ -88,6 +88,16 @@ constant 1. Every one of them was recorded with the emulator attached and a sess
 what 1 means, so a re-record will write the same value; it is the provenance and not the number that
 this field is about.
 
+They carry a second since #433, `DataCorePlugin.GameData.BestLapOpponentSameClassPosition` at a
+constant -1, and this one is not what a re-record will write. It is the leaderboard row of the
+fastest car of the player's own class, which the session best reads when `OpenDash.PositionMode` is
+`class`, and the emulator's field is two classes of twelve with best laps drawn from a seeded random
+generator, so which row holds it is something only SimHub watching the scenario can say. -1 is the
+value SimHub itself publishes before it has one, "nobody yet", which in a replay draws the class
+session best as the empty placeholder rather than as a car nobody observed. Every trace was recorded
+with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
+`bun run record` picks the property up by itself and drops the entry.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be
