@@ -130,7 +130,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The version a release is compared against: the older of what is installed and what the plugin is.
+        /// The version a release is compared against: the older of what is installed and what the plugin is. What is
+        /// installed is the rig's oldest dashboard, which <see cref="RigVersion"/> finds.
         /// </summary>
         /// <remarks>
         /// **The older of the two, not the dashboards' alone.** An OpenDash install is two halves that move
@@ -151,6 +152,40 @@ namespace OpenDashPlugin
             if (!readable) return string.IsNullOrWhiteSpace(pluginVersion) ? null : pluginVersion;
             if (string.IsNullOrWhiteSpace(pluginVersion)) return installedVersion;
             return Versioning.VersionCompare(pluginVersion, installedVersion) < 0 ? pluginVersion : installedVersion;
+        }
+
+        /// <summary>
+        /// The version this rig runs: what the check compares a release against, what the idle screen's mark
+        /// compares its offer against, and what every line of the panel names.
+        /// </summary>
+        /// <param name="packages">What the installer last found, one entry per folder it read.</param>
+        /// <param name="rigFolders">The folders of the screens the rig holds.</param>
+        /// <param name="pluginVersion">The version of the plugin that is running.</param>
+        /// <remarks>
+        /// The oldest dashboard among the rig's own screens, reduced with the plugin by
+        /// <see cref="ComparableInstalled"/>. It was the folder of one package, the 1920 x 480 `OpenDash`, which a
+        /// rig has only when somebody added that face (ADR 0017), and each caller reduced it for itself: the check
+        /// and the mark fell back to the plugin, whereas the panel named the raw value, and on a rig without that
+        /// face it said "You have an unknown version" under a title naming the right one (#458). One definition
+        /// here, read in one place (OpenDash.RigVersion), is what keeps them from disagreeing again.
+        ///
+        /// A folder outside the rig does not count, since nothing rewrites it and its version says nothing about
+        /// what the driver is looking at. A screen whose folder is missing or unreadable is passed over, as
+        /// ComparableInstalled passes over one dashboard, and with none left the plugin's version stands, which
+        /// since #438 is the version every dashboard follows.
+        /// </remarks>
+        public static string RigVersion(IEnumerable<PackageStatus> packages, IEnumerable<string> rigFolders, string pluginVersion)
+        {
+            var rig = new HashSet<string>((rigFolders ?? Enumerable.Empty<string>()).Where(folder => folder != null), StringComparer.OrdinalIgnoreCase);
+            string oldest = null;
+            foreach (var package in packages ?? Enumerable.Empty<PackageStatus>())
+            {
+                if (package?.FolderName == null || !rig.Contains(package.FolderName)) continue;
+                var version = package.InstalledVersion;
+                if (string.IsNullOrWhiteSpace(version) || version == Versioning.UnknownVersion) continue;
+                if (oldest == null || Versioning.VersionCompare(version, oldest) < 0) oldest = version;
+            }
+            return ComparableInstalled(oldest, pluginVersion);
         }
 
         /// <summary>

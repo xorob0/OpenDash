@@ -103,6 +103,65 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.3.0-rc.2", UpdateCheck.ComparableInstalled("0.3.0-rc.2", "0.3.0-rc.2"));
         }
 
+        // RigVersion
+
+        private static PackageStatus Folder(string folder, string installed) =>
+            new PackageStatus { FolderName = folder, InstalledVersion = installed, EmbeddedVersion = "0.3.0" };
+
+        /// <summary>
+        /// The rig's screens are measured, and no one package stands for them (#458).
+        /// </summary>
+        /// <remarks>
+        /// The version was read off the 1920 x 480 folder `OpenDash` alone, which a rig has only when somebody
+        /// added that face. A rig of two other screens has to be measured by those two, and the older of them is
+        /// the one whose dashboard is behind.
+        /// </remarks>
+        [Fact]
+        public void The_oldest_screen_on_the_rig_is_the_version_it_runs()
+        {
+            var packages = new[] { Folder("OpenDash 850x480", "0.3.0"), Folder("OpenDash Pit wall", "0.3.0-rc.7") };
+            var rig = new[] { "OpenDash 850x480", "OpenDash Pit wall" };
+            Assert.Equal("0.3.0-rc.7", UpdateCheck.RigVersion(packages, rig, "0.3.0"));
+            // A folder name is matched as the installer matches it, which is without regard to case.
+            Assert.Equal("0.3.0-rc.7", UpdateCheck.RigVersion(packages, new[] { "opendash 850x480", "OPENDASH PIT WALL" }, "0.3.0"));
+            // And the plugin is one of the halves, so a plugin behind every screen is what the rig runs.
+            Assert.Equal("0.2.0", UpdateCheck.RigVersion(packages, rig, "0.2.0"));
+        }
+
+        /// <summary>
+        /// A folder the rig does not hold says nothing about what it runs.
+        /// </summary>
+        /// <remarks>
+        /// Since ADR 0017 nothing writes a package the rig did not add, and nothing deletes one either, so a rig
+        /// that owned the 1920 face before and has since dropped it keeps a folder that no start rewrites. Counting
+        /// it would offer that rig every release against a dashboard nobody opens.
+        /// </remarks>
+        [Fact]
+        public void A_folder_outside_the_rig_does_not_count()
+        {
+            var packages = new[] { Folder("OpenDash", "0.1.0"), Folder("OpenDash 850x480", "0.3.0") };
+            Assert.Equal("0.3.0", UpdateCheck.RigVersion(packages, new[] { "OpenDash 850x480" }, "0.3.0"));
+            // A package the installer could not read has no folder, so it belongs to no screen.
+            Assert.Equal("0.3.0", UpdateCheck.RigVersion(new[] { Folder(null, "0.1.0"), Folder("OpenDash 850x480", "0.3.0") }, new[] { "OpenDash 850x480" }, "0.3.0"));
+        }
+
+        /// <summary>
+        /// With nothing readable on the rig the plugin's version stands, and never "an unknown version".
+        /// </summary>
+        [Fact]
+        public void A_rig_with_nothing_readable_is_named_by_the_plugin()
+        {
+            // A screen whose folder is missing, one whose sidecar cannot be read, an empty rig, and nothing read
+            // at all: each is the plugin, which since #438 is the version the dashboards follow.
+            Assert.Equal("0.3.0-rc.6", UpdateCheck.RigVersion(new[] { Folder("OpenDash 850x480", null) }, new[] { "OpenDash 850x480" }, "0.3.0-rc.6"));
+            Assert.Equal("0.3.0-rc.6", UpdateCheck.RigVersion(new[] { Folder("OpenDash 850x480", Versioning.UnknownVersion) }, new[] { "OpenDash 850x480" }, "0.3.0-rc.6"));
+            Assert.Equal("0.3.0-rc.6", UpdateCheck.RigVersion(new[] { Folder("OpenDash 850x480", "0.3.0-rc.5") }, new string[0], "0.3.0-rc.6"));
+            Assert.Equal("0.3.0-rc.6", UpdateCheck.RigVersion(null, null, "0.3.0-rc.6"));
+            // An unreadable screen beside a readable one is passed over rather than posing as 0.0.0.
+            var mixed = new[] { Folder("OpenDash 850x480", Versioning.UnknownVersion), Folder("OpenDash Companion", "0.3.0-rc.5") };
+            Assert.Equal("0.3.0-rc.5", UpdateCheck.RigVersion(mixed, new[] { "OpenDash 850x480", "OpenDash Companion" }, "0.3.0-rc.6"));
+        }
+
         // IsPreRelease
 
         [Theory]

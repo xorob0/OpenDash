@@ -125,10 +125,6 @@ namespace OpenDashPlugin
     {
         public const string PackageExtension = ".simhubdash";
 
-        /// <summary>The folder of the reference layout (1920 x 480). The panel's version is read from this package when it is
-        /// embedded, from the first package otherwise; every package carries the same version, so it rarely matters.</summary>
-        public const string PrimaryFolder = "OpenDash";
-
         private static readonly IReadOnlyList<PackageStatus> NoPackages = new PackageStatus[0];
 
         private readonly IInstallLog log;
@@ -187,15 +183,10 @@ namespace OpenDashPlugin
 
         public bool HasEmbeddedPackage => PackageCount > 0;
 
-        /// <summary>Folder of the primary package under DashTemplates ("OpenDash"); the panel reads its version.</summary>
-        public string FolderName { get; private set; } = PrimaryFolder;
-
-        /// <summary>Installed version of the primary package. Null when not installed; Versioning.UnknownVersion when
-        /// installed without a readable version.</summary>
-        public string InstalledVersion { get; private set; }
-
-        /// <summary>Embedded version of the primary package; null when the assembly carries no package.</summary>
-        public string EmbeddedVersion { get; private set; }
+        // There is no installed version of the installer as a whole. It used to read one off a primary package, the
+        // 1920 x 480 `OpenDash`, which since ADR 0017 is a folder only the rigs that added that face have; what the
+        // rig runs is a question about the rig's screens and the plugin together, and UpdateCheck.RigVersion answers
+        // it from Packages (#458).
 
         /// <summary>The first failure of the last run; null when every package went through.</summary>
         public string LastError { get; private set; }
@@ -318,11 +309,6 @@ namespace OpenDashPlugin
                 .Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
 
-            var primary = results.FirstOrDefault(result => result.FolderName == PrimaryFolder) ?? results[0];
-            FolderName = primary.FolderName ?? PrimaryFolder;
-            EmbeddedVersion = primary.EmbeddedVersion;
-            InstalledVersion = primary.InstalledVersion;
-
             if (results.Any(result => result.Extracted)) RefreshSimHubFonts();
         }
 
@@ -428,21 +414,18 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// A build that carries no package installs nothing and vouches for nothing on the disk.
+        /// </summary>
+        /// <remarks>
+        /// It used to read the 1920 x 480 folder and call the rig up to date when that one was there, which said
+        /// nothing about any other screen. A folder is measured against the package that writes it, and this build
+        /// has none, so it reports "Not installed" as plugin/OpenDash/Resources/README.md says it does.
+        /// </remarks>
         private void RefreshWithoutPackage()
         {
-            EmbeddedVersion = null;
-            try
-            {
-                InstalledVersion = ReadInstalled(FolderName);
-                Status = InstalledVersion == null ? InstallStatus.NotInstalled : InstallStatus.UpToDate;
-                log.Warn("No .simhubdash is embedded in this build; nothing to install (see plugin/OpenDash/Resources/README.md).");
-            }
-            catch (Exception ex)
-            {
-                Status = InstallStatus.Failed;
-                LastError = ex.Message;
-                log.Error("Reading the installed dashboard failed: " + ex);
-            }
+            Status = InstallStatus.NotInstalled;
+            log.Warn("No .simhubdash is embedded in this build; nothing to install (see plugin/OpenDash/Resources/README.md).");
         }
 
         /// <summary>Reads the folder's files; the interpretation is InstalledVersionFrom. An unreadable sidecar (locked,

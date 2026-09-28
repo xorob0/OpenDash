@@ -66,7 +66,7 @@ namespace OpenDashPlugin
                 Save();
                 if (!on)
                 {
-                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.Installer.InstalledVersion };
+                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.RigVersion };
                 }
                 RefreshUpdateLine();
             });
@@ -164,7 +164,7 @@ namespace OpenDashPlugin
 
             askedManually |= manual;
             if (checkButton != null) checkButton.IsEnabled = false;
-            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
+            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.RigVersion, Manual = manual };
             RefreshUpdateLine();
             return true;
         }
@@ -185,7 +185,7 @@ namespace OpenDashPlugin
                 // The service declined after all. Whatever was showing before is still the truth.
                 if (updateStatus.State == UpdateState.Checking)
                 {
-                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.RigVersion };
                 }
             }
             else
@@ -302,10 +302,7 @@ namespace OpenDashPlugin
                     // the dashboards have just moved.
                     plugin.RefreshUpdateMark();
                     RefreshRestoreButton();
-                    if (outcome.Ok && outcome.Updated.Count > 0)
-                    {
-                        updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
-                    }
+                    updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
                     RefreshStatus();
                     // The button's visibility is computed nowhere but here, so a status that has just stopped
                     // offering an update has to be redrawn or the button outlives the release it was offering.
@@ -489,14 +486,14 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Title "OpenDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
-        /// label showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
+        /// <summary>Title "OpenDash <the version the rig runs>" and the status pill: a 6 px dot and a tracked label
+        /// showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
         private void RefreshStatus()
         {
             if (dashboardTitle == null || statusHost == null) return;
             var installer = plugin.Installer;
-            var version = installer.InstalledVersion ?? installer.EmbeddedVersion ?? OpenDash.Version;
-            dashboardTitle.Text = DashboardInstaller.Summary(version);
+            // The version the update line under it names, so that the two cannot disagree.
+            dashboardTitle.Text = DashboardInstaller.Summary(plugin.RigVersion);
 
             // The worse of the two questions this section answers: what is on the disk against what
             // the build carries, and what the daily check found waiting. Reading the first alone told a
