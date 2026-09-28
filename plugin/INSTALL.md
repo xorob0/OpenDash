@@ -20,15 +20,16 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    The same from PowerShell: `Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"`.
 4. Start SimHub. It notices the new plugin and asks whether to enable it; accept. If SimHub
    asks to restart, restart it.
-5. "OpenDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
-   should say "OpenDash <version> · 14 dashboards" and "Up to date", which means every dashboard
-   was extracted into its own folder under `DashTemplates` on that start (`OpenDash`,
-   `OpenDash 1280x480` and so on, see Sizes below).
-6. Assign a dashboard to a display. Pick the size that matches the display from the Sizes table;
-   OpenDash is a normal SimHub dashboard from here on: in Dash Studio the sizes are listed as
-   "OpenDash", "OpenDash 1280x480" and so on, and you open one in a window, send it to a USB or
-   HDMI display, or point a phone or tablet at it exactly like any other dashboard. Nothing in
-   the plugin launches it; that is SimHub's job.
+5. "OpenDash" now appears in SimHub's left menu. Open it on the **Rig** tab, which starts empty:
+   the plugin writes no dashboard until you add a screen, so a first start puts nothing new in
+   SimHub's dashboard list. Press **Add a screen**, choose its kind and the size that matches the
+   display from Sizes below, and the plugin writes that one dashboard into its own folder under
+   `DashTemplates` (`OpenDash 1280x480` for the first screen of that size). Add one screen per
+   display, then restart SimHub, which reads its list of dashboards only when it starts.
+6. Assign each dashboard to its display. OpenDash is a normal SimHub dashboard from here on: in
+   Dash Studio the sizes are listed as "OpenDash", "OpenDash 1280x480" and so on, and you open one
+   in a window, send it to a USB or HDMI display, or point a phone or tablet at it exactly like any
+   other dashboard. Nothing in the plugin launches it; that is SimHub's job.
 
 ## The face
 
@@ -228,8 +229,8 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
 each slot of those faces, and they stay: the round faces keep the twelve-slot design on purpose, and
 the release that gives them zones is the one that will say what happens to the twelve properties. The
-`OpenDash slots <size>` faces published with each release read them as well, four to twelve each, so
-if you have installed one of those by hand it is reading the twelve too.
+`OpenDash slots <size>` faces that earlier releases published read them as well, four to twelve each,
+so one you installed by hand from such a release is reading the twelve too.
 
 `OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
 `OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
@@ -254,10 +255,11 @@ that identifies you, and can be switched off in the Dashboard section, in which 
 fetched at all. Nothing is ever installed without being asked for.
 
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
-with a wheel button, under the same dashboard names. Your old face is still published with each
-release as `OpenDash slots <size>.simhubdash`, so you can install one by hand if you prefer it.
-Your slot settings are not lost; they still drive the two round faces, and they drive an
-`OpenDash slots <size>` face too if you install one.
+with a wheel button, under the same dashboard names. Your old face is no longer published: the plugin
+is the only way in, and the twelve-slot faces are built only so that the two designs can be compared
+from a local build until the card faces are retired. Your slot settings are not lost; they still
+drive the two round faces, and an `OpenDash slots <size>` face you installed by hand from an earlier
+release keeps reading them.
 
 ## Uninstall
 

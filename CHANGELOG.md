@@ -5,12 +5,14 @@ The release workflow refuses a tag that does not match it. A version carrying a 
 `-rc.2` publishes as a pre-release, so a candidate is never the download a first-time user is
 offered.
 
-Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashboards that are ready
-to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
-including any that the plugin does not install.
+Each release carries `OpenDash-plugin.zip` and nothing else. The plugin is the only way in: the
+dashboards and the LED profiles are embedded in it, and every one of them reaches SimHub through its
+panel (#438).
 
-From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
-strips, the brows and the flag box, together with a `manifest.json` listing everything published.
+Until then a release also carried one `.simhubdash` per package, including the `OpenDash slots
+<size>` card faces the plugin does not install, and from 0.2.0-rc.2 one `.ledsprofile` per LED
+device shape and a `manifest.json` listing everything published. The notes of those releases say so
+where they describe them.
 
 ## 0.3.0-rc.7 (2026-09-27)
 

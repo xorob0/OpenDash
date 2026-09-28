@@ -25,9 +25,8 @@ USBD480 USB screen, a phone or a tablet on the network. The telemetry is SimHub'
 other sims will very probably work, although iRacing is the one OpenDash is tested against and
 therefore the only one it claims.
 
-The packages and the plugin are published on the
-[releases page](https://github.com/xorob0/OpenDash/releases), and [Install](#install) below says
-which file to take.
+The plugin is published on the [releases page](https://github.com/xorob0/OpenDash/releases) with
+every package inside it, and [Install](#install) below says how to put it into SimHub.
 
 ## What it looks like
 
@@ -71,23 +70,20 @@ that are plugin settings.
 
 ## Install
 
-Everything is on the [releases page](https://github.com/xorob0/OpenDash/releases), which carries
-`OpenDash-plugin.zip` and one `.simhubdash` per screen. A release whose version ends in a suffix
-such as `-rc.2` is marked as a pre-release, which is what to expect while OpenDash is alpha. You
-need SimHub 9.12.6 or later on Windows. [CHANGELOG.md](CHANGELOG.md) says what each release
-changed.
+The plugin is the only way in. The [releases page](https://github.com/xorob0/OpenDash/releases)
+carries one file, `OpenDash-plugin.zip`, and the fourteen dashboards and every LED profile are
+embedded in it. A release whose version ends in a suffix such as `-rc.2` is marked as a
+pre-release, which is what to expect while OpenDash is alpha. You need SimHub 9.12.6 or later on
+Windows. [CHANGELOG.md](CHANGELOG.md) says what each release changed.
 
-- **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
-  the default layout and the default modes, and no settings page. Nothing else is needed, so this
-  is the shortest way to see OpenDash on a display. `OpenDash 850x480` is the base size and the one
-  to take if nothing matches your display exactly; `OpenDash 1280x480` is the large one.
-- **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since the fourteen
-  dashboards it installs are embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll`
-  into
-  SimHub's install folder, the one holding `SimHubWPF.exe`, rather than into a subfolder of it.
-  Unblock the file, then start SimHub and accept the new plugin. The plugin extracts all fourteen
-  dashboards and adds an "OpenDash" page to the left menu. The full procedure, the table of sizes
-  and the troubleshooting list are in [plugin/INSTALL.md](plugin/INSTALL.md).
+Close SimHub, unzip the archive and copy `OpenDash.dll` into SimHub's install folder, the one
+holding `SimHubWPF.exe`, rather than into a subfolder of it. Unblock the file, then start SimHub
+and accept the new plugin. An "OpenDash" page appears in the left menu; on its Rig tab, add the
+screen your rig has, and the plugin writes that dashboard into SimHub. `OpenDash 850x480` is the
+base size and the one to take if nothing matches your display exactly; `OpenDash 1280x480` is the
+large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
+when it starts. The full procedure, the table of sizes and the troubleshooting list are in
+[plugin/INSTALL.md](plugin/INSTALL.md).
 
 Copying a file by hand is how SimHub loads any third-party plugin, and unblocking is the step
 that fails silently: Windows marks whatever was downloaded, and .NET then refuses to load the
@@ -98,7 +94,11 @@ plugin, so SimHub either reports a loading error or never mentions the plugin at
 Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
 ```
 
-In both cases OpenDash is a normal SimHub dashboard afterwards: assign it to a display from
+There is no route that skips the plugin. A SimHub that cannot take a DLL into its own folder, or
+whose owner would rather it did not, cannot run OpenDash; that is a choice rather than an
+oversight, and [docs/scope.md](docs/scope.md) says what it buys.
+
+Afterwards OpenDash is a normal SimHub dashboard: assign it to a display from
 Dash Studio like any other. With no game running it shows the openDash wordmark, the time and
 "no game running": the idle screen is inside the dashboard, so there is nothing to point at it.
 
