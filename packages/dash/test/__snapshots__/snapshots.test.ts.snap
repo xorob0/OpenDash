@@ -11168,6 +11168,44 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 1626,
+          "Top": 439,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "8edf579c-3064-57c6-b884-a8f9c87f50cb",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -17755,6 +17793,44 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 986,
+          "Top": 439,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "39f2e49c-4b26-5d86-b47e-b94ce028617a",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -24286,6 +24362,44 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 986,
+          "Top": 359,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "de058291-f59d-565e-b277-8e5863be9996",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -30204,6 +30318,44 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 556,
+          "Top": 439,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "928b2241-01d4-571c-b154-e7cb34b9a34b",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -36075,6 +36227,44 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "BorderStyle": {},
           "Id": "8b852cff-219d-5263-914a-85d297bfa3d2",
           "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 506,
+          "Top": 439,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "10120a7a-bbbb-5abd-99e8-659daf80237a",
+          "Name": "idle.update",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         }
@@ -42512,6 +42702,44 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "BorderStyle": {},
           "Id": "297d5051-7c0c-5a6e-b08d-bd80ec65dd5b",
           "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 986,
+          "Top": 679,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "9d5b4327-f0fa-528f-b8e7-3c702c0cf9be",
+          "Name": "idle.update",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         }
@@ -49289,6 +49517,44 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 506,
+          "Top": 245,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "65db6293-b365-51fa-a3b3-4ca0bc6e5f55",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -54982,6 +55248,44 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Name": "idle.state",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 2,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 306,
+          "Top": 645,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "c7896e1e-ab12-5e0b-bc81-129f805fe973",
+          "Name": "idle.update",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
         }
       ]
     }
@@ -59979,6 +60283,44 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "BorderStyle": {},
           "Id": "02db35c2-304a-58d0-a815-6642f4cf3b83",
           "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 1,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 105,
+          "Top": 406,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "c0b91efb-a84e-506e-bad5-0ed6381351ee",
+          "Name": "idle.update",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         }
@@ -65684,6 +66026,44 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "BorderStyle": {},
           "Id": "de9ffce1-31d5-5fe5-b8ec-530c34a76fc7",
           "Name": "idle.state",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "UPDATE AVAILABLE IN SIMHUB",
+          "TextColor": "#FF5A6069",
+          "HorizontalAlignment": 1,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 265,
+          "Top": 746,
+          "Width": 270,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([OpenDash.UpdateVersion], '')) = (''), 'UPDATE AVAILABLE IN SIMHUB', ('UPDATE TO ') + (isnull([OpenDash.UpdateVersion], '')) + (' IN SIMHUB'))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.UpdateAvailable], false)) = (true)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "e39cf776-d4af-524e-8fdc-b57d5cac9924",
+          "Name": "idle.update",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         }
