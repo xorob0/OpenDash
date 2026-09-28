@@ -284,6 +284,9 @@ namespace OpenDashPlugin
         /// rig as it stood then. Reading it at the start of each run is also what spares every caller from
         /// handing it over again before each Refresh, which six of them used to do.
         ///
+        /// A run reads the screens and changes one thing on them: where the settings spell a stock folder in another
+        /// case than its package does, the screen is given the package's spelling (PlanFor, #467).
+        ///
         /// Null for "everything", so that a caller which has not been taught about the rig -- the update
         /// path, which installs exactly what it downloaded, and the tests -- behaves as it always did. An
         /// empty rig is an empty list and correctly installs nothing: that is a new user, and the panel
@@ -357,7 +360,8 @@ namespace OpenDashPlugin
                 result.Error = "This build ships no package for a " + screen.SizeLabel + " " + screen.Kind + ".";
                 return result;
             }
-            var entry = Process(new Planned { Package = name, Screen = ScreenInstaller.TargetFor(screen), Wanted = true }, force: true, install: true, replaceEdited: true);
+            var entry = Process(PlanFor(screen, name), force: true, install: true, replaceEdited: true);
+            result.Folder = screen.Folder;
             result.Error = entry.Error;
             result.Written = entry.Extracted;
             if (entry.Extracted) log.Info("Wrote the screen " + screen.Name + " into " + screen.Folder + ".");
@@ -407,7 +411,7 @@ namespace OpenDashPlugin
                     log.Warn("The screen " + screen.Name + " has no package in this build, so " + screen.Folder + " was left as it is.");
                     continue;
                 }
-                planned.Add(new Planned { Package = package, Screen = ScreenInstaller.TargetFor(screen), Wanted = true });
+                planned.Add(PlanFor(screen, package));
             }
             foreach (var name in names)
             {
@@ -416,6 +420,27 @@ namespace OpenDashPlugin
                 planned.Add(new Planned { Package = name, Wanted = false });
             }
             return planned;
+        }
+
+        /// <summary>
+        /// One screen's folder, written from its package under the name the package gives it.
+        /// </summary>
+        /// <remarks>
+        /// A stock screen's folder is the package's own, and the settings hold a copy of its name that a rig older
+        /// than #374 spells "openDash". Written under that copy, the folder changed case at every update, and SimHub,
+        /// which reopens a dashboard by the path it remembered, case included, did not reopen it at the next restart
+        /// (#467). The package's spelling is therefore put into the screen before anything is written or recorded,
+        /// which is why a start, a reinstall and a press on the Rig tab cannot spell it otherwise. The screen is the
+        /// rig's own object, so the correction reaches the settings as well, and a start saves them once it is done.
+        /// </remarks>
+        private Planned PlanFor(ScreenInstance screen, string package)
+        {
+            var stale = screen.Folder;
+            if (screen.SpellFolderAs(FolderOf(package)))
+            {
+                log.Info("The folder of " + screen.Name + " is spelled " + screen.Folder + ", as its package spells it, where the settings had " + stale + ".");
+            }
+            return new Planned { Package = package, Screen = ScreenInstaller.TargetFor(screen), Wanted = true };
         }
 
         /// <summary>Reads one folder's package, decides, and installs it when asked and needed. Never throws: a failure

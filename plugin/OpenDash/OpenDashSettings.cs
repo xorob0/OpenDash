@@ -66,6 +66,15 @@ namespace OpenDashPlugin
             // "cannot vouch for this folder" into "this folder is not ours", which is the opposite bias, and the
             // adoption branch would then have recorded whatever was on disk as OpenDash's own work.
             if (string.IsNullOrWhiteSpace(fingerprint)) return;
+            // Kept under the spelling it is given and under no other. A dictionary that ignores case keeps the spelling
+            // a folder was first recorded under, which on a rig older than #374 is "openDash", and ADR 0017's migration
+            // read the rig's folders from those keys; a record that follows what was written stops handing the old
+            // spelling on (#467). The comparison is made here rather than left to the dictionary, whose comparer is
+            // whatever the settings were deserialised with.
+            var stale = current.FolderFingerprints.Keys
+                .Where(key => string.Equals(key, folderName, StringComparison.OrdinalIgnoreCase) && !string.Equals(key, folderName, StringComparison.Ordinal))
+                .ToList();
+            foreach (var key in stale) current.FolderFingerprints.Remove(key);
             current.FolderFingerprints[folderName] = fingerprint;
         }
     }

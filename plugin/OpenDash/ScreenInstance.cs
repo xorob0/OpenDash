@@ -257,6 +257,35 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Spells this screen's folder as its package spells its own, when the two name one folder in different case.
+        /// </summary>
+        /// <remarks>
+        /// The first screen of a size holds its package's folder, and the settings keep a copy of that name which can
+        /// be stale: the package spells it "OpenDash 850x480", which is what SimHub has read since #374, whereas a rig
+        /// migrated from a record written before that rename still says "openDash 850x480". Windows takes the two for
+        /// one folder and SimHub does not, since it reopens the dashboard it had open by the path it remembered, case
+        /// included, so a folder written under the copy's spelling is a dashboard that does not come back (#467). The
+        /// package is thus the one truth for the name of a folder it carries, and the copy is brought into line with it.
+        ///
+        /// A slots face spells its namespace from its folder, so one that held the stock namespace under the old
+        /// spelling takes the stock namespace of the new one; otherwise it would stop being the stock screen of its own
+        /// folder, and its package, which has nothing to rewrite, would be refused as a copy. Such a namespace names no
+        /// property and no action, so nothing outside the rig can have been bound to the old one. Every other kind
+        /// takes its namespace from its kind and its size, and keeps it.
+        /// </remarks>
+        /// <returns>Whether the folder was spelled anew.</returns>
+        public bool SpellFolderAs(string packageFolder)
+        {
+            if (Folder == null || packageFolder == null) return false;
+            if (string.Equals(Folder, packageFolder, StringComparison.Ordinal)) return false;
+            if (!string.Equals(Folder, packageFolder, StringComparison.OrdinalIgnoreCase)) return false;
+            var stock = IsStock;
+            Folder = packageFolder;
+            if (stock) Namespace = StockNamespace;
+            return true;
+        }
+
         /// <summary>The face shape this screen is, for drawing a plan of it. Null when nothing ships at that size.</summary>
         public Contract.FaceSize? FaceSize
         {

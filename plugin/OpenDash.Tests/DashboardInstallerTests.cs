@@ -1,7 +1,8 @@
 // DashboardInstallerTests.cs: the installer against a temporary SimHub root and synthetic packages: every embedded
 // package is installed, only the ones that need it unless forced, the worst status wins, a broken package does not stop
-// the others, a second screen of a size is kept current and held back on the same terms as the first, the panel's
-// summary text, and the embedded resource naming (spaces in a file name survive). Also the pure InstalledVersionFrom:
+// the others, a second screen of a size is kept current and held back on the same terms as the first, a stock folder the
+// settings spell in another case is written as its package spells it, the panel's summary text, and the embedded
+// resource naming (spaces in a file name survive). Also the pure InstalledVersionFrom:
 // an absent folder is not installed, a folder without a usable sidecar is reinstalled.
 using System;
 using System.Collections.Generic;
@@ -275,6 +276,102 @@ namespace OpenDashPlugin.Tests
             var gone = Stock("OpenDash Gone", 640, 480, "Gone");
             gone.Namespace = "Gone";
             Assert.Contains("ships no package", installer.Write(gone).Error);
+        }
+
+        // A stock folder the settings still spell as they did before #374 (#467)
+
+        private const string RoundName = "OpenDashPlugin.Resources.OpenDash 480 round.simhubdash";
+        private const string RoundFolder = "OpenDash 480 round";
+
+        private static MemoryPackageSource FaceAndRound(string version)
+        {
+            return new MemoryPackageSource()
+                .Add(FaceName, SyntheticPackage.Instanceable(FaceFolder, "Face850x480", version))
+                .Add(RoundName, SyntheticPackage.Zip(RoundFolder, version));
+        }
+
+        /// <summary>The folders under DashTemplates as the filesystem spells them, which a lookup by name cannot tell
+        /// where the filesystem ignores case.</summary>
+        private string[] SpelledFolders()
+        {
+            return Directory.GetDirectories(Path.Combine(root, PackageExtractor.DashTemplates))
+                .Select(Path.GetFileName)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private bool HasDashboardSpelled(string folder)
+        {
+            return Directory.GetFiles(PackageExtractor.InstalledFolder(root, folder))
+                .Select(Path.GetFileName)
+                .Contains(folder + PackageExtractor.DashExtension, StringComparer.Ordinal);
+        }
+
+        /// <summary>
+        /// The ticket's rig: settings written before #374 spell the stock folders "openDash", while the packages, the
+        /// folders on disk and the dashboard SimHub reopens spell them "OpenDash". An update start writes each folder as
+        /// its package spells it and corrects the settings, and neither a plain restart nor a reinstall moves it after.
+        /// </summary>
+        /// <remarks>
+        /// Measured on the VM before this: since #455 every update start wrote a stock folder under the settings'
+        /// spelling, and SimHub, which matches the dashboard it reopens against the folder name with regard to case,
+        /// did not reopen it at the restart that followed. The rig is built the way such a rig came to be, by the
+        /// migration of ADR 0017 reading the folders off a record written before #374. The round face is here because
+        /// a slots face's namespace is spelled from its folder: a folder corrected without it would stop being the
+        /// stock screen, and its package, which has no namespace to rewrite, would be refused.
+        /// </remarks>
+        [Fact]
+        public void A_start_over_settings_that_spell_the_stock_folder_the_old_way_writes_it_as_its_package_does()
+        {
+            PackageExtractor.Install(SyntheticPackage.Instanceable(FaceFolder, "Face850x480", "0.3.0-rc.7"), root, null);
+            PackageExtractor.Install(SyntheticPackage.Zip(RoundFolder, "0.3.0-rc.7"), root, null);
+            var settings = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "openDash 850x480", FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, FaceFolder)) },
+                    { "openDash 480 round", FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, RoundFolder)) },
+                },
+            };
+            settings.Normalise();
+            var wheel = settings.RigScreens().Single(screen => screen.IsFace);
+            var round = settings.RigScreens().Single(screen => !screen.IsFace);
+            Assert.Equal("openDash 850x480", wheel.Folder);
+            Assert.Equal("openDash 480 round", round.Folder);
+            Assert.Equal("SlotsopenDash480Round", round.Namespace);
+
+            var record = new SettingsFolderRecord(() => settings);
+            var update = new DashboardInstaller(root, null, FaceAndRound("0.3.0-rc.8"), record) { Rig = () => settings.RigScreens() };
+            update.EnsureInstalled(false);
+
+            Assert.All(update.Packages, entry => Assert.Null(entry.Error));
+            Assert.All(update.Packages, entry => Assert.True(entry.Extracted));
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+            Assert.True(HasDashboardSpelled(FaceFolder));
+            Assert.True(HasDashboardSpelled(RoundFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, FaceFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, RoundFolder));
+
+            // The settings are corrected, the round face stays the stock screen of its folder, and the record is kept
+            // under the spelling that was written, so nothing reads the old one again.
+            Assert.Equal(FaceFolder, wheel.Folder);
+            Assert.Equal(RoundFolder, round.Folder);
+            Assert.True(round.IsStock);
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, settings.FolderFingerprints.Keys.OrderBy(key => key, StringComparer.Ordinal));
+            Assert.Equal(FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, FaceFolder)), record.Get(FaceFolder));
+
+            // A plain restart finds nothing to do and nothing edited.
+            var restart = new DashboardInstaller(root, null, FaceAndRound("0.3.0-rc.8"), record) { Rig = () => settings.RigScreens() };
+            restart.EnsureInstalled(false);
+            Assert.All(restart.Packages, entry => Assert.False(entry.Extracted || entry.Edited));
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+
+            // Nor does a reinstall, or a press on the Rig tab, spell it otherwise.
+            restart.EnsureInstalled(true);
+            Assert.All(restart.Packages, entry => Assert.True(entry.Extracted && !entry.HeldBack));
+            Assert.Equal(FaceFolder, restart.Write(wheel).Folder);
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+            Assert.True(HasDashboardSpelled(FaceFolder));
         }
 
         // Somebody's Dash Studio work, and whether an install destroys it

@@ -2,7 +2,9 @@
 // Every case here is biased the same way: when it cannot prove the folder is untouched, it says so, because the
 // cost of asking unnecessarily is a click and the cost of staying quiet is somebody's afternoon.
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -138,6 +140,37 @@ namespace OpenDashPlugin.Tests
             Assert.Null(record.Get(null));
             record.Set(null, "sha256:x");
             Assert.Single(settings.FolderFingerprints);
+        }
+
+        /// <summary>
+        /// A folder recorded again under another spelling is kept under that spelling alone, whatever comparer the
+        /// settings came back with (#467).
+        /// </summary>
+        /// <remarks>
+        /// A rig older than #374 recorded its folders as "openDash", and a dictionary that ignores case would keep that
+        /// key for ever however often the folder was recorded since; ADR 0017's migration read the rig's folders from
+        /// those keys. The second settings object stands for one deserialised without the comparer, where the old key
+        /// would otherwise sit beside the new one.
+        /// </remarks>
+        [Fact]
+        public void A_folder_recorded_under_another_spelling_is_kept_under_that_one_alone()
+        {
+            var ignoringCase = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { "openDash 850x480", "sha256:old" } },
+            };
+            new SettingsFolderRecord(() => ignoringCase).Set("OpenDash 850x480", "sha256:new");
+            Assert.Equal(new[] { "OpenDash 850x480" }, ignoringCase.FolderFingerprints.Keys.ToArray());
+            Assert.Equal("sha256:new", ignoringCase.FolderFingerprints["OpenDash 850x480"]);
+
+            var ordinal = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.Ordinal) { { "openDash 850x480", "sha256:old" }, { "OpenDash Rim", "sha256:rim" } },
+            };
+            var record = new SettingsFolderRecord(() => ordinal);
+            record.Set("OpenDash 850x480", "sha256:new");
+            Assert.Equal(new[] { "OpenDash 850x480", "OpenDash Rim" }, ordinal.FolderFingerprints.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray());
+            Assert.Equal("sha256:new", record.Get("OpenDash 850x480"));
         }
 
         [Fact]

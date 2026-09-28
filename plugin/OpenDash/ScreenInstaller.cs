@@ -39,6 +39,10 @@ namespace OpenDashPlugin
         /// second has a folder of its own and every property reference repointed at its own namespace.
         /// The installer writes both from this, so a start, a reinstall and a press on the Rig tab cannot
         /// disagree about what a screen's folder should hold.
+        ///
+        /// The folder is the screen's as it stands, so the installer spells a stock screen's folder as its
+        /// package does before asking (ScreenInstance.SpellFolderAs); a copy in the settings spelled the way
+        /// it was before #374 is otherwise a folder renamed in case at every update (#467).
         /// </remarks>
         public static PackageExtractor.ScreenTarget TargetFor(ScreenInstance screen)
         {

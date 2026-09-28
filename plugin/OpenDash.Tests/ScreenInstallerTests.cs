@@ -1,5 +1,5 @@
-// ScreenInstallerTests.cs: the folder one screen owns -- and, mostly, the repair that puts the driver's
-// name for it back into SimHub's dashboard list after an install has handed SimHub the package's.
+// ScreenInstallerTests.cs: the folder one screen owns -- how it is spelled, and, mostly, the repair that puts
+// the driver's name for it back into SimHub's dashboard list after an install has handed SimHub the package's.
 //
 // Reported from a rig: after an update, the screens were listed under names their owner had never
 // chosen, which from the outside is indistinguishable from the dashboards having disappeared.
@@ -106,6 +106,38 @@ namespace OpenDashPlugin.Tests
             Assert.False(ScreenInstaller.Retitle(null, root, record, null));
             Assert.False(ScreenInstaller.Retitle(new ScreenInstance { Folder = null, Name = "Rim" }, root, record, null));
             Assert.False(ScreenInstaller.Retitle(new ScreenInstance { Folder = "OpenDash Rim", Name = "Rim" }, root, record, null));
+        }
+
+        /// <summary>
+        /// A screen takes its package's spelling of the folder it holds, and of no other folder (#467).
+        /// </summary>
+        /// <remarks>
+        /// The second screen is the half that must not move. Its folder is its own rather than a package's, a rig
+        /// that made one before #374 spells it "openDash Rim", and SimHub reopens it under that spelling.
+        /// </remarks>
+        [Fact]
+        public void A_screen_takes_its_packages_spelling_of_its_own_folder_and_of_no_other()
+        {
+            var wheel = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Face850x480", Folder = "openDash 850x480" };
+            Assert.True(wheel.SpellFolderAs("OpenDash 850x480"));
+            Assert.Equal("OpenDash 850x480", wheel.Folder);
+            Assert.Equal("Face850x480", wheel.Namespace);
+            Assert.False(wheel.SpellFolderAs("OpenDash 850x480"));
+
+            var rim = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Rim", Folder = "openDash Rim" };
+            Assert.False(rim.SpellFolderAs("OpenDash 850x480"));
+            Assert.Equal("openDash Rim", rim.Folder);
+            Assert.Equal("Rim", rim.Namespace);
+
+            // A slots face spells its namespace from its folder, and it stays the stock screen of the folder it holds.
+            var round = new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Folder = "openDash 480 round" };
+            round.Namespace = round.StockNamespace;
+            Assert.True(round.SpellFolderAs("OpenDash 480 round"));
+            Assert.Equal("SlotsOpenDash480Round", round.Namespace);
+            Assert.True(round.IsStock);
+
+            Assert.False(new ScreenInstance { Folder = null }.SpellFolderAs("OpenDash 850x480"));
+            Assert.False(wheel.SpellFolderAs(null));
         }
     }
 }
