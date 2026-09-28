@@ -136,13 +136,14 @@ const rowGapOf = (board: boolean): number => (board ? 0 : ROW_GAP);
 const headerHeightOf = (board: boolean, rowHeight: number): number => (board ? Math.min(BOARD_HEADER_HEIGHT, rowHeight) : HEADER_HEIGHT);
 
 /**
- * How tall a row is at each density.
+ * The row the canvas draws a list at, at each density.
  *
- * Mechanism 1 of docs/design/readability-pass.md: a table answered a taller box with more rows of
- * the same size, so a list page never filled its box and the relative -- the page a driver reads
- * most -- drew the column that says *who* at the smallest size in the design. The row is declared
- * here instead, and it is a ceiling rather than a ramp: a table types up to this and no further,
- * and buys rows with whatever height is left.
+ * What a table takes when its caller states nothing, and the floor a {@link listPlan} counts its
+ * rows at: a page's declared count is cut to what a box holds at this row, never at a shorter one.
+ * It used to be the whole answer, and that was Mechanism 1 of the readability pass (#328): a table
+ * answered a taller box with more rows of this size, so a 437 x 214 box and a 437 x 510 one differed
+ * only in how many drivers they listed, and the relative drew the column that says *who* at the
+ * smallest size in the design however much height it had.
  */
 const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34, compact: 28, panel: 34 };
 
@@ -150,18 +151,31 @@ const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34,
 export const tableRowHeight = (density: Density): number => ROW_HEIGHT[density];
 
 /**
- * The heights at which a list row's type changes, which {@link rowTypeOf} reads as `>=`.
+ * The type a list row can carry, smallest first, and the least row height each one needs.
  *
- * Declared so that a caller stretching a row into its box can tell whether the stretch will change
- * the type under it. It does: the 34 px row draws its position and its gap at 34 where the 28 px row
- * draws them at 24, and those two are monospaced columns of a fixed budget, so a row that grows takes
- * the width out of the one flexible column beside them — the name. #339's relative is where that
- * matters and `relativeRowPlan` is what does the telling.
+ * Four steps where there used to be three, and the one added is the one #328 is about. The canvas
+ * draws 34 / 24 in its 34 px row and steps both down one in the 28 px row a narrow zone takes; the
+ * companion's 38 px row promotes the car number to the position's size. Those are three drawings of
+ * the whole row, and between the first two the name and the numerals move together: a row tall
+ * enough for a 15 px name also took its position and its gap from 24 to 34. In a narrow zone that
+ * is a trade the row cannot make. The position and the gap are monospaced columns of a fixed budget,
+ * so their growth comes out of the one flexible column beside them, and on the 850 x 480 face it
+ * would take the name from 82 px to 61 — which is why that face drew its name at 13 under however
+ * much height it had.
+ *
+ * **The second step is the name alone**: the 28 px row's numerals and the 34 px row's name, for a
+ * row tall enough to carry the larger name in a box too narrow to carry the larger numerals. It is
+ * not a size the canvas draws; it is the canvas's two sizes of the one cell that flexes, which is
+ * rule 20 read for a table whose width edge is met by the numerals before its height edge is met by
+ * anything. Its height is the 34 px row's, the height the canvas draws a 15 px name in.
+ *
+ * `rowTypeOf` reads a height as the largest step it allows, so a caller that states only a height
+ * gets the canvas's drawing as before; a {@link listPlan} chooses among the steps its height allows
+ * and takes the name-only one where the width refuses the rest.
  */
-export const ROW_TYPE_STEPS: readonly number[] = [34, 38];
-
-/** The sizes the cells of a row of this height are drawn at. */
-interface RowType {
+export interface RowType {
+  /** The least row height this type is drawn in. */
+  from: number;
   /** Position, gap and the lap times: the numbers a driver reads across a row. */
   lead: number;
   /** The car number, which the companion's taller row promotes to the lead size. */
@@ -172,11 +186,16 @@ interface RowType {
   name: number;
 }
 
+export const LIST_ROW_TYPES: readonly RowType[] = [
+  { from: 0, lead: 24, minor: 16, rating: 24, name: 13 },
+  { from: 34, lead: 24, minor: 16, rating: 24, name: 15 },
+  { from: 34, lead: 34, minor: 24, rating: 24, name: 15 },
+  { from: 38, lead: 34, minor: 34, rating: 24, name: 15 },
+];
+
 /**
- * The type a row of this height carries.
- *
- * The canvas draws 34 / 24 in its 34 px row and steps both down one in the 28 px row a narrow zone
- * takes; the companion's 38 px row promotes the car number to the position's size.
+ * The type a row of this height carries: the largest step of {@link LIST_ROW_TYPES} it is tall enough
+ * for, which is the canvas's own drawing at that height.
  *
  * **The name is 15 from the 34 px row up and 13 in the 28 px row**, where it used to be 13 in both.
  * That is #339: the relative is the page a driver reads most and it drew the column that says *who* at
@@ -184,14 +203,11 @@ interface RowType {
  * row is the row of a zone read at arm's length, and 15 is what that face labels at everywhere else;
  * `density.ts` calls 13 the floor rather than the size.
  *
- * **The 28 px row keeps 13, which is the canvas's own number and needs no argument beyond that.** The
- * argument it was given here was a wrong one: "15 would cost a narrow column three characters — 82 px
- * is seven at 13 and five at 15". Run it. The three boxes the 28 px row is ever handed are 82, 77 and
- * 57 px of name column, and 15 costs one character at the first, one at the second and none at the
- * third: seven against six, six against five, four against four. One character is not a reason, and
- * neither is it an argument for 15 — a second divergence from a catalogue that draws 13 at every shape
- * has to buy more than one glyph of width, and this one buys one. `tables.test.ts` holds all six
- * counts, so the next reader can check the claim rather than redo the arithmetic behind it.
+ * **The 28 px row keeps 13, which is the canvas's own number.** What changed with #328 is that a narrow
+ * zone is no longer held to the 28 px row: a page that declares fewer rows than its box would hold at
+ * 28 has the height for the name-only step, and `listPlan` takes it there. The trade that step makes
+ * is one character of budget for two pixels of every letter left, and it is counted where it is made;
+ * `tables.test.ts` holds the counts.
  *
  * A board is read across a garage rather than at arm's length and types the other way about: the
  * pit wall artboards draw every `.trow` with a 15 px name under 24 px numerals, with the car
@@ -201,12 +217,19 @@ interface RowType {
 function rowTypeOf(rowHeight: number, board = false): RowType {
   if (board) {
     const lead = rowHeight >= 32 ? 24 : 16;
-    return { lead, minor: 16, rating: lead, name: 15 };
+    return { from: 0, lead, minor: 16, rating: lead, name: 15 };
   }
-  if (rowHeight >= 38) return { lead: 34, minor: 34, rating: 24, name: 15 };
-  if (rowHeight >= 34) return { lead: 34, minor: 24, rating: 24, name: 15 };
-  return { lead: 24, minor: 16, rating: 24, name: 13 };
+  let type = LIST_ROW_TYPES[0]!;
+  for (const step of LIST_ROW_TYPES) if (step.from <= rowHeight) type = step;
+  return type;
 }
+
+/** A row stated either way: as the height it is drawn at, or as the type a plan chose for it. */
+export type RowSize = number | RowType;
+
+/** The type a row stated either way carries; a bare height is read as the canvas reads it. */
+const typeOfRow = (row: RowSize | undefined, density: Density, board = false): RowType =>
+  typeof row === 'object' ? row : rowTypeOf(row ?? tableRowHeight(density), board);
 
 /** The face a driver name is set in, which is Barlow Medium at every size and in both drawings. */
 export const NAME_FACE: MeasuredFace = 'BarlowMedium';
@@ -239,8 +262,8 @@ export const SHORTEST_NAME_CHARS = 8;
  * Ten characters is not a promise that every full name fits: `Hannah Fischer` is fourteen and
  * ellipsises wherever the column holds ten. It is the width below which the *default* drawing of the
  * *default* format starts losing letters, which is the one place a reader would call the ellipsis a
- * fault rather than a trade, and it is therefore the floor a row height is not allowed to buy spacing
- * under. `relativeRowPlan` is what enforces that.
+ * fault rather than a trade, and it is therefore the floor a larger type is not allowed to take a
+ * column under. `nameFloorOf` states the rule and `listPlan` is what enforces it.
  */
 export const NAME_SAMPLE = 'Liam Byrne';
 
@@ -323,11 +346,11 @@ export const nameSampleAt = (fs: number): string => (nameIsUpperCased(fs) ? NAME
 /** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
 export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
 
-/** The size a row of this height sets a name in, which is what a caller measuring the column has to measure at. */
-export const nameSizeForRow = (rowHeight: number, board = false): number => rowTypeOf(rowHeight, board).name;
+/** The size a row sets a name in, which is what a caller measuring the column has to measure at. */
+export const nameSizeForRow = (row: RowSize, board = false): number => (typeof row === 'object' ? row : rowTypeOf(row, board)).name;
 
-/** The same, for a row of this height in this drawing: what `fittingColumns` sheds a column to reach. */
-export const nameFloorForRow = (rowHeight: number, board = false): number => nameColumnFloor(nameSizeForRow(rowHeight, board));
+/** The same, for a row in this drawing: what `fittingColumns` sheds a column to reach. */
+export const nameFloorForRow = (row: RowSize, board = false): number => nameColumnFloor(nameSizeForRow(row, board));
 
 interface CellContext {
   /** Item name prefix, unique within the screen. */
@@ -698,6 +721,11 @@ export interface TableSpec {
   /** Row height; {@link tableRowHeight} by default. */
   rowHeight?: number;
   /**
+   * The type the row's cells are drawn at, where a {@link listPlan} chose one; the largest the row
+   * height allows by default. A row taller than its type is the same row with more space around it.
+   */
+  rowType?: RowType;
+  /**
    * How many rows at the top of the field a split list keeps, the rest of them following the player
    * across a limit line. Absent, which is the default, the table is the one contiguous list it has
    * always been, so the face zones and the companion are untouched.
@@ -742,15 +770,39 @@ function rowIndexFor(spec: TableSpec, centre: number): Expr {
  * board is inset by 16 rather than 6 and types its cells differently, so it asks for its own
  * widths and the name column is what pays the difference.
  */
-export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number, board = false): number[] {
+export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: RowSize, board = false): number[] {
   const d = densityOf(density);
-  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density), board), board };
+  const row: RowSpec = { d, type: typeOfRow(rowHeight, density, board), board };
   const raw = columns.map((id) => COLUMNS[id].width(row));
   const fixed = raw.reduce((sum, w) => sum + w, 0);
   const gaps = cellGapOf(board) * Math.max(0, columns.length - 1);
   const flexColumns = raw.filter((w) => w === 0).length;
   const spare = Math.max(0, width - 2 * padXOf(board) - fixed - gaps);
   return raw.map((w) => (w === 0 ? Math.floor(spare / Math.max(1, flexColumns)) : w));
+}
+
+/** Where a column of a row begins, and how wide it is. */
+export interface ColumnSpan {
+  id: ColumnId;
+  left: number;
+  width: number;
+}
+
+/**
+ * Where each column of a row sits: laid out from the padded edge, one cell gap apart, at the widths
+ * {@link columnWidths} gives them.
+ *
+ * The one place that walks a row from left to right, so that the header, every row block and a test
+ * holding a cell against its column all agree on where the column is.
+ */
+export function columnSpans(columns: readonly ColumnId[], frame: Rect, density: Density, row?: RowSize, board = false): ColumnSpan[] {
+  const widths = columnWidths(columns, frame.width, density, row, board);
+  let x = frame.left + padXOf(board);
+  return columns.map((id, i) => {
+    const span = { id, left: x, width: widths[i] ?? 0 };
+    x += span.width + cellGapOf(board);
+    return span;
+  });
 }
 
 /** How many rows of `rowHeight` fit under the header. */
@@ -784,7 +836,8 @@ export function rowsThatFit(frame: Rect, opts: { density: Density; header: boole
  * wrong for one that was told to stop counting: eleven rows of 28 px in a 560 px zone is 328 px of list
  * and 232 px of nothing, which reads as a page that failed to draw rather than as a page with a
  * declared length. Stretching the row instead spends the height on the space between the rows, and
- * `rowTypeOf` stops at 38 so what is bought above that is spacing and never size.
+ * the type stops at 38 so what is bought above that is spacing and never size; {@link listPlan} is
+ * what chooses the type.
  *
  * Never below `rowHeight`, which is the caller's floor: a frame too short for the rows asked for is
  * `table()`'s to clamp, and it does.
@@ -797,14 +850,111 @@ export function rowHeightThatFills(frame: Rect, opts: { density: Density; header
   return Math.max(h, Math.floor((body + gap) / Math.max(1, rows)) - gap);
 }
 
+/**
+ * What a list page declares: the columns and the rows it wants, and how it sheds a column.
+ *
+ * The count is the page's answer to its own question rather than what the box divides out, which is
+ * the half of #328 the table could not supply for itself. `fit` is the page's shedding, since which
+ * columns survive a narrow box is a decision each page takes and not one the table can.
+ */
+export interface ListDeclaration {
+  density: Density;
+  header: boolean;
+  /** The columns the page draws at this shape, before a narrow box sheds any. */
+  columns: readonly ColumnId[];
+  /**
+   * The rows the page wants. A box too short for them at the canvas's row lists fewer. `Infinity` is
+   * a list that wants every row its box holds at that row, which is the pit wall's answer.
+   */
+  rows: number;
+  /** The fewest it asks for however short the box; `table()` clamps what the frame cannot hold. */
+  least?: number;
+  /** Whether the count must be odd, for a list centred on a row of its own. */
+  odd?: boolean;
+  /** The columns that fit a width at a row type, which is the page's shedding. */
+  fit: (columns: readonly ColumnId[], width: number, density: Density, row: RowType) => ColumnId[];
+}
+
+/** What a list page draws: how many rows, at what height, at what type, in which columns. */
+export interface ListPlan {
+  rows: number;
+  rowHeight: number;
+  rowType: RowType;
+  columns: ColumnId[];
+}
+
+/**
+ * The characters a name column holds at a row type in this frame, which is what the cut is counted in.
+ *
+ * Characters and not pixels, because pixels are what the first guard of #339 got wrong: a step that
+ * promotes the position and the gap takes their width out of the name, and a column that still cleared
+ * the eight-character floor could hold nine characters of the budget where it had held ten.
+ */
+export function nameBudget(frame: Rect, list: ListDeclaration, row: RowType): number {
+  const kept = list.fit(list.columns, frame.width, list.density, row);
+  const index = kept.indexOf('name');
+  if (index < 0) return 0;
+  return charsThatFit(NAME_FACE, row.name, columnWidths(kept, frame.width, list.density, row)[index] ?? 0);
+}
+
+/**
+ * The least a step may leave the name, given what the canvas's own row left it.
+ *
+ * **Ten characters is the line where the canvas's row held ten**: `Liam Byrne` is what the default
+ * format makes of the entry every artboard and every trace carries, and a larger type is never the
+ * reason it lost a letter. That is #339's rule and it stands; it is what keeps zone B of the
+ * 1280 x 480 face at the 34 px type rather than the 38, whose car number would take the name from ten
+ * characters to nine.
+ *
+ * **Where the canvas's row already cut it, a step may cost one character and never two.** Below ten
+ * the default sample is ellipsised whatever the row does, so the question the column answers stops
+ * being *is the name whole* and becomes *can it be read from the seat*, and one character of a name
+ * that is already cut buys two pixels of every character left. That is the 850 x 480 face, whose
+ * 82 px column holds seven at 13 and six at 15. A step costing two is refused, which is what keeps a
+ * narrow zone's numerals at 24: at 34 they would take the same column to five.
+ */
+export const nameFloorOf = (had: number): number => (had >= DEFAULT_NAME_CHARS ? DEFAULT_NAME_CHARS : Math.max(0, had - 1));
+
+/**
+ * The row a list page draws: its declared rows first, then the type they can carry, then the rest as
+ * space between them.
+ *
+ * `fitFields` answers a box for a rank in that order and this answers it for a table, which is #328.
+ *
+ * - **Rows.** The page's count, cut to what the box holds at the canvas's row for the density and
+ *   never counted at a shorter one; odd where the page centres on a row of its own.
+ * - **Type.** The largest step of {@link LIST_ROW_TYPES} the rows' height allows that the width
+ *   allows too, the width being the name's budget: {@link nameFloorOf} is the edge. The canvas's own
+ *   row always passes, since the edge is measured from it, so the type is never smaller than the
+ *   canvas draws at the density.
+ * - **Space.** The row is stretched to fill the body, whatever type it carries, so a declared list
+ *   spans its box instead of sitting centred in a pool of slack. A row taller than its type is the
+ *   same row with air between it and the next, and air between the rows of a relative is what
+ *   separates the car ahead from the car behind at a glance.
+ *
+ * The type stops at the 38 px row, the tallest the canvas draws a list at, so rule 20's three edges
+ * all hold: the height of the box, the width of the box, and the top of the ramp.
+ */
+export function listPlan(frame: Rect, list: ListDeclaration): ListPlan {
+  const floor = tableRowHeight(list.density);
+  const fit = { density: list.density, header: list.header, rowHeight: floor };
+  const fits = Math.min(list.rows, rowsThatFit(frame, fit));
+  const counted = list.odd && fits % 2 === 0 ? fits - 1 : fits;
+  const rows = Math.max(list.least ?? 1, counted);
+  const rowHeight = rowHeightThatFills(frame, fit, rows);
+  const canvas = rowTypeOf(floor);
+  const least = nameFloorOf(nameBudget(frame, list, canvas));
+  const steps = LIST_ROW_TYPES.slice(LIST_ROW_TYPES.indexOf(canvas)).filter((step) => step.from <= rowHeight).reverse();
+  const rowType = steps.find((step) => nameBudget(frame, list, step) >= least) ?? canvas;
+  return { rows, rowHeight, rowType, columns: list.fit(list.columns, frame.width, list.density, rowType) };
+}
+
 /** The header row: a label per column, aligned as its cells are, closed on a board by its rule. */
-function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { height: number; padX: number; cellGap: number; board: boolean }): Item[] {
+function headerRow(spec: TableSpec, spans: readonly ColumnSpan[], top: number, geometry: { height: number; board: boolean }): Item[] {
   const d = densityOf(spec.density);
-  const { height, padX, cellGap, board } = geometry;
+  const { height, board } = geometry;
   const items: Item[] = board ? [rule(`${spec.name}.head.rule`, spec.frame.left, top + height - 1, spec.frame.width, 1)] : [];
-  let x = spec.frame.left + padX;
-  spec.columns.forEach((id, i) => {
-    const width = widths[i] ?? 0;
+  spans.forEach(({ id, left: x, width }) => {
     const column = COLUMNS[id];
     const text = column.header;
     // Measured as `label` draws it: a header carries no binding, so it is upper-cased on the way in
@@ -812,7 +962,6 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
     const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
     items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
-    x += width + cellGap;
   });
   return items;
 }
@@ -826,7 +975,7 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
  * evaluates a few hundred times a tick, and the two halves of a split list differ in one thing
  * only: where they start counting.
  */
-function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr; inClass?: Expr }): LayerItem {
+function rowBlock(spec: TableSpec, spans: readonly ColumnSpan[], rowHeight: number, type: RowType, block: { name: string; top: number; rows: number; idx: Expr; inClass?: Expr }): LayerItem {
   const d = densityOf(spec.density);
   const board = spec.board ?? false;
   const { name, top, rows, idx, inClass } = block;
@@ -838,9 +987,7 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
     // the gap. Both run the frame's full width, under the padding the cells are inset by.
     ...(board ? [rule(`${spec.name}.${name}.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
   ];
-  let x = spec.frame.left + padXOf(board);
-  spec.columns.forEach((id, i) => {
-    const width = widths[i] ?? 0;
+  spans.forEach(({ id, left: x, width }) => {
     children.push(
       ...COLUMNS[id].cell({
         name: `${spec.name}.${name}`,
@@ -851,7 +998,7 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
         height: rowHeight,
         d,
         density: spec.density,
-        type: rowTypeOf(rowHeight, board),
+        type,
         isPlayer,
         inPit,
         mode: spec.mode,
@@ -859,7 +1006,6 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
         align: COLUMNS[id].align,
       }),
     );
-    x += width + cellGapOf(board);
   });
   const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${spec.name}.${name}`, children }, { Visible: carAvailable(idx) });
   return { kind: 'layer', name: `${spec.name}.${name}s`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGapOf(board), repeatLeftOffset: 0 };
@@ -913,8 +1059,7 @@ export function table(spec: TableSpec): Item[] {
   const header = spec.header ?? true;
   const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
   const board = spec.board ?? false;
-  const padX = padXOf(board);
-  const cellGap = cellGapOf(board);
+  const type = spec.rowType ?? rowTypeOf(rowHeight, board);
   const rowGap = rowGapOf(board);
   const headerHeight = headerHeightOf(board, rowHeight);
   const fit = { density: spec.density, header, rowHeight, board };
@@ -937,7 +1082,7 @@ export function table(spec: TableSpec): Item[] {
   const capacity = rowsThatFit(splits ? short : spec.frame, fit);
   const rows = Math.max(1, Math.min(spec.rows ?? capacity, capacity));
   const topRows = splits ? Math.min(spec.split ?? 0, rows - 1) : 0;
-  const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight, board);
+  const spans = columnSpans(spec.columns, spec.frame, spec.density, type, board);
   const headTop = spec.frame.top + (header ? headerHeight : 0);
   // The canvas gives every list body `justify-content: center`, so what a declared row count leaves
   // over is shared above and below the block rather than piled under it.
@@ -951,11 +1096,11 @@ export function table(spec: TableSpec): Item[] {
   const stack = rows * rowHeight + (rows - 1) * rowGap + (splits ? SPLIT_HEIGHT + rowGap : 0);
   const slack = board ? 0 : Math.max(0, Math.round((body - stack) / 2));
   const top = headTop + slack;
-  const head = header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, cellGap, board }) : [];
+  const head = header ? headerRow(spec, spans, spec.frame.top, { height: headerHeight, board }) : [];
   if (!splits) {
     // The player sits in the middle of a relative table, so the row index counts from that row.
     const idx = rowIndexFor(spec, Math.ceil(rows / 2));
-    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx, inClass: rowsInClass(spec.classOnly) })];
+    return [...head, rowBlock(spec, spans, rowHeight, type, { name: 'row', top, rows, idx, inClass: rowsInClass(spec.classOnly) })];
   }
   // The player sits in the middle of the window, as in a relative table, so a driver reads as many
   // cars ahead as behind whatever the field does around them.
@@ -967,9 +1112,9 @@ export function table(spec: TableSpec): Item[] {
   const bandTop = top + topRows * (rowHeight + rowGap);
   return [
     ...head,
-    rowBlock(spec, widths, rowHeight, { name: 'row', top, rows: topRows, idx: rowIndex.full() }),
+    rowBlock(spec, spans, rowHeight, type, { name: 'row', top, rows: topRows, idx: rowIndex.full() }),
     ...limitLine(spec, bandTop, splitHiddenCars(topRows, windowRows)),
-    rowBlock(spec, widths, rowHeight, { name: 'splitRow', top: bandTop + SPLIT_HEIGHT + rowGap, rows: windowRows, idx: rowIndex.split(topRows, windowRows) }),
+    rowBlock(spec, spans, rowHeight, type, { name: 'splitRow', top: bandTop + SPLIT_HEIGHT + rowGap, rows: windowRows, idx: rowIndex.split(topRows, windowRows) }),
   ];
 }
 

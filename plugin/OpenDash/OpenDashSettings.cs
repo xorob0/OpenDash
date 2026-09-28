@@ -758,6 +758,11 @@ namespace OpenDashPlugin
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
 
+        /// <summary>The release the last answered check offered, or null when it found this rig current. Persisted
+        /// because the check runs once a day and SimHub starts more often than that, and the idle screen's mark is
+        /// read from it on every start between; see UpdateMark.Remember. #83.</summary>
+        public string OfferedRelease { get; set; }
+
         /// <summary>Fingerprint of each dashboard folder as OpenDash last wrote it, keyed by folder name. An entry
         /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
         /// rather than beside the dashboard so that nothing OpenDash writes into DashTemplates can confuse SimHub's

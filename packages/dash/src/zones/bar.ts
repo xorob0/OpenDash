@@ -28,12 +28,14 @@ import {
   CHARS,
   airTemperature,
   antiRollFront,
-  classOpponentCount,
+  fieldSize,
   clock,
   currentLap,
   incidents,
   localClock,
-  opponentCount,
+  player,
+  positionDigits,
+  positionDrawn,
   playerClass,
   sessionTimeLeft,
   simClock,
@@ -42,7 +44,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { add, fmt, isnull, num, str, iff, eq, game, concat, driver, playerPosition } = ncalc;
+const { add, fmt, isnull, num, str, iff, eq, concat, driver, playerPosition } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -107,15 +109,29 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: clock(sessionTimeLeft()), chars: CHARS.clock },
   { id: 'clock', label: 'Clock', sample: '14:32', bind: localClock(), chars: CHARS.clock },
   { id: 'simulatedTime', label: 'Real time', sample: '19:26', bind: simClock(), chars: CHARS.clock },
+  // The two position cells answer two questions, and cannot contradict each other on one face.
+  //
+  // `position` is the place the rig counts, which is `PositionMode`: in class by default, over the
+  // whole field when the rig asks for that, with the count it is out of following it. It is the
+  // same reading the session module, the pit wall and the companion header draw, through the same
+  // `positionDigits` and `fieldSize`, so the bar is not the one surface where a rig set to class
+  // still reads the whole field. It used to bind `Position` and `OpponentsCount` with no reference
+  // to the mode, which drew `16 / 40` beside `GT3 · P2`. #432.
+  //
+  // `classPosition` is always the class, whatever the mode says, because what it adds is the class
+  // name: with the rig counting overall it is the one cell on the face that still says where the
+  // driver stands in their own class, and with the rig counting in class the two cells agree. The
+  // converse, a cell always counting overall, is not offered here: the setting is what asks for the
+  // whole field, and a bar cell doing so behind its back is the disagreement #432 removed.
   {
     id: 'position',
     label: 'Position',
     short: 'Pos',
     sample: '3',
-    bind: fmt(isnull(game('Position'), num(0)), '0'),
+    bind: positionDigits(player()),
     chars: CHARS.position,
-    denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(opponentCount(), '0')), chars: { digits: 4, specials: 1 } },
-    drawn: drawnFigure({ value: isnull(game('Position'), num(0)), digits: CHARS.position.digits }),
+    denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(fieldSize(), '0')), chars: { digits: 4, specials: 1 } },
+    drawn: positionDrawn(player()),
   },
   // The position through the leaderboard function every other class reading uses, not a GameData
   // property of that name: SimHub publishes none, so the old read fell through to its own default,

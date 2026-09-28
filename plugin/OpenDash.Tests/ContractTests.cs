@@ -62,7 +62,7 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the rev bar mode, the blue flag detail, the two that decide
-            // how a driver is named, the zone face of every face that ships
+            // how a driver is named, the idle screen's two, the zone face of every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
@@ -81,7 +81,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -108,8 +108,9 @@ namespace OpenDashPlugin.Tests
             // own gate joined them, the rig-wide style it first read being a field the panel does not
             // write, and 344 before whether the car flashes at all had to be published beside whether
             // it is flashing now: 47 of the 85 measured cars give no flash, and OpenDash's own redline
-            // flash was going out with them.
-            Assert.Equal(345, names.Count);
+            // flash was going out with them. And 345 before the idle screen could say that a newer
+            // release exists, and which (#83).
+            Assert.Equal(347, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -138,6 +139,10 @@ namespace OpenDashPlugin.Tests
             // rather than about the screen they are reading. #385.
             Assert.Equal("DriverNameFormat", names[18]);
             Assert.Equal("DriverNameTeam", names[19]);
+            // And the idle screen's two, appended for the same reason and shared because every package
+            // ends with an idle screen. Published rather than chosen. #83.
+            Assert.Equal("UpdateAvailable", names[20]);
+            Assert.Equal("UpdateVersion", names[21]);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
             // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30
