@@ -102,7 +102,7 @@ export const SERVICE_TOGGLES: readonly Toggle[] = [
 /**
  * The four the catalogue draws as badges on the car and writes in the row as one summary word.
  *
- * They stay beside that summary wherever the shape keeps the `tyres` part, because `RIGHTS` says
+ * They stay beside that summary wherever the shape keeps the `tyres` part, because `Rights` says
  * which pair and these say which corner, and a crew that has set three of them is a case the six
  * words of the summary do not name.
  */
