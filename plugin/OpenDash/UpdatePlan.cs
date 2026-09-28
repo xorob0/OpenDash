@@ -54,6 +54,36 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>
+    /// A yes to replacing edited dashboards, carried from the run that staged a plugin to the start that writes them.
+    /// </summary>
+    /// <remarks>
+    /// Since #438 an update stages the plugin and the dashboards come inside it, so the process that asked "replace
+    /// your version?" is never the one that replaces anything: the new plugin's first start writes the dashboards,
+    /// and without the answer it holds every edited one back, leaving new code reading old dashboards. The answer is
+    /// therefore kept as the version it was given for, and honoured only by a plugin of exactly that version, so a
+    /// swap that never happened cannot spend it on the old plugin's dashboards and a later version cannot inherit it.
+    /// </remarks>
+    public static class EditedConsent
+    {
+        /// <summary>Whether the plugin starting now should replace edited dashboards.</summary>
+        public static bool AppliesNow(string consentedFor, string running)
+        {
+            if (string.IsNullOrWhiteSpace(consentedFor) || string.IsNullOrWhiteSpace(running)) return false;
+            return Versioning.VersionCompare(consentedFor, running) == 0;
+        }
+
+        /// <summary>
+        /// Whether the answer is spent or stale after this start: spent when it applied, stale when no swap is still
+        /// waiting to bring the version it was given for. Kept only while the old plugin runs and a swap is pending.
+        /// </summary>
+        public static bool Forget(string consentedFor, string running, bool swapPending)
+        {
+            if (string.IsNullOrWhiteSpace(consentedFor)) return false;
+            return AppliesNow(consentedFor, running) || !swapPending;
+        }
+    }
+
     /// <summary>Packages held in memory, for installing what has just been downloaded.</summary>
     public sealed class DownloadedPackageSource : IPackageSource
     {

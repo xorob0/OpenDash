@@ -758,6 +758,11 @@ namespace OpenDashPlugin
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
 
+        /// <summary>The release a person said yes to replacing their edited dashboards for, or null. Written when an
+        /// update stages the plugin, read and cleared by that plugin's first start, which is what writes the
+        /// dashboards; see EditedConsent.</summary>
+        public string ReplaceEditedFor { get; set; }
+
         /// <summary>Fingerprint of each dashboard folder as OpenDash last wrote it, keyed by folder name. An entry
         /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
         /// rather than beside the dashboard so that nothing OpenDash writes into DashTemplates can confuse SimHub's
