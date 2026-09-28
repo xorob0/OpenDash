@@ -215,6 +215,8 @@ export const SHEDDING: Record<string, Shedding> = {
   //
   // `tall` keeps the last lap where the drawing puts a licence badge this build has no read for,
   // and no class chip: the catalogue's 12 px `B` there is the badge and not a class. zones.md §5.
+  // Both of these rows were read off the drawings again for #341 and stand: `tall narrow` is the
+  // code and the gap, and `tall` adds the badge and the bare last lap and draws no number.
   opponents: fields({
     wide: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap', 'ahead.rating', 'behind.rating'],
     grid: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],

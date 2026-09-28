@@ -672,7 +672,16 @@ holding a drawing against a zone should find the argument rather than suspect a 
 - **Opponents at `tall`.** The last lap, where the drawing has a licence badge instead. The badge
   is one the module has no read for, and the 12 px `B` the catalogue draws there is that badge and
   not the class chip an earlier transcription of this row took it for, so the class does not appear
-  at that shape either.
+  at that shape either. [#341](https://github.com/xorob0/OpenDash/issues/341) read the two drawings
+  again and confirms both rows: `tall narrow · 274 by 300` draws the direction triangle, the flag, the
+  code and the gap, and `tall · 360 by 470` those four with the badge and the bare last lap; the badge
+  is 18 px high with a 12 px `B` in the primary text colour, where the class chip is 20 high with a
+  13 px `GT3` in the label colour. The real boxes draw the declared sets: the faces' 225 to 250 px
+  narrow zones keep the name and the gap, and the 1280 × 720 face's 445 × 516 and 445 × 560, the pit
+  wall's 507 × 427 portrait zones and the portrait companion page add the last lap, which
+  `shedding.test.ts` holds at every zone body the build produces. The nano's 245 × 156 is the one box
+  that sheds the names, and is pinned there. The ticket's own reading of `tall`, that it keeps the
+  class, is the transcription this row corrects.
 
 Everywhere else the drawing names a field the module does not build, which is the opposite case and
 is not a deviation: delta's three sector deltas, the rating on a list row and the pit window. They
