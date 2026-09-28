@@ -94,9 +94,9 @@ describe('metrics', () => {
 
 
   test('label and numeral produce integer, top-aligned boxes', () => {
-    const l = label('x.label', 'current', 16, 52, 223);
+    const l = label('x.label', 'Current', 16, 52, 223);
     expect(l.rect).toEqual({ left: 16, top: 51, width: 223, height: 19 });
-    expect(l.text).toBe('CURRENT');
+    expect(l.text).toBe('Current');
     expect(l.vAlign).toBe('top');
     expect(l.font).toBe('Barlow');
     expect(l.fontWeight).toBe('Medium');

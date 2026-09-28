@@ -132,9 +132,9 @@ namespace OpenDashPlugin
         /// instead, so this is the one place the kind is still spelled out.</summary>
         private static string KindLabel(ScreenInstance screen)
         {
-            if (screen.IsCompanion) return "companion";
-            if (screen.IsPitWall) return "pit wall";
-            return string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "slots" : "face";
+            if (screen.IsCompanion) return "Companion";
+            if (screen.IsPitWall) return "Pit wall";
+            return string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : "Face";
         }
 
         private bool Installed(ScreenInstance screen)
@@ -229,7 +229,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
-        /// through Ui.Label, which upper-cases them.</summary>
+        /// through Ui.Label, which draws them as written, so the kind leads in sentence case.</summary>
         private static string ScreenFacts(ScreenInstance screen)
         {
             return KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty);

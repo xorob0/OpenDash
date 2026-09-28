@@ -71,7 +71,7 @@ namespace OpenDashPlugin
         /// have one. A kind is either drawn or written, never neither.</summary>
         public static string KindWord(string kind)
         {
-            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "slots" : null;
+            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : null;
         }
 
         /// <summary>The card's second line: the size OpenDash installed, behind the kind when the kind has

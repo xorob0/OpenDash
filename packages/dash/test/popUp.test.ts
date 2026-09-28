@@ -290,7 +290,7 @@ describe('the three conditions, each a state or arithmetic over a published prop
   });
 
   test('the lap time is the label Lap over the last lap, with the delta beside it', () => {
-    expect(textNamed(LAP_POP_UP, 'label').text).toBe('LAP');
+    expect(textNamed(LAP_POP_UP, 'label').text).toBe('Lap');
     expect(textNamed(LAP_POP_UP, 'value').textColor).toBe(ds.color.text.primary);
     expect(textNamed(LAP_POP_UP, 'value').bindings?.Text?.formula).toContain('DataCorePlugin.GameData.LastLapTime');
     expect(textNamed(LAP_POP_UP, 'secondary').textColor).toBe(ds.color.text.secondary);
@@ -301,7 +301,7 @@ describe('the three conditions, each a state or arithmetic over a published prop
     expect(FUEL_POP_UP.when).toContain('DataCorePlugin.Computed.Fuel_RemainingLaps');
     expect(FUEL_POP_UP.when).toContain('OpenDash.LightsLowFuelLaps');
     expect(FUEL_POP_UP.when).toContain('OpenDash.FlagBoxLowFuelLaps');
-    expect(textNamed(FUEL_POP_UP, 'label').text).toBe('FUEL');
+    expect(textNamed(FUEL_POP_UP, 'label').text).toBe('Fuel');
     expect(textNamed(FUEL_POP_UP, 'value').textColor).toBe('#FF2D46');
   });
 

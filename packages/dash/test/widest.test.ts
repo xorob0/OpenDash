@@ -45,7 +45,7 @@ describe('the reading of a binding', () => {
   });
 
   test('a case function is applied, since KPA and BAR are not kPa and bar', () => {
-    // #384's tyre pressure unit, which `unit()` draws through `ucase`.
+    // A unit wrapped in `ucase`, which is how `unit()` drew #384's tyre pressure unit before #422.
     expect(drawnFloors("ucase(if([Unit] = 'Psi', 'psi', if([Unit] = 'Bar', 'bar', 'kPa')))").sort()).toEqual(['BAR', 'KPA', 'PSI']);
     expect(drawnFloors("lcase('KM/H')")).toEqual(['km/h']);
     expect(drawnFloors("tcase('liam byrne')")).toEqual(['Liam Byrne']);

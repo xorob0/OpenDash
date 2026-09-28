@@ -141,10 +141,10 @@ describe('what it draws', () => {
     }
   });
 
-  test('the state line names the state, upper-cased, in the label face', () => {
+  test('the state line names the state, as it is written, in the label face', () => {
     const state = textsOf(idleOf(MAINS[0]!.main)).find((i) => i.name === 'idle.state')!;
-    expect(state.text).toBe(IDLE_STATE.toUpperCase());
-    expect(state.text).toBe('NO GAME RUNNING');
+    expect(state.text).toBe(IDLE_STATE);
+    expect(state.text).toBe('No game running');
     expect({ font: state.font, weight: state.fontWeight }).toEqual({ font: ds.font.label, weight: 'Medium' });
     // No binding: SimHub is showing this screen because no game is running, so there is nothing to ask.
     expect(state.bindings).toBeUndefined();

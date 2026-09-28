@@ -167,18 +167,18 @@ describe('the drawing', () => {
   });
 
   test('every name fits the narrowest banner of the eight faces without being shortened', () => {
-    // 200 px at 600 x 686, where "DISENGAGE LIMITER" is the longest of the five at 135 px. It is
+    // 200 px at 600 x 686, where "Disengage limiter" is the longest of the five. It is
     // measured here as well as by the face's own fit suite because this is where the copy is
     // chosen: a sixth state with a longer name would fail on the sentence rather than on a face.
     const narrowest = Math.min(...ZONE_FACES.map((f) => f.zones.pitLimiter.width));
     for (const spec of PIT_ALERTS) {
-      const width = measureText('BarlowMedium', spec.label.toUpperCase(), ds.size.label);
+      const width = measureText('BarlowMedium', spec.label, ds.size.label);
       expect({ id: spec.id, width, box: narrowest, fits: width <= narrowest }).toMatchObject({ fits: true });
     }
   });
 
-  test('the names are drawn upper-cased, as every band on the face is', () => {
+  test('the names are drawn as they are written, in sentence case like every label on the face', () => {
     const labels = items.filter((i): i is TextItem => i.kind === 'text');
-    expect(labels.map((l) => l.text)).toEqual(PIT_ALERTS.map((a) => a.label.toUpperCase()));
+    expect(labels.map((l) => l.text)).toEqual(PIT_ALERTS.map((a) => a.label));
   });
 });

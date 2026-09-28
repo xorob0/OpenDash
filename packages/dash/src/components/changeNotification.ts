@@ -149,7 +149,7 @@ export function changeNotification(frame: Rect, value: TrackedValue, prefix = 'n
   const right = frame.left + frame.width - CHANGE_NOTIFICATION_PAD_X;
   const trend = rect(right - TREND_SIZE, inner + (height - TREND_SIZE) / 2, TREND_SIZE, TREND_SIZE);
   const reading = monoWidth(cells('SemiBold', size), valueChars(value)) + boxSlack(size);
-  const labelWidth = Math.ceil(measureText('BarlowMedium', value.notice.toUpperCase(), ds.size.label)) + boxSlack(ds.size.label);
+  const labelWidth = Math.ceil(measureText('BarlowMedium', value.notice, ds.size.label)) + boxSlack(ds.size.label);
   const children: Item[] = [
     band(`${name}.box`, frame, ds.purpose.popUp.surface),
     band(`${name}.rule`, rect(frame.left, frame.top, frame.width, CHANGE_NOTIFICATION_RULE), ds.purpose.popUp.rule),

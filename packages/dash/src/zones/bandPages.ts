@@ -198,7 +198,7 @@ const fuel: readonly BandField[] = [
     drawn: drawnFigure({ value: fuelLevel(), digits: 3, decimals: 2 }),
     after: 'L',
     afterBind: fuelUnit(),
-    afterWidest: 'GAL',
+    afterWidest: 'gal',
     color: ds.purpose.fuel.nominal,
   },
   { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
@@ -297,8 +297,8 @@ const weather: readonly BandField[] = [
     chars: CHARS.pressure,
     after: '°',
   },
-  { id: 'wind', label: 'Wind', sample: '12', bind: fmt(windKmh(), '0'), drawn: drawnFigure({ value: windKmh(), digits: CHARS.temperature.digits }), chars: CHARS.temperature, after: 'KM/H' },
-  { id: 'grip', label: 'Grip', sample: 'GREEN', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 7, specials: 0 }, widest: 'MODERATE' },
+  { id: 'wind', label: 'Wind', sample: '12', bind: fmt(windKmh(), '0'), drawn: drawnFigure({ value: windKmh(), digits: CHARS.temperature.digits }), chars: CHARS.temperature, after: 'km/h' },
+  { id: 'grip', label: 'Grip', sample: 'Green', bind: isnull(game('TrackGripStatus'), str('--')), chars: { digits: 7, specials: 0 }, widest: 'Moderate' },
 ];
 
 /**
@@ -586,7 +586,7 @@ const unitWidth = (field: BandField): number => {
   if (!field.after) return 0;
   // Measured by the wider of the two spellings where the sim names the unit, since either may be
   // the one drawn and a box cut for the shorter clips the longer.
-  const drawn = [field.after, ...(field.afterWidest ? [field.afterWidest] : [])].map((s) => measureText('BarlowMedium', s.toUpperCase(), ds.size.labelSm));
+  const drawn = [field.after, ...(field.afterWidest ? [field.afterWidest] : [])].map((s) => measureText('BarlowMedium', s, ds.size.labelSm));
   return Math.ceil(Math.max(...drawn)) + 2;
 };
 
@@ -601,7 +601,7 @@ function valueWidthOf(field: BandField, valueFs: number): number {
 function fieldWidth(field: BandField, valueFs: number, labelFs: number): number {
   const value = valueWidthOf(field, valueFs);
   const after = field.after ? FIELD_GAP + unitWidth(field) : 0;
-  const text = Math.ceil(measureText('BarlowMedium', field.labelWidest ?? field.label.toUpperCase(), labelFs)) + 2;
+  const text = Math.ceil(measureText('BarlowMedium', field.labelWidest ?? field.label, labelFs)) + 2;
   return Math.ceil(Math.max(value + after, text));
 }
 
@@ -637,7 +637,7 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
     present: field.present,
     draw: (at) => {
       const items: Item[] = [
-        label(`${prefix}${field.id}.label`, field.label.toUpperCase(), at.x, labelTop, w, {
+        label(`${prefix}${field.id}.label`, field.label, at.x, labelTop, w, {
           size: labelFs,
           bind: field.labelBind,
           widest: field.labelWidest,
@@ -763,12 +763,12 @@ function inlineValueSize(height: number, preferred: number): number {
 function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: string, frame: Rect, valueFs: number, labelFs: number): RankMember[] {
   const valueTop = frame.top + (frame.height - valueFs) / 2;
   const wordTop = frame.top + (frame.height - labelFs) / 2;
-  const wordWidth = Math.ceil(measureText('BarlowMedium', page.word.toUpperCase(), labelFs)) + 2;
+  const wordWidth = Math.ceil(measureText('BarlowMedium', page.word, labelFs)) + 2;
   const word: RankMember = {
     id: 'word',
     width: wordWidth,
     draw: (at) => [
-      label(`${prefix}word`, page.word.toUpperCase(), at.x, wordTop, wordWidth, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+      label(`${prefix}word`, page.word, at.x, wordTop, wordWidth, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
     ],
   };
 
@@ -968,7 +968,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   let x = frame.left + m.padX + letterRoom(frame);
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
-    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), x, labelTop, w, { size: labelFs }));
+    items.push(label(`${prefix}${field.id}.label`, field.label, x, labelTop, w, { size: labelFs }));
     items.push(
       field.widest
         ? label(`${prefix}${field.id}.value`, field.sample, x, valueTop, w, {
@@ -1001,7 +1001,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   for (const field of [...clocks].reverse()) {
     const w = fieldWidth(field, valueFs, labelFs);
     right -= w;
-    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), right, labelTop, w, { size: labelFs, hAlign: 'right' }));
+    items.push(label(`${prefix}${field.id}.label`, field.label, right, labelTop, w, { size: labelFs, hAlign: 'right' }));
     items.push(numeral(`${prefix}${field.id}.value`, field.sample, right, valueTop, valueFs, field.chars, { bind: field.bind, width: w, hAlign: 'right' }));
     right -= CORNER_GAP;
   }

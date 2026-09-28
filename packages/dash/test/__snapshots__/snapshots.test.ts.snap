@@ -9,7 +9,7 @@ exports[`card snapshots card 0 currentLap 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "CURRENT",
+    "Text": "Current",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -80,7 +80,7 @@ exports[`card snapshots card 1 lastLap 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "LAST",
+    "Text": "Last",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -151,7 +151,7 @@ exports[`card snapshots card 2 bestLap 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "BEST",
+    "Text": "Best",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -222,7 +222,7 @@ exports[`card snapshots card 3 delta 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "DELTA",
+    "Text": "Delta",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -293,7 +293,7 @@ exports[`card snapshots card 4 position 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "POSITION",
+    "Text": "Position",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -396,7 +396,7 @@ exports[`card snapshots card 5 session 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "LAP",
+    "Text": "Lap",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -411,7 +411,7 @@ exports[`card snapshots card 5 session 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+          "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
         },
         "Mode": 2
       }
@@ -519,7 +519,7 @@ exports[`card snapshots card 6 fuel 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "FUEL",
+    "Text": "Fuel",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -594,7 +594,7 @@ exports[`card snapshots card 6 fuel 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+          "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
         },
         "Mode": 2
       },
@@ -622,7 +622,7 @@ exports[`card snapshots card 7 fuelLaps 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "FUEL LAPS",
+    "Text": "Fuel laps",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -835,7 +835,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "TYRES °C · LAST STOP",
+    "Text": "Tyres °C · last stop",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -850,7 +850,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+          "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
         },
         "Mode": 2
       }
@@ -1336,7 +1336,7 @@ exports[`card snapshots card 11 tyrePressures 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "PRESSURES PSI · LAST STOP",
+    "Text": "Pressures psi · last stop",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -1351,7 +1351,7 @@ exports[`card snapshots card 11 tyrePressures 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')"
+          "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
         },
         "Mode": 2
       }
@@ -1541,7 +1541,7 @@ exports[`card snapshots card 12 speed 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 15,
-    "Text": "SPEED",
+    "Text": "Speed",
     "TextColor": "#FF5A6069",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -1601,7 +1601,7 @@ exports[`card snapshots card 12 speed 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 13,
-    "Text": "KM/H",
+    "Text": "km/h",
     "TextColor": "#FF8A9099",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -1616,7 +1616,7 @@ exports[`card snapshots card 12 speed 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+          "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
         },
         "Mode": 2
       },
@@ -3577,7 +3577,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Medium",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "PIT LIMITER",
+        "Text": "Pit limiter",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -8187,7 +8187,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -11152,14 +11152,14 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 896,
+          "Left": 904,
           "Top": 350,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -11321,7 +11321,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11412,7 +11412,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11503,7 +11503,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11594,7 +11594,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11685,7 +11685,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11808,7 +11808,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -11823,7 +11823,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -11951,7 +11951,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -12026,7 +12026,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -12074,7 +12074,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -12347,7 +12347,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -12362,7 +12362,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -12868,7 +12868,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI · LAST STOP",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -12883,7 +12883,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -13093,7 +13093,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -13153,7 +13153,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -13168,7 +13168,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -15408,7 +15408,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -17777,14 +17777,14 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 576,
+          "Left": 584,
           "Top": 350,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -17946,7 +17946,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18037,7 +18037,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18128,7 +18128,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18219,7 +18219,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18310,7 +18310,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18433,7 +18433,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18448,7 +18448,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -18576,7 +18576,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18651,7 +18651,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -18699,7 +18699,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18972,7 +18972,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -18987,7 +18987,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -19197,7 +19197,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -19212,7 +19212,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -19422,7 +19422,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -19482,7 +19482,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -19497,7 +19497,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -21737,7 +21737,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -24346,14 +24346,14 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 576,
+          "Left": 584,
           "Top": 310,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -24515,7 +24515,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -24606,7 +24606,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -24697,7 +24697,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -24788,7 +24788,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -24879,7 +24879,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25002,7 +25002,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25017,7 +25017,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -25145,7 +25145,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25220,7 +25220,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -25268,7 +25268,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25541,7 +25541,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25556,7 +25556,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -25766,7 +25766,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25781,7 +25781,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -25991,7 +25991,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -26051,7 +26051,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -26066,7 +26066,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -28306,7 +28306,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -30302,14 +30302,14 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 361,
+          "Left": 369,
           "Top": 350,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -30471,7 +30471,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30562,7 +30562,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30653,7 +30653,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30744,7 +30744,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30835,7 +30835,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30958,7 +30958,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -30973,7 +30973,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -31101,7 +31101,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -31176,7 +31176,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -31224,7 +31224,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -31497,7 +31497,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -31512,7 +31512,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -31722,7 +31722,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI · LAST STOP",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -31737,7 +31737,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -31947,7 +31947,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -32007,7 +32007,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -32022,7 +32022,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -34262,7 +34262,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -36213,14 +36213,14 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 336,
+          "Left": 344,
           "Top": 350,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -36382,7 +36382,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36473,7 +36473,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36564,7 +36564,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36655,7 +36655,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36746,7 +36746,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36869,7 +36869,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -36884,7 +36884,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -37012,7 +37012,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37087,7 +37087,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -37135,7 +37135,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37408,7 +37408,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37423,7 +37423,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -37633,7 +37633,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37648,7 +37648,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -37858,7 +37858,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37918,7 +37918,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -37933,7 +37933,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -40203,7 +40203,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -42688,14 +42688,14 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 576,
+          "Left": 584,
           "Top": 470,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -42857,7 +42857,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -42948,7 +42948,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43039,7 +43039,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43130,7 +43130,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43221,7 +43221,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43344,7 +43344,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43359,7 +43359,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -43487,7 +43487,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43562,7 +43562,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -43610,7 +43610,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43883,7 +43883,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43898,7 +43898,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -44108,7 +44108,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -44123,7 +44123,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -44333,7 +44333,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -44393,7 +44393,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -44408,7 +44408,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -46618,7 +46618,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -49501,14 +49501,14 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 336,
+          "Left": 344,
           "Top": 215,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -49670,7 +49670,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -49761,7 +49761,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -49852,7 +49852,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -49943,7 +49943,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50034,7 +50034,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50157,7 +50157,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50172,7 +50172,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -50300,7 +50300,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50375,7 +50375,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -50423,7 +50423,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50696,7 +50696,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50711,7 +50711,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -50921,7 +50921,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI · LAST STOP",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -50936,7 +50936,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -51146,7 +51146,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -51206,7 +51206,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -51221,7 +51221,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -53431,7 +53431,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -55232,14 +55232,14 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 236,
+          "Left": 244,
           "Top": 453,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -55401,7 +55401,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55492,7 +55492,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55583,7 +55583,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55674,7 +55674,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55765,7 +55765,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55888,7 +55888,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -55903,7 +55903,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -56031,7 +56031,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56106,7 +56106,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -56154,7 +56154,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56427,7 +56427,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56442,7 +56442,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -56652,7 +56652,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56667,7 +56667,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -56877,7 +56877,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56937,7 +56937,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -56952,7 +56952,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -59128,7 +59128,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -60269,14 +60269,14 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 176,
+          "Left": 184,
           "Top": 312,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -60438,7 +60438,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60529,7 +60529,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60620,7 +60620,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60711,7 +60711,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60802,7 +60802,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60925,7 +60925,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -60940,7 +60940,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -61068,7 +61068,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61143,7 +61143,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -61191,7 +61191,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61464,7 +61464,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C",
+          "Text": "Tyres °C",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61479,7 +61479,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C')))"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C')))"
               },
               "Mode": 2
             }
@@ -61689,7 +61689,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61704,7 +61704,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi')))"
               },
               "Mode": 2
             }
@@ -61914,7 +61914,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61974,7 +61974,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -61989,7 +61989,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -64243,7 +64243,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
               "FontWeight": "Medium",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "PIT LIMITER",
+              "Text": "Pit limiter",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -66012,14 +66012,14 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "NO GAME RUNNING",
+          "Text": "No game running",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
-          "Left": 336,
+          "Left": 344,
           "Top": 510,
-          "Width": 128,
+          "Width": 113,
           "Height": 19,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -66181,7 +66181,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "CURRENT",
+          "Text": "Current",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66272,7 +66272,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAST",
+          "Text": "Last",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66363,7 +66363,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "BEST",
+          "Text": "Best",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66454,7 +66454,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "DELTA",
+          "Text": "Delta",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66545,7 +66545,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "POSITION",
+          "Text": "Position",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66668,7 +66668,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "LAP",
+          "Text": "Lap",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66683,7 +66683,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'TIME LEFT', 'LAP')"
+                "Expression": "if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) < (86400)))), 'Time left', 'Lap')"
               },
               "Mode": 2
             }
@@ -66811,7 +66811,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL",
+          "Text": "Fuel",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -66886,7 +66886,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), 'gal', 'L')"
               },
               "Mode": 2
             },
@@ -66934,7 +66934,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "FUEL LAPS",
+          "Text": "Fuel laps",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -67207,7 +67207,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "TYRES °C · LAST STOP",
+          "Text": "Tyres °C · last stop",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -67222,7 +67222,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('TYRES ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · LAST STOP')"
+                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -67432,7 +67432,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "PRESSURES PSI",
+          "Text": "Pressures psi",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -67447,7 +67447,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')))"
+                "Expression": "('Pressures ') + (if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Kpa'), 'kPa', if((isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi')) = ('Bar'), 'bar', 'psi')))"
               },
               "Mode": 2
             }
@@ -67657,7 +67657,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 15,
-          "Text": "SPEED",
+          "Text": "Speed",
           "TextColor": "#FF5A6069",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -67717,7 +67717,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -67732,7 +67732,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "ucase(if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h'))"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },

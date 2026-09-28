@@ -41,13 +41,13 @@ const COMPANION_GAP = { x: 28, y: 12 } as const;
  *
  * No word sits beside it on the axle line, which #384 asked for and the drawing has no room for: the
  * chip is centred there, the only band free of the two inboard drawings is the column gap of 18 to
- * 28 px, and the chip's own 80 px already overlap each front tyre by about thirty. A `COMPOUND`
- * beside it measures 66 px more and would cover a third of each of them. What names it instead is a
+ * 28 px, and the chip's own 78 px already overlap each front tyre by about thirty. A `Compound`
+ * beside it measures 62 px more and would cover a third of each of them. What names it instead is a
  * caption under the grid, where the page already explains the tick, drawn wherever the footer line
  * has the room for a second sentence; the room for a label on the axle line is the canvas's to give,
  * and the disagreement is recorded in `docs/design/zones.md` §10 rather than settled here.
  */
-const CHIP = { height: 28, size: 15, padding: 13, widest: 'MEDIUM' } as const;
+const CHIP = { height: 28, size: 15, padding: 13, widest: 'Medium' } as const;
 
 /** Gap between two captions sharing a line. */
 const CAPTION_GAP = 20;
@@ -84,8 +84,8 @@ export const CAPTIONS: readonly Caption[] = [
  */
 const SHED_FIRST: readonly string[] = ['tread', 'compound', 'tick'];
 
-/** A caption's box: the sentence upper-cased, and the pixel of slack WPF needs not to clip it. */
-const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text.toUpperCase(), fs)) + 1;
+/** A caption's box: the sentence as it is drawn, and the pixel of slack WPF needs not to clip it. */
+const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text, fs)) + 1;
 
 /**
  * The captions the line holds, in the order they are drawn: as many as fit, shed by
@@ -151,7 +151,7 @@ export const tyres = defineModule('tyres', (ctx) => {
             height: CHIP.height,
             size: CHIP.size,
             width: chipWidth,
-            bind: ncalc.ucase(carCompound(player())),
+            bind: carCompound(player()),
           }),
         ];
       }),

@@ -175,7 +175,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The captions are the canvas's own wording, which abbreviates what strip.ts spells out; the panel
-        /// cannot carry the full spelling, because the caption is drawn as tracked uppercase and the 3/9/3's
+        /// cannot carry the full spelling, because the caption is drawn as a tracked label and the 3/9/3's
         /// four device families at their full length are wider than the row is. Every other shape the build
         /// emits is a generic run and joins a grouped row, which is the rule PanelLightRowsTests holds
         /// against strip.ts: a shape that gains a device family there and no caption here fails it.
@@ -183,10 +183,10 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<KeyValuePair<string, string>> NamedShapes =
             new[]
             {
-                new KeyValuePair<string, string>("4-14-4", "strip" + Join + "SimRep MLD, Ascher"),
-                new KeyValuePair<string, string>("4-14-4-reversed", "strip" + Join + "SimRep MLD, wired from the far end"),
-                new KeyValuePair<string, string>("3-9-3-fanatec", "strip" + Join + "Fanatec wheels in SimHub"),
-                new KeyValuePair<string, string>("3-10-3", "strip" + Join + "GridSim Lab GTSL Pro"),
+                new KeyValuePair<string, string>("4-14-4", "Strip" + Join + "SimRep MLD, Ascher"),
+                new KeyValuePair<string, string>("4-14-4-reversed", "Strip" + Join + "SimRep MLD, wired from the far end"),
+                new KeyValuePair<string, string>("3-9-3-fanatec", "Strip" + Join + "Fanatec wheels in SimHub"),
+                new KeyValuePair<string, string>("3-10-3", "Strip" + Join + "GridSim Lab GTSL Pro"),
             };
 
         /// <summary>The counts a caption writes as a word. Beyond the table it falls back to the digits,
@@ -249,7 +249,7 @@ namespace OpenDashPlugin
             // still a profile of SimHub's LED driver, which is what the caption says and all it can say.
             foreach (var entry in rest.Where(e => e.Value == null))
             {
-                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "strip", new[] { entry.Key.ShapeId }));
+                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "Strip", new[] { entry.Key.ShapeId }));
             }
             return rows;
         }
@@ -258,9 +258,9 @@ namespace OpenDashPlugin
         /// brow is, and anything else is named by how many LEDs sit at each end.</summary>
         public static string SideNoun(int side, int count)
         {
-            if (side == 0) return count == 1 ? "bare run" : "bare runs and brows";
+            if (side == 0) return count == 1 ? "Bare run" : "Bare runs and brows";
             var each = side == 1 ? "one LED at each end" : Word(side) + " LEDs at each end";
-            return count == 1 ? "strip, " + each : "strips, " + each;
+            return count == 1 ? "Strip, " + each : "Strips, " + each;
         }
 
         /// <summary>A group of lengths, named by its two ends: "OpenDash brow 9 … 25".</summary>

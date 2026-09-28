@@ -140,7 +140,7 @@ describe('the split keeps the top of the field and follows the player', () => {
     expect(evaluate(idx, 16, { k: CENTRE })).toBe(16);
     expect(evaluate(idx, 16, { k: WINDOW })).toBe(18);
     expect(hiddenCount(list, 16)).toBe(7);
-    expect(formula(named(list, '.limit.count')!, 'Text')).toContain("' CARS NOT SHOWN'");
+    expect(formula(named(list, '.limit.count')!, 'Text')).toContain("' cars not shown'");
   });
 
   test('a field the rows can all hold is never cut, wherever the player is in it', () => {
@@ -197,17 +197,19 @@ describe('the limit line is drawn where the canvas draws it', () => {
   test('the label is twelve pixels clear of both lines and centred in the row', () => {
     expect(count.rect.left - (before.rect.left + before.rect.width)).toBe(CLEARANCE);
     expect(after.rect.left - (count.rect.left + count.rect.width)).toBe(CLEARANCE);
-    expect(count.rect.left + count.rect.width / 2).toBeCloseTo(FRAME.left + FRAME.width / 2, 0);
+    // To the half pixel: a box an odd number of pixels wide has no whole-pixel left that centres it,
+    // which is what `cars not shown` is and what the capitals it replaced (#422) happened not to be.
+    expect(Math.abs(count.rect.left + count.rect.width / 2 - (FRAME.left + FRAME.width / 2))).toBeLessThanOrEqual(0.5);
     expect(count.fontSize).toBe(13);
     expect(count.hAlign).toBe('center');
   });
 
   test('the bound count declares the widest text it can draw, and the box holds it', () => {
     expect(count.widest).toBeTruthy();
-    expect(count.widest).toMatch(/CARS NOT SHOWN$/);
+    expect(count.widest).toMatch(/cars not shown$/);
     // Every digit, since the count is a number and the widest is measured rather than guessed.
     for (const digit of '0123456789') {
-      const drawn = measureText('BarlowMedium', `${digit}${digit} CARS NOT SHOWN`, count.fontSize);
+      const drawn = measureText('BarlowMedium', `${digit}${digit} cars not shown`, count.fontSize);
       expect({ digit, drawn, box: count.rect.width, fits: drawn <= count.rect.width }).toMatchObject({ fits: true });
     }
   });

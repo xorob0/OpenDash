@@ -173,7 +173,7 @@ describe('each board draws the columns its artboard heads', () => {
 describe('the iRating column', () => {
   for (const b of BOARDS.filter((x) => x.columns.includes('rating'))) {
     test(`${b.page}: is headed by the word rather than the abbreviation`, () => {
-      expect({ page: b.page, header: headerOf(b, 'rating')?.text }).toEqual({ page: b.page, header: 'IRATING' });
+      expect({ page: b.page, header: headerOf(b, 'rating')?.text }).toEqual({ page: b.page, header: 'iRating' });
     });
 
     test(`${b.page}: and is drawn at 24 px, right aligned, in thousands to one decimal`, () => {

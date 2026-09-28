@@ -36,7 +36,7 @@ The four shift RPMs, the redline and the forward-gear count are `{{placeholders}
 
 | | What it holds still |
 |---|---|
-| `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · GO INTO A SESSION` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
+| `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · Go into a session` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
 | `untimed` | A lap-counted race that publishes no session clock, which is what iRacing publishes for one. It is the scenario for the laps form of #387's fuel margin, and for the session page counting laps rather than time. Also `green`'s held lap. |
 
 Neither has a committed trace; `UNTRACED_SCENARIOS` in [scripts/emulator.ts](../../../scripts/emulator.ts)

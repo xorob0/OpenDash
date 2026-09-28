@@ -39,7 +39,7 @@
  * offer, the update mark below. Nothing else, and in particular no reading that does not exist without
  * a game: a last best lap, the car, the driver and the session are
  * all a game's to publish, and a row of dashes where one of them would go is the thing the racing face
- * was already doing wrong. `docs/design/voice.md` is why the line reads "NO GAME RUNNING" rather than
+ * was already doing wrong. `docs/design/voice.md` is why the line reads "No game running" rather than
  * a sentence about SimHub waiting for telemetry -- it names the state and leaves the mechanism out.
  *
  * The three are a list rather than an arrangement, because #736 hands the idle screen to the user and
@@ -156,7 +156,7 @@ const left = (cx: number, width: number): number => Math.round(cx - width / 2);
 const clockWidth = (fs: number): number => monoWidth(cells('SemiBold', fs), CHARS.minutesClock) + boxSlack(fs);
 
 /** The state line's box, measured in the weight a label is drawn in. */
-const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', IDLE_STATE.toUpperCase(), fs)) + 2;
+const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', IDLE_STATE, fs)) + 2;
 
 /**
  * A block: how wide its ink is at a size, and the drawing itself, centred on `cx` with its canvas line
