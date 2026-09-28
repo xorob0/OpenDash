@@ -43,7 +43,7 @@ import type { Archetype } from './shedding.ts';
  *    sheds a column before it shortens a name (#385). The one box the build produces that takes this
  *    step is the 639 x 338 pit wall zone, whose `wide` declaration draws the last lap and not the best.
  * 3. **The name's length.** With nothing droppable left the name column is what remains between the
- *    position and the gap, and the name is ellipsised to it. The three narrow faces are here: seven,
+ *    position and the gap, and the name is ellipsised to it. The three narrow faces are here: six,
  *    six and four characters at 850 x 480, 800 x 286 and 800 x 480.
  * 4. **The name**, once its column cannot hold one letter and the ellipsis after it, and then **the
  *    position**, once the position and the gap alone overrun the row. In the 28 px row the name goes

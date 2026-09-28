@@ -555,7 +555,7 @@ row, sheds it the same way. Each step is taken only when the one before it is sp
    shortens a name. The one box the build produces that takes this step is the `639 × 338` pit wall
    zone, whose `wide` declaration draws the last lap and not the best.
 3. **The name's length.** With nothing droppable left, the name is ellipsised to what the position and
-   the gap leave it: seven, six and four characters on the three narrow faces.
+   the gap leave it: six, six and four characters on the 850 × 480, 800 × 286 and 800 × 480 faces.
 4. **The name, then the position**, once the name cannot hold one letter and its ellipsis and once the
    position and the gap alone overrun the row. In the 28 px row that is below 191 px and 156 px of body;
    the narrowest the build produces is 225, so no box takes this step. It is written down so that the
