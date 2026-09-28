@@ -145,7 +145,8 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
   return args;
 }
 
-const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+/** What VERSION may hold. `scripts/version.ts` refuses to write anything else, so the build never meets it. */
+export const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
 /** The trimmed contents of VERSION, which must look like `major.minor.patch[-prerelease]`. */
 export function readVersion(file: string = VERSION_FILE): string {

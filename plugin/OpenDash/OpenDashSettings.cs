@@ -758,6 +758,11 @@ namespace OpenDashPlugin
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
 
+        /// <summary>The release the last answered check offered, or null when it found this rig current. Persisted
+        /// because the check runs once a day and SimHub starts more often than that, and the idle screen's mark is
+        /// read from it on every start between; see UpdateMark.Remember. #83.</summary>
+        public string OfferedRelease { get; set; }
+
         /// <summary>The release a person said yes to replacing their edited dashboards for, or null. Written when an
         /// update stages the plugin, read and cleared by that plugin's first start, which is what writes the
         /// dashboards; see EditedConsent.</summary>

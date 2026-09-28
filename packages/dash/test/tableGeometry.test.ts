@@ -15,7 +15,8 @@ import { MODULES } from '../src/modules/index.ts';
 import { PORTRAIT_COLUMNS, RACE_COLUMNS, TOWER_COLUMNS, portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER } from '../src/screens/pitwallHeader.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnWidths, type ColumnId } from '../src/second/table.ts';
+import { LEADERBOARD_COLUMNS, fittingColumns } from '../src/modules/leaderboard.ts';
+import { columnWidths, table, type ColumnId } from '../src/second/table.ts';
 import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -165,11 +166,12 @@ describe('the other two tables keep the row they already drew', () => {
     [...walkItems(MODULES.find((m) => m.id === id)!.build({ frame: rect(0, 0, width, height), density, prefix: '' }))];
 
   test('a zone list is padded 6, spaced 2 and ruled nowhere', () => {
-    // The leaderboard rather than the relative: since #339 the relative declares its own row count and
-    // stretches its row to fill the body, so its pitch is a fact about the box rather than about the
-    // list drawing. The leaderboard still takes the density's 34, which is the canvas's zone row, and
-    // the 2 px between two of them is what makes the pitch 36.
-    const items = build('leaderboard', 600, 242, 'zone');
+    // A table stated with no row of its own rather than either page: since #328 both list pages declare
+    // their row count and stretch the row to fill the body, so their pitch is a fact about the box rather
+    // than about the list drawing. A table left to its default takes the density's 34, which is the
+    // canvas's zone row, and the 2 px between two of them is what makes the pitch 36.
+    const frame = rect(0, 0, 600, 242);
+    const items = [...walkItems(table({ name: 'table', frame, columns: fittingColumns(LEADERBOARD_COLUMNS, frame.width, 'zone'), mode: 'full', density: 'zone', header: false }))];
     expect(items.find((i) => i.name.endsWith('.row.rule'))).toBeUndefined();
     expect(items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.pos'))!.rect.left).toBe(6);
     const stamped = items.find((i) => i.kind === 'layer' && i.name.endsWith('.rows'));

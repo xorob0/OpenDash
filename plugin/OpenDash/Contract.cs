@@ -21,6 +21,36 @@ namespace OpenDashPlugin
         public const string BlueFlagDetail = "BlueFlagDetail";
         public const string DriverNameFormat = "DriverNameFormat";
         public const string DriverNameTeam = "DriverNameTeam";
+
+        /// <summary>
+        /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #83.
+        /// </summary>
+        /// <remarks>
+        /// Published state rather than a setting, like CarLadderChosen: nobody chooses it, and the idle
+        /// screen is its only reader. False with the check switched off, false with no answer yet, false
+        /// once the rig has caught up, and false -- through the isnull() default every reader carries --
+        /// with no plugin at all, which is the rule ADR 0003 makes of every property and the ticket makes
+        /// of this one in particular: the absence of the plugin never triggers anything.
+        /// </remarks>
+        public const string UpdateAvailable = "UpdateAvailable";
+
+        /// <summary>
+        /// The version the idle screen's mark names, or the empty string when there is none to name.
+        /// </summary>
+        /// <remarks>
+        /// Empty whenever UpdateAvailable is false, and empty too for a version longer than
+        /// UpdateVersionMaxLength or written in characters outside UpdateVersionCharacters: the mark's box
+        /// is measured for the longest version this can carry, WPF clips whatever does not fit, and the
+        /// mark says "update available" without a number rather than half of one.
+        /// </remarks>
+        public const string UpdateVersion = "UpdateVersion";
+
+        /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
+        public const int UpdateVersionMaxLength = 12;
+
+        /// <summary>The characters a version UpdateVersion carries may be written in, which is what semver
+        /// allows and what contract.ts measures the widest of.</summary>
+        public const string UpdateVersionCharacters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
@@ -119,7 +149,9 @@ namespace OpenDashPlugin
         }
 
         public static readonly string[] PositionModes = { "overall", "class" };
-        public const string DefaultPositionMode = "overall";
+        /// <summary>Class, because the place a driver is racing for is the place in their own class, and a
+        /// single-class field reads the same either way. A saved value is kept as it is. #432.</summary>
+        public const string DefaultPositionMode = "class";
 
         public static readonly string[] DeltaReferences = { "session", "alltime" };
         public const string DefaultDeltaReference = "session";
@@ -891,6 +923,10 @@ namespace OpenDashPlugin
             yield return BlueFlagDetail;
             yield return DriverNameFormat;
             yield return DriverNameTeam;
+            // Appended for the reason RevBar was, and shared because every package ends with an idle
+            // screen and every idle screen carries the mark. Published rather than chosen. #83.
+            yield return UpdateAvailable;
+            yield return UpdateVersion;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

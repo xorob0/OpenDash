@@ -80,7 +80,7 @@ describe('a module that needs a session draws its notice while there is none', (
    * box a module is given anywhere.
    */
   test('the list spans every density, the smallest type included', () => {
-    expect([...new Set(BOXES.map((b) => b.density))].sort()).toEqual(['compact', 'companion', 'wide', 'zone']);
+    expect([...new Set(BOXES.map((b) => b.density))].sort()).toEqual(['compact', 'companion', 'panel', 'wide', 'zone']);
   });
 
   for (const box of BOXES) {
