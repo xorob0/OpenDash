@@ -119,7 +119,9 @@ namespace OpenDashPlugin
         }
 
         public static readonly string[] PositionModes = { "overall", "class" };
-        public const string DefaultPositionMode = "overall";
+        /// <summary>Class, because the place a driver is racing for is the place in their own class, and a
+        /// single-class field reads the same either way. A saved value is kept as it is. #432.</summary>
+        public const string DefaultPositionMode = "class";
 
         public static readonly string[] DeltaReferences = { "session", "alltime" };
         public const string DefaultDeltaReference = "session";

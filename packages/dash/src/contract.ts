@@ -161,7 +161,11 @@ export const RETIRED_LED_CENTRE = 'rpmOnly';
 export const DEFAULTS = {
   ShiftLights: true,
   RevBar: 'shift' as RevBarMode,
-  PositionMode: 'overall' as PositionMode,
+  // The place a driver is racing for, which in a multiclass race is the place in their own class: a
+  // driver second of class drawn as P16 is shown a number that is not theirs. A single-class field
+  // makes the two readings identical, so counting the whole field buys nothing there and is wrong
+  // everywhere else. Overall remains the other choice of the setting. #432.
+  PositionMode: 'class' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
@@ -395,7 +399,7 @@ export const setting = {
   revBar: (): Expr => isnull(prop(propertyName(REV_BAR_SETTING)), iff(setting.shiftLights(), str('shift'), str('rpm'))),
   /** `isnull([OpenDash.RevBar], ...) = 'off'`: whether the face is in the given rev bar mode. */
   revBarIs: (mode: RevBarMode): Expr => eq(setting.revBar(), str(mode)),
-  /** `isnull([OpenDash.PositionMode], 'overall')` */
+  /** `isnull([OpenDash.PositionMode], 'class')`, the fallback being what a package draws with no plugin. #432. */
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
