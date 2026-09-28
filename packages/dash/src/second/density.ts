@@ -184,6 +184,17 @@ export const densityOf = (density: Density): DensitySpec => DENSITIES[density];
 export const isZone = (density: Density): boolean => density !== 'companion';
 
 /**
+ * True for the pit wall's densities: its panels, and the zone dashboards of both kinds it embeds.
+ *
+ * A pit wall is read across a garage by somebody who is not driving, and a list on it answers *who is
+ * in the race* rather than *who is near me*, so where a face's list declares the rows it wants a pit
+ * wall's takes every row its box holds. `screens/zones.ts` builds its standard zones at `panel` and its
+ * wide ones at `wide`, and no face or companion draws at either, which is what makes the density the
+ * place to ask.
+ */
+export const isPitWall = (density: Density): boolean => density === 'panel' || density === 'wide';
+
+/**
  * The density a box of this size wants. Below the thresholds the zone ramp does not fit, which is
  * a fact about the box rather than about the page in it, so the choice is made once here.
  */

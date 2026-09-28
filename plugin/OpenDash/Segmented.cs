@@ -63,6 +63,11 @@ namespace OpenDashPlugin
             KeyDown += OnKey;
             GotKeyboardFocus += (sender, args) => Paint();
             LostKeyboardFocus += (sender, args) => Paint();
+            // A locked bar fades the way a disabled button does, to the canvas's 40 %. A Border has no
+            // template to carry the trigger Widgets gives a button, and without it a bar that no longer
+            // answers the pointer looks exactly like one that does: the add form's ends, under the
+            // Fanatec switch, are the first bar ever locked.
+            IsEnabledChanged += (sender, args) => Opacity = IsEnabled ? 1 : PanelMetrics.DisabledOpacity;
 
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
             Child = panel;

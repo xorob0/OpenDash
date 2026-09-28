@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning","OpenDash.UpdateAvailable","OpenDash.UpdateVersion"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -295,6 +295,8 @@
 {"p":"OpenDash.Slot10","v":8}
 {"p":"OpenDash.Slot11","v":9}
 {"p":"OpenDash.Slot12","v":10}
+{"p":"OpenDash.UpdateAvailable","v":false}
+{"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":null}
 {"p":"PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds","v":35.88}
 {"p":"PersistantTrackerPlugin.EstimatedLapTime","t":"timespan","v":"00:02:12.1640000"}

@@ -44,8 +44,8 @@ times and the relative, and the band across the foot.
 **The large face, 1280 x 480.** The same five parts and 430 px more width, which the page spends
 rather than stretches. A page is laid out for the box it is given rather than scaled into it, so
 the wider zone shows more of the page: the relative carries the car number and the class beside
-every driver here, which the base has no room for. The base spends what it saves on rows instead,
-listing nine cars in the relative where this lists seven at a taller row. The lap times are larger here than on
+every driver here, which the base has no room for. Both list the seven cars the relative declares,
+and the base spends the height on a taller row and a larger name rather than on more cars. The lap times are larger here than on
 the base because the zone is 180 px wider, not because anything was stretched into it — a rank
 grows to the next size on its own ramp and stops.
 
@@ -100,7 +100,9 @@ Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
 
 In both cases OpenDash is a normal SimHub dashboard afterwards: assign it to a display from
 Dash Studio like any other. With no game running it shows the openDash wordmark, the time and
-"no game running": the idle screen is inside the dashboard, so there is nothing to point at it.
+"no game running": the idle screen is inside the dashboard, so there is nothing to point at it. When
+the plugin has found a newer release, a small line in its corner says which and where to take it;
+the racing face never does, and a dashboard running without the plugin never does either.
 
 ## The dashboard
 
@@ -138,7 +140,9 @@ second arrangement of the screen, with the well's room given back; on everything
 arrangement -- the round faces' rev arc, the companion's speedo -- it falls back to the plain RPM
 bar rather than going dark, which is what ADR 0004 records.
 `OpenDash.ShiftLights` is still attached beside it as the deprecated alias, true only in the
-`shift` state.
+`shift` state. `OpenDash.UpdateAvailable` and `OpenDash.UpdateVersion` are what the plugin last
+heard from GitHub about a newer release, which the idle screen draws: false and empty with update
+checks switched off, and false and empty on a rig that runs the newest release.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are the card in each slot. Of the faces the plugin installs
 the two round ones are the only readers: `OpenDash 480 round` reads the first two and
