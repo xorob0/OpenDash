@@ -41,8 +41,20 @@ jobs:
       # disagrees with CHANGELOG.md only once the tag is pushed, and the plugin installs a dashboard
       # only over an older one, so a number that did not move is a rig left on its old dashboard.
       # `bun run version <x.y.z>` writes both; see scripts/version.ts.
+      # A branch can agree with itself and still have set the number back, by deleting the newer
+      # sections along with it, so a pull request also holds VERSION to its base's. The checkout is
+      # shallow, and the base commit is fetched alone for its VERSION.
       - name: Check VERSION against the changelog
-        run: bun run version --check
+        run: |
+          set -euo pipefail
+          if [ -n "$BASE" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE"
+            bun run version --check --base "$BASE"
+          else
+            bun run version --check
+          fi
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
 
       - name: Typecheck
         run: bun run typecheck

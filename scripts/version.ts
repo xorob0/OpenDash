@@ -17,10 +17,12 @@
  *
  *   bun run version 0.3.0-rc.8 [--date 2026-09-28]   VERSION and a new heading at the top
  *   bun run version --check                           VERSION agrees with the changelog
+ *   bun run version --check --base <ref>              ...and ranks no lower than the base's
  *
  * A new heading has no notes under it, and an empty section is no section (changelog.ts), so the
  * check fails until the notes are written: a cut is not finished while its release body is empty.
  */
+import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { VERSION_FILE, VERSION_PATTERN } from '../packages/dash/src/build.ts';
 import { CHANGELOG_FILE, sectionFor, versionOf } from './changelog.ts';
@@ -227,9 +229,10 @@ export const bump = (markdown: string, current: string, requested: string, date:
  * Why VERSION and the changelog disagree, one sentence each; empty when they agree.
  *
  * They agree when VERSION holds a version, the changelog's newest heading is that version, dated,
- * with notes under it, and every heading is a dated version that ranks below the one above it. The
- * last is what stops a number moving backwards: the newest heading is VERSION, so a new one can
- * only be added above it by ranking above it.
+ * with notes under it, and every heading is a dated version that ranks below the one above it.
+ *
+ * That holds the file to itself and no further. A branch that sets VERSION back and deletes the
+ * sections above it agrees with itself; what catches it is `behind`, against the base's VERSION.
  */
 export const disagreements = (versionText: string, markdown: string): string[] => {
   const problems: string[] = [];
@@ -267,20 +270,39 @@ export const disagreements = (versionText: string, markdown: string): string[] =
   return problems;
 };
 
+/**
+ * Why VERSION is behind the base it would merge into, as a sentence; null when it is not.
+ *
+ * The same number as the base is the usual case, since most pull requests do not cut a release.
+ * A lower one is a number moving backwards, which the plugin would never install over the base's,
+ * and a string that ranks the same but is spelled differently is a second name for one release.
+ */
+export const behind = (versionText: string, baseText: string): string | null => {
+  const version = versionText.trim();
+  const base = baseText.trim();
+  const order = compareVersions(version, base);
+  if (order > 0 || version === base) return null;
+  return order < 0
+    ? `VERSION is ${version}, below the base's ${base}; the plugin installs a dashboard only over an older one, so a merge would leave every rig on ${base}`
+    : `VERSION is ${version}, which ranks the same as the base's ${base} without being it`;
+};
+
 // ---------------------------------------------------------------------------------------------
 // The command.
 // ---------------------------------------------------------------------------------------------
 
-export const USAGE = 'usage: bun run version <x.y.z[-pre]> [--date YYYY-MM-DD]\n       bun run version --check';
+export const USAGE = 'usage: bun run version <x.y.z[-pre]> [--date YYYY-MM-DD]\n       bun run version --check [--base <ref>]';
 
-export type Options = { help: true } | { check: true } | { version: string; date?: string };
+export type Options = { help: true } | { check: true; base?: string } | { version: string; date?: string };
 
 export const parseArgs = (argv: readonly string[]): Options => {
   const rest = [...argv];
   if (rest.includes('--help') || rest.includes('-h')) return { help: true };
   if (rest.includes('--check')) {
-    if (rest.length > 1) throw new Error('--check takes nothing else');
-    return { check: true };
+    rest.splice(rest.indexOf('--check'), 1);
+    if (rest.length === 0) return { check: true };
+    if (rest[0] === '--base' && rest.length === 2 && rest[1] !== '' && !rest[1]!.startsWith('-')) return { check: true, base: rest[1] };
+    throw new Error('--check takes nothing else but --base <ref>');
   }
   let date: string | undefined;
   const at = rest.indexOf('--date');
@@ -306,7 +328,16 @@ export interface MainIO {
   versionFile: string;
   changelogFile: string;
   now: () => Date;
+  /** VERSION as it is at a git ref, for `--check --base`. */
+  versionAt: (ref: string) => string;
 }
+
+/** `git show <ref>:VERSION`, failing loudly: a check that cannot read its base has not passed. */
+const gitVersionAt = (ref: string): string => {
+  const shown = spawnSync('git', ['show', `${ref}:VERSION`], { encoding: 'utf8' });
+  if (shown.status !== 0) throw new Error(`cannot read VERSION at ${ref}: ${(shown.stderr || '').trim() || `git exited ${shown.status}`}`);
+  return shown.stdout;
+};
 
 const DEFAULT_IO: MainIO = {
   out: (line) => console.log(line),
@@ -314,6 +345,7 @@ const DEFAULT_IO: MainIO = {
   versionFile: VERSION_FILE,
   changelogFile: CHANGELOG_FILE,
   now: () => new Date(),
+  versionAt: gitVersionAt,
 };
 
 export function main(argv: readonly string[], io: MainIO = DEFAULT_IO): number {
@@ -335,10 +367,21 @@ export function main(argv: readonly string[], io: MainIO = DEFAULT_IO): number {
 
   if ('check' in opts) {
     const problems = disagreements(versionText, markdown);
+    if (opts.base !== undefined) {
+      let baseText: string;
+      try {
+        baseText = io.versionAt(opts.base);
+      } catch (e) {
+        io.err(`::error::${e instanceof Error ? e.message : String(e)}`);
+        return 1;
+      }
+      const regression = behind(versionText, baseText);
+      if (regression !== null) problems.push(regression);
+    }
     // ::error:: so that CI annotates the run with the reason rather than burying it in a log.
     for (const problem of problems) io.err(`::error::${problem}`);
     if (problems.length > 0) return 1;
-    io.out(`VERSION ${versionText.trim()} agrees with CHANGELOG.md`);
+    io.out(`VERSION ${versionText.trim()} agrees with CHANGELOG.md${opts.base === undefined ? '' : ` and is not behind ${opts.base}`}`);
     return 0;
   }
 

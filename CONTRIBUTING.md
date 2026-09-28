@@ -183,6 +183,7 @@ it. It is changed in one way only:
 ```bash
 bun run version 0.3.0-rc.8     # VERSION, and a dated heading at the top of CHANGELOG.md
 bun run version --check        # VERSION and CHANGELOG.md agree
+bun run version --check --base origin/main   # ...and VERSION is not behind main's
 ```
 
 The first writes the number and the changelog heading together, dated today (`--date` names
@@ -194,7 +195,9 @@ say why. Running it again with the same version re-dates the heading and keeps t
 Then write the notes under the heading, for a driver rather than for a reviewer, since that section
 is what the release page says. `bun run version --check` fails until the section has something in
 it, and CI runs the same check on every pull request, so a `VERSION` and a changelog that disagree
-are caught on the branch rather than when the tag is pushed.
+are caught on the branch rather than when the tag is pushed. On a pull request CI adds `--base`,
+because a branch that set `VERSION` back and deleted the newer sections with it would agree with
+itself: the base's `VERSION` is what shows the number went backwards.
 
 A cut is one commit, `Cut <version>: <theme>`, carrying `VERSION` and the section, on a branch named
 `release-<version>`, since a cut has no ticket. Once it is merged, pushing the tag `v<version>` on

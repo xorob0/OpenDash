@@ -182,7 +182,8 @@ On a tag, a release workflow attaches `OpenDash.simhubdash` and `OpenDash-plugin
 GitHub release. The dashboard version in the `.metadata` sidecar, the plugin assembly version
 and the tag are the same string, read from `VERSION`. That file and the newest heading of
 `CHANGELOG.md` are written together by `bun run version <x.y.z>`, and the dash job checks on every
-pull request that the two agree, so a cut whose number did not move fails before it is tagged.
+pull request that the two agree and that `VERSION` is not behind the base's, so a cut whose number
+did not move, or a branch that set it back, fails before it is tagged.
 
 ## Repository layout
 

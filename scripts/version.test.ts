@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { VERSION_FILE } from '../packages/dash/src/build.ts';
 import { CHANGELOG_FILE, sectionFor } from './changelog.ts';
-import { bump, compareVersions, disagreements, headingsIn, main, parseArgs, today, type MainIO } from './version.ts';
+import { behind, bump, compareVersions, disagreements, headingsIn, main, parseArgs, today, type MainIO } from './version.ts';
 
 const SAMPLE = [
   '# Changelog',
@@ -138,6 +138,21 @@ describe('the check', () => {
     expect(disagreements('next', SAMPLE)[0]).toBe('VERSION must hold a version like 0.3.0, got "next"');
   });
 
+  test('a branch that set the number back and deleted the newer section agrees with itself, so only the base catches it', () => {
+    const rolledBack = SAMPLE.replace('## 0.3.0-rc.7 (2026-09-27)\n\nThe newest one.\n\n', '');
+    expect(disagreements('0.3.0-rc.6', rolledBack)).toEqual([]);
+    expect(behind('0.3.0-rc.6', '0.3.0-rc.7\n')).toBe(
+      "VERSION is 0.3.0-rc.6, below the base's 0.3.0-rc.7; the plugin installs a dashboard only over an older one, so a merge would leave every rig on 0.3.0-rc.7",
+    );
+  });
+
+  test('against the base, the same number or a newer one is not behind', () => {
+    expect(behind('0.3.0-rc.7', '0.3.0-rc.7')).toBeNull();
+    expect(behind('0.3.0-rc.8\n', '0.3.0-rc.7')).toBeNull();
+    expect(behind('0.3.0', '0.3.0-rc.10')).toBeNull();
+    expect(behind('0.3.0+b1', '0.3.0')).toBe("VERSION is 0.3.0+b1, which ranks the same as the base's 0.3.0 without being it");
+  });
+
   test('a changelog with no release at all disagrees', () => {
     expect(disagreements('0.1.0', '# Changelog\n')).toEqual(['CHANGELOG.md has no `## <version> (<date>)` heading']);
   });
@@ -155,7 +170,7 @@ describe('the real tree', () => {
 });
 
 describe('the command', () => {
-  const tree = (version: string, changelog: string) => {
+  const tree = (version: string, changelog: string, base: Record<string, string> = {}) => {
     const dir = mkdtempSync(path.join(tmpdir(), 'version-'));
     const out: string[] = [];
     const err: string[] = [];
@@ -165,6 +180,11 @@ describe('the command', () => {
       versionFile: path.join(dir, 'VERSION'),
       changelogFile: path.join(dir, 'CHANGELOG.md'),
       now: () => new Date(2026, 8, 28, 12),
+      versionAt: (ref) => {
+        const at = base[ref];
+        if (at === undefined) throw new Error(`cannot read VERSION at ${ref}`);
+        return at;
+      },
     };
     writeFileSync(io.versionFile, version);
     writeFileSync(io.changelogFile, changelog);
@@ -210,14 +230,39 @@ describe('the command', () => {
     expect(passing.out).toEqual(['VERSION 0.3.0-rc.7 agrees with CHANGELOG.md']);
   });
 
+  test('--base fails the check when VERSION is behind the base, and says so in the annotation', () => {
+    const rolledBack = SAMPLE.replace('## 0.3.0-rc.7 (2026-09-27)\n\nThe newest one.\n\n', '');
+    const t = tree('0.3.0-rc.6', rolledBack, { main: '0.3.0-rc.7' });
+    expect(main(['--check'], t.io)).toBe(0);
+    expect(main(['--check', '--base', 'main'], t.io)).toBe(1);
+    expect(t.err).toEqual([
+      "::error::VERSION is 0.3.0-rc.6, below the base's 0.3.0-rc.7; the plugin installs a dashboard only over an older one, so a merge would leave every rig on 0.3.0-rc.7",
+    ]);
+  });
+
+  test('--base passes a branch level with or ahead of the base', () => {
+    const t = tree('0.3.0-rc.7', SAMPLE, { main: '0.3.0-rc.7', old: '0.3.0-rc.6' });
+    expect(main(['--check', '--base', 'main'], t.io)).toBe(0);
+    expect(main(['--check', '--base', 'old'], t.io)).toBe(0);
+    expect(t.out.at(-1)).toBe('VERSION 0.3.0-rc.7 agrees with CHANGELOG.md and is not behind old');
+  });
+
+  test('a base that cannot be read fails the check rather than passing it', () => {
+    const t = tree('0.3.0-rc.7', SAMPLE);
+    expect(main(['--check', '--base', 'nowhere'], t.io)).toBe(1);
+    expect(t.err).toEqual(['::error::cannot read VERSION at nowhere']);
+  });
+
   test('arguments', () => {
     expect(parseArgs(['0.3.0'])).toEqual({ version: '0.3.0', date: undefined });
     expect(parseArgs(['--date', '2026-09-28', '0.3.0'])).toEqual({ version: '0.3.0', date: '2026-09-28' });
     expect(parseArgs(['--check'])).toEqual({ check: true });
+    expect(parseArgs(['--check', '--base', 'abc123'])).toEqual({ check: true, base: 'abc123' });
+    expect(() => parseArgs(['--check', '--base'])).toThrow('--check takes nothing else but --base <ref>');
     expect(parseArgs(['-h'])).toEqual({ help: true });
     expect(() => parseArgs([])).toThrow('one version is needed');
     expect(() => parseArgs(['0.3.0', '0.4.0'])).toThrow('one version is needed');
-    expect(() => parseArgs(['--check', '0.3.0'])).toThrow('--check takes nothing else');
+    expect(() => parseArgs(['--check', '0.3.0'])).toThrow('--check takes nothing else but --base <ref>');
     expect(() => parseArgs(['0.3.0', '--date'])).toThrow('--date needs a day');
     expect(() => parseArgs(['--force', '0.3.0'])).toThrow('unknown option --force');
   });
