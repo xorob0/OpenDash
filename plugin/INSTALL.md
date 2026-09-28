@@ -275,10 +275,11 @@ dashboard or an LED profile written against it still reads.
 ## Update
 
 Close SimHub, replace `OpenDash.dll` with the new one, unblock it and start SimHub. When the
-dashboards embedded in the new plugin are newer than the installed ones, the plugin replaces
-each `DashTemplates\<name>` folder on that start and keeps the previous folder as
-`DashTemplates\<name>_backup.zip` (for example `OpenDash_backup.zip` and
-`OpenDash 1280x480_backup.zip`).
+dashboards embedded in the new plugin are newer than the installed ones, the plugin replaces the
+`DashTemplates\<name>` folder of every screen on your rig on that start, a second screen of the
+same size included, and keeps the previous folder as `DashTemplates\<name>_backup.zip` (for
+example `OpenDash 1280x480_backup.zip`, and `OpenDash Rim_backup.zip` for a second 1280x480 screen
+named Rim).
 
 A dashboard you have edited in Dash Studio is **not** replaced silently. The plugin notices that
 the folder no longer holds what it wrote, leaves it alone and says so; pressing Reinstall a second

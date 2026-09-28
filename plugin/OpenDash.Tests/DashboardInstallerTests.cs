@@ -1,7 +1,8 @@
 // DashboardInstallerTests.cs: the installer against a temporary SimHub root and synthetic packages: every embedded
 // package is installed, only the ones that need it unless forced, the worst status wins, a broken package does not stop
-// the others, the panel's summary text, and the embedded resource naming (spaces in a file name survive). Also the pure
-// InstalledVersionFrom: an absent folder is not installed, a folder without a usable sidecar is reinstalled.
+// the others, a second screen of a size is kept current and held back on the same terms as the first, the panel's
+// summary text, and the embedded resource naming (spaces in a file name survive). Also the pure InstalledVersionFrom:
+// an absent folder is not installed, a folder without a usable sidecar is reinstalled.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -47,6 +48,20 @@ namespace OpenDashPlugin.Tests
             return new DashboardInstaller(root, log, packages, record);
         }
 
+        /// <summary>The first screen of a size, which holds the package's own folder and namespace.</summary>
+        private static ScreenInstance Stock(string folder, int width, int height, string name = null)
+        {
+            return new ScreenInstance
+            {
+                Kind = Contract.KindFace,
+                Width = width,
+                Height = height,
+                Namespace = "Face" + width + "x" + height,
+                Name = name ?? folder,
+                Folder = folder,
+            };
+        }
+
         // What the "This plugin" pill says, which is a question about the rig and not about the build
 
         /// <summary>
@@ -62,7 +77,7 @@ namespace OpenDashPlugin.Tests
         public void The_pill_ignores_a_package_the_rig_never_asked_for()
         {
             var installer = Installer(TwoPackages());
-            installer.Wanted = new[] { SmallFolder };
+            installer.Rig = () => new[] { Stock(SmallFolder, 1280, 480) };
             installer.EnsureInstalled(force: true);
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
@@ -78,7 +93,7 @@ namespace OpenDashPlugin.Tests
         public void The_pill_still_answers_for_a_screen_the_rig_wants()
         {
             var installer = Installer(TwoPackages());
-            installer.Wanted = new[] { SmallFolder, "OpenDash" };
+            installer.Rig = () => new[] { Stock(SmallFolder, 1280, 480), Stock("OpenDash", 1920, 480) };
             installer.Refresh();
             Assert.Equal(InstallStatus.NotInstalled, installer.Status);
         }
@@ -89,9 +104,177 @@ namespace OpenDashPlugin.Tests
         public void An_empty_rig_has_nothing_outstanding()
         {
             var installer = Installer(TwoPackages());
-            installer.Wanted = new string[0];
+            installer.Rig = () => new ScreenInstance[0];
             installer.EnsureInstalled(force: true);
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
+        }
+
+        // A second screen of a size, which owns a folder no package carries (#455)
+
+        private const string FaceName = "OpenDashPlugin.Resources.OpenDash 850x480.simhubdash";
+        private const string FaceFolder = "OpenDash 850x480";
+        private const string RimFolder = "OpenDash Rim (2)";
+
+        /// <summary>The rig the ticket was measured on, as far as it matters here: the stock 850x480, and a second
+        /// screen of that size with a namespace of its own.</summary>
+        private static ScreenInstance[] TwoOfASize()
+        {
+            var rim = Stock(RimFolder, 850, 480, "Rim (2)");
+            rim.Namespace = "Rim2";
+            rim.Package = FaceName;
+            var wheel = Stock(FaceFolder, 850, 480, "Tim wheel");
+            wheel.Package = FaceName;
+            return new[] { wheel, rim };
+        }
+
+        private static MemoryPackageSource Face(string version)
+        {
+            return new MemoryPackageSource().Add(FaceName, SyntheticPackage.Instanceable(FaceFolder, "Face850x480", version));
+        }
+
+        private DashboardInstaller OverRig(IPackageSource packages, IFolderRecord record, IReadOnlyList<ScreenInstance> rig, IInstallLog log = null)
+        {
+            return new DashboardInstaller(root, log, packages, record) { Rig = () => rig };
+        }
+
+        /// <summary>How many times a token appears across every dashboard file of an installed folder.</summary>
+        private int Occurrences(string folder, string token)
+        {
+            var total = 0;
+            foreach (var path in Directory.GetFiles(PackageExtractor.InstalledFolder(root, folder), "*.djson", SearchOption.AllDirectories))
+            {
+                var text = File.ReadAllText(path);
+                for (var at = text.IndexOf(token, StringComparison.Ordinal); at >= 0; at = text.IndexOf(token, at + token.Length, StringComparison.Ordinal)) total++;
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// The ticket's own case: a plugin whose package is newer than a second screen's folder starts, and the
+        /// folder is written again with its namespace, its title and a fingerprint of what was written.
+        /// </summary>
+        /// <remarks>
+        /// Measured on the VM before this: the start replaced the stock 850x480 and left "OpenDash Rim (2)" at
+        /// rc.7 without a word, because the installer walked the packages and only a missing folder was ever
+        /// written for a second screen. The pill then read up to date over it.
+        /// </remarks>
+        [Fact]
+        public void A_start_over_a_second_screen_of_a_size_at_an_older_version_writes_it_again()
+        {
+            var record = new MemoryFolderRecord();
+            var rig = TwoOfASize();
+            OverRig(Face("0.3.0-rc.7"), record, rig).EnsureInstalled(false);
+            Assert.Equal("0.3.0-rc.7", PackageExtractor.ReadInstalledVersion(root, RimFolder));
+
+            // Before the start writes anything, the pill and its tooltip already account for it.
+            var installer = OverRig(Face("0.3.0-rc.8"), record, rig);
+            installer.Refresh();
+            Assert.Equal(InstallStatus.UpdateAvailable, installer.Status);
+            Assert.Contains(RimFolder + ": Update available", installer.PackageReport());
+
+            installer.EnsureInstalled(false);
+
+            var rim = installer.Packages.Single(p => p.FolderName == RimFolder);
+            Assert.True(rim.Extracted);
+            Assert.Null(rim.Error);
+            Assert.Equal("0.3.0-rc.8", rim.InstalledVersion);
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+            Assert.Contains(RimFolder + ": Up to date", installer.PackageReport());
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, FaceFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, RimFolder));
+
+            // Its own namespace as many times as the package names the stock one, and the stock one nowhere,
+            // while the first screen keeps the package's own.
+            var stock = Occurrences(FaceFolder, "OpenDash.Face850x480");
+            Assert.True(stock > 0);
+            Assert.Equal(0, Occurrences(RimFolder, "OpenDash.Face850x480"));
+            Assert.Equal(stock, Occurrences(RimFolder, "OpenDash.Rim2"));
+
+            // Listed in SimHub under each screen's own name, since the installer writes it rather than the package's.
+            Assert.Contains("\"Title\":\"Rim (2)\"", File.ReadAllText(PackageExtractor.InstalledSidecar(root, RimFolder)));
+            Assert.Contains("\"Title\":\"Tim wheel\"", File.ReadAllText(PackageExtractor.InstalledSidecar(root, FaceFolder)));
+
+            // A copy of what it replaced, as for any folder, and a fingerprint of what it wrote, so that the next
+            // start takes the folder for OpenDash's own and finds nothing to do.
+            Assert.Equal(Path.Combine(root, "DashTemplates", RimFolder + PackageExtractor.BackupSuffix), rim.KeptCopy);
+            Assert.Equal(FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, RimFolder)), record.Get(RimFolder));
+            var next = OverRig(Face("0.3.0-rc.8"), record, rig);
+            next.EnsureInstalled(false);
+            Assert.All(next.Packages, p => Assert.False(p.Extracted || p.Edited));
+        }
+
+        /// <summary>
+        /// A second screen somebody has edited in Dash Studio is held back on the same terms as the first, and
+        /// never reads as up to date while it is.
+        /// </summary>
+        [Fact]
+        public void A_second_screen_somebody_edited_is_held_back_exactly_as_the_first_would_be()
+        {
+            var record = new MemoryFolderRecord();
+            var rig = TwoOfASize();
+            OverRig(Face("0.3.0-rc.7"), record, rig).EnsureInstalled(false);
+            var theirs = Path.Combine(PackageExtractor.InstalledFolder(root, RimFolder), RimFolder + ".djson");
+            File.WriteAllText(theirs, "{\"Version\":2,\"mine\":true}");
+
+            var log = new ListLog();
+            var installer = OverRig(Face("0.3.0-rc.8"), record, rig, log);
+            installer.EnsureInstalled(false);
+
+            var rim = installer.Packages.Single(p => p.FolderName == RimFolder);
+            Assert.True(rim.Edited);
+            Assert.True(rim.HeldBack);
+            Assert.False(rim.Extracted);
+            Assert.Equal("0.3.0-rc.7", rim.InstalledVersion);
+            Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(theirs));
+            Assert.Contains(log.Lines, line => line.Contains(RimFolder + " has changed since OpenDash wrote it"));
+            // Holding one folder back holds back nothing else.
+            Assert.True(installer.Packages.Single(p => p.FolderName == FaceFolder).Extracted);
+            Assert.Equal(InstallStatus.UpdateAvailable, installer.Status);
+            Assert.Contains(RimFolder + ": Update available (you have edited this one, so it was left alone)", installer.PackageReport());
+
+            // A yes replaces it, and the copy of their work goes where no later install reclaims it.
+            installer.EnsureInstalled(false, replaceEdited: true);
+            rim = installer.Packages.Single(p => p.FolderName == RimFolder);
+            Assert.True(rim.Extracted);
+            Assert.Contains(PackageExtractor.EditedSuffix, rim.KeptCopy);
+            Assert.Equal(0, Occurrences(RimFolder, "OpenDash.Face850x480"));
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+        }
+
+        /// <summary>
+        /// The Rig tab's presses write through the same routine as a start: the folder with its namespace and its
+        /// title, and the fingerprint of what was written, whatever version was there.
+        /// </summary>
+        /// <remarks>
+        /// ADR 0017's warning, pinned where the panel now reaches it: a fingerprint of the embedded package rather
+        /// than of the rewritten copy would make a second screen read as somebody's work from the next start on,
+        /// and it would be held back from every update for ever.
+        /// </remarks>
+        [Fact]
+        public void A_press_on_the_Rig_tab_writes_a_second_screen_through_the_same_routine()
+        {
+            var record = new MemoryFolderRecord();
+            var rig = TwoOfASize();
+            var installer = OverRig(Face("0.3.0-rc.8"), record, rig);
+
+            var written = installer.Write(rig[1]);
+
+            Assert.True(written.Ok);
+            Assert.True(written.Written);
+            Assert.Equal(0, Occurrences(RimFolder, "OpenDash.Face850x480"));
+            Assert.True(Occurrences(RimFolder, "OpenDash.Rim2") > 0);
+            Assert.Equal(FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, RimFolder)), record.Get(RimFolder));
+
+            // Written again although it is current, because a press is somebody asking.
+            Assert.True(installer.Write(rig[1]).Written);
+
+            installer.Refresh();
+            Assert.False(installer.Packages.Single(p => p.FolderName == RimFolder).Edited);
+
+            // And a screen whose size this build does not ship is said to have no package, not written blind.
+            var gone = Stock("OpenDash Gone", 640, 480, "Gone");
+            gone.Namespace = "Gone";
+            Assert.Contains("ships no package", installer.Write(gone).Error);
         }
 
         // Somebody's Dash Studio work, and whether an install destroys it

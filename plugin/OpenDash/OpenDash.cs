@@ -36,11 +36,11 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Built on first use rather than eagerly, because the record of what OpenDash wrote into each folder lives
-        /// in the settings and the settings are read in Init. The lambda reads Settings each time, so the record
-        /// follows the object the panel replaces when a user changes something.
+        /// in the settings and the settings are read in Init. The lambdas read Settings each time, so the record and
+        /// the rig follow the object the panel replaces when a user changes something.
         /// </summary>
         public DashboardInstaller Installer =>
-            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
+            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)) { Rig = () => Settings.RigScreens() });
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
@@ -236,18 +236,21 @@ namespace OpenDashPlugin
                 // assembly was staged gives up after a while, and a session that reaches here with a
                 // staged assembly is a session where the last swap did not happen. Inert otherwise.
                 PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
-                // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
-                // embeds on every start, so a user who owned one screen found fourteen dashboards in
-                // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
-                // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
-                Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
+                // The rig decides what is written, and the installer reads it for itself (DashboardInstaller.Rig).
+                // Before ADR 0017 this wrote every package the plugin embeds on every start, so a user who owned
+                // one screen found fourteen dashboards in SimHub's list; now a screen exists because somebody
+                // added it. Nothing outside the rig is deleted -- that is a thing a user asks for -- it is simply
+                // no longer rewritten. The sizes are repaired first, because a screen that remembers no package
+                // is matched to one by its kind and its size.
+                var log = new SimHubInstallLog();
+                RepairScreenSizes(log);
                 // A driver who said yes to replacing their edited dashboards said it to the plugin that
                 // downloaded this one, and this start is what writes them (#438); see EditedConsent.
                 var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
                 if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
                 Installer.EnsureInstalled(false, replaceEdited);
                 if (EditedConsent.Forget(Settings.ReplaceEditedFor, Version, PluginUpdate.Pending(Installer.SimHubRoot))) Settings.ReplaceEditedFor = null;
-                WriteScreenFolders();
+                RetitleScreens(log);
             }
             catch (Exception ex)
             {
@@ -295,38 +298,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Writes the folder of any screen that has not got one.
+        /// Puts every screen's name back into the dashboard SimHub lists, where a folder has lost it.
         /// </summary>
         /// <remarks>
-        /// The stock screens are DashboardInstaller's, because their folder is a package's own and it
-        /// keeps them at the embedded version. A screen with a namespace of its own has a folder no
-        /// package writes, so it is written here -- once, when it is missing. A folder somebody deleted
-        /// comes back on the next start, which is the same promise the stock ones have always made; the
-        /// panel offers the same thing on a button for a user who does not want to restart to get it.
-        ///
-        /// Then every screen's name goes back into the dashboard SimHub lists, stock ones included. The
-        /// installer above has just written the stock folders from their packages, which carries the
-        /// package's own title with it, so a screen the driver renamed left SimHub's list under the name
-        /// they knew it by at every single update. Cheap where nothing moved: Retitle compares before it
-        /// writes and does nothing to a folder whose title is already the screen's.
+        /// The installer writes each screen's folder, the first of a size and the second alike, and
+        /// writes the screen's name in as it does; there is no second writer here any more (#455), which
+        /// is what used to leave a second screen of a size on the dashboard it was first written with. What
+        /// is left is the repair for a folder somebody else titled: an older plugin, or the update path,
+        /// which installs what it downloaded under each package's own title. Cheap where nothing moved:
+        /// Retitle compares before it writes and does nothing to a folder whose title is already the screen's.
         /// </remarks>
-        private void WriteScreenFolders()
+        private void RetitleScreens(IInstallLog log)
         {
-            var log = new SimHubInstallLog();
-            RepairScreenSizes(log);
-            foreach (var screen in Settings.RigScreens())
-            {
-                if (!screen.IsStock)
-                {
-                    var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
-                    if (!result.Ok)
-                    {
-                        Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
-                        continue;
-                    }
-                }
-                ScreenInstaller.Retitle(screen, Installer.SimHubRoot, Installer.Record, log);
-            }
+            foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, Installer.SimHubRoot, Installer.Record, log);
         }
 
         /// <summary>

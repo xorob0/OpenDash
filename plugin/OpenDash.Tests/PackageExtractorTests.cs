@@ -330,19 +330,7 @@ namespace OpenDashPlugin.Tests
         /// <summary>A package shaped like a real one: bindings in the main dashboard and in a widget.</summary>
         private static MemoryStream Instanceable(string folder, string ns)
         {
-            var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},"
-                + "\"A\":\"isnull([OpenDash." + ns + "ZoneA],0)\",\"B\":\"isnull([OpenDash." + ns + "ZoneBPages],0)\"}";
-            var widget = "{\"Version\":2,\"C\":\"isnull([OpenDash." + ns + "ZoneC],0)\"}";
-            var stream = new MemoryStream();
-            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
-            {
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson", main);
-                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"" + folder + "\",\"DashboardVersion\":\"1.0.0\"}");
-                SyntheticPackage.Add(zip, folder + "/zoneface-module.djson", widget);
-                SyntheticPackage.Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
-            }
-            stream.Position = 0;
-            return stream;
+            return SyntheticPackage.Instanceable(folder, ns);
         }
 
         [Fact]

@@ -30,6 +30,25 @@ namespace OpenDashPlugin.Tests
             return stream;
         }
 
+        /// <summary>A package shaped like a real one for ADR 0017: bindings to its namespace in the main dashboard and in
+        /// a widget, so that a second screen's copy of it has something to rewrite.</summary>
+        public static MemoryStream Instanceable(string folder, string ns, string version = "1.0.0")
+        {
+            var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},"
+                + "\"A\":\"isnull([OpenDash." + ns + "ZoneA],0)\",\"B\":\"isnull([OpenDash." + ns + "ZoneBPages],0)\"}";
+            var widget = "{\"Version\":2,\"C\":\"isnull([OpenDash." + ns + "ZoneC],0)\"}";
+            var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+            {
+                Add(zip, folder + "/" + folder + ".djson", main);
+                Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"" + folder + "\",\"DashboardVersion\":\"" + version + "\"}");
+                Add(zip, folder + "/zoneface-module.djson", widget);
+                Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
+            }
+            stream.Position = 0;
+            return stream;
+        }
+
         public static void Add(ZipArchive zip, string name, string content)
         {
             using (var writer = new StreamWriter(zip.CreateEntry(name).Open(), new UTF8Encoding(false)))
