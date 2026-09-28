@@ -443,7 +443,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
 
   const stagedProfiles: { shape: StripShape; fileName: string; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
   for (const shape of stripShapes) {
-    const profile = rpmStripProfile(shape, stableGuid(`OpenDash/leds/${shape.id}`));
+    const profile = rpmStripProfile(shape, stableGuid(`OpenDash/leds/${shape.id}`), version);
     const warnings = validateStripProfileOrThrow(profile, deviceLength(shape));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     stagedProfiles.push({ shape, fileName: rpmStripFileName(shape), profile, warnings });
