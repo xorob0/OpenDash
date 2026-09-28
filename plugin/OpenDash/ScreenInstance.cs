@@ -421,8 +421,13 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Past the modules turned off, because the pane that turns one off is the same pane that
-        /// binds this button: a press that landed on a module the driver had switched off would show
-        /// a page the companion's own header counts as absent.
+        /// would bind this button: a press that landed on a module the driver had switched off would
+        /// show a page the companion's own header counts as absent.
+        ///
+        /// Nothing calls it from SimHub today. A companion registers no action (Contract.CompanionActionNames)
+        /// and the page it moves is read by no package, SimHub's own NextScreen paging the companion
+        /// instead. It stays, with the companion half of the glance below, because #362 is where both
+        /// come back if SimHub ever lets a plugin choose the screen.
         /// </remarks>
         public int CycleModule()
         {
@@ -442,6 +447,13 @@ namespace OpenDashPlugin
         /// </remarks>
         public void BeginQuickGlance()
         {
+            // A face's glance is its zones' and is held there, so that the settings' every-face glance
+            // and this one are the same hold and a face cannot be borrowed twice.
+            if (IsFace)
+            {
+                if (Face != null) Face.BeginQuickGlance();
+                return;
+            }
             if (GlanceHeld) return;
             if (IsCompanion)
             {
@@ -465,6 +477,11 @@ namespace OpenDashPlugin
         /// <summary>Puts the screen back where it was. A release with no press does nothing.</summary>
         public void EndQuickGlance()
         {
+            if (IsFace)
+            {
+                if (Face != null) Face.EndQuickGlance();
+                return;
+            }
             if (!GlanceHeld) return;
             if (IsCompanion) CompanionPage = glanceRestore;
             else if (glanceZone != null) SetZonePage(glanceZone, glanceRestore);

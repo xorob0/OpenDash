@@ -80,6 +80,25 @@ export default function Install() {
         </ul>
       </Section>
 
+      <Section
+        id="companion-paging"
+        title="Paging a companion"
+        lede="SimHub pages a companion, not OpenDash, so its button is bound on the device and not on the OpenDash page."
+      >
+        <ul className={`rows ${styles.points}`}>
+          <li>
+            <strong>By touch.</strong> Tap the left or right half of the screen to change module.
+          </li>
+          <li>
+            <strong>By a wheel button.</strong> Open the device or window the companion runs on in SimHub, go to its Controls and events, and bind{' '}
+            <code>NextScreen</code>, with <code>PreviousScreen</code> to go back.
+          </li>
+          <li>
+            <strong>One device at a time.</strong> Those bindings belong to that device, so the button that pages the companion does not page your dash.
+          </li>
+        </ul>
+      </Section>
+
       <Section id="nothing-showing" title="Nothing showing?" lede="The usual causes, most common first.">
         <ul className={`rows ${styles.points}`}>
           <li>
@@ -104,6 +123,10 @@ export default function Install() {
           </li>
           <li>
             <strong>A wheel button does nothing.</strong> Bind the action of the screen you are looking at. Each screen has its own.
+          </li>
+          <li>
+            <strong>The companion does not change page.</strong> Bind <code>NextScreen</code> in the Controls and events of the device the companion runs on, not your
+            dash&apos;s.
           </li>
         </ul>
       </Section>

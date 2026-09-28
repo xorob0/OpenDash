@@ -116,6 +116,10 @@ binder for each, in the Buttons section, so you do not have to go looking in Con
 | Zone A, B, C, D | advances that zone to its next enabled page |
 | Quick glance | while held, shows one chosen page in one chosen zone, and returns on release |
 
+A quick glance is always bound as a hold, whatever press type you pick in SimHub's binding
+dialog: SimHub only tells OpenDash a button was released under that press type, and a glance bound
+any other way would appear and vanish in the same frame.
+
 There is a set of these **per screen**, named for the screen: the actions of the reference face are
 `OpenDash.Face1920x480CycleZoneA` through `CycleZoneD` and `OpenDash.Face1920x480HoldQuickGlance`.
 A rig with one screen binds five of them and can ignore the rest.
@@ -131,10 +135,12 @@ The companion shows one module at a time: a big, calm page for a phone or a tabl
 wheel. There are twenty-one modules, listed on the OpenDash page under Companion, and each has
 its own switch. A module that is off is skipped entirely.
 
-Paging is SimHub's, not OpenDash's. In SimHub, open the device or window the companion runs on,
-go to its "Controls and events" and bind a wheel button to **NextScreen** (and another to
-**PreviousScreen** if you want to go back). Those are per-device bindings, so the button that
-pages your companion does not page your dash.
+Paging is SimHub's, not OpenDash's, so OpenDash registers no action for a companion. Tap the left
+or right half of the screen to change module. For a wheel button, open the device or window the
+companion runs on in SimHub, go to its "Controls and events", and bind **NextScreen**, with
+**PreviousScreen** to go back. Those bindings belong to that device, so the button that pages your
+companion does not page your dash. The OpenDash page says the same under the companion's Module
+paging.
 
 Three modules are off when you install: **Energy**, **Damage** and **Track rivals**. iRacing
 publishes no virtual energy, no damage values at all and nothing a segment-by-segment rival
@@ -323,7 +329,9 @@ other dashboards.
   on the 480 and six on the 800, so a card in a higher slot is never drawn. Assign the card to a
   lower slot number.
 - The companion does not change page when you press the button: the binding is on the device,
-  not in OpenDash. Open that device's "Controls and events" in SimHub and bind NextScreen.
+  not in OpenDash. Open the "Controls and events" of the device or window the companion runs on
+  and bind NextScreen there; a button bound on your dash's device pages the dash and not the
+  companion.
 - A wheel is in SimHub's Devices view but not in the LED device list when adding a strip: SimHub's
   log says why on the line beginning `[OpenDash] LED device not offered`, and the list names it
   underneath when OpenDash found any sign of LEDs on it. For a wheel made with FanaBridge, see

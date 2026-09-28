@@ -283,13 +283,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(11, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
         }
 
-        /// <summary>The one action the companion's own section binds, which the contract has to carry for
-        /// the row to be bindable at all.</summary>
+        /// <summary>A companion's section binds no action of OpenDash's: its paging is SimHub's, bound on
+        /// the device the companion runs on.</summary>
         [Fact]
         public void A_companion_has_no_wheel_action_to_bind()
         {
-            // SimHub's own per-dashboard "Next screen" is what pages a companion from a button now,
-            // and a tap on the screen is what pages it from the screen. See ContractTests.
+            // SimHub's own NextScreen and PreviousScreen, bound in the Controls and events of the device
+            // the companion runs on, are what page it from a button, and a tap on the screen is what pages
+            // it from the screen. See ContractTests and ScreenActionsTests.
             Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, "Companion"));
         }
     }

@@ -1,20 +1,17 @@
 /**
  * The companion: a phone or a tablet beside the wheel showing one module at a time.
  *
- * Every module is a screen of one dashboard, in catalogue order, and **the plugin decides which one
- * is up**: a screen is enabled when the rotation leaves its module on and `OpenDash.CompanionPage`
- * names it, so exactly one of the twenty-one is enabled at any moment and SimHub shows that one.
- * `EditorModel.CheckGameModeScreen` re-evaluates every screen's expression each frame and moves off
- * a screen that has stopped being enabled, which is the same mechanism the two arrangements of a
- * zone face are chosen by, and it is what gives the companion the two things a face already had: a
- * module it opens on, and a module a held button shows.
+ * Every module is a screen of one dashboard, in catalogue order, and **SimHub decides which one is
+ * up**. A screen is enabled when the rotation leaves its module on (`secondScreen.moduleLive`), so the
+ * enabled screens are the ring SimHub's own paging walks: a tap on the left or right half of the
+ * screen, or a wheel button bound to NextScreen and PreviousScreen in the Controls and events of the
+ * device the companion runs on. That binding is per device, so the button paging the phone does not
+ * page the dash.
  *
- * **What it costs is SimHub's own Next and Previous ring.** With one screen enabled the ring has
- * nowhere to move to, so `CompanionNextModule` replaces it -- a plugin action bound to a wheel
- * button, which advances past whatever the driver has turned off. A package installed without the
- * plugin therefore opens on the first module and stays there, where before it could be paged; that
- * is the price of a start page and a glance, and it is the same price the paged form would have
- * charged.
+ * It used to be the plugin's choice: `OpenDash.CompanionPage` named the one module enabled, and a
+ * `CompanionNextModule` action moved it. That left SimHub's ring one screen long, so a tap did
+ * nothing, and the plugin registers no companion action now (#435). What survives of the plugin's
+ * choice is the start module, forced for a few seconds after SimHub loads through `CompanionOpenOn`.
  *
  * Every module screen is an in-game screen and nothing else, and the dashboard ends with one idle
  * screen (`idle.ts`). SimHub filters screens by role only when the roles differ between them, which

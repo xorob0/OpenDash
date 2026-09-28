@@ -1044,15 +1044,19 @@ export function moduleSettingName(number: number): string {
 }
 
 /**
- * `CompanionPage`: the module a companion is showing, as a 0-based page index.
+ * `CompanionPage`: the module a companion was built to show, as a 0-based page index.
  *
- * It is the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin holds and the
- * dashboard follows, moved by the `CompanionNextModule` action and by the held glance. The start
- * module and the glance module are *not* properties beside it, and deliberately so -- a second-screen
- * property has to be read by a package, which `secondScreens.test.ts` enforces, and nothing on the
- * screen reads either of them: a start page is applied once by `Init` and a glance is a value the
- * hold copies into this one and copies back on release. That is the idiom the pit wall's own glance
- * landed on, and one idiom is enough.
+ * It was the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin held and the
+ * dashboard followed, which a `CompanionNextModule` action and a held glance used to step. **Nothing
+ * moves it today.** A companion registers no action, because SimHub's own NextScreen and
+ * PreviousScreen page it (#435), and no screen reads it, which is the next constant. The plugin still
+ * publishes it and writes the start module into it when it forces that module through
+ * `CompanionOpenOn`, which is bookkeeping nothing reads. The code that stepped it is kept in the
+ * plugin for #362, which is where the action and the glance come back if SimHub ever lets a plugin
+ * choose the screen.
+ *
+ * The start module and the glance module are *not* properties beside it, and deliberately so -- a
+ * second-screen property has to be read by a package, which `secondScreens.test.ts` enforces.
  */
 export const COMPANION_PAGE_SETTING = 'CompanionPage';
 
@@ -1352,7 +1356,11 @@ export const secondScreen = {
   companionPage: (): Expr => isnull(prop(propertyName(COMPANION_PAGE_SETTING)), num(DEFAULT_COMPANION_PAGE)),
   /**
    * A module's screen is enabled when the rotation leaves it on *and* it is the page the plugin is
-   * showing, which is what makes the companion one screen at a time rather than a ring SimHub pages.
+   * showing, which is what made the companion one screen at a time rather than a ring SimHub pages.
+   *
+   * No screen is gated on it now -- `moduleLive` below is what the companion reads, so that SimHub
+   * pages it and a tap works -- and nothing moves the page it reads. It is kept, with `companionPage`,
+   * for #362. What follows is why it was built as it was.
    *
    * Both halves earn their place. The page is what a wheel button moves, so it is what decides which
    * of the twenty-one is up; the rotation is still asked, so that a driver with no plugin sees the
