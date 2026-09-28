@@ -6,12 +6,13 @@
  * catalogues in packages/dash, and with the build manifest when there is one.
  */
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FLAG_CATALOGUE } from '../../packages/dash/src/flags.ts';
 import { ALL_SHAPES, LEGACY_SHAPES } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
-import { flags, heroFace, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
+import { downloads, flags, heroFace, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
@@ -95,8 +96,31 @@ describe('the package list', () => {
     expect(packages.map((p) => p.round)).toEqual([true, false]);
   });
 
+  test('carries no file name, because a package is a screen the plugin installs and not a download', () => {
+    const [p] = sitePackages({ packages: [{ folder: 'OpenDash 850x480', kind: 'dash', width: 850, height: 480, file: 'OpenDash 850x480.simhubdash' }] });
+    expect(Object.keys(p!)).toEqual(['folder', 'kind', 'width', 'height', 'round']);
+  });
+
   test.if(manifest !== null)('is the fourteen packages the plugin installs', () => {
     expect(sitePackages(manifest!)).toHaveLength(14);
+  });
+});
+
+describe('the downloads', () => {
+  test('are the plugin zip and nothing else the build wrote beside it', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'opendash-downloads-'));
+    try {
+      for (const f of ['OpenDash-plugin.zip', 'OpenDash 850x480.simhubdash', 'OpenDash slots 850x480.simhubdash', 'OpenDash 3-9-3.ledsprofile', 'manifest.json']) {
+        writeFileSync(path.join(dir, f), 'x'.repeat(f.length));
+      }
+      expect(downloads(dir)).toEqual([{ file: 'OpenDash-plugin.zip', bytes: 'OpenDash-plugin.zip'.length }]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('are none when nothing was built', () => {
+    expect(downloads(path.join(tmpdir(), 'opendash-no-such-build'))).toEqual([]);
   });
 });
 

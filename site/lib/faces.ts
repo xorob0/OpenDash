@@ -1,12 +1,12 @@
 /**
- * The packages as the pages list them: in reading order, with their capture name and the download
- * the build produced for them.
+ * The packages as the pages list them: in reading order, with their capture name.
  *
- * This is the one place the generated package list, the generated download list and the editorial
- * notes meet. The picker, the size list and the download page all read from here, so a package
- * cannot be listed on one page and missing from another.
+ * This is the one place the generated package list and the editorial notes meet. The picker, the
+ * size list and the download page all read from here, so a package cannot be listed on one page
+ * and missing from another. None of them carries a file to download: the plugin is the only way in
+ * (#438), and the one download is its zip.
  */
-import { DOWNLOADS, PACKAGES } from './content.generated';
+import { PACKAGES } from './content.generated';
 import { hasCapture, packageFile, stillFor } from './captures';
 import { clipFor } from './clips';
 import { inReadingOrder, slug } from './packages';
@@ -14,15 +14,9 @@ import type { SitePackage } from '../scripts/content';
 
 export interface PackageOption extends SitePackage {
   slug: string;
-  /** What the built .simhubdash weighs, or undefined when this build did not produce one. */
-  bytes?: number;
 }
 
-const option = (p: SitePackage): PackageOption => ({
-  ...p,
-  slug: slug(p.folder),
-  bytes: DOWNLOADS.find((d) => d.file === p.file)?.bytes,
-});
+const option = (p: SitePackage): PackageOption => ({ ...p, slug: slug(p.folder) });
 
 export const ALL: readonly PackageOption[] = inReadingOrder(PACKAGES).map(option);
 export const FACES: readonly PackageOption[] = ALL.filter((p) => p.kind === 'dash');
@@ -44,8 +38,6 @@ export interface PickerFace {
   width: number;
   height: number;
   round: boolean;
-  file: string;
-  bytes?: number;
   /** The picture the cell shows: the clip's own first frame where there is a clip. */
   capture: string | null;
   /** What plays when the cell is chosen, where this size has been filmed. */
@@ -61,8 +53,6 @@ export const pickerFaces = (): PickerFace[] =>
       width: f.width,
       height: f.height,
       round: f.round,
-      file: f.file,
-      bytes: f.bytes,
       // The clip's poster is the clip's first frame, so a cell that starts playing does not jump.
       capture: clip?.poster ?? (hasCapture(packageFile(f.folder)) ? stillFor(f.folder) : null),
       clip: clip ? { webm: clip.webm, mp4: clip.mp4 } : null,

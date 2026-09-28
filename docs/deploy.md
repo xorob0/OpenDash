@@ -8,8 +8,9 @@ which is a different question.
 ## The one thing to understand first
 
 The image builds everything it serves. Its first stage runs the repository's own `bun run package`,
-so the `.simhubdash` files and `OpenDash-plugin.zip` behind the Downloads page are the files this
-commit produces rather than artifacts uploaded from somewhere else. There is consequently no token
+so the `OpenDash-plugin.zip` behind the Downloads page is the file this commit produces rather than
+an artifact uploaded from somewhere else. It is the only file the site hands out, as it is the only
+file a release publishes: the plugin is the only way in ([scope.md](scope.md), #438). There is consequently no token
 to keep and no second place that can go stale, and a redeploy is a release of the downloads as much
 as of the pages. It also means the site can offer exactly one version at a time, which is why
 Downloads pairs the current build with the changelog rather than with an archive.

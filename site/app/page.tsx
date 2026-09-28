@@ -156,7 +156,7 @@ export default function Home() {
       <Section id="get" title="Install it" lede={`Windows, SimHub ${SIMHUB_VERSION} or later. ${FREE_FOREVER}`}>
         <Actions>
           <Primary href={INSTALL.href}>{INSTALL.label} OpenDash</Primary>
-          <Secondary href="/download">Download the files</Secondary>
+          <Secondary href="/download">Download the plugin</Secondary>
         </Actions>
       </Section>
     </>

@@ -21,10 +21,10 @@ Three scripts read the repository at build time, and their output is generated a
 | Script | Reads | Writes |
 |---|---|---|
 | `scripts/tokens.ts` | `design/tokens.json` | `app/tokens.css` |
-| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/*.simhubdash` | `lib/content.generated.ts` |
+| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/OpenDash-plugin.zip` | `lib/content.generated.ts` |
 | `scripts/fonts.ts` | `packages/dash/fonts/*.ttf` | `public/fonts/*.woff2` |
 
-So which packages exist, how big each one is, what the 21 pages are called, which 3 ship off, the
+So which packages exist, how big the plugin zip is, what the 21 pages are called, which 3 ship off, the
 62 strip shapes, the flags in ranked order, the rectangles of the base face, what version this is
 and what each release changed are all read rather than retyped. A colour comes from the token file
 through three layers of `var()`.
@@ -36,20 +36,21 @@ differentiators. `lib/packages.ts` holds the sentence that says what each size i
 competitor cell read from their pages on the date in `CHECKED_ON`. `lib/anatomy.ts` holds the words
 for the parts of the face; their rectangles are generated.
 
-`content.ts` reads `build/`, which only exists after `bun run build` at the repository root. Without
-it the downloads come back empty and the pages say so rather than inventing a file.
+`content.ts` reads `build/`, which only exists after `bun run build` at the repository root, and the
+plugin zip is in it only after `bun run package`. Without it the download comes back empty and the
+pages say so rather than inventing a file.
 
 ## The pages
 
 | Route | What it answers |
 |---|---|
 | `/` | which sim, which host, what it costs; find your screen; download |
-| `/screens` | every size, to scale, with a download each; the anatomy; the companion; the pit wall |
+| `/screens` | every size, to scale; the anatomy; the companion; the pit wall |
 | `/pages` | the 21 pages, captured; the face's other catalogues |
 | `/lights` | the car's own shift lights, the strip shapes, the flag box, the Lights tab |
 | `/compare` | openDash beside the two competitors, dated |
-| `/install` | the 2 routes, the unblock step, nothing showing |
-| `/download` | the plugin, one file per screen, the release notes |
+| `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |
+| `/download` | the plugin, what it carries, the release notes |
 
 `lib/routes.ts` lists them with their anchors. The sitemap is generated from it and
 `test/links.test.ts` checks every `href` against it.
@@ -98,8 +99,8 @@ first deploy, what a redeploy publishes, and the failures worth recognising. Two
 worth having here, because both are easy to get wrong from inside this directory.
 
 The image builds everything it serves. Its first stage runs the repository's own `bun run package`,
-so the `.simhubdash` files and `OpenDash-plugin.zip` on the Downloads page are the files this commit
-produces, and a redeploy is a release of the downloads as much as of the pages. **Build from the
+so the `OpenDash-plugin.zip` on the Downloads page is the file this commit produces, and the only
+one the site offers, and a redeploy is a release of the downloads as much as of the pages. **Build from the
 repository root, not from `site/`**, because that first stage needs the whole tree:
 
 ```bash
