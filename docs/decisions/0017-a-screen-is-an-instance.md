@@ -191,3 +191,48 @@ rev arc, zone A in the middle of the disc and the catalogue zones where the card
 the sentence above should be read as unbuilt rather than as open. Until the conversion, which is
 after 1.0, a round screen's pane keeps the Layout section it has and the round picker is owed with
 the rest of the conversion work.
+
+---
+
+## Amended, 2026-09-28: a strip is an instance too, and it is found by its own id (#457)
+
+**What moved.** The instance model reached the LED strips in 0.3.0-rc.2. A strip is a bar with a
+name, a shape and a namespace frozen at creation, exactly as a screen is, and the profile installed
+for it is the embedded profile of its shape with the bar's namespace written through it, under an id
+derived from that namespace (`LedBarProfile.IdFor`). The Install tab's strip rows, however, went on
+asking SimHub about the embedded profiles, by the embedded profile's own id, which no bar carries.
+On the VM, with a `3/9/3` and a `3/9/3 Fanatec` added on the Arduino, SimHub held them as
+`b8000ec9-…` and `cf2f576b-…`, the ids `Led393` and `Led393Fanatec` derive, while the rows looked for
+`cf7dc3c7-…`, and every row thus said Not installed on a rig with two strips in SimHub.
+
+**The rows stay, and they ask about the rig's bars.** One could think that the rows duplicate the
+Lights tab, where the strips are added. In reality the Lights tab configures a bar and says nothing
+about what SimHub holds for it, whereas the Install tab is where a driver reads what is installed and
+at which version ([plugin.md](../design/plugin.md#install)); without the rows, nothing on the panel
+would say that a strip's profile is missing or old. A row therefore reports, for the shapes it names,
+whether any of the rig's bars of those shapes is in any LED device's list, looked for by the id the
+bar derives, and whether that copy is current. A bar whose profile is in no list does not pull the
+row down to Not installed while another bar of its shapes is there, since the row speaks for shapes
+rather than for bars.
+
+**A strip carries the version that built it.** The build stamps every strip profile as it has always
+stamped the flag box: `OpenDash` in its `Author`, and `Built by OpenDash <version>` in its own
+`Description`, which the rewrite into a bar's profile leaves untouched. The copy in SimHub is compared
+with the embedded one by that version, through the same `FlagBoxInstallPlan.VersionOf` the flag box
+uses, and by nothing else. A strip installed before this carries no version at all, and it reads as
+older, since nothing says that it is current.
+
+**An update is offered and never applied on its own.** Installing a newer plugin does not rewrite a
+bar's profile. The row reads Outdated and offers Update, which rewrites every outdated bar of its
+shapes into the device that bar names, exactly as adding the strip today would write it, and the
+row's tooltip names both versions and says that the copy in SimHub is replaced together with whatever
+was changed in it there. This is not a new rule but the amendment of 2026-09-13 to
+[ADR 0013](0013-lighting-hardware.md) applied to bars: a profile inside a settings file gives OpenDash
+nothing to fingerprint, so the press is the consent, and a strip a driver has edited in SimHub's own
+editor is not overwritten behind their back.
+
+**What this costs.** A driver who never opens the Install tab keeps the older strip, since the row is
+the only place that says so. Moreover, 0.3.0-rc.1 installed strips per shape, before there were
+bars, and a rig that pressed one of those rows holds a profile under the embedded id; such a profile
+belongs to no bar and reads the rig-wide settings, so the rows no longer count it and nothing on the
+panel updates it. It keeps working as it did, and removing it is done in SimHub.
