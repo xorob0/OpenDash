@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { flagBox, setting } from '../contract.ts';
+import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -136,8 +136,17 @@ export const CHARS = {
   lapOfTotal: { digits: 6, specials: 3 } as Chars,
 };
 
-/** True when a TimeSpan holds a real lap time rather than the unset `00:00:00`. */
-export const hasTime = (ts: Expr): Expr => gt(timespanToSeconds(isnull(ts, num(0))), num(0));
+/**
+ * True when a TimeSpan holds a real lap time rather than the unset `00:00:00` or nothing at all.
+ *
+ * **The guard goes outside the conversion.** SimHub's `timespantoseconds` answers null for anything
+ * that is not a TimeSpan, the number `0` included, so `timespantoseconds(isnull(ts, 0))` is null
+ * whenever `ts` is, and NCalc's `null > 0` throws (`ArgumentNullException`, measured against the
+ * NCalc.dll SimHub 9.12.6 ships). A throwing expression draws the empty string, so every lap time
+ * with no value behind it drew nothing where it should have drawn {@link noTime}, and a value that
+ * came and went drew a field that vanished and came back. #454.
+ */
+export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
 
 /** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
 export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
@@ -308,8 +317,29 @@ export const sessionBestRow = (inClass: Expr | boolean = classMode()): Expr => {
   return iff(ge(index, num(0)), add(index, num(1)), num(-1));
 };
 
-/** The session's best lap, which is the best lap of that car: of the player's class, counting in class. */
-export const sessionBestLap = (): Expr => driver('bestlap', sessionBestRow());
+/**
+ * The session's best lap: of the whole field, or of the player's class when the rig counts in class.
+ *
+ * **Never `driverbestlap()` of {@link sessionBestRow}**, which is what this was when a rig reported
+ * the session best flashing on joining a session and through the first timed lap (#454). The row
+ * comes from a published property, and SimHub publishes a property from the last frame it finished.
+ * `driverbestlap()` instead reads `lastData.NewData`, the frame SimHub is building, and SimHub builds
+ * each frame in place: at the start of every tick `NewData` is a fresh object with no leaderboard,
+ * which it fills in over the course of the tick. A dashboard renders on its own thread, so a frame it
+ * draws mid-build finds no car at the row and gets null, which {@link lapTime} used to draw as an
+ * empty field. It is the same race the property read above already took the row out of. The race is
+ * read from the decompiled 9.12.6; the emulator on the test VM did not produce it, so what a rig
+ * sees is argued from SimHub's code rather than filmed.
+ *
+ * So the time is read from a published property as well. For the field SimHub has one:
+ * `BestLapOpponent` is declared under `GameData` like any other member, because the empty frame
+ * SimHub declares its properties from carries a blank car there, and the read is null-safe the whole
+ * way down. For the class it has none: `BestLapSameClassOpponent` is null on that frame, so the plugin
+ * copies that car's time out of the finished frame as {@link CLASS_BEST_LAP}. Without the plugin the
+ * class reading falls back on the row, which is right on every frame SimHub is not mid-build.
+ */
+export const sessionBestLap = (): Expr =>
+  iff(classMode(), isnull(prop(propertyName(CLASS_BEST_LAP)), driver('bestlap', sessionBestRow(true))), game('BestLapOpponent.BestLapTime'));
 
 /**
  * The session's best time through one sector, of the field or of the player's own class as

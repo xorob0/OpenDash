@@ -5,8 +5,11 @@
 // It does read telemetry, for exactly one thing. ADR 0018 reopened ADR 0009 -- "the plugin does not
 // compute" -- for the car's own LED bar, because there is no SimHub property to derive it from, no
 // expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
-// is the whole of that: three values in, one frame of colours out, and nothing else in the plugin
-// reads a telemetry value.
+// is the whole of that: three values in, one frame of colours out.
+//
+// The one other value it reads is SimHub's own, not ours: the best lap of the player's class, which
+// SimHub works out every frame and never publishes. DataUpdate copies it out of the finished frame so
+// a dashboard need not look it up in the one being built; Contract.ClassBestLap says why.
 using System;
 using System.Linq;
 using System.Reflection;
@@ -470,10 +473,28 @@ namespace OpenDashPlugin
         /// </remarks>
         private DateTime? releaseStartModulesAt;
 
+        /// <summary>
+        /// The best lap of the player's class on the last frame SimHub finished, or null. What
+        /// <see cref="Contract.ClassBestLap"/> publishes.
+        /// </summary>
+        /// <remarks>
+        /// Written here, on SimHub's data thread, after the frame is complete and before the next one
+        /// starts; read by a dashboard on its own thread whenever it renders. A TimeSpan? is a reference
+        /// once boxed by the delegate, so the reader sees one frame's value or the next, never half of
+        /// either.
+        /// </remarks>
+        private volatile object classBestLap;
+
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             try
             {
+                // First and on its own, so that nothing the lights do below can leave it stale. A frame
+                // without the game running holds no leaderboard, and neither does the dashboard's field.
+                classBestLap = data != null && data.GameRunning && data.NewData != null
+                    ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
+                    : null;
+
                 if (releaseStartModulesAt != null && DateTime.UtcNow >= releaseStartModulesAt.Value)
                 {
                     releaseStartModulesAt = null;
@@ -618,6 +639,9 @@ namespace OpenDashPlugin
             // read live and the offer is computed when it changes; see RefreshUpdateMark. #755.
             this.AttachDelegate(Contract.UpdateAvailable, () => UpdateMark.Available(Settings.CheckForUpdates, offeredUpdate));
             this.AttachDelegate(Contract.UpdateVersion, () => UpdateMark.Shown(Settings.CheckForUpdates, offeredUpdate));
+            // And the class best, filled by DataUpdate from the frame SimHub has finished. Not a setting:
+            // published because SimHub keeps it and does not publish it. See Contract.ClassBestLap.
+            this.AttachDelegate(Contract.ClassBestLap, () => classBestLap);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

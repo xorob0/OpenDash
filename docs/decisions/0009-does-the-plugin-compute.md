@@ -88,6 +88,26 @@ The allowance is for reading what the host already remembers and does not extend
 `getvalue`, with which an expression would keep state of its own. Those would be a computing plugin
 written in NCalc, which is the thing this record refuses, and they remain unused.
 
+### A value SimHub keeps and does not publish
+
+Added 2026-09-28 for #454. SimHub works out the best lap of the player's class on every frame and
+keeps the car as `BestLapSameClassOpponent`, but it never becomes a property: `DataCorePlugin`
+declares `GameData` from an empty frame at startup, and on that frame the car is null. Its field
+twin, `BestLapOpponent`, is declared because the empty frame carries a blank car there.
+
+An expression can reach the class car's time only through `driverbestlap()`, and that function
+reads the frame SimHub is still building rather than the one it last published. SimHub builds each
+frame in place on the object the dashboard reads, so a dashboard that renders mid-build finds no
+leaderboard and gets nothing, which a rig reported as the session best flashing. The race is read
+from SimHub's code; the emulator did not produce it on the test VM. The plugin therefore copies the
+time out of the finished frame in `DataUpdate` and publishes it as `OpenDash.ClassBestLap`.
+
+That is not a computation, and it does not reopen the decision above: SimHub chose the car and the
+time, and the plugin only moves SimHub's own answer to where SimHub would have published it. It is
+the same shape of exception as ADR 0018, which reads telemetry because no property exists to derive
+from, and the package stays complete without the plugin, falling back on the row lookup, which is
+right on every frame SimHub is not mid-build.
+
 ## What would reopen this
 
 An expression is not a good place for arithmetic that is long, shared between many items, or

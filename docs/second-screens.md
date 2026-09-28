@@ -159,9 +159,12 @@ when either answer is yes, and `rowsInClass` in `second/values.ts` is where the 
 The session best follows the same setting, because it is a reference the driver measures against
 and a GT3 driver cannot act on an LMP2's lap. Counting in class, the `Session best` field of the
 Lap times module, the Sectors module and the pit wall's track panel reads the fastest lap of the
-player's own class, from SimHub's `BestLapOpponentSameClassPosition`; and a sector draws purple
+player's own class, which SimHub keeps and does not publish, so the plugin publishes it as
+`OpenDash.ClassBestLap` (#454); and a sector draws purple
 against the class's best split, `getbestsplittime_playerclassonly`, which is also what the Sectors
-module's `Best S1` to `Best S3` read. Counting overall, every one of them reads the whole field.
+module's `Best S1` to `Best S3` read. Counting overall, every one of them reads the whole field,
+the time from SimHub's `GameData.BestLapOpponent.BestLapTime`. Neither is looked up with
+`driverbestlap()`, which reads the frame SimHub is still building (#454).
 
 The purple on a leaderboard's `Best` column asks the wider question a list asks, because it marks
 the fastest car of the rows the list draws: it falls on the class's fastest car wherever the rows
