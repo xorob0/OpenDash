@@ -278,14 +278,47 @@ export const splitHiddenCars = (topRows: number, rows: number): Expr => sub(spli
  * `BestLapOpponentPosition` is a public property of `StatusDataBase`, so SimHub publishes it under
  * `GameData` like any other, and reading it cannot throw. `IndexToPosition`'s own arithmetic is the
  * `+ 1`, which applies to a real index and not to the -1 that means "nobody yet".
+ *
+ * **Which field "the session" is follows `PositionMode`**, as every list already does (#433). The
+ * fastest car of the whole field is an LMP2 time handed to a GT3 driver, which is a reference
+ * nobody in that car can act on; counting in class, the row is the fastest car of the player's own
+ * class instead. SimHub keeps that one as a property too, `BestLapOpponentSameClassPosition`, set
+ * from `Opponents.IndexOf` exactly as its overall twin is, so it is the same leaderboard index with
+ * the same -1 and takes the same `+ 1`. Its function form,
+ * `getbestlapopponentleaderboardposition_playerclassonly`, is the same `?.` chain and throws the
+ * same way, so it is not called either.
+ *
+ * The switch is here rather than at each field so that every reader of the row follows it without
+ * being told: the Lap times, Sectors and pit wall fields, and the purple on a leaderboard's `Best`
+ * column through {@link carIsSessionBest}, which on a board filtered to one class would otherwise
+ * paint the overall fastest car and therefore nobody at all.
+ *
+ * A list asks a wider question than the rig does, which is why the condition can be passed. A zone
+ * filtered to the player's class draws only that class whatever `PositionMode` says, so its purple
+ * has to be the fastest car of that class or it falls on a car the list does not draw; the table
+ * hands in the same condition its rows are chosen by, a plain `true` or `false` where the rows
+ * never change field, and every other reader takes the rig's.
  */
-export const sessionBestRow = (): Expr => {
-  const index = isnull(game('BestLapOpponentPosition'), num(-1));
+export const sessionBestRow = (inClass: Expr | boolean = classMode()): Expr => {
+  const inClassIndex = isnull(game('BestLapOpponentSameClassPosition'), num(-1));
+  const fieldIndex = isnull(game('BestLapOpponentPosition'), num(-1));
+  const index = typeof inClass === 'boolean' ? (inClass ? inClassIndex : fieldIndex) : iff(inClass, inClassIndex, fieldIndex);
   return iff(ge(index, num(0)), add(index, num(1)), num(-1));
 };
 
-/** The session's best lap, which is the best lap of that car. */
+/** The session's best lap, which is the best lap of that car: of the player's class, counting in class. */
 export const sessionBestLap = (): Expr => driver('bestlap', sessionBestRow());
+
+/**
+ * The session's best time through one sector, of the field or of the player's own class as
+ * `PositionMode` says, for the same reason {@link sessionBestRow} follows it: a GT3 driver could
+ * never draw a sector purple while an LMP2 was on track. A TimeSpan, or null before anyone has set
+ * one.
+ *
+ * Both are functions rather than properties, SimHub publishing the splits as a list and not under
+ * `GameData`; both are null-safe the whole way down and return a `TimeSpan?`, so neither can throw.
+ */
+export const sessionBestSplit = (sector: number): Expr => iff(classMode(), ncalc.bestSplitTimeInClass(sector), ncalc.bestSplitTime(sector));
 
 // --- Per-car reads, each guarded for a row that is not there --------------------------------
 
@@ -599,7 +632,15 @@ export const carClassInterval = (idx: Expr): Expr => {
 
 export const carLastLap = (idx: Expr): Expr => lapTime(driver('lastlap', idx));
 export const carBestLap = (idx: Expr): Expr => lapTime(driver('bestlap', idx));
-export const carIsSessionBest = (idx: Expr): Expr => and(eq(idx, sessionBestRow()), gt(sessionBestRow(), num(0)));
+/**
+ * Whether a car holds the session best, which is the fastest car of the field its list draws: the
+ * player's class where `inClass` holds and the whole field otherwise, the rig's `PositionMode` when
+ * nothing is passed (see {@link sessionBestRow}).
+ */
+export const carIsSessionBest = (idx: Expr, inClass?: Expr | boolean): Expr => {
+  const row = sessionBestRow(inClass);
+  return and(eq(idx, row), gt(row, num(0)));
+};
 export const carSector = (idx: Expr, sector: number): Expr => sectorTime(ncalc.driverSector('lastlap', idx, sector, false));
 export const carStintLaps = (idx: Expr): Expr => fmt(isnull(driver('lapsdonesincelastpitout', idx), num(0)), '0');
 export const carPitCount = (idx: Expr): Expr => fmt(isnull(driver('pitcount', idx), num(0)), '0');
