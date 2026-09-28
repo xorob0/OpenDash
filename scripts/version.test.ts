@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { VERSION_FILE } from '../packages/dash/src/build.ts';
 import { CHANGELOG_FILE, sectionFor } from './changelog.ts';
-import { behind, bump, compareVersions, disagreements, headingsIn, main, parseArgs, today, type MainIO } from './version.ts';
+import { behind, bump, compareVersions, disagreements, headingsIn, isDate, main, parseArgs, today, type MainIO } from './version.ts';
 
 const SAMPLE = [
   '# Changelog',
@@ -53,6 +53,12 @@ describe('the ordering is the plugin\'s', () => {
     expect(compareVersions('0.3.0-rc.10', '0.3.0-rc.9')).toBeGreaterThan(0);
     expect(compareVersions('0.3.0', '0.3.0-rc.10')).toBeGreaterThan(0);
   });
+
+  test('a core segment past Int32.MaxValue is 0, as int.TryParse leaves it in the plugin', () => {
+    expect(compareVersions('99999999999.0.0', '1.0.0')).toBeLessThan(0);
+    expect(compareVersions('2147483648.0.0', '0.0.0')).toBe(0);
+    expect(compareVersions('2147483647.0.0', '1.0.0')).toBeGreaterThan(0);
+  });
 });
 
 describe('the edit', () => {
@@ -85,6 +91,16 @@ describe('the edit', () => {
   test('something that is not a version is refused before anything is written', () => {
     expect(() => bump(SAMPLE, '0.3.0-rc.7', '0.4', '2026-09-28')).toThrow('is not a version');
     expect(() => bump(SAMPLE, '0.3.0-rc.7', '0.4.0', 'Monday')).toThrow('is not a date');
+    expect(() => bump(SAMPLE, '0.3.0-rc.7', '0.4.0', '2026-99-99')).toThrow('is not a date');
+    expect(() => bump(SAMPLE, '0.3.0-rc.7', '0.4.0', '2026-02-29')).toThrow('is not a date');
+  });
+
+  test('a date is a day the calendar has, not only the shape of one', () => {
+    expect(isDate('2026-09-28')).toBe(true);
+    expect(isDate('2028-02-29')).toBe(true);
+    expect(isDate('2026-02-29')).toBe(false);
+    expect(isDate('2026-13-01')).toBe(false);
+    expect(isDate('2026-9-28')).toBe(false);
   });
 
   test('a changelog ahead of VERSION is refused rather than given a second newest heading', () => {
@@ -136,6 +152,9 @@ describe('the check', () => {
       'CHANGELOG.md line 9 is not a `## <version> (<date>)` heading: "## 0.3.0-rc.6"',
     ]);
     expect(disagreements('next', SAMPLE)[0]).toBe('VERSION must hold a version like 0.3.0, got "next"');
+    expect(disagreements('0.3.0-rc.7', SAMPLE.replace('(2026-09-22)', '(2026-99-99)'))).toEqual([
+      'CHANGELOG.md line 9 is not a `## <version> (<date>)` heading: "## 0.3.0-rc.6 (2026-99-99)"',
+    ]);
   });
 
   test('a branch that set the number back and deleted the newer section agrees with itself, so only the base catches it', () => {

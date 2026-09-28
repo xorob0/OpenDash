@@ -40,6 +40,8 @@ interface Parsed {
 
 const isDigit = (c: string): boolean => c >= '0' && c <= '9';
 
+const INT32_MAX = 2147483647;
+
 const parse = (version: string): Parsed => {
   let text = version.trim();
   if (text.startsWith('v') || text.startsWith('V')) text = text.slice(1);
@@ -56,7 +58,9 @@ const parse = (version: string): Parsed => {
   for (const part of text.split('.')) {
     let digits = 0;
     while (digits < part.length && isDigit(part[digits]!)) digits++;
-    core.push(digits > 0 ? Number(part.slice(0, digits)) : 0);
+    // int.TryParse: a segment past Int32.MaxValue fails to parse, and the plugin reads it as 0.
+    const value = digits > 0 ? Number(part.slice(0, digits)) : 0;
+    core.push(value <= INT32_MAX ? value : 0);
     if (digits < part.length) break; // "0rc1": stop at the first segment that is not a number
   }
   return { core, preRelease };
@@ -149,9 +153,18 @@ export interface Heading {
   text: string;
   /** The first word after `## `, which is what changelog.ts matches a tag against. */
   version: string;
-  /** Null when the heading is not in the `(<date>)` shape. */
+  /** Null when the heading is not in the `(<date>)` shape, or its date is not a day the calendar has. */
   date: string | null;
 }
+
+/** True for a day the calendar has: 2026-02-29 and 2026-99-99 are the shape of a date, not dates. */
+export const isDate = (text: string): boolean => {
+  const shaped = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!shaped) return false;
+  const [year, month, day] = [Number(shaped[1]), Number(shaped[2]), Number(shaped[3])];
+  const at = new Date(Date.UTC(year, month - 1, day));
+  return at.getUTCFullYear() === year && at.getUTCMonth() === month - 1 && at.getUTCDate() === day;
+};
 
 /** Every release heading, newest first as the file gives them. The same lines changelog.ts reads. */
 export const headingsIn = (markdown: string): Heading[] =>
@@ -159,7 +172,8 @@ export const headingsIn = (markdown: string): Heading[] =>
     if (!text.startsWith('## ')) return [];
     const version = text.slice(3).trim().split(/\s+/)[0] ?? '';
     const shaped = HEADING.exec(text.trimEnd());
-    return [{ line, text, version, date: shaped?.[2] ?? null }];
+    const date = shaped?.[2];
+    return [{ line, text, version, date: date !== undefined && isDate(date) ? date : null }];
   });
 
 /** A date as a heading carries it, in the local calendar, which is the day the author cut it on. */
@@ -189,7 +203,7 @@ export interface Bumped {
 export const bump = (markdown: string, current: string, requested: string, date: string): Bumped => {
   const next = versionOf(requested);
   if (!VERSION_PATTERN.test(next)) throw new VersionError(`${JSON.stringify(requested)} is not a version like 0.3.0 or 0.3.0-rc.8`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new VersionError(`${JSON.stringify(date)} is not a date like 2026-09-28`);
+  if (!isDate(date)) throw new VersionError(`${JSON.stringify(date)} is not a date like 2026-09-28`);
 
   const order = compareVersions(next, current);
   if (order < 0 || (order === 0 && next !== current)) {
