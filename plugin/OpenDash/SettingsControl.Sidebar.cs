@@ -39,6 +39,11 @@ namespace OpenDashPlugin
         private TextBox railSearchBox;
         private Popup searchFlyout;
 
+        /// <summary>The sidebar's night switch, set in place when the wheel changes night mode rather than drawn
+        /// again, and the guard that keeps that setting from being heard as a press.</summary>
+        private ToggleButton nightSwitch;
+        private bool syncingNight;
+
         /// <summary>The nav items of the sidebar that is showing, so focus can follow a press to the new one.</summary>
         private readonly System.Collections.Generic.Dictionary<PanelPage, Button> navItems = new System.Collections.Generic.Dictionary<PanelPage, Button>();
 
@@ -48,9 +53,27 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The items above the foot scroll, with no bar, when the window is too short for them: under about
         /// 645 px the foot would otherwise cover Settings, then Shortcuts.
+        ///
+        /// Keyboard focus inside the sidebar is carried into the new one: the nav item, the night switch or
+        /// the search that had it has it again, rather than focus dropping to the window when the control
+        /// holding it is drawn away by an update answer, a mapping change or a finished run.
         /// </remarks>
         private void RefreshSidebar()
         {
+            PanelPage? focusedItem = null;
+            var nightFocused = false;
+            TextBox focusedSearch = null;
+            if (sidebarHost.IsKeyboardFocusWithin)
+            {
+                foreach (var pair in navItems)
+                {
+                    if (pair.Value.IsKeyboardFocusWithin) focusedItem = pair.Key;
+                }
+                nightFocused = nightSwitch != null && nightSwitch.IsKeyboardFocusWithin;
+                if (searchBox != null && searchBox.IsKeyboardFocusWithin) focusedSearch = searchBox;
+                else if (railSearchBox != null && railSearchBox.IsKeyboardFocusWithin) focusedSearch = railSearchBox;
+            }
+
             var narrow = Narrow;
             var padX = narrow ? PanelShell.RailPaddingX : PanelShell.SidebarPaddingX;
             var dock = new DockPanel { LastChildFill = true };
@@ -80,6 +103,35 @@ namespace OpenDashPlugin
             sidebarHost.BorderThickness = new Thickness(0, 0, PanelMetrics.BorderWeight, 0);
             sidebarHost.Padding = new Thickness(padX, PanelShell.SidebarPaddingTop, padX, PanelShell.SidebarPaddingBottom);
             sidebarHost.Child = dock;
+
+            if (focusedItem.HasValue) FocusNavItem(focusedItem.Value);
+            else if (nightFocused) FocusLater(nightSwitch);
+            else if (focusedSearch != null && focusedSearch.IsVisible) FocusLater(focusedSearch);
+        }
+
+        /// <summary>Focuses a control once the sidebar it was drawn into has been laid out.</summary>
+        private void FocusLater(IInputElement element)
+        {
+            if (element == null) return;
+            Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(element)), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        /// <summary>Sets the sidebar's night switch to the setting without drawing the sidebar again, so a
+        /// wheel press moves it and a driver focused on it keeps the focus.</summary>
+        private void SyncNightSwitch()
+        {
+            if (nightSwitch == null) return;
+            var on = Settings.LightsNightMode;
+            if (nightSwitch.IsChecked == on) return;
+            syncingNight = true;
+            try
+            {
+                nightSwitch.IsChecked = on;
+            }
+            finally
+            {
+                syncingNight = false;
+            }
         }
 
         /// <summary>Takes an element that is kept between rebuilds out of the sidebar it was last drawn in.</summary>
@@ -474,11 +526,13 @@ namespace OpenDashPlugin
         {
             var night = Ui.Switch(Settings.LightsNightMode, on =>
             {
+                if (syncingNight) return;
                 Settings.LightsNightMode = on;
                 Save();
                 ShowLightingChange();
             });
             System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
+            nightSwitch = night;
             FrameworkElement nightRow;
             if (narrow)
             {

@@ -295,6 +295,13 @@ namespace OpenDashPlugin
             return wide ? room : Math.Min(room, ContentMax);
         }
 
+        /// <summary>How long a resize waits for the window to stop moving before the page is rebuilt.</summary>
+        public const int ResizeSettleMs = 150;
+
+        /// <summary>How long a lighting change waits for a burst of wheel presses to stop before a page that
+        /// draws lighting is rebuilt.</summary>
+        public const int LightingSettleMs = 120;
+
         public static bool TwoColumns(PanelLayout layout, double contentWidth)
         {
             return layout == PanelLayout.Full && contentWidth >= TwoColumnFrom;

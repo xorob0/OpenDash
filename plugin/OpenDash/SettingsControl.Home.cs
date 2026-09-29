@@ -16,6 +16,7 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildHomePage(PanelRoute to)
         {
+            DrawsLighting();
             var head = new StackPanel { Orientation = Orientation.Vertical };
             var eyebrow = Ui.Eyebrow(PanelHome.Title);
             eyebrow.Margin = new Thickness(0, 0, 0, 10);

@@ -30,6 +30,12 @@ namespace OpenDashPlugin
         /// <summary>Where this build draws an update's progress.</summary>
         private Border updateProgressHost;
 
+        /// <summary>The run that is downloading, held outside the build so a rebuild in place -- a resize, the
+        /// return to the panel, a lighting change -- draws it again rather than an idle section with live
+        /// buttons: the line it said and the fraction it last reported. Null when nothing is running.</summary>
+        private string applyingLine;
+        private double applyingFraction;
+
         /// <summary>The question Update or Reinstall has put on the update line, if either has. It outlives the
         /// page, and does not need forgetting with the controls: a question counts only while its line shows it.</summary>
         private readonly PanelConfirmation confirmation = new PanelConfirmation();
@@ -70,11 +76,11 @@ namespace OpenDashPlugin
         /// pressed on the remembered offer that was waiting for the listing.</summary>
         private void UpdateAnswered()
         {
-            if (checkButton != null) checkButton.IsEnabled = true;
+            if (checkButton != null) checkButton.IsEnabled = !applying;
             RefreshUpdateLine();
             var waiting = applyWaiting;
             applyWaiting = false;
-            if (waiting && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null && updateProgressHost != null) ApplyUpdate(updateProgressHost);
+            if (waiting && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null && updateProgressHost != null) ApplyUpdate();
         }
     }
 }

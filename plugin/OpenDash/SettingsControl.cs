@@ -92,6 +92,13 @@ namespace OpenDashPlugin
         /// <summary>Whether SimHub has taken the panel off screen since it was last shown.</summary>
         private bool wasUnloaded;
 
+        /// <summary>Whether the build that is showing draws the rig's lighting -- night mode or a brightness --
+        /// and so asked through <see cref="DrawsLighting"/> to be rebuilt when either changes.</summary>
+        private bool pageDrawsLighting;
+
+        /// <summary>Holds a lighting change's rebuild until a burst of wheel presses has finished.</summary>
+        private DispatcherTimer lightingSettle;
+
         public SettingsControl(OpenDash plugin)
         {
             this.plugin = plugin;
@@ -134,6 +141,7 @@ namespace OpenDashPlugin
                 // A resize that had not settled would otherwise rebuild the page off screen, and on Screens
                 // start a preview no Unloaded would ever dispose.
                 if (resizeSettle != null) resizeSettle.Stop();
+                if (lightingSettle != null) lightingSettle.Stop();
                 // A page that is not on screen must not still be drawing a dashboard.
                 DropPreview();
                 wasUnloaded = true;
@@ -226,7 +234,7 @@ namespace OpenDashPlugin
         {
             if (resizeSettle == null)
             {
-                resizeSettle = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromMilliseconds(150) };
+                resizeSettle = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromMilliseconds(PanelShell.ResizeSettleMs) };
                 resizeSettle.Tick += (sender, args) =>
                 {
                     resizeSettle.Stop();
@@ -258,13 +266,15 @@ namespace OpenDashPlugin
         // Navigation: Go(route) and Go(page, anchor) leave the page; Open(page, id, anchor) goes with a card
         // selected; Select and Selected hold a page's card for the session (Rig's is a PanelEmulation
         // scenario id, which is how Settings' "Try" opens Rig on one); Redraw rebuilds the page in place after
-        // a change, keeping the scroll and clearing the lines; ShowLightingChange redraws the sidebar's switch
-        // and the page after night mode or a brightness changed, which the wheel's buttons do too.
+        // a change, keeping the scroll and clearing the lines; ShowLightingChange sets the sidebar's switch
+        // and, only for a page that called DrawsLighting() while building, rebuilds it after night mode or a
+        // brightness changed, which the wheel's buttons do too, a burst of presses once.
         // Lifetime: OnDrop(action) lets go of what one build holds, on every rebuild and on Go; OnLeave(action)
         // undoes what the page started, on Go only; OnTick(action) is called every second while showing;
         // OnUpdate(checking, answered) hears the update check. Layout: PageLayout, PageSection, ContentWidth
         // (less the scroll bar), Narrow and TwoColumns, all read while building -- the shell rebuilds the page
-        // when any of them moves. Lines: Say. Sheets: ShowSheet(title, body, footer, closed), SheetFooter,
+        // when any of them moves, so anything a page has in flight (a download, a press it is waiting on) lives
+        // in a field outside the build and the next build draws it from there. Lines: Say. Sheets: ShowSheet(title, body, footer, closed), SheetFooter,
         // CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
@@ -291,8 +301,9 @@ namespace OpenDashPlugin
         /// </remarks>
         private void Go(PanelRoute to)
         {
-            CloseSheet();
+            var panelFocused = IsKeyboardFocusWithin;
             var sidebarFocused = sidebarHost.IsKeyboardFocusWithin;
+            CloseSheet();
             DropPreview();
             ClearMessages();
             ClearTicks();
@@ -305,7 +316,10 @@ namespace OpenDashPlugin
             RefreshAttention();
             pageHost.Content = BuildPage(route);
             RefreshSidebar();
+            // Focus follows the press: to the new page's item when it came from the sidebar, and to the new
+            // page's first control when it came from a page or a sheet, whose control has just been drawn away.
             if (sidebarFocused) FocusNavItem(route.Page);
+            else if (panelFocused) FocusPageStart();
             if (route.Anchor != null) ScrollToAnchor(route.Anchor);
             else mainScroll.ScrollToTop();
         }
@@ -355,14 +369,41 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Draws the sidebar's switch and the page again after the rig's lighting changed: a press here, or
-        /// the wheel's night mode and brightness buttons, which the plugin reports through
-        /// <see cref="OpenDash.RigLightingPressed"/>. A page need not watch for these itself.
+        /// Shows a change to the rig's lighting: a press here, or the wheel's night mode and brightness
+        /// buttons, which the plugin reports through <see cref="OpenDash.RigLightingPressed"/>. The sidebar's
+        /// switch is set in place, and the page is rebuilt only when it draws lighting, once a burst of
+        /// presses has stopped.
         /// </summary>
+        /// <remarks>
+        /// It rebuilt the sidebar and whatever page was showing on every press, on SimHub's interface thread
+        /// while the driver was on track: Screens reloaded its live preview, Updates unpacked every strip
+        /// profile and LEDs walked SimHub's devices, and none of the three draws lighting. Five brightness
+        /// steps were five rebuilds.
+        /// </remarks>
         private void ShowLightingChange()
         {
-            RefreshSidebar();
-            RebuildPage();
+            SyncNightSwitch();
+            if (!pageDrawsLighting) return;
+            if (lightingSettle == null)
+            {
+                lightingSettle = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromMilliseconds(PanelShell.LightingSettleMs) };
+                lightingSettle.Tick += (sender, args) =>
+                {
+                    lightingSettle.Stop();
+                    if (IsLoaded && pageDrawsLighting) RebuildPage();
+                };
+            }
+            lightingSettle.Stop();
+            lightingSettle.Start();
+        }
+
+        /// <summary>
+        /// Called by a page while it is built when it draws night mode or a brightness, so a change to either
+        /// rebuilds it. A page that does not call it is left alone by a wheel press.
+        /// </summary>
+        private void DrawsLighting()
+        {
+            pageDrawsLighting = true;
         }
 
         /// <summary>
@@ -490,6 +531,12 @@ namespace OpenDashPlugin
             return node == root ? path : null;
         }
 
+        /// <summary>Puts keyboard focus on the first control of the page that is showing, once it is laid out.</summary>
+        private void FocusPageStart()
+        {
+            Dispatcher.BeginInvoke(new Action(() => pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))), DispatcherPriority.Loaded);
+        }
+
         /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
         /// focusable thing above it when the rebuild is shaped differently there.</summary>
         private void RestoreFocus(DependencyObject root, List<int> path)
@@ -518,6 +565,7 @@ namespace OpenDashPlugin
         {
             builtContentWidth = ContentWidth;
             builtTwoColumns = TwoColumns;
+            pageDrawsLighting = false;
             try
             {
                 switch (to.Page)

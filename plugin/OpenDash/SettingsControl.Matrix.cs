@@ -17,6 +17,7 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
+            DrawsLighting();
             var panels = Settings.MatrixPanels().ToList();
             var groups = new List<UIElement>();
             var caption = Ui.Caption(PanelLights.PanelsCaption);

@@ -25,8 +25,13 @@ namespace OpenDashPlugin
 
         private TextBlock carTablesLine;
 
+        /// <summary>Whether the car tables are downloading, held outside the build so a rebuild meanwhile draws
+        /// the button disabled and the line saying so rather than a press that looks ready.</summary>
+        private bool carTablesDownloading;
+
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
+            DrawsLighting();
             OnDrop(() =>
             {
                 carTablesButton = null;
@@ -93,8 +98,12 @@ namespace OpenDashPlugin
             // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
             // refetches on its own any more, so the invitation is the whole of what staleness now does.
             if (service.Stale(DateTime.UtcNow)) line += " " + PanelLights.CarTablesStale;
-            carTablesLine.Text = line;
-            if (carTablesButton != null) carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+            carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
+            if (carTablesButton != null)
+            {
+                carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+                carTablesButton.IsEnabled = !carTablesDownloading;
+            }
         }
 
         /// <summary>
@@ -106,16 +115,16 @@ namespace OpenDashPlugin
         /// </remarks>
         private void DownloadCarTables()
         {
-            if (carTablesButton == null) return;
-            carTablesButton.IsEnabled = false;
-            if (carTablesLine != null) carTablesLine.Text = PanelLights.CarTablesDownloading;
+            if (carTablesButton == null || carTablesDownloading) return;
+            carTablesDownloading = true;
+            RefreshCarTables();
 
             UpdateService.InBackground(() =>
             {
                 plugin.CarLights.Download(DateTime.UtcNow);
                 Dispatcher.Invoke(() =>
                 {
-                    if (carTablesButton != null) carTablesButton.IsEnabled = true;
+                    carTablesDownloading = false;
                     RefreshCarTables();
                 });
             }, new SimHubInstallLog());

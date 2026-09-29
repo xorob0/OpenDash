@@ -38,6 +38,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildRigPage(PanelRoute to)
         {
+            DrawsLighting();
             var night = Ui.Switch(Settings.LightsNightMode, on =>
             {
                 Settings.LightsNightMode = on;

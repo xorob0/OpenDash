@@ -18,6 +18,7 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildSettingsPage(PanelRoute to)
         {
+            DrawsLighting();
             return PageLayout(PanelSettings.Title, null,
                 Ui.Anchor(BuildRaceDataSection(), PanelSettings.AnchorRaceData),
                 Ui.Anchor(BuildFlagsSection(), PanelSettings.AnchorFlags),

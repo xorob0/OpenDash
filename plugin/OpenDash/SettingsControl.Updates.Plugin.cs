@@ -32,10 +32,9 @@ namespace OpenDashPlugin
             updateLine.Visibility = Visibility.Collapsed;
             text.Children.Add(updateLine);
 
-            // The bar is held by the button that starts a run rather than by a field, because a field would
-            // have to be dropped in SettingsControl.ForgetTabControls with the rest and a run that finished
-            // after the tab was left would otherwise draw into a column nobody is looking at. The button and
-            // the bar are built together and go together.
+            // The bar is this build's, dropped with the rest of its controls (BuildUpdatesPage); a run writes
+            // through updateProgressHost, so a rebuild while it downloads gets the bar and a run that finishes
+            // after the page has gone writes nowhere.
             var progressHost = new Border
             {
                 Visibility = Visibility.Collapsed,
@@ -48,7 +47,7 @@ namespace OpenDashPlugin
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
             updateProgressHost = progressHost;
-            updateButton = BuildUpdateButton(progressHost);
+            updateButton = BuildUpdateButton();
             restoreButton = BuildRestoreButton();
             var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
 
@@ -56,6 +55,7 @@ namespace OpenDashPlugin
             RefreshStatus();
             RefreshUpdateLine();
             RefreshRestoreButton();
+            if (applying) ShowRun();
             return section;
         }
 
@@ -80,13 +80,35 @@ namespace OpenDashPlugin
             return Ui.Row(PanelUpdates.CheckTitle, UpdateWording.CheckCaption, right);
         }
 
-        private Button BuildUpdateButton(Border progressHost)
+        private Button BuildUpdateButton()
         {
             var button = BuildSecondaryButton(null, "Download the newest release.");
             button.SetBinding(ContentControl.ContentProperty, LabelFromTheLine(ReplacingAction.Update));
             button.Visibility = Visibility.Collapsed;
-            button.Click += (sender, args) => ApplyUpdate(progressHost);
+            button.Click += (sender, args) => ApplyUpdate();
             return button;
+        }
+
+        /// <summary>
+        /// Draws the run that is downloading into this build: its line, its bar at the fraction it last
+        /// reported, and the three presses it holds off disabled, since each would return without a word
+        /// while it runs.
+        /// </summary>
+        private void ShowRun()
+        {
+            if (updateButton != null) updateButton.IsEnabled = false;
+            if (reinstallButton != null) reinstallButton.IsEnabled = false;
+            if (checkButton != null) checkButton.IsEnabled = false;
+            if (updateLine != null && applyingLine != null)
+            {
+                updateLine.Text = applyingLine;
+                updateLine.Visibility = Visibility.Visible;
+            }
+            if (updateProgressHost != null)
+            {
+                updateProgressHost.Child = Ui.Progress(applyingFraction);
+                updateProgressHost.Visibility = Visibility.Visible;
+            }
         }
 
         /// <summary>
@@ -193,7 +215,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
         /// </summary>
-        private void ApplyUpdate(Border progressHost)
+        private void ApplyUpdate()
         {
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
@@ -240,13 +262,9 @@ namespace OpenDashPlugin
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
             applying = true;
-            if (updateButton != null) updateButton.IsEnabled = false;
-            if (reinstallButton != null) reinstallButton.IsEnabled = false;
-            if (checkButton != null) checkButton.IsEnabled = false;
-            updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
-            updateLine.Visibility = Visibility.Visible;
-            progressHost.Child = Ui.Progress(0);
-            progressHost.Visibility = Visibility.Visible;
+            applyingLine = "Downloading " + updateStatus.LatestVersion + "…";
+            applyingFraction = 0;
+            ShowRun();
 
             // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
             // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole
@@ -259,7 +277,12 @@ namespace OpenDashPlugin
                 var percent = PanelMetrics.PercentOf(fraction);
                 if (percent == shown) return;
                 shown = percent;
-                Dispatcher.BeginInvoke(new Action(() => progressHost.Child = Ui.Progress(fraction)));
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    applyingFraction = fraction;
+                    // The build that is showing now, which a rebuild since the press has replaced.
+                    if (applying && updateProgressHost != null) updateProgressHost.Child = Ui.Progress(fraction);
+                }));
             };
 
             UpdateService.InBackground(() =>
@@ -268,8 +291,13 @@ namespace OpenDashPlugin
                 Dispatcher.Invoke(() =>
                 {
                     applying = false;
-                    progressHost.Visibility = Visibility.Collapsed;
-                    progressHost.Child = null;
+                    applyingLine = null;
+                    applyingFraction = 0;
+                    if (updateProgressHost != null)
+                    {
+                        updateProgressHost.Visibility = Visibility.Collapsed;
+                        updateProgressHost.Child = null;
+                    }
                     if (updateButton != null) updateButton.IsEnabled = true;
                     if (reinstallButton != null) reinstallButton.IsEnabled = true;
                     if (checkButton != null) checkButton.IsEnabled = true;
@@ -378,6 +406,9 @@ namespace OpenDashPlugin
             {
                 updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable && !pending ? Visibility.Visible : Visibility.Collapsed;
             }
+            // A run that is downloading owns the line and the presses until it answers: an answer or a
+            // rebuild meanwhile must not put the offer back with its buttons live.
+            if (applying) ShowRun();
             // The pill reads this line's answer as well as the disk's, so it is refreshed with it.
             RefreshStatus();
         }
