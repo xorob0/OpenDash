@@ -21,6 +21,7 @@ namespace OpenDashPlugin
         public const string BlueFlagDetail = "BlueFlagDetail";
         public const string DriverNameFormat = "DriverNameFormat";
         public const string DriverNameTeam = "DriverNameTeam";
+        public const string ClockFormat = "ClockFormat";
 
         /// <summary>
         /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #83.
@@ -221,6 +222,26 @@ namespace OpenDashPlugin
         /// person's name and this chooses whose name is written. Off, because the driver is the answer
         /// for every other kind of racing.</summary>
         public const bool DefaultDriverNameTeam = false;
+
+        /// <summary>
+        /// How a clock of the day is written: "24h" is `14:32` and "12h" is `2:32 PM`. Mirrors
+        /// CLOCK_FORMATS in contract.ts. #324.
+        /// </summary>
+        /// <remarks>
+        /// Shared, for the reason the driver name format is: which of the two a driver reads without
+        /// thinking is a fact about the driver, and it is the same on the rim as on the pit wall. Both
+        /// clocks follow it, the wall clock and the sim's time of day.
+        ///
+        /// The plugin only publishes the choice. The difficulty is the dashboard's: a twelve-hour clock
+        /// writes a meridiem a twenty-four-hour one does not, the clocks are drawn in monospaced cells,
+        /// and `M` fits no cell, so every surface measures its box for the word and draws it as a
+        /// proportional run after the digits -- `timeOfDay` in second/values.ts.
+        /// </remarks>
+        public static readonly string[] ClockFormats = { "24h", "12h" };
+
+        /// <summary>What every clock drew before there was a choice, so a rig that never opens the
+        /// setting is unchanged.</summary>
+        public const string DefaultClockFormat = "24h";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -944,6 +965,9 @@ namespace OpenDashPlugin
             // And the class best, appended for the same reason and published rather than chosen: every
             // package that draws a session best reads it when the rig counts in class.
             yield return ClassBestLap;
+            // And the clock format, appended for the same reason and shared because every package's
+            // idle screen draws the wall clock. #324.
+            yield return ClockFormat;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

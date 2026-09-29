@@ -54,6 +54,14 @@ namespace OpenDashPlugin
                 Save();
             });
 
+            // Rig-wide for the same reason: a driver reads a clock one way on the rim and on the pit
+            // wall, and the sim's time of day the way they read their own. #324.
+            var clock = BuildSegmented(Contract.ClockFormats, PanelDataTab.ClockLabels, Settings.ClockFormat, value =>
+            {
+                Settings.ClockFormat = value;
+                Save();
+            });
+
             // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
@@ -62,7 +70,8 @@ namespace OpenDashPlugin
                 Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),
                 Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag),
                 Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName),
-                Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName)));
+                Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
+                Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock)));
         }
     }
 }
