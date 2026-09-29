@@ -29,8 +29,12 @@ namespace OpenDashPlugin
         /// A missing package draws nothing on purpose. The pane already carries a warning row saying
         /// that this screen's dashboard is gone from SimHub, with a button that writes it again, and a
         /// second notice directly above it would say the same thing twice (docs/design/voice.md).
+        ///
+        /// It is fitted to <paramref name="available"/>, which a page passes as the room its column has
+        /// (ContentWidth, less an aside beside it in two columns), and never wider than
+        /// <see cref="BodyWidth"/>: a fixed 880 was clipped in every layout narrower than that.
         /// </remarks>
-        private FrameworkElement BuildScreenPreview(ScreenInstance screen)
+        private FrameworkElement BuildScreenPreview(ScreenInstance screen, double available = BodyWidth)
         {
             DropPreview();
             if (screen == null || screen.Folder == null) return null;
@@ -50,7 +54,8 @@ namespace OpenDashPlugin
             // The screen's own namespace is what makes this preview's remembered screen its own. Two
             // screens of the same package are two instances (ADR 0017), and neither of them is the
             // dashboard the driver has open.
-            screenPreview = ScreenPreview.Load(file, PreviewContextId(screen), BodyWidth);
+            var width = Math.Max(120, Math.Min(BodyWidth, available));
+            screenPreview = ScreenPreview.Load(file, PreviewContextId(screen), width);
             return screenPreview.Element;
         }
 

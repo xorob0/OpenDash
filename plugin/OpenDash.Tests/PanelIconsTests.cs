@@ -232,6 +232,12 @@ namespace OpenDashPlugin.Tests
         /// A glyph is recognised as a literal with neither a letter nor a digit in it, so the emoji the
         /// requirement also forbids fail here as well. The empty string is allowed, since several labels
         /// are built empty and filled once telemetry arrives.
+        ///
+        /// Every factory of the kit counts, not only Text, Label and Numeral: the pages draw most of their
+        /// words through PageTitle, Prose, Chip, Crumbs, Button and the rows, and a "—" handed to any of
+        /// them is the same typed icon. An argument that is a literal on its own is read wherever it sits
+        /// in the call, so <c>Ui.Crumbs("Devices", "›")</c> fails; a literal joined into a longer string
+        /// (a " · " between two names) is a separator and is not an argument on its own.
         /// </remarks>
         [Fact]
         public void The_panel_never_builds_an_icon_out_of_text()
@@ -242,13 +248,15 @@ namespace OpenDashPlugin.Tests
             var typed = new List<string>();
             foreach (var source in sources)
             {
-                foreach (Match call in Regex.Matches(File.ReadAllText(source),
-                    @"\b(?:Ui\.)?(?:Text|Label|Numeral)\s*\(\s*""(?<literal>[^""\\]*)"""))
+                var text = File.ReadAllText(source);
+                foreach (Match call in Regex.Matches(text, @"(?:\bUi\.[A-Z]\w*|(?<![\w.])(?:Text|Label|Numeral))\s*\("))
                 {
-                    var literal = call.Groups["literal"].Value;
-                    if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit))
+                    foreach (var literal in LiteralArguments(text, call.Index + call.Length))
                     {
-                        typed.Add(Path.GetFileName(source) + ": " + call.Value);
+                        if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit))
+                        {
+                            typed.Add(Path.GetFileName(source) + ": " + call.Value + "\"" + literal + "\"");
+                        }
                     }
                 }
             }
@@ -256,6 +264,58 @@ namespace OpenDashPlugin.Tests
             Assert.True(typed.Count == 0,
                 "an icon is drawn and never typed, but a glyph is handed to a text factory in:" +
                 Environment.NewLine + string.Join(Environment.NewLine, typed));
+        }
+
+        /// <summary>The kit's factories are all held, not just the three this test was first written for.</summary>
+        [Fact]
+        public void The_glyph_guard_reads_every_factory_and_every_argument()
+        {
+            Assert.Equal(new[] { "›" }, LiteralArguments("Ui.Crumbs(\"Devices\", \"›\");", "Ui.Crumbs(".Length).Where(l => !l.Any(char.IsLetterOrDigit)).ToArray());
+            Assert.Equal(new[] { "—" }, LiteralArguments("Ui.Prose(\"—\", 13);", "Ui.Prose(".Length).ToArray());
+            Assert.Empty(LiteralArguments("Ui.Text(a + \" · \" + b, 13);", "Ui.Text(".Length));
+            Assert.Empty(LiteralArguments("Ui.Chip(Name(\"+\"), false, null);", "Ui.Chip(".Length));
+        }
+
+        /// <summary>
+        /// The arguments of the call that opens just before <paramref name="start"/> which are a string
+        /// literal and nothing else, read to the call's closing parenthesis.
+        /// </summary>
+        private static List<string> LiteralArguments(string text, int start)
+        {
+            var literals = new List<string>();
+            var depth = 1;
+            var argument = new System.Text.StringBuilder();
+            string only = null;
+            var parts = 0;
+            for (var i = start; i < text.Length && depth > 0; i++)
+            {
+                var c = text[i];
+                if (c == '"')
+                {
+                    var end = i + 1;
+                    var value = new System.Text.StringBuilder();
+                    while (end < text.Length && text[end] != '"')
+                    {
+                        if (text[end] == '\\' && end + 1 < text.Length) { value.Append(text[end + 1]); end += 2; continue; }
+                        value.Append(text[end]);
+                        end++;
+                    }
+                    if (depth == 1) { only = value.ToString(); parts++; }
+                    i = end;
+                    continue;
+                }
+                if (c == '(' || c == '[' || c == '{') { depth++; if (depth == 2) parts++; continue; }
+                if (c == ')' || c == ']' || c == '}') { depth--; if (depth > 0) continue; }
+                if (depth == 1 && c != ',' ) { if (!char.IsWhiteSpace(c)) parts++; continue; }
+                if (depth == 1 || depth == 0)
+                {
+                    if (parts == 1 && only != null) literals.Add(only);
+                    only = null;
+                    parts = 0;
+                    argument.Clear();
+                }
+            }
+            return literals;
         }
 
         /// <summary>The four names the cards ask PanelMetrics for are these paths and not a second copy

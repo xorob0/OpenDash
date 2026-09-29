@@ -53,7 +53,7 @@ namespace OpenDashPlugin
             if (fix != null) selected.Add(fix);
             // The screen itself, between its name and the controls that change it. Null when its package is
             // not installed, which the fix above says in its own words.
-            var preview = BuildScreenPreview(screen);
+            var preview = BuildScreenPreview(screen, ContentWidth);
             if (preview != null)
             {
                 preview.Margin = new Thickness(0, 18, 0, 0);

@@ -361,5 +361,15 @@ namespace OpenDashPlugin
         public const double CrumbPaddingX = 7;
         public const double CrumbTextSize = 12;
         public const double MessageTextSize = 13;
+
+        /// <summary>The pages' .inp: 30 high, 10 in, 13 px.</summary>
+        public const double InputHeight = 30;
+        public const double InputPaddingX = 10;
+        public const double InputTextSize = 13;
+
+        /// <summary>The pages' .num-in: 64 by 30, 8 in, the value at 15.</summary>
+        public const double NumberInputWidth = 64;
+        public const double NumberInputPaddingX = 8;
+        public const double NumberInputTextSize = 15;
     }
 }

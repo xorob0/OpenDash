@@ -522,7 +522,11 @@ namespace OpenDashPlugin
         /// A control that is drawn and not yet built: faded, not answering, the ticket in its hover, and a
         /// Soon tag after its title when it is a row this kit built.
         /// </summary>
-        public static Border Soon(FrameworkElement row, int ticket, string title = null)
+        /// <remarks>
+        /// Only through a registry entry: the ticket is PanelSoon's, where PanelSoonTests holds every number
+        /// to a ticket that is still open, so a page cannot grey a row with a number typed beside it.
+        /// </remarks>
+        private static Border SoonWith(FrameworkElement row, int ticket, string title)
         {
             var parts = row == null ? null : row.Tag as RowParts;
             if (parts != null && parts.TitleLine != null)
@@ -545,10 +549,12 @@ namespace OpenDashPlugin
             return wrapper;
         }
 
-        /// <summary>The same, from the registry's entry.</summary>
+        /// <summary>A control that is drawn and not yet built, from the registry's entry: faded, not
+        /// answering, "Coming soon · #n" in its hover, and the Soon tag after its title when it is a kit row.</summary>
         public static Border Soon(FrameworkElement row, SoonItem item)
         {
-            return Soon(row, item.Ticket, item.Title);
+            if (item == null) throw new ArgumentNullException("item");
+            return SoonWith(row, item.Ticket, item.Title);
         }
 
         /// <summary>A greyed switch row for a registry entry: the commonest shape a Soon takes.</summary>
@@ -612,23 +618,29 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The Screens page's binding chip: what a button is bound to, on the raised ground, or a dashed
-        /// "Not bound" when nothing is. A click goes wherever the caller says, which is Shortcuts.
+        /// The Screens page's binding chip: what a button is bound to, on the raised ground; a dashed "Not
+        /// bound" when nothing is; and, when the bindings could not be read (<paramref name="bound"/> null),
+        /// a plain outlined chip carrying <paramref name="text"/> and making no claim either way. A click
+        /// goes wherever the caller says, which is Shortcuts.
         /// </summary>
-        public static FrameworkElement BindingChip(string text, bool bound, Action click = null)
+        public static FrameworkElement BindingChip(string text, bool? bound, Action click = null)
         {
-            var label = Text(bound ? text : NotBound, 13, FontWeights.Medium, bound ? Theme.TextPrimary : Theme.TextSecondary);
+            var known = bound.HasValue;
+            var isBound = bound == true;
+            var label = Text(known && !isBound ? NotBound : text, 13, FontWeights.Medium, isBound ? Theme.TextPrimary : Theme.TextSecondary);
             var chip = new Border
             {
                 Height = 26,
                 Padding = new Thickness(9, 0, 9, 0),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Background = bound ? Brush(Theme.SurfaceRaised) : System.Windows.Media.Brushes.Transparent,
+                Background = isBound ? Brush(Theme.SurfaceRaised) : System.Windows.Media.Brushes.Transparent,
+                BorderBrush = known ? null : Brush(Theme.Border),
+                BorderThickness = new Thickness(known ? 0 : PanelMetrics.BorderWeight),
                 Child = label,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             FrameworkElement result = chip;
-            if (!bound)
+            if (known && !isBound)
             {
                 var grid = new Grid { VerticalAlignment = VerticalAlignment.Center };
                 grid.Children.Add(chip);
@@ -897,6 +909,161 @@ namespace OpenDashPlugin
             return button;
         }
 
+        // --- Choices in a sheet ----------------------------------------------------------------------
+
+        /// <summary>
+        /// The sheets' choice tile -- AddScreen's .kind and .tile, AddLeds' .hw: the zone ground at the
+        /// panel's radius, a one pixel border at rest and two in the accent when chosen, one of a radio group.
+        /// </summary>
+        /// <param name="centred">The size tile's column, centred and padded 12/8/10; otherwise the kind and
+        /// hardware tile's, left-aligned in 12.</param>
+        /// <param name="soon">A tile for something not built yet, from the registry: faded, not answering,
+        /// its ticket in the hover.</param>
+        public static Button ChoiceTile(UIElement content, bool selected, Action pick, bool centred = false, SoonItem soon = null)
+        {
+            var edge = selected ? 2.0 : PanelMetrics.BorderWeight;
+            // The padding takes back what the thicker border adds, so a tile does not move when it is chosen.
+            var inset = centred ? new Thickness(8, 12, 8, 10) : new Thickness(12);
+            var less = edge - PanelMetrics.BorderWeight;
+            var button = new Button
+            {
+                Background = Brush(Theme.SurfaceZone),
+                BorderBrush = Brush(selected ? Theme.Accent : Theme.Border),
+                BorderThickness = new Thickness(edge),
+                Padding = new Thickness(inset.Left - less, inset.Top - less, inset.Right - less, inset.Bottom - less),
+                Cursor = Cursors.Hand,
+                Content = content,
+                HorizontalContentAlignment = centred ? HorizontalAlignment.Center : HorizontalAlignment.Stretch,
+                VerticalContentAlignment = centred ? VerticalAlignment.Bottom : VerticalAlignment.Top,
+                FocusVisualStyle = FocusRing(),
+                Template = CardTemplate(),
+            };
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, selected ? "checked" : "unchecked");
+            if (soon != null)
+            {
+                button.Opacity = PanelShell.SoonOpacity;
+                button.IsEnabled = false;
+                button.Cursor = Cursors.No;
+                button.ToolTip = soon.Tip;
+                ToolTipService.SetShowOnDisabled(button, true);
+            }
+            else if (pick != null)
+            {
+                button.Click += (sender, args) => pick();
+            }
+            return button;
+        }
+
+        /// <summary>
+        /// AddLeds' .dev: a radio row of a device list -- a 14 px ring, the name, and a caption at the right.
+        /// Chosen, the ring is filled in the accent, the row is on the zone ground with the accent down its
+        /// left edge. A row that cannot be chosen draws a dashed ring and fades to 60 %.
+        /// </summary>
+        public static Button RadioRow(string name, string meta, bool selected, Action pick, bool enabled = true)
+        {
+            var ring = new Ellipse
+            {
+                Width = 14,
+                Height = 14,
+                Stroke = Brush(selected ? Theme.Accent : Theme.Border),
+                StrokeThickness = selected ? 4 : PanelMetrics.BorderWeight,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            if (!enabled)
+            {
+                var dashes = new DoubleCollection { 2, 2 };
+                dashes.Freeze();
+                ring.StrokeDashArray = dashes;
+            }
+            var dock = new DockPanel { LastChildFill = true };
+            ring.Margin = new Thickness(0, 0, 12, 0);
+            DockPanel.SetDock(ring, Dock.Left);
+            dock.Children.Add(ring);
+            if (!string.IsNullOrEmpty(meta))
+            {
+                var caption = Text(meta, 12, FontWeights.Normal, Theme.TextSecondary);
+                caption.Margin = new Thickness(12, 0, 0, 0);
+                caption.VerticalAlignment = VerticalAlignment.Center;
+                DockPanel.SetDock(caption, Dock.Right);
+                dock.Children.Add(caption);
+            }
+            var label = Text(name ?? string.Empty, 14, FontWeights.Normal, enabled ? Theme.TextPrimary : Theme.TextSecondary);
+            label.TextTrimming = TextTrimming.CharacterEllipsis;
+            label.VerticalAlignment = VerticalAlignment.Center;
+            dock.Children.Add(label);
+
+            var bar = new Rectangle { Width = 2, Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Left };
+            var body = new Grid();
+            body.Children.Add(new Border { Padding = new Thickness(12, 10, 12, 10), Child = dock });
+            body.Children.Add(bar);
+            var button = new Button
+            {
+                Background = selected ? Brush(Theme.SurfaceZone) : System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Cursor = enabled ? Cursors.Hand : Cursors.Arrow,
+                Content = body,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                FocusVisualStyle = FocusRing(),
+                Template = CardTemplate(),
+                IsEnabled = enabled,
+                Opacity = enabled ? 1 : 0.6,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, name ?? string.Empty);
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, selected ? "checked" : "unchecked");
+            if (pick != null && enabled) button.Click += (sender, args) => pick();
+            return button;
+        }
+
+        /// <summary>
+        /// The pages' .inp: a 30 px text field on the base ground, 10 in from its edges, 13 px Barlow. The
+        /// shell's BuildNameBox is the older 24 px field on the field ground; a page drawn to the redesign
+        /// uses this.
+        /// </summary>
+        public static TextBox Input(string text, double width = double.NaN)
+        {
+            var box = new TextBox { Text = text ?? string.Empty, Width = width };
+            Field(box, PanelShell.InputHeight);
+            box.Background = Brush(Theme.SurfaceBase);
+            box.Padding = new Thickness(PanelShell.InputPaddingX - PanelMetrics.BorderWeight, 0, PanelShell.InputPaddingX - PanelMetrics.BorderWeight, 0);
+            box.FontSize = PanelShell.InputTextSize;
+            return box;
+        }
+
+        /// <summary>
+        /// The pages' .num-in: a 64 by 30 number field on the base ground, its value right-aligned in the
+        /// display family's SemiBold at 15. It repairs what is typed on Enter or on leaving it, clamped to
+        /// the range, and tells <paramref name="changed"/> the repaired value.
+        /// </summary>
+        public static TextBox NumberInput(int value, int min, int max, Action<int> changed)
+        {
+            var box = Input(value.ToString(System.Globalization.CultureInfo.InvariantCulture), PanelShell.NumberInputWidth);
+            box.Padding = new Thickness(PanelShell.NumberInputPaddingX - PanelMetrics.BorderWeight, 0, PanelShell.NumberInputPaddingX - PanelMetrics.BorderWeight, 0);
+            box.FontFamily = PanelFonts.Data;
+            box.FontWeight = FontWeights.SemiBold;
+            box.FontSize = PanelShell.NumberInputTextSize;
+            box.HorizontalContentAlignment = HorizontalAlignment.Right;
+            box.TextAlignment = TextAlignment.Right;
+            var last = value;
+            Action commit = () =>
+            {
+                int parsed;
+                if (!int.TryParse(box.Text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out parsed)) parsed = last;
+                if (parsed < min) parsed = min;
+                if (parsed > max) parsed = max;
+                box.Text = parsed.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (parsed == last) return;
+                last = parsed;
+                if (changed != null) changed(parsed);
+            };
+            box.LostFocus += (sender, args) => commit();
+            box.KeyDown += (sender, args) =>
+            {
+                if (args.Key == Key.Enter) commit();
+            };
+            return box;
+        }
+
         /// <summary>The layout the shell last measured, which a card grid reads for its column cap. Set by
         /// SettingsControl on every size change; there is one panel.</summary>
         public static PanelLayout Layout = PanelLayout.Full;
@@ -1072,10 +1239,13 @@ namespace OpenDashPlugin
                 if (preview != null) preview(current);
             };
             surface.SizeChanged += (sender, args) => paint();
+            // A drag ends in exactly one save: on the release, or when capture is taken away mid-drag (Alt+Tab,
+            // a SimHub popup), which would otherwise leave the slider drawing a value the setting never got.
+            var dragging = false;
             surface.MouseLeftButtonDown += (sender, args) =>
             {
                 surface.Focus();
-                surface.CaptureMouse();
+                dragging = surface.CaptureMouse();
                 seek(args.GetPosition(surface));
                 args.Handled = true;
             };
@@ -1083,11 +1253,16 @@ namespace OpenDashPlugin
             {
                 if (surface.IsMouseCaptured) seek(args.GetPosition(surface));
             };
+            surface.LostMouseCapture += (sender, args) =>
+            {
+                if (!dragging) return;
+                dragging = false;
+                changed(current);
+            };
             surface.MouseLeftButtonUp += (sender, args) =>
             {
                 if (!surface.IsMouseCaptured) return;
                 surface.ReleaseMouseCapture();
-                changed(current);
             };
             surface.KeyDown += (sender, args) =>
             {
@@ -1147,6 +1322,8 @@ namespace OpenDashPlugin
                 {
                     shift.Y = 0;
                     Panel.SetZIndex(dock, 0);
+                    // A drag the thumb gave up on (capture lost) moves nothing.
+                    if (args.Canceled) return;
                     var heights = hosts.Select(h => h.ActualHeight).ToList();
                     var target = PanelReorder.TargetIndex(heights, index, travelled);
                     if (target != index && moved != null) moved(index, target);
