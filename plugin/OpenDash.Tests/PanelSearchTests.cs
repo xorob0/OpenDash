@@ -66,6 +66,12 @@ namespace OpenDashPlugin.Tests
         {
             var hit = PanelSearch.Find(Entries, "night").Single();
             Assert.Equal("Night mode · Settings", hit.Text);
+            // A page's own title is said once: "Home", not "Home · Home".
+            foreach (var title in new[] { PanelHome.Title, PanelRigMap.Title, PanelScreens.Title })
+            {
+                var own = PanelSearch.All().First(entry => entry.Label == title && PanelNav.Label(entry.Route.Page) == title);
+                Assert.Equal(title, new PanelSearch.Hit(own, 0).Text);
+            }
             Assert.Equal(PanelRoute.To(PanelPage.Settings, "settings.lighting"), hit.Route);
             Assert.Equal("No setting matches.", PanelSearch.NoMatch);
         }

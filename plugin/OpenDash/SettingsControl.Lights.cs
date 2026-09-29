@@ -247,14 +247,14 @@ namespace OpenDashPlugin
             var found = EmbeddedProfileOf(bar);
             if (found == null)
             {
-                Say(PanelMessage.Caution(PanelLights.BarAddFailed(bar.Name)));
+                Say(PanelMessage.Caution(PanelLights.BarMoveFailed(bar.Name)));
                 return;
             }
             var plan = InstallBar(bar, found.Json);
             var ok = plan.State == FlagBoxInstallState.UpToDate;
             var target = LedTargets.Find(bar.Device);
             var where = target == null ? "that device" : target.Name;
-            var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarAddFailed(bar.Name);
+            var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarMoveFailed(bar.Name);
             if (ok && plan.Note != null) line += " " + plan.Note;
             Say(line, ok && plan.Note == null);
             // The strip's device, and so whether its profile is selected, moved with the press.
@@ -265,7 +265,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildLedBarActions(string ns)
         {
             var rename = Ui.Button("Rename", PanelButtonKind.Outline, PanelButtonSize.Small);
-            rename.ToolTip = "Renames this strip. Install it again to rename it in SimHub.";
+            rename.ToolTip = PanelLights.RenameBarTooltip;
             rename.Click += (sender, args) => ShowRenameLedBar(ns);
             var remove = Ui.Button("Remove", PanelButtonKind.GhostDanger, PanelButtonSize.Small);
             remove.ToolTip = "Removes this strip and its profile from SimHub.";

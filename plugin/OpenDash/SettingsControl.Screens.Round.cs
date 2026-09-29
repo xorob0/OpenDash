@@ -52,7 +52,7 @@ namespace OpenDashPlugin
             var warning = BuildSlotWarning();
             warning.Margin = new Thickness(0, 12, 0, 0);
             return Ui.Anchor(Ui.VStack(0,
-                PageSection(PanelScreens.SlotsTitle, intro, picture),
+                PageSection(PanelScreens.CardsTitle, intro, picture),
                 BuildSlotsRevBarRow(screen),
                 warning), PanelScreens.AnchorSlots);
         }
@@ -77,7 +77,7 @@ namespace OpenDashPlugin
             });
             return Ui.Row(
                 PanelDataTab.RevBarTitle,
-                "Applies to every card face on your rig.",
+                "Applies to every round face on your rig.",
                 control);
         }
 

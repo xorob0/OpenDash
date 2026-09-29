@@ -21,10 +21,11 @@ namespace OpenDashPlugin
         public const string OilTempTitle = "Oil temperature";
         public const string WaterTempTitle = "Water temperature";
 
-        /// <summary>Each threshold's caption names its own default, since "the default" alone pointed at
+        /// <summary>Each threshold's caption says which unit to type it in (ruling 66: SimHub's own, so a
+        /// Fahrenheit rig types Fahrenheit) and names its own default, since "the default" alone pointed at
         /// nothing on the row.</summary>
-        public const string OilTempCaption = "0 uses 120 °C (248 °F).";
-        public const string WaterTempCaption = "0 uses 110 °C (230 °F).";
+        public const string OilTempCaption = "In SimHub's unit; 0 uses 120 °C (248 °F).";
+        public const string WaterTempCaption = "In SimHub's unit; 0 uses 110 °C (230 °F).";
 
         public const string BrightnessTitle = "Brightness";
         public const string BrightnessCaption = "SimHub's device brightness applies on top.";

@@ -99,9 +99,11 @@ namespace OpenDashPlugin.Tests
 
             // The tabs went with #503: the profile is installed from its own row, directly above this caption
             // on the Matrix page, so the caption says nothing of where.
+            // And the profile row above it already says "8 × 8 matrix", so the caption does not.
             Assert.Equal(
-                "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below.",
+                "\"OpenDash Flag box\" is the one profile that paints every panel below.",
                 PanelLights.BoxCaption("OpenDash Flag box"));
+            Assert.Equal("8 × 8 matrix", PanelLightRows.FlagBoxCaption);
         }
 
         /// <summary>
@@ -124,12 +126,16 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("Matrix page", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
         }
 
-        /// <summary>A strip whose profile could not be installed is sent to Updates, which lists what
-        /// OpenDash has written into SimHub; the tab it used to name is gone (#503).</summary>
+        /// <summary>A strip whose profile could not be installed is sent to SimHub's log (voice.md's failure
+        /// form): Updates offers no press for a profile that is not in SimHub and its hover sends the driver
+        /// back to LEDs, so "See the Updates page" led nowhere. A failed move says "move", not "Added", and
+        /// Rename no longer promises an "Install it again" no page has.</summary>
         [Fact]
-        public void A_strip_whose_profile_failed_is_sent_to_Updates()
+        public void A_strip_whose_profile_failed_is_sent_to_the_log()
         {
-            Assert.Equal("Added Rim, but its profile could not be installed. See the Updates page.", PanelLights.BarAddFailed("Rim"));
+            Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log.", PanelLights.BarAddFailed("Rim"));
+            Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
+            Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
         }
 
         [Theory]

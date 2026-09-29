@@ -14,8 +14,11 @@ namespace OpenDashPlugin
     {
         public const string Title = "Screens";
 
-        /// <summary>A screen written after SimHub started, on its card and in the fix box under it.</summary>
-        public const string RestartToLoad = "Restart SimHub to load it";
+        /// <summary>A screen this session added, which SimHub has not loaded: a state, on its card beside "In
+        /// SimHub" and "Missing", and the title of the fix box under it, whose detail is the one step
+        /// ("Restart SimHub, then assign ..."). Main's Right now and the Screens fix box both say it, and Home's
+        /// issue says it of the screen by name.</summary>
+        public const string NotInSimHubYet = "Not in SimHub yet";
 
         /// <summary>A rig with no screen, on this page's pill and on Home's card.</summary>
         public const string NoScreens = "No screens yet";
@@ -57,7 +60,10 @@ namespace OpenDashPlugin
         public const string WebViewTitle = "Web view address";
         public const string ModulesTitle = "Modules";
         public const string FirstModuleTitle = "First module";
-        public const string SlotsTitle = "Slots";
+        /// <summary>The round pane's section, which Screens.dc.html heads with its cards ("Card 1", "Card 2")
+        /// and "Cards are shared by every round screen": the artboard's noun, never the settings model's
+        /// "Slots", which search still takes as a keyword.</summary>
+        public const string CardsTitle = "Cards";
 
         // Anchors the page's rows carry, so search can scroll to them.
         public const string AnchorCards = "screens.cards";
@@ -83,7 +89,7 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(WebViewTitle, PanelPage.Screens, AnchorWebView, "url", "pit wall"),
             new PanelSearch.Entry(ModulesTitle, PanelPage.Screens, AnchorModules, "companion", "phone", "rotation"),
             new PanelSearch.Entry(FirstModuleTitle, PanelPage.Screens, AnchorFirstModule, "companion", "phone", "start"),
-            new PanelSearch.Entry(SlotsTitle, PanelPage.Screens, AnchorSlots, "card face", "round", "cards"),
+            new PanelSearch.Entry(CardsTitle, PanelPage.Screens, AnchorSlots, "card face", "round", "slots"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one

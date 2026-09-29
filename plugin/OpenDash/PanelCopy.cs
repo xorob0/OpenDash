@@ -119,10 +119,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The word a kind needs because the canvas gives it no icon, and null for the three that
-        /// have one. A kind is either drawn or written, never neither.</summary>
+        /// have one. A kind is either drawn or written, never neither, and written by its one name,
+        /// PanelAddScreen.KindName ("Round"), never the settings model's "Slots".</summary>
         public static string KindWord(string kind)
         {
-            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : null;
+            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? PanelAddScreen.KindName(kind) : null;
         }
 
         /// <summary>The card's second line: the size OpenDash installed, behind the kind when the kind has

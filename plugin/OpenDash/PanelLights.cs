@@ -262,10 +262,25 @@ namespace OpenDashPlugin
             return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
         }
 
+        /// <summary>
+        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form):
+        /// no page offers a press that installs it again -- the Updates row for a profile that is not in SimHub
+        /// has none, and its hover sends the driver back to LEDs -- until the LEDs header carries ReinstallBar's.
+        /// </summary>
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See the Updates page.";
+            return "Added " + name + ", but its profile could not be installed. See SimHub's log.";
         }
+
+        /// <summary>A strip whose profile could not be moved to another device: nothing was added.</summary>
+        public static string BarMoveFailed(string name)
+        {
+            return "Could not move " + name + "'s profile. See SimHub's log.";
+        }
+
+        /// <summary>The strip's Rename press. It renames the strip; no page reinstalls a profile yet, so the
+        /// tooltip does not send the driver to one.</summary>
+        public const string RenameBarTooltip = "Renames this strip.";
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
         public const string CarTablesTitle = "Car light tables";
@@ -395,9 +410,11 @@ namespace OpenDashPlugin
         /// <summary>The line under the flag box heading: one profile, named. It names the profile because
         /// the panels below do not carry their own, and says nothing of where to install it: the profile's
         /// own row, with its press, is directly above.</summary>
+        /// <summary>The flag box section's caption. The profile row directly above already says "8 × 8
+        /// matrix", so the caption does not say it again.</summary>
         public static string BoxCaption(string profile)
         {
-            return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below.";
+            return "\"" + profile + "\" is the one profile that paints every panel below.";
         }
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since

@@ -67,12 +67,14 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_kind_without_an_icon_is_written_on_the_size_line()
         {
-            Assert.Equal("Slots", PanelCopy.KindWord(Contract.KindSlots));
+            // By its one name, as the card and the Add tile write it; never the settings model's "Slots".
+            Assert.Equal("Round", PanelCopy.KindWord(Contract.KindSlots));
+            Assert.Equal(PanelAddScreen.KindName(Contract.KindSlots), PanelCopy.KindWord(Contract.KindSlots));
             Assert.Null(PanelCopy.KindWord(Contract.KindFace));
             Assert.Null(PanelCopy.KindWord(Contract.KindPitWall));
             Assert.Null(PanelCopy.KindWord(Contract.KindCompanion));
 
-            Assert.Equal("Slots · 1280 × 480", PanelCopy.SizeLine(Contract.KindSlots, "1280 × 480"));
+            Assert.Equal("Round · 1280 × 480", PanelCopy.SizeLine(Contract.KindSlots, "1280 × 480"));
             Assert.Equal("1280 × 480", PanelCopy.SizeLine(Contract.KindFace, "1280 × 480"));
         }
 

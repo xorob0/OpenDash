@@ -56,7 +56,7 @@ namespace OpenDashPlugin.Tests
             // The round face is the one package whose caption the design writes itself, so it reads
             // "480 round" rather than its kind and its pixels; the kind is carried by that word.
             Assert.Equal("480 round", PanelPackageRow.Caption(Package("OpenDash 480 round", Contract.KindSlots, 480, 480)));
-            Assert.Equal("Slots · 800 × 800", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 800, 800)));
+            Assert.Equal("Round · 800 × 800", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 800, 800)));
             Assert.Equal("1920 × 1080", PanelPackageRow.Caption(Package("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080)));
         }
 
@@ -65,7 +65,7 @@ namespace OpenDashPlugin.Tests
         public void A_package_with_no_readable_size_shows_no_size()
         {
             Assert.Equal(string.Empty, PanelPackageRow.Caption(Package("OpenDash Companion", Contract.KindCompanion, 0, 0)));
-            Assert.Equal("Slots", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 0, 0)));
+            Assert.Equal("Round", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 0, 0)));
             Assert.Equal(string.Empty, PanelPackageRow.Caption(null));
             Assert.Equal(string.Empty, PanelPackageRow.Name(null));
         }

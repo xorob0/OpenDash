@@ -22,8 +22,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Oil temperature", PanelSettings.OilTempTitle);
             Assert.Equal("Water temperature", PanelSettings.WaterTempTitle);
             // Each threshold names its own default, which the artboard draws as the field's placeholder.
-            Assert.Equal("0 uses 120 °C (248 °F).", PanelSettings.OilTempCaption);
-            Assert.Equal("0 uses 110 °C (230 °F).", PanelSettings.WaterTempCaption);
+            Assert.Equal("In SimHub's unit; 0 uses 120 °C (248 °F).", PanelSettings.OilTempCaption);
+            Assert.Equal("In SimHub's unit; 0 uses 110 °C (230 °F).", PanelSettings.WaterTempCaption);
             Assert.Equal("Brightness", PanelSettings.BrightnessTitle);
             Assert.Equal("SimHub's device brightness applies on top.", PanelSettings.BrightnessCaption);
             Assert.Equal("Night brightness", PanelSettings.NightBrightnessTitle);

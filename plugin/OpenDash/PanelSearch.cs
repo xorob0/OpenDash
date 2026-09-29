@@ -61,8 +61,8 @@ namespace OpenDashPlugin
             public string PageLabel { get { return PanelNav.Label(Entry.Route.Page); } }
 
             /// <summary>What the list shows: "Delta reference · Settings", with the separator the rest of the
-            /// panel uses.</summary>
-            public string Text { get { return Label + " · " + PageLabel; } }
+            /// panel uses, and the label alone when it is its page's own title ("Home", not "Home · Home").</summary>
+            public string Text { get { return string.Equals(Label, PageLabel, StringComparison.Ordinal) ? Label : Label + " · " + PageLabel; } }
         }
 
         public const int DefaultMax = 8;

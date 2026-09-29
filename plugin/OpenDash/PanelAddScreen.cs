@@ -95,12 +95,12 @@ namespace OpenDashPlugin
         public const string AddButton = "Add screen";
 
         /// <summary>
-        /// A Duplicate that made nothing, and why: DuplicateScreen returns null only when no package in this
-        /// build makes the screen, so that is the reason, said where the driver reads it and logged.
+        /// A Duplicate that made nothing. DuplicateScreen returns null only when no package in this build makes
+        /// the screen, and that reason is logged; the line points at the log, as voice.md's failure rule asks.
         /// </summary>
         public static string DuplicateFailed(string name)
         {
-            return "Could not duplicate " + name + ": this build carries no dashboard for it.";
+            return "Could not duplicate " + name + ". See SimHub's log.";
         }
 
         /// <summary>

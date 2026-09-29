@@ -93,7 +93,7 @@ namespace OpenDashPlugin
                 var captured = screen;
                 var installed = Installed(captured);
                 var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, captured.Namespace);
-                var state = !installed ? PanelScreens.Missing : restart ? PanelScreens.RestartToLoad : PanelScreens.InSimHub;
+                var state = !installed ? PanelScreens.Missing : restart ? PanelScreens.NotInSimHubYet : PanelScreens.InSimHub;
                 var stateHex = !installed ? Theme.StatusFailed : restart ? Theme.Caution : Theme.StatusUpToDate;
                 var thumb = Ui.Thumb(captured.IsSlots ? "round" : captured.Kind, captured.Width, captured.Height);
                 cards.Add(Ui.DeviceCard(
@@ -197,9 +197,9 @@ namespace OpenDashPlugin
             }
             var restart = PanelAttention.Of(issues, PanelAttention.ScreenRestart, screen.Namespace);
             if (restart == null) return null;
-            // The card above says this state as PanelScreens.RestartToLoad, so the fix box does too: one phrase
+            // The card above says this state as PanelScreens.NotInSimHubYet, so the fix box does too: one phrase
             // for one state. Home names the screen in its title, because Home lists every screen's.
-            var fix = Ui.FixBox(PanelScreens.RestartToLoad, restart.Detail, null, null, PanelIcons.Restart);
+            var fix = Ui.FixBox(PanelScreens.NotInSimHubYet, restart.Detail, null, null, PanelIcons.Restart);
             fix.Margin = new Thickness(0, 18, 0, 0);
             return fix;
         }

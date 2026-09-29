@@ -206,11 +206,16 @@ namespace OpenDashPlugin.Tests
         public void The_screens_page_is_titled_and_its_rows_are_found_where_they_are()
         {
             Assert.Equal("Screens", PanelScreens.Title);
-            // One phrase for one state: the card and the fix box under it both say this.
-            Assert.Equal("Restart SimHub to load it", PanelScreens.RestartToLoad);
+            // One phrase for one state, a state and not an instruction: the card and the fix box under it
+            // both say it, as Main's Right now and the Screens fix box do, and Home says it of the screen.
+            Assert.Equal("Not in SimHub yet", PanelScreens.NotInSimHubYet);
+            var waiting = new AttentionInput();
+            waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
+            Assert.Equal("Rim is not in SimHub yet", System.Linq.Enumerable.Single(PanelAttention.Find(waiting)).Title);
             // The empty rig's pill, which Home's card says too, with the stop a sentence takes.
             Assert.Equal("No screens yet", PanelScreens.NoScreens);
-            Assert.Equal("Could not duplicate Rim: this build carries no dashboard for it.", PanelAddScreen.DuplicateFailed("Rim"));
+            // A failure points at the log (voice.md), in the words its siblings use.
+            Assert.Equal("Could not duplicate Rim. See SimHub's log.", PanelAddScreen.DuplicateFailed("Rim"));
             var anchors = new[]
             {
                 PanelScreens.AnchorCards, PanelScreens.AnchorRevBar, PanelScreens.AnchorFlagDisplay, PanelScreens.AnchorLapReview,
@@ -231,7 +236,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Web view address", PanelScreens.WebViewTitle);
             Assert.Equal("Modules", PanelScreens.ModulesTitle);
             Assert.Equal("First module", PanelScreens.FirstModuleTitle);
-            Assert.Equal("Slots", PanelScreens.SlotsTitle);
+            // The round pane's heading is the artboard's noun, and "slots" still finds it.
+            Assert.Equal("Cards", PanelScreens.CardsTitle);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
             // The card's states, the header's Duplicate, and the fix box under a screen that is gone, whose
             // detail is Home's too.
             Assert.Equal("In SimHub", PanelScreens.InSimHub);
