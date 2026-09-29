@@ -62,6 +62,15 @@ enabled screens -- so while a game runs the ring is the modules alone and a tap 
 between sessions it is the idle screen alone. Paging is a wheel button bound to the device's own
 `NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
 
+What OpenDash can do is choose a module for a moment. SimHub moves off a screen that stops being
+enabled, so leaving exactly one enabled makes SimHub select it, and once everything re-enables SimHub
+has no reason to leave. `CompanionOpenOn` names that module: the start module for a few seconds after
+SimHub loads, and the quick glance module while its button is held (#362). Going back on release is
+the half the plugin cannot name, since SimHub never says which module a tap reached; the dashboard
+knows, and keeps it in a variable of its own, so the release sets `CompanionOpenOn` to -2 ("the one
+you were on") for a second. `companionVariables` in `packages/dash/src/contract.ts` is the mechanism
+and `secondScreens.test.ts` walks it frame by frame.
+
 ## The pit wall
 
 Three landscape pages and one portrait page:

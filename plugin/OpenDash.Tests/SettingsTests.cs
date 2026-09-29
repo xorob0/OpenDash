@@ -1732,6 +1732,91 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_forced_start_module_lets_go_by_itself_however_it_was_forced()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Normalise();
+            var companion = settings.ScreenOf("Companion");
+            var init = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+            var justBefore = Contract.CompanionOpenOnWindow - TimeSpan.FromMilliseconds(1);
+
+            // Nothing is forced before anything has asked, which is also what a package with no plugin reads.
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", init));
+
+            // Init: held on the start module for the window, then handed back to SimHub's paging.
+            companion.CompanionStart = 7;
+            settings.OpenOnStartPages(init);
+            Assert.Equal(7, settings.ScreenCompanionOpenOn("Companion", init));
+            Assert.Equal(7, settings.ScreenCompanionOpenOn("Companion", init + justBefore));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", init + Contract.CompanionOpenOnWindow));
+
+            // The panel choosing a start module twenty minutes in. This one used to be let go by nothing:
+            // the only release was a clock Init armed once, so a companion the driver had been tapping
+            // froze on the module, taps and all, until SimHub restarted.
+            var later = init + TimeSpan.FromMinutes(20);
+            companion.CompanionStart = 3;
+            companion.OpenOnStartModule(later);
+            Assert.Equal(3, settings.ScreenCompanionOpenOn("Companion", later + justBefore));
+            // A save normalises the screen in the middle of the window, and that does not drop the force.
+            settings.Normalise();
+            Assert.Equal(3, settings.ScreenCompanionOpenOn("Companion", later + justBefore));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", later + Contract.CompanionOpenOnWindow));
+
+            // A screen the rig no longer holds forces nothing rather than throwing on SimHub's thread.
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Gone", later));
+        }
+
+        [Fact]
+        public void A_companion_glance_forces_its_module_while_held_and_the_way_back_for_a_moment()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Normalise();
+            var companion = settings.ScreenOf("Companion");
+            var pressed = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+            var back = Contract.CompanionBackWindow;
+
+            // Energy, which the rotation has off: a glance is asked for, and shows it anyway.
+            companion.CompanionQuickGlance = 5;
+            settings.BeginScreenGlance("Companion");
+            Assert.Equal(5, settings.ScreenCompanionOpenOn("Companion", pressed));
+            // For as long as the button is down, however long that is.
+            Assert.Equal(5, settings.ScreenCompanionOpenOn("Companion", pressed + TimeSpan.FromHours(1)));
+            // A second press while one is held does nothing.
+            companion.CompanionQuickGlance = 9;
+            settings.BeginScreenGlance("Companion");
+            Assert.Equal(5, settings.ScreenCompanionOpenOn("Companion", pressed));
+
+            // Released: the way back, which the dashboard resolves to the module it remembers, for the
+            // window, and then nothing, so the paging is SimHub's again.
+            var released = pressed + TimeSpan.FromSeconds(3);
+            settings.EndScreenGlance("Companion", released);
+            Assert.Equal(Contract.CompanionOpenOnBack, settings.ScreenCompanionOpenOn("Companion", released));
+            Assert.Equal(Contract.CompanionOpenOnBack, settings.ScreenCompanionOpenOn("Companion", released + back - TimeSpan.FromMilliseconds(1)));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", released + back));
+            // A release with no press does nothing, and in particular does not start another way back.
+            var stray = released + TimeSpan.FromMinutes(1);
+            settings.EndScreenGlance("Companion", stray);
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", stray));
+
+            // Pressed while the start module is still being forced: the glance takes over, and the way
+            // back goes to the start module, which is what the dashboard had been drawing. Nothing is
+            // forced after that, though the start window would still have had seconds to run.
+            var start = stray + TimeSpan.FromMinutes(1);
+            settings.OpenOnStartPages(start);
+            settings.BeginScreenGlance("Companion");
+            Assert.Equal(9, settings.ScreenCompanionOpenOn("Companion", start));
+            settings.EndScreenGlance("Companion", start + TimeSpan.FromSeconds(1));
+            Assert.Equal(Contract.CompanionOpenOnBack, settings.ScreenCompanionOpenOn("Companion", start + TimeSpan.FromSeconds(1)));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", start + TimeSpan.FromSeconds(1) + back));
+
+            // A glance on a screen the rig no longer holds does nothing rather than throwing.
+            settings.BeginScreenGlance("Gone");
+            settings.EndScreenGlance("Gone", start);
+        }
+
+        [Fact]
         public void A_pit_wall_glance_borrows_one_zone_and_gives_it_back()
         {
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };

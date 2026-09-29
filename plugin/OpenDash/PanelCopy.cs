@@ -79,6 +79,10 @@ namespace OpenDashPlugin
         /// <summary>The glance row's caption on a pit wall, where the page is lent to one zone.</summary>
         public const string PitWallGlance = "Hold to show one page, release to put the zone back. " + GlanceBoundAsHold;
 
+        /// <summary>The glance row's caption on a companion, where release goes back to whichever module
+        /// was up, including one a tap paged to.</summary>
+        public const string CompanionGlance = "Hold to show one module, release to go back to the one you were on. " + GlanceBoundAsHold;
+
         /// <summary>
         /// How a companion is paged, and where the button for it is bound, which is not in OpenDash.
         /// </summary>

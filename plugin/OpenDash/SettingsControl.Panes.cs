@@ -927,19 +927,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// How a companion is paged, which is not OpenDash's to decide any more.
+        /// How a companion is paged, which is SimHub's, and the two moments OpenDash still chooses the module.
         /// </summary>
         /// <remarks>
-        /// There used to be a select for the module a held button shows and a binder for OpenDash's own
-        /// next-module action here. Both needed OpenDash to be the thing choosing which screen was up,
-        /// and that is exactly what stopped a tap working: SimHub's only touch gesture maps a tap to the
-        /// previous or next screen, and its navigation walks the screens whose expression is true, so
-        /// with one of twenty-one enabled there was nothing to walk. A row that no longer does anything
-        /// is worse than a row that is not there, so they are replaced by the sentence saying where the
-        /// controls went: PanelCopy.CompanionPaging, which names the device's Controls and events,
-        /// NextScreen and PreviousScreen, and that the binding belongs to the device. What stays is the
-        /// First module select, the one a session opens on, which OpenDash still sets once at the start
-        /// and SimHub pages from.
+        /// There used to be a binder for OpenDash's own next-module action here. It needed OpenDash to be
+        /// the thing choosing which screen was up, and that is exactly what stopped a tap working:
+        /// SimHub's only touch gesture maps a tap to the previous or next screen, and its navigation
+        /// walks the screens whose expression is true, so with one of twenty-one enabled there was
+        /// nothing to walk. It is replaced by the sentence saying where the controls went:
+        /// PanelCopy.CompanionPaging, which names the device's Controls and events, NextScreen and
+        /// PreviousScreen, and that the binding belongs to the device.
+        ///
+        /// What OpenDash still chooses, it chooses for a moment: the First module, the one a session
+        /// opens on, and the Quick glance, held on a button and let go on release (#362). Both force one
+        /// screen enabled so SimHub selects it, and then hand the paging back.
         ///
         /// It is prose and not a picture (#435). A drawn diagram in the panel's own hand would be a
         /// drawing of SimHub's dialog, which goes stale at SimHub's next release as surely as a
@@ -953,15 +954,27 @@ namespace OpenDashPlugin
             var startText = Ui.VStack(4, Ui.Body("First module"),
                 Ui.Caption("Shown when a session starts."));
             startText.MaxWidth = 420;
+            var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
+                Ui.Caption(PanelCopy.CompanionGlance));
+            glanceText.MaxWidth = 420;
             return Ui.Section("Module paging",
                 Ui.Caption(PanelCopy.CompanionPaging, BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(screen, Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
                     screen.CompanionStart = value;
                     // And force it now, so the screen in front of you moves rather than waiting for the
-                    // next SimHub start. Somebody choosing where it opens is looking at the thing.
-                    screen.OpenOnStartModule();
-                })));
+                    // next SimHub start. Somebody choosing where it opens is looking at the thing. The
+                    // force lets go by itself after the same window Init's does, so the taps come back.
+                    screen.OpenOnStartModule(DateTime.UtcNow);
+                })),
+                // Any module, the ones the rotation has off included: a glance is asked for by holding a
+                // button, and the rotation is about what a tap steps through.
+                Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
+                    BuildModuleSelect(screen, Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value =>
+                    {
+                        screen.CompanionQuickGlance = value;
+                    }),
+                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))));
         }
 
         /// <summary>How this companion draws a flag. Full screen by default, which is what a phone on a

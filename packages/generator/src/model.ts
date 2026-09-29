@@ -478,6 +478,32 @@ export interface DashboardMetadata {
   mainPreviewIndex?: number;
 }
 
+/**
+ * A dashboard variable: a named NCalc value SimHub evaluates every frame, read anywhere in the same
+ * dashboard as `[variable.Name]`.
+ *
+ * A variable reading its own name reads what it held on the previous frame, so a variable can hold
+ * state: `if(cond, [variable.Kept], newValue)` keeps its value for as long as `cond` is true. SimHub's
+ * guard against self-reference is on a variable being read inside the read of itself, and a
+ * variable's expression is evaluated rather than read, so the guard never fires on this.
+ *
+ * `beforeScreenRoles` is what makes a variable usable by a screen's enabled expression. SimHub
+ * evaluates those variables first in a frame, then the enabled expressions and the choice of screen,
+ * then everything else (`EditorModel.UpdateData`); a variable evaluated afterwards would reach a
+ * screen's expression a frame late. The list is evaluated in order, so a variable reads the ones
+ * above it as they are this frame and the ones below it as they were on the last.
+ */
+export interface DashboardVariable {
+  /** Read as `[variable.<name>]`; SimHub matches it without regard to case. */
+  name: string;
+  /** NCalc. */
+  expression: string;
+  /** Evaluate before SimHub chooses the frame's screen. Defaults to false, as SimHub's does. */
+  beforeScreenRoles?: boolean;
+  /** Evaluate on the first frame only and keep that value. Defaults to false. */
+  evaluateOnlyOnce?: boolean;
+}
+
 export interface Dashboard {
   id?: string;
   /** File base name without extension; `<name>.djson`. The main dashboard of a package is named after the folder. */
@@ -486,6 +512,8 @@ export interface Dashboard {
   height: number;
   backgroundColor: Hex;
   screens: Screen[];
+  /** The dashboard's own variables, in the order SimHub evaluates them. */
+  variables?: DashboardVariable[];
   /** The images this dashboard's items may reference. Packed into `<name>.djson.ressources`. */
   images?: ImageAsset[];
   metadata: DashboardMetadata;
