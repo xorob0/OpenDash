@@ -56,6 +56,48 @@ describe('the glyph sheet', () => {
     expect(new Set(sheet.glyphs.map((g) => g.kind))).toEqual(new Set(['flag', 'pit', 'spotter', 'warning', 'gear', 'standby']));
   });
 
+  test('names each glyph as the plugin will look it up, literally, per kind', () => {
+    // The name is a key the panel reads the sheet by, so it is pinned as written rather than compared
+    // with the catalogue that writes it: the comparison above stays green whatever the catalogue calls
+    // a glyph. A flag is its condition id; every other kind is its label, spaces and all. There is no
+    // "gear-3" and no "spotter-left", which is what a lookup written from a guess would ask for.
+    const byKind = (kind: string): string[] => sheet.glyphs.filter((g) => g.kind === kind).map((g) => g.name);
+    expect(byKind('flag')).toEqual([
+      'red',
+      'disqualify',
+      'furled',
+      'black',
+      'meatball',
+      'caution',
+      'yellowWaving',
+      'yellow',
+      'debris',
+      'blue',
+      'white',
+      'green',
+      'startSet',
+      'startReady',
+      'chequered',
+    ]);
+    expect(byKind('pit')).toEqual(['Pit speeding', 'Pit limiterOutOfLane', 'Pit limiterInLane']);
+    expect(byKind('spotter')).toEqual([
+      'Spotter carBoth',
+      'Spotter carLeft',
+      'Spotter carRight',
+      'Spotter carBothGrowing',
+      'Spotter carLeftGrowing',
+      'Spotter carRightGrowing',
+    ]);
+    expect(byKind('warning')).toEqual(['Warning oilHot', 'Warning waterHot', 'Warning lowFuel']);
+    const gears = byKind('gear');
+    expect(gears).toHaveLength(44);
+    for (const name of ['Gear R redline', 'Gear N stage2', 'Gear 3 stage1', 'Gear 9 rest']) expect(gears).toContain(name);
+    expect(byKind('standby')).toEqual(['Standby']);
+    const names = sheet.glyphs.map((g) => g.name);
+    expect(new Set(names).size).toBe(names.length);
+    for (const guess of ['gear-3', 'spotter-left']) expect(names).not.toContain(guess);
+  });
+
   test('every frame is the panel, eight rows of eight, and an unlit cell is kept as null', () => {
     for (const glyph of sheet.glyphs) {
       expect({ name: glyph.name, frames: glyph.frames.length > 0 }).toEqual({ name: glyph.name, frames: true });
