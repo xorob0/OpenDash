@@ -84,7 +84,9 @@ namespace OpenDashPlugin
             }
             if (tiles.Count == 0)
             {
-                var empty = Ui.Caption("Add a screen, a strip or a matrix and it appears here.");
+                var screensPress = Ui.Button("Open Screens", PanelButtonKind.Outline, PanelButtonSize.Small);
+                screensPress.Click += (sender, args) => Go(PanelPage.Screens);
+                var empty = Ui.HStack(12, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
                 Canvas.SetLeft(empty, 24);
                 Canvas.SetTop(empty, 24);
                 canvas.Children.Add(empty);

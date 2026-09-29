@@ -77,7 +77,7 @@ namespace OpenDashPlugin.Tests
             input.Strips.Add(Strip("Dash brow", FlagBoxInstallState.UpToDate, false));
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("Dash brow's profile is not selected", issue.Title);
-            Assert.Equal("Its profile is installed but not selected on the device.", issue.Detail);
+            Assert.Equal("Installed, but not selected in SimHub.", issue.Detail);
             Assert.Equal(PanelIssueAction.CheckAgain, issue.Action);
             Assert.Equal("Check again", issue.ActionLabel);
             Assert.Equal(PanelPage.Leds, issue.Page);
@@ -117,7 +117,7 @@ namespace OpenDashPlugin.Tests
             input.Screens.Add(Screen("B", unclaimed: true));
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("2 screens came with an older OpenDash", issue.Title);
-            Assert.Equal(PanelScreens.UnclaimedNote, issue.Detail);
+            Assert.Equal("Keep or remove each one on the Screens page.", issue.Detail);
         }
 
         [Fact]
@@ -126,9 +126,12 @@ namespace OpenDashPlugin.Tests
             var input = new AttentionInput();
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Outdated, true));
             input.FlagBox = FlagBoxInstallState.Outdated;
-            Assert.Equal(new[] { "Wheel rim's profile is out of date" }, PanelAttention.Find(input).Select(i => i.Title));
+            Assert.Equal(new[] { "Wheel rim's profile has an update" }, PanelAttention.Find(input).Select(i => i.Title));
+            // Its press is on Updates until the LEDs page's header has one.
+            Assert.Equal(PanelPage.Updates, PanelAttention.Find(input).Single().Page);
+            Assert.Equal(PanelUpdates.AnchorLights, PanelAttention.Find(input).Single().Anchor);
             input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });
-            Assert.Equal("OpenDash Flag box is out of date", PanelAttention.Find(input).Last().Title);
+            Assert.Equal("OpenDash Flag box has an update", PanelAttention.Find(input).Last().Title);
         }
 
         [Fact]

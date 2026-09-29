@@ -2,33 +2,58 @@
 
 What the plugin draws in SimHub's left menu.
 
-**Four tabs, and a screen is the unit.** A rig is a set of screens the user added, each owning the
-zones it shows and the wheel buttons that cycle them, so two faces and a pit wall are configured
-apart rather than sharing one set of settings — and so are two faces of the *same size*, which
-[ADR 0017](../decisions/0017-a-screen-is-an-instance.md) is the record of. What is genuinely the same
-everywhere lives in Data. The packages live in Install. Everything that drives an LED lives in
-Lights.
+**A sidebar of pages, one per thing on the rig, and a screen is the unit.** Since
+[#503](https://github.com/xorob0/OpenDash/issues/503) the panel is a sidebar -- Home, Rig, Screens, LEDs,
+Matrix, Shortcuts, Settings, and Updates pinned at its foot -- and the page it opens beside it. The four
+tabs grouped settings by their kind, which was honest about the settings model and wrong about the
+driver: somebody who came to change their wheel found its rows on three tabs. A rig is still a set of
+screens the user added, each owning the zones it shows and the buttons that cycle them, so two faces and
+a pit wall are configured apart ([ADR 0017](../decisions/0017-a-screen-is-an-instance.md)).
 
-| tab | what is on it |
+| page | what is on it |
 |---|---|
-| **Rig** | the screen cards, and the selected screen's own pane |
-| **Data** | the settings that mean the same thing on every screen |
-| **Lights** | the flag box, the matrices and the strips |
-| **Install** | the packages, the plugin version, reinstall and the update check |
+| **Home** | what needs fixing, what each device is showing, brightness and night mode |
+| **Rig** | every screen, strip and matrix as a tile, painted with a flag, a car alongside, the pit lane, a warning or the revs |
+| **Screens** | the screen cards, the selected screen's own pane, and the Add, Edit, Remove and Duplicate sheets |
+| **LEDs** | one group per strip, the Add LEDs sheet, the car shift light width and the car tables |
+| **Matrix** | the flag box profile in the header, one group per matrix panel |
+| **Shortcuts** | every wheel button and key: each screen's zones and quick glance, and the rig's night mode and brightness |
+| **Settings** | what is the same everywhere: race data, flags, alerts and lighting |
+| **Updates** | the plugin's version and the update check, what OpenDash has written into SimHub, Reinstall, Put mine back, the links |
 
-The canvas draws the first, second and fourth on the `Plugin` artboard, and the controls they need
-on `PluginComponents`. It was drawn before the lights wave and shows three tabs named Screens, Data
-and Install; this file is ahead of it on two points, said here rather than changed there because the
-canvas is the author's:
+### Where everything moved
 
-- **Lights is a fourth tab, not a section.** [#282](https://github.com/xorob0/OpenDash/issues/282) settles
-  that a light device "is the same shape of thing as a screen", which argued for putting a flag box
-  card in the same row as the screens. It is not done, because a screen and a box are the same shape
-  to *the settings model* and nothing alike to a user: a screen is a rectangle with zones, a box is
-  64 LEDs with a mounting side, and one row of cards mixing them would have to explain itself. Four
-  tabs is the cheaper honesty.
-- **The first tab is Rig, not Screens.** Because it is now a list of what you have rather than a list
-  of what exists.
+| on the four tabs | now |
+|---|---|
+| Rig: the screen cards and each screen's pane | Screens |
+| Rig: a face's Wheel buttons, the three quick-glance binders | Shortcuts (the glance's page stays on Screens, with a chip that opens its binding) |
+| Data | Settings, Race data |
+| Lights: the strips, the car tables, the car shift light width | LEDs |
+| Lights: the matrix panels | Matrix |
+| Lights: brightness, night mode, the alert thresholds | Settings, and Home's quick controls |
+| Install: the flag box row | Matrix's header (and still listed on Updates) |
+| Install: everything else | Updates |
+
+### Where the build departs from the #503 artboards
+
+Recorded here because [voice.md](voice.md) says every divergence is, and the canvas is the author's:
+
+- **The mark is Ui.Mark(), `media/logo.svg`**, not the artboard's three rising bars, which
+  [brand.md](brand.md) rejected.
+- **Eyebrows, tags and nav labels are sentence case**, since brand.md is taking the uppercase transform
+  away; the artboard's capitals are the transform's, not the text's.
+- **The live card's eyebrow is one trimming line without tracking.** WPF has no letter spacing, and the
+  tracked eyebrow is a block per glyph, which cannot trim; "Live · Assetto Corsa Competizione" is wider
+  than the card's 151 px.
+- **The live card is a fixed 85 px** against the artboard's 83.3, so its lines sit on whole pixels and the
+  items below it never move when a session starts.
+- **On the rail, night mode is the full 40 px switch** rather than an icon toggle: the same control on
+  both sidebars, with its label as the tooltip where the label is not drawn.
+- **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the
+  plugin does not bundle.
+- **Voice replacements**: greyed rows are noun phrases ("Rig test", "Alert dismissal", "RPM colour for
+  everything", "Where each alert shows"); "Car-specific shift points", not thresholds; the #369 switch is
+  "Car's own rev lights"; a page is named as "the Screens page" wherever copy sends a driver to one.
 
 ### Three tokens are owed
 
@@ -44,6 +69,9 @@ card's width and height are literals in `Widgets.cs`. They belong in the token f
 adds them there, and this paragraph is the record that they are missing rather than forgotten.
 
 ## The tab bar
+
+*Gone with #503, for the sidebar above. This section and the four below it describe the tabs as they
+were; each moves to its page, in the words of the table above, as the page agent rebuilds that page.*
 
 Across the top under the header, `control.tab`. The selected tab carries the accent underline; the
 rest are `text.secondary`. Four tabs never need to scroll, so there is no overflow behaviour.

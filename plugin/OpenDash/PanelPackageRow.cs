@@ -19,7 +19,7 @@ namespace OpenDashPlugin
         /// offer none of them. Adding is the Screens page's now, and this sentence is what sends
         /// somebody there from Updates rather than leaving them to find it.
         /// </remarks>
-        public const string SectionCaption = "Add a screen on Screens to use one.";
+        public const string SectionCaption = "To use one, add a screen on the Screens page.";
 
         /// <summary>
         /// The row's first line.

@@ -19,6 +19,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Rig", PanelRigMap.Title);
             Assert.Equal("Drag to arrange like your rig", PanelRigMap.CanvasHint);
             Assert.Equal("Reset layout", PanelRigMap.ResetLayout);
+            Assert.Equal("Nothing on the rig yet.", PanelRigMap.Empty);
             Assert.Equal("Real hardware", PanelRigMap.RealHardwareTitle);
             Assert.NotNull(PanelSoon.Find(PanelRigMap.RealHardwareTitle));
             Assert.Equal(580, PanelRigMap.CanvasHeight);

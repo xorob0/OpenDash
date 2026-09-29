@@ -65,6 +65,9 @@ namespace OpenDashPlugin
 
         public const string ResetLayout = "Reset layout";
 
+        /// <summary>The canvas of a rig with nothing on it, beside a press that goes to Screens.</summary>
+        public const string Empty = "Nothing on the rig yet.";
+
         /// <summary>The greyed switch in the header (#506), by its registry title; search finds it through
         /// PanelSoon rather than an entry of this page's own.</summary>
         public const string RealHardwareTitle = "Real hardware";

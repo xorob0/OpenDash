@@ -14,7 +14,7 @@ namespace OpenDashPlugin.Tests
     public class PanelScreensTests
     {
         [Fact]
-        public void A_rig_of_five_screens_added_on_the_rig_tab_is_never_told_to_remove_any()
+        public void A_rig_of_five_screens_added_on_the_screens_page_is_never_told_to_remove_any()
         {
             // The rig of the #459 walk-through: built from nothing, one screen at a time, five by the end,
             // two of them at one size.
@@ -132,7 +132,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_rig_a_released_build_wrote_from_screens_added_on_the_rig_tab_is_never_told()
+        public void A_rig_a_released_build_wrote_from_screens_added_on_the_screens_page_is_never_told()
         {
             // The #459 rig as the build it was made on wrote it: five screens, every one carrying the
             // package it was added from, and no word from any of them on where they came from.
@@ -206,6 +206,11 @@ namespace OpenDashPlugin.Tests
         public void The_screens_page_is_titled_and_its_rows_are_found_where_they_are()
         {
             Assert.Equal("Screens", PanelScreens.Title);
+            // One phrase for one state: the card and the fix box under it both say this.
+            Assert.Equal("Restart SimHub to load it", PanelScreens.RestartToLoad);
+            // The empty rig's pill, which Home's card says too, with the stop a sentence takes.
+            Assert.Equal("No screens yet", PanelScreens.NoScreens);
+            Assert.Equal("Could not duplicate Rim: this build carries no dashboard for it.", PanelAddScreen.DuplicateFailed("Rim"));
             var anchors = new[]
             {
                 PanelScreens.AnchorCards, PanelScreens.AnchorRevBar, PanelScreens.AnchorFlagDisplay, PanelScreens.AnchorLapReview,

@@ -17,7 +17,7 @@ namespace OpenDashPlugin.Tests
         [InlineData(3, -17, 2)]
         [InlineData(3, -500, 0)]
         [InlineData(2, 0, 2)]
-        public void A_row_lands_where_its_centre_passes_a_neighbours_middle(int from, double delta, int target)
+        public void A_row_lands_where_its_leading_edge_passes_a_neighbours_middle(int from, double delta, int target)
         {
             Assert.Equal(target, PanelReorder.TargetIndex(Even, from, delta));
         }

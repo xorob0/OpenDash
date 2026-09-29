@@ -128,7 +128,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_whose_profile_failed_is_sent_to_Updates()
         {
-            Assert.Equal("Added Rim, but its profile could not be installed. See Updates.", PanelLights.BarAddFailed("Rim"));
+            Assert.Equal("Added Rim, but its profile could not be installed. See the Updates page.", PanelLights.BarAddFailed("Rim"));
         }
 
         [Theory]

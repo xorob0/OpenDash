@@ -95,6 +95,15 @@ namespace OpenDashPlugin
         public const string AddButton = "Add screen";
 
         /// <summary>
+        /// A Duplicate that made nothing, and why: DuplicateScreen returns null only when no package in this
+        /// build makes the screen, so that is the reason, said where the driver reads it and logged.
+        /// </summary>
+        public static string DuplicateFailed(string name)
+        {
+            return "Could not duplicate " + name + ": this build carries no dashboard for it.";
+        }
+
+        /// <summary>
         /// The one place a screen already on the rig is changed.
         /// </summary>
         /// <remarks>
@@ -132,9 +141,9 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Updates asks before it replaces authored work and keeps the copy under a name no later
         /// install claims. A reinstall of one screen costs exactly the same thing, so it says the same
-        /// thing and keeps the copy the same way; "Put mine back" on Updates is what restores it.
+        /// thing and keeps the copy the same way; "Put mine back" on the Updates page is what restores it.
         /// </remarks>
-        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on Updates restores it.";
+        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Updates page restores it.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.

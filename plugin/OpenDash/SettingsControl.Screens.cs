@@ -95,7 +95,7 @@ namespace OpenDashPlugin
                 var captured = screen;
                 var installed = Installed(captured);
                 var restart = issues.Any(i => i.Id == "screen-restart:" + captured.Namespace);
-                var state = !installed ? "Missing" : restart ? "Restart SimHub to load it" : "In SimHub";
+                var state = !installed ? "Missing" : restart ? PanelScreens.RestartToLoad : "In SimHub";
                 var stateHex = !installed ? Theme.StatusFailed : restart ? Theme.Caution : Theme.StatusUpToDate;
                 var thumb = Ui.Thumb(captured.IsSlots ? "round" : captured.Kind, captured.Width, captured.Height);
                 cards.Add(Ui.DeviceCard(
@@ -138,7 +138,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildEmptyRig()
         {
-            var pill = Ui.StatusPill(Theme.TextDim, "No screens yet", Theme.TextLabel);
+            var pill = Ui.StatusPill(Theme.TextDim, PanelScreens.NoScreens, Theme.TextLabel);
             var text = Ui.Caption(PanelCopy.EmptyRig);
             return Ui.VStack(4, pill, text);
         }
@@ -199,7 +199,9 @@ namespace OpenDashPlugin
             }
             var restart = issues.FirstOrDefault(i => i.Id == "screen-restart:" + screen.Namespace);
             if (restart == null) return null;
-            var fix = Ui.FixBox(restart.Title, restart.Detail, null, null, PanelIcons.Restart);
+            // The card above says this state as PanelScreens.RestartToLoad, so the fix box does too: one phrase
+            // for one state. Home names the screen in its title, because Home lists every screen's.
+            var fix = Ui.FixBox(PanelScreens.RestartToLoad, restart.Detail, null, null, PanelIcons.Restart);
             fix.Margin = new Thickness(0, 18, 0, 0);
             return fix;
         }
@@ -516,7 +518,8 @@ namespace OpenDashPlugin
             var copy = Settings.DuplicateScreen(screen.Namespace, catalogue);
             if (copy == null)
             {
-                Say(PanelMessage.Caution("Could not duplicate " + screen.Name + "."));
+                Log.Warn("Duplicating " + screen.Name + " made nothing: no package in this build makes " + (screen.Folder ?? screen.Kind) + ".");
+                Say(PanelMessage.Caution(PanelAddScreen.DuplicateFailed(screen.Name)));
                 return;
             }
             Save();

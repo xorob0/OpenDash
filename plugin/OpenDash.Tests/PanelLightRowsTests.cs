@@ -271,7 +271,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_tooltip_says_what_the_rigs_strips_hold_and_offers_only_the_press_the_row_has()
         {
-            // No strip of the shape in SimHub: a strip is added on the Lights tab, and the row has no
+            // No strip of the shape in SimHub: a strip is added on the LEDs page, and the row has no
             // Install press to name, so it says where to go.
             var one = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
             Assert.Equal("No strip of this shape is in SimHub. Add one on the LEDs page.", one);

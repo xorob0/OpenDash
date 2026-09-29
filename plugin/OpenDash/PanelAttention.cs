@@ -193,7 +193,7 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     "strip-unselected:" + strip.Namespace, PanelPage.Leds, strip.Namespace,
                     strip.Name + "'s profile is not selected",
-                    "Its profile is installed but not selected on the device.",
+                    "Installed, but not selected in SimHub.",
                     SelectSteps(strip.DeviceName, strip.Name), CheckAgain, PanelIssueAction.CheckAgain));
             }
 
@@ -213,24 +213,28 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     "screens-unclaimed", PanelPage.Screens, null,
                     (unclaimed == 1 ? "1 screen" : unclaimed + " screens") + " came with an older OpenDash",
-                    PanelScreens.UnclaimedNote,
+                    UnclaimedDetail,
                     null, "Open Screens", PanelIssueAction.Navigate));
             }
 
             foreach (var strip in strips.Where(s => s.Profile == FlagBoxInstallState.Outdated))
             {
+                // On Updates, which is where a strip profile's Update press is until the LEDs page's header
+                // carries one (ReinstallBar and UpdateBars are the shell's, for that header): an issue
+                // whose press lands where there is nothing to press is worse than one that sends the
+                // driver a page further.
                 issues.Add(new PanelIssue(
-                    "strip-outdated:" + strip.Namespace, PanelPage.Leds, strip.Namespace,
-                    strip.Name + "'s profile is out of date",
+                    "strip-outdated:" + strip.Namespace, PanelPage.Updates, strip.Namespace,
+                    strip.Name + "'s profile has an update",
                     OutdatedDetail,
-                    null, Open(strip.Name), PanelIssueAction.Navigate));
+                    null, "Open Updates", PanelIssueAction.Navigate, PanelUpdates.AnchorLights));
             }
             if (matrices.Count > 0 && input.FlagBox == FlagBoxInstallState.Outdated)
             {
                 var name = string.IsNullOrWhiteSpace(input.FlagBoxName) ? FlagBoxProfile.ProfileName : input.FlagBoxName;
                 issues.Add(new PanelIssue(
                     "flagbox-outdated", PanelPage.Matrix, null,
-                    name + " is out of date",
+                    name + " has an update",
                     OutdatedDetail,
                     null, "Open Matrix", PanelIssueAction.Navigate));
             }
@@ -265,6 +269,10 @@ namespace OpenDashPlugin
         public const string InstallAgain = "Install it again";
         public const string CheckAgain = "Check again";
         public const string OutdatedDetail = "Update it to the version this OpenDash carries.";
+
+        /// <summary>What Home says under the screens an older OpenDash made, in the words the Screens page
+        /// uses for them: screens, each kept or removed there.</summary>
+        public const string UnclaimedDetail = "Keep or remove each one on the Screens page.";
 
         public static string Open(string name) { return "Open " + name; }
 

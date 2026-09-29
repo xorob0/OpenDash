@@ -141,13 +141,14 @@ namespace OpenDashPlugin
             var strips = Settings.LedBarList();
             var matrices = Settings.MatrixPanels().ToList();
             var grid = Ui.CardGrid(220, 16, 3,
-                DeviceCount(PanelNav.Label(PanelPage.Screens), screens.Select(s => s.Name), PanelPage.Screens),
-                DeviceCount(PanelNav.Label(PanelPage.Leds), strips.Select(b => b.Name), PanelPage.Leds),
-                DeviceCount(PanelNav.Label(PanelPage.Matrix), matrices.Select(m => Settings.MatrixName(m) ?? "Matrix " + m), PanelPage.Matrix));
+                DeviceCount(PanelNav.Label(PanelPage.Screens), screens.Select(s => s.Name), PanelPage.Screens, PanelScreens.NoScreens + "."),
+                DeviceCount(PanelNav.Label(PanelPage.Leds), strips.Select(b => b.Name), PanelPage.Leds, PanelLights.NoBars),
+                DeviceCount(PanelNav.Label(PanelPage.Matrix), matrices.Select(m => Settings.MatrixName(m) ?? "Matrix " + m), PanelPage.Matrix, PanelLights.NoPanels));
             return PageSection(PanelHome.RightNowTitle, grid);
         }
 
-        private FrameworkElement DeviceCount(string title, IEnumerable<string> names, PanelPage page)
+        /// <param name="empty">The page's own words for having none, so Home and the page say it alike.</param>
+        private FrameworkElement DeviceCount(string title, IEnumerable<string> names, PanelPage page, string empty)
         {
             var list = names.ToList();
             var open = Ui.LinkButton("Open");
@@ -156,7 +157,7 @@ namespace OpenDashPlugin
             stack.Children.Add(Ui.Row(Ui.Eyebrow(title), open));
             if (list.Count == 0)
             {
-                var none = Ui.Prose("None yet.");
+                var none = Ui.Prose(empty);
                 none.Margin = new Thickness(0, 10, 0, 0);
                 stack.Children.Add(none);
             }

@@ -14,6 +14,12 @@ namespace OpenDashPlugin
     {
         public const string Title = "Screens";
 
+        /// <summary>A screen written after SimHub started, on its card and in the fix box under it.</summary>
+        public const string RestartToLoad = "Restart SimHub to load it";
+
+        /// <summary>A rig with no screen, on this page's pill and on Home's card.</summary>
+        public const string NoScreens = "No screens yet";
+
         /// <summary>The line an upgrading user meets over the cards, and nobody else.</summary>
         public const string UnclaimedNote = "Remove the dashboards you have no screen for.";
 

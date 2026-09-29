@@ -27,15 +27,15 @@ namespace OpenDashPlugin.Tests
             return new ScreenInstance { Kind = kind, Width = width, Height = height, Package = package };
         }
 
-        /// <summary>A package the design names reads by that name; one it does not keeps its folder.</summary>
         /// <summary>The caption over the rows sends somebody to the page that adds a screen, which is
-        /// Screens now that the tabs have gone (#503).</summary>
+        /// Screens now that the tabs have gone (#503), named the way every page names another.</summary>
         [Fact]
         public void The_section_sends_somebody_to_Screens_to_add_one()
         {
-            Assert.Equal("Add a screen on Screens to use one.", PanelPackageRow.SectionCaption);
+            Assert.Equal("To use one, add a screen on the Screens page.", PanelPackageRow.SectionCaption);
         }
 
+        /// <summary>A package the design names reads by that name; one it does not keeps its folder.</summary>
         [Fact]
         public void The_row_names_the_package_and_captions_it_with_the_size()
         {

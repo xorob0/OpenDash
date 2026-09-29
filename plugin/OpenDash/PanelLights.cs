@@ -264,7 +264,7 @@ namespace OpenDashPlugin
 
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See Updates.";
+            return "Added " + name + ", but its profile could not be installed. See the Updates page.";
         }
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>

@@ -42,7 +42,7 @@ export default function Lights() {
             <h2 className="h3">Lit like the real car</h2>
             <p className="prose">
               A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Lovely Car Data, an open table of measured cars. One
-              click on the Lights tab fetches it, and nothing about you or your car leaves your machine.
+              click on the LEDs page fetches it, and nothing about you or your car leaves your machine.
             </p>
             <Attribution className={`prose ${styles.credit}`} />
           </div>
@@ -99,7 +99,7 @@ export default function Lights() {
             </div>
             <div className={styles.point}>
               <h3 className="h3">Never installed for you</h3>
-              <p className="prose">OpenDash never installs a profile by itself. Press Install on the Lights tab.</p>
+              <p className="prose">OpenDash never installs a profile by itself. Press Install at the top of the Matrix page.</p>
             </div>
             <div className={styles.point}>
               <h3 className="h3">Checked, not yet driven</h3>

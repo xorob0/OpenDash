@@ -264,12 +264,12 @@ namespace OpenDashPlugin.Tests
         public void The_reinstall_says_what_it_replaces()
         {
             Assert.DoesNotContain("edited", PanelAddScreen.ReinstallCaption);
-            // The Install tab's own promise, in the same words, because it is the same copy and the same
+            // The Updates page's own promise, in the same words, because it is the same copy and the same
             // button that puts it back.
             Assert.Contains("a copy is kept", PanelAddScreen.ReinstallEditedCaption);
             Assert.Contains("Put mine back", PanelAddScreen.ReinstallEditedCaption);
             // Where "Put mine back" is now that the tabs have gone (#503).
-            Assert.EndsWith("\"Put mine back\" on Updates restores it.", PanelAddScreen.ReinstallEditedCaption);
+            Assert.EndsWith("\"Put mine back\" on the Updates page restores it.", PanelAddScreen.ReinstallEditedCaption);
         }
     }
 }
