@@ -968,6 +968,16 @@ describe('what a released plugin embeds', () => {
     // release, which is the shape of the bug this replaced.
     const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');
     expect(script).toContain('cp build/*.simhubdash plugin/OpenDash/Resources/');
+    // The glyph sheet as well: the csproj embeds it only where it exists, so a plugin packaged
+    // without it builds, ships and draws the flag box previews bare, and nothing else goes red.
+    expect(script).toContain('cp build/flag-box-glyphs.json plugin/OpenDash/Resources/');
+    // CI and a release never run this script, so each carries the sheet in the dash artefact and
+    // refuses a plugin job that did not receive it.
+    for (const name of ['ci.yml', 'release.yml']) {
+      const workflow = readFileSync(join(import.meta.dir, '..', '..', '..', '.github', 'workflows', name), 'utf8');
+      expect([name, /^\s+build\/flag-box-glyphs\.json$/m.test(workflow)]).toEqual([name, true]);
+      expect([name, workflow.includes('test -s plugin/OpenDash/Resources/flag-box-glyphs.json')]).toEqual([name, true]);
+    }
     expect(script).not.toMatch(/^\s*case .*OpenDash slots/m);
   });
 });
