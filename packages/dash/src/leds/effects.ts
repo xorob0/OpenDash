@@ -230,8 +230,9 @@ export const FLAG_ROWS: readonly FlagRow[] = [
   // The flag's two colours, its yellow and its stripes' red, alternating at the fast rate, which is
   // what the band's stripes are on a lamp. The yellow alone at that rate was all a lamp had to say
   // "and there is something on the road" with, and a glance at it caught the yellow flag. The red is
-  // also the low-fuel lamp's, which shares this lamp on a two-LED side, but that one blinks it
-  // against darkness at the slow rate and this one against the yellow at the fast one.
+  // also the low-fuel and oil-pressure lamps', which share this lamp on a side of one or two LEDs,
+  // and the oil pressure blinks it at this same fast rate; both blink it against darkness, though,
+  // so it is the yellow half rather than the rate that tells the flag from the two car warnings.
   {
     id: 'debris',
     label: 'Debris flag',
