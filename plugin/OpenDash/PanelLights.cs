@@ -237,11 +237,12 @@ namespace OpenDashPlugin
         /// selects, so that it never offers a shape whose profile does not exist.
         /// </summary>
         /// <remarks>
-        /// One switch and not a wiring drop-down. The reversed 4/14/4 is the other wiring the build writes
-        /// and it is deliberately left off the form: a Fanatec switch is what was asked for, one switch is
-        /// clearer than a wiring drop-down with two entries, and the reversed row keeps its place on the
-        /// Install tab. Should a third wiring ever arrive, the switch becomes that drop-down, and this
-        /// paragraph is the reason it was not one from the start (#436).
+        /// One switch and not a wiring drop-down (#436). Every plain shape has a far-end twin now, and
+        /// that is not a wiring to pick here: a bar is reversed by its own switch (LedBar.Reversed), which
+        /// installs the twin in place of the plain profile (#503). The Fanatec wiring is not a reversal --
+        /// it is the order SimHub's Fanatec LED device presents a wheel's runs in, which reverses nothing
+        /// -- so it stays a switch of its own on the form. The reversed 4/14/4 keeps a row of its own on the Install tab only because it is named for
+        /// a device, as the plain 4/14/4 is.
         /// </remarks>
         public static bool OffersFanatec(IEnumerable<string> census)
         {

@@ -124,8 +124,9 @@ namespace OpenDashPlugin
         public string Name { get; private set; }
         public string Caption { get; private set; }
 
-        /// <summary>The shapes one press installs, in the order the row names them. One for most rows;
-        /// three, five or seven for the grouped ones.</summary>
+        /// <summary>The shapes one press installs, in the order the row names them: each of its
+        /// geometries' profiles, the plain wiring followed by its reversed twin where the build carries
+        /// one.</summary>
         public IReadOnlyList<string> ShapeIds { get; private set; }
     }
 
@@ -357,7 +358,7 @@ namespace OpenDashPlugin
             }
             var shape = LightShape.Parse(profile.ShapeId);
             if (shape == null) return profile.ShapeId;
-            if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre) + (shape.Reversed ? " reversed" : string.Empty);
+            if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre);
             // rpmStripProfileName() writes the reversed suffix in lower case and the Fanatec one as the
             // maker's own name, so the fallback cannot simply append the suffix it read.
             var wiring = shape.Wiring == FanatecSuffix ? " Fanatec" : shape.Wiring == ReversedSuffix ? " reversed" : string.Empty;
