@@ -43,17 +43,17 @@
     {"at": 27, "log": "4/20 disqualified: DISQUALIFIED, outlined", "set": {"SessionFlags": "black|disqualify"}},
     {"at": 34, "log": "5/20 black furled: BLACK FLAG · FURLED", "set": {"SessionFlags": "furled"}},
     {"at": 41, "log": "6/20 black: BLACK FLAG", "set": {"SessionFlags": "black"}},
-    {"at": 48, "log": "7/20 meatball: MEATBALL, orange", "set": {"SessionFlags": "repair"}},
+    {"at": 48, "log": "7/20 meatball: MEATBALL, outlined orange", "set": {"SessionFlags": "repair"}},
     {"at": 55, "log": "8/20 full-course caution: SAFETY CAR", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},
     {"at": 62, "log": "9/20 waved yellow: WAVED YELLOW, flashing", "set": {"SessionFlags": "yellow|yellowWaving"}},
     {"at": 69, "log": "10/20 yellow: YELLOW FLAG, steady", "set": {"SessionFlags": "yellow"}},
-    {"at": 76, "log": "11/20 debris: DEBRIS", "set": {"SessionFlags": "debris"}},
+    {"at": 76, "log": "11/20 debris: DEBRIS on yellow, under red stripes", "set": {"SessionFlags": "debris"}},
     // An event: three seconds after the count moves, and nothing afterwards. A second with nothing
     // out comes first, because SimHub's window records a value the first time it is asked and answers
     // false, and from 6 s to here something above the incident was always out, so nothing had asked
     // it. Without the gap the first pass after `bun run dev` would record the incident and show nothing.
     {"at": 83, "log": "nothing out for a second", "set": {"SessionFlags": 0}},
-    {"at": 84, "log": "12/20 incident: INCIDENT · 2x / 17, outlined amber, for three seconds", "set": {"PlayerCarMyIncidentCount": 2}},
+    {"at": 84, "log": "12/20 incident: INCIDENT · 2x / 17, filled amber, for three seconds", "set": {"PlayerCarMyIncidentCount": 2}},
     {"at": 90, "log": "13/20 blue: BLUE FLAG", "set": {"SessionFlags": "blue"}},
     {"at": 97, "log": "14/20 white: WHITE · LAST LAP", "set": {"SessionFlags": "white"}},
     // The band reads the green through SimHub's GreenLimiter, which reports it only shortly after
