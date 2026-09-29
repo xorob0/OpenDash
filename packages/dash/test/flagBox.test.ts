@@ -23,7 +23,7 @@ import {
   type FlagBoxMatrix,
   PROPERTY_PREFIX,
 } from '../src/contract.ts';
-import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
+import { ALERT_CATALOGUE, conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
 import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
@@ -250,9 +250,11 @@ describe('one ordered list, shared with the face', () => {
   test('band D draws every one of them, so no condition is the box’s alone', () => {
     // The face used to draw the six SimHub normalises and the box all fifteen, so a red flag, a
     // disqualification, a furled black, a meatball, a full-course caution, a waved yellow, the
-    // debris flag and the start gantry were invisible on a dash with no box beside it.
-    const band = flagStrip(rect(0, 0, 1920, 60));
-    expect(band.map((i) => i.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
+    // debris flag and the start gantry were invisible on a dash with no box beside it. The band
+    // draws the whole alert catalogue now, of which the box's list is the flag half, in order.
+    const band = flagStrip(rect(0, 0, 1920, 60)).map((i) => i.name);
+    expect(band).toEqual(ALERT_CATALOGUE.map((c) => `flag.${c.id}`));
+    expect(band.filter((name) => FLAG_CATALOGUE.some((c) => name === `flag.${c.id}`))).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
   });
 
   test('every condition in the catalogue is either drawn or absent on purpose', () => {

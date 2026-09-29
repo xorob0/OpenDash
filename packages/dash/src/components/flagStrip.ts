@@ -1,10 +1,12 @@
 /**
- * flagStrip: band D's flag, one Layer per condition of `FLAG_CATALOGUE`, sharing the band anatomy
+ * flagStrip: band D's flag, one Layer per condition of `ALERT_CATALOGUE`, sharing the band anatomy
  * and differing in shape, colour, name and behaviour. One shows at a time and nothing is drawn when
- * nothing is raised.
+ * nothing is raised. The catalogue is the fifteen flags and five car alerts, ranked in one list, so
+ * that an engine stalled on the grass, an incident or a push to pass takes the band exactly as a
+ * flag does and cannot draw over one that outranks it.
  *
  * It draws in two phases, #380. `flagStrip` is the takeover, the whole band for the few seconds a
- * flag has just come out or just changed; `flagCorners` is what it settles into, the same fifteen
+ * condition has just come out or just changed; `flagCorners` is what it settles into, the same twenty
  * conditions in the block at each end of the band, so the page a driver was reading comes back while
  * the flag stays out. `flagTakingBand` is the one window that decides between them, and `zones/face.ts`
  * is where the two groups are gated against each other.
@@ -36,7 +38,7 @@ import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
-import { bandRaised, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, raisedRank, type AlertBandSpec, type FaceFlag, type FlagCondition } from '../flags.ts';
+import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { CHIP_WIDEST } from '../second/chip.ts';
@@ -65,8 +67,8 @@ export function flagVisible(flag: FlagProperty): Expr {
   return and(...higher, eq(game(flag), num(1)));
 }
 
-/** The shape the condition asks for, drawn over `frame`. */
-const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
+/** The shape the condition asks for, drawn over `frame`, with the name as a style asks for it. */
+const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
   switch (spec.shape) {
     case 'filled':
       return filledBand(name, frame, style, spec.colour, spec.label, spec.flash ?? false);
@@ -75,6 +77,20 @@ const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: Alert
     case 'chequer':
       return chequerBand(name, frame);
   }
+};
+
+/**
+ * The whole band: the shape, and in place of the label the run a condition writes when it has the
+ * band to itself, which is the incident's count against its limit. A style that writes no name
+ * writes no run, and the settled corner blocks draw `shapeParts` alone, so the run is the takeover's.
+ */
+const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
+  if (spec.shape === 'chequer' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
+  const ink = spec.shape === 'filled' ? ds.purpose.flag.onFlag : spec.colour;
+  return [
+    ...shapeParts(name, frame, { ...style, labels: false }, spec),
+    alertBandName(`${name}.label`, frame, spec.run.sample, ink, { bind: spec.run.bind, widest: spec.run.widest }),
+  ];
 };
 
 /** The condition whose band can say more than its own name, and the only one. */
@@ -137,9 +153,9 @@ const blueFlagRuns = (label: string): readonly BlueFlagRun[] => {
  * and a class. The plain filled band is what those two keep.
  */
 const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
-  if (!style.labels || spec.shape !== 'filled') return bandParts(name, frame, style, spec);
+  if (!style.labels || spec.shape !== 'filled') return shapeParts(name, frame, style, spec);
   return [
-    ...bandParts(name, frame, { ...style, labels: false }, spec),
+    ...shapeParts(name, frame, { ...style, labels: false }, spec),
     ...blueFlagRuns(spec.label).map((run) =>
       alertBandName(`${name}.label${run.detail === 'none' ? '' : `.${run.detail}`}`, frame, run.sample, ds.purpose.flag.onFlag, {
         widest: run.widest,
@@ -151,7 +167,7 @@ const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: A
 };
 
 /**
- * One condition's layer, ranked by `bandRaised` rather than by the box's own reading: null-safe, so
+ * One condition's layer, ranked by `bandVisible` rather than by the box's own reading: null-safe, so
  * that a sim publishing no `SessionFlagsDetails` leaves the band dark rather than lighting it, and
  * limited where a bit is held longer than the flag it announces.
  *
@@ -159,11 +175,19 @@ const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: A
  * the box's, where sixty-four pixels are the only thing a driver has; a driver who wants band D
  * quieter turns the flag format off instead.
  */
-const conditionLayer = (condition: FlagCondition, name: string, children: Item[]): LayerItem =>
-  withMoreBindings({ kind: 'layer', name, children }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
+const conditionLayer = (condition: AlertCondition, name: string, children: Item[]): LayerItem =>
+  withMoreBindings({ kind: 'layer', name, children }, { Visible: bandVisible(condition) });
+
+/**
+ * Whether a condition draws where the band writes no name. Every one does except a neutral alert,
+ * whose white is already the white flag's fill and the black family's outline: without the word it
+ * would say "last lap" or "black flag" instead of what the driver's hand did, so it says nothing.
+ * The rank does not move with it, since the layers below still negate its reading.
+ */
+const drawnWithoutName = (condition: AlertCondition): boolean => !('neutral' in condition && condition.neutral);
 
 export function flagStrip(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flag'): Item[] {
-  return FLAG_CATALOGUE.map((condition) => {
+  return ALERT_CATALOGUE.filter((condition) => style.labels || drawnWithoutName(condition)).map((condition) => {
     const name = `${prefix}.${condition.id}`;
     const parts = condition.id === BLUE_FLAG_ID ? blueFlagParts : bandParts;
     return conditionLayer(condition, name, parts(name, frame, style, condition.band));
@@ -183,7 +207,8 @@ export function flagStrip(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES
 export const FLAG_TAKEOVER_MS = ds.indicator.alert.durationMs;
 
 /**
- * The flag has just come out, or has just changed: the band is its for these few seconds.
+ * A condition has just come out, or the one out has just changed: the band is its for these few
+ * seconds.
  *
  * `changed(ms, value)` is SimHub's own window and not a clock of ours, which is what ADR 0009
  * admits, and the value it watches is `raisedRank`, the position of the *winning* condition rather
@@ -216,23 +241,29 @@ export interface FlagCornerBlocks {
  * that does not fit is not shrunk and not clipped; it is simply not written, and the block is colour
  * alone, which is what the nano's twelve-pixel strip already is.
  *
- * All fourteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
+ * All nineteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
  * so the answer comes out per face rather than per condition: on the four faces with no corner block a
  * settled flag is a colour, and a colour is a family rather than a member -- the three blacks are one
  * outlined sliver and the debris flag is a yellow. zones.md §6 weighs that against holding the whole
- * band for the length of a caution, and §10 records what the canvas still owes those four faces.
+ * band for the length of a caution, and §10 records what the canvas still owes those four faces. A
+ * neutral alert is the exception that has no colour to fall back on, and draws nothing there.
  */
 const cornerNameFits = (block: Rect, text: string): boolean =>
   measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;
 
-/** One end of the settled flag: the condition's own shape, with its name where the block has room. */
-const cornerParts = (name: string, block: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
+/**
+ * One end of the settled condition: its own shape, with its name where the block has room, and never
+ * the run the whole band writes in place of the name.
+ */
+const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
+  const spec = condition.band;
   const labels = style.labels && spec.shape !== 'chequer' && cornerNameFits(block, spec.label);
-  return bandParts(name, block, { ...style, labels }, spec);
+  if (!labels && !drawnWithoutName(condition)) return [];
+  return shapeParts(name, block, { ...style, labels }, spec);
 };
 
 /**
- * The settled flag: the same fifteen conditions, ranked the same way, drawn in the block at each end
+ * The settled flag: the same twenty conditions, ranked the same way, drawn in the block at each end
  * of the band instead of across the whole of it.
  *
  * The page underneath is back, which is the point of #380, and the flag is still out until its bits
@@ -243,14 +274,15 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, spec: Ale
  * behind takes a whole band -- "BLUE FLAG · P4 GT3" is wider than any corner block at any size --
  * and a block that wrote it on the widest face and not on the others would be a different drawing
  * per face. The blue block writes BLUE FLAG where that fits, and the detail belongs to the seconds
- * the flag has the band.
+ * the flag has the band. The incident's count is the same: the block writes INCIDENT.
+ *
+ * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has
+ * no layer here at all rather than an empty one.
  */
 export function flagCorners(blocks: FlagCornerBlocks, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flagCorner'): Item[] {
-  return FLAG_CATALOGUE.map((condition) => {
+  return ALERT_CATALOGUE.flatMap((condition) => {
     const name = `${prefix}.${condition.id}`;
-    return conditionLayer(condition, name, [
-      ...cornerParts(`${name}.left`, blocks.left, style, condition.band),
-      ...cornerParts(`${name}.right`, blocks.right, style, condition.band),
-    ]);
+    const children = [...cornerParts(`${name}.left`, blocks.left, style, condition), ...cornerParts(`${name}.right`, blocks.right, style, condition)];
+    return children.length === 0 ? [] : [conditionLayer(condition, name, children)];
   });
 }
