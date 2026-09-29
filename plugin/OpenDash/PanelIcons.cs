@@ -128,5 +128,8 @@ namespace OpenDashPlugin
 
         /// <summary>The plus a dashed add card carries at the twenty unit size.</summary>
         public const string Add = "M10 4v12M4 10h12";
+
+        /// <summary>Night mode on the rail: a crescent, where the full sidebar draws a labelled switch.</summary>
+        public const string Night = "M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z";
     }
 }

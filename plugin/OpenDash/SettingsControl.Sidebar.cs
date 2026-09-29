@@ -90,11 +90,19 @@ namespace OpenDashPlugin
             dock.Children.Add(foot);
             // The flex-grow the artboard puts between the items and the foot: the dock's last child takes
             // what is left, and scrolls when that is less than the items need.
+            //
+            // A focus ring is drawn in the nearest ScrollContentPresenter's adorner layer, which is clipped to
+            // the viewport, and the kit's ring stands FocusRingOutset outside the control. The items fill the
+            // viewport's width, so the ring lost its sides on every item above the foot. The viewport is
+            // widened by the ring on each side and the items drawn back in by as much, so nothing moves and
+            // the ring is whole.
+            top.Margin = new Thickness(FocusRingOutset, 0, FocusRingOutset, 0);
             dock.Children.Add(new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Focusable = false,
+                Margin = new Thickness(-FocusRingOutset, 0, -FocusRingOutset, 0),
                 Content = top,
             });
 
@@ -108,6 +116,9 @@ namespace OpenDashPlugin
             else if (nightFocused) FocusLater(nightSwitch);
             else if (focusedSearch != null && focusedSearch.IsVisible) FocusLater(focusedSearch);
         }
+
+        /// <summary>How far the kit's focus ring stands outside the control it rings: the offset and the ring.</summary>
+        private const double FocusRingOutset = Theme.FocusRingOffset + Theme.FocusRing;
 
         /// <summary>Focuses a control once the sidebar it was drawn into has been laid out.</summary>
         private void FocusLater(IInputElement element)
@@ -249,6 +260,7 @@ namespace OpenDashPlugin
                 ToolTip = PanelSearch.RailTooltip,
                 Content = Ui.NavIcon(PanelIcons.Search, Theme.TextSecondary, PanelShell.SearchIconSize),
                 Margin = new Thickness(0, 0, 0, PanelShell.SearchGap),
+                FocusVisualStyle = Ui.FocusRing(),
             };
             System.Windows.Automation.AutomationProperties.SetName(toggle, PanelSearch.Placeholder);
             toggle.Template = RailToggleTemplate();
@@ -436,6 +448,9 @@ namespace OpenDashPlugin
                         VerticalAlignment = VerticalAlignment.Center,
                         Child = Ui.Text(badge, PanelShell.BadgeTextSize, FontWeights.SemiBold, Theme.Caution, PanelFonts.Data),
                     };
+                    // The artboard's 12 px flex gap stands before every trailing element, the badge too, so
+                    // the amber dot beside it does not touch it.
+                    tag.Margin = new Thickness(PanelShell.NavTrailGap, 0, 0, 0);
                     DockPanel.SetDock(tag, Dock.Right);
                     dock.Children.Add(tag);
                 }
@@ -493,7 +508,7 @@ namespace OpenDashPlugin
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 FocusVisualStyle = Ui.FocusRing(),
-                ToolTip = narrow ? NavTooltip(page, count, badge) : null,
+                ToolTip = narrow ? NavTooltip(page, count, badge, warns) : null,
                 Template = NavItemTemplate(),
             };
             System.Windows.Automation.AutomationProperties.SetName(button, PanelNav.Label(page));
@@ -507,12 +522,11 @@ namespace OpenDashPlugin
             return button;
         }
 
-        private static string NavTooltip(PanelPage page, string count, string badge)
+        /// <summary>The rail item's tooltip: its label, its count and badge, and what its amber dot means,
+        /// which the full sidebar's dot carries as a tooltip of its own.</summary>
+        private static string NavTooltip(PanelPage page, string count, string badge, bool warns)
         {
-            var text = PanelNav.Label(page);
-            if (count != null) text += " · " + count;
-            if (badge != null) text += " · " + badge;
-            return text;
+            return PanelNav.RailTooltip(page, count, badge, warns);
         }
 
         private static ControlTemplate NavItemTemplate()
@@ -532,13 +546,16 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildFoot(bool narrow)
         {
-            var night = Ui.Switch(Settings.LightsNightMode, on =>
+            Action<bool> pressed = on =>
             {
                 if (syncingNight) return;
                 Settings.LightsNightMode = on;
                 Save();
                 ShowLightingChange();
-            }, narrow ? PanelShell.RailSwitchWidth : PanelShell.SwitchWidth);
+            };
+            // On the rail night mode is an icon among icons, a crescent that lights in the accent when on, with
+            // its label as the tooltip; a bare switch at the foot of a column of icons read as nothing.
+            var night = narrow ? RailNightToggle(Settings.LightsNightMode, pressed) : Ui.Switch(Settings.LightsNightMode, pressed);
             System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
             nightSwitch = night;
             FrameworkElement nightRow;
@@ -574,6 +591,36 @@ namespace OpenDashPlugin
             foot.Children.Add(nightBlock);
             foot.Children.Add(updates);
             return foot;
+        }
+
+        /// <summary>
+        /// Night mode on the rail: the crescent in secondary ink on no ground when off, and in the accent on the
+        /// zone ground when on, the rail's inside wide and a nav item high, with the kit's focus ring.
+        /// </summary>
+        private static ToggleButton RailNightToggle(bool on, Action<bool> changed)
+        {
+            var icon = Ui.NavIcon(PanelIcons.Night, on ? Theme.Accent : Theme.TextSecondary);
+            var toggle = new ToggleButton
+            {
+                Width = PanelShell.RailInnerWidth,
+                Height = PanelShell.NavItemHeight,
+                IsChecked = on,
+                Background = on ? Ui.Brush(Theme.SurfaceZone) : Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Content = icon,
+                Template = RailToggleTemplate(),
+                FocusVisualStyle = Ui.FocusRing(),
+            };
+            Action<bool> ink = lit =>
+            {
+                Ui.SetIconInk(icon, lit ? Theme.Accent : Theme.TextSecondary);
+                toggle.Background = lit ? Ui.Brush(Theme.SurfaceZone) : Brushes.Transparent;
+            };
+            toggle.Checked += (sender, args) => { ink(true); changed(true); };
+            toggle.Unchecked += (sender, args) => { ink(false); changed(false); };
+            return toggle;
         }
 
         /// <summary>Whether a plugin update waits for SimHub to close. False when that cannot be read.</summary>

@@ -230,10 +230,6 @@ namespace OpenDashPlugin
         /// </summary>
         public const double RailInnerWidth = RailWidth - PanelMetrics.BorderWeight - 2 * RailPaddingX;
 
-        /// <summary>Night mode's switch on the rail, narrower than the full sidebar's 40 so it fits the 39 the
-        /// rail has: the same control, its knob stopping 17 in rather than 21 when on.</summary>
-        public const double RailSwitchWidth = 36;
-
         /// <summary>
         /// Where the centre of a sidebar item sits across, from the sidebar's left edge: half the room inside
         /// the rule, 107.5 on the full sidebar and 27.5 on the rail. A capture script clicks here and at

@@ -47,9 +47,10 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   than the card's 151 px.
 - **The live card is a fixed 85 px** against the artboard's 83.3, so its lines sit on whole pixels and the
   items below it never move when a session starts.
-- **On the rail, night mode is the same switch at 36 px** rather than an icon toggle: the rail has 39 px
-  inside its rule, the full switch is 40, and the icon sheet has no moon to draw a toggle from. Its label
-  is the tooltip where the label is not drawn. The artboards draw no rail at all.
+- **On the rail, night mode is an icon toggle**, a crescent (`PanelIcons.Night`, the panel's own glyph, since
+  the icon sheet has no moon) that lights in the accent on the zone ground when on, a nav item high and the
+  rail's 39 px inside wide. Its label is the tooltip where the label is not drawn, and a rail item's tooltip
+  ends "Needs attention" when it wears the amber dot. The artboards draw no rail at all.
 - **Past the 1112 px ceiling the main column stays beside the sidebar** and the room beyond it is left
   empty on the right, rather than the column being centred in the window; the artboards stop at 1200.
 - **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the

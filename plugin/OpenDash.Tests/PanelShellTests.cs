@@ -5,6 +5,7 @@
 // a pin rather than a join: once the author copies them to design/canvas/plugin/*.dc.html, these move to
 // reading the files the way PanelIconsTests reads PluginComponents.dc.html.
 using System;
+using System.Linq;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -110,8 +111,17 @@ namespace OpenDashPlugin.Tests
         public void The_rail_holds_what_fits_inside_its_rule()
         {
             Assert.Equal(39, PanelShell.RailInnerWidth);
-            Assert.True(PanelShell.RailSwitchWidth <= PanelShell.RailInnerWidth, "the rail's night switch fits the rail");
-            Assert.True(PanelShell.RailSwitchWidth - PanelShell.SwitchKnob - 2 * PanelShell.SwitchInset > 0, "the knob still travels");
+            // Night mode on the rail is an icon toggle the rail's inside wide, as the search button is.
+            var sidebar = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Sidebar.cs"));
+            Assert.Contains("narrow ? RailNightToggle(", sidebar);
+            Assert.Contains("Ui.NavIcon(PanelIcons.Night,", sidebar);
+            // The focus ring is drawn whole: the items' viewport is widened by the ring and the items drawn
+            // back in, the rail's search carries the kit's ring, and the badge keeps the 12 px trail gap.
+            Assert.Contains("Margin = new Thickness(-FocusRingOutset, 0, -FocusRingOutset, 0)", sidebar);
+            Assert.Contains("top.Margin = new Thickness(FocusRingOutset, 0, FocusRingOutset, 0);", sidebar);
+            // The nav item, the rail's search and the rail's night toggle.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(sidebar, @"FocusVisualStyle = Ui\.FocusRing\(\)").Count);
+            Assert.Contains("tag.Margin = new Thickness(PanelShell.NavTrailGap, 0, 0, 0);", sidebar);
             Assert.Equal(107.5, PanelShell.ItemCentreX(PanelLayout.Full));
             Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Rail));
             Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Compact));

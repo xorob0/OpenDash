@@ -58,11 +58,24 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void An_empty_count_and_an_unreadable_one_draw_nothing()
+        public void An_empty_count_reads_zero_and_only_an_unreadable_one_draws_nothing()
         {
-            Assert.Null(PanelNav.Count(PanelPage.Screens, 0, 0, 0, 0));
-            // The bindings could not be read: hidden, never guessed.
+            // How many the rig has, none included, and nothing bound is a count the driver can read.
+            Assert.Equal("0", PanelNav.Count(PanelPage.Screens, 0, 0, 0, 0));
+            Assert.Equal("0", PanelNav.Count(PanelPage.Leds, 0, 0, 0, 0));
+            Assert.Equal("0", PanelNav.Count(PanelPage.Matrix, 0, 0, 0, 0));
+            Assert.Equal("0", PanelNav.Count(PanelPage.Shortcuts, 0, 0, 0, 0));
+            // The bindings could not be read: hidden, never guessed, and not the same as none bound.
             Assert.Null(PanelNav.Count(PanelPage.Shortcuts, 1, 1, 1, null));
+        }
+
+        [Fact]
+        public void A_rail_item_says_what_its_dot_means()
+        {
+            Assert.Equal("Screens · 5", PanelNav.RailTooltip(PanelPage.Screens, "5", null, false));
+            Assert.Equal("Screens · 5 · Needs attention", PanelNav.RailTooltip(PanelPage.Screens, "5", null, true));
+            Assert.Equal("Updates · Restart · Needs attention", PanelNav.RailTooltip(PanelPage.Updates, null, PanelNav.RestartBadge, true));
+            Assert.Equal("Home", PanelNav.RailTooltip(PanelPage.Home, null, null, false));
         }
 
         [Fact]

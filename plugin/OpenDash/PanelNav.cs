@@ -62,10 +62,11 @@ namespace OpenDashPlugin
         /// The number beside an item, or null for none.
         /// </summary>
         /// <remarks>
-        /// Screens, LEDs and Matrix count what the rig has, and nothing is drawn for none: an empty page says
-        /// so itself, and a column of zeros beside the pages of a new rig reads as an error. Shortcuts counts
-        /// the actions somebody has bound, and is hidden when the bindings could not be read, which is what
-        /// a null count says; a guess would be a number that is sometimes wrong.
+        /// Screens, LEDs and Matrix count what the rig has, none included: a rig with no matrix reads "0"
+        /// beside Matrix, as the ruling on the counts asks. Shortcuts counts the actions somebody has bound,
+        /// "0" when the bindings were read and none is bound, and is hidden only when the bindings could not
+        /// be read, which is what a null count says; a guess would be a number that is sometimes wrong, and
+        /// hiding a zero as well made "nothing bound" look the same as "could not tell".
         /// </remarks>
         public static string Count(PanelPage page, int screens, int strips, int matrices, int? boundShortcuts)
         {
@@ -78,7 +79,7 @@ namespace OpenDashPlugin
                 case PanelPage.Shortcuts: count = boundShortcuts; break;
                 default: count = null; break;
             }
-            return count.HasValue && count.Value > 0 ? count.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
+            return count.HasValue ? Math.Max(0, count.Value).ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
         }
 
         /// <summary>Whether an item wears the amber dot: when Home has something to fix on that page. A fact
@@ -119,5 +120,19 @@ namespace OpenDashPlugin
 
         /// <summary>The dot's tooltip on an item that wears it.</summary>
         public const string WarnTooltip = "Needs attention";
+
+        /// <summary>
+        /// A rail item's tooltip, which is all the rail says about it: the label, the count, the badge, and
+        /// what the amber dot means when the item wears one ("Screens · 5 · Needs attention"). The full
+        /// sidebar draws each of these, and its dot carries <see cref="WarnTooltip"/> as its own tooltip.
+        /// </summary>
+        public static string RailTooltip(PanelPage page, string count, string badge, bool warns)
+        {
+            var text = Label(page);
+            if (count != null) text += " · " + count;
+            if (badge != null) text += " · " + badge;
+            if (warns) text += " · " + WarnTooltip;
+            return text;
+        }
     }
 }

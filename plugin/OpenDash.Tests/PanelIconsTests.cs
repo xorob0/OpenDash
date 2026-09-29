@@ -126,6 +126,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("M7.5 5l5 5-5 5", PanelIcons.ChevronRight);
             Assert.Equal("M5 7.5l5 5 5-5", PanelIcons.ChevronDown);
             Assert.Equal("M10 4v12M4 10h12", PanelIcons.Add);
+            Assert.Equal("M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z", PanelIcons.Night);
             Assert.Equal(20, PanelIcons.NavBox);
             Assert.Equal(18, PanelIcons.NavSize);
 
@@ -137,7 +138,7 @@ namespace OpenDashPlugin.Tests
         {
             PanelIcons.Home, PanelIcons.Rig, PanelIcons.Screens, PanelIcons.Leds, PanelIcons.Matrix, PanelIcons.Shortcuts,
             PanelIcons.Settings, PanelIcons.Updates, PanelIcons.Search, PanelIcons.Close, PanelIcons.Warning, PanelIcons.Restart,
-            PanelIcons.DragHandle, PanelIcons.ChevronRight, PanelIcons.ChevronDown, PanelIcons.Add,
+            PanelIcons.DragHandle, PanelIcons.ChevronRight, PanelIcons.ChevronDown, PanelIcons.Add, PanelIcons.Night,
         };
 
         /// <summary>The set is one hand: one box, one weight, and two sizes named by the sheet's own
@@ -185,7 +186,7 @@ namespace OpenDashPlugin.Tests
                 PanelIcons.Alert, PanelIcons.External, PanelIcons.Display, PanelIcons.Grid,
                 PanelIcons.Phone, PanelIcons.Plus,
             }.Concat(RedesignPaths).ToArray();
-            Assert.Equal(26, paths.Length);
+            Assert.Equal(27, paths.Length);
             Assert.Equal(paths.Length, paths.Distinct(StringComparer.Ordinal).Count());
         }
 
