@@ -234,7 +234,7 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             if (edited.Count > 0 && !confirmingEdited)
             {
                 // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
@@ -431,7 +431,7 @@ namespace OpenDashPlugin
             // one of them is extracting into, so whichever starts first holds the field.
             if (applying) return;
 
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             if (edited.Count > 0 && !confirmingReinstall)
             {
                 confirmingReinstall = true;

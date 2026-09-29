@@ -47,6 +47,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "OpenDash zones 1920x480" }, plan.NotCarried);
         }
 
+        /// <summary>
+        /// A folder outside the rig is installed here and still not the update's, since nothing writes it (#468):
+        /// fetched, it was written by the installer the update builds, which has no rig to ask; not carried, it was
+        /// counted among the dashboards said to follow the plugin.
+        /// </summary>
+        [Fact]
+        public void A_folder_outside_the_rig_is_neither_fetched_nor_counted()
+        {
+            var leftover = new PackageStatus { FolderName = "OpenDash Companion", InstalledVersion = "0.1.0", OutsideRig = true };
+
+            var carried = UpdatePlan.For(new[] { Installed("OpenDash 850x480"), leftover }, ReleaseWith("OpenDash 850x480", "OpenDash Companion"));
+            Assert.Equal(new[] { "OpenDash 850x480" }, carried.Items.Select(i => i.FolderName));
+            Assert.Empty(carried.NotCarried);
+
+            var notCarried = UpdatePlan.For(new[] { Installed("OpenDash 850x480"), leftover }, ReleaseWith());
+            Assert.True(notCarried.IsEmpty);
+            Assert.Equal(new[] { "OpenDash 850x480" }, notCarried.NotCarried);
+        }
+
         [Fact]
         public void A_package_that_is_not_installed_is_not_an_update()
         {
