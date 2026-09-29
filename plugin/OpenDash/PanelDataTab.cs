@@ -3,8 +3,10 @@
 //
 // Apart from SettingsControl.Data.cs for the reason PanelLights.cs is apart from
 // SettingsControl.Lights.cs: the tab is WPF and the net8.0 test project cannot compile a line of it, so
-// copy a test can hold has to live where it can reach. One row here says something the canvas does not,
-// on purpose, and a constant with a test on it is the only way that stays a decision rather than a drift.
+// copy a test can hold has to live where it can reach. Some rows here say something the canvas does not,
+// on purpose -- the Position row's sentences, the driver and team name rows, the delta reference's third
+// segment, the whole of the delta precision row and the clock row -- and a constant with a test on it is
+// the only way that stays a decision rather than a drift.
 // Pure: no WPF types.
 namespace OpenDashPlugin
 {
@@ -69,6 +71,37 @@ namespace OpenDashPlugin
         public const string DeltaTitle = "Delta reference";
 
         public const string DeltaCaption = "Which lap the delta compares against.";
+
+        /// <summary>One label per reference, in the contract's order.</summary>
+        /// <remarks>
+        /// "Last lap" is the canvas's own name for that lap, the one the Last lap card and the Lap times
+        /// page draw, so the row names a lap the driver has already seen a time for rather than
+        /// inventing a word for it. The canvas draws this row with the first two segments only; the
+        /// third is one it does not carry yet (#322).
+        /// </remarks>
+        public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
+
+        /// <summary>The row under the delta reference, which the canvas does not draw at all (#322).</summary>
+        public const string DeltaPrecisionTitle = "Delta precision";
+
+        /// <summary>What each answer is for, which is the one thing the two words cannot say.</summary>
+        /// <remarks>
+        /// The control already shows the two values, so the caption does not list them; what it adds is
+        /// when a driver would want each, a hotlap being decided by the third place and a race being read
+        /// in a glance at two.
+        /// </remarks>
+        public const string DeltaPrecisionCaption = "Thousandths for a hotlap, hundredths to read at a glance.";
+
+        /// <summary>One label per precision, in the contract's order.</summary>
+        /// <remarks>
+        /// Words, although the driver names and the clock answer their questions with worked examples. A
+        /// name is not a numeral, and a delta is nothing else: `0.21` and `0.214` would be set in the
+        /// panel's Barlow, where the canvas's fourth rule keeps numerals, version numbers in the plugin
+        /// included, to Barlow Condensed. The clock's `14:32` and `2:32 PM` are drawn in that Barlow too.
+        /// That is a disagreement between the build and the canvas for the canvas's owner to settle, not
+        /// a precedent this row follows.
+        /// </remarks>
+        public static readonly string[] DeltaPrecisionLabels = { "Hundredths", "Thousandths" };
 
         public const string SessionTitle = "Session progress";
 
