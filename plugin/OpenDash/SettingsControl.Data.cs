@@ -69,6 +69,18 @@ namespace OpenDashPlugin
                 Save();
             });
 
+            // Rig-wide since #503: a flag shown in the pit lane is the same answer on every surface, and
+            // the two thresholds are facts about the car rather than about which corner a box is in.
+            // Through the setters, because Normalise fills every panel's entry from the rig's value on
+            // the next save and an index into one panel's array would be undone by it.
+            var flagsInPitLane = BuildToggle(Settings.FlagsInPitLane, on =>
+            {
+                Settings.FlagsInPitLane = on;
+                Save();
+            });
+            var oilTemp = BuildNumberBox(Settings.LightsOilTemp ?? 0, 0, 999, v => { Settings.SetLightsOilTemp(v); Save(); });
+            var waterTemp = BuildNumberBox(Settings.LightsWaterTemp ?? 0, 0, 999, v => { Settings.SetLightsWaterTemp(v); Save(); });
+
             // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
@@ -79,7 +91,10 @@ namespace OpenDashPlugin
                 Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag),
                 Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName),
                 Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
-                Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock)));
+                Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock),
+                Ui.Row("Flags in the pit lane", null, flagsInPitLane),
+                Ui.Row("Oil temperature warning", "In SimHub's unit. 0 uses the default.", oilTemp),
+                Ui.Row("Water temperature warning", "In SimHub's unit. 0 uses the default.", waterTemp)));
         }
     }
 }

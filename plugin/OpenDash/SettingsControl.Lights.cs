@@ -261,9 +261,8 @@ namespace OpenDashPlugin
                     Ui.Row("Redline flash", "Off keeps the gear steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
                     // The same answer the strips give, offered here because the digit is the one other
                     // thing on the rig those tables can colour.
-                    Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
-                    Ui.Row("Oil temperature warning", "Warns above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
-                    Ui.Row("Water temperature warning", "Warns above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
+                    // The two temperature thresholds are the rig's since #503 and sit on the Data tab.
+                    Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })));
             });
         }
         /// <summary>Renaming a panel and taking it away, at the foot of its own group.</summary>
@@ -329,7 +328,9 @@ namespace OpenDashPlugin
                         if (live != null) live.Centre = value;
                         Save();
                     });
-                var style = BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.BarRpmStyle(ns), 220,
+                // Contract.LedRpmStyleCar is the value the rebuilt LEDs page's single switch writes (#369);
+                // until then the chooser offers every style the contract declares.
+                var style = BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.BarRpmStyle(ns) ?? Contract.LedRpmStyleCar, 220,
                     value =>
                     {
                         var live = Settings.LedBarByNamespace(ns);
@@ -419,7 +420,8 @@ namespace OpenDashPlugin
             if (bar == null) return;
             bar.Device = LedBar.NormaliseDevice(device);
             Save();
-            var found = EmbeddedShapes().FirstOrDefault(entry => string.Equals(entry.Id, bar.Shape, StringComparison.Ordinal));
+            // By the profile the bar installs, which is the reversed twin for a strip wired from the far end.
+            var found = EmbeddedShapes().FirstOrDefault(entry => string.Equals(entry.Id, bar.ProfileShapeId, StringComparison.Ordinal));
             if (found == null)
             {
                 AnnounceLights(PanelLights.BarAddFailed(bar.Name), Theme.Caution);
@@ -667,7 +669,7 @@ namespace OpenDashPlugin
         {
             var bar = Settings.AddLedBar(shape, name, device);
             Save();
-            var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, shape, StringComparison.Ordinal));
+            var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, bar.ProfileShapeId, StringComparison.Ordinal));
             var embedded = found == null ? null : found.Json;
             var ok = embedded != null;
             string note = null;

@@ -199,9 +199,9 @@ namespace OpenDashPlugin
             var census = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
             foreach (var bar in Settings.LedBarList())
             {
-                if (bar == null || bar.Shape == null) continue;
+                if (bar == null || bar.ProfileShapeId == null) continue;
                 string json;
-                var description = embedded.TryGetValue(bar.Shape, out json) ? FlagBoxProfile.DescriptionOf(json) : null;
+                var description = embedded.TryGetValue(bar.ProfileShapeId, out json) ? FlagBoxProfile.DescriptionOf(json) : null;
                 census.Add(new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, description, devices)));
             }
             return census;
@@ -231,7 +231,7 @@ namespace OpenDashPlugin
             foreach (var bar in outdated)
             {
                 string json;
-                if (!embedded.TryGetValue(bar.Shape, out json))
+                if (!embedded.TryGetValue(bar.ProfileShapeId, out json))
                 {
                     results.Add(new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
                 }
