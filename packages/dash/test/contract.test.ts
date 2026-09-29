@@ -718,10 +718,11 @@ describe('plugin mirror', () => {
     // The effect table, pair by pair and in order. ContractTests.cs checks a few rows and the order of
     // the settings, which a transposition such as tc -> LedEffectAbs and abs -> LedEffectTc keeps; the
     // plugin attaches each bar's switch by the effect's id through this table, so that transposition
-    // would have the panel's traction control switch turn off ABS on the strip.
-    const block = /LedEffects\s*=\s*new\[\]\s*\{([\s\S]*?)\};/.exec(source);
-    expect(block).not.toBeNull();
-    const pairs = [...(block?.[1] ?? '').matchAll(/new KeyValuePair<string, string>\("([^"]*)", "([^"]*)"\)/g)].map((m) => ({ id: m[1], setting: m[2] }));
+    // would have the panel's traction control switch turn off ABS on the strip. What is read is every
+    // ("id", "LedEffect...") pair in the file, in order, whatever declares it: a KeyValuePair, a tuple
+    // or a table the list is built from all spell a row the same way, so the check holds the table and
+    // not the layout of its C# declaration.
+    const pairs = [...source.matchAll(/\(\s*"([^"]*)"\s*,\s*"(LedEffect[A-Za-z]*)"\s*\)/g)].map((m) => ({ id: m[1], setting: m[2] }));
     expect(pairs).toEqual(LED_EFFECTS.map(({ id, setting }) => ({ id, setting })));
     // The rule for a flag row neither table lists, and the default of every switch.
     expect(source).toContain(`public const string LedEffectFlagPrefix = "${LED_EFFECT_FLAG_PREFIX}";`);
