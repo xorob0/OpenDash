@@ -131,6 +131,9 @@ namespace OpenDashPlugin
                 plugin.RigLightingPressed -= ShowLightingChange;
                 PluginManager.InputMappingsChanged -= MappingsChanged;
                 StopClock();
+                // A resize that had not settled would otherwise rebuild the page off screen, and on Screens
+                // start a preview no Unloaded would ever dispose.
+                if (resizeSettle != null) resizeSettle.Stop();
                 // A page that is not on screen must not still be drawing a dashboard.
                 DropPreview();
                 wasUnloaded = true;
@@ -227,7 +230,7 @@ namespace OpenDashPlugin
                 resizeSettle.Tick += (sender, args) =>
                 {
                     resizeSettle.Stop();
-                    if (PageRoomMoved()) RebuildPage();
+                    if (IsLoaded && PageRoomMoved()) RebuildPage();
                 };
             }
             resizeSettle.Stop();
@@ -364,10 +367,13 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Brings the panel up to date after SimHub showed another page: an update answer that landed while
-        /// it was away was not heard, and the preview it had was let go of on the way out.
+        /// it was away was not heard, the preview it had was let go of on the way out, and a binding made on
+        /// SimHub's own Controls and events page -- the page a driver most often leaves this one for -- was
+        /// not heard either, because the mapping event is only listened to while the panel is on screen.
         /// </summary>
         private void CatchUp()
         {
+            ForgetBindings();
             if (updateStatus.State == UpdateState.Checking && !plugin.UpdateCheckInFlight && !applying)
             {
                 var last = plugin.LastUpdateStatus;
@@ -790,17 +796,36 @@ namespace OpenDashPlugin
         /// </summary>
         private static void HoldWhilePressed(ControlsEditor editor)
         {
-            var model = editor.Model;
-            if (model == null) return;
-            Action apply = () =>
+            // SimHub's own Loaded handler replaces Model with a new ControlsEditorModel every time the editor
+            // is shown (ControlsEditor_Loaded in 9.12.6), and the Add dialog writes into that new model's
+            // Triggers. Watching only the first model missed every glance bound on the page, so the watch
+            // follows Model wherever it goes.
+            ControlsEditorModel watched = null;
+            System.Collections.Specialized.NotifyCollectionChangedEventHandler changed = null;
+            Action<ControlsEditorModel> apply = model =>
             {
+                if (model == null || model.Triggers == null) return;
                 foreach (var mapping in model.Triggers)
                 {
                     if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
                 }
             };
-            model.Triggers.CollectionChanged += (sender, args) => apply();
-            apply();
+            changed = (sender, args) => apply(watched);
+            Action attach = () =>
+            {
+                var model = editor.Model;
+                if (ReferenceEquals(model, watched)) return;
+                if (watched != null && watched.Triggers != null) watched.Triggers.CollectionChanged -= changed;
+                watched = model;
+                if (watched != null && watched.Triggers != null) watched.Triggers.CollectionChanged += changed;
+                apply(watched);
+            };
+            editor.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == null || args.PropertyName == "Model") attach();
+            };
+            editor.Loaded += (sender, args) => attach();
+            attach();
         }
 
         /// <summary>

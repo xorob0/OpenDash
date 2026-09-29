@@ -5,6 +5,10 @@
 // on Settings all ask the same question, and before this nothing in the panel could answer it without drawing
 // SimHub's ControlsEditor. ControlsEditorModel is public and draws nothing: its constructor fills Triggers
 // from SimHub's own mapping list. The shell owns this file; PanelBindings has the words.
+//
+// The cache is forgotten on every Go, on every mapping change SimHub reports, and when the panel comes back
+// on screen (CatchUp): the mapping event is only listened to while the panel is showing, so anything bound
+// while it was away -- on SimHub's own Controls and events page, most often -- is read afresh on return.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +22,7 @@ namespace OpenDashPlugin
         /// <summary>The triggers read for each action since the last Go or mapping change. Null when unreadable.</summary>
         private readonly Dictionary<string, IList<string>> bindingCache = new Dictionary<string, IList<string>>(StringComparer.Ordinal);
 
-        /// <summary>Forgets what was read, on Go and whenever SimHub says a mapping changed.</summary>
+        /// <summary>Forgets what was read: on Go, on return to the panel, and whenever SimHub says a mapping changed.</summary>
         private void ForgetBindings()
         {
             bindingCache.Clear();
