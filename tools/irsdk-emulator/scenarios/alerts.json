@@ -1,0 +1,91 @@
+{
+  // Every condition of the alert catalogue, one at a time and in its rank, then the cases where
+  // several are out at once, then the two places where nothing should be (#762).
+  //
+  // It is what a face's band D is checked against, and the companion's strip and the pit wall's
+  // band with it, since all of them draw `ALERT_CATALOGUE` in packages/dash/src/flags.ts. Each state
+  // is held seven seconds: three with the whole band, which is the takeover, and four settled into the
+  // block at each end of it, #380, so both phases are seen for every condition. flagbox.json is the
+  // same walk for the 8x8 box, which draws the flags and not the car alerts.
+  //
+  // The order and the timings are fixed and the run loops, so two runs are comparable and the whole
+  // catalogue can be watched twice without restarting. docs/design/flag-box.md says what each state
+  // should look like, the car alerts under "What band D draws that the box does not".
+  "extends": "race.json",
+  "name": "The alert catalogue, one condition at a time, then several at once",
+  "loop": 220,
+  "yaml": {"IncidentLimit": "17"},
+  "variables": [
+    // Nothing that decides an alert moves on its own: every state below is set and held.
+    {"name": "SessionFlags", "value": "green", "pin": true},
+    {"name": "EngineWarnings", "value": 0, "pin": true},
+    {"name": "Voltage", "value": 13.9, "pin": true},
+    {"name": "IsOnTrack", "value": true, "pin": true},
+    {"name": "OnPitRoad", "value": 0, "pin": true},
+    {"name": "PlayerCarMyIncidentCount", "value": 0, "pin": true},
+    {"name": "CarIdxP2P_Status", "value": false, "pin": true},
+    {"name": "CarIdxP2P_Count", "value": 3, "pin": true},
+    {"name": "dcHeadlightFlash", "value": false, "pin": true}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold everything: the flag cycle and the limiter toggle would move it", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
+    // Back to the start on every loop: a count left at the last pass's 3 would be a fresh incident.
+    {"at": 0, "set": {"PlayerCarMyIncidentCount": 0, "SessionFlags": "green", "EngineWarnings": 0, "Voltage": 13.9, "IsOnTrack": true, "OnPitRoad": 0}},
+
+    // --- The catalogue, in its order ------------------------------------------------------------
+    // SimHub reads iRacing's ignition as off once Voltage has been 0 for five frames.
+    {"at": 6, "log": "1/20 ignition off: IGNITION OFF, outlined red", "set": {"Voltage": 0.0}},
+    // EngineWarnings 8 is the stalled bit, with the ignition back on: press the starter.
+    {"at": 13, "log": "2/20 engine off: ENGINE OFF, outlined red", "set": {"Voltage": 13.9, "EngineWarnings": 8}},
+    {"at": 20, "log": "3/20 red: RED FLAG", "set": {"EngineWarnings": 0, "SessionFlags": "red"}},
+    {"at": 27, "log": "4/20 disqualified: DISQUALIFIED, outlined", "set": {"SessionFlags": "black|disqualify"}},
+    {"at": 34, "log": "5/20 black furled: BLACK FLAG · FURLED", "set": {"SessionFlags": "furled"}},
+    {"at": 41, "log": "6/20 black: BLACK FLAG", "set": {"SessionFlags": "black"}},
+    {"at": 48, "log": "7/20 meatball: MEATBALL, orange", "set": {"SessionFlags": "repair"}},
+    {"at": 55, "log": "8/20 full-course caution: SAFETY CAR", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},
+    {"at": 62, "log": "9/20 waved yellow: WAVED YELLOW, flashing", "set": {"SessionFlags": "yellow|yellowWaving"}},
+    {"at": 69, "log": "10/20 yellow: YELLOW FLAG, steady", "set": {"SessionFlags": "yellow"}},
+    {"at": 76, "log": "11/20 debris: DEBRIS", "set": {"SessionFlags": "debris"}},
+    // An event: three seconds after the count moves, and nothing afterwards. A second with nothing
+    // out comes first, because SimHub's window records a value the first time it is asked and answers
+    // false, and from 6 s to here something above the incident was always out, so nothing had asked
+    // it. Without the gap the first pass after `bun run dev` would record the incident and show nothing.
+    {"at": 83, "log": "nothing out for a second", "set": {"SessionFlags": 0}},
+    {"at": 84, "log": "12/20 incident: INCIDENT · 2x / 17, outlined amber, for three seconds", "set": {"PlayerCarMyIncidentCount": 2}},
+    {"at": 90, "log": "13/20 blue: BLUE FLAG", "set": {"SessionFlags": "blue"}},
+    {"at": 97, "log": "14/20 white: WHITE · LAST LAP", "set": {"SessionFlags": "white"}},
+    // The band reads the green through SimHub's GreenLimiter, which reports it only shortly after
+    // it is raised, so this is a green of a second or two rather than seven.
+    {"at": 104, "log": "15/20 green: GREEN FLAG, briefly", "set": {"SessionFlags": "green"}},
+    {"at": 111, "log": "16/20 set: GREEN · SET, outlined", "set": {"SessionFlags": "startSet"}},
+    {"at": 118, "log": "17/20 ready: GREEN · READY, outlined", "set": {"SessionFlags": "startReady"}},
+    {"at": 125, "log": "18/20 chequered: the board", "set": {"SessionFlags": "checkered"}},
+    {"at": 132, "log": "19/20 push to pass: PUSH TO PASS, filled white; nothing on the nano", "set": {"SessionFlags": 0, "CarIdxP2P_Status[12]": true}},
+    // A flash is a press and a release; the window holds three seconds after the release. The same
+    // quiet second first, for the same reason as the incident's.
+    {"at": 139, "log": "nothing out for a second", "set": {"CarIdxP2P_Status[12]": false}},
+    {"at": 140, "log": "20/20 headlight flash: FLASH, outlined white, for three seconds", "set": {"dcHeadlightFlash": true}},
+    {"at": 140.3, "set": {"dcHeadlightFlash": false}},
+
+    // --- Several at once --------------------------------------------------------------------------
+    {"at": 146, "log": "a stall under a red flag: ENGINE OFF, not RED FLAG", "set": {"EngineWarnings": 8, "SessionFlags": "red"}},
+    {"at": 153, "log": "restarted under the red: RED FLAG takes the band again", "set": {"EngineWarnings": 0}},
+    {"at": 157, "log": "a yellow", "set": {"SessionFlags": "yellow"}},
+    {"at": 160, "log": "an incident under the yellow: still YELLOW FLAG", "set": {"PlayerCarMyIncidentCount": 3}},
+    {"at": 166, "log": "the yellow clears: INCIDENT · 3x / 17 now, told late rather than lost", "set": {"SessionFlags": 0}},
+    {"at": 172, "log": "push to pass on the last lap: WHITE · LAST LAP, not PUSH TO PASS", "set": {"SessionFlags": "white", "CarIdxP2P_Status[12]": true}},
+    {"at": 179, "log": "a flash while being lapped: BLUE FLAG, not FLASH", "set": {"SessionFlags": "blue", "CarIdxP2P_Status[12]": false, "dcHeadlightFlash": true}},
+    {"at": 179.3, "set": {"dcHeadlightFlash": false}},
+
+    // --- Where nothing should be ------------------------------------------------------------------
+    // In the garage there is no voltage, so to SimHub the ignition is off; nobody is in the car, so
+    // the band says nothing (#312).
+    {"at": 186, "log": "in the garage: no alert at all, though the ignition reads off", "set": {"SessionFlags": 0, "IsOnTrack": false, "Voltage": 0.0}},
+    // In the lane the pit family has the ignition, in the limiter's rectangle, and band D does not.
+    {"at": 193, "log": "in the pit lane with the ignition off: 'Ignition off' over zone A, band D quiet", "set": {"IsOnTrack": true, "OnPitRoad": 1}},
+    {"at": 200, "log": "in the pit lane with the engine stalled: 'Engine off' over zone A, band D quiet", "set": {"Voltage": 13.9, "EngineWarnings": 8}},
+    {"at": 207, "log": "out of the lane, running: nothing", "set": {"OnPitRoad": 0, "EngineWarnings": 0}}
+  ]
+}

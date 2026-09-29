@@ -39,10 +39,11 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { TRACKED_VALUES, type TrackedValue } from '../second/tracked.ts';
+import { inTheCar } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAP_POP_UP } from './popUp.ts';
 
-const { and, changed, fmt, isdecreasing, isincreasing, isNull, isnull, not, num, raw } = ncalc;
+const { and, changed, fmt, isdecreasing, isincreasing, isNull, not, num } = ncalc;
 
 /**
  * The box the pagesandalerts artboard draws.
@@ -69,20 +70,6 @@ export const TREND_GAP = ds.space[3];
 
 /** How long the window stays open after the setting moves: `indicator.changeNotification.durationMs`. */
 export const CHANGE_NOTIFICATION_MS = ds.indicator.changeNotification.durationMs;
-
-/**
- * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
- * player in car" and is exactly the canvas's condition.
- *
- * Read as a boolean and not compared with a number. A raw telemetry boolean reaches a binding as
- * `true` or `false`, where `GameData`'s booleans arrive as 1 and 0 -- the committed traces show
- * both forms side by side -- so `= 1` would never hold and the gate would silence every
- * notification. It is the same reading `carAvailable` uses for the leaderboard's rows.
- *
- * The default is `true`, so a sim that publishes nothing leaves the notifications showing rather
- * than suppressing all of them.
- */
-const inTheCar = (): Expr => isnull(raw('IsOnTrack'), 'true');
 
 /**
  * The value has moved within the window, and is worth showing.

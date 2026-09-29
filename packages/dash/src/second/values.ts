@@ -61,6 +61,8 @@ const {
   hms,
   ne,
   isIn,
+  not,
+  isNull,
 } = ncalc;
 
 /** What a value shows when the sim has not given one. */
@@ -1098,6 +1100,64 @@ export const tankIsLow = (): Expr => and(fuelIsSettled(), lt(isnull(computed('Fu
  */
 export const ignitionOn = (): Expr => game('EngineIgnitionOn');
 
+/**
+ * The ignition is off.
+ *
+ * SimHub's iRacing reader has no ignition of iRacing's to pass through, and derives one: it is on
+ * while `Voltage` has been above zero within the last five frames (`IRacingManager` in the decompiled
+ * 9.12.6 ICarsReader.dll). That is why anything drawing this on track also needs {@link inTheCar}: a
+ * driver standing in the garage has no voltage, and so, to SimHub, an ignition switched off. A reader
+ * that overrides nothing gets `GameManagerBase`'s guess instead, `Rpms > 300`, which is an engine at
+ * idle rather than a switch.
+ *
+ * The property is a non-nullable `int` and is never absent while a game runs; the `isnull` default of
+ * 1 is for the frames before any game has, when there is no `NewData` to read it from.
+ */
+export const ignitionOff = (): Expr => eq(isnull(ignitionOn(), num(1)), num(0));
+
+/**
+ * The engine is not running: SimHub's `EngineStarted` at 0, which on iRacing is the ignition on and
+ * the stalled bit of `EngineWarnings` clear, held over five frames.
+ *
+ * SimHub's reading rather than the bit, although the bit is iRacing's own, because of what SimHub
+ * leaves out. `IRacingManager` ignores the stalled bit on an electric car, on a car whose idle RPM
+ * is 0, and on one whose model name says Hybrid -- which is a guess about names, but a guess somebody
+ * made because a hybrid raises the bit while it runs. The alert catalogue ranks this above a red
+ * flag, and ENGINE OFF over a flag on a car that is driving is the worst false alarm the face could
+ * give, so the reading that has already been corrected for it is the one to take.
+ *
+ * It is also true with the ignition off, which is SimHub's own definition; the pit family and the
+ * catalogue both rank the ignition above it, so the one that names the switch is what shows. Here
+ * rather than beside a drawing because both read it and have to agree about what an engine that has
+ * stopped is.
+ */
+export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)), num(0));
+
+/**
+ * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
+ * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
+ * change to this line.
+ *
+ * It is the stronger of the two questions #312 tells apart, and {@link inSession} is the weaker: a
+ * driver in the garage is in a session and not in the car. Everything that raises itself on a change
+ * or on a car state reads it, because in the garage and in the menus those are noise -- a setting
+ * that moves while a setup loads, and an ignition that SimHub reads as off whenever there is no
+ * voltage, which is whenever nobody is driving.
+ *
+ * Read as a boolean and not compared with a number. A raw telemetry boolean reaches a binding as
+ * `true` or `false`, where `GameData`'s booleans arrive as 1 and 0 -- the committed traces show both
+ * forms side by side -- so `= 1` would never hold and the gate would silence everything behind it.
+ * It is the same reading `carAvailable` uses for the leaderboard's rows.
+ *
+ * **What a sim that does not say gets is the caller's choice**, because the two callers want opposite
+ * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
+ * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
+ * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
+ * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
+ * flags already are.
+ */
+export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
+
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));
@@ -1256,6 +1316,8 @@ export const simClock = (): TimeOfDay => {
 export const incidents = (): Expr => raw('PlayerCarMyIncidentCount');
 /** The incident limit, a string in iRacing's session YAML ("unlimited" or a number). */
 export const incidentLimit = (): Expr => prop('DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit');
+/** The session has a limit to count incidents against: one is published and it is not "unlimited". */
+export const hasIncidentLimit = (): Expr => and(not(isNull(incidentLimit())), ne(incidentLimit(), str('unlimited')));
 
 // --- Tyres ------------------------------------------------------------------------------------
 

@@ -38,7 +38,10 @@ const telemetry = (car: Car): Record<string, number | null> => ({
   'DataCorePlugin.GameData.IsInPitLane': car.lane ? 1 : 0,
   'DataCorePlugin.GameData.EngineIgnitionOn': car.ignition ? 1 : 0,
   'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': car.hasLimiter ? 1 : null,
-  'DataCorePlugin.GameRawData.Telemetry.EngineWarnings': car.stalled ? 8 : 0,
+  // SimHub's own reading of the engine, which is what the family reads since #762: its iRacing reader
+  // sets it from the ignition and the stalled bit, so a stall with the ignition on is 0 and so is
+  // any car with the ignition off.
+  'DataCorePlugin.GameData.EngineStarted': car.ignition && !car.stalled ? 1 : 0,
 });
 
 function evaluate(expression: string, car: Car): boolean {

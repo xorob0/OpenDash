@@ -20,6 +20,13 @@
  * format the block does cover this rectangle, and the face draws the pit alert over it deliberately,
  * for the same reason.
  *
+ * **The ignition and the stall are shared with the alert catalogue, across the pit entry line.** In
+ * the lane they are this family's, and out of it they are the catalogue's first two entries, drawn on
+ * band D (`IGNITION_OFF` and `ENGINE_OFF` in flags.ts). Both read `ignitionOff` and `engineStopped`
+ * from `second/values.ts` and split on the same `isInPitLane()`, so one condition is never drawn in
+ * both places. The catalogue's half also asks whether anybody is in the car, since on the circuit
+ * SimHub's reading of the ignition is off whenever nobody is.
+ *
  * Two of `alertBand`'s three shapes, at the artboards' border: a filled band for the correct state,
  * outlined bands for the four that are not. `purpose.pitLimiter` and `purpose.flag.white` are both
  * `#FFFFFF`, so the mistake and the correct state differ in shape rather than in colour, which is
@@ -36,11 +43,11 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { ALERT_BAND_BORDER } from './alertBand.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
-import { isInPitLane } from '../second/values.ts';
+import { engineStopped, ignitionOff, isInPitLane } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 
-const { and, div, eq, game, gt, isNull, isnull, mod, not, num, raw, truncate } = ncalc;
+const { and, eq, game, isNull, isnull, not, num, raw } = ncalc;
 
 /** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no pit alert at all. */
 const limiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
@@ -55,26 +62,6 @@ const limiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
  * cells use for traction control and ABS.
  */
 const hasLimiter = (): Expr => not(isNull(raw('dcPitSpeedLimiterToggle')));
-
-/**
- * The ignition is off.
- *
- * The `isnull` default is 1 and that is the whole point of it: a sim that does not publish
- * `EngineIgnitionOn` would otherwise draw the alarm for ever. The flag box answers the same
- * condition with a dim standby mark rather than a band, because a dark box has to be distinguishable
- * from a profile that failed to load; a face has no such constraint and says it in words.
- */
-const ignitionOff = (): Expr => eq(isnull(game('EngineIgnitionOn'), num(1)), num(0));
-
-/**
- * The engine has stopped: bit 8 of iRacing's `EngineWarnings` word, `irsdk_EngineWarnings`'s
- * stalled bit, tested arithmetically because that is the only way NCalc can test a bit.
- *
- * Written here rather than shared with `leds/effects.ts` and `zones/telltales.ts`, which each carry
- * the same three operations for their own bits: the three are one line each and lifting them would
- * mean a fourth file before anything reads two of them.
- */
-const engineStalled = (): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(8))), num(2)), num(0));
 
 /** One state of the pit family: what it says, how it is dressed and when it is out. */
 export interface PitAlertSpec {
@@ -93,14 +80,13 @@ export interface PitAlertSpec {
 /**
  * The pit family, highest priority first.
  *
- * The ignition sits above the stalled engine because it is the switch the driver can move, and
- * because iRacing may well raise both when a driver kills the engine in the box: where it does, the
- * chain shows the one that names what to do about it. That has not been checked against a running
- * sim, so the order is the safe reading rather than a measured one.
+ * The ignition sits above the stopped engine because it is the switch the driver can move, and
+ * because the two are raised together whenever it is off: SimHub's `EngineStarted` is 0 whenever its
+ * ignition is, so the chain shows the one that names what to do about it.
  */
 export const PIT_ALERTS: readonly PitAlertSpec[] = [
   { id: 'ignition', label: 'Ignition off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), ignitionOff()) },
-  { id: 'engine', label: 'Engine off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), engineStalled()) },
+  { id: 'engine', label: 'Engine off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), engineStopped()) },
   { id: 'engage', label: 'Engage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(isInPitLane(), not(limiterOn()), hasLimiter()) },
   { id: 'disengage', label: 'Disengage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(limiterOn(), not(isInPitLane())) },
   { id: 'limiter', label: 'Pit limiter', shape: 'filled', colour: ds.purpose.pitLimiter, when: and(limiterOn(), isInPitLane()), blinkMs: PIT_LIMITER_BLINK_MS },

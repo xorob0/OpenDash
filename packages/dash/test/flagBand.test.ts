@@ -20,7 +20,7 @@ import { describe, expect, test } from 'bun:test';
 import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
-import { bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
+import { ALERT_CATALOGUE, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
@@ -242,7 +242,7 @@ describe('the waved yellow flash', () => {
 
   test('and no other state flashes at all', () => {
     for (const face of ZONE_FACES) {
-      for (const id of FLAG_CATALOGUE.map((c) => c.id).filter((id) => id !== 'yellowWaving')) {
+      for (const id of ALERT_CATALOGUE.map((c) => c.id).filter((id) => id !== 'yellowWaving')) {
         const layer = layerOf(face, id);
         expect({ face: face.folder, id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
           face: face.folder,
@@ -333,7 +333,12 @@ describe('the flag settles into the blocks at the ends of the band', () => {
     });
 
     test(`${face.folder} draws every condition in both blocks, in the shape and colour it draws on the whole band`, () => {
-      for (const condition of FLAG_CATALOGUE) {
+      // Every condition but a neutral alert on a face with no corner block: push to pass and the
+      // headlight flash are white, which without their name would be the white flag or the black
+      // one, and sixteen pixels hold no name. They have no settled layer there at all.
+      const neutral = (id: string): boolean => id === 'pushToPass' || id === 'headlightFlash';
+      expect([...cornerLayers(face).keys()]).toEqual(ALERT_CATALOGUE.map((c) => c.id).filter((id) => face.bandCorners || !neutral(id)));
+      for (const condition of ALERT_CATALOGUE.filter((c) => face.bandCorners || !neutral(c.id))) {
         const layer = cornerLayerOf(face, condition.id);
         const children = [...walkItems(layer.children)].filter((i) => i.kind !== 'layer');
         // Both ends, always: a flag at one end of the band would read as a fault rather than a flag.
@@ -370,9 +375,11 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // A name too wide for the block is not shrunk and not clipped: it is not written, and the
       // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
       // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
-      // corner blocks hold every one of the fourteen names.
-      for (const condition of FLAG_CATALOGUE) {
-        const names = labelsOf(cornerLayerOf(face, condition.id).children);
+      // corner blocks hold every one of the nineteen names.
+      for (const condition of ALERT_CATALOGUE) {
+        const settled = cornerLayers(face).get(condition.id);
+        if (!settled) continue;
+        const names = labelsOf(settled.children);
         for (const name of names) {
           expect({ item: name.name, font: name.font, weight: name.fontWeight }).toEqual({ item: name.name, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
           const drawn = measureText('BarlowBold', name.widest ?? name.text, name.fontSize);
@@ -386,6 +393,11 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // And the blue block writes its own name and never the car behind: "BLUE FLAG · P4 GT3" is
       // wider than any block at any size, so the detail belongs to the seconds the flag has the band.
       expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE FLAG · GT3');
+      // The incident likewise: the block writes INCIDENT, unbound, and its count against the limit
+      // is the whole band's for the seconds it has it.
+      for (const label of labelsOf(cornerLayerOf(face, 'incident').children)) {
+        expect({ item: label.name, text: label.text, bound: label.bindings?.Text !== undefined }).toEqual({ item: label.name, text: 'INCIDENT', bound: false });
+      }
     });
 
     test(`${face.folder} keeps the waved yellow blinking in both blocks, and blinks nothing else`, () => {
@@ -398,7 +410,7 @@ describe('the flag settles into the blocks at the ends of the band', () => {
         if (flash.kind !== 'rect') throw new Error('the flash is a band');
         expect(flash.backgroundColor).toBe(ds.color.surface.base);
       }
-      for (const condition of FLAG_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
+      for (const condition of ALERT_CATALOGUE.filter((c) => c.id !== 'yellowWaving' && cornerLayers(face).has(c.id))) {
         const layer = cornerLayerOf(face, condition.id);
         expect({ face: face.folder, id: condition.id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
           face: face.folder,
@@ -432,12 +444,14 @@ describe('the window that decides which phase the band is in', () => {
   });
 
   test('ranks the catalogue in the catalogue’s own order, and 0 when nothing is raised', () => {
-    // Read with a stub, so that the nesting is legible: the first condition is 1, the fifteenth is
-    // 15, and nothing raised is 0.
+    // Read with a stub, so that the nesting is legible: the first condition is 1, the twentieth is
+    // 20, and nothing raised is 0. The whole catalogue and not the flags alone, since a car alert
+    // takes the band exactly as a flag does and a change of winner to or from one is a change.
     const ranked = raisedRank((condition) => condition.id);
     let expected = '0';
-    for (let i = FLAG_CATALOGUE.length - 1; i >= 0; i--) expected = `if(${FLAG_CATALOGUE[i]!.id}, ${i + 1}, ${expected})`;
+    for (let i = ALERT_CATALOGUE.length - 1; i >= 0; i--) expected = `if(${ALERT_CATALOGUE[i]!.id}, ${i + 1}, ${expected})`;
     expect(ranked).toBe(expected);
+    expect(ALERT_CATALOGUE).toHaveLength(20);
   });
 
   test('and reads the bits the way the band reads them, so the phase and the flag cannot disagree', () => {

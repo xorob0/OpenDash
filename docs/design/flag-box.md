@@ -27,7 +27,9 @@ raised.
 
 The table carries the canvas's own alert number beside each rank, and the band the face draws in
 band D, so that the two surfaces can be read against one another on one page. Band D draws all
-fifteen; `docs/design/zones.md` describes the band itself.
+fifteen, and five car alerts besides, ranked in the same list: [What band D draws that the box
+does not](#what-band-d-draws-that-the-box-does-not) is those five. `docs/design/zones.md` describes
+the band itself.
 
 | | Condition | iRacing bits | Critical | Canvas | The picture | The band |
 |---|---|---|---|---|---|---|
@@ -100,6 +102,67 @@ a piece of work of its own.
 
 **The band has no critical-flags switch.** Sixty-four pixels are the only thing a driver with a box
 has, which is what the switch is for; a driver who wants band D quieter turns the flag format off.
+
+### What band D draws that the box does not
+
+The canvas's alert catalogue is one list of flags and car alerts together, and since #762 so is
+`ALERT_CATALOGUE` in `flags.ts`: twenty conditions, of which the fifteen above are the flags and
+`FLAG_CATALOGUE` is those fifteen, in the same order. Every band ranks all twenty -- band D's
+takeover and its settled blocks, the full-screen block, the companion and the pit wall -- and draws
+them all but where the two white ones would be drawn without their name, below; the box and the LED
+strips draw the flags. Whether a matrix ever draws an incident count is a question
+for the matrix; it is not answered by drawing one.
+
+| Rank | Condition | Source | Canvas | The band |
+|---|---|---|---|---|
+| 1 | Ignition off | `GameData.EngineIgnitionOn` at 0, out of the pit lane | 2 | Outlined `purpose.alert.power`, "IGNITION OFF". |
+| 2 | Engine off | `GameData.EngineStarted` at 0, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
+| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Outlined `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
+| 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
+| 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
+
+**All five read whether anybody is in the car**, which is `inTheCar` in `second/values.ts`, iRacing's
+`IsOnTrack` and #312's one test of it. The ignition needs it most: SimHub's iRacing reader has no
+ignition of iRacing's to pass through and derives one from `Voltage`, so a driver standing in the
+garage is, to SimHub, a driver whose ignition is off. They read it as "no" where a sim does not
+publish `IsOnTrack`, which makes them iRacing's as the flags are: elsewhere SimHub's ignition is its
+guess from the revs, `Rpms > 300`, and IGNITION OFF would sit over every flag whenever the engine
+idled. The change notification reads the same test as "yes" there, since a notification that fires
+in another sim costs nothing.
+
+**The stall is SimHub's reading and not iRacing's bit.** `EngineStarted` is the ignition on and the
+stalled bit of `EngineWarnings` clear, except that SimHub ignores the bit on an electric car, on one
+with no idle RPM and on one whose model name says Hybrid. That last is a guess about names, but
+somebody made it because a hybrid raises the bit while it runs, and ENGINE OFF ranks above a red
+flag: a false one on a GTP car would be the worst alarm the face could give. It needs a recording
+from a hybrid to settle.
+
+**The ignition and the stall belong to the pit family in the lane.** The limiter's rectangle already
+says "Ignition off" and "Engine off" there, and one condition drawn twice on one face would be two
+answers to one question; out of the lane nothing drew either, and a car stalled on the grass after a
+spin is exactly where a driver needs telling to press the starter. The two halves read the same two
+predicates and split on the same `IsInPitLane`. The canvas numbers the pair engine first; the
+catalogue keeps the pit family's order, ignition first, because it is the switch the driver can move
+and where iRacing raises both it names what to do.
+
+**The incident and the flash are events, not states.** Each holds for `indicator.alert.durationMs`
+after the value it watches moves, which is SimHub's `changed()` window and the same three seconds a
+flag keeps the whole band. The window is asked before anything else in the condition: SimHub's NCalc
+stops an `and` at the first false and `changed()` answers false the first time it is asked, so a
+window asked only once the count was above zero would first be asked on the first incident of a
+session, and say nothing. The same laziness means an incident taken while something above it has the
+band is told when that clears, rather than lost behind it.
+
+**Two colours had to be read against the flags.** `purpose.alert.incident` is the caution amber,
+`#FFB300`, which is the meatball's `purpose.flag.orange`; filled, the two would be one band on the
+nano, and the driver who has just hit something is the driver a meatball is likeliest to be for, so
+the incident is outlined where the canvas fills it. `purpose.alert.p2p` is `color.neutral.primary`,
+which is white: filled it is the white flag and outlined it is the black family's `#F5F7FA`. No fourth
+shape exists to give them, so push to pass and the flash are drawn only where their name is written.
+The nano's strip writes none and has no layer for them; a corner block too narrow for the word draws
+nothing rather than a white sliver; and the full-screen block does not take the body for them at all,
+since what the driver's own hand has just done is not worth the gear for the length of a push to
+pass. Both departures want the author's arbitration in `design/`.
 
 ### The four decisions sixty-four pixels forced
 
@@ -374,18 +437,20 @@ SimHub without a rebuild.
 
 Everything a comparable flag box draws that OpenDash does not, and, since band D reads this same
 list, everything the canvas's alert catalogue numbers that no surface raises. Each line is a thing
-somebody will ask for; the answer is that iRacing does not publish it, not that it was forgotten.
+somebody will ask for. The first is drawn, and not here; for every other the answer is that iRacing
+does not publish it, not that it was forgotten.
 
 | Wanted | Why not |
 |---|---|
-| **Engine off, ignition off** (canvas 1 and 2) | They are not `SessionFlags` bits and they are not flags. `EngineWarnings` and the ignition state are published and belong to the telltales and to the pit alerts, where the canvas also puts them; drawing them in the flag rank would put a car state above a red flag. |
+| **Engine off, ignition off, incident, push to pass, headlight flash** (canvas 1, 2, 15, 24 and 25), **on the box** | They are drawn on every band, [above](#what-band-d-draws-that-the-box-does-not), and not on the box. They are not flags, and the box's own answer to a car switched off is the dim standby mark under [When nobody is racing](#when-nobody-is-racing). The LED strips leave the flash out for their own reason, `DROPPED` in `leds/effects.ts`: a lamp spent on what the driver's hand just did is a lamp not spent on an aid. |
+| **Virtual safety car, with the delta to the reference speed** (canvas 8) | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing; there is no reference speed to be over or under. |
 | **Double yellow** (canvas 9) | iRacing publishes one yellow and one waved yellow. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
-| **Push to pass, headlight flash** (canvas 24 and 25) | `PushToPass` is published and is a car state rather than a flag; the headlight flash is not published at all. Both rank below every flag in the canvas, so neither would ever reach a band that draws fifteen above it. |
-| **Yellow per sector** | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
-| **Virtual safety car** | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing. |
+| **Yellow per sector** (canvas 10) | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
+| **Stop and go, drive through, a penalty with its value** (canvas 12, 13 and 14) | None is published. iRacing tells a driver which penalty in the chat and flies the black flag, and the telemetry carries the flag and nothing of the text: no penalty type, no seconds. The black flag is drawn; which penalty it is, is not, and a band that said "DRIVE THROUGH" from a guess would be wrong the first time the penalty was a stop and go. |
+| **White for a slow car** (canvas 17) | iRacing's `white` is the last lap and nothing else. There is no slow-car white in the bitfield. |
+| **The size of an incident** | The canvas's "Incident · 4x" could be read as the incident just taken, and a band shows the running count instead. The increment is the count now less the count before the window opened, and nothing on a dashboard remembers the count before. |
+| **How many pushes to pass are left** | The canvas writes "Push to pass · 3 left". `PlayerP2P_Count` is published, and iRacing describes it as "count of usage (or remaining in Race)": one number meaning two things by session type, with no recording of a car that has push to pass to say which "3 left" would be. The band writes the name, and the number waits for that recording. |
 | **Safety car, as its own picture** | The closest honest reading of `caution`/`cautionWaving` *is* the pace car being deployed, and it is drawn as the full-course caution. A second glyph would be the same condition twice. |
-| **White for a slow car** | iRacing's `white` is the last lap and nothing else. There is no slow-car white in the bitfield. |
-| **Incident, penalty, drive through, stop and go** | None of these is a `SessionFlags` bit. iRacing communicates them through the black flag and text; the box shows the black flag. |
 | **One lap to green, ten to go, five to go** | `oneLapToGreen`, `tenToGo` and `fiveToGo` are published, and they are session information rather than flags. The screen has the room to say them in words and the box does not; drawing a numeral here would compete with the gear. |
 | **Green held** | `greenHeld` is published and means the green is being withheld at a restart. It has no distinct picture that would not be mistaken for a green flag, which is the opposite of what it means. |
 | **Crossed, random waving** | `crossed` and `randomWaving` are published, and neither has a documented meaning in iRacing's own reference. Drawing something for a condition nobody can define is how a box starts lying. |

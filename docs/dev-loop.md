@@ -17,6 +17,7 @@ bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed
 bun run dev --scenario flagbox                # walk every state the flag box draws
+bun run dev --scenario alerts --keep          # walk the alert catalogue on band D, one condition every 7 s
 bun run dev --scenario nosession               # the game running with no session, for #406's notices
 bun run dev --scenario untimed                 # a lap race with no clock: #387's laps form, #439's mark
 ```

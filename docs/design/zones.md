@@ -191,7 +191,9 @@ is 824, 111, 272 × 30. It is not a page and it is not part of the catalogue; it
 **Five pit alerts share that one rectangle, ranked among themselves and not against band D.** Engage
 the limiter, disengage it, the limiter on in the lane, the ignition off and the engine off are one
 ordered list, of which at most one is ever out, each carrying its own test of whether the car is in
-the lane rather than the list carrying one. They are deliberately **not** ranked under the flag: the
+the lane rather than the list carrying one. The last two are the lane's half of a pair: out of the
+lane the same two readings are the alert catalogue's first two entries and draw on band D, so a car
+stalled on the circuit is told too, and the one condition is never drawn in both places. They are deliberately **not** ranked under the flag: the
 two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
 would blank the limiter band under a full-course caution, which is precisely when the pit lane is
 busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
@@ -1062,7 +1064,7 @@ what the window watches is the rank of the *winning* condition, `raisedRank` in
 `packages/dash/src/flags.ts`. A blinking flag keeps blinking in the block.
 
 So band D's own priority over time reads: **the flag alone for three seconds, then the flag at both
-ends over the page, then the page alone.** Nothing else about the ranking changes; the fifteen
+ends over the page, then the page alone.** Nothing else about the ranking changes; the twenty
 conditions are ranked by the same expression in both phases, so the phase decides the rectangle and
 never which flag wins.
 
@@ -1109,11 +1111,23 @@ publishes: `Flag_Yellow` folds the standing yellow, the waved yellow and both ca
 band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black, a
 meatball, a full-course caution, a waved yellow, the debris flag and the start gantry were therefore
 drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
-about which of two live flags won. The band reads `FLAG_CATALOGUE` in
+about which of two live flags won. The band reads `ALERT_CATALOGUE` in
 `packages/dash/src/flags.ts` now, through the same `conditionVisible` the box ranks with, so the
 three surfaces that draw flags cannot disagree. Which condition takes which shape, and which rank,
 is tabulated in [flag-box.md](flag-box.md), which remains the single place a condition is refused
 with its reason.
+
+**And five car alerts ranked in the same list, since #762.** The canvas's alert catalogue is flags
+and car alerts in one order, and so is the band: the ignition off and the engine stalled out on the
+circuit rank above the red flag, an incident with its count against the limit below the flags that
+mean slow down, and push to pass and the headlight flash below the chequer. They take the band and
+settle into its blocks as a flag does, and every one of them reads whether anybody is in the car,
+which is `inTheCar` in `second/values.ts`, and reads it as "no" in a sim that does not say. In the lane the ignition and
+the stall are the pit family's instead, below. The incident and the flash are events, held for the
+same three seconds after the value they watch moves. Push to pass and the flash are white, which is
+two flags' colour without their name, so they are drawn only where the name is: not on the nano, not
+in a sixteen-pixel block, and not on the full-screen block. [flag-box.md](flag-box.md) has the table
+and the reasons, and §10 the departures from the canvas.
 
 Three consequences are worth stating. The band is iRacing's, as the box already was, since
 `SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
@@ -1366,8 +1380,9 @@ lists the same things.
 | Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
 | Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
 | Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
-| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all fifteen conditions of `FLAG_CATALOGUE` over band D's rectangle, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
-| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own fifteen-condition catalogue through the band's own expression, and names each condition in a word short enough for a block measured on the longest of them, which is MEATBALL. |
+| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all twenty conditions of `ALERT_CATALOGUE` over band D's rectangle, the fifteen flags and five car alerts, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
+| The alert catalogue's car alerts | **Built from the five iRacing publishes, with four departures the author owes a ruling on** (#762). The ignition sits above the stalled engine, where PagesAndAlerts numbers them 2 and 1, because the pit family already ranked them that way and a face should not answer the same pair in two orders either side of the pit entry. The incident is outlined, where the sheet fills it, because `purpose.alert.incident` and `purpose.flag.orange` are both `#FFB300` and filled it would be the meatball. Push to pass and the headlight flash are drawn only where their name is written, because `purpose.alert.p2p` is white: filled it is the white flag and outlined the black family, and the nano, a sixteen-pixel block and the full-screen block would draw it without the word. And "Push to pass · 3 left" is written without the count, which iRacing publishes with two meanings by session type. The tokens are left as they are; the canvas either gives the two neutral alerts and the incident colours of their own or accepts these shapes. |
+| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own catalogue through the band's own expression, eighteen of its twenty conditions, the two neutral alerts apart, and names each condition in a word short enough for a block measured on the longest of them, which is MEATBALL. |
 | The chips "bar: 2 fields per end" and "band corners: yes" | **Built**: `barFieldsPerEnd` is 2 and `bandCorners` is true at this size. |
 | The chips "A grid", "B grid", "C grid" and "D grid" | Three of the four are what `shapeOf` returns for those rectangles. The fourth is the disagreement recorded above. |
 | A growth factor per page of zones B and C, from ×1.08 to ×2.07 | **Recorded, not checked**, although the ceiling the chips are measured against is now the build's own: a rank on a face grows by rule 20 until it meets the width, the height or ×2.2, as the sheet's pages do. The factors still differ wherever the build's drawing of a page differs from the catalogue's, and nothing compares the factor a page reaches against the factor the sheet chips. |
