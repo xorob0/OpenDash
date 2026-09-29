@@ -27,7 +27,7 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
+import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
@@ -401,14 +401,18 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 ];
 
 /**
- * The rig's brightness, over everything a strip draws.
+ * The strip's brightness, over everything a strip draws.
  *
  * `LightsBrightness`, `LightsNightBrightness` and `LightsNightMode` are named for the rig rather
  * than for one device, and the panel captions them "for every light OpenDash drives"; until this
  * container existed that sentence was untrue, because the only reader of the composed expression
- * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three. Both
- * artefacts now read the one `flagBox.brightness()`, so day, night and the switch resolve in a
- * single place and the two cannot drift apart.
+ * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three.
+ *
+ * Since #503 a strip may also have a brightness of its own, `LedBrightness`, which the plugin
+ * publishes per bar and which falls back to the rig's day brightness where a bar has none. Night
+ * mode still wins: {@link setting.ledBrightnessInForce} takes the lower of the strip's own and the
+ * night brightness, so a strip turned up for daylight is not left bright in a dark room. The flag box
+ * has no brightness of its own and keeps reading `flagBox.brightness()`.
  *
  * `Groups.BrightnessFormulaGroup` is the strip's container of that kind and is one of the fifty-six
  * SimHub 9.12.6 resolves. It goes through `raw` because the generator models only the containers a
@@ -420,8 +424,8 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
   kind: 'raw',
   containerType: 'Groups.BrightnessFormulaGroup',
-  description: 'the rig brightness, day or night',
-  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: flagBox.brightness() }) },
+  description: 'the strip brightness, day or night',
+  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: setting.ledBrightnessInForce() }) },
   children,
 });
 

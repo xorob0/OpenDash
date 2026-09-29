@@ -688,10 +688,17 @@ describe('every generated profile', () => {
       const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
       const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
-      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: flagBox.brightness() } });
+      // The strip's own brightness since #503, with the rig's behind it and night mode capping it,
+      // which the matrix does not have: its group still reads flagBox.brightness().
+      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: setting.ledBrightnessInForce() } });
       // ...and it reaches the file, with each read defaulted so a strip works with no plugin at all.
       const text = leds.serializeProfile(p);
-      for (const read of ['isnull([OpenDash.LightsNightMode], false)', 'isnull([OpenDash.LightsNightBrightness], 25)', 'isnull([OpenDash.LightsBrightness], 100)']) {
+      for (const read of [
+        'isnull([OpenDash.LightsNightMode], false)',
+        'isnull([OpenDash.LightsNightBrightness], 25)',
+        'isnull([OpenDash.LightsBrightness], 100)',
+        'isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))',
+      ]) {
         expect({ shape: shape.id, read, present: text.includes(read) }).toMatchObject({ present: true });
       }
     }
