@@ -126,35 +126,90 @@ namespace OpenDashPlugin
         // Layout
 
         /// <summary>Vertical stack with a fixed gap between children (flex column, gap).</summary>
+        /// <remarks>
+        /// The gap is a bottom margin given to every child but the last as the stack is built, and it does
+        /// not follow HStack's rule, because the tabs lean on the difference: a section is appended to after
+        /// it is built (the Lights tab's rows, the line Announce inserts, the plugin section's progress
+        /// bar), and what arrives late brings its own spacing, to which a gap owed between every two drawn
+        /// children would add.
+        /// </remarks>
         public static StackPanel VStack(double gap, params UIElement[] children)
         {
             var panel = new StackPanel { Orientation = Orientation.Vertical };
-            AddWithGap(panel, gap, true, children);
-            return panel;
-        }
-
-        /// <summary>Horizontal stack with a fixed gap between children (flex row, gap, align-items center).</summary>
-        public static StackPanel HStack(double gap, params UIElement[] children)
-        {
-            var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            AddWithGap(panel, gap, false, children);
-            return panel;
-        }
-
-        private static void AddWithGap(Panel panel, double gap, bool vertical, IList<UIElement> children)
-        {
-            for (var i = 0; i < children.Count; i++)
+            for (var i = 0; i < children.Length; i++)
             {
-                var child = children[i];
-                var element = child as FrameworkElement;
-                if (element != null && i < children.Count - 1)
+                var element = children[i] as FrameworkElement;
+                if (element != null && i < children.Length - 1)
                 {
                     var margin = element.Margin;
-                    element.Margin = vertical
-                        ? new Thickness(margin.Left, margin.Top, margin.Right, margin.Bottom + gap)
-                        : new Thickness(margin.Left, margin.Top, margin.Right + gap, margin.Bottom);
+                    element.Margin = new Thickness(margin.Left, margin.Top, margin.Right, margin.Bottom + gap);
                 }
-                panel.Children.Add(child);
+                panel.Children.Add(children[i]);
+            }
+            return panel;
+        }
+
+        /// <summary>Horizontal stack with a gap between every two children that draw (flex row, gap,
+        /// align-items center). A child that takes no width, an empty host or a collapsed control, has no
+        /// gap beside it; PanelMetrics.RowOffsets is the rule.</summary>
+        public static Panel HStack(double gap, params UIElement[] children)
+        {
+            var panel = new GapRow(gap) { VerticalAlignment = VerticalAlignment.Center };
+            foreach (var child in children) panel.Children.Add(child);
+            return panel;
+        }
+
+        /// <summary>
+        /// The panel behind HStack: its children side by side, each as wide as it asks, and the gap only
+        /// between two that draw.
+        /// </summary>
+        /// <remarks>
+        /// A panel rather than a margin on each child, because whether a child draws is known when the row
+        /// is laid out and not when it is built: the Update host of a strip row is filled and emptied by a
+        /// press long after HStack has returned. Otherwise it measures and arranges as a horizontal
+        /// StackPanel does, so a row whose children all draw is laid out exactly as before.
+        /// </remarks>
+        private sealed class GapRow : Panel
+        {
+            private readonly double gap;
+
+            public GapRow(double gap)
+            {
+                this.gap = gap;
+            }
+
+            protected override Size MeasureOverride(Size available)
+            {
+                // Unbounded along the row, as a horizontal StackPanel measures, so that a child is as wide
+                // as it asks and a wrapping caption wraps at its own MaxWidth.
+                var slot = new Size(double.PositiveInfinity, available.Height);
+                var height = 0.0;
+                foreach (UIElement child in InternalChildren)
+                {
+                    child.Measure(slot);
+                    height = Math.Max(height, child.DesiredSize.Height);
+                }
+                var offsets = PanelMetrics.RowOffsets(Widths(), gap);
+                return new Size(offsets[offsets.Length - 1], height);
+            }
+
+            protected override Size ArrangeOverride(Size final)
+            {
+                var widths = Widths();
+                var offsets = PanelMetrics.RowOffsets(widths, gap);
+                for (var i = 0; i < widths.Length; i++)
+                {
+                    var child = InternalChildren[i];
+                    child.Arrange(new Rect(offsets[i], 0, widths[i], Math.Max(final.Height, child.DesiredSize.Height)));
+                }
+                return final;
+            }
+
+            private double[] Widths()
+            {
+                var widths = new double[InternalChildren.Count];
+                for (var i = 0; i < widths.Length; i++) widths[i] = InternalChildren[i].DesiredSize.Width;
+                return widths;
             }
         }
 
@@ -230,7 +285,9 @@ namespace OpenDashPlugin
                 ? (FrameworkElement)text
                 : HStack(PanelMetrics.RowIconGap, Icon(iconPath, Theme.TextLabel), text);
             // A row with nothing to press is the package list, which says what is on disk and offers no
-            // action: HStack of a null child would throw, so the pill stands alone.
+            // action: HStack of a null child would throw, so the pill stands alone. A host that is empty
+            // for now is a button like any other, because HStack owes no gap beside a child that draws
+            // nothing, so its pill ends on the same edge as the package list's.
             var row = Row(left, button == null ? (FrameworkElement)pill : HStack(PanelMetrics.RowRightGap, pill, button));
             row.Height = PanelMetrics.RowHeight;
             return new Border
@@ -257,7 +314,7 @@ namespace OpenDashPlugin
 
         /// <summary>A status: the dot and its tracked label, in the 24 px pill the canvas draws. The height
         /// is the whole of what a pill adds, and it is what keeps a row of them on one baseline.</summary>
-        public static StackPanel StatusPill(string dotHex, string label, string labelHex)
+        public static Panel StatusPill(string dotHex, string label, string labelHex)
         {
             var pill = HStack(PanelMetrics.PillGap, Dot(dotHex), Label(label, labelHex));
             pill.Height = PanelMetrics.PillHeight;
