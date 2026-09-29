@@ -278,6 +278,9 @@ namespace OpenDashPlugin
         public static string Note(PackageEntry entry, bool second)
         {
             if (entry == null) return string.Empty;
+            // Not a card face's: every card face reads the same twelve slots, so a second one gets a dashboard of its
+            // own and no settings at all, and the line would promise what it does not do (#474).
+            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return string.Empty;
             return second
                 ? "Your second " + entry.SizeLabel + " gets settings of its own."
                 : string.Empty;

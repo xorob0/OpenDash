@@ -39,15 +39,27 @@ namespace OpenDashPlugin
         /// second has a folder of its own and every property reference repointed at its own namespace.
         /// The installer writes both from this, so a start, a reinstall and a press on the Rig tab cannot
         /// disagree about what a screen's folder should hold.
+        ///
+        /// The folder is the screen's as it stands, so the installer spells a stock screen's folder as its
+        /// package does before asking (ScreenInstance.SpellFolderAs); a copy in the settings spelled the way
+        /// it was before #374 is otherwise a folder renamed in case at every update (#467).
+        ///
+        /// A card face is never rewritten, the first of a package or a second. Its package reads only the
+        /// properties every screen shares, so it carries no namespace at all, and there is nothing in it to
+        /// point at the screen's own. Compared namespaces would say otherwise whenever the screen's differed
+        /// from the stock one, and the extractor, finding nothing to rewrite, refuses the copy; that is how
+        /// the first card face on a fresh rig came to be refused as a copy of itself (#474). Its copy is
+        /// therefore the package under the screen's folder and title, whichever namespace the screen holds.
         /// </remarks>
         public static PackageExtractor.ScreenTarget TargetFor(ScreenInstance screen)
         {
+            var carriesNamespace = !screen.IsSlots;
             return new PackageExtractor.ScreenTarget
             {
                 Folder = screen.Folder,
                 Title = screen.Name,
-                FromNamespace = screen.StockNamespace,
-                ToNamespace = screen.Namespace,
+                FromNamespace = carriesNamespace ? screen.StockNamespace : null,
+                ToNamespace = carriesNamespace ? screen.Namespace : null,
             };
         }
 

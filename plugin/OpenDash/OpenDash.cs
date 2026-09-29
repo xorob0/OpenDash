@@ -303,7 +303,9 @@ namespace OpenDashPlugin
             }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
-            // The installer records what it wrote into each folder but never saves; this is the safe moment.
+            // The installer records what it wrote into each folder, and spells a stock folder the settings
+            // still spell the way they did before #374 as its package does (#467), but never saves; this is
+            // the safe moment.
             SaveSettings();
         }
 

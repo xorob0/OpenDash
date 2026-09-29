@@ -121,6 +121,22 @@ The per-screen `<dashboard>.djson.NN.png` files are written on save by the same 
 (`GetScreenShotFilename`, at 100 px tall) and are read by nothing in 9.12.6: `ScreensOverview`
 renders live. OpenDash does not ship them.
 
+### A dashboard is reopened by the spelling of its folder, case included (2026-09-28, #467)
+
+SimHub remembers the dashboard it had open in `DashStudioSettings_2.json`, under `LayoutsV2`, as a
+path such as `DashTemplates\OpenDash 850x480\OpenDash 850x480.djson`. One could think that the match
+made at startup is the filesystem's, which on Windows ignores case. In reality it is made with regard
+to case, which was measured rather than decompiled: on the VM, with SimHub 9.12.6 and that path
+remembered, the log said "Starting dashboard" at each start while the folder was spelled
+`OpenDash 850x480`, said nothing in two and a half minutes once the same folder had been renamed to
+`openDash 850x480`, and said it again at the next start once only the folder had been renamed back.
+
+The spelling of a folder is thus part of what a driver has set up, even where Windows does not tell
+two spellings apart, and whatever writes a dashboard folder has to keep the one SimHub last read. For
+a stock screen that is the package's own, which the installer writes whatever the settings say.
+Whether a display assigned to a hardware device is lost in the same way was not tested, since the VM
+has none.
+
 ### The `.djson` is plain JSON, and modern exports carry no reference tracking
 
 Exports from SimHub 9.9 and later have no `$id` or `$ref` keys and no `$values` wrappers;
