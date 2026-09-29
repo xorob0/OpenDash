@@ -114,13 +114,17 @@ namespace OpenDashPlugin.Tests
             foreach (var item in PanelSoon.All)
             {
                 var listed = all.Any(entry => entry.Label == item.Title && entry.Route.Page == item.Page && entry.Route.Anchor == item.Anchor);
-                Assert.True(listed == PanelSoon.IsDrawn(item), item.Title + (listed ? " is listed and drawn nowhere" : " is drawn and not listed"));
+                Assert.True(listed == PanelSearch.Lists(item), item.Title + (listed ? " is listed and drawn nowhere" : " is drawn and not listed"));
             }
             foreach (var query in new[] { "real hardware", "rig test", "alert dismissal" })
             {
                 Assert.NotEmpty(PanelSearch.Find(all, query));
             }
-            // #116 and #85 are only ever drawn inside the Add sheet, which search cannot open: not listed.
+            // #116 and #85 are only ever drawn inside the Add sheet, which search cannot open: not listed,
+            // however many pages draw them.
+            Assert.True(PanelSoon.FlagsScreen.InSheetOnly && PanelSoon.YourDisplays.InSheetOnly);
+            Assert.False(PanelSearch.Lists(PanelSoon.FlagsScreen));
+            Assert.False(PanelSearch.Lists(PanelSoon.YourDisplays));
             Assert.Empty(PanelSearch.Find(all, "flags screen"));
             Assert.Empty(PanelSearch.Find(all, "your displays"));
             // Listed once: the Rig page no longer types its greyed switch in beside the registry's entry.
@@ -157,30 +161,24 @@ namespace OpenDashPlugin.Tests
             { PanelPage.Updates, "SettingsControl.Updates" },
         };
 
-        /// <summary>
-        /// Labels a page draws through something other than the constant: each with the reason, so the list
-        /// is a record rather than a way round the test.
-        /// </summary>
-        private static readonly Dictionary<string, string> DrawnOtherwise = new Dictionary<string, string>(StringComparer.Ordinal)
+        /// <summary>The page model whose SearchDrawnOtherwise lists the labels that page draws through
+        /// something other than the constant: each page keeps its own, with the reason.</summary>
+        private static readonly Dictionary<PanelPage, Type> PageModels = new Dictionary<PanelPage, Type>
         {
-            // The Reinstall button's label is bound to the update line, through PanelConfirmation.Label.
-            { PanelConfirmation.ReinstallLabel, "LabelFromTheLine(ReplacingAction.Reinstall)" },
-            // The scenario chips' groups are drawn from the list the constants are built into.
-            { PanelEmulation.FlagsGroup, "PanelEmulation.Groups" },
-            { PanelEmulation.SpotterGroup, "PanelEmulation.Groups" },
-            { PanelEmulation.PitLaneGroup, "PanelEmulation.Groups" },
-            { PanelEmulation.WarningsGroup, "PanelEmulation.Groups" },
-            { PanelEmulation.RevsGroup, "PanelEmulation.Groups" },
-            // A zone's rows read "Band D · next page", built from these by PanelShortcuts.ZoneRow.
-            { PanelShortcuts.NextPageTitle, "PanelShortcuts.ZoneRow(" },
-            { PanelShortcuts.PreviousPageTitle, "PanelShortcuts.ZoneRow(" },
-            // The flag box row names the profile as SimHub lists it, FlagBoxName(), whose fallback is this.
-            { FlagBoxProfile.ProfileName, "FlagBoxName()" },
-            // The rig's own rows are drawn by their action, through the same function search names them by.
-            { PanelShortcuts.RigActionLabel(Contract.ToggleNightModeAction), "PanelShortcuts.RigActionLabel(" },
-            { PanelShortcuts.RigActionLabel(Contract.BrightnessUpAction), "PanelShortcuts.RigActionLabel(" },
-            { PanelShortcuts.RigActionLabel(Contract.BrightnessDownAction), "PanelShortcuts.RigActionLabel(" },
+            { PanelPage.Home, typeof(PanelHome) },
+            { PanelPage.Rig, typeof(PanelRigMap) },
+            { PanelPage.Screens, typeof(PanelScreens) },
+            { PanelPage.Leds, typeof(PanelLeds) },
+            { PanelPage.Matrix, typeof(PanelMatrix) },
+            { PanelPage.Shortcuts, typeof(PanelShortcuts) },
+            { PanelPage.Settings, typeof(PanelSettings) },
+            { PanelPage.Updates, typeof(PanelUpdates) },
         };
+
+        private static IReadOnlyDictionary<string, string> DrawnOtherwise(PanelPage page)
+        {
+            return (IReadOnlyDictionary<string, string>)PageModels[page].GetField("SearchDrawnOtherwise").GetValue(null);
+        }
 
         /// <summary>
         /// Every search label on a page is a constant that page's own files draw, so a page agent who rewords
@@ -205,7 +203,7 @@ namespace OpenDashPlugin.Tests
                 var page = entry.Route.Page;
                 var text = sources[page];
                 string otherwise;
-                if (DrawnOtherwise.TryGetValue(entry.Label, out otherwise) && text.Contains(otherwise)) continue;
+                if (DrawnOtherwise(page).TryGetValue(entry.Label, out otherwise) && text.Contains(otherwise)) continue;
                 var drawn = constants.Where(c => c.Value == entry.Label).Any(c => text.Contains(c.Name));
                 if (!drawn) missing.Add(entry.Label + " · " + page);
             }

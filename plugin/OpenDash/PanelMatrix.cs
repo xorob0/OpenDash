@@ -3,6 +3,8 @@
 // One card per panel with the flag box profile's state in the page header, the family switches, the idle
 // display and a live 8x8 preview (PanelEmulation.MatrixFrame). The matrix copy that already existed stays in
 // PanelLights; the Matrix page agent owns this file and adds the rest. Pure: no WPF.
+using System.Collections.Generic;
+
 namespace OpenDashPlugin
 {
     public static class PanelMatrix
@@ -54,6 +56,20 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(PitStatusTitle, PanelPage.Matrix, AnchorPanels, "limiter", "pit lane", "speeding"),
             new PanelSearch.Entry(CarWarningsTitle, PanelPage.Matrix, AnchorPanels, "fuel", "oil", "water"),
             new PanelSearch.Entry(CarShiftPointsTitle, PanelPage.Matrix, AnchorPanels, "lovely", "car data", "car-specific", "thresholds"),
+        };
+
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = new SoonItem[0];
+
+        /// <summary>
+        /// Search labels this page draws through something other than the constant, each with the text its
+        /// sources draw it by, so the list is a record rather than a way round PanelSearchTests.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>(System.StringComparer.Ordinal)
+        {
+            // The flag box row names the profile as SimHub lists it, FlagBoxName(), whose fallback is this.
+            { FlagBoxProfile.ProfileName, "FlagBoxName()" },
         };
     }
 }

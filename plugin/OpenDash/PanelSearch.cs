@@ -148,10 +148,35 @@ namespace OpenDashPlugin
                 .Concat(Soon);
         }
 
-        /// <summary>The registry's greyed rows that a page draws, as entries: found by their title, and by
+        /// <summary>
+        /// Every greyed row a page says it draws, from each page's own SoonDrawn list in sidebar order. Each
+        /// page's list is its own (Panel&lt;Page&gt;.cs), held by PanelSoonTests to that page's sources, so a page
+        /// agent that draws a row touches no shell file.
+        /// </summary>
+        public static IEnumerable<SoonItem> SoonDrawn()
+        {
+            return PanelHome.SoonDrawn
+                .Concat(PanelRigMap.SoonDrawn)
+                .Concat(PanelScreens.SoonDrawn)
+                .Concat(PanelLeds.SoonDrawn)
+                .Concat(PanelMatrix.SoonDrawn)
+                .Concat(PanelShortcuts.SoonDrawn)
+                .Concat(PanelSettings.SoonDrawn)
+                .Concat(PanelUpdates.SoonDrawn);
+        }
+
+        /// <summary>Whether search may send a driver to a greyed row: a page draws it, and not only inside a
+        /// sheet, which search cannot open.</summary>
+        public static bool Lists(SoonItem item)
+        {
+            return item != null && !item.InSheetOnly && SoonDrawn().Contains(item);
+        }
+
+        /// <summary>The greyed rows the pages draw outside a sheet, as entries: found by their title, and by
         /// "soon". A row no page draws yet is not listed, since its hit would land on nothing.</summary>
-        public static readonly Entry[] Soon = PanelSoon.All
-            .Where(PanelSoon.IsDrawn)
+        public static readonly Entry[] Soon = SoonDrawn()
+            .Where(item => !item.InSheetOnly)
+            .Distinct()
             .Select(item => new Entry(item.Title, item.Page, item.Anchor, PanelSoon.Tag.ToLowerInvariant(), "coming"))
             .ToArray();
     }

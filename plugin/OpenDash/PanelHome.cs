@@ -3,6 +3,8 @@
 // Home says what needs fixing (PanelAttention decides that), what each device is showing, and the two
 // controls a driver reaches for between sessions. The Home page agent owns this file and adds to it.
 // Pure: no WPF.
+using System.Collections.Generic;
+
 namespace OpenDashPlugin
 {
     public static class PanelHome
@@ -28,5 +30,12 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(RightNowTitle, PanelPage.Home, AnchorRightNow, "live", "showing"),
             new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness", "night mode"),
         };
+
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = new SoonItem[0];
+
+        /// <summary>Search labels this page draws through something other than the constant: none.</summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>();
     }
 }

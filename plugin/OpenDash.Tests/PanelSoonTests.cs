@@ -101,7 +101,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_greyed_row_has_an_anchor_of_its_own()
         {
-            Assert.Equal("soon.506.realhardware", PanelSoon.Find("Real hardware").Anchor);
+            Assert.Equal("soon.506.realhardware", PanelSoon.RealHardware.Anchor);
             Assert.Equal(PanelSoon.All.Count, PanelSoon.All.Select(item => item.Anchor).Distinct(StringComparer.Ordinal).Count());
         }
 
@@ -113,30 +113,126 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The rows search may send a driver to are the rows the pages draw: a page that draws every row the
-        /// registry gives it calls PanelSoon.For(PanelPage.X), and a page that draws one calls
-        /// PanelSoon.Find(title). Read from the sources, because the pages are WPF and no test compiles them;
-        /// a page agent that draws its rows has to list its page in DrawnOnPages for search to find them.
+        /// The ruled rows, as (title, ticket, page): the ticket set and each page's count alone let two rows
+        /// swap tickets and stay green -- Pit limiter lights 509 with Priority order 505, Rig test 511 with
+        /// Alert dismissal 510, Yellow flags 504 with Incidents 508.
+        /// </summary>
+        [Theory]
+        [InlineData("Zones instead of cards", 146, PanelPage.Screens)]
+        [InlineData("Yellow flags", 504, PanelPage.Settings)]
+        [InlineData("Priority order", 505, PanelPage.Matrix)]
+        [InlineData("Real hardware", 506, PanelPage.Rig)]
+        [InlineData("Tyre wear", 507, PanelPage.Settings)]
+        [InlineData("Pit window open", 507, PanelPage.Settings)]
+        [InlineData("Incidents", 508, PanelPage.Settings)]
+        [InlineData("Pit limiter lights", 509, PanelPage.Leds)]
+        [InlineData("Alert dismissal", 510, PanelPage.Shortcuts)]
+        [InlineData("Rig test", 511, PanelPage.Shortcuts)]
+        [InlineData("Alert display", 512, PanelPage.Settings)]
+        [InlineData("Sim time of day", 128, PanelPage.Settings)]
+        [InlineData("Screen dimming", 128, PanelPage.Settings)]
+        public void A_ruled_row_cites_its_own_ticket_on_its_own_page(string title, int ticket, PanelPage page)
+        {
+            var item = PanelSoon.Find(title);
+            Assert.NotNull(item);
+            Assert.Equal(ticket, item.Ticket);
+            Assert.Equal(page, item.Page);
+        }
+
+        /// <summary>
+        /// Only the registry greys a row. SoonItem's constructor is internal, and no plugin file but
+        /// PanelSoon.cs constructs one or writes the "Coming soon" hover, so a closed ticket such as #370 or
+        /// #322 cannot be greyed from a page with a number typed beside it and pass every test here.
         /// </summary>
         [Fact]
-        public void Search_lists_exactly_the_greyed_rows_the_pages_draw()
+        public void Only_the_registry_greys_a_row()
         {
-            var pages = new HashSet<PanelPage>();
-            var titles = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var source in RepoPaths.SettingsControlSources())
+            var offenders = new List<string>();
+            foreach (var path in Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), "*.cs"))
             {
-                var text = File.ReadAllText(source);
-                foreach (Match call in Regex.Matches(text, @"PanelSoon\.For\(PanelPage\.(\w+)\)"))
-                {
-                    pages.Add((PanelPage)Enum.Parse(typeof(PanelPage), call.Groups[1].Value));
-                }
-                foreach (Match call in Regex.Matches(text, @"PanelSoon\.Find\(([^)]+)\)"))
-                {
-                    titles.Add(Resolve(call.Groups[1].Value.Trim()));
-                }
+                if (Path.GetFileName(path) == "PanelSoon.cs") continue;
+                var code = RepoPaths.Code(path);
+                if (code.Contains("new SoonItem(")) offenders.Add(Path.GetFileName(path) + ": new SoonItem(");
+                if (code.Contains("Coming soon")) offenders.Add(Path.GetFileName(path) + ": \"Coming soon\"");
             }
-            Assert.Equal(pages.OrderBy(p => p), PanelSoon.DrawnOnPages.OrderBy(p => p));
-            Assert.Equal(titles.OrderBy(t => t, StringComparer.Ordinal), PanelSoon.DrawnOneByOne.OrderBy(t => t, StringComparer.Ordinal));
+            Assert.True(offenders.Count == 0, string.Join(Environment.NewLine, offenders));
+            Assert.All(typeof(SoonItem).GetConstructors(), ctor => Assert.False(ctor.IsPublic, "SoonItem's constructor is public"));
+        }
+
+        /// <summary>Every registry entry is a named field, so a page draws Ui.Soon(row, PanelSoon.RevFill)
+        /// rather than finding one by a title typed again, and All is exactly those fields.</summary>
+        [Fact]
+        public void Every_entry_is_named()
+        {
+            var named = typeof(PanelSoon).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .Where(field => field.FieldType == typeof(SoonItem))
+                .Select(field => (SoonItem)field.GetValue(null))
+                .ToList();
+            Assert.Equal(PanelSoon.All.Count, named.Count);
+            Assert.All(PanelSoon.All, item => Assert.Contains(item, named));
+        }
+
+        /// <summary>The sheet's two tiles are drawn only inside the Add screen sheet, which search cannot
+        /// open, and are the only such rows.</summary>
+        [Fact]
+        public void Only_the_add_sheets_tiles_are_drawn_in_a_sheet_alone()
+        {
+            Assert.Equal(new[] { 116, 85 }, PanelSoon.All.Where(item => item.InSheetOnly).Select(item => item.Ticket));
+        }
+
+        /// <summary>The page model and the files that build each page, which its SoonDrawn is held to.</summary>
+        private static readonly Dictionary<PanelPage, (Type Model, string Sources)> Pages = new Dictionary<PanelPage, (Type, string)>
+        {
+            { PanelPage.Home, (typeof(PanelHome), "SettingsControl.Home") },
+            { PanelPage.Rig, (typeof(PanelRigMap), "SettingsControl.Rig") },
+            { PanelPage.Screens, (typeof(PanelScreens), "SettingsControl.Screens") },
+            { PanelPage.Leds, (typeof(PanelLeds), "SettingsControl.Lights") },
+            { PanelPage.Matrix, (typeof(PanelMatrix), "SettingsControl.Matrix") },
+            { PanelPage.Shortcuts, (typeof(PanelShortcuts), "SettingsControl.Shortcuts") },
+            { PanelPage.Settings, (typeof(PanelSettings), "SettingsControl.Settings") },
+            { PanelPage.Updates, (typeof(PanelUpdates), "SettingsControl.Updates") },
+        };
+
+        /// <summary>
+        /// Each page's SoonDrawn, in its own Panel&lt;Page&gt;.cs, is exactly the greyed rows that page's own
+        /// sources draw: by name (PanelSoon.RevFill), by PanelSoon.Find(title), or all of a page's entries
+        /// through PanelSoon.For(PanelPage.X). Read from the sources, because the pages are WPF and no test
+        /// compiles them. A page agent that draws a row adds it to its own list, and no shell file moves.
+        /// </summary>
+        [Theory]
+        [InlineData(PanelPage.Home)]
+        [InlineData(PanelPage.Rig)]
+        [InlineData(PanelPage.Screens)]
+        [InlineData(PanelPage.Leds)]
+        [InlineData(PanelPage.Matrix)]
+        [InlineData(PanelPage.Shortcuts)]
+        [InlineData(PanelPage.Settings)]
+        [InlineData(PanelPage.Updates)]
+        public void A_page_lists_exactly_the_greyed_rows_its_own_sources_draw(PanelPage page)
+        {
+            var (model, prefix) = Pages[page];
+            var code = string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), prefix + "*.cs")
+                .Where(path => Path.GetFileName(path) == prefix + ".cs" || Path.GetFileName(path).StartsWith(prefix + ".", StringComparison.Ordinal))
+                .Select(RepoPaths.Code));
+            var drawn = new HashSet<SoonItem>();
+            foreach (Match call in Regex.Matches(code, @"PanelSoon\.For\(PanelPage\.(\w+)\)"))
+            {
+                foreach (var item in PanelSoon.For((PanelPage)Enum.Parse(typeof(PanelPage), call.Groups[1].Value))) drawn.Add(item);
+            }
+            foreach (Match call in Regex.Matches(code, @"PanelSoon\.Find\(([^)]+)\)"))
+            {
+                var item = PanelSoon.Find(Resolve(call.Groups[1].Value.Trim()));
+                Assert.NotNull(item);
+                drawn.Add(item);
+            }
+            foreach (Match name in Regex.Matches(code, @"PanelSoon\.(\w+)"))
+            {
+                var field = typeof(PanelSoon).GetField(name.Groups[1].Value);
+                if (field != null && field.FieldType == typeof(SoonItem)) drawn.Add((SoonItem)field.GetValue(null));
+            }
+            var listed = (SoonItem[])model.GetField("SoonDrawn").GetValue(null);
+            Assert.Equal(drawn.Select(item => item.Anchor).OrderBy(a => a, StringComparer.Ordinal), listed.Select(item => item.Anchor).OrderBy(a => a, StringComparer.Ordinal));
+            Assert.All(listed, item => Assert.Equal(page, item.Page));
         }
 
         /// <summary>A Find argument as the title it names: a literal, or a Panel constant read by reflection.</summary>

@@ -525,6 +525,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Only through a registry entry: the ticket is PanelSoon's, where PanelSoonTests holds every number
         /// to a ticket that is still open, so a page cannot grey a row with a number typed beside it.
+        /// SoonItem's constructor is internal and PanelSoonTests fails on any "new SoonItem(" or "Coming soon"
+        /// outside PanelSoon.cs, so that holds for a page file too.
         /// </remarks>
         private static Border SoonWith(FrameworkElement row, int ticket, string title)
         {

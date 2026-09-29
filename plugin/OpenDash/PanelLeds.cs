@@ -4,6 +4,8 @@
 // centre shows, a brightness of its own, its wiring direction, and a switch for every effect (#370). The
 // strip copy that already existed stays in PanelLights and PanelLightRows; the LEDs page agent owns this
 // file and adds the rest. Pure: no WPF.
+using System.Collections.Generic;
+
 namespace OpenDashPlugin
 {
     public static class PanelLeds
@@ -45,5 +47,12 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(MirrorFitTitle, PanelPage.Leds, AnchorMirrorFit, "stretch", "true size"),
             new PanelSearch.Entry(PanelLights.CarTablesTitle, PanelPage.Leds, AnchorCarTables, "lovely", "car data", "download"),
         };
+
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = new SoonItem[0];
+
+        /// <summary>Search labels this page draws through something other than the constant: none.</summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>();
     }
 }

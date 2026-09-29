@@ -4,6 +4,8 @@
 // quick glance, night mode, brightness up and down. The binding control is SimHub's own ControlsEditor, so
 // this page draws rows around it rather than a binder of its own. The Shortcuts page agent owns this file.
 // Pure: no WPF.
+using System.Collections.Generic;
+
 namespace OpenDashPlugin
 {
     public static class PanelShortcuts
@@ -45,6 +47,25 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(RigActionLabel(Contract.ToggleNightModeAction), PanelPage.Shortcuts, AnchorRig, "night mode button", "bind", "toggle"),
             new PanelSearch.Entry(RigActionLabel(Contract.BrightnessUpAction), PanelPage.Shortcuts, AnchorRig, "brightness buttons", "brighter", "bind"),
             new PanelSearch.Entry(RigActionLabel(Contract.BrightnessDownAction), PanelPage.Shortcuts, AnchorRig, "brightness buttons", "dimmer", "bind"),
+        };
+
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = { PanelSoon.RigTest, PanelSoon.AlertDismissal };
+
+        /// <summary>
+        /// Search labels this page draws through something other than the constant, each with the text its
+        /// sources draw it by, so the list is a record rather than a way round PanelSearchTests.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>(System.StringComparer.Ordinal)
+        {
+            // A zone's rows read "Band D · next page", built from these by ZoneRow.
+            { NextPageTitle, "PanelShortcuts.ZoneRow(" },
+            { PreviousPageTitle, "PanelShortcuts.ZoneRow(" },
+            // The rig's own rows are drawn by their action, through the same function search names them by.
+            { RigActionLabel(Contract.ToggleNightModeAction), "PanelShortcuts.RigActionLabel(" },
+            { RigActionLabel(Contract.BrightnessUpAction), "PanelShortcuts.RigActionLabel(" },
+            { RigActionLabel(Contract.BrightnessDownAction), "PanelShortcuts.RigActionLabel(" },
         };
 
         /// <summary>The friendly name a binder gives one of the rig's own actions (Contract.RigActionNames).</summary>

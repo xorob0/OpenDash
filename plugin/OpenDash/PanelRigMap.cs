@@ -96,6 +96,24 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "shift point", "rpm"),
         };
 
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = { PanelSoon.RealHardware };
+
+        /// <summary>
+        /// Search labels this page draws through something other than the constant, each with the text its
+        /// sources draw it by, so the list is a record rather than a way round PanelSearchTests.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>(System.StringComparer.Ordinal)
+        {
+            // The scenario chips' groups are drawn from the list the constants are built into.
+            { PanelEmulation.FlagsGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.SpotterGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.PitLaneGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.WarningsGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.RevsGroup, "PanelEmulation.Groups" },
+        };
+
         /// <summary>The empty edge round a laid-out canvas, and the gap between two tiles across and down.</summary>
         public const double LayoutMargin = 24;
         public const double LayoutGap = 28;

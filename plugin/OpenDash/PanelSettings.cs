@@ -3,6 +3,8 @@
 // Settings holds only what is the same everywhere: the race data, the flags, the alert thresholds and the
 // lighting. The race data's words stay in PanelDataTab, where their pins are; the Settings page agent owns
 // this file and adds the rest. Pure: no WPF.
+using System.Collections.Generic;
+
 namespace OpenDashPlugin
 {
     public static class PanelSettings
@@ -54,5 +56,12 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(NightBrightnessTitle, PanelPage.Settings, AnchorLighting, "night", "dim"),
             new PanelSearch.Entry(NightModeTitle, PanelPage.Settings, AnchorLighting, "dark", "dim"),
         };
+
+        /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
+        /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
+        public static readonly SoonItem[] SoonDrawn = new SoonItem[0];
+
+        /// <summary>Search labels this page draws through something other than the constant: none.</summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>();
     }
 }
