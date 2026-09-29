@@ -50,14 +50,61 @@ const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
  */
 const LIST = { firstRow: 336, lastUsedBand: 221, rowHeight: 84, quickRunOffset: 86 } as const;
 /**
- * SimHub 9.12.6 offers prebuilt track layouts at the top of the Dash Studio page, and the offer
- * pushes the dashboard list sixty-one pixels down. It is dismissed before anything is measured from
- * the list; clicking where "No thanks" would be costs nothing when the offer is not there, because
- * what is underneath it is the page's own background.
+ * SimHub 9.12.6 offers prebuilt track layouts at the top of the Dash Studio page: a #375963 band at
+ * y 158..210, from x 1325 to 2725, which moves the search box and every row `shift` pixels down.
+ * "No thanks" is the grey button at x 2627..2712, y 171..197, and (0.695 of the width, 182) lands on
+ * it; "Enable it now", the blue one just left of it at 2516..2620, opts the guest into sharing its
+ * laps and must never be the one pressed.
+ *
+ * The click is made blind, since it costs nothing when the offer is not there, and is then checked,
+ * because a blind click cannot say whether it worked and the offer has once turned up after it. A
+ * look at the band decides: an offer still up is clicked once more, and one that stays after that is
+ * worked under, `shift` pixels lower, rather than clicked through (#308).
+ *
+ * It keeps coming back because "No thanks" is only remembered. SimHub holds the answer in memory as
+ * `MapOnlineSuggestionDiscarded` and writes it to `PluginsData\Common\DashStudioSettings_2.json`
+ * when it exits cleanly, and `simhubStop` in vm.ts kills it, so every install brings the offer back.
+ * The decompiled `GraphicalDashPluginListModel` shows it while that flag and `UseOnlineMaps` are both
+ * false; setting the flag back to false while SimHub is stopped is how to see it again on purpose.
  */
-const TRACK_LAYOUT_OFFER = { x: 0.695, y: 182 } as const;
+export const TRACK_LAYOUT_OFFER = { x: 0.695, y: 182, shift: 61 } as const;
 /** How long a row is hovered before it is clicked: its Start button appears on hover, not on click. */
 const HOVER_SECONDS = 2;
+
+/** A pixel as the guest's framebuffer holds it. */
+export type Rgb = readonly [number, number, number];
+/**
+ * The colours `openDashboard` reads Dash Studio by, sampled on the guest on 2026-09-29 from SimHub
+ * 9.12.6's dark theme at 3840x2160.
+ *
+ * The capture is VNC's RAW encoding, so it is lossless and a solid fill reads as one exact value; the
+ * tolerance absorbs drift and nothing else. The closest two colours here, a row and the page, are ten
+ * levels apart in every channel, so no pixel can match two of them, and at 2 the search box's #222222
+ * is not taken for the page it sits on.
+ */
+export const DASH_STUDIO = {
+  /** The track-layout offer's band. */
+  offer: [0x37, 0x59, 0x63],
+  /** A dashboard row's card. */
+  row: [0x2f, 0x2f, 0x2f],
+  /** The same card under the pointer, which is when its Start button is up. */
+  hoveredRow: [0x21, 0x3e, 0x4a],
+  /** The page behind everything. */
+  page: [0x25, 0x25, 0x25],
+} as const satisfies Record<string, Rgb>;
+export const COLOUR_TOLERANCE = 2;
+/**
+ * Where a look samples, in absolute pixels like `MENU` and `LIST`.
+ *
+ * Three points each, so that one pixel under a glyph cannot decide anything. The offer's are on x
+ * 1330, a column that crosses only the band and the page; the row's are on x 2400, right of every
+ * title and left of the star and MORE, 25 px either side of the row's centre, which keeps all three
+ * inside a card 78 px tall. The pointer is drawn into the framebuffer, so every point is more than
+ * 100 px from where it rests.
+ */
+const LOOK = { offerX: 1330, offerYs: [165, 184, 203], rowX: 2400, rowSpread: 25 } as const;
+/** How many times one call may redo a pass at the same offset, when a look says the offset was right. */
+export const MAX_REPEATS = 1;
 
 /**
  * The display mode every coordinate in this file was measured in, and the only one they hold in.
@@ -94,6 +141,251 @@ export function screenModeProblem(size: { width: number; height: number }): stri
     `It prints the mode before and after and every mode the driver offers. A container restart undoes it, ` +
     `so it is worth reading this message as "the VM restarted" rather than as a broken script.`
   );
+}
+
+// --------------------------------------------------------------------------- looking at Dash Studio
+//
+// What `openDashboard` reads off the screen, and what it makes of it, without a VM. The reading is
+// done in one VNC session on the host and comes back as a `look` line of nine pixels; everything
+// from there on is here, where it can be tested.
+
+export const hex = (c: Rgb): string => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+
+/** True when every channel is within `tolerance` of the other colour's. */
+export const sameColour = (a: Rgb, b: Rgb, tolerance = COLOUR_TOLERANCE): boolean => a.every((v, i) => Math.abs(v - b[i]!) <= tolerance);
+
+/**
+ * Where a pass clicks the search box, hovers the row and presses Windowed, for a list that starts
+ * `bandOffset` lower because of the Last used band, and `TRACK_LAYOUT_OFFER.shift` lower again when
+ * the pass is working under the offer.
+ */
+export function where(bandOffset: number, index: number, underOffer: boolean): { searchY: number; rowY: number; windowedY: number } {
+  const shift = underOffer ? TRACK_LAYOUT_OFFER.shift : 0;
+  const rowY = LIST.firstRow + bandOffset + shift + index * LIST.rowHeight;
+  return { searchY: LIST.firstRow - 123 + shift, rowY, windowedY: rowY + LIST.quickRunOffset };
+}
+
+/** The three points a look reads on the offer's band, and the three it reads on the row at `rowY`. */
+export function lookPoints(rowY: number): { offer: [number, number][]; row: [number, number][] } {
+  return {
+    offer: LOOK.offerYs.map((y): [number, number] => [LOOK.offerX, y]),
+    row: [-LOOK.rowSpread, 0, LOOK.rowSpread].map((d): [number, number] => [LOOK.rowX, rowY + d]),
+  };
+}
+
+/** What a look read, in the order `lookPoints` gives. */
+export interface LookSamples {
+  offer: Rgb[];
+  row: Rgb[];
+}
+
+const isRgb = (v: unknown): v is Rgb => Array.isArray(v) && v.length === 3 && v.every((c) => Number.isInteger(c) && c >= 0 && c <= 255);
+const isTriple = (v: unknown): v is Rgb[] => Array.isArray(v) && v.length === 3 && v.every(isRgb);
+
+/**
+ * The `look` line out of the host's output, or null when there is none or it is not nine pixels.
+ * Anything else the run printed is ignored, since vncdotool and Python both have things to say.
+ */
+export function parseLook(stdout: string): LookSamples | null {
+  const line = stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.startsWith('look '));
+  if (!line) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line.slice('look '.length));
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const { offer, row } = parsed as { offer?: unknown; row?: unknown };
+  return isTriple(offer) && isTriple(row) ? { offer, row } : null;
+}
+
+/** Whether the offer's band is on screen: all three points, none, or some, which is the band moving. */
+export type OfferState = 'up' | 'down' | 'partial';
+export function offerState(offer: readonly Rgb[]): OfferState {
+  const on = offer.filter((c) => sameColour(c, DASH_STUDIO.offer)).length;
+  return on === offer.length ? 'up' : on === 0 ? 'down' : 'partial';
+}
+
+/**
+ * What was under the pointer when a pass was about to press Start.
+ *
+ * `hovered` is the row lit, which is the Start button up; `row` is a row that had not lit; `page` is
+ * nothing there at all; `moved` is the offer come or gone since the pass decided where to click, so
+ * the rows are not where the click would land; `unknown` is a colour none of the above; `unread` is
+ * a look that could not be taken.
+ */
+export type Seen =
+  | { kind: 'hovered' }
+  | { kind: 'row' }
+  | { kind: 'page' }
+  | { kind: 'moved'; now: OfferState }
+  | { kind: 'unknown'; colour: string }
+  | { kind: 'unread'; why: string };
+
+/**
+ * Reads a look taken with the pointer on the row, by a pass that expects the offer `expected`.
+ *
+ * The offer comes first because it decides where the row is: a band that is not in the state the
+ * pass assumed means the row this is looking at is the wrong one, whatever colour it is. Then two
+ * of the three row points have to agree, so that one glyph cannot decide.
+ */
+export function readLook(s: LookSamples, expected: 'up' | 'down'): Seen {
+  const now = offerState(s.offer);
+  if (now !== expected) return { kind: 'moved', now };
+  const most = (c: Rgb) => s.row.filter((p) => sameColour(p, c)).length >= 2;
+  if (most(DASH_STUDIO.hoveredRow)) return { kind: 'hovered' };
+  if (most(DASH_STUDIO.row)) return { kind: 'row' };
+  if (most(DASH_STUDIO.page)) return { kind: 'page' };
+  return { kind: 'unknown', colour: hex(s.row[1]!) };
+}
+
+/**
+ * Whether a pass presses Start after what it saw.
+ *
+ * Withheld only where a press cannot be right: nothing under the pointer, or rows that have moved
+ * away from it. Everything else is pressed as it was before the look existed -- an unlit row after a
+ * second dwell, a colour nobody measured, a look that failed -- so that a look which is wrong about
+ * something costs a message and never a dashboard that would have opened.
+ */
+export const pressAfter = (seen: Seen): boolean => seen.kind !== 'page' && seen.kind !== 'moved';
+
+/** One pass of `openDashboard`, as its failure message reports it. */
+export interface Attempt {
+  rowY: number;
+  /** The look after the first "No thanks" still found the offer, whole or in part. */
+  offerSeen: boolean;
+  /** The offer was still up after the second, so this pass worked `TRACK_LAYOUT_OFFER.shift` lower. */
+  underOffer: boolean;
+  seen: Seen;
+  /** 2 when an unlit row was given a second dwell. */
+  looks: number;
+  pressed: boolean;
+  /** Dashboards the pass opened that were not the one asked for, closed again. */
+  strays: string[];
+}
+
+/**
+ * Whether the next pass should be this pass again rather than the next offset: when the page moved
+ * under it, or when a lit row opened some other dashboard, which says the offset was right and the
+ * filter was not.
+ */
+export const repeatPass = (a: Attempt): boolean =>
+  a.seen.kind === 'moved' || (a.pressed && a.seen.kind === 'hovered' && a.strays.length > 0);
+
+/** What a success prints. One line, because `bun run dev` indents it under its step. */
+export const openedLine = (name: string, attempt: number, underOffer: boolean): string =>
+  `opened ${name}${attempt > 1 ? ` (on attempt ${attempt})` : ''}` +
+  (underOffer ? `, ${TRACK_LAYOUT_OFFER.shift} px lower under SimHub's track-layout offer, which two "No thanks" clicks did not dismiss` : '');
+
+/** A pass's reading in a few words, for its line in a failure and for `OPENDASH_GUI_DEBUG`. */
+export function describeSeen(seen: Seen, looks = 1): string {
+  switch (seen.kind) {
+    case 'hovered':
+      return 'the row lit up';
+    case 'row':
+      return `a row, not lit after ${looks * HOVER_SECONDS} s`;
+    case 'page':
+      return 'only the page background';
+    case 'moved':
+      return seen.now === 'up' ? 'the track-layout offer had appeared' : seen.now === 'down' ? 'the track-layout offer had gone' : 'the track-layout offer was moving';
+    case 'unknown':
+      return `a colour it does not know, ${seen.colour}`;
+    case 'unread':
+      return `the screen could not be read (${seen.why})`;
+  }
+}
+
+/** What `openDashboard` knew when it gave up, besides its passes. */
+export interface FailureContext {
+  name: string;
+  filter: string;
+  /** `simhubRunning` after the last pass: false is #303, null is a guest that did not answer. */
+  running: boolean | null;
+  /** Why a later pass never started, when SimHub's window was not there for it. */
+  noWindow?: string;
+  /** The offer was on screen when this gave up, after the last look. */
+  offerAtEnd?: boolean;
+  /** Where the screen as it gave up was saved, relative to the working directory. */
+  picture?: string;
+}
+
+const quoted = (s: string) => `"${s}"`;
+
+/** The pass a failure is explained by: the last one that pressed, else the last that saw something. */
+function leadAttempt(attempts: readonly Attempt[]): Attempt | null {
+  return attempts.filter((a) => a.pressed).at(-1) ?? attempts.filter((a) => a.seen.kind !== 'page').at(-1) ?? null;
+}
+
+/** Line one of a failure, which is the only line `bun run shots` and `bun run clips` keep. */
+function failureLead(ctx: FailureContext, attempts: readonly Attempt[]): string {
+  if (ctx.running === false)
+    return `SimHub is not running any more, so nothing it was sent could open anything; that is #303, not a coordinate, and \`bun run vm logs 80\` shows why it stopped.`;
+  if (ctx.noWindow) return `SimHub's window was not there when attempt ${attempts.length + 1} began (${ctx.noWindow}), so nothing more was clicked.`;
+  const lead = leadAttempt(attempts);
+  if (!lead) {
+    const ys = [...new Set(attempts.map((a) => `y ${a.rowY}`))].join(' or ');
+    return (
+      `there was no dashboard row under the pointer at ${ys}, only the page background, so nothing was pressed: ${quoted(ctx.filter)} matched nothing in Dash Studio's list. ` +
+      `Either it is not installed (SimHub reads the list only at startup, and \`bun run vm install\` restarts it), or the search box kept an earlier run's text and the name was typed after it.`
+    );
+  }
+  const at = `y ${lead.rowY}`;
+  const seen = lead.seen;
+  if (seen.kind === 'moved') {
+    if (seen.now === 'up')
+      return `SimHub's track-layout offer appeared after it had been checked for, which moves the search box and every row ${TRACK_LAYOUT_OFFER.shift} px down, so the row at ${at} was not pressed.`;
+    if (seen.now === 'down') return `SimHub's track-layout offer went away while this was working ${TRACK_LAYOUT_OFFER.shift} px below it, so the rows moved back up and the row at ${at} was not pressed.`;
+    return `SimHub's track-layout offer was moving (only part of its band was on screen), so where the rows were could not be known and the row at ${at} was not pressed.`;
+  }
+  if (lead.strays.length > 0)
+    return `the lit row at ${at} opened ${lead.strays.map(quoted).join(', ')} instead, so typing ${quoted(ctx.filter)} had not narrowed Dash Studio's list to it (the keys did not all reach the search box); it was closed again.`;
+  switch (seen.kind) {
+    case 'hovered':
+      return `the row at ${at} lit up under the pointer and Start then Windowed were pressed, but no ${quoted(ctx.name)} window appeared within 14 s: the Windowed entry of the Quick run menu was missed.`;
+    case 'row':
+      return `a dashboard row was under the pointer at ${at} but had not lit up after ${lead.looks * HOVER_SECONDS} s, so SimHub was not taking the pointer (a window in front of it, or SimHub too busy to draw); Start was pressed anyway, as before, and nothing opened.`;
+    case 'unknown':
+      return `the look before Start read ${seen.colour} at (${LOOK.rowX}, ${lead.rowY}), which is none of the colours scripts/gui.ts knows (a row ${hex(DASH_STUDIO.row)}, lit ${hex(DASH_STUDIO.hoveredRow)}, the page ${hex(DASH_STUDIO.page)}), so Start was pressed unchecked, as before, and nothing opened.`;
+    case 'unread':
+      return `the look before Start could not read the screen (${seen.why}), so Start was pressed unchecked, as before, and nothing opened.`;
+    case 'page':
+      // leadAttempt never returns an unpressed page reading.
+      return `there was no dashboard row under the pointer at ${at}.`;
+  }
+}
+
+/** Why the offer was there at all, for a failure that met it. */
+export const OFFER_COMES_BACK =
+  'It comes back after every SimHub restart that ends in a kill, which is how `bun run vm` restarts it: "No thanks" is kept in memory and saved only when SimHub exits cleanly ' +
+  '(MapOnlineSuggestionDiscarded in PluginsData\\Common\\DashStudioSettings_2.json).';
+
+/**
+ * The whole message a failed `openDashboard` returns. Line one says what was seen, because it is
+ * the only line two of the callers print; the lines after it are the passes one by one, whether this
+ * is #303, the offer if it was met, and the picture.
+ */
+export function openFailure(ctx: FailureContext, attempts: readonly Attempt[]): string {
+  const lines = [`could not open ${ctx.name}: ${failureLead(ctx, attempts)}`];
+  attempts.forEach((a, i) => {
+    const outcome = !a.pressed ? 'nothing pressed' : a.strays.length > 0 ? `opened ${a.strays.map(quoted).join(', ')} instead, closed` : 'Start and Windowed pressed, no window';
+    const under = a.underOffer ? ` (${TRACK_LAYOUT_OFFER.shift} px lower, under the track-layout offer)` : '';
+    lines.push(`  attempt ${i + 1} at y ${a.rowY}${under}: ${describeSeen(a.seen, a.looks)}; ${outcome}`);
+  });
+  if (ctx.noWindow) lines.push(`  attempt ${attempts.length + 1} did not start: ${ctx.noWindow}`);
+  if (ctx.running === true) lines.push('SimHub was still running after the last attempt, so this is not #303.');
+  if (ctx.running === null) lines.push('Whether SimHub is still running could not be read: the guest did not answer.');
+  const stillUp = attempts.flatMap((a, i) => (a.offerSeen ? [i + 1] : []));
+  if (stillUp.length > 0) lines.push(`SimHub's track-layout offer was still up after the first "No thanks" in attempt ${stillUp.join(' and ')}.`);
+  if (ctx.offerAtEnd)
+    lines.push(`SimHub's track-layout offer was up when this gave up, so it may have come back after the last look and moved everything ${TRACK_LAYOUT_OFFER.shift} px down.`);
+  if (stillUp.length > 0 || ctx.offerAtEnd) lines.push(OFFER_COMES_BACK);
+  if (ctx.picture) lines.push(`The screen as this gave up is ${ctx.picture}.`);
+  lines.push(`Open it by hand once (Dash Studio, find ${ctx.name}, Start, Windowed) and run this again; everything else will be in place.`);
+  return lines.join('\n');
 }
 
 /** Runs a snippet against the guest's VNC through the Python environment the host already has. */
