@@ -700,7 +700,7 @@ describe('every generated profile', () => {
     }
   });
 
-  test('obeys the rig brightness, which the flag box had to itself until now', () => {
+  test('obeys its own brightness, the rig\'s behind it, never above the night brightness at night', () => {
     // LightsBrightness, LightsNightBrightness and LightsNightMode are captioned "for every light
     // OpenDash drives", and a wheel strip and a brow read none of the three: the composed expression
     // had one reader, the matrix. The assertion is against contract.ts rather than against a copy of
@@ -713,8 +713,8 @@ describe('every generated profile', () => {
       const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
       const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
-      // The strip's own brightness since #503, with the rig's behind it and night mode capping it,
-      // which the matrix does not have: its group still reads flagBox.brightness().
+      // The strip's own brightness since #503, capped at night by the night brightness; with none of
+      // its own, flagBox.brightness() itself, which is what the matrix's group reads.
       expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: setting.ledBrightnessInForce() } });
       // ...and it reaches the file, with each read defaulted so a strip works with no plugin at all.
       const text = leds.serializeProfile(p);
@@ -723,6 +723,7 @@ describe('every generated profile', () => {
         'isnull([OpenDash.LightsNightBrightness], 25)',
         'isnull([OpenDash.LightsBrightness], 100)',
         'isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))',
+        flagBox.brightness(),
       ]) {
         expect({ shape: shape.id, read, present: text.includes(read) }).toMatchObject({ present: true });
       }

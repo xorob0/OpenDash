@@ -409,10 +409,11 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
  * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three.
  *
  * Since #503 a strip may also have a brightness of its own, `LedBrightness`, which the plugin
- * publishes per bar and which falls back to the rig's day brightness where a bar has none. Night
- * mode still wins: {@link setting.ledBrightnessInForce} takes the lower of the strip's own and the
- * night brightness, so a strip turned up for daylight is not left bright in a dark room. The flag box
- * has no brightness of its own and keeps reading `flagBox.brightness()`.
+ * publishes per bar. A bar with none is drawn at `flagBox.brightness()`, the expression the flag box
+ * reads, so a strip that follows the rig and the box beside it cannot come to hold two brightnesses,
+ * at night as by day. A bar with one is drawn at it, and at night at the lower of it and the night
+ * brightness ({@link setting.ledBrightnessInForce}), so a strip turned up for daylight is not left
+ * bright in a dark room. The flag box has no brightness of its own.
  *
  * `Groups.BrightnessFormulaGroup` is the strip's container of that kind and is one of the fifty-six
  * SimHub 9.12.6 resolves. It goes through `raw` because the generator models only the containers a

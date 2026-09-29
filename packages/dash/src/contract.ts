@@ -12,7 +12,7 @@ import type { Expr } from './bind.ts';
 // one direction the two can face.
 import { ALL_SHAPES } from './leds/strip.ts';
 
-const { add, and, concat, div, eq, fmt, iff, isnull, left, lt, min, mod, num, or, prop, str, truncate } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, isNull, left, lt, min, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -512,9 +512,11 @@ export const LED_SPOTTER_WHOLE_SETTING = 'LedSpotterWhole';
  * The rig's brightness trio is one answer for every light, which is right for most rigs and wrong for
  * the one whose wheel is a hand's width from the driver's eyes and whose brow is a metre away. A bar
  * with an answer of its own publishes it here under its namespace; the rig-wide name publishes null,
- * and so does a bar with no answer, and both fall back to `LightsBrightness`. Night mode still wins:
- * {@link setting.ledBrightnessInForce} takes the lower of this and the night brightness, so a strip
- * turned up for daylight does not stay bright at night.
+ * and so does a bar with no answer. Null means the rig's, literally: such a strip is drawn at
+ * `flagBox.brightness()`, day and night, so it and the flag box cannot drift apart and the brightness
+ * buttons move both. A bar with an answer of its own is never brighter than the night brightness at
+ * night: {@link setting.ledBrightnessInForce} takes the lower of the two, so a strip turned up for
+ * daylight does not stay bright in a dark room.
  */
 export const LED_BRIGHTNESS_SETTING = 'LedBrightness';
 
@@ -664,11 +666,18 @@ export const setting = {
    */
   ledBrightness: (): Expr => isnull(prop(propertyName(LED_BRIGHTNESS_SETTING)), flagBox.dayBrightness()),
   /**
-   * The brightness a strip is drawn at: its own, or at night the lower of its own and the night
-   * brightness, so that night mode dims a strip turned up for daylight and never brightens one
-   * turned down.
+   * The brightness a strip is drawn at. With no brightness of its own it is the rig's, exactly what
+   * the flag box draws, night brightness included. With one, it is that, and at night the lower of it
+   * and the night brightness, so that night mode dims a strip turned up for daylight and never
+   * brightens one turned down.
    */
-  ledBrightnessInForce: (): Expr => iff(eq(flagBox.nightMode(), 'true'), min(setting.ledBrightness(), flagBox.nightBrightness()), setting.ledBrightness()),
+  ledBrightnessInForce: (): Expr =>
+    iff(
+      isNull(prop(propertyName(LED_BRIGHTNESS_SETTING))),
+      flagBox.brightness(),
+      // Defaulted all the same, so no branch of the file reads a bare property.
+      iff(eq(flagBox.nightMode(), 'true'), min(setting.ledBrightness(), flagBox.nightBrightness()), setting.ledBrightness()),
+    ),
   /** `isnull([OpenDash.LedEffectFlags], true)`: the switch governing one effect, by the effect's id. */
   ledEffect: (id: string): Expr => isnull(prop(propertyName(ledEffectSettingName(id))), String(DEFAULT_LED_EFFECT)),
   /** `(isnull([OpenDash.LedEffectFlags], true)) = (true)`: whether that effect may light at all. */

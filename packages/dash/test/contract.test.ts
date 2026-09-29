@@ -416,11 +416,11 @@ describe('settings', () => {
     // drew before the choice existed.
     expect(DEFAULTS.FlagsInPitLane).toBe(true);
     expect(setting.flagsInPitLane()).toBe('isnull([OpenDash.FlagsInPitLane], true)');
-    // A strip with no brightness of its own is the rig's, and at night it is never brighter than
-    // the night brightness.
+    // A strip with no brightness of its own is the rig's, literally: what the flag box draws, day and
+    // night. One with its own is never brighter than the night brightness at night.
     expect(setting.ledBrightness()).toBe('isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))');
     expect(setting.ledBrightnessInForce()).toBe(
-      'if((isnull([OpenDash.LightsNightMode], false)) = (true), min(isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100)), isnull([OpenDash.LightsNightBrightness], 25)), isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100)))',
+      `if(isnull([OpenDash.LedBrightness]), ${flagBox.brightness()}, if((isnull([OpenDash.LightsNightMode], false)) = (true), min(isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100)), isnull([OpenDash.LightsNightBrightness], 25)), isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))))`,
     );
     // Every effect is on until it is switched off, and every flag row answers to the one switch.
     expect(setting.ledEffect('p2p')).toBe('isnull([OpenDash.LedEffectPushToPass], true)');
