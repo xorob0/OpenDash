@@ -1969,6 +1969,24 @@ namespace OpenDashPlugin
         public IReadOnlyList<DuplicateAssignment> Duplicates() => DuplicateAssignment.Find(Slots);
 
         /// <summary>Copies the values of another settings object; used by the panel to keep one instance alive.</summary>
+        /// <summary>
+        /// A normalised copy of these settings, for saving without repairing the live object.
+        /// </summary>
+        /// <remarks>
+        /// What a rig button saves after its press. Normalise moves a zone off a page its cycle has
+        /// turned off, which is right on a load and after a click in the panel, and wrong while a quick
+        /// glance is held on such a page: the brightness step would move the glanced zone under the
+        /// driver's thumb. The copy is repaired and written, and the zone on screen stays where the
+        /// glance put it until the release puts it back. #503.
+        /// </remarks>
+        public OpenDashSettings NormalisedCopy()
+        {
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(this);
+            copy.Normalise();
+            return copy;
+        }
+
         public void CopyFrom(OpenDashSettings other)
         {
             if (other == null) return;

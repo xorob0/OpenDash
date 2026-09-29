@@ -603,6 +603,23 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Saves after a rig button's press: a normalised copy, not the live settings, so a press while
+        /// a quick glance is held on a page its zone's cycle leaves out does not move the glanced zone.
+        /// See <see cref="OpenDashSettings.NormalisedCopy"/>.
+        /// </summary>
+        private void SaveRigPress()
+        {
+            try
+            {
+                this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy());
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Saving the settings failed", ex);
+            }
+        }
+
         private void LoadSettings()
         {
             try
@@ -774,7 +791,7 @@ namespace OpenDashPlugin
                     typeof(OpenDash),
                     (manager, action) => press(),
                     release == null ? null : (Action<PluginManager, string>)((manager, action) => release())),
-                () => OnInterfaceThread(SaveSettings));
+                () => OnInterfaceThread(SaveRigPress));
         }
     }
 }
