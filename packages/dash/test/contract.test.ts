@@ -26,6 +26,8 @@ import {
   LED_RPM_STYLE_SETTING,
   LED_BRIGHTNESS_SETTING,
   LED_EFFECTS,
+  DEFAULT_LED_EFFECT,
+  LED_EFFECT_FLAG_PREFIX,
   ledEffectSettingName,
   ledEffectSettingNames,
   RETIRED_LED_RPM_STYLES,
@@ -540,9 +542,9 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
-    // The panel today still builds a chooser over the style set. The rebuilt Lights page (#503, per
-    // #369) offers one switch instead, the car's own lights or not, and whoever rebuilds it moves
-    // this pin to `Contract.LedRpmStyleCar` in the same change.
+    // The style set is still named on the panel, which today builds a chooser over it; the switch the
+    // rebuilt Lights page offers instead is pinned by "the panel offers the car's own lights as a
+    // switch" below.
     expect(panel).toContain('Contract.LedRpmStyles');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
@@ -682,15 +684,6 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultClockFormat = "${DEFAULTS.ClockFormat}";`);
     expect(panelSource()).toContain('Contract.ClockFormats');
     expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${CLOCK_FORMAT_SETTING},`);
-    // Whether a flag shows in the pit lane: shared, on by default, and attached, since band D, the
-    // companion, the pit wall, the flag box and every strip read it. #503.
-    expect(source).toContain(`public const string ${FLAGS_IN_PIT_LANE_SETTING} = "${FLAGS_IN_PIT_LANE_SETTING}";`);
-    expect(source).toContain(`public const bool DefaultFlagsInPitLane = ${String(DEFAULTS.FlagsInPitLane)};`);
-    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${FLAGS_IN_PIT_LANE_SETTING},`);
-    // A strip's own brightness, and the two rev light styles the panel no longer offers, named so the
-    // plugin normalises a stored one to leftToRight rather than guessing. #503.
-    expect(source).toContain(`public const string ${LED_BRIGHTNESS_SETTING} = "${LED_BRIGHTNESS_SETTING}";`);
-    expect(source).toContain(`RetiredLedRpmStyles = ${csArray(RETIRED_LED_RPM_STYLES)};`);
     // The delta's precision: shared, on the Data tab under the reference it qualifies, and attached. #322.
     expect(source).toContain(`public const string ${DELTA_PRECISION_SETTING} = "${DELTA_PRECISION_SETTING}";`);
     expect(source).toContain(`DeltaPrecisions = ${csArray(DELTA_PRECISIONS)};`);
@@ -705,6 +698,43 @@ describe('plugin mirror', () => {
     expect(source).toContain(`DefaultPositionMode = "${DEFAULTS.PositionMode}";`);
     expect(source).toContain(`DefaultDeltaReference = "${DEFAULTS.DeltaReference}";`);
     expect(source).toContain(`DefaultSessionProgress = "${DEFAULTS.SessionProgress}";`);
+  });
+
+  /**
+   * What #503 asks of the plugin half, in a test of its own so that, while the two halves are apart,
+   * its red hides none of the older mirror assertions above.
+   */
+  test('Contract.cs and OpenDash.cs carry the #503 names', () => {
+    const source = pluginSource('Contract.cs');
+    // Whether a flag shows in the pit lane: shared, on by default, and attached, since band D, the
+    // companion, the pit wall, the flag box and every strip read it.
+    expect(source).toContain(`public const string ${FLAGS_IN_PIT_LANE_SETTING} = "${FLAGS_IN_PIT_LANE_SETTING}";`);
+    expect(source).toContain(`public const bool DefaultFlagsInPitLane = ${String(DEFAULTS.FlagsInPitLane)};`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${FLAGS_IN_PIT_LANE_SETTING},`);
+    // A strip's own brightness, and the two rev light styles the panel no longer offers, named so the
+    // plugin normalises a stored one to leftToRight rather than guessing.
+    expect(source).toContain(`public const string ${LED_BRIGHTNESS_SETTING} = "${LED_BRIGHTNESS_SETTING}";`);
+    expect(source).toContain(`RetiredLedRpmStyles = ${csArray(RETIRED_LED_RPM_STYLES)};`);
+    // The effect table, pair by pair and in order. ContractTests.cs checks a few rows and the order of
+    // the settings, which a transposition such as tc -> LedEffectAbs and abs -> LedEffectTc keeps; the
+    // plugin attaches each bar's switch by the effect's id through this table, so that transposition
+    // would have the panel's traction control switch turn off ABS on the strip.
+    const block = /LedEffects\s*=\s*new\[\]\s*\{([\s\S]*?)\};/.exec(source);
+    expect(block).not.toBeNull();
+    const pairs = [...(block?.[1] ?? '').matchAll(/new KeyValuePair<string, string>\("([^"]*)", "([^"]*)"\)/g)].map((m) => ({ id: m[1], setting: m[2] }));
+    expect(pairs).toEqual(LED_EFFECTS.map(({ id, setting }) => ({ id, setting })));
+    // The rule for a flag row neither table lists, and the default of every switch.
+    expect(source).toContain(`public const string LedEffectFlagPrefix = "${LED_EFFECT_FLAG_PREFIX}";`);
+    expect(source).toContain(`public const bool DefaultLedEffect = ${String(DEFAULT_LED_EFFECT)};`);
+  });
+
+  /**
+   * The rebuilt Lights page (#503, per #369) offers one switch for the rev lights -- the car's own, or
+   * not -- where today's panel builds a chooser over {@link LED_RPM_STYLES}. Its own test, so that it
+   * can stay red until the page is rebuilt without hiding anything in "declares the strips".
+   */
+  test("the panel offers the car's own lights as a switch", () => {
+    expect(panelSource()).toContain('Contract.LedRpmStyleCar');
   });
 });
 

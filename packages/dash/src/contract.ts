@@ -567,7 +567,8 @@ export const DEFAULT_LED_EFFECT = true;
 /** The fifteen switches, once each, in the order {@link LED_EFFECTS} first names them. */
 export const ledEffectSettingNames = (): string[] => [...new Set(LED_EFFECTS.map((e) => e.setting))];
 
-const LED_EFFECT_FLAG_PREFIX = 'flag.';
+/** The prefix every flag row's effect id carries: `flag.yellow`. `Contract.LedEffectFlagPrefix` mirrors it. */
+export const LED_EFFECT_FLAG_PREFIX = 'flag.';
 const LED_EFFECT_FLAGS_SETTING = 'LedEffectFlags';
 
 /**
