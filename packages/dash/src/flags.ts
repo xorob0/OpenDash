@@ -410,7 +410,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   ENGINE_OFF,
   { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED FLAG' } },
   { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
-  { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
+  { id: 'furled', name: 'Black flag · furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
   { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
   { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'filled', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
   // The full course yellow: iRacing's caution of the whole track, which is the pace car being

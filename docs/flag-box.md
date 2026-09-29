@@ -128,7 +128,7 @@ you can learn the box away from the car.
 | 1 | Red — the whole box red | ● |
 | 2 | Disqualified — a cross, blinking | ● |
 | 3 | Black — an outline | ● |
-| 4 | Black furled — a bar | ● |
+| 4 | Black flag · furled — a bar | ● |
 | 5 | Meatball — an orange disc | ● |
 | 6 | Chequered — a checkerboard | |
 | 7 | Full course yellow — yellow in bands | ● |

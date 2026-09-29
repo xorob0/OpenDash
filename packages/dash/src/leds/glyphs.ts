@@ -171,7 +171,7 @@ export const SMALL_BLACK: Grid = [
   '........',
 ];
 
-/** Black furled, the bar at the top of its walk. */
+/** Black flag · furled, the bar at the top of its walk. */
 export const FURLED_HIGH: Grid = [
   '........',
   '........',
@@ -183,7 +183,7 @@ export const FURLED_HIGH: Grid = [
   '........',
 ];
 
-/** Black furled: the same flag rolled up, so it is a bar rather than a field. */
+/** Black flag · furled: the same flag rolled up, so it is a bar rather than a field. */
 export const FURLED: Grid = [
   '........',
   '........',
@@ -195,7 +195,7 @@ export const FURLED: Grid = [
   '........',
 ];
 
-/** Black furled, the bottom of its walk. One row above the start gantry's bar, and a different hue. */
+/** Black flag · furled, the bottom of its walk. One row above the start gantry's bar, and a different hue. */
 export const FURLED_LOW: Grid = [
   '........',
   '........',

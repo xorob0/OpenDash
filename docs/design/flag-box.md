@@ -35,7 +35,7 @@ the band itself.
 |---|---|---|---|---|---|---|
 | 1 | Red | `red` | yes | 3 | The whole box red. The only condition that takes it in one colour. | Filled `purpose.flag.red`, "RED FLAG". |
 | 2 | Disqualified | `disqualify` | yes | 4 | A cross, blinking. The one flag that ends the race whether the driver reacts or not. | Outlined `purpose.flag.black`, "DISQUALIFIED". |
-| 3 | Black furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
+| 3 | Black flag · furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
 | 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
 | 6 | Full course yellow | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "FULL COURSE YELLOW", or "FCY" where that does not fit. |
@@ -95,6 +95,13 @@ FULL COURSE YELLOW where the whole name fits across it at that size. That is the
 Every other block writes FCY, the companions and the pit walls included, because a tall block sets a
 large size and the whole name no longer fits across it, which is why the pit wall, the widest screen
 of all, reads FCY. `flagFormat.test.ts` pins which block writes which.
+
+**The furled black agrees with the canvas's "Black flag · furled"** on the band, in this table, on
+the site and on the pit wall, and the full-screen block writes BLACK for it, as it does for the black
+flag, where it used to write FURLED, which did not say that it was a black flag at all. The two yellows
+share a word on the block too and are told apart by the flash; the two blacks are not, since neither
+flashes, so on the block a furled black and a black flag are one drawing. The band and the box still
+tell them apart, the band by its name and the box by a bar that walks against an outline that waves.
 
 ### What the band does that the box does not, and the reverse
 

@@ -70,6 +70,12 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
  * never has to distinguish two things a driver can see side by side.
  *
+ * The furled black reads BLACK as the black flag does, #497, since FURLED alone did not say that it
+ * was a black flag at all. Unlike the two yellows, nothing on the block tells those two apart, as
+ * neither of them flashes: band D writes BLACK FLAG · FURLED for the one and BLACK FLAG for the other,
+ * and the box draws the one as a bar that walks and the other as an outline that waves, but the
+ * block draws the same outlined word for both.
+ *
  * The full course yellow is not in the table, because its band already carries the two forms the
  * block wants: FCY, which is a word like the others and is what the one size is measured against, and
  * FULL COURSE YELLOW, which the block writes instead wherever it fits at the size the others have set,
@@ -90,7 +96,7 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
   engine: 'ENGINE',
   red: 'RED',
   disqualify: 'DSQ',
-  furled: 'FURLED',
+  furled: 'BLACK',
   black: 'BLACK',
   meatball: 'MEATBALL',
   yellowWaving: 'YELLOW',

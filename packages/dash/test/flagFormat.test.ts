@@ -55,7 +55,7 @@ const BLOCK_NAME: Record<string, string> = {
   engine: 'ENGINE',
   red: 'RED',
   disqualify: 'DSQ',
-  furled: 'FURLED',
+  furled: 'BLACK',
   black: 'BLACK',
   meatball: 'MEATBALL',
   caution: 'FCY',

@@ -41,7 +41,7 @@
     {"at": 13, "log": "2/20 engine off: ENGINE OFF, outlined red", "set": {"Voltage": 13.9, "EngineWarnings": 8}},
     {"at": 20, "log": "3/20 red: RED FLAG", "set": {"EngineWarnings": 0, "SessionFlags": "red"}},
     {"at": 27, "log": "4/20 disqualified: DISQUALIFIED, outlined", "set": {"SessionFlags": "black|disqualify"}},
-    {"at": 34, "log": "5/20 black furled: BLACK FLAG · FURLED", "set": {"SessionFlags": "furled"}},
+    {"at": 34, "log": "5/20 black flag · furled: BLACK FLAG · FURLED", "set": {"SessionFlags": "furled"}},
     {"at": 41, "log": "6/20 black: BLACK FLAG", "set": {"SessionFlags": "black"}},
     {"at": 48, "log": "7/20 meatball: MEATBALL, orange", "set": {"SessionFlags": "repair"}},
     {"at": 55, "log": "8/20 full course yellow: FULL COURSE YELLOW", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},

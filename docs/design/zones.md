@@ -1098,7 +1098,8 @@ at the price of the fuel page for the whole caution — the case #380 opens with
 in exchange for a name he has already read during the three seconds the flag had the band. And the
 choice between a flag held and a page given back is already a setting: `FlagFormat` set to `full`
 gives the flag zones B, A and C for the whole of its duration and names it there, DSQ apart from
-FURLED apart from BLACK, at the cost of the gear rather than of the band. A third arm would be a
+BLACK, at the cost of the gear rather than of the band; the furled black reads BLACK there as the
+black flag does since #497, and the block does not tell those two apart. A third arm would be a
 setting inside a setting for a view one of the two already offers. What those four faces are owed is
 a drawing rather than a switch, and [§10](#10-where-the-canvas-contradicts-itself) is where that debt
 is written down: a block wide enough for a name there means taking room from the page, so the canvas
