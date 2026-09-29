@@ -12,6 +12,7 @@ import type {
   Border,
   ChartItem,
   Dashboard,
+  DashboardVariable,
   DotStyle,
   DrawableItem,
   EllipseItem,
@@ -525,7 +526,24 @@ export const buildImageDescriptor = (image: ImageAsset): JsonObject => ({
   MD5: image.md5,
 });
 
+/**
+ * One entry of a dashboard's `Variables.DashboardVariables`, in the key order `DashboardFormulaVariable`
+ * declares. `OverrideWithParentDashboardVariableWhenAvailable` is SimHub's for a widget handed a
+ * variable by the dashboard that includes it, and defaults to true there; it is written false, because
+ * a variable declared here is this dashboard's own.
+ */
+export const buildVariableObject = (variable: DashboardVariable): JsonObject => ({
+  VariableName: variable.name,
+  EvaluateOnlyOnce: variable.evaluateOnlyOnce ?? false,
+  OverrideWithParentDashboardVariableWhenAvailable: false,
+  ValueExpression: { Expression: variable.expression },
+  EvaluateBeforeScreenRoles: variable.beforeScreenRoles ?? false,
+});
+
 export const buildDashboardObject = (dashboard: Dashboard, ctx: SerializeContext): JsonObject => ({
+  // First, because `Variables` is the first member `Dashboard` declares, and only when there are some:
+  // SimHub's own `ShouldSerializeVariables` leaves an empty list out.
+  ...(dashboard.variables?.length ? { Variables: { DashboardVariables: dashboard.variables.map(buildVariableObject) } } : {}),
   Version: 2,
   Id: dashboard.id ?? stableGuid(dashboardPath(ctx.packageName, dashboard.name)),
   BaseHeight: dashboard.height,

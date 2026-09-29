@@ -69,6 +69,35 @@ describe('document shape', () => {
     expect(s.BackgroundColor).toBe('#FF000000');
   });
 
+  test('variables are written first, in SimHub\'s key order, and only when there are some', () => {
+    const plain = buildDashboardObject(dashboard('OpenDash', [screen('Main', [rect('r')])]), CTX);
+    expect(Object.keys(plain)).not.toContain('Variables');
+    expect(Object.keys(buildDashboardObject(dashboard('OpenDash', [screen('Main', [rect('r')])], { variables: [] }), CTX))).not.toContain('Variables');
+
+    const d = dashboard('OpenDash', [screen('Main', [rect('r')])], {
+      variables: [
+        { name: 'shown', expression: 'rootdashboardscreenname()', beforeScreenRoles: true },
+        { name: 'once', expression: '1', evaluateOnlyOnce: true },
+      ],
+    });
+    const doc = buildDashboardObject(d, CTX);
+    // `Variables` is the first member `Dashboard` declares, ahead of `Version`.
+    expect(Object.keys(doc).slice(0, 2)).toEqual(['Variables', 'Version']);
+    const variables = (doc.Variables as { DashboardVariables: Record<string, unknown>[] }).DashboardVariables;
+    expect(variables.map((v) => Object.keys(v))).toEqual(Array(2).fill([
+      'VariableName', 'EvaluateOnlyOnce', 'OverrideWithParentDashboardVariableWhenAvailable', 'ValueExpression', 'EvaluateBeforeScreenRoles',
+    ]));
+    expect(variables[0]).toEqual({
+      VariableName: 'shown',
+      EvaluateOnlyOnce: false,
+      // SimHub defaults this to true for a widget's variable; these are the dashboard's own.
+      OverrideWithParentDashboardVariableWhenAvailable: false,
+      ValueExpression: { Expression: 'rootdashboardscreenname()' },
+      EvaluateBeforeScreenRoles: true,
+    });
+    expect(variables[1]).toMatchObject({ VariableName: 'once', EvaluateOnlyOnce: true, EvaluateBeforeScreenRoles: false });
+  });
+
   test('serializeDashboard is 2-space indented JSON of the object', () => {
     const d = dashboard('OpenDash', [screen('Main', [rect('r')])]);
     const text = serializeDashboard(d, CTX);
