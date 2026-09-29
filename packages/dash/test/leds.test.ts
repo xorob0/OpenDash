@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
-import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledMirrorRunName, propertyName, setting, type LedCentre } from '../src/contract.ts';
+import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_EFFECTS, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledEffectSettingName, ledMirrorRunName, ledProperties, propertyName, setting, type LedCentre } from '../src/contract.ts';
 import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
@@ -408,7 +408,10 @@ describe('the effect catalogue', () => {
   test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
     const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
     const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
-    expect(strip.when).toBe(box.raised);
+    // The row is the box's condition exactly; what the strip draws is that behind the strip's own
+    // switch for it, which the box does not have (#503).
+    expect(SIDE_EFFECTS.find((e) => e.id === 'lowFuel')!.when).toBe(box.raised);
+    expect(strip.when).toBe(`(${setting.ledEffectOn('lowFuel')}) and (${box.raised})`);
     expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
     // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
     // reads. That is a different question from the one the box asks, so the number in the panel moved
@@ -922,3 +925,60 @@ describe('the per-gear shift table', () => {
   });
 });
 
+
+describe('the effect switches (#370, #503)', () => {
+  test('there is a switch for exactly the effects a strip draws, the flag rows sharing one', () => {
+    const drawn = ALL_EFFECTS().map((e) => e.id);
+    expect(new Set(LED_EFFECTS.map((e) => e.id))).toEqual(new Set(drawn));
+    expect(LED_EFFECTS).toHaveLength(drawn.length);
+    for (const e of ALL_EFFECTS()) {
+      if (e.id.startsWith('flag.')) expect({ id: e.id, setting: ledEffectSettingName(e.id) }).toEqual({ id: e.id, setting: 'LedEffectFlags' });
+    }
+    expect(() => ledEffectSettingName('kers')).toThrow(RangeError);
+  });
+
+  test('no strip setting outside the mirror runs carries the digit 1 or 2', () => {
+    // ContractTests.cs holds the plugin's list to the same rule, so that a run length cannot pass for
+    // a setting; it is why push to pass's switch is spelled out rather than P2p.
+    const runs = new Set(MIRROR_RUN_LENGTHS.map((n) => propertyName(ledMirrorRunName(n))));
+    const offenders = ledProperties().filter((name) => !runs.has(name) && /[12]/.test(name));
+    expect(offenders).toEqual([]);
+  });
+
+  test('every effect in every profile answers to its switch, and every flag to the pit lane as well', () => {
+    const byLabel = new Map(ALL_EFFECTS().map((e) => [e.label, e]));
+    expect(byLabel.size).toBe(ALL_EFFECTS().length);
+    const effectOf = (description: string) =>
+      byLabel.get(description) ?? byLabel.get(description.replace(/, held$/, '')) ?? byLabel.get(description.replace(/, whole strip$/, ''));
+    const seen = new Set<string>();
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/switches/${shape.id}`)).containers)) {
+        const effect = effectOf(descriptionOf(c));
+        if (effect === undefined) continue;
+        const formula =
+          c.kind === 'customStatus' ? c.enabledFormula.expression : c.kind === 'conditionalGroup' ? c.trigger.expression : undefined;
+        if (formula === undefined) continue;
+        seen.add(effect.id);
+        const at = { shape: shape.id, container: descriptionOf(c) };
+        expect({ ...at, switch: formula.includes(`isnull([OpenDash.${ledEffectSettingName(effect.id)}], true)`) }).toEqual({ ...at, switch: true });
+        if (effect.role === 'race') expect({ ...at, pitLane: formula.includes('[OpenDash.FlagsInPitLane]') }).toEqual({ ...at, pitLane: true });
+      }
+    }
+    // And every effect was found somewhere, so the loop above tested something for each of them.
+    expect([...seen].sort()).toEqual(ALL_EFFECTS().map((e) => e.id).sort());
+  });
+
+  test('an effect switched off lets the one ranked under it on the same lamp show', () => {
+    // Structural rather than evaluated: a lower row's guard is not() of the higher row's `when`, and
+    // that `when` is the gated one, whose first term is the switch. So with the switch off the higher
+    // row is not lit and the guard is true -- off means gone, not dark.
+    const placed = walk(profileFor('4-14-4').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
+    const oil = ALL_EFFECTS().find((e) => e.id === 'oilPressure')!;
+    expect(oil.when.startsWith(`(${setting.ledEffectOn('oilPressure')}) and (`)).toBe(true);
+    const lowFuel = placed.find((c) => c.description === 'Low fuel')!;
+    expect(lowFuel.enabledFormula.expression).toContain(`!(${oil.when})`);
+    // And the rows themselves are ungated, so what a condition *is* is still readable on its own.
+    expect(SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!.when).not.toContain('LedEffect');
+    expect(flagEffects().every((e) => !e.when.includes('LedEffect') && !e.when.includes('FlagsInPitLane'))).toBe(true);
+  });
+});

@@ -34,7 +34,7 @@ import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS } from '../components/flagStrip.ts';
 import { setting } from '../contract.ts';
-import { conditionRaised, flagCondition, safeBitSet, type FlagCondition } from '../flags.ts';
+import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
 import { tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { type EffectRole, type Lamp } from './lamps.ts';
@@ -576,13 +576,42 @@ export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: st
 ];
 
 /**
- * Every effect the catalogue ships, in composition order: later shows over earlier.
+ * An effect as a strip draws it: only while the driver has left its switch on, and for a flag only
+ * where a flag may show at all. #370, #503.
+ *
+ * Applied once, here, to the whole catalogue, and nowhere else. Not in the rows themselves, which
+ * say what an effect *is* and are what the tests evaluate as such; and not in `flagEffects`, whose
+ * rows are ranked against each other by their bits and are read that way by `leds.flags.test.ts`.
+ *
+ * What the switch composes with is the lamp's ranking, and it composes by construction. A lamp's
+ * guards are `not()` of the effects above it (`effectContainer`), and those effects are the gated
+ * ones, so an effect switched off is not lit and stops holding down what ranks below it: off means
+ * gone, and the next thing on that lamp shows through, exactly as it would were the condition itself
+ * false. The same holds for a flag silenced in the pit lane (`FlagsInPitLane`), which asks the one
+ * `flagsAllowedHere` every screen and the flag box ask. `blinkWhen` carries the same terms, so a
+ * blink never outlives the light it belongs to.
+ *
+ * The switch is read through `OpenDash.LedEffect*`, a rig-wide name that the plugin rewrites to the
+ * bar's own namespace when it installs the profile for a bar, as it does every `OpenDash.Led*` read.
+ */
+const gated = (effect: LedEffect): LedEffect => {
+  const allowed: Expr[] = [setting.ledEffectOn(effect.id), ...(effect.role === 'race' ? [flagsAllowedHere()] : [])];
+  return {
+    ...effect,
+    when: and(...allowed, effect.when),
+    ...(effect.blinkWhen === undefined ? {} : { blinkWhen: and(...allowed, effect.blinkWhen) }),
+  };
+};
+
+/**
+ * Every effect the catalogue ships, as a strip draws it, in composition order: later shows over
+ * earlier. Each is {@link gated} by its switch.
  *
  * The pit family is last because it is the only thing the canvas lets take the whole strip, and
  * something that takes the whole strip has to be the thing nothing paints over. It used to sit
  * ahead of the flags, so a flag — exclusive itself at the time — blanked the limiter.
  */
-export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS, ...SPOTTER_EFFECTS, ...flagEffects(), ...PIT_EFFECTS];
+export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS, ...SPOTTER_EFFECTS, ...flagEffects(), ...PIT_EFFECTS].map(gated);
 
 /**
  * What one lamp of one side draws, highest rank first.

@@ -346,10 +346,13 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
   // A car alongside over the whole run, when the driver has asked for that. The lamp version below
   // it is left exactly as it is: the group blanks its background when it triggers, so it paints over
   // the lamp rather than needing the lamp to know about it, and with the switch off it never
-  // triggers at all. Under the pit family, which is the one thing nothing paints over.
+  // triggers at all. Under the pit family, which is the one thing nothing paints over. The rows are
+  // the catalogue's gated ones rather than SPOTTER_EFFECTS itself, so a side the driver has switched
+  // off does not come back over the whole strip (#503).
+  const spotterIds = new Set(SPOTTER_EFFECTS.map((effect) => effect.id));
   const spotterWhole = placed.length === 0
     ? []
-    : SPOTTER_EFFECTS.map((effect) => ({
+    : ALL_EFFECTS().filter((effect) => spotterIds.has(effect.id)).map((effect) => ({
         kind: 'conditionalGroup' as const,
         description: `${effect.label}, whole strip`,
         trigger: { expression: and(eq(setting.ledSpotterWhole(), 'true'), effect.when) },
