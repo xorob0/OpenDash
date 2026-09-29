@@ -90,8 +90,8 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
 /**
  * The table. One entry per page of the catalogue, in the catalogue's order.
  *
- * Where a module carries a field the drawing does not name -- the companion artboard gives fuel
- * three per-lap consumptions where the zone drawing gives it one -- the field is kept at `wide`,
+ * Where a module carries a field the drawing does not name -- the leaderboard's best and last lap,
+ * which the companion's list draws and the zone drawing does not -- the field is kept at `wide`,
  * the fullest form, and follows the drawing everywhere else. Where the drawing names a field the
  * module does not have yet, it is simply not here; the module is what this table is about.
  *
@@ -134,13 +134,31 @@ export const SHEDDING: Record<string, Shedding> = {
   }),
   // The redline is a number a driver reads once a car, so it is the first thing the speedo drops.
   speedo: fields({ wide: ['speed', 'rpm', 'redline'], grid: ['speed', 'rpm'], tallNarrow: ['speed', 'rpm'], tall: ['speed', 'rpm'] }),
+  // The order is the one the page draws, rank by rank and left to right, and it is the reading a
+  // driver makes before a stop: what is in the tank and how long it lasts, whether that reaches the
+  // flag and how many laps it is worth, and then what to put in at the stop and what a lap costs.
+  // Every shape keeps its fields in that order, the narrow two keeping fewer of them.
+  //
+  // Past the tank, a figure outranks the figures it is worked out from. The margin is the estimate
+  // less the session's laps left, the estimate is the tank over the per-lap average, and the refuel
+  // is the laps left at that average less the tank, so the consumptions are the working of every
+  // figure ahead of them but the tank, and the estimate is the working of the margin alone. The
+  // estimate therefore goes after the margin and before every consumption; and of the three
+  // consumptions the average goes first, since it is the one the figures ahead of it are taken from,
+  // whereas the last lap and this lap are what a driver checks a saving against. Band D's fuel page
+  // sheds in the same order, and `shedding.test.ts` holds both.
+  //
+  // The estimate used to be listed last, behind the three consumptions, and so was the first field a
+  // box too short gave up, on a page that draws it in the lead rank at the lead size (#334): the
+  // drawing and the declaration disagreed about the one number a driver counts down to the stop by.
+  //
   // What is left, whether it reaches the flag, and what to add: those three survive everywhere. The
   // three per-lap consumptions are one number three ways, so the narrow shapes keep the average
   // alone.
   //
   // The margin is the one field of this page the canvas draws nowhere, and it is declared twice over
-  // as a preference rather than as a transcription (#387). At `wide` and `tall` it sits third and the
-  // estimated laps last: the estimate and the session's laps left are the two terms of the margin's
+  // as a preference rather than as a transcription (#387). At `wide` and `tall` it sits third, ahead
+  // of the estimated laps: the estimate and the session's laps left are the two terms of the margin's
   // subtraction, so a box that cannot carry both keeps the answer and sheds the working. At the two
   // narrow shapes it takes the fuel time's place in the lead rank, which is the same trade and the
   // only one the shape has room for -- the lead rank of a 250 px column is two readings grown, not
@@ -158,10 +176,10 @@ export const SHEDDING: Record<string, Shedding> = {
   // narrow page carries it. It is a choice between losses and the canvas has not been asked; zones.md
   // §5 records the measurement so the question is reopened with it rather than without.
   fuel: fields({
-    wide: ['level', 'time', 'toEnd', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
+    wide: ['level', 'time', 'toEnd', 'lapsLeft', 'toAdd', 'average', 'lastLap', 'thisLap'],
     grid: ['level', 'toEnd', 'toAdd', 'average'],
     tallNarrow: ['level', 'toEnd', 'toAdd', 'average'],
-    tall: ['level', 'time', 'toEnd', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
+    tall: ['level', 'time', 'toEnd', 'lapsLeft', 'toAdd', 'average', 'lastLap', 'thisLap'],
   }),
   energy: nothing('one line of prose: iRacing publishes no virtual energy'),
   tyres: nothing('four corners cut from the box; rule 18'),

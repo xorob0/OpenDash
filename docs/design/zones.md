@@ -646,7 +646,7 @@ a short box sheds the same line from both cars rather than emptying one of them.
 | 2 | Delta | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` |
 | 3 | Sectors | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` · `bestS1` · `bestS2` · `bestS3` | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` | `s1` · `s2` · `s3` · `yourBest` · `last` | `s1` · `s2` · `s3` · `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
-| 5 | Fuel | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `toEnd` · `toAdd` · `average` | `level` · `toEnd` · `toAdd` · `average` | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
+| 5 | Fuel | `level` · `time` · `toEnd` · `lapsLeft` · `toAdd` · `average` · `lastLap` · `thisLap` | `level` · `toEnd` · `toAdd` · `average` | `level` · `toEnd` · `toAdd` · `average` | `level` · `time` · `toEnd` · `lapsLeft` · `toAdd` · `average` · `lastLap` · `thisLap` |
 | 8 | Pit view | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` |
 | 9 | Car settings | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` |
 | 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` |
@@ -678,21 +678,36 @@ holding a drawing against a zone should find the argument rather than suspect a 
 
 - **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
   234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
-- **Fuel at `wide` and at `tall`.** The last lap, this lap and the five-lap average, where the zone
-  drawing carries one per-lap cell. The three come from the companion artboard, which is what the
-  `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
-  still one number.
+- **Fuel at `wide` and at `tall`.** Three consumptions under the refuel where both fuel sheets draw
+  two, the per-lap average and a five-lap one. The average is the same figure in both. The five-lap
+  one is not built, because no property says what an earlier lap cost
+  ([second-screens.md](../second-screens.md) records the datum), and the build draws the last lap
+  and this lap instead, the last lap being what band D's artboard draws beside the average. The
+  narrower shapes keep the average alone, since one number three ways is still one number.
+
+  **The order is the drawing's**, rank by rank and left to right, and it is argued rather than
+  copied, as the reading a driver makes before a stop: what is in the tank and how long it lasts,
+  whether that reaches the flag and how many laps it is worth, and then what to put in at the stop
+  and what a lap costs. Past the tank, a figure outranks the figures it is worked out from. The
+  margin is the estimate less the session's laps left, the estimate is the tank over the per-lap
+  average, and the refuel is the laps left at that average less the tank, so the estimate goes after
+  the margin and before every consumption, and the average goes first of the three because the
+  figures ahead of it are taken from it. Band D's fuel page sheds in the same order. The table used to list the estimate last, behind
+  the three consumptions, on a page that draws it in the lead rank at the lead size, so the one
+  number a driver counts down to the stop by was the first a short box gave up
+  ([#334](https://github.com/xorob0/OpenDash/issues/334)).
 - **Fuel's margin, at every shape.** `toEnd` is the signed figure saying whether the fuel in the
   tank reaches the end of the race and by how much, `+1.4` laps or `−3` minutes, and neither fuel
-  sheet draws it: `ZoneCatalogue.dc.html` describes the page as "fuel, fuel time, refuel, last lap,
-  2 and 5 lap averages, estimated laps, level gauge" and the companion artboard draws the same set.
+  sheet draws it: `CompanionModules.dc.html` describes the page as "fuel, fuel time, refuel, last
+  lap, 2 and 5 lap averages, estimated laps, level gauge", and `ZoneCatalogue.dc.html` draws those
+  less the last lap.
   It is taken all the same, because it is the only fuel question a race asks and the page already
   carried every term of it — the range and the estimated laps here, the laps left on the session
   page — so a driver was doing the subtraction himself between corners (#387).
 
   Where it sits is a preference rather than a transcription, and it is declared twice. At `wide` and
-  at `tall` it goes third and the estimated laps stay last, since the estimate is the working and this
-  is the answer. At `grid` and at `tall narrow` it takes the fuel time's place, which is the same
+  at `tall` it goes third and the estimated laps come after it, since the estimate is the working and
+  this is the answer. At `grid` and at `tall narrow` it takes the fuel time's place, which is the same
   trade at the only price those shapes can pay: the lead rank of a 250 px column is two readings
   grown to fill it and not three at the density's own size, so a third field there costs the page its
   growth and a rank besides. The fuel time is how long the tank lasts and the margin is that same
