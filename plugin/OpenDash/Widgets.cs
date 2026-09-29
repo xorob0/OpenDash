@@ -722,7 +722,10 @@ namespace OpenDashPlugin
             var host = new FrameworkElementFactory(typeof(Grid));
             host.AppendChild(presenter);
             host.AppendChild(DashedFrame());
-            return new ControlTemplate(typeof(Button)) { VisualTree = host };
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = host };
+            // A tile that cannot add another (Matrix at four) fades as a disabled button does, frame and all.
+            template.Triggers.Add(DisabledFade());
+            return template;
         }
 
         /// <summary>

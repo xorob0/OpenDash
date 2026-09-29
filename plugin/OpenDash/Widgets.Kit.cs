@@ -867,8 +867,16 @@ namespace OpenDashPlugin
             {
                 var hex = stateHex ?? Theme.TextSecondary;
                 var dot = new Ellipse { Width = PanelKit.CardStateDot, Height = PanelKit.CardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
-                var line = HStack(PanelKit.CardStateGap, dot, Text(state, PanelKit.CardStateSize, FontWeights.Normal, hex));
-                line.Margin = new Thickness(0, PanelKit.CardGap, 0, 0);
+                dot.Margin = new Thickness(0, 0, PanelKit.CardStateGap, 0);
+                // Docked rather than stacked, so the word has the card's width to trim in: a card at the
+                // grid's narrowest cannot hold every state in full.
+                var word = Text(state, PanelKit.CardStateSize, FontWeights.Normal, hex);
+                word.TextTrimming = TextTrimming.CharacterEllipsis;
+                word.ToolTip = state;
+                var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, PanelKit.CardGap, 0, 0) };
+                DockPanel.SetDock(dot, Dock.Left);
+                line.Children.Add(dot);
+                line.Children.Add(word);
                 rows.Children.Add(line);
             }
 
@@ -894,8 +902,16 @@ namespace OpenDashPlugin
             return button;
         }
 
-        /// <summary>The dashed tile that adds one, beside the cards: a plus over its words, in secondary ink.</summary>
-        public static Button DashedAddCard(string text, Action click)
+        /// <summary>
+        /// The dashed tile that adds one, beside the cards: a plus over its words, in secondary ink, and an
+        /// optional count after the words -- Matrix.dc.html's "Add a matrix 2 / 4", the count in the display
+        /// family at 13/600, 8 after the words.
+        /// </summary>
+        /// <remarks>
+        /// A tile set IsEnabled = false (Matrix at four) fades to the kit's 40 per cent through its template,
+        /// as a disabled button does, and stops answering the pointer.
+        /// </remarks>
+        public static Button DashedAddCard(string text, Action click, string detail = null)
         {
             var stack = new StackPanel { Orientation = Orientation.Vertical, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             var plus = NavIcon(PanelIcons.Add, Theme.TextSecondary);
@@ -904,7 +920,21 @@ namespace OpenDashPlugin
             var label = Text(text, PanelKit.AddTileTextSize, FontWeights.Medium, Theme.TextSecondary);
             label.Margin = new Thickness(0, PanelKit.AddTileGap, 0, 0);
             label.HorizontalAlignment = HorizontalAlignment.Center;
-            stack.Children.Add(label);
+            TextBlock count = null;
+            if (string.IsNullOrEmpty(detail))
+            {
+                stack.Children.Add(label);
+            }
+            else
+            {
+                label.Margin = new Thickness(0);
+                count = Text(detail, PanelKit.AddTileDetailSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+                count.VerticalAlignment = VerticalAlignment.Center;
+                var words = HStack(PanelKit.AddTileDetailGap, label, count);
+                words.Margin = new Thickness(0, PanelKit.AddTileGap, 0, 0);
+                words.HorizontalAlignment = HorizontalAlignment.Center;
+                stack.Children.Add(words);
+            }
             var button = new Button
             {
                 MinHeight = PanelKit.AddTileMinHeight,
@@ -916,8 +946,19 @@ namespace OpenDashPlugin
                 FocusVisualStyle = FocusRing(),
                 Template = DashedCardTemplate(),
             };
-            button.MouseEnter += (sender, args) => { label.Foreground = Brush(Theme.TextPrimary); SetIconInk(plus, Theme.TextPrimary); };
-            button.MouseLeave += (sender, args) => { label.Foreground = Brush(Theme.TextSecondary); SetIconInk(plus, Theme.TextSecondary); };
+            button.MouseEnter += (sender, args) =>
+            {
+                if (!button.IsEnabled) return;
+                label.Foreground = Brush(Theme.TextPrimary);
+                if (count != null) count.Foreground = Brush(Theme.TextPrimary);
+                SetIconInk(plus, Theme.TextPrimary);
+            };
+            button.MouseLeave += (sender, args) =>
+            {
+                label.Foreground = Brush(Theme.TextSecondary);
+                if (count != null) count.Foreground = Brush(Theme.TextSecondary);
+                SetIconInk(plus, Theme.TextSecondary);
+            };
             if (click != null) button.Click += (sender, args) => click();
             return button;
         }

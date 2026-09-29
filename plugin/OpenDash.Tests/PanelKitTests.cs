@@ -31,12 +31,72 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelKit.CardGridGap);
         }
 
+        /// <summary>
+        /// Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart, so at its own 1200 px --
+        /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
+        /// keeps "Add a screen" on the first row. At 150 the grid took five there.
+        /// </summary>
+        [Fact]
+        public void The_card_grid_holds_the_artboards_six_at_its_own_width()
+        {
+            Assert.Equal(138, PanelKit.CardMinWidth);
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 17), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 0), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+        }
+
+        /// <summary>
+        /// The selected card's cue, which PanelMetrics.Card held for the old card before it was deleted: at
+        /// rest the one pixel Rule border and no foot bar; selected, the border and the 2 px foot bar in the
+        /// accent. Screens.dc.html's card style: 'border: 1px solid #33D9F2; box-shadow: inset 0 -2px 0
+        /// #33D9F2;' when on, 'border: 1px solid #1C1F24;' at rest.
+        /// </summary>
+        [Fact]
+        public void A_selected_card_is_edged_and_barred_in_the_accent()
+        {
+            var card = Factory("DeviceCard");
+            Assert.Contains("BorderBrush = Brush(selected ? Theme.Accent : Theme.Rule),", card);
+            Assert.Contains("Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent", card);
+            Assert.Contains("BorderThickness = new Thickness(PanelMetrics.BorderWeight),", card);
+            Assert.Contains("Background = Brush(Theme.SurfaceZone),", card);
+        }
+
+        /// <summary>A state that does not fit a card at the grid's narrowest trims rather than clips, and says
+        /// itself in full as its tooltip.</summary>
+        [Fact]
+        public void A_cards_state_line_trims()
+        {
+            var card = Factory("DeviceCard");
+            Assert.Contains("word.TextTrimming = TextTrimming.CharacterEllipsis;", card);
+            Assert.Contains("word.ToolTip = state;", card);
+        }
+
         [Fact]
         public void The_add_tile_is_the_artboards_dashed_link()
         {
             // The dashed <a> beside the cards: gap 6px, font 500 13px.
             Assert.Equal(6, PanelKit.AddTileGap);
             Assert.Equal(13, PanelKit.AddTileTextSize);
+            // The artboard sizes the tile from the grid row and gives no minimum; 96 is the kit's own, what
+            // the tile holds in a row of cards without pictures.
+            Assert.Equal(96, PanelKit.AddTileMinHeight);
+            // Matrix.dc.html's "Add a matrix <span class="num" style="font-size: 13px">2 / 4</span>": the
+            // button's gap 8px, the .num face at 13.
+            Assert.Equal(13, PanelKit.AddTileDetailSize);
+            Assert.Equal(8, PanelKit.AddTileDetailGap);
+        }
+
+        /// <summary>The Matrix tile's "n / 4" is the kit's, and a tile that cannot add another fades as a
+        /// disabled button does, so Matrix at four does not hand-build a tile of its own.</summary>
+        [Fact]
+        public void The_add_tile_carries_a_count_and_fades_when_it_cannot_add()
+        {
+            var tile = Factory("DashedAddCard");
+            Assert.Contains("string detail = null", tile);
+            Assert.Contains("PanelKit.AddTileDetailSize", tile);
+            var widgets = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.cs"));
+            var start = widgets.IndexOf("private static ControlTemplate DashedCardTemplate()", StringComparison.Ordinal);
+            var body = widgets.Substring(start, widgets.IndexOf("private static FrameworkElementFactory DashedFrame()", start, StringComparison.Ordinal) - start);
+            Assert.Contains("template.Triggers.Add(DisabledFade());", body);
         }
 
         [Fact]
@@ -46,6 +106,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(30, PanelKit.ChipHeight);
             Assert.Equal(11, PanelKit.ChipPaddingX);
             Assert.Equal(13, PanelKit.ChipTextSize);
+            // Rig's .sw{width:10px;height:10px} inside the .chip's gap:6px.
+            Assert.Equal(10, PanelKit.ChipSwatch);
+            Assert.Equal(6, PanelKit.ChipSwatchGap);
             // Screens' .chip{height:26px;padding:0 9px}: the binding chip on a zone and a glance.
             Assert.Equal(26, PanelKit.BindingChipHeight);
             Assert.Equal(9, PanelKit.BindingChipPaddingX);
@@ -61,6 +124,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelKit.FixPaddingX);
             Assert.Equal(14, PanelKit.FixPaddingY);
             Assert.Equal(16, PanelKit.FixIconGap);
+            // Inside the .fix's text column: the detail 3 under the title, and the steps' column gap of 10.
+            Assert.Equal(3, PanelKit.FixDetailGap);
+            Assert.Equal(10, PanelKit.FixStepsGap);
         }
 
         [Fact]
@@ -70,11 +136,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelKit.RadioRowPaddingX);
             Assert.Equal(10, PanelKit.RadioRowPaddingY);
             Assert.Equal(12, PanelKit.RadioRowGap);
+            // The .dev's ring is 14px, its name 14 and its caption 12.
+            Assert.Equal(14, PanelKit.RadioRing);
+            Assert.Equal(14, PanelKit.RadioNameSize);
+            Assert.Equal(12, PanelKit.RadioMetaSize);
             // AddScreen's .kind and AddLeds' .hw{padding:12px}; .tile{padding:12px 8px 10px}.
             Assert.Equal(12, PanelKit.ChoiceTilePadding);
             Assert.Equal(12, PanelKit.SizeTilePaddingTop);
             Assert.Equal(8, PanelKit.SizeTilePaddingX);
             Assert.Equal(10, PanelKit.SizeTilePaddingBottom);
+            // A chosen .kind or .tile is edged "2px solid" in the accent.
+            Assert.Equal(2, PanelKit.ChoiceTileChosenEdge);
             // AddLeds' .seg button{min-width:40px}: the ends buttons.
             Assert.Equal(40, PanelKit.SegmentMinWidth);
         }
@@ -89,6 +161,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(16, PanelKit.StepTitleSize);
             Assert.Equal(22, PanelKit.StepNumberSize);
             Assert.Equal(12, PanelKit.StepNumberTextSize);
+            // The step's head: the .stepn 10 before the title.
+            Assert.Equal(10, PanelKit.StepHeadGap);
+        }
+
+        /// <summary>
+        /// The slider is the kit's own: the artboards draw the browser's range input in the accent and give
+        /// no numbers, so these are pinned as the kit chose them rather than joined to an artboard, so that a
+        /// page cannot move one without a red test saying so.
+        /// </summary>
+        [Fact]
+        public void The_slider_is_drawn_at_the_kits_own_numbers()
+        {
+            Assert.Equal(4, PanelKit.SliderTrack);
+            Assert.Equal(14, PanelKit.SliderThumb);
+            Assert.Equal(22, PanelKit.SliderHeight);
+            Assert.Equal(120, PanelKit.SliderMinWidth);
+            Assert.Equal(12, PanelKit.SliderValueGap);
+            Assert.Equal(15, PanelKit.SliderValueSize);
+            Assert.Equal(40, PanelKit.SliderValueMinWidth);
         }
 
         private static string Kit() => File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
@@ -115,6 +206,10 @@ namespace OpenDashPlugin.Tests
         [InlineData("ChoiceTile", "PanelKit.SizeTilePaddingTop")]
         [InlineData("Step", "PanelKit.StepTitleSize")]
         [InlineData("Slider", "PanelKit.SliderThumb")]
+        [InlineData("Slider", "PanelKit.SliderTrack")]
+        [InlineData("Slider", "PanelKit.SliderHeight")]
+        [InlineData("Slider", "PanelKit.SliderMinWidth")]
+        [InlineData("DashedAddCard", "PanelKit.AddTileMinHeight")]
         public void The_kit_draws_each_control_from_its_constants(string factory, string constant)
         {
             Assert.Contains(constant, Factory(factory));

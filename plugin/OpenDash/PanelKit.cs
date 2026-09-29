@@ -30,10 +30,16 @@ namespace OpenDashPlugin
         /// <summary>The accent bar along a selected card's foot.</summary>
         public const double CardFootBar = 2;
 
-        /// <summary>The gap between cards in the grid, and the narrowest a card is let become before the grid
-        /// takes a column fewer: the artboard fixes six columns at its 1200 px and gives no minimum.</summary>
+        /// <summary>
+        /// The gap between cards in the grid, and the narrowest a card is let become before the grid takes a
+        /// column fewer. Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart and gives no
+        /// minimum; at its 1200 px, beside the full sidebar and less the scroll bar, the content is 879 px,
+        /// so six cards are (879 - 5 x 10) / 6 = 138 each. 138 is the widest minimum that keeps the artboard's
+        /// six at its own width; it was 150, which pushed "Add a screen" of a five-screen rig onto a second
+        /// row there. A state line that does not fit a card this narrow trims, with the word as its tooltip.
+        /// </summary>
         public const double CardGridGap = 10;
-        public const double CardMinWidth = 150;
+        public const double CardMinWidth = 138;
 
         // --- The dashed tile beside the cards: "Add a screen" ----------------------------------------
 
@@ -43,6 +49,11 @@ namespace OpenDashPlugin
 
         /// <summary>What the tile holds when the grid row is shorter; the artboard sizes it from the row.</summary>
         public const double AddTileMinHeight = 96;
+
+        /// <summary>The tile's optional count after its words -- Matrix.dc.html's "Add a matrix 2 / 4": the
+        /// .num face (the display family, 600) at 13, the button's 8 px gap after the words.</summary>
+        public const double AddTileDetailSize = 13;
+        public const double AddTileDetailGap = 8;
 
         // --- Chips ---------------------------------------------------------------------------------------
 
