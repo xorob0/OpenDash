@@ -3,16 +3,19 @@
  * preview and the rig page's tiles from the pictures the profile is built from (#503).
  *
  * The plugin reads it with no knowledge of how a flag looks, so what is held here is the contract it
- * reads against: the schema, every glyph of the catalogue in its order with every frame, every frame
- * the panel's size, and every lit cell a colour the design system defines.
+ * reads against: the schema, every glyph of the catalogue in its order with every frame and how long
+ * the box holds it, every frame the panel's size, and every lit cell a colour the design system
+ * defines.
  */
 import { describe, expect, test } from 'bun:test';
-import { COLUMNS, GLYPH_SHEET_SCHEMA_VERSION, glyphCatalogue, glyphSheetJson, ROWS } from '../src/leds/index.ts';
+import { FLAG_CATALOGUE } from '../src/flags.ts';
+import { COLUMNS, flagFrames, GLYPH_SHEET_SCHEMA_VERSION, glyphCatalogue, glyphSheetJson, ROWS } from '../src/leds/index.ts';
 import { ds } from '../src/tokens.ts';
 
 interface SheetGlyph {
   name: string;
   kind: string;
+  durationsMs: number[];
   frames: (string | null)[][][];
 }
 interface Sheet {
@@ -43,7 +46,7 @@ describe('the glyph sheet', () => {
     expect(sheet.schemaVersion).toBe(1);
     expect([sheet.rows, sheet.columns]).toEqual([ROWS, COLUMNS]);
     expect([sheet.rows, sheet.columns]).toEqual([8, 8]);
-    for (const glyph of sheet.glyphs) expect(Object.keys(glyph)).toEqual(['name', 'kind', 'frames']);
+    for (const glyph of sheet.glyphs) expect(Object.keys(glyph)).toEqual(['name', 'kind', 'durationsMs', 'frames']);
   });
 
   test('carries the whole catalogue, in its order, every frame of it', () => {
@@ -51,8 +54,15 @@ describe('the glyph sheet', () => {
     expect(sheet.glyphs).toHaveLength(catalogue.length);
     expect(sheet.glyphs.map((g) => g.name)).toEqual(catalogue.map((g) => g.name));
     expect(sheet.glyphs.map((g) => g.kind)).toEqual(catalogue.map((g) => g.kind));
-    // Every frame, and not only the first the SVG draws: the panel animates what the box animates.
-    sheet.glyphs.forEach((g, i) => expect({ name: g.name, frames: g.frames }).toEqual({ name: g.name, frames: catalogue[i]!.frames }));
+    // Every frame, and not only the first the SVG draws, with how long each is held: a preview that
+    // plays the frames at their durations plays what the box plays.
+    sheet.glyphs.forEach((g, i) =>
+      expect({ name: g.name, frames: g.frames, durationsMs: g.durationsMs }).toEqual({
+        name: g.name,
+        frames: catalogue[i]!.frames,
+        durationsMs: catalogue[i]!.durationsMs,
+      }),
+    );
     expect(new Set(sheet.glyphs.map((g) => g.kind))).toEqual(new Set(['flag', 'pit', 'spotter', 'warning', 'gear', 'standby']));
   });
 
@@ -96,6 +106,30 @@ describe('the glyph sheet', () => {
     const names = sheet.glyphs.map((g) => g.name);
     expect(new Set(names).size).toBe(names.length);
     for (const guess of ['gear-3', 'spotter-left']) expect(names).not.toContain(guess);
+  });
+
+  test("holds each frame as long as the box does, one duration to a frame", () => {
+    for (const glyph of sheet.glyphs) {
+      expect({ name: glyph.name, durations: glyph.durationsMs.length }).toEqual({ name: glyph.name, durations: glyph.frames.length });
+      for (const ms of glyph.durationsMs) expect({ name: glyph.name, positive: Number.isInteger(ms) && ms > 0 }).toEqual({ name: glyph.name, positive: true });
+    }
+    // Against the profile's own frames, not the catalogue that copies them: the flags are the glyphs
+    // that do not play at one rate.
+    for (const condition of FLAG_CATALOGUE) {
+      const frames = flagFrames(condition.id);
+      if (frames === undefined) continue;
+      const glyph = sheet.glyphs.find((g) => g.name === condition.id);
+      expect({ name: condition.id, durationsMs: glyph?.durationsMs }).toEqual({ name: condition.id, durationsMs: frames.map((f) => f.durationMs) });
+    }
+    // Red and the meatball grow, then hold: their first frame is a dot, and the picture is the frame
+    // held longest. A tile painted from frames[0] would draw the red flag as four LEDs.
+    const lit = (frame: (string | null)[][]): number => frame.flat().filter((c) => c !== null).length;
+    const still = (g: SheetGlyph): (string | null)[][] => g.frames[g.durationsMs.indexOf(Math.max(...g.durationsMs))]!;
+    const red = sheet.glyphs.find((g) => g.name === 'red')!;
+    expect(red.durationsMs).toEqual([100, 100, 100, 20000]);
+    expect(lit(red.frames[0]!)).toBe(4);
+    expect(lit(still(red))).toBe(64);
+    expect(sheet.glyphs.find((g) => g.name === 'meatball')!.durationsMs).toEqual([100, 100, 100, 20000]);
   });
 
   test('every frame is the panel, eight rows of eight, and an unlit cell is kept as null', () => {
