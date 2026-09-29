@@ -78,15 +78,17 @@ namespace OpenDashPlugin
         /// </summary>
         public List<string> EffectsOff { get; set; }
 
-        /// <summary>Whether this bar's shape has a reversed twin: a plain shape, not one already carrying
-        /// a wiring suffix.</summary>
+        /// <summary>Whether this bar's shape has a reversed twin: a plain shape of the grid, not one
+        /// already carrying a wiring suffix, and not a pre-grid `brow-N`, which the generator never
+        /// wrote a twin of (a bare run's twin is `0-N-0-reversed`).</summary>
         public bool SupportsReversal
         {
             get
             {
                 if (string.IsNullOrEmpty(Shape)) return false;
                 return !Shape.EndsWith("-" + PanelLightRows.ReversedSuffix, StringComparison.Ordinal)
-                    && !Shape.EndsWith("-" + PanelLightRows.FanatecSuffix, StringComparison.Ordinal);
+                    && !Shape.EndsWith("-" + PanelLightRows.FanatecSuffix, StringComparison.Ordinal)
+                    && !Shape.StartsWith(PanelLightRows.BrowPrefix, StringComparison.Ordinal);
             }
         }
 

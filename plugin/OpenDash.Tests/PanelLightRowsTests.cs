@@ -137,17 +137,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_brow_has_a_reversed_twin_too()
+        public void A_bare_run_has_a_reversed_twin_and_a_pre_grid_brow_has_none()
         {
-            var twin = LightShape.Parse("brow-15-reversed");
-            Assert.Equal(PanelLightRows.Brow, twin.Placement);
+            // A bare run is 0-N-0 and its twin 0-N-0-reversed, which share a row like any other pair.
+            var twin = LightShape.Parse("0-15-0-reversed");
+            Assert.Equal(PanelLightRows.Wheel, twin.Placement);
             Assert.Equal(15, twin.Centre);
+            Assert.True(twin.Bare);
             Assert.True(twin.Reversed);
+            var rows = PanelLightRows.Rows(new[] { new LightProfile("0-15-0", null), new LightProfile("0-15-0-reversed", null) });
+            Assert.Equal(new[] { "0-15-0", "0-15-0-reversed" }, Assert.Single(rows).ShapeIds);
+            // brow-N is from before the grid and is read only for an old profile's sake; no build wrote
+            // a twin of one, so an id that claims to be one is not read as a brow.
+            Assert.Equal(PanelLightRows.Brow, LightShape.Parse("brow-15").Placement);
+            Assert.Null(LightShape.Parse("brow-15-reversed"));
             Assert.Null(LightShape.Parse("brow-15-fanatec"));
-            Assert.Equal("brow 15 reversed", PanelLightRows.ShapeLabel("brow-15-reversed"));
-            var rows = PanelLightRows.Rows(new[] { new LightProfile("brow-15", null), new LightProfile("brow-15-reversed", null) });
-            Assert.Equal(new[] { "brow-15", "brow-15-reversed" }, Assert.Single(rows).ShapeIds);
-            Assert.Equal("OpenDash brow 15", rows[0].Name);
         }
 
         [Fact]

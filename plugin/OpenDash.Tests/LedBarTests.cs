@@ -381,11 +381,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
             Assert.False(settings.SetBarReversed("Gone", true));
 
-            // Any plain shape has a twin, a brow included.
-            var brow = settings.AddLedBar("brow-15", "Brow", LedBar.ArduinoDevice);
-            Assert.False(brow.Reversed);
-            Assert.True(settings.SetBarReversed(brow.Namespace, true));
-            Assert.Equal("brow-15-reversed", brow.ProfileShapeId);
+            // Any plain shape of the grid has a twin, a bare run included.
+            var bare = settings.AddLedBar("0-15-0", "Brow", LedBar.ArduinoDevice);
+            Assert.False(bare.Reversed);
+            Assert.True(settings.SetBarReversed(bare.Namespace, true));
+            Assert.Equal("0-15-0-reversed", bare.ProfileShapeId);
+            // A pre-grid brow id has none: no build wrote a brow-15-reversed to install.
+            var brow = settings.AddLedBar("brow-15", "Old brow", LedBar.ArduinoDevice);
+            Assert.False(brow.SupportsReversal);
+            Assert.False(settings.SetBarReversed(brow.Namespace, true));
+            Assert.Equal("brow-15", brow.ProfileShapeId);
 
             // Added as a reversed id, a bar arrives reversed.
             var added = settings.AddLedBar("4-14-4-reversed", "Second", LedBar.ArduinoDevice);

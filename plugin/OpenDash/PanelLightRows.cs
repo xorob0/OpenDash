@@ -89,18 +89,12 @@ namespace OpenDashPlugin
             if (string.IsNullOrEmpty(id)) return null;
             if (id.StartsWith(PanelLightRows.BrowPrefix, StringComparison.Ordinal))
             {
-                // A brow has a reversed twin like any plain shape, `brow-15-reversed`, since #503.
-                var rest = id.Substring(PanelLightRows.BrowPrefix.Length);
-                var reversed = "-" + PanelLightRows.ReversedSuffix;
-                string browWiring = null;
-                if (rest.EndsWith(reversed, StringComparison.Ordinal))
-                {
-                    rest = rest.Substring(0, rest.Length - reversed.Length);
-                    browWiring = PanelLightRows.ReversedSuffix;
-                }
+                // `brow-N` is an id from before the shape grid, read only so an old profile still finds
+                // its row; the generator writes a bare run as `0-N-0` now, and its reversed twin as
+                // `0-N-0-reversed`. No build has written a `brow-N-reversed`, so none is read.
                 int length;
-                if (!Number(rest, out length)) return null;
-                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, browWiring);
+                if (!Number(id.Substring(PanelLightRows.BrowPrefix.Length), out length)) return null;
+                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, null);
             }
 
             var parts = id.Split('-');
