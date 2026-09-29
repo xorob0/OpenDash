@@ -234,7 +234,7 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             if (edited.Count > 0 && !confirmingEdited)
             {
                 // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
@@ -431,7 +431,7 @@ namespace OpenDashPlugin
             // one of them is extracting into, so whichever starts first holds the field.
             if (applying) return;
 
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             if (edited.Count > 0 && !confirmingReinstall)
             {
                 confirmingReinstall = true;
@@ -449,12 +449,16 @@ namespace OpenDashPlugin
             {
                 // Every screen on the rig, a second one of a size included: the installer reads the rig and
                 // writes each folder with the screen's own name and namespace, so there is nothing to add after.
+                var writing = DateTime.UtcNow;
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
                 var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
                 var held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                // A font this press put into DashFonts is not drawn until SimHub restarts, so reopening, which is
+                // enough for everything else a reinstall writes, would leave that face missing.
+                var wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
                 updateLine.Text = held > 0
-                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them."
-                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
+                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them." + (wroteFonts ? " " + UpdateWording.RestartToSee : string.Empty)
+                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.ToSee(wroteFonts);
                 updateLine.Visibility = Visibility.Visible;
             }
             catch (Exception ex)

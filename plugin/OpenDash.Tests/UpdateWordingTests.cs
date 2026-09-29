@@ -58,6 +58,24 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// Reopening stays the sentence unless the install wrote a font, and then it is a restart, measured on the VM.
+        /// </summary>
+        /// <remarks>
+        /// SimHub reads DashFonts once per run, so a face written into a running SimHub is drawn by no dashboard
+        /// until it starts again, reopened or not (#441). Asking for a restart on every install instead would cost
+        /// a session each time for the one case that needs it.
+        /// </remarks>
+        [Fact]
+        public void The_sentence_after_an_install_that_wrote_a_font_says_restart()
+        {
+            Assert.Equal(UpdateWording.Reopen, UpdateWording.ToSee(false));
+            Assert.Equal(UpdateWording.RestartToSee, UpdateWording.ToSee(true));
+            Assert.StartsWith("Restart SimHub", UpdateWording.RestartToSee);
+            // It says what to do and nothing of why, as docs/design/voice.md asks of every restart sentence here.
+            Assert.DoesNotContain("font", UpdateWording.RestartToSee, System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// The plugin's own half, which says the opposite about the one point that matters.
         /// </summary>
         /// <remarks>

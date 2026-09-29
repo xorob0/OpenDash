@@ -331,7 +331,9 @@ file named above can be deleted as well. Deleting it alone does not remove the s
 since SimHub keeps copies of it in `PluginsData\Common\_Backups`, named
 `OpenDash.GeneralSettings_b*.json`, and restores a missing settings file from them at its next
 start; delete those copies with it, or the previous rig comes back. The fonts copied into
-`DashFonts` (Barlow) are harmless and shared with other dashboards.
+`DashFonts` (Barlow and openDash Display) are harmless and shared with other dashboards; an update
+that replaces one of them sets the older copy aside in `DashFonts\_Backups`, where it can be
+deleted.
 
 ## Troubleshooting
 

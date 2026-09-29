@@ -104,8 +104,23 @@ namespace OpenDashPlugin
         public string Error { get; set; }
 
         /// <summary>True when the folder on disk is not the one OpenDash wrote, so replacing it would destroy
-        /// somebody's work. Biased towards true: no record and an unreadable folder both count.</summary>
+        /// somebody's work. Biased towards true: no record and an unreadable folder both count. Always false on an
+        /// entry <see cref="OutsideRig"/>, which nothing replaces.</summary>
         public bool Edited { get; set; }
+
+        /// <summary>
+        /// True for the folder of a package no screen on the rig is written from, which a run reads and never writes.
+        /// </summary>
+        /// <remarks>
+        /// Such an entry is there so that the pill's tooltip can say what the build carries beyond the rig and at what
+        /// version, and it answers nothing about the rig: it is never replaced, so it is never edited, held back or
+        /// extracted either, and an update neither fetches it nor counts it among the dashboards that follow the
+        /// plugin. The two kinds of entry used to sit in one list with nothing to tell them apart, and every reader
+        /// that wanted the rig's took both, which is how a leftover folder came to be named in the question before a
+        /// reinstall that then left it alone (#468). False on every entry without a rig, since every package is then
+        /// written.
+        /// </remarks>
+        public bool OutsideRig { get; set; }
 
         /// <summary>True when this package was left alone because it was edited rather than because it was current.</summary>
         public bool HeldBack { get; set; }
@@ -178,9 +193,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>One entry per folder after Refresh or EnsureInstalled: every screen on the rig in the rig's order,
-        /// then every package no screen is written from; one per package, in install order, without a rig. Empty
-        /// before and when nothing is embedded.</summary>
+        /// then every package no screen is written from, each marked <see cref="PackageStatus.OutsideRig"/>; one per
+        /// package, in install order, without a rig. Empty before and when nothing is embedded.</summary>
         public IReadOnlyList<PackageStatus> Packages { get; private set; } = NoPackages;
+
+        /// <summary>
+        /// The folders a run would replace although somebody has edited them, which is what Reinstall and Update name
+        /// before they are pressed a second time.
+        /// </summary>
+        /// <remarks>
+        /// The rig's folders and no others, since no other folder is ever replaced and PackageStatus.Edited is set on
+        /// none of them. Both questions used to build this list for themselves out of every entry, so a leftover
+        /// folder outside the rig was named in them, and "Replace anyway" then left it as it was (#468).
+        /// </remarks>
+        public IReadOnlyList<string> EditedFolders => Packages.Where(package => package.Edited).Select(package => package.FolderName).ToList();
 
         /// <summary>How many packages the plugin carries, which is how many dashboards it installs.</summary>
         public int PackageCount => packages.Names.Count;
@@ -423,7 +449,7 @@ namespace OpenDashPlugin
         private PackageStatus Process(Planned planned, bool force, bool install, bool replaceEdited)
         {
             var name = planned.Package;
-            var entry = new PackageStatus { Name = name };
+            var entry = new PackageStatus { Name = name, OutsideRig = !planned.Wanted };
             try
             {
                 string own;
@@ -446,8 +472,12 @@ namespace OpenDashPlugin
                 // Three cases, and only the third is somebody's work. Not installed: nothing to lose. Installed with
                 // nothing remembered: OpenDash has never looked at this folder, which is every folder the first time
                 // this runs, so it is adopted rather than held back. Installed and different from what was recorded:
-                // it changed after OpenDash wrote it, and that is the case worth stopping for.
-                entry.Edited = entry.InstalledVersion != null
+                // it changed after OpenDash wrote it, and that is the case worth stopping for. Asked only of a folder a
+                // run may write, because stopping is the whole use of the answer: a folder outside the rig is never
+                // replaced, and reporting it edited put it in the questions before a reinstall and an update that
+                // left it alone (#468).
+                entry.Edited = planned.Wanted
+                    && entry.InstalledVersion != null
                     && !string.IsNullOrWhiteSpace(remembered)
                     && !FolderFingerprint.LooksUntouched(installedFolder, remembered);
 
@@ -580,8 +610,9 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Reloads SimHub's DashFonts after an install. Implemented in DashboardInstaller.cs, where SimHub is
-        /// available; in the tests the call compiles away.</summary>
+        /// <summary>Asks SimHub to reload its list of DashFonts after an install, which does not make a face copied into
+        /// a running SimHub drawable (#441). Implemented in DashboardInstaller.cs, where SimHub is available; in the
+        /// tests the call compiles away.</summary>
         partial void RefreshSimHubFonts();
     }
 }

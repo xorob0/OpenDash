@@ -1,8 +1,9 @@
 // DashboardInstallerTests.cs: the installer against a temporary SimHub root and synthetic packages: every embedded
 // package is installed, only the ones that need it unless forced, the worst status wins, a broken package does not stop
-// the others, a second screen of a size is kept current and held back on the same terms as the first, the panel's
-// summary text, and the embedded resource naming (spaces in a file name survive). Also the pure InstalledVersionFrom:
-// an absent folder is not installed, a folder without a usable sidecar is reinstalled.
+// the others, a second screen of a size is kept current and held back on the same terms as the first, a leftover folder
+// outside the rig is asked about by nothing, the panel's summary text, and the embedded resource naming (spaces in a
+// file name survive). Also the pure InstalledVersionFrom: an absent folder is not installed, a folder without a usable
+// sidecar is reinstalled.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -275,6 +276,61 @@ namespace OpenDashPlugin.Tests
             var gone = Stock("OpenDash Gone", 640, 480, "Gone");
             gone.Namespace = "Gone";
             Assert.Contains("ships no package", installer.Write(gone).Error);
+        }
+
+        // A folder outside the rig, which a run reads and never writes (#468)
+
+        private const string CompanionName = "OpenDashPlugin.Resources.OpenDash Companion.simhubdash";
+        private const string CompanionFolder = "OpenDash Companion";
+
+        /// <summary>
+        /// A leftover folder somebody edited, which no screen on the rig is written from, is named in no question
+        /// before a reinstall, and a rig with nothing of its own edited has nothing to be asked.
+        /// </summary>
+        /// <remarks>
+        /// Seen on the VM with the rig of "Tim wheel" and "Rim (2)" and an edited `OpenDash Companion` outside it: the
+        /// first press on Reinstall read "You have edited 2 dashboards: OpenDash Rim (2), OpenDash Companion.", and
+        /// "Replace anyway" wrote Rim (2) and left the Companion at rc.7, so the driver had been asked to consent to
+        /// replacing work that was never touched. The question is EditedFolders, which the Update button asks as well.
+        /// </remarks>
+        [Fact]
+        public void A_leftover_folder_somebody_edited_is_not_named_before_a_reinstall()
+        {
+            var record = new MemoryFolderRecord();
+            // A plugin from before ADR 0017 wrote every package it carried, so the Companion is on the disk, with a
+            // fingerprint in the record, although no screen of this rig is written from it.
+            var older = Face("0.3.0-rc.7").Add(CompanionName, SyntheticPackage.Zip(CompanionFolder, "0.3.0-rc.7"));
+            Installer(older, record: record).EnsureInstalled(false);
+            var rig = TwoOfASize();
+            var installer = OverRig(Face("0.3.0-rc.8").Add(CompanionName, SyntheticPackage.Zip(CompanionFolder, "0.3.0-rc.8")), record, rig);
+            installer.EnsureInstalled(false);
+            var theirs = Path.Combine(PackageExtractor.InstalledFolder(root, CompanionFolder), CompanionFolder + ".djson");
+            File.WriteAllText(theirs, "{\"Version\":2,\"mine\":true}");
+
+            installer.Refresh();
+
+            Assert.Empty(installer.EditedFolders);
+            var companion = installer.Packages.Single(p => p.FolderName == CompanionFolder);
+            Assert.True(companion.OutsideRig);
+            Assert.False(companion.Edited);
+            Assert.All(installer.Packages.Where(p => p != companion), p => Assert.False(p.OutsideRig));
+            // It still reports itself in the pill's tooltip, which names what the build carries beyond the rig, and
+            // it does not turn the pill, which answers for the rig.
+            Assert.Contains(CompanionFolder + ": Update available", installer.PackageReport());
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+
+            // With a screen of the rig edited as well, that screen is the whole of the question.
+            File.WriteAllText(Path.Combine(PackageExtractor.InstalledFolder(root, RimFolder), RimFolder + ".djson"), "{\"Version\":2,\"rim\":true}");
+            installer.Refresh();
+            Assert.Equal(new[] { RimFolder }, installer.EditedFolders);
+
+            // "Replace anyway" replaces it and leaves the leftover exactly as it was.
+            installer.EnsureInstalled(force: true, replaceEdited: true);
+            Assert.True(installer.Packages.Single(p => p.FolderName == RimFolder).Extracted);
+            Assert.False(installer.Packages.Single(p => p.FolderName == CompanionFolder).Extracted);
+            Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(theirs));
+            Assert.Equal("0.3.0-rc.7", PackageExtractor.ReadInstalledVersion(root, CompanionFolder));
+            Assert.Empty(installer.EditedFolders);
         }
 
         // Somebody's Dash Studio work, and whether an install destroys it
