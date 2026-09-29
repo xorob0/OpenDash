@@ -100,6 +100,10 @@ namespace OpenDashPlugin
 
         public string DeltaReference { get; set; } = Contract.DefaultDeltaReference;
 
+        /// <summary>How many places the live delta is drawn to: "hundredths" or "thousandths". Shared,
+        /// like the reference it qualifies.</summary>
+        public string DeltaPrecision { get; set; } = Contract.DefaultDeltaPrecision;
+
         public string SessionProgress { get; set; } = Contract.DefaultSessionProgress;
 
         /// <summary>What a blue flag band says beyond its colour: "none", "class" or "positionClass".
@@ -796,6 +800,7 @@ namespace OpenDashPlugin
             ShiftLights = RevBar == Contract.RevBarShift;
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
+            DeltaPrecision = Contract.NormaliseChoice(DeltaPrecision, Contract.DeltaPrecisions, Contract.DefaultDeltaPrecision);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
             BlueFlagDetail = Contract.NormaliseChoice(BlueFlagDetail, Contract.BlueFlagDetails, Contract.DefaultBlueFlagDetail);
             DriverNameFormat = Contract.NormaliseChoice(DriverNameFormat, Contract.DriverNameFormats, Contract.DefaultDriverNameFormat);
@@ -1733,6 +1738,7 @@ namespace OpenDashPlugin
             RevBar = other.RevBar;
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
+            DeltaPrecision = other.DeltaPrecision;
             SessionProgress = other.SessionProgress;
             BlueFlagDetail = other.BlueFlagDetail;
             DriverNameFormat = other.DriverNameFormat;

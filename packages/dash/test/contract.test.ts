@@ -50,6 +50,8 @@ import {
   defaultCardForSlot,
   DEFAULT_SLOT_CARDS,
   DEFAULTS,
+  DELTA_PRECISION_SETTING,
+  DELTA_PRECISIONS,
   DELTA_REFERENCES,
   POSITION_MODES,
   PROPERTY_PREFIX,
@@ -131,13 +133,13 @@ describe('settings', () => {
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
     ]);
-    // The lone 8 is RevBar, the blue flag detail, the two that decide how a driver is named, the
-    // idle screen's two, the class best and the clock format, which every screen shares with the
-    // four modes and the twelve slots.
+    // The lone 9 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two, the class best, the clock format and the delta's precision, which every
+    // screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        8 +
+        9 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -177,8 +179,9 @@ describe('settings', () => {
     // publish none and OpenDash's own redline flash was going out with them. And 345 before the
     // idle screen could say that a newer release exists, and which (#755), and 347 before the
     // plugin had to publish the class best, which SimHub keeps and never publishes, and 348 before a
-    // driver could say whether a clock reads 14:32 or 2:32 PM (#324).
-    expect(props).toHaveLength(349);
+    // driver could say whether a clock reads 14:32 or 2:32 PM (#324), and 349 before the live delta
+    // could be drawn to thousandths as well as hundredths (#322).
+    expect(props).toHaveLength(350);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -204,6 +207,9 @@ describe('settings', () => {
     // And the clock format after that, shared because every package's idle screen draws the wall
     // clock, and because a driver reads a clock one way on the rim and on the pit wall alike. #324.
     expect(props[11 + SLOT_MAX]).toBe('OpenDash.ClockFormat');
+    // And the delta's precision after it, chosen rather than published and shared because a delta
+    // read to the thousandth on the rim and to the hundredth on the pit wall is two answers. #322.
+    expect(props[12 + SLOT_MAX]).toBe('OpenDash.DeltaPrecision');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -304,6 +310,7 @@ describe('settings', () => {
         UPDATE_VERSION,
         CLASS_BEST_LAP,
         CLOCK_FORMAT_SETTING,
+        DELTA_PRECISION_SETTING,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -354,6 +361,12 @@ describe('settings', () => {
     expect(DEFAULTS.RevBar).toBe('shift');
     expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'class')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
+    // Hundredths without the plugin, which is what the canvas draws and what every package drew
+    // before the setting existed.
+    expect(setting.deltaPrecision()).toBe("isnull([OpenDash.DeltaPrecision], 'hundredths')");
+    expect(setting.deltaPrecisionIs('thousandths')).toBe("(isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')");
+    expect(DELTA_PRECISIONS).toEqual(['hundredths', 'thousandths']);
+    expect(DEFAULTS.DeltaPrecision).toBe('hundredths');
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
     expect(setting.slot(1)).toBe('isnull([OpenDash.Slot01], 12)');
     expect(setting.slot(7)).toBe('isnull([OpenDash.Slot07], 5)');
@@ -580,6 +593,13 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultClockFormat = "${DEFAULTS.ClockFormat}";`);
     expect(panelSource()).toContain('Contract.ClockFormats');
     expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${CLOCK_FORMAT_SETTING},`);
+    // The delta's precision: shared, on the Data tab under the reference it qualifies, and attached. #322.
+    expect(source).toContain(`public const string ${DELTA_PRECISION_SETTING} = "${DELTA_PRECISION_SETTING}";`);
+    expect(source).toContain(`DeltaPrecisions = ${csArray(DELTA_PRECISIONS)};`);
+    expect(source).toContain(`public const string DefaultDeltaPrecision = "${DEFAULTS.DeltaPrecision}";`);
+    expect(panelSource()).toContain('Contract.DeltaPrecisions');
+    expect(panelSource()).toContain('Settings.DeltaPrecision');
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${DELTA_PRECISION_SETTING},`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

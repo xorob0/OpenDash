@@ -239,8 +239,11 @@ These apply to every screen
   Position                             [ Overall | Class ]
   Overall, or within your class.
 
-  Delta reference                      [ Session best | All-time best ]
+  Delta reference           [ Session best | All-time best | Last lap ]
   Which lap the delta compares against.
+
+  Delta precision                      [ Hundredths | Thousandths ]
+  Thousandths for a hotlap, hundredths to read at a glance.
 
   Session progress                     [ Auto | Laps | Time ]
   Auto shows laps when the session declares a lap count, time otherwise.
@@ -276,6 +279,31 @@ does not change between the wheel and the pit wall ([#385](https://github.com/xo
 caption says the one thing the control cannot: that the sim's time of day follows the setting as well
 as the wall clock, which a row labelled "Clock" does not say on its own
 ([#324](https://github.com/xorob0/OpenDash/issues/324)).
+
+**The delta reference has a third segment the canvas does not draw.** The Plugin artboard offers the
+session best and the all-time best; Last lap was added by
+[#322](https://github.com/xorob0/OpenDash/issues/322) and is iRacing's own live delta to the lap
+before this one, which SimHub does not publish. The label is the canvas's own name for that lap, the
+one the Last lap card and the Lap times page already draw, and the row's caption holds for all three,
+since each of them is a lap. Three values is still a segmented control by the component sheet's rule.
+`PanelDataTab.DeltaLabels` holds the words, with a test that counts them against the contract.
+
+**The delta precision row is not on the canvas at all.** The canvas draws every live delta to two
+places, and [#322](https://github.com/xorob0/OpenDash/issues/322) lets a driver ask for three, which
+is what a hotlap is decided by. It sits directly under the reference because it qualifies the same
+number, and it is rig-wide for the reason the reference is: a delta read to the thousandth on the
+rim and to the hundredth on the pit wall is two answers to one question. The two values are words,
+although the driver names and the clock answer their questions with worked examples. A name is not a
+numeral, and a delta is nothing else: `0.21` and `0.214` would be set in the panel's own face,
+Barlow, where the canvas's fourth rule keeps numerals, version numbers in the plugin included, to
+Barlow Condensed. The clock's `14:32` and `2:32 PM` are drawn in that Barlow too. That is a
+disagreement between the build and the canvas for the canvas's owner to settle, not a precedent this
+row follows. The caption says what each is for, which the two words cannot. Neither answer resizes
+or rearranges a box, since every box that draws the delta is cut for three places whichever is
+chosen: what changes is the digits, and the delta page's caption beside the number, which follows
+the figure it draws and so moves one cell along when a third place is drawn;
+[ADR 0011](../decisions/0011-personalisation.md) is why that is the condition of the setting
+existing at all.
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it

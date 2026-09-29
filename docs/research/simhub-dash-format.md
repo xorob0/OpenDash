@@ -817,6 +817,57 @@ Established for #454 by decompiling `GameManagerBase`, `PluginManager` and `Data
   (`GameData.BestLapOpponent.BestLapTime`); `BestLapSameClassOpponent` is not initialised and has no
   property at all.
 
+### The live delta to the last lap is iRacing's, not SimHub's (2026-09-29, #322)
+
+Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
+
+- **SimHub publishes two live deltas and no third.** `SessionBestLiveDeltaSeconds` and
+  `AllTimeBestLiveDeltaSeconds` run through the lap. The `*LastLapDelta` properties beside them are
+  the finished lap's, written once at the line, and nothing compares the lap in progress with the one
+  before it. #322 was written believing otherwise.
+- **iRacing publishes it as raw telemetry**, and SimHub passes that through:
+  `[DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap]`. The second `l` in `Lastl` is
+  iRacing's own spelling and has to be kept; `LapDeltaToSessionLastLap` is a property nobody
+  publishes, and reading it draws the fallback without a word.
+- Beside it are `LapDeltaToSessionLastlLap_OK`, a boolean that is true once there is a last lap to
+  compare against, and `LapDeltaToSessionLastlLap_DD`, iRacing's rate of change of the delta, which
+  nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
+  `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
+  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+- **A raw iRacing float is a boxed System.Single, and `format` does not sign one.** iRacing publishes
+  the delta as an irsdk_float; the SDK reads it with `ReadSingle`, the raw telemetry is a dictionary
+  of objects that SimHub exposes unchanged, and NCalc's `if` and SimHub's `isnull` hand their
+  argument on unchanged too. `format(v, pattern, true)` (`NCalcEngineBase.Function_Format_Core`)
+  writes its `+` only when the value is a double, a decimal or an int, so a Single comes out as .NET
+  formats it alone: `0.21` for a slower delta where the session best draws `+0.21`, `0.00` for a
+  level one, and `0.00` for a small negative one where a double draws `-0.00`. `abs` and the
+  comparisons promote it, so a colour is right where the figure is not. The fix is to make it a
+  double before it is formatted, by `* 1.0` and not `* 1`: NCalc parses `1` as an Int32, and a Single
+  times an Int32 is still a Single, where a Single times the double `1.0` is a double.
+  `lastLapDelta` does that.
+- The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`). That SimHub exposes
+  them under these names on a live iRacing session follows from how it passes raw telemetry through,
+  as the flag bits above do, and is not yet confirmed on the VM.
+- **A format's pattern is written as a literal, so a precision is an `if` around two formats.** The
+  pattern `format(v, '0.00', true)` was verified with is a string literal, and `fmt` and `signed` in
+  `packages/generator/src/ncalc.ts` quote whatever they are given: a pattern passed to them as an
+  expression is emitted as a string literal holding the expression's text, and .NET then reads that
+  text as a custom pattern: its `.` and `0` become placeholders and its quotes and commas vanish, so
+  the delta draws a mangled copy of the expression rather than a number. So the delta's
+  precision is `if(<thousandths>, format(v, '0.000', true), format(v, '0.00', true))`, as
+  `referenceDeltaText` writes it. Whether SimHub's `format` would take a bound pattern at all has not
+  been tried, and nothing needs it to.
+- **`format` rounds a half away from zero.** .NET Framework, which SimHub runs on, formats a double
+  with a custom pattern by first taking fifteen significant digits and then rounding the last place
+  half away from zero, so 0.005 to two places is `0.01`, and 9.9995 to three is `10.000` although the
+  double is a hair under the half. That is why the band inside which the delta is drawn level is
+  strictly under half a unit of the last place: at the half the figure has already gained a digit.
+  The evaluator in `packages/dash/test/ncalcEval.ts` formats with JavaScript's `toFixed`, which rounds
+  the double itself, and so parts from the dash where a reading written as a decimal half is stored
+  as a double just under it: 1.005 to two places is `1.00` in the evaluator and `1.01` on the dash,
+  and 9.9995 to three is `9.999` against `10.000`. At 12.345 the double is just over the half, so both
+  draw `12.35`. This is from the .NET reference source and has not been measured on the VM.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

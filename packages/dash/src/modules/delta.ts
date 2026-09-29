@@ -24,8 +24,17 @@ import { SECTORS, sectorColour } from '../second/sectors.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
 import { archetypeOf } from './shedding.ts';
 import { stack, type StackRow } from '../second/layout.ts';
-import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, deltaColour, referenceDelta, referenceLabel, sectorDelta } from '../second/values.ts';
+import {
+  CHARS,
+  REFERENCE_DELTA_WIDEST,
+  REFERENCE_LABEL_WIDEST,
+  referenceDelta,
+  referenceDeltaColour,
+  referenceDeltaDrawn,
+  referenceDeltaText,
+  referenceLabel,
+  sectorDelta,
+} from '../second/values.ts';
 
 const { signed } = ncalc;
 
@@ -49,9 +58,6 @@ const SECTOR_SAMPLES = ['−0.29', '−0.23', '+0.31'] as const;
 /** The separator between the scale and the sector deltas: one pixel of surface.raised. */
 const RULE_HEIGHT = 1;
 
-/** The longest caption the reference setting can produce, which is what its box is measured by. */
-const CAPTION_WIDEST = 'vs all-time best';
-
 export const delta = defineModule('delta', (ctx) => {
   const d = densityOf(ctx.density);
   const value = referenceDelta();
@@ -61,18 +67,22 @@ export const delta = defineModule('delta', (ctx) => {
   // what every face with room across draws, and the caption under the number at two pixels, which
   // is the nano's. A compact zone always takes the stacked form, and so does any box the pair
   // would not fit side by side, because a caption is not worth pushing the number off the edge.
-  // `signed(v, '0.00')` always writes the sign, so the budget's five digit cells are the sign, two
-  // whole digits and two decimals; the caption follows whichever of them are on the screen.
+  // The figure always writes its sign, so the budget's six digit cells are the sign, two whole
+  // digits and the three places the precision setting can ask for; the caption follows whichever of
+  // them are on the screen, at either precision. Cutting the box for three places is what moves the
+  // portrait companion's caption under the number at both: beside it no longer fits 432 px at the
+  // widest three-place reading, and a box cannot change its cells at runtime. #322.
   const number = {
     sample: '−0.21',
-    bind: signed(value, '0.00'),
-    chars: CHARS.delta,
+    widest: REFERENCE_DELTA_WIDEST,
+    bind: referenceDeltaText(value),
+    chars: CHARS.referenceDelta,
     fs: d.hero,
-    colorBind: deltaColour(value),
-    drawn: drawnFigure({ value, digits: CHARS.delta.digits - 3, decimals: 2, signed: true }),
+    colorBind: referenceDeltaColour(value),
+    drawn: referenceDeltaDrawn(value),
   };
-  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: CAPTION_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
-  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: CAPTION_WIDEST, labelBelow: true });
+  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: REFERENCE_LABEL_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
+  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: REFERENCE_LABEL_WIDEST, labelBelow: true });
   const captionBelow = ctx.density === 'compact' || fieldWidth(beside, ctx.density) > ctx.frame.width;
   // 34 px on both of the canvas's ramps, which is the small rank of the companion and the middle
   // one of a zone; a compact zone steps the pair down together.

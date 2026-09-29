@@ -29,6 +29,12 @@ export interface ValueSpec {
   bind: Expr;
   /** Character budget: the box is exactly this many cells wide. */
   chars: Chars;
+  /**
+   * The longest reading `bind` can produce, for a value whose sample is the short end of its range.
+   * It does not move the box, which is cut from `chars`; it is what the fit tests measure it by. See
+   * `FieldValue.widest` in `second/field.ts`.
+   */
+  widest?: string;
   color?: Hex;
   colorBind?: Expr;
   weight?: DataWeight;
@@ -67,6 +73,7 @@ export function readout(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSp
       color: value.color,
       colorBind: value.colorBind,
       weight: value.weight,
+      widest: value.widest,
       visibleBind: unmarked(value.mark),
     }),
     ...(value.mark ? [mark(`${prefix}mark`, value.mark, g.x, g.valueY, g.valueFs, undefined, { weight: value.weight, color: value.color, maxWidth })] : []),
