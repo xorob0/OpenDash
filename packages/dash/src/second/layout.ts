@@ -141,8 +141,9 @@ export function rowsThatFit(rows: readonly StackRow[], height: number, gap: numb
  * One factor for the whole stack, and that is what makes this filling rather than stretching: every
  * value grows by it, so the sizes keep their order and their ratios -- the 46 px lap time above a
  * 34 px delta stays above it by the same proportion -- and a stack that has spent its room is the
- * same drawing larger, never a drawing pulled to the shape of its rectangle. Rows that cannot grow -- a gauge, a trace, a table -- keep their height and
- * are simply part of the budget the growing rows are measured against.
+ * same drawing larger, never a drawing pulled to the shape of its rectangle. Rows that cannot grow
+ * -- a gauge, a trace, a table -- keep their height and are simply part of the budget the growing
+ * rows are measured against.
  *
  * A stack already too tall for its box is left alone. It has nothing to spend, and `rowsThatFit` is
  * about to take a row off it.

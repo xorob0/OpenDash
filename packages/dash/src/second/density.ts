@@ -242,8 +242,9 @@ export const FACE_GROWTH = 2.2;
  * build's, and not a factor of two.
  *
  * The ramp step was the answer on faces too until #330. It cost a page a factor of about 1.35 in
- * every box, the smallest step of any ramp being 34 to 46, and a factor of exactly one where the
- * lead was already at the top of its ramp, which is to say on the pages whose one number is the
- * reason for the page. zones.md §2 has the argument.
+ * every box, being the smallest step any size on the page takes and 34 to 46 on every page that
+ * mixes the two, and a factor of exactly one where the lead was already at the top of its ramp,
+ * which is to say on the pages whose one number is the reason for the page. zones.md §2 has the
+ * argument.
  */
 export const grownAtMost = (fs: number, density: Density): number => (isFace(density) ? fs * FACE_GROWTH : nextOnRamp(fs, density));
