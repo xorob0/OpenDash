@@ -83,7 +83,10 @@ Every page draws one 64 px strip: the wordmark and the page name on the left, an
 laid out from the right edge inwards, the two clocks, the wind, the track state, the incident
 count, the time left and the session and lap. Each group names itself before its value, which is
 not decoration: the strip once wrote its clocks the other way round, as `14:32 LOCAL 15:07 SIM`,
-and a rig reported being unable to tell which was the wall clock and which was the sim's.
+and a rig reported being unable to tell which was the wall clock and which was the sim's. Both clocks
+follow `OpenDash.ClockFormat`: on a twelve-hour rig each writes `AM` or `PM` after its digits, the
+strip is laid out for that, and on a twenty-four-hour rig every group moves back up to the edge so
+no gap opens where the word would be (#324).
 
 **The flag is not on the strip.** It was, as a colour block and a word built from the six flags
 SimHub normalises, and it did not light on a rig; a 24 px block in the corner of a 1920 px header

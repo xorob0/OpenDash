@@ -314,6 +314,18 @@ hidden while it is drawn. A clock and its mark are therefore two items in one pl
 drawn — monospace is a property of the item, and no binding makes a cell wide for one reading and
 narrow for the next.
 
+And it covers a **meridiem**, the `AM` or `PM` a twelve-hour clock writes after its digits when the
+rig asks for one ([#324](https://github.com/xorob0/OpenDash/issues/324)). Both halves carry an `M`, so
+neither goes in a cell; the digits stay a value — `12:59` is the same four digits and a colon as
+`23:59`, so one budget, `CHARS.timeOfDay`, holds either format — and the word follows them as a
+proportional run, the way a unit follows its figure, drawn only while `OpenDash.ClockFormat` reads
+`12h`. What a setting cannot do is resize a box at runtime, so **every surface measures its clock
+with the word** and then gives the room back when the word is not there: the digits of a clock laid
+from the right move up to the edge, the pit wall header's groups move up behind them, and the idle
+screen's digits stay centred where the twenty-four-hour clock is and let the word hang after them. A
+twelve-hour hour is one digit or two, so the word is placed after the figure's drawn width, which is
+the rule #387 set for every follower. `clockFormat.test.ts` evaluates each surface under both formats.
+
 ---
 
 ## 3. The bar
@@ -1034,6 +1046,11 @@ property another screen owns. `ShiftLights` is now its deprecated alias and stay
 release: an rc.2 user's properties do not vanish without warning (#170), and a package installed
 beside an older plugin falls back through it.
 
+`ClockFormat` is shared for the same reason: `24h` draws `14:32` and `12h` draws `2:32 PM`, the wall
+clock and the sim's time of day alike, and which of the two a driver reads without thinking does not
+change between the rim, the pit wall and the idle screen every package ends with. Rule 19 above says
+how a word that fits no cell is drawn after the digits.
+
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
 installed without the plugin shows each zone's start page and simply cannot cycle. That is still a
 complete product by [ADR 0003](../decisions/0003-plugin-settings-through-properties.md)'s letter,
@@ -1172,6 +1189,7 @@ a mistake in this document.
 | The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until #146 retires the card path. |
 | The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
 | The "D grid" chip | Every FaceVariants sheet chips band D as `grid`, whereas the band it draws is 1280 × 60, or 800 × 58 on the nano, which `second/shape.ts` bands as wide and short rather than as the 430 × 300 the `grid` archetype is. **Neither is taken, because the band does not consult the shape model at all**: `bandPages.ts` draws one centred rank for a wide short box, and only zones B and C ask `shapeOf` for their page. The 600 × 686 sheet chips its own zones B and C the same way, and they measure 600 × 160 and 600 × 150, which is wide and short again. |
+| The twelve-hour clock | No artboard draws one: every clock on the canvas reads `14:32`. The build's answer is recorded here rather than presented as the drawing's ([#324](https://github.com/xorob0/OpenDash/issues/324)). The `AM` or `PM` is set as each surface already sets what follows a figure — at the denominator's size and in its ink in the bar, as a band D unit in the corner, as a small label in the pit wall header and on the idle screen — and one gap after the digits. Every box a clock is drawn in is measured with it, so band D's corner, which was cut for the eight cells of `0:42:15` and drew `13:11`, is twelve pixels narrower measured for `12:59 AM` than it was, and its pages centre six pixels further right. How the word should look beside the figure is the author's to draw. |
 | The strip at 850 × 480 and 800 × 480 | Both artboards caption five cells, namely slip, TC, cut, bias and ABS, and the build keeps four at 850 and three at 800, which §3 tabulates and `barStrip.test.ts` pins. **The artboards' own scale is taken**: each face now draws the bar at the size its artboard gives it, so the narrower faces gain cells the earlier measured layout had shed. What the two still drop is cut at 850 and cut and slip at 800, and the cause is the ends rather than the strip, each end being laid out from its own edge for the widest entry the catalogue holds rather than for the entry actually selected. Raising the count further therefore means narrowing the reserved end or measuring the strip's values below the size the end fields use, and the canvas has made neither decision. The 600 × 686 sheet is no longer a disagreement: it draws its five cells in fixed 54 px columns at a 12 px gap, which is what the build now does, with four pixels to spare that the widest class name governs. |
 | The 600 × 686 well | The size's own chip names a 36 px well above the bar. The artboard draws the well at 6, 2, 588 × 32 with the segments at 12, 6, 576 × 24, and the bar begins at y 36, so that 36 is the room above the bar, being a 2 px face margin, the 32 px well and a 2 px gap, rather than the height of anything. **The artboard is taken** and §1 tabulates the 32. Were the well itself meant to be 36, the rect in `faces/600x686.ts` would move and `revBarReclaim` would become 38, which moves the second arrangement's table as well. |
 | Zone A, centred or filled | The face artboards centre zone A's block in its column, `justify-content: center` with a 198 px gear in a 320 px column at 1280 × 480, while the FaceVariants sheets caption the same zone "Zone A fills its column. Padding stays; empty height does not". **Both are taken, and they turn out not to disagree**: every page is cut from the column, each run being a share of its height rather than a size of its own, and what is then left over goes half above the page and half below it, so all four fill and all four centre. What the sheets ask for and the format refuses is the last three per cent of the gear, which is the subject of the row below. |

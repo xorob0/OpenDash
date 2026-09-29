@@ -333,6 +333,13 @@ export type InlinePart =
       colorBind?: Expr;
       visibleBind?: Expr;
       /**
+       * Where the value sits in its cells: from the left by default, and from the right for a value
+       * whose reading can be a cell shorter than its budget and which a word follows -- a twelve-hour
+       * clock's `9:05` before its `PM` -- so that the empty cell falls before the figure rather than
+       * between the figure and the word.
+       */
+      hAlign?: HAlign;
+      /**
        * A mark drawn in this value's place, in the value's own box, for a state whose reading is a
        * glyph no cell can hold: the `∞` of a session with no clock. It takes no width of its own, so
        * the run is laid out as it was; see `elements/mark.ts`.
@@ -381,6 +388,7 @@ export function inlineGroup(name: string, parts: readonly InlinePart[], fs: numb
               bind: part.bind,
               color: part.color,
               colorBind: part.colorBind,
+              hAlign: part.hAlign,
               visibleBind: unmarked(part.mark, part.visibleBind),
               maxWidth: w,
             }),

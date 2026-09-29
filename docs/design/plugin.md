@@ -253,6 +253,9 @@ These apply to every screen
   Team names                                              [ on/off ]
   Names the team instead of the driver, and keeps the driver where
   the sim has no team.
+
+  Clock                                          [ 14:32 | 2:32 PM ]
+  The sim's time of day follows it too.
 ```
 
 **The four name formats are shown as what they make of one name rather than described.** A value in a
@@ -268,6 +271,11 @@ does not offer.
 
 Naming a driver is here and not on a screen's pane because a name is read by a person, and the person
 does not change between the wheel and the pit wall ([#385](https://github.com/xorob0/OpenDash/issues/385)).
+
+**The clock is two worked examples of one time for the same reason**, `14:32` against `2:32 PM`. Its
+caption says the one thing the control cannot: that the sim's time of day follows the setting as well
+as the wall clock, which a row labelled "Clock" does not say on its own
+([#324](https://github.com/xorob0/OpenDash/issues/324)).
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it

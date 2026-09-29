@@ -98,5 +98,19 @@ namespace OpenDashPlugin
         /// with no team keeps its driver rather than going blank. The second is the one worth the line:
         /// without it a half-filled column reads as a fault.</summary>
         public const string TeamNameCaption = "Names the team instead of the driver, and keeps the driver where the sim has no team.";
+
+        public const string ClockTitle = "Clock";
+
+        /// <summary>The one fact the control cannot show: that the sim's time of day follows it too,
+        /// which a row labelled "Clock" over two readings of the wall clock does not say. #324.</summary>
+        public const string ClockCaption = "The sim's time of day follows it too.";
+
+        /// <summary>The two formats, shown as what they make of one time rather than described.
+        ///
+        /// For the reason the driver names are examples: a value in a chooser is read without its label
+        /// (docs/design/voice.md), and "24-hour" beside "12-hour" asks the reader to picture both, where
+        /// `14:32` beside `2:32 PM` is the answer itself. The time is the one the dashboards' own
+        /// clock is drawn with at design time.</summary>
+        public static readonly string[] ClockLabels = { "14:32", "2:32 PM" };
     }
 }

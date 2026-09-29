@@ -31,7 +31,24 @@ import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
-import { CHARS, GRIP_WIDEST, currentLap, incidentLimit, incidents, localClock, sessionClock, sessionType, simClock, totalLaps, trackGrip, untimedMark, windKmh } from '../second/values.ts';
+import {
+  CHARS,
+  GRIP_WIDEST,
+  currentLap,
+  incidentLimit,
+  incidents,
+  localClock,
+  meridiemWidest,
+  sessionClock,
+  sessionType,
+  simClock,
+  totalLaps,
+  trackGrip,
+  twelveHour,
+  untimedMark,
+  windKmh,
+  type TimeOfDay,
+} from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
@@ -112,8 +129,49 @@ function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { 
   };
 }
 
-/** A right-hand group: a run of inline parts, or one proportional run of the data face. */
-type HeaderGroup = { id: string; parts: InlinePart[]; run?: undefined } | { id: string; parts?: undefined; run: RunSpec };
+/**
+ * A right-hand group: a run of inline parts, or one proportional run of the data face.
+ *
+ * `meridiem` is the `AM` or `PM` of a clock, a part appended to the run only while the rig writes its
+ * clocks to twelve hours (#324). The header is laid out for it, and every group from the clock
+ * leftwards is drawn one word further right while it is not there, so on a twenty-four-hour rig no
+ * gap opens where the word would be.
+ */
+type HeaderGroup = { id: string; parts: InlinePart[]; meridiem?: Expr; run?: undefined } | { id: string; parts?: undefined; meridiem?: undefined; run: RunSpec };
+
+/**
+ * `item`, drawn where it is while `when` holds and `dx` further along while it does not: a group of the
+ * header standing aside for the word a twelve-hour clock writes after itself, and moving back up to
+ * the edge on a twenty-four-hour one. The design-time place is the one without the word, which is the
+ * strip every rig draws until the setting is changed.
+ */
+function movedUnless(when: Expr, item: Item, dx: number): Item {
+  if (item.kind === 'layer') throw new Error(`${item.name}: a layer has no place of its own to move`);
+  const left = item.rect.left;
+  const bind = { Left: iff(when, num(left), num(left + dx)) };
+  // One case per kind the header draws, since `withMoreBindings` checks its item against the one
+  // type of its kind and a union is not one type.
+  if (item.kind === 'text') return withMoreBindings({ ...item, rect: { ...item.rect, left: left + dx } }, bind);
+  if (item.kind === 'rect') return withMoreBindings({ ...item, rect: { ...item.rect, left: left + dx } }, bind);
+  throw new Error(`${item.name}: the header draws no ${item.kind}`);
+}
+
+/**
+ * A clock of the day under its label: the digits right aligned in their cells, so that a twelve-hour
+ * `9:05` stands against its `PM` and the empty cell falls after the label instead.
+ *
+ * The cells are the five `HH:mm` draws and not the six the strip used to give it. The sixth held
+ * nothing any clock writes, and it was harmless only while the digits were set from the left: it
+ * stood between the clock and the next group, where it read as a wider gap than the strip's others.
+ */
+const clockGroup = (id: string, text: string, sample: string, clock: TimeOfDay): HeaderGroup => ({
+  id,
+  parts: [
+    { kind: 'label', text },
+    { kind: 'value', sample, bind: clock.text, chars: CHARS.timeOfDay, hAlign: 'right' },
+  ],
+  meridiem: clock.meridiem,
+});
 
 export interface PitWallHeaderSpec {
   frame: Rect;
@@ -197,34 +255,42 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     // and the two pairs sat a word apart while every other group sat a group-gap apart. Reported
     // from a rig as not being able to tell which clock was which and as the spacing looking wrong.
     // Both come from the same thing, so both are fixed by the same thing.
-    ...(compact
-      ? []
-      : [
-          {
-            id: 'simClock',
-            parts: [
-              { kind: 'label', text: 'Sim' },
-              { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
-            ] as InlinePart[],
-          },
-        ]),
-    {
-      id: 'localClock',
-      parts: [
-        { kind: 'label', text: 'Local' },
-        { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
-      ],
-    },
+    ...(compact ? [] : [clockGroup('simClock', 'Sim', '15:07', simClock())]),
+    clockGroup('localClock', 'Local', '14:32', localClock()),
   ];
 
   const shown = compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'track') : groups;
   const readouts: Item[] = [];
+  // Two cursors: `right` lays the strip out for a twelve-hour clock, which is the wider of the two
+  // and the one everything is measured against, and `without` for a twenty-four-hour one. Where they
+  // part, a group is drawn at the second and bound to the first while the words are there -- all but
+  // the word itself, which is only ever drawn at the first and so is simply put there.
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
+  let without = right;
+  const twelve = twelveHour();
   for (const group of [...shown].reverse()) {
-    const g = group.run ? dataRun(`${name}.${group.id}`, group.run, fs, d.labelSm) : inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
+    const groupName = `${name}.${group.id}`;
+    let g: { width: number; draw(x: number, top: number): Item[] };
+    let narrow: number;
+    let word: string | undefined;
+    if (group.run) {
+      g = dataRun(groupName, group.run, fs, d.labelSm);
+      narrow = g.width;
+    } else if (group.meridiem === undefined) {
+      g = inlineGroup(groupName, group.parts, fs, density);
+      narrow = g.width;
+    } else {
+      g = inlineGroup(groupName, [...group.parts, { kind: 'label', text: 'PM', widest: meridiemWidest('BarlowMedium'), bind: group.meridiem, visibleBind: twelve }], fs, density);
+      narrow = inlineGroup(groupName, group.parts, fs, density).width;
+      word = `${groupName}.${group.parts.length}`;
+    }
     right -= g.width;
-    readouts.push(...g.draw(right, top));
+    without -= narrow;
+    const shift = without - right;
+    const drawn = g.draw(right, top);
+    readouts.push(...(shift === 0 ? drawn : drawn.map((item) => (item.name === word ? item : movedUnless(twelve, item, shift)))));
     right -= PIT_WALL_HEADER.groupGap;
+    without -= PIT_WALL_HEADER.groupGap;
   }
 
   const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);

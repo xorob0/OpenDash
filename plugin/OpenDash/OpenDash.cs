@@ -629,6 +629,9 @@ namespace OpenDashPlugin
             // And the class best, filled by DataUpdate from the frame SimHub has finished. Not a setting:
             // published because SimHub keeps it and does not publish it. See Contract.ClassBestLap.
             this.AttachDelegate(Contract.ClassBestLap, () => classBestLap);
+            // And the clock format, shared because a driver reads a clock one way on every screen, and
+            // every package's idle screen draws the wall clock. #324.
+            this.AttachDelegate(Contract.ClockFormat, () => Settings.ClockFormat);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
