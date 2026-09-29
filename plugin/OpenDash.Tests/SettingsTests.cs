@@ -1362,23 +1362,57 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_settings_file_from_before_the_panel_rebuild_loads_with_the_new_answers_defaulted()
         {
-            // What a 0.3.0-rc.7 rig has on disk: no pit-lane switch, no rig thresholds, a retired rev
-            // look on the rig and on a bar, and a reversed 4/14/4. Json.NET, which is what SimHub reads
-            // it with. #503.
-            var json = "{\"LedRpmStyle\":\"f1\",\"FlagBoxMatrixOilTemp\":[248,0,0,0],"
-                + "\"LedBars\":[{\"Name\":\"MLD\",\"Namespace\":\"LedMLD\",\"Shape\":\"4-14-4-reversed\",\"RpmStyle\":\"meetInMiddle\"}]}";
+            // What a 0.3.0-rc.7 rig has on disk: no pit-lane switch, no rig thresholds but two named
+            // panels whose own differ (Left's water at 0), a face with no zone orders, a retired rev look
+            // on the rig and on both bars, a reversed 4/14/4 and a brow. Json.NET, which is what SimHub
+            // reads it with. #503.
+            var json = "{\"LedRpmStyle\":\"f1\","
+                + "\"FlagBoxMatrixName\":[\"Left\",\"Right\",null,null],"
+                + "\"FlagBoxMatrixOilTemp\":[120,135,150,0],\"FlagBoxMatrixWaterTemp\":[0,110,95,0],"
+                + "\"Rig\":[{\"Namespace\":\"Face1920x480\",\"Name\":\"Face 1920x480\",\"Kind\":\"face\",\"Width\":1920,\"Height\":480,"
+                + "\"Face\":{\"Zones\":[3,9,14,5],\"Masks\":[11,2097115,2097151,255],\"Starts\":[0,0,14,0],"
+                + "\"ClassOnly\":[false,false,false,false],\"BarFields\":[0,1,5,6],\"QuickGlance\":212}}],"
+                + "\"LedBars\":[{\"Name\":\"MLD\",\"Namespace\":\"LedMLD\",\"Shape\":\"4-14-4-reversed\",\"RpmStyle\":\"f1\"},"
+                + "{\"Name\":\"Brow\",\"Namespace\":\"LedBrow\",\"Shape\":\"brow-15\",\"RpmStyle\":\"meetInMiddle\"}]}";
             var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(json);
             settings.Normalise();
             Assert.True(settings.FlagsInPitLane);
             Assert.Equal("leftToRight", settings.LedRpmStyle);
-            Assert.Equal(248, settings.LightsOilTemp);
-            Assert.Equal(0, settings.LightsWaterTemp);
+
+            // The rig's thresholds are the first named panel that set one: Left's oil, Right's water, as
+            // every panel now reads them.
+            Assert.Equal(120, settings.LightsOilTemp);
+            Assert.Equal(110, settings.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(120, settings.MatrixOilTemp(matrix));
+                Assert.Equal(110, settings.MatrixWaterTemp(matrix));
+            }
+
+            // A face with no orders steps in the catalogue's, and each zone's position is the one
+            // zoneCyclePosition has always derived from the mask.
+            var face = settings.ScreenFace("Face1920x480");
+            for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
+            {
+                var letter = Contract.FaceZoneLetters[i];
+                Assert.Equal(Enumerable.Range(0, Contract.FaceZonePageCounts[i]), face.Order(letter));
+                var below = Enumerable.Range(0, face.Zones[i]).Count(p => (face.Mask(letter) & (1 << p)) != 0);
+                Assert.Equal(1 + below, face.Position(letter));
+            }
+            Assert.Equal(new[] { 3, 8, 15, 6 }, Contract.FaceZoneLetters.Select(face.Position).ToArray());
+
             var bar = settings.LedBarByNamespace("LedMLD");
             Assert.Equal("leftToRight", bar.RpmStyle);
             Assert.Equal("4-14-4", bar.Shape);
+            Assert.True(bar.Reversed);
             Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
             Assert.Null(bar.Brightness);
             Assert.Empty(bar.EffectsOff);
+            var brow = settings.LedBarByNamespace("LedBrow");
+            Assert.Equal("leftToRight", brow.RpmStyle);
+            Assert.Equal("brow-15", brow.Shape);
+            Assert.False(brow.Reversed);
+            Assert.Equal("brow-15", brow.ProfileShapeId);
 
             // And what this version writes, it reads back.
             settings.FlagsInPitLane = false;
@@ -1388,7 +1422,7 @@ namespace OpenDashPlugin.Tests
             var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
             back.Normalise();
             Assert.False(back.FlagsInPitLane);
-            Assert.Equal(248, back.LightsOilTemp);
+            Assert.Equal(120, back.LightsOilTemp);
             Assert.Equal(230, back.MatrixWaterTemp(3));
             Assert.Equal(40, back.BarBrightness("LedMLD"));
             Assert.False(back.BarEffectEnabled("LedMLD", "drs"));
