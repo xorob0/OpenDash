@@ -89,9 +89,18 @@ namespace OpenDashPlugin
             if (string.IsNullOrEmpty(id)) return null;
             if (id.StartsWith(PanelLightRows.BrowPrefix, StringComparison.Ordinal))
             {
+                // A brow has a reversed twin like any plain shape, `brow-15-reversed`, since #503.
+                var rest = id.Substring(PanelLightRows.BrowPrefix.Length);
+                var reversed = "-" + PanelLightRows.ReversedSuffix;
+                string browWiring = null;
+                if (rest.EndsWith(reversed, StringComparison.Ordinal))
+                {
+                    rest = rest.Substring(0, rest.Length - reversed.Length);
+                    browWiring = PanelLightRows.ReversedSuffix;
+                }
                 int length;
-                if (!Number(id.Substring(PanelLightRows.BrowPrefix.Length), out length)) return null;
-                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, null);
+                if (!Number(rest, out length)) return null;
+                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, browWiring);
             }
 
             var parts = id.Split('-');
@@ -211,12 +220,29 @@ namespace OpenDashPlugin
         /// The named shapes with a row each, then the generic runs with sides, the bare runs and the brows
         /// as one row apiece. A shape the build did not embed has no row at all, which is the honest answer:
         /// a row for a profile that is not there could only offer a press that does nothing.
+        ///
+        /// A reversed twin shares its plain sibling's row (#503). Reversal is a switch on a bar now rather
+        /// than a shape to pick, so the twin is the same strip wired from the other end: its row installs
+        /// it with the sibling, and a caption counts lengths, not wirings. The 4/14/4's twin is the one
+        /// exception and keeps the row it has always had, because it is named for a device of its own.
         /// </remarks>
         public static IList<LightRowPlan> Rows(IEnumerable<LightProfile> profiles)
         {
             var census = (profiles ?? Enumerable.Empty<LightProfile>())
                 .Where(p => p != null && !string.IsNullOrEmpty(p.ShapeId))
                 .ToList();
+
+            // Plain id to twin id, for every twin whose sibling this build carries and that has no row of
+            // its own; those twins then ride along behind their sibling wherever it lands.
+            var ids = new HashSet<string>(census.Select(p => p.ShapeId), StringComparer.Ordinal);
+            var namedIds = new HashSet<string>(NamedShapes.Select(n => n.Key), StringComparer.Ordinal);
+            var twinOf = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var id in ids)
+            {
+                var twin = id + "-" + ReversedSuffix;
+                if (ids.Contains(twin) && !namedIds.Contains(twin)) twinOf[id] = twin;
+            }
+            var folded = new HashSet<string>(twinOf.Values, StringComparer.Ordinal);
 
             var rows = new List<LightRowPlan>();
             var taken = new HashSet<string>(StringComparer.Ordinal);
@@ -226,11 +252,11 @@ namespace OpenDashPlugin
                 var profile = census.FirstOrDefault(p => string.Equals(p.ShapeId, key, StringComparison.Ordinal));
                 if (profile == null) continue;
                 taken.Add(profile.ShapeId);
-                rows.Add(new LightRowPlan(Prefixed(Label(profile)), named.Value, new[] { profile.ShapeId }));
+                rows.Add(new LightRowPlan(Prefixed(Label(profile)), named.Value, WithTwin(profile.ShapeId, twinOf)));
             }
 
             var rest = census
-                .Where(p => !taken.Contains(p.ShapeId))
+                .Where(p => !taken.Contains(p.ShapeId) && !folded.Contains(p.ShapeId))
                 .Select(p => new KeyValuePair<LightProfile, LightShape>(p, LightShape.Parse(p.ShapeId)))
                 .ToList();
 
@@ -242,16 +268,23 @@ namespace OpenDashPlugin
             foreach (var side in grid.Select(e => e.Value.Left).Distinct().OrderBy(n => n))
             {
                 var group = Sorted(grid.Where(e => e.Value.Left == side));
-                rows.Add(Range(group, SideNoun(side, 1), SideNoun(side, group.Count)));
+                rows.Add(Range(group, SideNoun(side, 1), SideNoun(side, group.Count), twinOf));
             }
 
             // Anything whose id this cannot read: its own row, under whatever the build called it. It is
             // still a profile of SimHub's LED driver, which is what the caption says and all it can say.
             foreach (var entry in rest.Where(e => e.Value == null))
             {
-                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "Strip", new[] { entry.Key.ShapeId }));
+                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "Strip", WithTwin(entry.Key.ShapeId, twinOf)));
             }
             return rows;
+        }
+
+        /// <summary>An id followed by its folded twin, when it has one.</summary>
+        private static IReadOnlyList<string> WithTwin(string id, IDictionary<string, string> twinOf)
+        {
+            string twin;
+            return twinOf.TryGetValue(id, out twin) ? new[] { id, twin } : new[] { id };
         }
 
         /// <summary>What a row of one side length is called: a side of none is a bare run, which is what a
@@ -264,14 +297,14 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A group of lengths, named by its two ends: "OpenDash brow 9 … 25".</summary>
-        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many)
+        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many, IDictionary<string, string> twinOf)
         {
             var labels = group.Select(Label).ToList();
             var name = labels.Count == 1
                 ? Prefixed(labels[0])
                 : Prefixed(labels[0] + Ellipsis + WithoutSharedWords(labels[0], labels[labels.Count - 1]));
             var caption = group.Count == 1 ? one : many + ", " + Word(group.Count) + " lengths";
-            return new LightRowPlan(name, caption, Ids(group));
+            return new LightRowPlan(name, caption, group.SelectMany(e => WithTwin(e.Key.ShapeId, twinOf)).ToList());
         }
 
         /// <summary>
@@ -307,11 +340,6 @@ namespace OpenDashPlugin
                 .ToList();
         }
 
-        private static IReadOnlyList<string> Ids(IEnumerable<KeyValuePair<LightProfile, LightShape>> group)
-        {
-            return group.Select(e => e.Key.ShapeId).ToList();
-        }
-
         private static string Label(KeyValuePair<LightProfile, LightShape> entry)
         {
             return Label(entry.Key);
@@ -335,7 +363,7 @@ namespace OpenDashPlugin
             }
             var shape = LightShape.Parse(profile.ShapeId);
             if (shape == null) return profile.ShapeId;
-            if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre);
+            if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre) + (shape.Reversed ? " reversed" : string.Empty);
             // rpmStripProfileName() writes the reversed suffix in lower case and the Fanatec one as the
             // maker's own name, so the fallback cannot simply append the suffix it read.
             var wiring = shape.Wiring == FanatecSuffix ? " Fanatec" : shape.Wiring == ReversedSuffix ? " reversed" : string.Empty;
@@ -421,12 +449,14 @@ namespace OpenDashPlugin
                 .ToList();
         }
 
-        /// <summary>The rig's bars whose shape is one of the row's, each with what SimHub holds for it.</summary>
+        /// <summary>The rig's bars whose profile is one of the row's, each with what SimHub holds for it. By
+        /// the profile a bar installs, which is its shape's reversed twin while the bar is reversed: a
+        /// reversed 4/14/4 is in SimHub as the reversed profile, and that row is the one that says so.</summary>
         private static IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> Members(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
         {
             var shapes = new HashSet<string>(shapeIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             return (bars ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
-                .Where(entry => entry.Key != null && entry.Value != null && entry.Key.Shape != null && shapes.Contains(entry.Key.Shape));
+                .Where(entry => entry.Key != null && entry.Value != null && entry.Key.ProfileShapeId != null && shapes.Contains(entry.Key.ProfileShapeId));
         }
 
         /// <summary>

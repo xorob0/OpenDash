@@ -93,6 +93,64 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_reversed_twin_shares_its_siblings_row_and_is_not_counted_as_a_length()
+        {
+            // The generator writes a reversed twin of every plain shape since #503, and reversal is a
+            // switch on a bar rather than a shape to pick, so a twin rides in its sibling's row. Names and
+            // captions are what they were; each row installs twice as many profiles.
+            var plain = FullBuild();
+            var twins = plain
+                .Where(p => !p.ShapeId.EndsWith("-reversed", StringComparison.Ordinal) && !p.ShapeId.EndsWith("-fanatec", StringComparison.Ordinal) && p.ShapeId != "4-14-4")
+                .Select(p => new LightProfile(p.ShapeId + "-reversed", "OpenDash " + PanelLightRows.Label(new LightProfile(p.ShapeId + "-reversed", null))))
+                .ToList();
+            // Shuffled in, as the assembly hands them over.
+            var built = plain.Concat(twins).OrderBy(p => p.ShapeId, StringComparer.Ordinal).ToList();
+
+            var before = PanelLightRows.Rows(plain);
+            var after = PanelLightRows.Rows(built);
+            Assert.Equal(before.Select(r => r.Name), after.Select(r => r.Name));
+            Assert.Equal(before.Select(r => r.Caption), after.Select(r => r.Caption));
+            for (var i = 0; i < before.Count; i++)
+            {
+                var row = before[i];
+                // The 4/14/4 pair keep their own two rows, and the Fanatec wiring has no twin.
+                var expected = row.ShapeIds.SelectMany(id => twins.Any(t => t.ShapeId == id + "-reversed") ? new[] { id, id + "-reversed" } : new[] { id });
+                Assert.Equal(expected, after[i].ShapeIds);
+            }
+            Assert.Equal(new[] { "4-14-4" }, after.Single(r => r.Name == "OpenDash 4/14/4").ShapeIds);
+            Assert.Equal(new[] { "4-14-4-reversed" }, after.Single(r => r.Name == "OpenDash 4/14/4 reversed").ShapeIds);
+            Assert.Equal(new[] { "3-9-3-fanatec" }, after.Single(r => r.Name == "OpenDash 3/9/3 Fanatec").ShapeIds);
+            Assert.Equal(new[] { "3-10-3", "3-10-3-reversed" }, after.Single(r => r.Name == "OpenDash 3/10/3").ShapeIds);
+            Assert.Equal(new[] { "1-4-1", "1-4-1-reversed", "1-5-1", "1-5-1-reversed" }, after.Single(r => r.Name == "OpenDash 1/4/1 … 1/12/1").ShapeIds.Take(4));
+            // Every profile in exactly one row, twins included.
+            var members = after.SelectMany(r => r.ShapeIds).ToList();
+            Assert.Equal(built.Count, members.Count);
+            Assert.Equal(built.Select(p => p.ShapeId).OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
+            // 62 profiles become 121: every plain shape but the 4/14/4, which had its twin already.
+            Assert.Equal(62, plain.Count);
+            Assert.Equal(121, built.Count);
+
+            // A twin whose sibling this build does not carry is still offered, in the row its geometry
+            // puts it in.
+            var orphan = PanelLightRows.Rows(new[] { new LightProfile("0-10-0-reversed", "OpenDash 0/10/0 reversed") });
+            Assert.Equal(new[] { "0-10-0-reversed" }, Assert.Single(orphan).ShapeIds);
+        }
+
+        [Fact]
+        public void A_brow_has_a_reversed_twin_too()
+        {
+            var twin = LightShape.Parse("brow-15-reversed");
+            Assert.Equal(PanelLightRows.Brow, twin.Placement);
+            Assert.Equal(15, twin.Centre);
+            Assert.True(twin.Reversed);
+            Assert.Null(LightShape.Parse("brow-15-fanatec"));
+            Assert.Equal("brow 15 reversed", PanelLightRows.ShapeLabel("brow-15-reversed"));
+            var rows = PanelLightRows.Rows(new[] { new LightProfile("brow-15", null), new LightProfile("brow-15-reversed", null) });
+            Assert.Equal(new[] { "brow-15", "brow-15-reversed" }, Assert.Single(rows).ShapeIds);
+            Assert.Equal("OpenDash brow 15", rows[0].Name);
+        }
+
+        [Fact]
         public void The_grouped_rows_are_named_by_their_own_ends()
         {
             // The name is read off the members rather than written down, so a length added to strip.ts
@@ -293,6 +351,29 @@ namespace OpenDashPlugin.Tests
                 new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = Current },
             };
             Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(sideThree.ShapeIds, Census(new LedBar[0], embeddedOnly), true).State);
+        }
+
+        [Fact]
+        public void A_reversed_bar_is_found_by_the_row_of_the_profile_it_installs()
+        {
+            // A 4/14/4 wired from the far end installs the reversed profile, whose row is its own; a
+            // reversed 3/10/3 installs a twin that rides in the 3/10/3's row. #503.
+            var mld = new LedBar { Name = "MLD", Namespace = "LedMLD", Shape = "4-14-4-reversed", Device = LedBar.ArduinoDevice };
+            var gtsl = new LedBar { Name = "GTSL", Namespace = "LedGTSL", Shape = "3-10-3", Reversed = true, Device = LedBar.ArduinoDevice };
+            mld.Normalise();
+            gtsl.Normalise();
+            var arduino = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = LedBarProfile.IdFor(mld.Namespace), Name = "MLD", Description = Current },
+                new InstalledProfile { ProfileId = LedBarProfile.IdFor(gtsl.Namespace), Name = "GTSL", Description = Current },
+            };
+            var census = Census(new[] { mld, gtsl }, arduino);
+            var built = FullBuild().Concat(new[] { new LightProfile("3-10-3-reversed", "OpenDash 3/10/3 reversed") }).ToList();
+            var rows = PanelLightRows.Rows(built);
+
+            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 4/14/4 reversed").ShapeIds, census, true).State);
+            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 4/14/4").ShapeIds, census, true).State);
+            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 3/10/3").ShapeIds, census, true).State);
         }
 
         /// <summary>
@@ -516,8 +597,13 @@ namespace OpenDashPlugin.Tests
                 },
                 rows.Select(r => r.Name));
             // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the
-            // legacy list already spells, plus the five that shipped before the grid.
-            Assert.Equal(62, rows.SelectMany(r => r.ShapeIds).Count());
+            // legacy list already spells, plus the five that shipped before the grid. And since #503 a
+            // reversed twin of every plain shape but the 4/14/4, which had one: fifty-nine more, riding
+            // in their siblings' rows, for 121. A build from before the twins has none.
+            var members = rows.SelectMany(r => r.ShapeIds).ToList();
+            var twins = members.Count(id => id.EndsWith("-reversed", StringComparison.Ordinal) && id != "4-14-4-reversed");
+            Assert.True(twins == 0 || twins == 59, twins + " reversed twins");
+            Assert.Equal(62 + twins, members.Count);
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);
