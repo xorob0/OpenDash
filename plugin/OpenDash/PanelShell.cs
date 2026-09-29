@@ -225,6 +225,26 @@ namespace OpenDashPlugin
         public static double SidebarWidthFor(PanelLayout layout) { return layout == PanelLayout.Full ? SidebarWidth : RailWidth; }
 
         /// <summary>
+        /// The room inside the rail: its 56 less the one pixel rule down its right edge and 8 each side, which
+        /// is 39 and not 40. What the rail holds is drawn to this, so nothing in it is clipped by a pixel.
+        /// </summary>
+        public const double RailInnerWidth = RailWidth - PanelMetrics.BorderWeight - 2 * RailPaddingX;
+
+        /// <summary>Night mode's switch on the rail, narrower than the full sidebar's 40 so it fits the 39 the
+        /// rail has: the same control, its knob stopping 17 in rather than 21 when on.</summary>
+        public const double RailSwitchWidth = 36;
+
+        /// <summary>
+        /// Where the centre of a sidebar item sits across, from the sidebar's left edge: half the room inside
+        /// the rule, 107.5 on the full sidebar and 27.5 on the rail. A capture script clicks here and at
+        /// <see cref="ItemCentre"/>, so the x follows the layout the panel is in as the y does.
+        /// </summary>
+        public static double ItemCentreX(PanelLayout layout = PanelLayout.Full)
+        {
+            return (SidebarWidthFor(layout) - PanelMetrics.BorderWeight) / 2;
+        }
+
+        /// <summary>
         /// Where the centre of a sidebar item sits, from the sidebar's top: the index is the item's place
         /// in <see cref="PanelNav.Pages"/>, Home being 0.
         /// </summary>

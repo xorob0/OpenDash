@@ -104,6 +104,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelShell.SectionGapFor(PanelPage.Rig));
         }
 
+        /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
+        /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
+        [Fact]
+        public void The_rail_holds_what_fits_inside_its_rule()
+        {
+            Assert.Equal(39, PanelShell.RailInnerWidth);
+            Assert.True(PanelShell.RailSwitchWidth <= PanelShell.RailInnerWidth, "the rail's night switch fits the rail");
+            Assert.True(PanelShell.RailSwitchWidth - PanelShell.SwitchKnob - 2 * PanelShell.SwitchInset > 0, "the knob still travels");
+            Assert.Equal(107.5, PanelShell.ItemCentreX(PanelLayout.Full));
+            Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Rail));
+            Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Compact));
+        }
+
         [Fact]
         public void The_content_grows_to_its_ceiling_and_no_further_unless_it_is_the_rig()
         {

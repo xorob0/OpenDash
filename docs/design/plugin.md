@@ -47,8 +47,11 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   than the card's 151 px.
 - **The live card is a fixed 85 px** against the artboard's 83.3, so its lines sit on whole pixels and the
   items below it never move when a session starts.
-- **On the rail, night mode is the full 40 px switch** rather than an icon toggle: the same control on
-  both sidebars, with its label as the tooltip where the label is not drawn.
+- **On the rail, night mode is the same switch at 36 px** rather than an icon toggle: the rail has 39 px
+  inside its rule, the full switch is 40, and the icon sheet has no moon to draw a toggle from. Its label
+  is the tooltip where the label is not drawn. The artboards draw no rail at all.
+- **Past the 1112 px ceiling the main column stays beside the sidebar** and the room beyond it is left
+  empty on the right, rather than the column being centred in the window; the artboards stop at 1200.
 - **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the
   plugin does not bundle.
 - **Voice replacements**: greyed rows are noun phrases ("Rig test", "Alert dismissal", "RPM colour for

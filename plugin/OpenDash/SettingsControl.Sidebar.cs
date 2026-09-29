@@ -166,9 +166,16 @@ namespace OpenDashPlugin
                 // Both runs in the display family, which is the one that carries Light and Bold (brand.md):
                 // Barlow ships Regular, Medium and SemiBold only, and WPF drew "open" Regular and "Dash"
                 // SemiBold from it.
-                var wordmark = Ui.HStack(0,
-                    Ui.Text("open", PanelShell.WordmarkSize, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
-                    Ui.Text("Dash", PanelShell.WordmarkSize, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data));
+                var open = Ui.Text("open", PanelShell.WordmarkSize, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data);
+                var dash = Ui.Text("Dash", PanelShell.WordmarkSize, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data);
+                // One line of the row's own 21, as the artboard's line-height: 1 draws it. WPF's default is the
+                // face's 1.2, about 25, which the 21 px row clipped at the descender of the p.
+                foreach (var run in new[] { open, dash })
+                {
+                    run.LineHeight = PanelShell.WordmarkSize;
+                    run.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+                }
+                var wordmark = Ui.HStack(0, open, dash);
                 // SemiBold, which the display family carries; the artboard's 500 is a face it does not.
                 var version = Ui.Text(OpenDash.Version, PanelShell.VersionSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
                 var dock = new DockPanel { LastChildFill = false };
@@ -232,7 +239,8 @@ namespace OpenDashPlugin
             var content = Ui.VStack(0, railField, results);
             var toggle = new ToggleButton
             {
-                Width = PanelShell.RailWidth - 2 * PanelShell.RailPaddingX,
+                // The rail's inside, 39: its 56 less the rule and 8 each side. It was 40 and lost its right edge.
+                Width = PanelShell.RailInnerWidth,
                 Height = PanelShell.SearchHeight,
                 Background = Ui.Brush(Theme.SurfaceBase),
                 BorderBrush = Ui.Brush(Theme.Border),
@@ -530,7 +538,7 @@ namespace OpenDashPlugin
                 Settings.LightsNightMode = on;
                 Save();
                 ShowLightingChange();
-            });
+            }, narrow ? PanelShell.RailSwitchWidth : PanelShell.SwitchWidth);
             System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
             nightSwitch = night;
             FrameworkElement nightRow;
@@ -539,7 +547,6 @@ namespace OpenDashPlugin
                 // The label is not drawn on the rail, so it is the tooltip there and only there.
                 night.ToolTip = PanelSettings.NightModeTitle;
                 night.HorizontalAlignment = HorizontalAlignment.Center;
-                night.Width = PanelShell.SwitchWidth;
                 nightRow = night;
             }
             else

@@ -1162,15 +1162,15 @@ namespace OpenDashPlugin
         /// A ToggleButton with a template of its own, so every caller that set IsChecked, a tooltip or an
         /// alignment on SimHub's switch keeps working. Space toggles it and it takes the focus ring.
         /// </remarks>
-        public static ToggleButton Switch(bool on, Action<bool> changed)
+        public static ToggleButton Switch(bool on, Action<bool> changed, double width = PanelShell.SwitchWidth)
         {
             var toggle = new ToggleButton
             {
-                Width = PanelShell.SwitchWidth,
+                Width = width,
                 Height = PanelShell.SwitchHeight,
                 IsChecked = on,
                 Cursor = Cursors.Hand,
-                Template = SwitchTemplate(),
+                Template = SwitchTemplate(width),
                 FocusVisualStyle = FocusRing(),
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1183,7 +1183,7 @@ namespace OpenDashPlugin
             return toggle;
         }
 
-        private static ControlTemplate SwitchTemplate()
+        private static ControlTemplate SwitchTemplate(double width)
         {
             var track = new FrameworkElementFactory(typeof(Border), "track");
             track.SetValue(Border.CornerRadiusProperty, new CornerRadius(PanelShell.SwitchHeight / 2));
@@ -1203,7 +1203,7 @@ namespace OpenDashPlugin
             var checkedTrigger = new Trigger { Property = ToggleButton.IsCheckedProperty, Value = true };
             checkedTrigger.Setters.Add(new Setter(Border.BackgroundProperty, Brush(Theme.Accent), "track"));
             checkedTrigger.Setters.Add(new Setter(Shape.FillProperty, Brush(Theme.OnAccent), "knob"));
-            checkedTrigger.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(PanelShell.SwitchWidth - PanelShell.SwitchKnob - PanelShell.SwitchInset, 0, 0, 0), "knob"));
+            checkedTrigger.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(width - PanelShell.SwitchKnob - PanelShell.SwitchInset, 0, 0, 0), "knob"));
             template.Triggers.Add(checkedTrigger);
             template.Triggers.Add(DisabledFade());
             return template;

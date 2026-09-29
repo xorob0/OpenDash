@@ -56,7 +56,12 @@ namespace OpenDashPlugin
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
-        private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Left };
+        private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Stretch };
+
+        /// <summary>The main column's one grid column, which carries the ceiling: a star column with a
+        /// MaxWidth stretches up to it and then stays beside the sidebar, where a Stretch element with a
+        /// MaxWidth of its own is centred in whatever is left.</summary>
+        private readonly ColumnDefinition mainColumn = new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) };
         private readonly StackPanel messageHost = new StackPanel { Orientation = Orientation.Vertical };
         private readonly ContentControl pageHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch };
 
@@ -169,7 +174,10 @@ namespace OpenDashPlugin
             column.Children.Add(messageHost);
             column.Children.Add(pageHost);
             mainFrame.Child = column;
-            mainScroll.Content = mainFrame;
+            var holder = new Grid();
+            holder.ColumnDefinitions.Add(mainColumn);
+            holder.Children.Add(mainFrame);
+            mainScroll.Content = holder;
 
             DockPanel.SetDock(sidebarHost, Dock.Left);
             frame.Children.Add(sidebarHost);
@@ -249,8 +257,7 @@ namespace OpenDashPlugin
         {
             var pad = PanelShell.MainPaddingX(layout);
             mainFrame.Padding = new Thickness(pad, PanelShell.MainPaddingTop, pad, PanelShell.MainPaddingBottom);
-            mainFrame.MaxWidth = WidePage(route.Page) ? double.PositiveInfinity : PanelShell.ContentMax + 2 * pad;
-            mainFrame.HorizontalAlignment = HorizontalAlignment.Stretch;
+            mainColumn.MaxWidth = WidePage(route.Page) ? double.PositiveInfinity : PanelShell.ContentMax + 2 * pad;
             sidebarHost.Width = PanelShell.SidebarWidthFor(layout);
             sheetLayer.Margin = new Thickness(PanelShell.SidebarWidthFor(layout), 0, 0, 0);
         }
