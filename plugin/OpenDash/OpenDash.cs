@@ -513,16 +513,18 @@ namespace OpenDashPlugin
                     ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
                     : null;
 
-                // What the panel names, replaced only when something in it moved, so the interface
-                // thread is not handed a new object sixty times a second.
-                var frame = data == null ? LiveStatus.None : new LiveStatus(
-                    data.GameName,
-                    data.GameRunning,
-                    data.NewData == null ? null : data.NewData.CarId,
-                    data.NewData == null ? null : data.NewData.CarModel,
-                    data.NewData == null ? null : data.NewData.TrackName,
-                    data.NewData == null ? null : data.NewData.SessionTypeName);
-                if (frame != live) live = frame;
+                // What the panel names, compared before anything is built and replaced only when
+                // something in it moved, so a frame in which nothing did allocates nothing and the
+                // interface thread is not handed a new object sixty times a second.
+                var named = data == null ? null : data.NewData;
+                var gameName = data == null ? null : data.GameName;
+                var gameRunning = data != null && data.GameRunning;
+                var carId = named == null ? null : named.CarId;
+                var carModel = named == null ? null : named.CarModel;
+                var trackName = named == null ? null : named.TrackName;
+                var sessionType = named == null ? null : named.SessionTypeName;
+                if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))
+                    live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);
 
                 var telemetry = data == null ? null : data.NewData;
                 // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no

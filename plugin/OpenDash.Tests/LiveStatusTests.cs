@@ -61,11 +61,36 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Is_answers_as_equality_does_and_allocates_nothing()
+        {
+            var session = Session();
+            Assert.True(session.Is("IRacing", true, "mx5 mx52016", "Mazda MX-5 Cup", "Spa", "Race"));
+            Assert.False(session.Is("IRacing", false, "mx5 mx52016", "Mazda MX-5 Cup", "Spa", "Race"));
+            Assert.False(session.Is("AssettoCorsa", true, "mx5 mx52016", "Mazda MX-5 Cup", "Spa", "Race"));
+            Assert.False(session.Is("IRacing", true, "MX5 MX52016", "Mazda MX-5 Cup", "Spa", "Race"));
+            Assert.False(session.Is("IRacing", true, "mx5 mx52016", "Global MX-5", "Spa", "Race"));
+            Assert.False(session.Is("IRacing", true, "mx5 mx52016", "Mazda MX-5 Cup", "Monza", "Race"));
+            Assert.False(session.Is("IRacing", true, "mx5 mx52016", "Mazda MX-5 Cup", "Spa", "Practice"));
+            Assert.True(LiveStatus.None.Is(null, false, null, null, null, null));
+            Assert.False(LiveStatus.None.Is(null, true, null, null, null, null));
+
+            // The frame with nothing moved is every frame but a handful, and it is asked sixty times a
+            // second: it has to cost nothing but the compares.
+            string game = "IRacing", car = "mx5 mx52016", model = "Mazda MX-5 Cup", track = "Spa", type = "Race";
+            session.Is(game, true, car, model, track, type);
+            var before = System.GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 1000; i++) session.Is(game, true, car, model, track, type);
+            Assert.Equal(0, System.GC.GetAllocatedBytesForCurrentThread() - before);
+        }
+
+        [Fact]
         public void The_plugin_replaces_its_copy_only_when_something_moved()
         {
             var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             Assert.Contains("private volatile LiveStatus live = LiveStatus.None;", source);
-            Assert.Contains("if (frame != live) live = frame;", source);
+            Assert.Contains("if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))", source);
+            Assert.Contains("live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);", source);
+            Assert.DoesNotContain("if (frame != live)", source);
             Assert.Contains("public LiveStatus Live => live;", source);
         }
     }

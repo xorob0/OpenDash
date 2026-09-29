@@ -48,12 +48,22 @@ namespace OpenDashPlugin
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return GameRunning == other.GameRunning
-                && string.Equals(GameName, other.GameName, StringComparison.Ordinal)
-                && string.Equals(CarId, other.CarId, StringComparison.Ordinal)
-                && string.Equals(CarModel, other.CarModel, StringComparison.Ordinal)
-                && string.Equals(TrackName, other.TrackName, StringComparison.Ordinal)
-                && string.Equals(SessionType, other.SessionType, StringComparison.Ordinal);
+            return Is(other.GameName, other.GameRunning, other.CarId, other.CarModel, other.TrackName, other.SessionType);
+        }
+
+        /// <summary>
+        /// Whether this status names exactly these six values, compared as <see cref="Equals(LiveStatus)"/>
+        /// compares them. DataUpdate asks this of the frame before building anything, so a frame in
+        /// which nothing moved allocates nothing.
+        /// </summary>
+        public bool Is(string gameName, bool gameRunning, string carId, string carModel, string trackName, string sessionType)
+        {
+            return GameRunning == gameRunning
+                && string.Equals(GameName, gameName, StringComparison.Ordinal)
+                && string.Equals(CarId, carId, StringComparison.Ordinal)
+                && string.Equals(CarModel, carModel, StringComparison.Ordinal)
+                && string.Equals(TrackName, trackName, StringComparison.Ordinal)
+                && string.Equals(SessionType, sessionType, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
