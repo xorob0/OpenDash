@@ -1303,8 +1303,8 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(108, settings.MatrixWaterTemp(matrix));
             }
 
-            // Panels that disagreed collapse to matrix 1's: one answer for the rig, and the first box's
-            // is the one most rigs had.
+            // A file that names no panel is read as one box, and takes matrix 1's value, even 0. Named
+            // panels with these numbers would give 130, the first that set one (the untouched case below).
             var differing = JsonSerializer.Deserialize<OpenDashSettings>("{\"FlagBoxMatrixOilTemp\":[0,130,140,150]}");
             differing.Normalise();
             Assert.Equal(0, differing.LightsOilTemp);
@@ -1561,7 +1561,8 @@ namespace OpenDashPlugin.Tests
         public void The_lights_are_declared_whatever_the_rig_is()
         {
             // Unlike a screen the rig has not got. There is nothing to detect -- OpenDash does not
-            // install the profile (ADR 0013) -- and it is a fixed handful of names.
+            // install the profile (ADR 0013) -- and a hundred and nine names is still fewer than the
+            // screens' two hundred and sixty-four.
             var settings = new OpenDashSettings { Screens = new List<string>() };
             settings.Normalise();
             var declared = settings.DeclaredProperties().ToList();
@@ -1580,8 +1581,8 @@ namespace OpenDashPlugin.Tests
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(26, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
-            // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
-            // rather than the hundred and thirty-six that made the screens worth narrowing.
+            // profile (ADR 0013), so there is nothing to detect, and a hundred and nine names is still
+            // fewer than the screens' two hundred and sixty-four, which are what was worth narrowing.
             var lights = Contract.LightsPropertyNames().Count();
 
             // An empty rig is a new install, and declares nothing of any screen's.

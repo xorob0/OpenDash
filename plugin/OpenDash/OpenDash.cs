@@ -431,7 +431,8 @@ namespace OpenDashPlugin
             }
             // The rig-wide names of what a bar owns, after the runs as the contract declares them. Each
             // answers for a strip nobody added as a bar, which reads these through its own isnull():
-            // the whole strip rather than a lamp, as bright as the rig, and everything it can draw.
+            // the lamp at the car's end rather than the whole strip, as bright as the rig, and everything
+            // it can draw.
             this.AttachDelegate(Contract.LedSpotterWhole, () => Contract.DefaultLedSpotterWhole);
             this.AttachDelegate(Contract.LedBrightness, () => (int?)null);
             foreach (var setting in Contract.LedEffectSettings())
@@ -494,14 +495,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// One frame of the car's own bar. The only telemetry OpenDash reads, and the only thing it
-        /// computes (ADR 0018).
+        /// One frame of what OpenDash reads from SimHub. Each frame it copies the class best lap out
+        /// of the leaderboard, compares the game, car, track and session names the panel shows with
+        /// the copy it holds and replaces that copy only when one of them moved, and runs the car's own
+        /// bar, the only thing OpenDash computes (ADR 0018).
         ///
         /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
-        /// or the sim closed it sets one field and returns, and the table lookup happens on a car
-        /// change rather than per frame. Nothing here may throw -- SimHub calls this from its own loop
-        /// and an exception here would be one per frame -- so the whole body is guarded and a failure
-        /// leaves the strip on the published ladder.</para>
+        /// or the sim closed the bar is handed nothing to compute, and the table lookup happens on a
+        /// car change rather than per frame. Nothing here may throw -- SimHub calls this from its own
+        /// loop and an exception here would be one per frame -- so the whole body is guarded and a
+        /// failure leaves the strip on the published ladder.</para>
         /// </summary>
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
@@ -514,8 +517,8 @@ namespace OpenDashPlugin
                     : null;
 
                 // What the panel names, compared before anything is built and replaced only when
-                // something in it moved, so a frame in which nothing did allocates nothing and the
-                // interface thread is not handed a new object sixty times a second.
+                // something in it moved, so a frame in which nothing did allocates nothing for the
+                // panel's copy and the interface thread is not handed a new object sixty times a second.
                 var named = data == null ? null : data.NewData;
                 var gameName = data == null ? null : data.GameName;
                 var gameRunning = data != null && data.GameRunning;
