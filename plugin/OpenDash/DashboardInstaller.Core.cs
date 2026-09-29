@@ -580,8 +580,9 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Reloads SimHub's DashFonts after an install. Implemented in DashboardInstaller.cs, where SimHub is
-        /// available; in the tests the call compiles away.</summary>
+        /// <summary>Asks SimHub to reload its list of DashFonts after an install, which does not make a face copied into
+        /// a running SimHub drawable (#441). Implemented in DashboardInstaller.cs, where SimHub is available; in the
+        /// tests the call compiles away.</summary>
         partial void RefreshSimHubFonts();
     }
 }

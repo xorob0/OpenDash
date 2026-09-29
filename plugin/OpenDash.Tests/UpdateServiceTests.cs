@@ -279,6 +279,39 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Contains("Close and reopen the dashboard", outcome.Line);
             Assert.DoesNotContain("restart SimHub", outcome.Line);
+            Assert.False(outcome.FontsWritten);
+        }
+
+        /// <summary>
+        /// An update whose dashboard brings a face the rig does not have says to restart, because reopening does not
+        /// draw it.
+        /// </summary>
+        /// <remarks>
+        /// This is #441's run A in miniature: rc.6 installed with two faces, rc.7 adding openDashDisplay-Light.ttf,
+        /// written into a running SimHub. The face was copied and the dashboard reopened, and the wordmark still drew
+        /// in a heavier face, since SimHub reads DashFonts once per run. Saying "close and reopen" there was the
+        /// false half of the sentence.
+        /// </remarks>
+        [Fact]
+        public void An_update_that_brings_a_new_face_says_to_restart_rather_than_reopen()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("0.1.0", record, "OpenDash");
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] =
+                SyntheticPackage.Zip("OpenDash", "0.2.0", ("OpenDash/_SHFonts/openDashDisplay-Light.ttf", "font-light")).ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.True(outcome.Ok);
+            Assert.True(outcome.FontsWritten);
+            Assert.True(File.Exists(Path.Combine(root, PackageExtractor.DashFonts, "openDashDisplay-Light.ttf")));
+            Assert.EndsWith(UpdateWording.RestartToSee, outcome.Line);
+            Assert.DoesNotContain("reopen", outcome.Line);
         }
 
         /// <summary>
