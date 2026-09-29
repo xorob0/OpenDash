@@ -20,14 +20,24 @@ import { FLAG_BOX_FILE } from '../src/build.ts';
 const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`;
 
 describe('the profile file names', () => {
-  test('are the grid, less what a legacy shape already spells, plus the legacy shapes', () => {
+  test('are the grid, less what a legacy shape already spells, plus the legacy shapes, plus a far-end twin of each plain one', () => {
     // The count is the product of the two ranges rather than a number typed here, so widening a range
     // moves it and dropping a shape from the legacy list moves it the other way. What is pinned is
     // the arithmetic: every side against every centre, the long bare runs after them, and the shapes
     // that shipped before the grid and fall outside it.
     expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
     const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
-    expect(ALL_SHAPES.length).toBe(GRID_SHAPES.filter((shape) => !spelled.has(shape.id)).length + LEGACY_SHAPES.length);
+    const shapes = [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];
+    // And since #503 every plain one of those twice, once wired from each end; the Fanatec wiring is
+    // the one shape that is neither plain nor a reversal, so it has no twin. The spelled 4/14/4
+    // reversed is the twin of its plain sibling, and no second one is made.
+    const plain = shapes.filter((shape) => !shape.id.endsWith('-reversed') && !shape.id.endsWith('-fanatec'));
+    expect(shapes.filter((shape) => shape.id.endsWith('-fanatec'))).toHaveLength(1);
+    expect(ALL_SHAPES.length).toBe(2 * plain.length + 1);
+    expect(ALL_SHAPES.length).toBe(121);
+    // The twins come after every shape that was there before them, so no id moves.
+    expect(ALL_SHAPES.slice(0, shapes.length).map((shape) => shape.id)).toEqual(shapes.map((shape) => shape.id));
+    expect(ALL_SHAPES.slice(shapes.length).every((shape) => shape.id.endsWith('-reversed'))).toBe(true);
     // And the ranges themselves, which are the whole of what a driver picks between.
     expect(SIDE_LENGTHS).toEqual([0, 1, 2, 3, 4]);
     expect(CENTRE_LENGTHS[0]).toBe(4);

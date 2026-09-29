@@ -21,9 +21,12 @@ const manifest: Manifest | null = existsSync(manifestPath) ? (JSON.parse(readFil
 describe('the strip shapes', () => {
   const shapes = stripShapes(ALL_SHAPES, LEGACY_SHAPES);
 
-  test('are the sixty-two the build writes, five of them legacy', () => {
-    expect(shapes).toHaveLength(62);
+  test('are the hundred and twenty-one the build writes, five of them legacy', () => {
+    // Sixty-two until #503 gave every plain shape a far-end twin: a profile is installed per bar now,
+    // and which way a strip is wired is a switch on the bar, so the twins cost bytes and nothing else.
+    expect(shapes).toHaveLength(121);
     expect(shapes.filter((s) => s.legacy)).toHaveLength(5);
+    expect(shapes.filter((s) => s.id.endsWith('-reversed'))).toHaveLength(60);
   });
 
   test('have unique ids', () => {
@@ -34,10 +37,10 @@ describe('the strip shapes', () => {
     for (const s of shapes.filter((x) => !x.legacy)) expect(s.left).toBe(s.right);
   });
 
-  test.if(manifest !== null)('each one has a profile in the manifest, and the flag box makes sixty-three', () => {
+  test.if(manifest !== null)('each one has a profile in the manifest, and the flag box makes a hundred and twenty-two', () => {
     const profiles = new Set(manifest!.ledProfiles ?? []);
     for (const s of shapes) expect(profiles.has(`OpenDash ${s.id}.ledsprofile`)).toBe(true);
-    expect(profiles.size).toBe(63);
+    expect(profiles.size).toBe(122);
   });
 });
 

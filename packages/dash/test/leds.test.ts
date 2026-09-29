@@ -124,7 +124,17 @@ describe('the strip shapes', () => {
   test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', '4-14-4-reversed']);
+    // Since #503 that is the Fanatec wiring and the far-end twin of every plain shape, and a twin is
+    // exactly its plain sibling's geometry read from the other end of the whole device.
+    for (const s of ALL_SHAPES.filter((s) => s.positions)) {
+      if (s.id === '3-9-3-fanatec') continue;
+      expect({ id: s.id, twin: s.id.endsWith('-reversed') }).toMatchObject({ twin: true });
+      const plain = shapeById(s.id.slice(0, -'-reversed'.length));
+      expect({ id: s.id, sibling: plain !== undefined && plain.positions === undefined }).toMatchObject({ sibling: true });
+      expect({ id: s.id, geometry: [s.left, s.centre, s.right, s.extraRuns] }).toEqual({ id: s.id, geometry: [plain!.left, plain!.centre, plain!.right, plain!.extraRuns] });
+      expect({ id: s.id, positions: s.positions }).toEqual({ id: s.id, positions: reversedPositions(deviceLength(s)) });
+    }
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id)).toContain('4-14-4-reversed');
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {

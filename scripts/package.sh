@@ -9,10 +9,11 @@ rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledspr
 # Everything is copied and the csproj decides what is embedded, which is how CI works too: it hands
 # the whole dash artefact over. The card faces are excluded there, for the reason written there.
 cp build/*.simhubdash plugin/OpenDash/Resources/
-# Gzipped, keeping the .ledsprofile name. Sixty-three shapes of a third of a megabyte each is twenty
-# megabytes of NCalc in the assembly; the same files pack to about five hundred kilobytes, and
-# FlagBoxProfile.TextOf sniffs gzip's magic so nothing else in the plugin knows the difference. The
-# plain files stay in build/ and are published nowhere: the plugin is the only way in (#438).
+# Gzipped, keeping the .ledsprofile name. A hundred and twenty-one shapes and the flag box, a third of
+# a megabyte each, is forty-four megabytes of NCalc in the assembly; the same files pack to under a
+# megabyte, and FlagBoxProfile.TextOf sniffs gzip's magic so nothing else in the plugin knows the
+# difference. Half of that is the far-end twins (#503). The plain files stay in build/ and are
+# published nowhere: the plugin is the only way in (#438).
 for profile in build/*.ledsprofile; do
   gzip -9 -c "$profile" > "plugin/OpenDash/Resources/$(basename "$profile")"
 done
