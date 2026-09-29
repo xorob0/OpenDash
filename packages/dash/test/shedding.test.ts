@@ -18,6 +18,7 @@ import { densityForBox, type Density } from '../src/second/density.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { ARCHETYPES, SHAPE_ARCHETYPES, shapeOf } from '../src/second/shape.ts';
 import { walkItems } from '../src/walk.ts';
+import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 
 /** Every item name a page draws in a box, which is how a declared id is checked against reality. */
@@ -203,6 +204,42 @@ describe('the two the ticket works through', () => {
     const narrow = namesAt('relative', 'tallNarrow');
     expect(narrow.some((n) => n.includes('row.class'))).toBe(false);
     expect(narrow.some((n) => n.includes('row.gap'))).toBe(true);
+  });
+});
+
+/**
+ * The one page whose order is argued rather than read off a drawing, because the drawing has no
+ * margin in it: the reading a driver makes before a stop, each figure ahead of the ones it is worked
+ * out from. `shedding.ts` has the argument; this holds the three places it has to be true (#334).
+ */
+describe('the fuel page keeps one order wherever it is drawn', () => {
+  /** The fields a page drew, in the order it drew them: rank by rank and left to right. */
+  const drawnOrder = (names: readonly string[]): string[] => names.filter((n) => n.endsWith('.value')).map((n) => n.slice(0, -'.value'.length));
+
+  test('at every shape the table lists the fields in the order the page draws them', () => {
+    for (const shape of ARCHETYPES) {
+      expect({ shape, order: drawnOrder(namesAt('fuel', shape)) }).toEqual({ shape, order: [...keepsAt('fuel', shape)!] });
+    }
+  });
+
+  test('so the estimate outlives every consumption, the margin outlives the estimate, and the average outlives the other two', () => {
+    for (const shape of ['wide', 'tall'] as const) {
+      const order = keepsAt('fuel', shape)!;
+      const rank = (id: string): number => order.indexOf(id);
+      expect({ shape, margin: rank('toEnd') < rank('lapsLeft') }).toEqual({ shape, margin: true });
+      for (const consumption of ['average', 'lastLap', 'thisLap']) {
+        expect({ shape, consumption, estimate: rank('lapsLeft') < rank(consumption) }).toEqual({ shape, consumption, estimate: true });
+      }
+      expect({ shape, average: rank('average') < Math.min(rank('lastLap'), rank('thisLap')) }).toEqual({ shape, average: true });
+    }
+  });
+
+  test("and band D's fuel page sheds in the same order", () => {
+    // The band names its readings for the band; these are the same readings under the module's ids.
+    // It has no `thisLap`, so the comparison is over the seven they share.
+    const asModule: Record<string, string> = { fuel: 'level', time: 'time', toEnd: 'toEnd', laps: 'lapsLeft', refuel: 'toAdd', perLap: 'average', lastLap: 'lastLap' };
+    const band = BAND_PAGES.fuel!.map((field) => asModule[field.id] ?? `band.${field.id}`);
+    expect(band).toEqual(keepsAt('fuel', 'wide')!.filter((id) => band.includes(id)));
   });
 });
 

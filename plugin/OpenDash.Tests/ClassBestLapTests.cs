@@ -27,8 +27,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void It_is_published_with_the_shared_group_and_not_offered_as_a_setting()
         {
+            // At the index it shipped at rather than last: the shared group is appended to, and the
+            // clock format came after it (#324).
             var shared = Contract.SharedPropertyNames().ToList();
-            Assert.Equal(Contract.ClassBestLap, shared.Last());
+            Assert.Equal(22, shared.IndexOf(Contract.ClassBestLap));
             Assert.Equal("ClassBestLap", Contract.ClassBestLap);
         }
     }

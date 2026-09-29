@@ -155,7 +155,7 @@ still running one from an earlier release reads the twelve as well; they are bui
 comparison on a rig, and no release publishes them. They are ordinary properties
 like the rest, so a dashboard or an LED profile of your own may read them, and they are not
 deprecated and are not being removed. The two round faces keep the twelve-slot design of 0.1.x on
-purpose; a round face becomes zones on a ring after 1.0, and the release that converts it is the one
+purpose; a round face becomes zones on a ring before 1.0 (#487), and the release that converts it is the one
 that will say what happens to these twelve.
 
 ## The second screens

@@ -125,9 +125,11 @@ const inkEnd = (item: TextItem): number => inkStart(item) + inkWidth(item);
  * Everything else an expression names -- a property, a `driver…` lookup, the player's own row -- is
  * a reading, and a follower may only read what its figure reads. `min` is in for band D's energy and
  * refuel, whose declaration is clamped to the cells their box was measured from; it takes two widths
- * and no reading of its own.
+ * and no reading of its own. `in` is a comparison and not a reading either, being `=` written as a
+ * function: a twelve-hour clock asks whether its formatted hour is one of `10`, `11` and `12`, and
+ * what it compares is the figure's own `format` of the figure's own property (#324).
  */
-const WIDTH_FUNCTIONS = new Set(['if', 'round', 'abs', 'min']);
+const WIDTH_FUNCTIONS = new Set(['if', 'round', 'abs', 'min', 'in']);
 
 /** What an expression reads: the properties it names and the functions it calls. */
 const readings = (expression: string): string[] => [
