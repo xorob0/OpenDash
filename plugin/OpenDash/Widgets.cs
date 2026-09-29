@@ -790,7 +790,9 @@ namespace OpenDashPlugin
         /// follows is that such a setting is kept and moved out of the way, never dropped: somebody owns
         /// two flag boxes and their rig has to be configurable.
         /// </remarks>
-        public static FrameworkElement Collapsible(string title, string caption, bool open, Func<FrameworkElement> build)
+        /// <param name="toggled">Told when a hand opens or shuts the group, so a page can remember which is
+        /// open across a redraw.</param>
+        public static FrameworkElement Collapsible(string title, string caption, bool open, Func<FrameworkElement> build, Action<bool> toggled = null)
         {
             var chevron = Icon(ChevronIcon, Theme.TextSecondary);
             var head = HStack(8, chevron, Text(title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary));
@@ -820,6 +822,7 @@ namespace OpenDashPlugin
             {
                 open = !open;
                 apply();
+                if (toggled != null) toggled(open);
             };
             apply();
             return VStack(0, button, host);

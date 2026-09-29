@@ -19,15 +19,23 @@ namespace OpenDashPlugin
         private readonly Border sheetPanel = new Border();
         private Action sheetClosed;
 
+        /// <summary>What had keyboard focus when the sheet opened, which gets it back when the sheet closes.</summary>
+        private IInputElement sheetOpener;
+
         private bool SheetOpen => sheetLayer.Visibility == Visibility.Visible;
 
         private UIElement BuildSheetLayer()
         {
-            var dim = new Border { Background = Ui.Tint(Theme.SurfaceBase, PanelShell.SheetDimOpacity), Cursor = Cursors.Arrow };
+            // Both sheet artboards dim in the inset ground and edge the sheet in the border ink.
+            var dim = new Border { Background = Ui.Tint(Theme.SurfaceInset, PanelShell.SheetDimOpacity), Cursor = Cursors.Arrow };
             dim.MouseLeftButtonDown += (sender, args) => CloseSheet();
             sheetPanel.HorizontalAlignment = HorizontalAlignment.Right;
             sheetPanel.Background = Ui.Brush(Theme.SurfaceBase);
-            sheetPanel.BorderBrush = Ui.Brush(Theme.Rule);
+            sheetPanel.BorderBrush = Ui.Brush(Theme.Border);
+            // Tab and Ctrl+Tab go round the sheet and not out into the dimmed page, whose presses still work.
+            KeyboardNavigation.SetTabNavigation(sheetPanel, KeyboardNavigationMode.Cycle);
+            KeyboardNavigation.SetControlTabNavigation(sheetPanel, KeyboardNavigationMode.Cycle);
+            KeyboardNavigation.SetDirectionalNavigation(sheetPanel, KeyboardNavigationMode.Contained);
             sheetPanel.BorderThickness = new Thickness(PanelMetrics.BorderWeight, 0, 0, 0);
             sheetLayer.Children.Add(dim);
             sheetLayer.Children.Add(sheetPanel);
@@ -40,8 +48,11 @@ namespace OpenDashPlugin
         /// <param name="closed">Told when the sheet closes, however it closes.</param>
         private void ShowSheet(string title, UIElement body, UIElement footer, Action closed = null)
         {
-            CloseSheet();
+            // A sheet replacing another keeps the first one's opener: that is where the driver was.
+            var opener = SheetOpen ? sheetOpener : Keyboard.FocusedElement;
+            CloseSheet(restoreFocus: false);
             sheetClosed = closed;
+            sheetOpener = opener;
 
             var close = Ui.IconButton(PanelIcons.Close, "Close", CloseSheet);
             var head = new DockPanel { LastChildFill = true, Margin = new Thickness(PanelShell.SheetPaddingX, PanelShell.SheetHeaderPaddingTop, PanelShell.SheetPaddingX - 8, PanelShell.SheetHeaderPaddingBottom) };
@@ -104,15 +115,25 @@ namespace OpenDashPlugin
             sheetPanel.Width = PanelShell.SheetWidth(controlWidth);
         }
 
-        /// <summary>Closes the sheet, if one is open.</summary>
+        /// <summary>Closes the sheet, if one is open, and gives focus back to what opened it when that is
+        /// still on screen.</summary>
         private void CloseSheet()
         {
+            CloseSheet(restoreFocus: true);
+        }
+
+        private void CloseSheet(bool restoreFocus)
+        {
             if (!SheetOpen && sheetPanel.Child == null) return;
+            var hadFocus = sheetPanel.IsKeyboardFocusWithin;
             sheetLayer.Visibility = Visibility.Collapsed;
             sheetPanel.Child = null;
+            var opener = sheetOpener as UIElement;
+            sheetOpener = null;
             var closed = sheetClosed;
             sheetClosed = null;
             if (closed != null) closed();
+            if (restoreFocus && hadFocus && opener != null && opener.IsVisible) Keyboard.Focus(opener);
         }
     }
 }

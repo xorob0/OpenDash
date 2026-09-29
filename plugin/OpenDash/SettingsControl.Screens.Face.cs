@@ -40,7 +40,7 @@ namespace OpenDashPlugin
 
             // The controls this build holds go with the page: a refresh after it has gone must not write into
             // a control nobody can see and read as having done something.
-            OnLeave(() =>
+            OnDrop(() =>
             {
                 zoneSelects.Clear();
                 zoneMaskButtons.Clear();

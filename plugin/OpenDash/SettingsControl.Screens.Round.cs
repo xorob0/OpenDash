@@ -41,7 +41,7 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = row,
             };
-            OnLeave(() =>
+            OnDrop(() =>
             {
                 slotWarningText = null;
                 slotWarningRow = null;

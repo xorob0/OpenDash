@@ -22,42 +22,80 @@ namespace OpenDashPlugin
         /// <summary>The live card's parts, rewritten on the tick without rebuilding the sidebar.</summary>
         private Border liveCard;
         private Ellipse liveDot;
-        private StackPanel liveEyebrowHost;
+        private Ellipse liveRing;
+        private TextBlock liveEyebrow;
         private TextBlock liveLine1;
         private TextBlock liveLine2;
         private LiveCard liveShown;
 
-        /// <summary>The search field, kept across sidebar rebuilds so a query being typed survives a redraw
-        /// the typing did not cause.</summary>
+        /// <summary>
+        /// The search, built once for each shape of sidebar and moved into every rebuild of it, so a query
+        /// being typed, its list and the caret survive a redraw the typing did not cause: an update answer,
+        /// a page change, a night-mode press.
+        /// </summary>
+        private FrameworkElement searchFull;
+        private FrameworkElement searchRail;
         private TextBox searchBox;
+        private TextBox railSearchBox;
         private Popup searchFlyout;
 
-        /// <summary>Draws the sidebar again from the rig, the route and what needs fixing.</summary>
+        /// <summary>The nav items of the sidebar that is showing, so focus can follow a press to the new one.</summary>
+        private readonly System.Collections.Generic.Dictionary<PanelPage, Button> navItems = new System.Collections.Generic.Dictionary<PanelPage, Button>();
+
+        /// <summary>
+        /// Draws the sidebar again from the rig, the route and what needs fixing.
+        /// </summary>
+        /// <remarks>
+        /// The items above the foot scroll, with no bar, when the window is too short for them: under about
+        /// 645 px the foot would otherwise cover Settings, then Shortcuts.
+        /// </remarks>
         private void RefreshSidebar()
         {
             var narrow = Narrow;
             var padX = narrow ? PanelShell.RailPaddingX : PanelShell.SidebarPaddingX;
             var dock = new DockPanel { LastChildFill = true };
+            navItems.Clear();
 
-            var top = new StackPanel { Orientation = Orientation.Vertical };
+            var top = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Top };
             top.Children.Add(BuildMarkRow(narrow));
-            top.Children.Add(BuildSearch(narrow));
+            top.Children.Add(Adopt(BuildSearch(narrow)));
             top.Children.Add(BuildLiveCard(narrow));
             top.Children.Add(BuildNavList(narrow));
-            DockPanel.SetDock(top, Dock.Top);
 
             var foot = BuildFoot(narrow);
             DockPanel.SetDock(foot, Dock.Bottom);
             dock.Children.Add(foot);
-            dock.Children.Add(top);
-            // The spacer the artboard draws as flex-grow: the dock's last child takes what is left.
-            dock.Children.Add(new Border());
+            // The flex-grow the artboard puts between the items and the foot: the dock's last child takes
+            // what is left, and scrolls when that is less than the items need.
+            dock.Children.Add(new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Focusable = false,
+                Content = top,
+            });
 
             sidebarHost.Background = Ui.Brush(Theme.SurfaceInset);
             sidebarHost.BorderBrush = Ui.Brush(Theme.Rule);
             sidebarHost.BorderThickness = new Thickness(0, 0, PanelMetrics.BorderWeight, 0);
             sidebarHost.Padding = new Thickness(padX, PanelShell.SidebarPaddingTop, padX, PanelShell.SidebarPaddingBottom);
             sidebarHost.Child = dock;
+        }
+
+        /// <summary>Takes an element that is kept between rebuilds out of the sidebar it was last drawn in.</summary>
+        private static FrameworkElement Adopt(FrameworkElement element)
+        {
+            var panel = element.Parent as Panel;
+            if (panel != null) panel.Children.Remove(element);
+            return element;
+        }
+
+        /// <summary>Puts keyboard focus on a page's item, after a press on the old one was drawn away.</summary>
+        private void FocusNavItem(PanelPage page)
+        {
+            Button item;
+            if (!navItems.TryGetValue(page, out item)) return;
+            Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(item)), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         private FrameworkElement BuildMarkRow(bool narrow)
@@ -73,10 +111,14 @@ namespace OpenDashPlugin
             else
             {
                 // The wordmark is the one place "openDash" is spelled that way; every sentence says OpenDash.
+                // Both runs in the display family, which is the one that carries Light and Bold (brand.md):
+                // Barlow ships Regular, Medium and SemiBold only, and WPF drew "open" Regular and "Dash"
+                // SemiBold from it.
                 var wordmark = Ui.HStack(0,
-                    Ui.Text("open", PanelShell.WordmarkSize, FontWeights.Light, Theme.TextPrimary),
-                    Ui.Text("Dash", PanelShell.WordmarkSize, FontWeights.Bold, Theme.TextPrimary));
-                var version = Ui.Text(OpenDash.Version, PanelShell.VersionSize, FontWeights.Medium, Theme.TextSecondary, PanelFonts.Data);
+                    Ui.Text("open", PanelShell.WordmarkSize, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
+                    Ui.Text("Dash", PanelShell.WordmarkSize, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data));
+                // SemiBold, which the display family carries; the artboard's 500 is a face it does not.
+                var version = Ui.Text(OpenDash.Version, PanelShell.VersionSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
                 var dock = new DockPanel { LastChildFill = false };
                 var left = Ui.HStack(10, mark, wordmark);
                 DockPanel.SetDock(left, Dock.Left);
@@ -100,17 +142,22 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildSearch(bool narrow)
         {
+            if (!narrow && searchFull != null) return searchFull;
+            if (narrow && searchRail != null) return searchRail;
+
             Func<string, System.Collections.Generic.IList<PanelSearch.Hit>> find = query => PanelSearch.Find(PanelSearch.All(), query);
             Action<PanelSearch.Hit> pick = hit =>
             {
                 if (searchFlyout != null) searchFlyout.IsOpen = false;
                 if (searchBox != null) searchBox.Text = string.Empty;
+                if (railSearchBox != null) railSearchBox.Text = string.Empty;
                 Go(hit.Route);
             };
 
             if (!narrow)
             {
-                searchBox = new TextBox { ToolTip = "Search every setting" };
+                // No tooltip: the placeholder already says Search.
+                searchBox = new TextBox();
                 var field = Ui.SearchField(searchBox, PanelSearch.Placeholder);
                 var tag = Ui.NewTag();
                 tag.Margin = new Thickness(6, 0, 0, 0);
@@ -120,12 +167,13 @@ namespace OpenDashPlugin
                 var host = new Grid { Margin = new Thickness(0, 0, 0, PanelShell.SearchGap) };
                 host.Children.Add(field);
                 host.Children.Add(list);
+                searchFull = host;
                 return host;
             }
 
             // The rail: a button, and the same list under a field of its own in a flyout beside it.
             var box = new TextBox();
-            searchBox = box;
+            railSearchBox = box;
             var railField = Ui.SearchField(box, PanelSearch.Placeholder);
             railField.Width = 320;
             var results = Ui.Suggestions(box, find, hit => hit.Text, pick, PanelSearch.NoMatch, popup: false, width: 320);
@@ -138,10 +186,11 @@ namespace OpenDashPlugin
                 BorderBrush = Ui.Brush(Theme.Border),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                 Cursor = Cursors.Hand,
-                ToolTip = "Search every setting",
+                ToolTip = PanelSearch.RailTooltip,
                 Content = Ui.NavIcon(PanelIcons.Search, Theme.TextSecondary, PanelShell.SearchIconSize),
                 Margin = new Thickness(0, 0, 0, PanelShell.SearchGap),
             };
+            System.Windows.Automation.AutomationProperties.SetName(toggle, PanelSearch.Placeholder);
             toggle.Template = RailToggleTemplate();
             searchFlyout = Ui.Flyout(toggle, content);
             searchFlyout.Placement = PlacementMode.Right;
@@ -149,6 +198,7 @@ namespace OpenDashPlugin
             var rail = new Grid();
             rail.Children.Add(toggle);
             rail.Children.Add(searchFlyout);
+            searchRail = rail;
             return rail;
         }
 
@@ -174,27 +224,46 @@ namespace OpenDashPlugin
         {
             liveShown = null;
             liveDot = new Ellipse { Width = PanelShell.LiveDotSize, Height = PanelShell.LiveDotSize, VerticalAlignment = VerticalAlignment.Center };
+            // The artboard's 3 px ring round a live dot, drawn behind it and outside the dot's own box so the
+            // eyebrow does not move when a session starts.
+            liveRing = new Ellipse
+            {
+                Width = PanelShell.LiveDotSize + 2 * PanelShell.LiveRingWidth,
+                Height = PanelShell.LiveDotSize + 2 * PanelShell.LiveRingWidth,
+                Margin = new Thickness(-PanelShell.LiveRingWidth),
+                IsHitTestVisible = false,
+            };
+            var dot = new Grid { Width = PanelShell.LiveDotSize, Height = PanelShell.LiveDotSize, VerticalAlignment = VerticalAlignment.Center, ClipToBounds = false };
+            dot.Children.Add(liveRing);
+            dot.Children.Add(liveDot);
             if (narrow)
             {
-                liveEyebrowHost = null;
+                liveEyebrow = null;
                 liveLine1 = null;
                 liveLine2 = null;
-                liveDot.Width = 9;
-                liveDot.Height = 9;
-                liveDot.HorizontalAlignment = HorizontalAlignment.Center;
+                dot.Width = dot.Height = liveDot.Width = liveDot.Height = 9;
+                liveRing.Width = liveRing.Height = 9 + 2 * PanelShell.LiveRingWidth;
+                dot.HorizontalAlignment = HorizontalAlignment.Center;
                 liveCard = new Border
                 {
                     Height = PanelShell.RailLiveHeight,
                     Margin = new Thickness(0, 0, 0, PanelShell.LiveCardGap),
                     Background = Brushes.Transparent,
-                    Child = liveDot,
+                    Child = dot,
                 };
             }
             else
             {
-                liveEyebrowHost = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-                var eyebrow = Ui.HStack(8, liveDot, liveEyebrowHost);
-                eyebrow.Height = PanelShell.LiveEyebrowHeight;
+                // One block that trims rather than the tracked eyebrow, which is a glyph per block and cannot:
+                // "Live · Assetto Corsa Competizione" is wider than the 151 px the card has for it.
+                liveEyebrow = Ui.Text(string.Empty, PanelShell.EyebrowSize, FontWeights.SemiBold, Theme.TextSecondary);
+                liveEyebrow.TextTrimming = TextTrimming.CharacterEllipsis;
+                liveEyebrow.VerticalAlignment = VerticalAlignment.Center;
+                var eyebrow = new DockPanel { LastChildFill = true, Height = PanelShell.LiveEyebrowHeight };
+                dot.Margin = new Thickness(0, 0, 8, 0);
+                DockPanel.SetDock(dot, Dock.Left);
+                eyebrow.Children.Add(dot);
+                eyebrow.Children.Add(liveEyebrow);
                 liveLine1 = Ui.Text(string.Empty, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
                 liveLine1.Height = PanelShell.LiveCarHeight;
                 liveLine1.TextTrimming = TextTrimming.CharacterEllipsis;
@@ -241,11 +310,12 @@ namespace OpenDashPlugin
             if (liveShown != null && liveShown.Eyebrow == card.Eyebrow && liveShown.Line1 == card.Line1 && liveShown.Line2 == card.Line2) return;
             liveShown = card;
             liveDot.Fill = Ui.Brush(card.DotHex);
+            liveRing.Fill = card.Live ? Ui.Tint(card.DotHex, PanelShell.LiveRingOpacity) : Brushes.Transparent;
             liveCard.ToolTip = card.Tooltip;
-            if (liveEyebrowHost != null)
+            if (liveEyebrow != null)
             {
-                liveEyebrowHost.Children.Clear();
-                liveEyebrowHost.Children.Add(Ui.Eyebrow(card.Eyebrow, card.EyebrowHex));
+                liveEyebrow.Text = card.Eyebrow ?? string.Empty;
+                liveEyebrow.Foreground = Ui.Brush(card.EyebrowHex);
             }
             if (liveLine1 != null) liveLine1.Text = card.Line1 ?? string.Empty;
             if (liveLine2 != null) liveLine2.Text = card.Line2 ?? string.Empty;
@@ -265,10 +335,12 @@ namespace OpenDashPlugin
                 list.Children.Add(item);
                 if (PanelNav.GapAfter(page))
                 {
+                    // The artboard's rule is an item of its own in a column with a 2 px gap: the gap, eight,
+                    // the pixel, eight, and the next item's gap, which is its own top margin here.
                     list.Children.Add(new Border
                     {
                         Height = 1,
-                        Margin = new Thickness(narrow ? 4 : PanelShell.NavDividerMarginX, PanelShell.NavDividerMarginY, narrow ? 4 : PanelShell.NavDividerMarginX, PanelShell.NavDividerMarginY - PanelShell.NavItemGap),
+                        Margin = new Thickness(narrow ? 4 : PanelShell.NavDividerMarginX, PanelShell.NavItemGap + PanelShell.NavDividerMarginY, narrow ? 4 : PanelShell.NavDividerMarginX, PanelShell.NavDividerMarginY),
                         Background = Ui.Brush(Theme.Rule),
                     });
                 }
@@ -321,16 +393,17 @@ namespace OpenDashPlugin
                 }
                 if (count != null)
                 {
-                    var number = Ui.Text(count, PanelShell.NavCountSize, FontWeights.Medium, Theme.TextSecondary, PanelFonts.Data);
+                    // SemiBold: the display family carries no Medium, which WPF would draw SemiBold anyway.
+                    var number = Ui.Text(count, PanelShell.NavCountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
                     number.MinWidth = 10;
                     number.TextAlignment = TextAlignment.Right;
-                    number.Margin = new Thickness(8, 0, 0, 0);
+                    number.Margin = new Thickness(PanelShell.NavTrailGap, 0, 0, 0);
                     DockPanel.SetDock(number, Dock.Right);
                     dock.Children.Add(number);
                 }
                 if (warns)
                 {
-                    var dot = new Ellipse { Width = PanelShell.NavWarnSize, Height = PanelShell.NavWarnSize, Fill = Ui.Brush(Theme.Caution), ToolTip = PanelNav.WarnTooltip, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+                    var dot = new Ellipse { Width = PanelShell.NavWarnSize, Height = PanelShell.NavWarnSize, Fill = Ui.Brush(Theme.Caution), ToolTip = PanelNav.WarnTooltip, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelShell.NavTrailGap, 0, 0, 0) };
                     DockPanel.SetDock(dot, Dock.Right);
                     dock.Children.Add(dot);
                 }
@@ -382,6 +455,7 @@ namespace OpenDashPlugin
                 button.MouseLeave += (sender, args) => button.Background = Brushes.Transparent;
             }
             button.Click += (sender, args) => Go(page);
+            navItems[page] = button;
             return button;
         }
 
@@ -414,12 +488,14 @@ namespace OpenDashPlugin
             {
                 Settings.LightsNightMode = on;
                 Save();
-                RebuildPage();
+                ShowLightingChange();
             });
-            night.ToolTip = "Night mode";
+            System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
             FrameworkElement nightRow;
             if (narrow)
             {
+                // The label is not drawn on the rail, so it is the tooltip there and only there.
+                night.ToolTip = PanelSettings.NightModeTitle;
                 night.HorizontalAlignment = HorizontalAlignment.Center;
                 night.Width = PanelShell.SwitchWidth;
                 nightRow = night;
@@ -429,7 +505,7 @@ namespace OpenDashPlugin
                 var dock = new DockPanel { LastChildFill = true };
                 DockPanel.SetDock(night, Dock.Right);
                 dock.Children.Add(night);
-                dock.Children.Add(Ui.Eyebrow("Night mode"));
+                dock.Children.Add(Ui.Eyebrow(PanelSettings.NightModeTitle));
                 nightRow = dock;
             }
             var nightBlock = new Border

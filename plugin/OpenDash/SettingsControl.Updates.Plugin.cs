@@ -47,6 +47,7 @@ namespace OpenDashPlugin
 
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
+            updateProgressHost = progressHost;
             updateButton = BuildUpdateButton(progressHost);
             restoreButton = BuildRestoreButton();
             var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
@@ -199,14 +200,14 @@ namespace OpenDashPlugin
             if (applying) return;
 
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
-            if (release == null && updateStatus.State == UpdateState.UpdateAvailable && pendingApply == null)
+            if (release == null && updateStatus.State == UpdateState.UpdateAvailable && !applyWaiting)
             {
                 // The offer is the remembered one (UpdateMark.Opening): the release is known and its assets are
                 // not, since a download URL expires within the hour and none is kept between runs. The press is
                 // a request, so the listing is asked for now and the update applied when it answers.
-                pendingApply = progressHost;
+                applyWaiting = true;
                 if (Check(manual: true)) return;
-                pendingApply = null;
+                applyWaiting = false;
             }
             if (release == null)
             {

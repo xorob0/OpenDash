@@ -70,6 +70,9 @@ namespace OpenDashPlugin
 
         public const string Placeholder = "Search";
 
+        /// <summary>The rail's search button, which has no placeholder to say what it does.</summary>
+        public const string RailTooltip = "Searches every setting.";
+
         /// <summary>
         /// The entries a query finds, best first, at most <paramref name="max"/>.
         /// </summary>

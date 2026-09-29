@@ -182,6 +182,10 @@ namespace OpenDashPlugin
         public const double LiveTrackHeight = 16;
         public const double LiveDotSize = 7;
 
+        /// <summary>The ring round a live dot: 3 px of the dot's own green at 18 %.</summary>
+        public const double LiveRingWidth = 3;
+        public const double LiveRingOpacity = 0.18;
+
         /// <summary>The live card on the rail: its dot alone, with the card's words as its tooltip.</summary>
         public const double RailLiveHeight = 22;
 
@@ -193,10 +197,14 @@ namespace OpenDashPlugin
         public const double NavCountSize = 15;
         public const double NavWarnSize = 7;
 
+        /// <summary>What sits between an item's label, its amber dot and its count: the artboard's flex gap.</summary>
+        public const double NavTrailGap = 12;
+
         /// <summary>The accent bar down the left edge of the page that is showing.</summary>
         public const double NavActiveBar = 2;
 
-        /// <summary>The rule after Rig and after Matrix: one pixel with eight above and below it.</summary>
+        /// <summary>The rule after Rig and after Matrix: one pixel with eight above and below it, an item of
+        /// its own in the column, so the column's 2 px gap falls on both sides of it as well.</summary>
         public const double NavDividerMarginY = 8;
         public const double NavDividerMarginX = 10;
         public const double NavDividerHeight = 1 + 2 * NavDividerMarginY;
@@ -233,7 +241,7 @@ namespace OpenDashPlugin
             for (var i = 0; i < index; i++)
             {
                 y += NavItemHeight + NavItemGap;
-                if (PanelNav.GapAfter(PanelNav.Pages[i])) y += NavDividerHeight;
+                if (PanelNav.GapAfter(PanelNav.Pages[i])) y += NavDividerHeight + NavItemGap;
             }
             return y + NavItemHeight / 2;
         }
@@ -273,11 +281,16 @@ namespace OpenDashPlugin
         /// <summary>The gap between a page's sections, which the artboards draw at 28.</summary>
         public const double SectionGap = 28;
 
-        /// <summary>The room a page has to lay out in, for a control of that width.</summary>
-        public static double ContentWidth(double controlWidth, bool wide = false)
+        /// <summary>
+        /// The room a page has to lay out in, for a control of that width, less <paramref name="scrollBar"/>:
+        /// the main column's vertical scroll bar, which takes its width from the column whenever the page is
+        /// taller than the window, and which the shell always leaves room for rather than rebuild the page
+        /// each time the bar comes and goes.
+        /// </summary>
+        public static double ContentWidth(double controlWidth, bool wide = false, double scrollBar = 0)
         {
             var layout = Layout(controlWidth);
-            var room = controlWidth - SidebarWidthFor(layout) - 2 * MainPaddingX(layout);
+            var room = controlWidth - SidebarWidthFor(layout) - 2 * MainPaddingX(layout) - Math.Max(0, scrollBar);
             if (room < 0) room = 0;
             return wide ? room : Math.Min(room, ContentMax);
         }

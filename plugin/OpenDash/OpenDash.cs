@@ -123,6 +123,16 @@ namespace OpenDashPlugin
         /// </summary>
         public event Action<UpdateStatus> UpdateChecked;
 
+        /// <summary>Whether a check is in flight now, whose answer <see cref="UpdateChecked"/> will carry.</summary>
+        public bool UpdateCheckInFlight => System.Threading.Volatile.Read(ref checking) != 0;
+
+        /// <summary>
+        /// Raised on the interface thread after one of the rig's own actions -- night mode, brightness up or
+        /// down, pressed on the wheel -- has changed the settings and been saved, so an open panel can show
+        /// the state the rig is now in rather than the one it drew.
+        /// </summary>
+        public event Action RigLightingPressed;
+
         /// <summary>1 while a check is in flight, so that the panel opening during the one Init queued waits for
         /// its answer rather than asking GitHub a second time.</summary>
         private int checking;
@@ -620,6 +630,14 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Saving the settings failed", ex);
+            }
+            try
+            {
+                RigLightingPressed?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Showing a wheel press on the panel failed", ex);
             }
         }
 

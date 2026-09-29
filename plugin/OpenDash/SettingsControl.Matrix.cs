@@ -25,7 +25,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
-            OnLeave(() =>
+            OnDrop(() =>
             {
                 flagBoxLine = null;
                 flagBoxPath = null;
@@ -230,7 +230,7 @@ namespace OpenDashPlugin
                     // the rig those tables can colour.
                     Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
                     BuildMatrixPanelActions(m));
-            });
+            }, opened => { if (opened) Select(PanelPage.Matrix, m.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
         }
 
         /// <summary>Renaming a panel and taking it away, at the foot of its own group.</summary>

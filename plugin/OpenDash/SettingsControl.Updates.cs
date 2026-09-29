@@ -22,9 +22,13 @@ namespace OpenDashPlugin
         private Button restoreButton;
         private Button checkButton;
 
-        /// <summary>Where an Update pressed on a remembered offer draws its progress, once the listing it asked
-        /// for has answered. Null when no such press is waiting.</summary>
-        private Border pendingApply;
+        /// <summary>Whether an Update pressed on a remembered offer is waiting for the listing it asked for.
+        /// Held apart from the build's controls, so a rebuild in place (night mode, a resize) keeps the press;
+        /// only leaving the page drops it.</summary>
+        private bool applyWaiting;
+
+        /// <summary>Where this build draws an update's progress.</summary>
+        private Border updateProgressHost;
 
         /// <summary>The question Update or Reinstall has put on the update line, if either has. It outlives the
         /// page, and does not need forgetting with the controls: a question counts only while its line shows it.</summary>
@@ -32,9 +36,9 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildUpdatesPage(PanelRoute to)
         {
-            // Every control the page holds goes with it, so an answer or a finished run that lands after the
+            // Every control the build holds goes with it, so an answer or a finished run that lands after the
             // page has gone writes nowhere rather than into a control nobody can see.
-            OnLeave(() =>
+            OnDrop(() =>
             {
                 dashboardTitle = null;
                 statusHost = null;
@@ -43,8 +47,9 @@ namespace OpenDashPlugin
                 updateButton = null;
                 restoreButton = null;
                 checkButton = null;
-                pendingApply = null;
+                updateProgressHost = null;
             });
+            OnLeave(() => applyWaiting = false);
             OnUpdate(
                 () =>
                 {
@@ -67,9 +72,9 @@ namespace OpenDashPlugin
         {
             if (checkButton != null) checkButton.IsEnabled = true;
             RefreshUpdateLine();
-            var host = pendingApply;
-            pendingApply = null;
-            if (host != null && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null) ApplyUpdate(host);
+            var waiting = applyWaiting;
+            applyWaiting = false;
+            if (waiting && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null && updateProgressHost != null) ApplyUpdate(updateProgressHost);
         }
     }
 }

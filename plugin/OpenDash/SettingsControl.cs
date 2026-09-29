@@ -73,9 +73,24 @@ namespace OpenDashPlugin
         private PanelLayout layout = PanelLayout.Full;
         private double controlWidth = PanelShell.FullFrom;
 
-        /// <summary>What the page being left asked to have undone: controls it held, a download it was
-        /// watching. Run and cleared on every Go.</summary>
+        /// <summary>What the page being left asked to have undone: a press it was waiting on, a download it
+        /// was watching. Run and cleared on every Go, and only on Go.</summary>
         private readonly List<Action> leaveActions = new List<Action>();
+
+        /// <summary>What the build that is showing asked to have let go of when it is replaced: the controls
+        /// it held. Run and cleared on every Go and on every rebuild in place.</summary>
+        private readonly List<Action> dropActions = new List<Action>();
+
+        /// <summary>The room and the columns the page that is showing was built for, so a resize rebuilds it
+        /// only when either has moved.</summary>
+        private double builtContentWidth = -1;
+        private bool builtTwoColumns;
+
+        /// <summary>Holds a resize's rebuild until the window has stopped moving.</summary>
+        private DispatcherTimer resizeSettle;
+
+        /// <summary>Whether SimHub has taken the panel off screen since it was last shown.</summary>
+        private bool wasUnloaded;
 
         public SettingsControl(OpenDash plugin)
         {
@@ -93,18 +108,28 @@ namespace OpenDashPlugin
             // while the page is on screen, so a page SimHub has let go of is not kept alive by the plugin;
             // the clock is the same, and nothing ticks behind a panel nobody is looking at.
             plugin.UpdateChecked += ShowUpdateAnswer;
+            plugin.RigLightingPressed += ShowLightingChange;
             Loaded += (sender, args) =>
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.UpdateChecked += ShowUpdateAnswer;
+                plugin.RigLightingPressed -= ShowLightingChange;
+                plugin.RigLightingPressed += ShowLightingChange;
                 StartClock();
+                if (wasUnloaded)
+                {
+                    wasUnloaded = false;
+                    CatchUp();
+                }
             };
             Unloaded += (sender, args) =>
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
+                plugin.RigLightingPressed -= ShowLightingChange;
                 StopClock();
                 // A page that is not on screen must not still be drawing a dashboard.
                 DropPreview();
+                wasUnloaded = true;
             };
 
             Go(route);
@@ -138,7 +163,10 @@ namespace OpenDashPlugin
             root.Children.Add(frame);
             root.Children.Add(BuildSheetLayer());
             root.SizeChanged += (sender, args) => Resize(args.NewSize.Width);
-            root.PreviewKeyDown += (sender, args) =>
+            // Bubbling, not tunnelling: an open drop-down list, a flyout and the search's suggestions each
+            // put their own Escape away and mark it handled, so the sheet closes only on an Escape nothing
+            // inside it wanted. PreviewKeyDown saw the key first and closed the sheet under an open list.
+            root.KeyDown += (sender, args) =>
             {
                 if (args.Key == Key.Escape && SheetOpen)
                 {
@@ -151,10 +179,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Follows the control's width: the sidebar, the gutter and the ceiling change at once, and the page
-        /// is drawn again only when the sidebar changes between labels and a rail, which is the one change a
-        /// page's own layout answers to. A card grid decides its columns as it is measured.
+        /// Follows the control's width: the sidebar, the gutter and the ceiling change at once. The sidebar is
+        /// drawn again when it changes between labels and a rail, and the page when the room it was built for
+        /// has moved -- its columns, or its width, which a picture or the Rig canvas is sized from -- once the
+        /// window has stopped moving. A card grid decides its columns as it is measured.
         /// </summary>
+        /// <remarks>
+        /// The constructor builds the first page before SimHub has measured the control, at the
+        /// <see cref="PanelShell.FullFrom"/> it assumes; the first real size is what corrects it.
+        /// </remarks>
         private void Resize(double width)
         {
             if (width <= 0) return;
@@ -169,7 +202,32 @@ namespace OpenDashPlugin
                 RefreshSidebar();
                 RebuildPage();
             }
+            else if (PageRoomMoved())
+            {
+                SettleThenRebuild();
+            }
             if (SheetOpen) SizeSheet();
+        }
+
+        /// <summary>Whether the page that is showing was built for other room than it has now.</summary>
+        private bool PageRoomMoved()
+        {
+            return Math.Abs(ContentWidth - builtContentWidth) >= 1 || TwoColumns != builtTwoColumns;
+        }
+
+        private void SettleThenRebuild()
+        {
+            if (resizeSettle == null)
+            {
+                resizeSettle = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromMilliseconds(150) };
+                resizeSettle.Tick += (sender, args) =>
+                {
+                    resizeSettle.Stop();
+                    if (PageRoomMoved()) RebuildPage();
+                };
+            }
+            resizeSettle.Stop();
+            resizeSettle.Start();
         }
 
         private void ApplyLayout()
@@ -194,25 +252,29 @@ namespace OpenDashPlugin
         /// Goes to a page, and to a row on it when the route names one.
         /// </summary>
         /// <remarks>
-        /// Everything the page being left held goes with it: the live preview of a screen, which holds
-        /// SimHub's renderer (ADR 0020); the page's lines; its tick callbacks and whatever it asked to have
-        /// undone; the sheet. The page is built afresh from the settings rather than re-shown, so nothing has
-        /// to be kept in step while it is not on screen, and a control a page holds belongs to the one build
-        /// that made it.
+        /// The sheet goes first, so that whatever its <c>closed</c> callback draws is drawn before, and then
+        /// cleared with, the page being left, rather than surviving into the next one. Then everything the
+        /// page being left held goes with it: the live preview of a screen, which holds SimHub's renderer
+        /// (ADR 0020); the page's lines; its tick callbacks and whatever it asked to have undone or dropped.
+        /// The page is built afresh from the settings rather than re-shown, so nothing has to be kept in step
+        /// while it is not on screen, and a control a page holds belongs to the one build that made it.
         /// </remarks>
         private void Go(PanelRoute to)
         {
+            CloseSheet();
+            var sidebarFocused = sidebarHost.IsKeyboardFocusWithin;
             DropPreview();
             ClearMessages();
             ClearTicks();
             ClearUpdateHandlers();
             RunLeaveActions();
-            CloseSheet();
+            RunDropActions();
             route = to ?? PanelRoute.Home;
             ApplyLayout();
             RefreshAttention();
             pageHost.Content = BuildPage(route);
             RefreshSidebar();
+            if (sidebarFocused) FocusNavItem(route.Page);
             if (route.Anchor != null) ScrollToAnchor(route.Anchor);
             else mainScroll.ScrollToTop();
         }
@@ -222,23 +284,73 @@ namespace OpenDashPlugin
             Go(new PanelRoute(page, anchor));
         }
 
-        /// <summary>Draws the page that is showing again, after something changed the rig under it.</summary>
+        /// <summary>
+        /// Draws the page that is showing again, in place, after something changed the rig under it: what
+        /// needs fixing is asked again, the sidebar's counts and dots follow, the lines are cleared for the
+        /// press's own, and the scroll stays where the driver was.
+        /// </summary>
+        /// <remarks>
+        /// It was Go to the same page, which threw the page back to its top on every press. The lines are
+        /// still cleared, because a press that redraws says its own line after, and two presses' lines would
+        /// otherwise stack; Say brings the top into view when it has something to say.
+        /// </remarks>
         private void Redraw()
         {
-            Go(new PanelRoute(route.Page));
+            CloseSheet();
+            ClearMessages();
+            RefreshAttention();
+            RebuildPage();
+            RefreshSidebar();
         }
 
-        /// <summary>Draws the page again without leaving it: the lines stay, the scroll stays. For a change
-        /// of layout, where nothing about the rig moved.</summary>
+        /// <summary>Draws the page again without leaving it: the lines stay, the scroll stays, keyboard focus
+        /// comes back to the control at the same place. For a change of layout, where nothing about the rig
+        /// moved, and under Redraw.</summary>
+        /// <remarks>
+        /// The page is not left, so its OnLeave actions are not run: a press it is waiting on survives a
+        /// rebuild. What the discarded build held is let go of through OnDrop.
+        /// </remarks>
         private void RebuildPage()
         {
+            var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
             DropPreview();
             ClearTicks();
             ClearUpdateHandlers();
-            RunLeaveActions();
+            RunDropActions();
             var offset = mainScroll.VerticalOffset;
             pageHost.Content = BuildPage(route);
             mainScroll.ScrollToVerticalOffset(offset);
+            if (focus != null) RestoreFocus(pageHost, focus);
+        }
+
+        /// <summary>
+        /// Draws the sidebar's switch and the page again after the rig's lighting changed: a press here, or
+        /// the wheel's night mode and brightness buttons, which the plugin reports through
+        /// <see cref="OpenDash.RigLightingPressed"/>. A page need not watch for these itself.
+        /// </summary>
+        private void ShowLightingChange()
+        {
+            RefreshSidebar();
+            RebuildPage();
+        }
+
+        /// <summary>
+        /// Brings the panel up to date after SimHub showed another page: an update answer that landed while
+        /// it was away was not heard, and the preview it had was let go of on the way out.
+        /// </summary>
+        private void CatchUp()
+        {
+            if (updateStatus.State == UpdateState.Checking && !plugin.UpdateCheckInFlight && !applying)
+            {
+                var last = plugin.LastUpdateStatus;
+                updateStatus = last == null
+                    ? new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.RigVersion }
+                    : askedManually && !last.Manual ? last.AsManual() : last;
+                askedManually = false;
+            }
+            RefreshAttention();
+            RebuildPage();
+            RefreshSidebar();
         }
 
         /// <summary>Selects a card on a page for the session, without drawing anything.</summary>
@@ -262,8 +374,9 @@ namespace OpenDashPlugin
             Go(new PanelRoute(page, anchor));
         }
 
-        /// <summary>The room a page has for its content at the width the panel is now.</summary>
-        private double ContentWidth => PanelShell.ContentWidth(controlWidth, WidePage(route.Page));
+        /// <summary>The room a page has for its content at the width the panel is now, less the room the main
+        /// column's scroll bar takes when the page is taller than the window.</summary>
+        private double ContentWidth => PanelShell.ContentWidth(controlWidth, WidePage(route.Page), SystemParameters.VerticalScrollBarWidth);
 
         /// <summary>Whether the sidebar is a rail, which is when a page stacks what it would lay side by side.</summary>
         private bool Narrow => PanelShell.IsNarrow(layout);
@@ -271,16 +384,39 @@ namespace OpenDashPlugin
         /// <summary>Whether a page may lay two blocks side by side.</summary>
         private bool TwoColumns => PanelShell.TwoColumns(layout, ContentWidth);
 
-        /// <summary>Asks for something to be undone when the page is left: a control it held, a watch it set.</summary>
+        /// <summary>
+        /// Asks for something to be undone when the page is left for another: a press it is waiting on, a
+        /// watch it set. Not run when the page is rebuilt in place (a resize, night mode, Redraw).
+        /// </summary>
         private void OnLeave(Action undo)
         {
             if (undo != null) leaveActions.Add(undo);
         }
 
+        /// <summary>
+        /// Asks for the controls this build of the page holds to be let go of when the build is replaced,
+        /// whether by another page or by a rebuild of this one, so a refresh that lands afterwards writes
+        /// into nothing rather than into a control nobody can see.
+        /// </summary>
+        private void OnDrop(Action drop)
+        {
+            if (drop != null) dropActions.Add(drop);
+        }
+
         private void RunLeaveActions()
         {
-            var actions = leaveActions.ToList();
-            leaveActions.Clear();
+            Run(leaveActions, "Leaving a page failed to undo something: ");
+        }
+
+        private void RunDropActions()
+        {
+            Run(dropActions, "Replacing a page failed to let go of something: ");
+        }
+
+        private static void Run(List<Action> list, string failure)
+        {
+            var actions = list.ToList();
+            list.Clear();
             foreach (var action in actions)
             {
                 try
@@ -289,9 +425,55 @@ namespace OpenDashPlugin
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn("Leaving a page failed to undo something: " + ex.Message);
+                    Log.Warn(failure + ex.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Where a focused control sits under a root, as the child index at each level of the visual tree,
+        /// so the same place can be found in a rebuild that draws the same shape.
+        /// </summary>
+        private static List<int> FocusPath(DependencyObject root, DependencyObject focused)
+        {
+            if (root == null || focused == null) return null;
+            var path = new List<int>();
+            var node = focused;
+            while (node != null && node != root)
+            {
+                var parent = System.Windows.Media.VisualTreeHelper.GetParent(node);
+                if (parent == null) return null;
+                var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+                var index = -1;
+                for (var i = 0; i < count; i++)
+                {
+                    if (System.Windows.Media.VisualTreeHelper.GetChild(parent, i) == node) { index = i; break; }
+                }
+                if (index < 0) return null;
+                path.Insert(0, index);
+                node = parent;
+            }
+            return node == root ? path : null;
+        }
+
+        /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
+        /// focusable thing above it when the rebuild is shaped differently there.</summary>
+        private void RestoreFocus(DependencyObject root, List<int> path)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                DependencyObject node = root;
+                IInputElement last = null;
+                foreach (var index in path)
+                {
+                    if (index >= System.Windows.Media.VisualTreeHelper.GetChildrenCount(node)) break;
+                    node = System.Windows.Media.VisualTreeHelper.GetChild(node, index);
+                    var element = node as UIElement;
+                    if (element != null && element.Focusable && element.IsVisible && element.IsEnabled) last = element;
+                }
+                if (last != null) Keyboard.Focus(last);
+                else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>
@@ -300,6 +482,8 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildPage(PanelRoute to)
         {
+            builtContentWidth = ContentWidth;
+            builtTwoColumns = TwoColumns;
             try
             {
                 switch (to.Page)

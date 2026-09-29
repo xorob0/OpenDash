@@ -28,7 +28,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
-            OnLeave(() =>
+            OnDrop(() =>
             {
                 carTablesButton = null;
                 carTablesLine = null;
@@ -173,7 +173,7 @@ namespace OpenDashPlugin
                             Save();
                         })), PanelLeds.AnchorSpotter),
                     BuildLedBarActions(ns));
-            });
+            }, opened => { if (opened) Select(PanelPage.Leds, ns); });
         }
 
         /// <summary>

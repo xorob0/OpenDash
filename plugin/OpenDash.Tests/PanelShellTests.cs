@@ -36,8 +36,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelShell.NavIconGap);
             Assert.Equal(15, PanelShell.NavTextSize);
             Assert.Equal(2, PanelShell.NavActiveBar);
-            // The divider: one pixel with eight above and below.
+            // The divider: one pixel with eight above and below, and the column's 2 px gap on either side
+            // of it, since the artboard draws it as an item of its own: 2 + 8 + 1 + 8 + 2.
             Assert.Equal(17, PanelShell.NavDividerHeight);
+            Assert.Equal(21, PanelShell.NavDividerHeight + 2 * PanelShell.NavItemGap);
+            // The label, the amber dot and the count, 12 apart; the live dot's 3 px ring at 18 %.
+            Assert.Equal(12, PanelShell.NavTrailGap);
+            Assert.Equal(3, PanelShell.LiveRingWidth);
+            Assert.Equal(0.18, PanelShell.LiveRingOpacity);
             // The switch: 40 by 22, a 16 px knob inset 3.
             Assert.Equal(40, PanelShell.SwitchWidth);
             Assert.Equal(22, PanelShell.SwitchHeight);
@@ -94,6 +100,11 @@ namespace OpenDashPlugin.Tests
             // 700: the rail and a 20 gutter.
             Assert.Equal(700 - 56 - 40, PanelShell.ContentWidth(700));
             Assert.Equal(0, PanelShell.ContentWidth(10));
+            // The main column's scroll bar comes out of the room wherever the room is under the ceiling:
+            // a 1100 px window has 1100 - 216 - 88 - 17, and a 3840 one is still capped.
+            Assert.Equal(1100 - 216 - 88 - 17, PanelShell.ContentWidth(1100, false, 17));
+            Assert.Equal(1112, PanelShell.ContentWidth(3840, false, 17));
+            Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, true, 17));
         }
 
         [Fact]
@@ -135,11 +146,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(234, PanelShell.ItemCentre(0));
             // Rig is one item on.
             Assert.Equal(234 + 42, PanelShell.ItemCentre(1));
-            // Screens comes after the rule under Rig.
-            Assert.Equal(234 + 2 * 42 + 17, PanelShell.ItemCentre(2));
+            // Screens comes after the rule under Rig, which is 17 and the gap after it, 19 in all.
+            Assert.Equal(337, PanelShell.ItemCentre(2));
             // Shortcuts comes after the rule under Matrix as well.
-            Assert.Equal(234 + 5 * 42 + 2 * 17, PanelShell.ItemCentre(5));
-            Assert.Equal(234 + 6 * 42 + 2 * 17, PanelShell.ItemCentre(6));
+            Assert.Equal(482, PanelShell.ItemCentre(5));
+            Assert.Equal(524, PanelShell.ItemCentre(6));
             // The rail's card is its dot.
             Assert.Equal(234 - 85 + 22, PanelShell.ItemCentre(0, PanelLayout.Rail));
             // Updates is pinned to the foot.
