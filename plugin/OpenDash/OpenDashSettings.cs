@@ -1258,8 +1258,14 @@ namespace OpenDashPlugin
 
         public void EndScreenGlance(string ns)
         {
+            EndScreenGlance(ns, DateTime.UtcNow);
+        }
+
+        /// <summary>The same, released at a given moment, from which a companion's way back is timed.</summary>
+        public void EndScreenGlance(string ns, DateTime now)
+        {
             var screen = ScreenByNamespace(ns);
-            if (screen != null) screen.EndQuickGlance();
+            if (screen != null) screen.EndQuickGlance(now);
         }
 
         /// <summary>The page one zone of one pit wall shows, by the key naming its page and slot.</summary>

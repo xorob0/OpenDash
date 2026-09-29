@@ -6,6 +6,7 @@
  * plugin/OpenDash/Contract.cs mirrors this file.
  */
 import { ncalc } from './generator.ts';
+import type { DashboardVariable } from './generator.ts';
 import type { Expr } from './bind.ts';
 // The shapes, for the run lengths the mirror publishes. strip.ts imports nothing, so this is the
 // one direction the two can face.
@@ -1066,13 +1067,11 @@ export function moduleSettingName(number: number): string {
  * `CompanionPage`: the module a companion was built to show, as a 0-based page index.
  *
  * It was the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin held and the
- * dashboard followed, which a `CompanionNextModule` action and a held glance used to step. **Nothing
- * moves it today.** A companion registers no action, because SimHub's own NextScreen and
- * PreviousScreen page it (#435), and no screen reads it, which is the next constant. The plugin still
- * publishes it and writes the start module into it when it forces that module through
- * `CompanionOpenOn`, which is bookkeeping nothing reads. The code that stepped it is kept in the
- * plugin for #362, which is where the action and the glance come back if SimHub ever lets a plugin
- * choose the screen.
+ * dashboard followed, which a `CompanionNextModule` action and a held glance used to step. **No screen
+ * follows it today.** SimHub's own NextScreen and PreviousScreen page a companion (#435), and the
+ * start module and the held glance reach the screen through `CompanionOpenOn` and the dashboard's
+ * own variables, below. The plugin still publishes the page and keeps it in step with the start
+ * module and the glance, which is bookkeeping nothing reads.
  *
  * The start module and the glance module are *not* properties beside it, and deliberately so -- a
  * second-screen property has to be read by a package, which `secondScreens.test.ts` enforces.
@@ -1085,35 +1084,99 @@ export const COMPANION_PAGE_SETTING = 'CompanionPage';
  * SimHub's only touch gesture on a dashboard maps a tap to the previous or next *screen*, and its
  * navigation walks the screens whose expression is true. While OpenDash enabled exactly one of the
  * twenty-one, that list had one member and a tap did nothing at all. So the rotation alone decides
- * which screens exist and SimHub decides which of them is up.
+ * which screens exist and SimHub decides which of them is up, except for the moments the plugin
+ * forces one through `CompanionOpenOn`.
  *
  * The property stays published. It has shipped, README names it, and #170 is the rule that an
  * rc user's properties do not vanish without a release of warning; what it costs while it is unread
- * is one name in a list. It comes back into use, with the start module and the held glance, if
- * SimHub ever gives a plugin a way to choose the screen -- #362.
+ * is one name in a list.
  */
 export const COMPANION_PAGE_IS_UNREAD = true;
 
 /**
- * `CompanionOpenOn`: the module to force, or -1 for none. The start module, recovered.
+ * `CompanionOpenOn`: the module to force, -1 for none, or -2 for the module the driver was on.
  *
- * **OpenDash can still choose a screen; it just cannot choose it twice.** SimHub re-evaluates every
- * screen's expression each frame and moves off one that has stopped being enabled -- the mechanism
- * the companion ran on before, and the reason the old gate worked at all. So leaving exactly one
- * module enabled still forces SimHub onto it. The plugin holds this at the start module for a few
- * seconds after SimHub loads and then clears it, and everything re-enables around a screen SimHub
- * has already selected and has no reason to leave.
+ * **OpenDash can choose a screen by leaving it the only one enabled.** SimHub re-evaluates every
+ * screen's expression each frame and moves off one that has stopped being enabled
+ * (`EditorModel.CheckGameModeScreen`): its current screen is gone, the last one it remembers is the
+ * same screen, so it takes the first enabled one, and one screen standing is the one it takes. When
+ * everything re-enables around it, SimHub has no reason to leave. That is how a companion opens on
+ * its start module, forced for a few seconds after SimHub loads, and how a held glance shows its
+ * module: forced for as long as the button is down.
  *
- * What it does *not* recover is the held glance, and the difference is memory rather than control.
- * Going to a module is one forced selection; coming back is a second one, to whichever module the
- * driver had been on -- and now that SimHub owns the paging, OpenDash does not know what that is.
- * SimHub publishes no property naming the selected screen. Its own navigation stack does know, and
- * `Dashboard.GotoScreen` uses it, but that method is internal. #362.
+ * Coming back from a glance is a second forced selection, to whichever module the driver had paged
+ * to -- and SimHub publishes no property naming the selected screen, so the plugin cannot name it.
+ * **The dashboard can**, which is what -2 asks of it. `rootdashboardscreenname()` is the screen it
+ * drew last frame, and a dashboard variable can keep a value from one frame to the next; so the
+ * companion remembers the last module the driver chose itself, and while the plugin says -2 it forces
+ * that one. See `companionVariables`.
  */
 export const COMPANION_OPEN_ON_SETTING = 'CompanionOpenOn';
 
 /** -1: force nothing, which is what a package with no plugin reads and what every ordinary frame is. */
 export const DEFAULT_COMPANION_OPEN_ON = -1;
+
+/**
+ * -2: force the module the driver was on before the plugin forced one. Set by the release of a held
+ * glance for about a second (`Contract.CompanionBackWindow`), which is long enough for SimHub to have
+ * moved and short enough that a tap straight after is not lost for long.
+ */
+export const COMPANION_OPEN_ON_BACK = -2;
+
+/**
+ * The companion's own dashboard variables, as `[variable.<name>]` reads them.
+ *
+ * None of the three is a plugin property, and none may contain `OpenDash.Companion`: a second
+ * companion is installed by replacing that token throughout the package's text
+ * (`PackageExtractor.RewriteNamespace`), which repoints the property reads inside these expressions
+ * and must leave the names alone.
+ */
+export const COMPANION_VARIABLES = {
+  /** The module drawn last frame, 0-based, or -1 when it was not a module. */
+  shown: 'companionShown',
+  /** The module to go back to: the last one shown that the plugin did not force. */
+  back: 'companionBack',
+  /** The module this frame forces, or -1 for none: `CompanionOpenOn` with -2 resolved. */
+  force: 'companionForce',
+} as const;
+
+const companionVariable = (name: string): Expr => isnull(prop(`variable.${name}`), num(DEFAULT_COMPANION_OPEN_ON));
+
+/**
+ * The three variables a companion keeps, in the order SimHub evaluates them, all before it chooses
+ * the frame's screen.
+ *
+ * `shown` names the module drawn last frame. `rootdashboardscreenname()` answers from the list of
+ * screen names SimHub hands the engine while it applies the items' bindings, which happens after the
+ * screen is chosen; a variable evaluated before the choice therefore reads the screen of the frame
+ * before, which is exactly the one a press or a release interrupts. The screens are named by module
+ * id, so the name is turned back into the index `CompanionOpenOn` speaks.
+ *
+ * `back` reads itself, which reads what it held last frame, and that is the whole of the memory: it
+ * follows `shown` except while the plugin is taking it back (-2), while the module shown is the one
+ * being forced -- the glance, or the start module -- and while what is shown is not a module at all,
+ * the idle screen between sessions. So it holds the last module the driver chose.
+ *
+ * `force` is what the screens read: the plugin's module, or on -2 the one `back` holds. When `back`
+ * holds nothing -- a glance pressed before any module was drawn -- it forces nothing, and the
+ * companion stays on the glance rather than blanking.
+ */
+export function companionVariables(): DashboardVariable[] {
+  const openOn = secondScreen.companionOpenOn();
+  const shownName = isnull('rootdashboardscreenname()', str(''));
+  const shown = MODULE_CATALOGUE.reduceRight<Expr>((rest, m) => iff(eq(shownName, str(m.id)), num(m.number - 1), rest), num(-1));
+  const lastShown = companionVariable(COMPANION_VARIABLES.shown);
+  const kept = companionVariable(COMPANION_VARIABLES.back);
+  return [
+    { name: COMPANION_VARIABLES.shown, expression: shown, beforeScreenRoles: true },
+    {
+      name: COMPANION_VARIABLES.back,
+      expression: iff(or(eq(openOn, num(COMPANION_OPEN_ON_BACK)), eq(lastShown, openOn), lt(lastShown, num(0))), kept, lastShown),
+      beforeScreenRoles: true,
+    },
+    { name: COMPANION_VARIABLES.force, expression: iff(eq(openOn, num(COMPANION_OPEN_ON_BACK)), kept, openOn), beforeScreenRoles: true },
+  ];
+}
 
 /** Lap times, which is the first module in page order and what a companion opens on. */
 export const DEFAULT_COMPANION_PAGE = 0;
@@ -1371,36 +1434,22 @@ export const secondScreen = {
    * as a number and treats as enabled when it is above zero. A boolean property converts to 1.
    */
   moduleEnabled: (number: number): Expr => isnull(prop(propertyName(moduleSettingName(number))), num(moduleAt(number).enabled ? 1 : 0)),
-  /** `isnull([OpenDash.CompanionPage], 0)`: the module the companion is showing, 0-based. */
-  companionPage: (): Expr => isnull(prop(propertyName(COMPANION_PAGE_SETTING)), num(DEFAULT_COMPANION_PAGE)),
-  /**
-   * A module's screen is enabled when the rotation leaves it on *and* it is the page the plugin is
-   * showing, which is what made the companion one screen at a time rather than a ring SimHub pages.
-   *
-   * No screen is gated on it now -- `moduleLive` below is what the companion reads, so that SimHub
-   * pages it and a tap works -- and nothing moves the page it reads. It is kept, with `companionPage`,
-   * for #362. What follows is why it was built as it was.
-   *
-   * Both halves earn their place. The page is what a wheel button moves, so it is what decides which
-   * of the twenty-one is up; the rotation is still asked, so that a driver with no plugin sees the
-   * first module they have left on rather than a screen they switched off, and so that the switches
-   * are read by the package that offers them. SimHub re-evaluates every screen's expression each
-   * frame and moves off a screen that has stopped being enabled, which is the same mechanism the two
-   * arrangements of a zone face are chosen by.
-   */
-  moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
   /** `isnull([OpenDash.CompanionOpenOn], -1)`: the module the plugin is forcing, or -1. */
   companionOpenOn: (): Expr => isnull(prop(propertyName(COMPANION_OPEN_ON_SETTING)), num(DEFAULT_COMPANION_OPEN_ON)),
+  /** `isnull([variable.companionForce], -1)`: the module this frame forces, or -1. */
+  companionForce: (): Expr => companionVariable(COMPANION_VARIABLES.force),
   /**
-   * A module's screen is enabled when the rotation leaves it on, and -- while the plugin is forcing
-   * one -- when it is the one being forced.
+   * A module's screen is enabled when the rotation leaves it on -- and, while a module is being
+   * forced, when it is that module and no other.
    *
-   * The second half is false on every ordinary frame, so SimHub's own paging owns the screen and a
-   * tap works. It goes true for a few seconds after SimHub loads, which leaves one screen standing
-   * and makes SimHub select it: that is the start module.
+   * The forcing half is idle on every ordinary frame, so SimHub's own paging owns the screen and a
+   * tap works. It goes true for a few seconds after SimHub loads, for as long as a glance is held, and
+   * for a moment after one is released; one screen left standing is one SimHub selects. A forced
+   * module is shown whether the rotation has it or not, because a glance is a thing the driver asked
+   * for by holding a button, and the rotation is about what a tap steps through.
    */
   moduleLive: (number: number): Expr =>
-    and(secondScreen.moduleEnabled(number), or(lt(secondScreen.companionOpenOn(), num(0)), eq(secondScreen.companionOpenOn(), num(number - 1)))),
+    or(eq(secondScreen.companionForce(), num(number - 1)), and(lt(secondScreen.companionForce(), num(0)), secondScreen.moduleEnabled(number))),
   /** `isnull([OpenDash.PitWallRaceA], 0)`: which page one page's zone shows. */
   zonePage: (id: PitWallPageMeta['id'], slot: string): Expr =>
     isnull(prop(propertyName(pitWallZoneSettingName(id, slot))), num(pitWallZoneSlot(id, slot).fallback)),

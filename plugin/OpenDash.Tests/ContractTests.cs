@@ -715,16 +715,20 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_companion_registers_no_action_because_SimHub_pages_it()
+        public void A_companion_registers_its_glance_and_nothing_to_page_with()
         {
-            // None, and that is the change. Both of the companion's actions moved `CompanionPage`, the
+            // No next-module action: both of the companion's old actions moved `CompanionPage`, the
             // screens were gated on it, and that gate is why a tap on the phone did nothing: SimHub's
-            // only touch gesture maps a tap to the previous or next screen and its navigation walks
-            // the screens whose expression is true, so one of twenty-one enabled had nowhere to go.
-            // SimHub owns the paging now, and an action that moves nothing would be a dead row in its
-            // Controls and events.
-            Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix));
-            Assert.Empty(Contract.CompanionActionNames("Rim"));
+            // only touch gesture maps a tap to the previous or next screen and its navigation walks the
+            // screens whose expression is true, so one of twenty-one enabled had nowhere to go. SimHub
+            // owns the paging now, and a next-module action would be a second binding for NextScreen.
+            // The glance is back (#362): it forces its module for as long as it is held, and the
+            // dashboard remembers where to go back to.
+            Assert.Equal(new[] { "CompanionHoldQuickGlance" }, Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix).ToArray());
+            Assert.Equal(new[] { "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
+            // The release forces the way back, which is neither a module nor nothing, for a moment.
+            Assert.Equal(-2, Contract.CompanionOpenOnBack);
+            Assert.True(Contract.CompanionBackWindow > TimeSpan.Zero && Contract.CompanionBackWindow < Contract.CompanionOpenOnWindow);
             // The name is kept, because a face still uses the same spelling for its own zones.
             Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
             // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,

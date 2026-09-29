@@ -227,6 +227,10 @@ namespace OpenDashPlugin
         /// be one timer on the plugin, armed once by Init: the panel forcing a start module chosen later
         /// in the session set a force that nothing ever released, and a companion that had been tapped
         /// freely froze on that module, taps and all, until SimHub restarted.
+        ///
+        /// A held glance forces too, with no end until its release, and the release forces
+        /// <see cref="Contract.CompanionOpenOnBack"/> for <see cref="Contract.CompanionBackWindow"/>.
+        /// Whichever of these was set last is the one in effect.
         /// </remarks>
         public int CompanionOpenOnAt(DateTime now)
         {
@@ -505,10 +509,9 @@ namespace OpenDashPlugin
         /// would bind this button: a press that landed on a module the driver had switched off would
         /// show a page the companion's own header counts as absent.
         ///
-        /// Nothing calls it from SimHub today. A companion registers no action (Contract.CompanionActionNames)
-        /// and the page it moves is read by no package, SimHub's own NextScreen paging the companion
-        /// instead. It stays, with the companion half of the glance below, because #362 is where both
-        /// come back if SimHub ever lets a plugin choose the screen.
+        /// Nothing calls it from SimHub today. A companion registers no next-module action
+        /// (Contract.CompanionActionNames) and the page it moves is read by no package, SimHub's own
+        /// NextScreen paging the companion instead.
         /// </remarks>
         public int CycleModule()
         {
@@ -525,6 +528,10 @@ namespace OpenDashPlugin
         /// The module does not have to be one the rotation leaves on, exactly as a face's glance page
         /// does not have to be one its mask enables: a glance is a thing a driver asked for by holding
         /// a button, and the rotation is about what the button steps through.
+        ///
+        /// On a companion "remembering" is the dashboard's to do. The force below leaves the glance
+        /// module the only screen enabled, so SimHub selects it; the module the driver had paged to is
+        /// one SimHub never tells the plugin, and the dashboard keeps it for the release.
         /// </remarks>
         public void BeginQuickGlance()
         {
@@ -540,6 +547,8 @@ namespace OpenDashPlugin
             {
                 glanceRestore = CompanionPage;
                 CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+                // For as long as the button is down, which the release ends.
+                force = new ModuleForce(CompanionPage, DateTime.MaxValue);
                 return;
             }
             if (!IsPitWall || PitWallZones == null) return;
@@ -558,13 +567,25 @@ namespace OpenDashPlugin
         /// <summary>Puts the screen back where it was. A release with no press does nothing.</summary>
         public void EndQuickGlance()
         {
+            EndQuickGlance(DateTime.UtcNow);
+        }
+
+        /// <summary>The same, released at a given moment, from which a companion's way back is timed.</summary>
+        public void EndQuickGlance(DateTime now)
+        {
             if (IsFace)
             {
                 if (Face != null) Face.EndQuickGlance();
                 return;
             }
             if (!GlanceHeld) return;
-            if (IsCompanion) CompanionPage = glanceRestore;
+            if (IsCompanion)
+            {
+                CompanionPage = glanceRestore;
+                // Back to the module the dashboard remembers, for long enough for SimHub to move there;
+                // after that nothing is forced and the paging is SimHub's again.
+                force = new ModuleForce(Contract.CompanionOpenOnBack, now + Contract.CompanionBackWindow);
+            }
             else if (glanceZone != null) SetZonePage(glanceZone, glanceRestore);
             glanceZone = null;
             glanceRestore = -1;

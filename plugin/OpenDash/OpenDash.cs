@@ -672,8 +672,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// The actions a driver binds to a wheel button, which are exactly the ones
         /// Contract.ScreenActionNames lists for the rig's screens: five per face, one per zone and one
-        /// held for a glance; the glance alone on a pit wall; and nothing on a companion, which SimHub
-        /// pages itself. ScreenActions walks that list and says what each name does, so the list and
+        /// held for a glance; the glance alone on a pit wall and on a companion, which SimHub pages
+        /// itself. ScreenActions walks that list and says what each name does, so the list and
         /// the registration cannot disagree, and ScreenActionsTests holds what arrives here.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
