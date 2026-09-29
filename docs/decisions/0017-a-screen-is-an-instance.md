@@ -236,3 +236,40 @@ the only place that says so. Moreover, 0.3.0-rc.1 installed strips per shape, be
 bars, and a rig that pressed one of those rows holds a profile under the embedded id; such a profile
 belongs to no bar and reads the rig-wide settings, so the rows no longer count it and nothing on the
 panel updates it. It keeps working as it did, and removing it is done in SimHub.
+
+---
+
+## Amended, 2026-09-28: a card face's namespace is its size, and its copy is never rewritten (#474)
+
+**What moved.** A card face, the `slots` kind the zone faces are replacing, took its namespace from its
+folder rather than from its size, because the migration above reads a size off a folder's name and the
+round faces' names carry none, so the two of them would otherwise have been one screen. A namespace read
+off a folder, however, is not frozen at creation, since it moves whenever the folder does. The Rig tab
+gave a new screen its namespace before its folder, so the first card face of a rig was given
+`Slots480x480` and then, once its folder was set, spelled a stock namespace of `SlotsOpenDash480Round`;
+and #467 had to move a migrated card face's namespace in order to correct the spelling of its folder,
+which is the one exception this decision otherwise forbids. Each time, the installer compared the two
+namespaces, took the screen for a second one whose copy had to be rewritten, and the copy was refused,
+because the package names no namespace at all. On a fresh rig, therefore, no card face could be written.
+
+**The namespace is the kind and the size, given once.** A card face reads only the properties every
+screen shares, so its namespace names no property and no action and exists only to keep two card faces
+apart on the rig. It is taken from its size, as a face's is, since the catalogue reads a round face's
+size from its metadata and every card face package is a size of its own. The migration is the one moment
+at which no size is known, and there a round face is given a namespace from its folder, once; from then
+on, neither the size the start repairs nor a folder spelled anew moves it.
+
+**Nothing in a card face is rewritten.** The rewrite above repoints the one namespace a package was built
+with, and a card face's package was built with none. One could think that a namespace equal to the stock
+one is what marks a copy as needing nothing. In reality it is what the package carries that decides it,
+and the installer thus asks the kind rather than the namespaces: a card face's copy is its package under
+the screen's folder and title, the first of a package and a second alike. A second card face still takes
+a folder and a namespace of its own, since two screens may not share a folder, but it reads the same
+twelve slots as the first, and the panel accordingly does not tell the driver that it gets settings of
+its own.
+
+**What this costs.** A card face migrated before this keeps the namespace its folder gave it, which is
+not the one its repaired size spells, so it does not read as a stock screen by its namespace although it
+holds its package's folder. Nothing reads that difference except the add, which now asks whether the rig
+already holds the package's folder as well as its namespace before it hands either out; otherwise a round
+face added to such a rig would have been given the folder of the one it already has.

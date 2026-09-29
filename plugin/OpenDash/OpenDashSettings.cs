@@ -1011,7 +1011,13 @@ namespace OpenDashPlugin
                     Height = height,
                     Folder = folder,
                 };
-                screen.Namespace = screen.StockNamespace;
+                // A card face whose folder spells no size, which is both round ones, would be Slots0x0 here, and the
+                // second would then be dropped as a repeat of the first. Its folder is what tells them apart at this
+                // moment, and it is asked once: the namespace names nothing and is frozen from here, so neither the
+                // size the start repairs nor a folder spelled anew moves it (#474).
+                screen.Namespace = screen.IsSlots && (width <= 0 || height <= 0)
+                    ? "Slots" + Contract.Slug(folder)
+                    : screen.StockNamespace;
                 screen.Name = screen.IsCompanion ? "Companion"
                     : screen.IsPitWall ? "Pit wall"
                     : width > 0 ? screen.SizeLabel

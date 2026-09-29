@@ -222,6 +222,7 @@ namespace OpenDashPlugin
         public bool IsFace { get { return string.Equals(Kind, Contract.KindFace, StringComparison.Ordinal); } }
         public bool IsCompanion { get { return string.Equals(Kind, Contract.KindCompanion, StringComparison.Ordinal); } }
         public bool IsPitWall { get { return string.Equals(Kind, Contract.KindPitWall, StringComparison.Ordinal); } }
+        public bool IsSlots { get { return string.Equals(Kind, Contract.KindSlots, StringComparison.Ordinal); } }
 
         /// <summary>
         /// Whether this screen holds the stock package for its size, unmodified.
@@ -230,7 +231,7 @@ namespace OpenDashPlugin
         /// The first screen at a size takes the stock namespace and the stock folder, and its package is
         /// extracted byte for byte as it is embedded. Only a second screen at a size needs the install to
         /// rewrite anything, which is what keeps the common rig producing exactly the files it produced
-        /// before ADR 0017.
+        /// before ADR 0017, and a card face never does, first or second (ScreenInstaller.TargetFor).
         /// </remarks>
         public bool IsStock
         {
@@ -246,13 +247,13 @@ namespace OpenDashPlugin
                 if (IsPitWall) return Contract.PitWallPrefix;
                 // A slots face owns no properties of its own -- it reads the twelve shared Slot ones --
                 // so its namespace names nothing and exists only to keep it distinct on the rig. It is
-                // taken from the folder rather than the size because the round faces carry no size in
-                // their name, and two of them would otherwise be one screen.
-                if (string.Equals(Kind, Contract.KindSlots, StringComparison.Ordinal))
-                {
-                    var from = Contract.Slug(Folder);
-                    return "Slots" + (from.Length == 0 ? Width + "x" + Height : from);
-                }
+                // taken from the size, as a face's is, and never from the folder: a namespace read off
+                // the folder moved whenever the folder did, which was once before the Rig tab had given
+                // it one and again whenever its spelling was corrected, and each move left the first
+                // card face of a rig reading as a copy of itself (#474). Every slots package is a size
+                // of its own, the two round ones included, since the catalogue reads their size from
+                // their metadata rather than from their name.
+                if (IsSlots) return "Slots" + Width + "x" + Height;
                 return "Face" + Width + "x" + Height;
             }
         }
@@ -268,11 +269,8 @@ namespace OpenDashPlugin
         /// included, so a folder written under the copy's spelling is a dashboard that does not come back (#467). The
         /// package is thus the one truth for the name of a folder it carries, and the copy is brought into line with it.
         ///
-        /// A slots face spells its namespace from its folder, so one that held the stock namespace under the old
-        /// spelling takes the stock namespace of the new one; otherwise it would stop being the stock screen of its own
-        /// folder, and its package, which has nothing to rewrite, would be refused as a copy. Such a namespace names no
-        /// property and no action, so nothing outside the rig can have been bound to the old one. Every other kind
-        /// takes its namespace from its kind and its size, and keeps it.
+        /// Only the folder moves. No kind takes its namespace from its folder, so the namespace stays the one the
+        /// screen was given at its creation (#474).
         /// </remarks>
         /// <returns>Whether the folder was spelled anew.</returns>
         public bool SpellFolderAs(string packageFolder)
@@ -280,9 +278,7 @@ namespace OpenDashPlugin
             if (Folder == null || packageFolder == null) return false;
             if (string.Equals(Folder, packageFolder, StringComparison.Ordinal)) return false;
             if (!string.Equals(Folder, packageFolder, StringComparison.OrdinalIgnoreCase)) return false;
-            var stock = IsStock;
             Folder = packageFolder;
-            if (stock) Namespace = StockNamespace;
             return true;
         }
 

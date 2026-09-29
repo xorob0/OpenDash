@@ -170,6 +170,8 @@ namespace OpenDashPlugin.Tests
             // together is what somebody would otherwise report as a bug.
             Assert.Contains("second", PanelAddScreen.Note(entry, true));
             Assert.Contains("settings of its own", PanelAddScreen.Note(entry, true));
+            // Except a card face, since every one of them reads the same twelve slots and a second gets none (#474).
+            Assert.Equal(string.Empty, PanelAddScreen.Note(Package("OpenDash 480 round", Contract.KindSlots, 480, 480), true));
         }
 
         /// <summary>
