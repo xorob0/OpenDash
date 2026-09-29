@@ -18,9 +18,15 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    a blocked plugin. Right-click `OpenDash.dll`, choose Properties, tick "Unblock" at the bottom
    of the General tab and click OK. If there is no "Unblock" box, the file is not blocked.
    The same from PowerShell: `Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"`.
-4. Start SimHub. It notices the new plugin and asks whether to enable it; accept. If SimHub
-   asks to restart, restart it.
-5. "OpenDash" now appears in SimHub's left menu. Open it on the **Rig** tab, which starts empty:
+4. Start SimHub. It notices the new plugin and shows a window titled "New plugins have been
+   detected !", in which OpenDash is listed with a switch at the right of its row, and that switch
+   is off. Switch it on, whereupon a second switch, "Show in left main menu", appears under the
+   description, off as well; switch that one on too, then press **Ok**. SimHub does not ask to
+   restart, and none is needed.
+5. "OpenDash" now appears in SimHub's left menu. If the second switch was left off, it is instead a
+   tab of **Additional plugins**, an entry of the same menu, where it works in the same way; the
+   same two switches are also under **Add/remove features**, at the foot of that menu, where the
+   second can be switched on later. Open OpenDash on the **Rig** tab, which starts empty:
    the plugin writes no dashboard until you add a screen, so a first start puts nothing new in
    SimHub's dashboard list. Press **Add a screen**, choose the screen type and the size that
    matches the display from Sizes below, give it a name and press **Add screen**: the plugin writes
@@ -321,9 +327,13 @@ Close SimHub, delete `OpenDash.dll` from the SimHub folder and, if you want the 
 too, delete the folders of the Sizes table under `DashTemplates` (`OpenDash`,
 `OpenDash 1280x480` and the rest) and the folder of any second screen of a size, which is
 `OpenDash` followed by the name you gave it, with the `.zip` copies kept beside them. The settings
-file named above can be deleted as well. The fonts copied into `DashFonts` (Barlow and openDash
-Display) are harmless and shared with other dashboards; an update that replaces one of them sets
-the older copy aside in `DashFonts\_Backups`, where it can be deleted.
+file named above can be deleted as well. Deleting it alone does not remove the settings, however,
+since SimHub keeps copies of it in `PluginsData\Common\_Backups`, named
+`OpenDash.GeneralSettings_b*.json`, and restores a missing settings file from them at its next
+start; delete those copies with it, or the previous rig comes back. The fonts copied into
+`DashFonts` (Barlow and openDash Display) are harmless and shared with other dashboards; an update
+that replaces one of them sets the older copy aside in `DashFonts\_Backups`, where it can be
+deleted.
 
 ## Troubleshooting
 
@@ -341,8 +351,8 @@ the older copy aside in `DashFonts\_Backups`, where it can be deleted.
   overwrite somebody's work without being told twice. Press **Reinstall**, then **Replace
   anyway**, to replace it; a copy is kept either way.
 - The dashboard shows the default pages although you changed them: the dashboard reads the
-  settings through the plugin's properties, so the plugin has to be enabled; check SimHub's
-  Settings > Plugins page.
+  settings through the plugin's properties, so the plugin has to be enabled; check its switch
+  under **Add/remove features**, at the foot of SimHub's left menu.
 - A wheel button does nothing: check that you bound the action of the screen you are looking at.
   Each screen has its own, so `Face1920x480CycleZoneB` moves the 1920 face and not the 850 beside
   it.

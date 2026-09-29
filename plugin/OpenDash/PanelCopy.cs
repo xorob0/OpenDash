@@ -36,6 +36,15 @@ namespace OpenDashPlugin
 
     public static class PanelCopy
     {
+        /// <summary>The line under OpenDash's name in SimHub's "New plugins have been detected !" prompt.</summary>
+        /// <remarks>
+        /// SimHub's PluginFinder.GetDescription looks up "PluginDescription_" + the class name in its own
+        /// translations and falls back to the class's [PluginDescription]. It has no translation for a
+        /// third-party plugin, so without the attribute the prompt printed the key itself,
+        /// "PluginDescription_OpenDash" (#475). It is the first sentence of OpenDash a driver reads.
+        /// </remarks>
+        public const string PluginDescription = "Dashboards for the screens on your rig, and a page to choose what each one shows.";
+
         public const string AddScreen = "Add a screen";
 
         /// <summary>The sentence under the empty rig's pill, which the pill has already said is empty.</summary>

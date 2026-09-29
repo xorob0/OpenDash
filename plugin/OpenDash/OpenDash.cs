@@ -22,6 +22,7 @@ namespace OpenDashPlugin
 {
     [PluginName("OpenDash")]
     [PluginAuthor("OpenDash contributors")]
+    [PluginDescription(PanelCopy.PluginDescription)]
     public class OpenDash : IDataPlugin, IWPFSettingsV2
     {
         /// <summary>SimHub stores the settings as PluginsData/Common/OpenDash.GeneralSettings.json.</summary>

@@ -34,6 +34,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Add the screen your rig has.", PanelCopy.EmptyRig);
         }
 
+        /// <summary>
+        /// SimHub's new-plugin prompt prints the plugin's [PluginDescription], and printed the resource key
+        /// "PluginDescription_OpenDash" while the class carried none (#475). OpenDash.cs references SimHub and
+        /// is not compiled here, so the attribute is held as text, as the panel's sources are.
+        /// </summary>
+        [Fact]
+        public void SimHubs_prompt_is_given_a_description_of_the_plugin()
+        {
+            Assert.Equal("Dashboards for the screens on your rig, and a page to choose what each one shows.", PanelCopy.PluginDescription);
+            var plugin = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
+            Assert.Contains("[PluginDescription(PanelCopy.PluginDescription)]", plugin);
+        }
+
         [Fact]
         public void Progress_says_the_word_and_the_number_the_canvas_shows()
         {
