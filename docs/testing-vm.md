@@ -206,5 +206,12 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
   photographed in the next photographs a key that is no longer down. `captureWhileHeld` in
   `scripts/gui.ts` holds, captures and releases inside one session, and is what proved the quick
   glance: without it the glance looked broken while working perfectly.
+- **The track-layout offer.** Dash Studio shows a "prebuilt track layouts" band at the top of
+  its page while `MapOnlineSuggestionDiscarded` in `PluginsData\Common\DashStudioSettings_2.json`
+  and `UseOnlineMaps` in `PluginsData\GlobalSimhubSettings.json` are both false. "No thanks" sets
+  the first in memory only, and SimHub saves it on a clean exit, which `Stop-Process -Force` never
+  is. To see the offer on purpose: stop SimHub, set `"MapOnlineSuggestionDiscarded": false` in that
+  file, and start SimHub. Never set `UseOnlineMaps` and never click "Enable it now": that opts the
+  guest into sharing its laps.
 - **Shared state.** There is one VM. If two agents test at once they will fight over SimHub.
   Check `simhub_status` / `vm_status` before assuming the desktop is yours.
