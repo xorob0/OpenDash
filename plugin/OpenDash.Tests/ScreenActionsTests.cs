@@ -103,7 +103,7 @@ namespace OpenDashPlugin.Tests
             companions.Rig[1].Namespace = "Garage";
             companions.Normalise();
             Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" },
-                Record(companions).Select(r => r.Name).Except(Contract.RigActionNames()).ToArray());
+                Record(companions).Select(r => r.Name).Where(n => !Contract.RigActionNames().Contains(n)).ToArray());
         }
 
         [Fact]
