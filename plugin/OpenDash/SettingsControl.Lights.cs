@@ -31,7 +31,8 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
-            DrawsLighting();
+            // No DrawsLighting(): the open strip group walks SimHub's LED devices, so the page is not rebuilt
+            // by a wheel press. Each picture re-dims in place through OnLighting instead.
             OnDrop(() =>
             {
                 carTablesButton = null;
@@ -161,6 +162,7 @@ namespace OpenDashPlugin
                 var preview = Ui.Strip(PanelEmulation.StripFrame(shape == null ? 0 : shape.Left, shape == null ? 0 : shape.Centre, PanelEmulation.Mid), StripStyle.Home,
                     PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness));
                 preview.Margin = new Thickness(0, 0, 0, 12);
+                OnLighting(() => Ui.Redim(preview, PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness)));
                 return Ui.VStack(0,
                     preview,
                     Ui.Anchor(BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)), PanelLeds.AnchorDevice),

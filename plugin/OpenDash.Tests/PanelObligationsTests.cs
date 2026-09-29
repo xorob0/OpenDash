@@ -66,6 +66,26 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A wheel's night-mode or brightness press rebuilds only a page that drew the switch or a brightness
+        /// as a control. LEDs walks SimHub's LED devices and Matrix reads its matrix profiles while they are
+        /// built, so both re-dim their pictures in place through OnLighting, and neither asks to be rebuilt.
+        /// </summary>
+        [Fact]
+        public void A_page_that_asks_simhub_while_it_is_built_repaints_its_lighting_in_place()
+        {
+            foreach (var name in new[] { "SettingsControl.Lights.cs", "SettingsControl.Matrix.cs" })
+            {
+                var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == name));
+                Assert.DoesNotContain("DrawsLighting()", code);
+                Assert.Contains("OnLighting(() => Ui.Redim(preview,", code);
+            }
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
+            // Cleared by every build, and run in place before any rebuild.
+            Assert.Contains("lightingActions.Clear();", shell);
+            Assert.Contains("Run(lightingActions.ToList(),", shell);
+        }
+
+        /// <summary>
         /// A glance re-bound through SimHub's Change command is corrected too. Change edits the mapping in
         /// place (trigger.PressType = pressType in 9.12.6) and the Triggers collection does not move, so the
         /// correction watches each mapping's own PropertyChanged, and the model's for a replaced collection.
@@ -82,6 +102,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("args.PropertyName == \"PressType\"", body);
             Assert.Contains("watched.PropertyChanged += modelChanged;", body);
             Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
+        }
+
+        /// <summary>
+        /// An undo a page registers while it is built runs once on Go, however many times the page was built
+        /// in place since: OnLeave takes a key, and a key registered again replaces its action.
+        /// </summary>
+        [Fact]
+        public void An_undo_registered_by_every_build_runs_once()
+        {
+            var code = string.Concat(RepoPaths.SettingsControlCode());
+            Assert.Contains("private void OnLeave(string key, Action undo)", code);
+            Assert.Contains("leaveActions.RemoveAll(pair => string.Equals(pair.Key, key, StringComparison.Ordinal));", code);
+            Assert.DoesNotContain("OnLeave(() =>", code);
         }
     }
 }

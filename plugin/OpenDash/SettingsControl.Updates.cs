@@ -55,7 +55,7 @@ namespace OpenDashPlugin
                 checkButton = null;
                 updateProgressHost = null;
             });
-            OnLeave(() => applyWaiting = false);
+            OnLeave("Updates.applyWaiting", () => applyWaiting = false);
             OnUpdate(
                 () =>
                 {

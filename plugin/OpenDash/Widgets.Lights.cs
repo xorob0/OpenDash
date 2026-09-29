@@ -58,6 +58,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Draws a picture made by <see cref="Strip"/> or <see cref="Matrix"/> at another brightness, in
+        /// place: what a page registers through OnLighting, so a wheel's night-mode press re-dims the
+        /// picture without the page being built again.
+        /// </summary>
+        public static void Redim(Border picture, double opacity)
+        {
+            var lamps = picture == null ? null : picture.Child as UIElement;
+            if (lamps != null) lamps.Opacity = opacity;
+        }
+
+        /// <summary>
         /// An 8x8: sixty-four round cells, row by row, <see cref="MatrixStyle.Gap"/> apart on the style's
         /// ground. Drawn on a canvas at exact positions, so the grid is the same size at every scale.
         /// </summary>

@@ -78,9 +78,10 @@ namespace OpenDashPlugin
         private PanelLayout layout = PanelLayout.Full;
         private double controlWidth = PanelShell.FullFrom;
 
-        /// <summary>What the page being left asked to have undone: a press it was waiting on, a download it
-        /// was watching. Run and cleared on every Go, and only on Go.</summary>
-        private readonly List<Action> leaveActions = new List<Action>();
+        /// <summary>What the page being left asked to have undone, by key: a press it was waiting on, a
+        /// download it was watching. Run and cleared on every Go, and only on Go; a key registered again
+        /// replaces its action, so every rebuild in place registering the same undo leaves one copy.</summary>
+        private readonly List<KeyValuePair<string, Action>> leaveActions = new List<KeyValuePair<string, Action>>();
 
         /// <summary>What the build that is showing asked to have let go of when it is replaced: the controls
         /// it held. Run and cleared on every Go and on every rebuild in place.</summary>
@@ -103,6 +104,11 @@ namespace OpenDashPlugin
 
         /// <summary>Holds a lighting change's rebuild until a burst of wheel presses has finished.</summary>
         private DispatcherTimer lightingSettle;
+
+        /// <summary>What the build that is showing asked, through <see cref="OnLighting"/>, to have repainted in
+        /// place when night mode or a brightness changes: the dim on a picture of a strip or a matrix.
+        /// Cleared by every build.</summary>
+        private readonly List<Action> lightingActions = new List<Action>();
 
         public SettingsControl(OpenDash plugin)
         {
@@ -273,16 +279,27 @@ namespace OpenDashPlugin
         // Navigation: Go(route) and Go(page, anchor) leave the page; Open(page, id, anchor) goes with a card
         // selected; Select and Selected hold a page's card for the session (Rig's is a PanelEmulation
         // scenario id, which is how Settings' "Try" opens Rig on one); Redraw rebuilds the page in place after
-        // a change, keeping the scroll and clearing the lines; ShowLightingChange sets the sidebar's switch
-        // and, only for a page that called DrawsLighting() while building, rebuilds it after night mode or a
-        // brightness changed, which the wheel's buttons do too, a burst of presses once.
-        // Lifetime: OnDrop(action) lets go of what one build holds, on every rebuild and on Go; OnLeave(action)
-        // undoes what the page started, on Go only; OnTick(action) is called every second while showing;
-        // OnUpdate(checking, answered) hears the update check. Layout: PageLayout, PageSection, ContentWidth
-        // (less the scroll bar), Narrow and TwoColumns, all read while building -- the shell rebuilds the page
-        // when any of them moves, so anything a page has in flight (a download, a press it is waiting on) lives
-        // in a field outside the build and the next build draws it from there. Lines: Say. Sheets: ShowSheet(title, body, footer, closed), SheetFooter,
-        // CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
+        // a change, keeping the scroll and clearing the lines. Lighting: ShowLightingChange sets the sidebar's
+        // switch after night mode or a brightness changed, which the wheel's buttons do too, while the driver
+        // is on track; it then runs what the build registered through OnLighting(repaint), in place and at
+        // once -- re-dimming a picture is a property set, and a page whose lighting is only a dimmed preview
+        // uses this and nothing else -- and last rebuilds the page, a burst of presses once, only when the
+        // build called DrawsLighting(), which is for a page that draws the night switch or a brightness
+        // itself (Home, Rig, Settings). A rebuild runs the whole build on SimHub's interface thread, so a page
+        // whose build asks SimHub anything (its devices, its profiles) must not call DrawsLighting().
+        // Lifetime: OnDrop(action) lets go of what one build holds, on every rebuild and on Go;
+        // OnLeave(key, action) undoes what the page started, on Go only, one action per key -- a rebuild
+        // registering the same key again replaces the action rather than adding a second, so an undo runs
+        // once however many times the page was built since the last Go; OnTick(action) is called every
+        // second while showing; OnUpdate(checking, answered) hears the update check. Layout: PageLayout,
+        // PageSection, ContentWidth (less the scroll bar), Narrow (the rail: the sidebar is icons) and
+        // TwoColumns (the only test for laying two blocks side by side: the full sidebar and at least
+        // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit), all read while
+        // building -- the shell rebuilds the page when any of them moves, so anything a page has in flight
+        // (a download, a press it is waiting on) lives in a field outside the build and the next build draws
+        // it from there. WidePage(page) is the shell's list of pages that take the whole column rather than
+        // stop at PanelShell.ContentMax (Rig alone). Lines: Say. Sheets: ShowSheet(title, body, footer,
+        // closed), SheetFooter, CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
         // and every binding named through PanelBindings.TriggerLabel); issues, the answer RefreshAttention keeps,
         // asked through PanelAttention.Has and Of with its rule constants (ScreenRestart, StripUnselected and the
@@ -390,13 +407,17 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// It rebuilt the sidebar and whatever page was showing on every press, on SimHub's interface thread
-        /// while the driver was on track: Screens reloaded its live preview, Updates unpacked every strip
-        /// profile and LEDs walked SimHub's devices, and none of the three draws lighting. Five brightness
-        /// steps were five rebuilds.
+        /// while the driver was on track: Screens reloaded its live preview and Updates unpacked every strip
+        /// profile. LEDs and Matrix draw lighting only as the dim on their pictures, and their builds walk
+        /// SimHub's LED devices and read its matrix profiles, so they repaint that dim in place through
+        /// <see cref="OnLighting"/> and are never rebuilt by a press. Only Home, Rig and Settings, which draw
+        /// the switch or a brightness as a control, call <see cref="DrawsLighting"/> and are rebuilt, once a
+        /// burst of presses has stopped.
         /// </remarks>
         private void ShowLightingChange()
         {
             SyncNightSwitch();
+            Run(lightingActions.ToList(), "Repainting a page's lighting failed: ");
             if (!pageDrawsLighting) return;
             if (lightingSettle == null)
             {
@@ -412,12 +433,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Called by a page while it is built when it draws night mode or a brightness, so a change to either
-        /// rebuilds it. A page that does not call it is left alone by a wheel press.
+        /// Called by a page while it is built when it draws night mode or a brightness as a control, so a
+        /// change to either rebuilds it. A page that does not call it is not rebuilt by a wheel press. Not for
+        /// a page whose build asks SimHub anything: that page repaints through <see cref="OnLighting"/>.
         /// </summary>
         private void DrawsLighting()
         {
             pageDrawsLighting = true;
+        }
+
+        /// <summary>
+        /// Asks for something this build drew to be repainted in place when night mode or a brightness
+        /// changes -- the dim on a picture of a strip or a matrix -- without rebuilding the page. Run at once
+        /// on every change, so it must be cheap: a property set, never a read of SimHub. Cleared with the
+        /// build.
+        /// </summary>
+        private void OnLighting(Action repaint)
+        {
+            if (repaint != null) lightingActions.Add(repaint);
         }
 
         /// <summary>
@@ -467,19 +500,30 @@ namespace OpenDashPlugin
         /// column's scroll bar takes when the page is taller than the window.</summary>
         private double ContentWidth => PanelShell.ContentWidth(controlWidth, WidePage(route.Page), SystemParameters.VerticalScrollBarWidth);
 
-        /// <summary>Whether the sidebar is a rail, which is when a page stacks what it would lay side by side.</summary>
+        /// <summary>Whether the sidebar is a rail of icons. It says nothing about columns: between 1000 and
+        /// 1080 px the sidebar is full and Narrow is false, yet there is not the room for two blocks side by
+        /// side. Ask <see cref="TwoColumns"/> for that.</summary>
         private bool Narrow => PanelShell.IsNarrow(layout);
 
-        /// <summary>Whether a page may lay two blocks side by side.</summary>
+        /// <summary>Whether a page may lay two blocks side by side, and the only test for it: the full sidebar
+        /// and at least <see cref="PanelShell.TwoColumnFrom"/> of content. When it is false a page stacks.</summary>
         private bool TwoColumns => PanelShell.TwoColumns(layout, ContentWidth);
 
         /// <summary>
         /// Asks for something to be undone when the page is left for another: a press it is waiting on, a
         /// watch it set. Not run when the page is rebuilt in place (a resize, night mode, Redraw).
         /// </summary>
-        private void OnLeave(Action undo)
+        /// <remarks>
+        /// Keyed, because a page calls it while it is built and a page is built again in place on every
+        /// resize, Redraw and return to the panel: an unkeyed list gained a copy each time, and the undo ran
+        /// once per build on the next Go. Registering a key that is already held replaces its action, so
+        /// each key's undo runs once. Name the key for the page and the thing (e.g. "Updates.applyWaiting").
+        /// </remarks>
+        private void OnLeave(string key, Action undo)
         {
-            if (undo != null) leaveActions.Add(undo);
+            if (key == null || undo == null) return;
+            leaveActions.RemoveAll(pair => string.Equals(pair.Key, key, StringComparison.Ordinal));
+            leaveActions.Add(new KeyValuePair<string, Action>(key, undo));
         }
 
         /// <summary>
@@ -494,7 +538,9 @@ namespace OpenDashPlugin
 
         private void RunLeaveActions()
         {
-            Run(leaveActions, "Leaving a page failed to undo something: ");
+            var actions = leaveActions.Select(pair => pair.Value).ToList();
+            leaveActions.Clear();
+            Run(actions, "Leaving a page failed to undo something: ");
         }
 
         private void RunDropActions()
@@ -580,6 +626,7 @@ namespace OpenDashPlugin
             builtContentWidth = ContentWidth;
             builtTwoColumns = TwoColumns;
             pageDrawsLighting = false;
+            lightingActions.Clear();
             try
             {
                 switch (to.Page)

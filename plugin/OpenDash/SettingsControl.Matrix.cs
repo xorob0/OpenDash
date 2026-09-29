@@ -17,7 +17,8 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
-            DrawsLighting();
+            // No DrawsLighting(): the build reads the flag box plan from SimHub (SafePlan), so the page is not
+            // rebuilt by a wheel press. Each panel's picture re-dims in place through OnLighting instead.
             var panels = Settings.MatrixPanels().ToList();
             var groups = new List<UIElement>();
             var caption = Ui.Caption(PanelLights.PanelsCaption);
@@ -167,6 +168,7 @@ namespace OpenDashPlugin
                 var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options), MatrixStyle.Home,
                     PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness));
                 preview.Margin = new Thickness(0, 0, 0, 12);
+                OnLighting(() => Ui.Redim(preview, PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness)));
                 return Ui.VStack(0,
                     preview,
                     Ui.Row(PanelMatrix.IdleDisplayTitle, null, rest),
