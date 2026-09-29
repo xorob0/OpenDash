@@ -245,8 +245,9 @@ chose and never told anybody about.
   expression and chooses the screen; then `UpdateDataInternal`, which evaluates the other variables
   and applies the chosen screen's bindings. Only a before-screen-roles variable reaches an enabled
   expression on the frame it was computed. Frames run on SimHub's data loop
-  (`GraphicalDashPlugin.DataUpdated`), not at the display's refresh rate, so a phone streaming at ten
-  frames a second still has its screen chosen sixty times a second.
+  (`GraphicalDashPlugin.DataUpdate` hands each one to the dashboards), which is ten a second on the
+  free edition and up to sixty licensed; a frame is skipped when the dash's refresh setting says so
+  (`RefreshSpeed_WPFRenderer`) or while the interface is still drawing the previous one.
 - **Forcing one screen selects it.** With the current screen disabled, `FindModeScreen` tries the
   screen the mode last remembered -- the same one, so also disabled -- and then takes the first
   enabled screen carrying the role. When exactly one is enabled that is the one, and when the others
@@ -271,6 +272,13 @@ chose and never told anybody about.
 
 The companion's three variables, and a frame-by-frame model of all of this, are in
 `packages/dash/src/contract.ts` (`companionVariables`) and `packages/dash/test/secondScreens.test.ts`.
+
+**Seen on the VM, 2026-09-29.** SimHub 9.12.6, free edition, `OpenDash Companion` windowed on the
+race scenario, SimHub's `NextScreen` bound to F5 and `CompanionHoldQuickGlance` to F6 as a hold. F5
+twice took it from Lap times to Sectors; F6 held showed Track; released, it went back to Sectors,
+which the plugin had never been told about; F5 then paged on to Speedo, so the way back had let go.
+The same from Speedo with a one-second hold came back to Speedo. SimHub logged nothing. The captures
+are in `media/362/`.
 
 ### Node types observed
 

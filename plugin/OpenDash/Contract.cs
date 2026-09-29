@@ -1501,10 +1501,13 @@ namespace OpenDashPlugin
         /// How long a released glance asks the companion to go back, before the paging is SimHub's again.
         /// </summary>
         /// <remarks>
-        /// SimHub chooses the screen on every data frame, sixty a second, so the move happens on the first
-        /// of them; the rest is margin. It is short because while it stands the one screen enabled is the
-        /// one being gone back to, so a tap does nothing, and a driver who releases the button and reaches
-        /// for the screen should find it answering.
+        /// SimHub chooses a dashboard's screen on its data loop: ten frames a second on the free edition,
+        /// up to sixty licensed, and fewer when the dash's refresh setting skips frames or the interface
+        /// is still drawing the last one. The move happens on the first frame after the release; a second
+        /// is ten of them on the free edition, which is where it was seen working (#362). It is short
+        /// because while it stands the one screen enabled is the one being gone back to, so a tap does
+        /// nothing, and a driver who releases the button and reaches for the screen should find it
+        /// answering.
         /// </remarks>
         public static readonly TimeSpan CompanionBackWindow = TimeSpan.FromSeconds(1);
 
