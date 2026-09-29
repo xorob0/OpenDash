@@ -39,7 +39,7 @@ export const ALERT_FLASH_MS = Math.round(1000 / ds.indicator.flagBand.flashHz / 
 
 /** How a band is dressed: whether the alert's name is drawn on it, and how thick an outline is. */
 export interface AlertBandStyle {
-  /** Draw "YELLOW FLAG" and the like centred on the band. */
+  /** Draw "YELLOW" and the like centred on the band. */
   labels: boolean;
   /** Border of an outlined band. A filled band always carries the artboards' three pixels. */
   outline: number;

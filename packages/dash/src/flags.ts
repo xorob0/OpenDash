@@ -408,10 +408,13 @@ const HEADLIGHT_FLASH: CarAlert = {
 export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   IGNITION_OFF,
   ENGINE_OFF,
-  { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED FLAG' } },
+  { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED' } },
   { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
-  { id: 'furled', name: 'Black flag · furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
-  { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
+  // The furled black is named as the black flag is, #497, and neither flashes, so on the band and on
+  // the full-screen block the two are one drawing; the box alone tells them apart, by a bar that walks
+  // against an outline that waves.
+  { id: 'furled', name: 'Black', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK' } },
+  { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK' }, faceFlag: 'Flag_Black' },
   { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'filled', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
   // The full course yellow: iRacing's caution of the whole track, which is the pace car being
   // deployed. It outranks a local yellow because it is the whole track. The canvas names it Safety
@@ -430,7 +433,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   // under "waving is blinking". Band D used to flash on SimHub's `Flag_Yellow`, which folds the two
   // together, so a standing yellow strobed for as long as it was out.
   //
-  // The flash is also all that tells the two apart, since both are named YELLOW FLAG, #497. A yellow
+  // The flash is also all that tells the two apart, since both are named YELLOW, #497. A yellow
   // being waved is the yellow flag, the canvas names no other, and a driver reads the difference in
   // the band's movement rather than in a word.
   {
@@ -439,15 +442,15 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
     critical: true,
     motion: 'moves',
     bits: ['yellowWaving'],
-    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG', flash: true },
+    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW', flash: true },
   },
-  { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG' }, faceFlag: 'Flag_Yellow' },
+  { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW' }, faceFlag: 'Flag_Yellow' },
   // `purpose.flag.debris` is the yellow, and the canvas draws the band as that yellow under danger
   // stripes. The stripes are a fourth shape and are not drawn: the name carries the difference on
   // the standard band, and on the nano, which writes no name, a debris flag reads as a yellow.
   { id: 'debris', name: 'Debris', critical: true, motion: 'moves', bits: ['debris'], band: { shape: 'filled', colour: ds.purpose.flag.debris, label: 'DEBRIS' } },
   INCIDENT,
-  { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE FLAG' }, faceFlag: 'Flag_Blue' },
+  { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE' }, faceFlag: 'Flag_Blue' },
   // In iRacing the white bit is the last lap and nothing else, which is why the name says so.
   { id: 'white', name: 'White', critical: false, motion: 'held', bits: ['white'], band: { shape: 'filled', colour: ds.purpose.flag.white, label: 'WHITE · LAST LAP' }, faceFlag: 'Flag_White' },
   {
@@ -456,7 +459,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
     critical: false,
     motion: 'held',
     bits: ['green'],
-    band: { shape: 'filled', colour: ds.purpose.flag.green, label: 'GREEN FLAG' },
+    band: { shape: 'filled', colour: ds.purpose.flag.green, label: 'GREEN' },
     limiter: 'Flag_Green',
     faceFlag: 'Flag_Green',
   },

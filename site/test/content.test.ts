@@ -82,7 +82,7 @@ describe('the flags', () => {
     expect(list.slice(firstQuiet).every((f) => !f.critical)).toBe(true);
   });
 
-  test('name two conditions alike only where their motion tells them apart', () => {
+  test('name two conditions alike only where their motion tells them apart, the two blacks aside', () => {
     // The yellow being waved is named as the standing one is, #497, and the list tells them apart by
     // the blink rather than by a word the driver never sees.
     const yellows = list.filter((f) => f.id === 'yellowWaving' || f.id === 'yellow');
@@ -90,7 +90,16 @@ describe('the flags', () => {
       { id: 'yellowWaving', name: 'Yellow', blinks: true },
       { id: 'yellow', name: 'Yellow', blinks: false },
     ]);
-    expect(new Set(list.map((f) => `${f.name} ${f.blinks}`)).size).toBe(list.length);
+    // The furled black is named as the black flag is, #497, and neither blinks, so the list carries
+    // them as two rows alike, told apart by their rank; the box tells them apart by a bar that walks
+    // against an outline that waves. That pair is the only one allowed to share a row.
+    const blacks = list.filter((f) => f.id === 'furled' || f.id === 'black');
+    expect(blacks.map(({ id, name, blinks }) => ({ id, name, blinks }))).toEqual([
+      { id: 'furled', name: 'Black', blinks: false },
+      { id: 'black', name: 'Black', blinks: false },
+    ]);
+    const others = list.filter((f) => f.id !== 'furled');
+    expect(new Set(others.map((f) => `${f.name} ${f.blinks}`)).size).toBe(others.length);
   });
 });
 

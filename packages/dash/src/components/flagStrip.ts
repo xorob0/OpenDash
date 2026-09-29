@@ -129,7 +129,7 @@ export const BLUE_FLAG_ID = 'blue';
  * face's band would fail there rather than be clipped by WPF.
  *
  * The separator goes with the detail rather than before it, so a lap with nothing behind reads
- * `BLUE FLAG` and not `BLUE FLAG · `.
+ * `BLUE` and not `BLUE · `.
  *
  * It lives here and not in `FLAG_CATALOGUE` because the catalogue is also the 8x8 box's list, the
  * LED strips' and the pit wall header's, and none of those three can draw a second run: a picture
@@ -283,10 +283,10 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
- * One thing the takeover has that this does not: the blue flag's detail. Naming the class of the car
- * behind takes a whole band -- "BLUE FLAG · P4 GT3" is wider than any corner block at any size --
- * and a block that wrote it on the widest face and not on the others would be a different drawing
- * per face. The blue block writes BLUE FLAG where that fits, and the detail belongs to the seconds
+ * One thing the takeover has that this does not: the blue flag's detail. "BLUE · P4 GT3" would fit
+ * the corner blocks of the four faces that have them and not the sixteen pixels of the other four,
+ * and a block that wrote it on some faces and not on the others would be a different drawing
+ * per face. The blue block writes BLUE where that fits, and the detail belongs to the seconds
  * the flag has the band. The incident's count is the same: the block writes INCIDENT.
  *
  * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has

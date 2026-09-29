@@ -60,11 +60,11 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  *
  * A table rather than the band's own label, because the block's name is a fact about the block's
  * width. One size serves every state, that size is the widest name divided into the block, and the
- * band writes "BLACK FLAG · FURLED": taking the labels as they are would set every name on the
- * portrait face at 69 px where the sheets draw 244, which is neither the block the sheets drew nor a
- * word worth the body. Cut, the widest is MEATBALL, and the only face that pays anything at all for
- * the nine conditions the block did not use to have is the portrait one, at 143 px against the 183
- * the five sheet names allowed.
+ * band writes "WHITE · LAST LAP": taking the labels as they are, FCY for the full course yellow,
+ * would set every name on the portrait face at 84 px where the sheets draw 244, which is neither the
+ * block the sheets drew nor a word worth the body. Cut, the widest is MEATBALL, and the only face
+ * that pays anything at all for the nine conditions the block did not use to have is the portrait
+ * one, at 143 px against the 183 the five sheet names allowed.
  *
  * The standing and the waved yellow read the same word and are told apart by the flash, which is
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
@@ -72,9 +72,8 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  *
  * The furled black reads BLACK as the black flag does, #497, since FURLED alone did not say that it
  * was a black flag at all. Unlike the two yellows, nothing on the block tells those two apart, as
- * neither of them flashes: band D writes BLACK FLAG · FURLED for the one and BLACK FLAG for the other,
- * and the box draws the one as a bar that walks and the other as an outline that waves, but the
- * block draws the same outlined word for both.
+ * neither of them flashes, and band D is the same, since it writes BLACK for both: the box alone
+ * draws the one as a bar that walks and the other as an outline that waves.
  *
  * The full course yellow is not in the table, because its band already carries the two forms the
  * block wants: FCY, which is a word like the others and is what the one size is measured against, and

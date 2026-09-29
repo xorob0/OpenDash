@@ -35,7 +35,7 @@
     // --- The flags, in priority order -------------------------------------------------------
     {"at": 4, "log": "1/15 red: the whole box red", "set": {"SessionFlags": "red"}},
     {"at": 10, "log": "2/15 disqualified: a cross, blinking", "set": {"SessionFlags": "black|disqualify"}},
-    {"at": 16, "log": "3/15 black flag · furled: a bar", "set": {"SessionFlags": "furled"}},
+    {"at": 16, "log": "3/15 black (furled): a bar", "set": {"SessionFlags": "furled"}},
     {"at": 22, "log": "4/15 black: an outline", "set": {"SessionFlags": "black"}},
     {"at": 28, "log": "5/15 meatball: an orange disc", "set": {"SessionFlags": "repair"}},
     {"at": 34, "log": "6/15 full course yellow: SC in black on yellow, blinking", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},

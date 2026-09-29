@@ -33,18 +33,18 @@ the band itself.
 
 | | Condition | iRacing bits | Critical | Canvas | The picture | The band |
 |---|---|---|---|---|---|---|
-| 1 | Red | `red` | yes | 3 | The whole box red. The only condition that takes it in one colour. | Filled `purpose.flag.red`, "RED FLAG". |
+| 1 | Red | `red` | yes | 3 | The whole box red. The only condition that takes it in one colour. | Filled `purpose.flag.red`, "RED". |
 | 2 | Disqualified | `disqualify` | yes | 4 | A cross, blinking. The one flag that ends the race whether the driver reacts or not. | Outlined `purpose.flag.black`, "DISQUALIFIED". |
-| 3 | Black flag · furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
-| 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
+| 3 | Black | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK". |
+| 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK". |
 | 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
 | 6 | Full course yellow | `caution`, `cautionWaving` | yes | 7 | SC written in black on a yellow panel, blinking. The letters are all that tell it from a yellow being waved. | Filled `purpose.alert.safetyCar`, "FULL COURSE YELLOW", or "FCY" where that does not fit. |
-| 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW FLAG", flashing. |
-| 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
+| 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW", flashing. |
+| 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
-| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE FLAG". |
+| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE". |
 | 11 | White | `white` | no | 16 | Solid white. In iRacing this is the last lap. | Filled white, "WHITE · LAST LAP". |
-| 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN FLAG", on `Flag_Green` rather than on the bit. |
+| 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN", on `Flag_Green` rather than on the bit. |
 | 13 | Set | `startSet` | no | 22 | Two bars of the start gantry. | Outlined green, "GREEN · SET". |
 | 14 | Ready | `startReady` | no | 22 | One bar of the start gantry. | Outlined green, "GREEN · READY". |
 | 15 | Chequered | `checkered` | no | 23 | A checkerboard of two-pixel squares. | The same board, half the band high, with no name. |
@@ -97,12 +97,24 @@ Every other block writes FCY, the companions and the pit walls included, because
 large size and the whole name no longer fits across it, which is why the pit wall, the widest screen
 of all, reads FCY. `flagFormat.test.ts` pins which block writes which.
 
-**The furled black agrees with the canvas's "Black flag · furled"** on the band, in this table, on
-the site and on the pit wall, and the full-screen block writes BLACK for it, as it does for the black
-flag, where it used to write FURLED, which did not say that it was a black flag at all. The two yellows
-share a word on the block too and are told apart by the flash; the two blacks are not, since neither
-flashes, so on the block a furled black and a black flag are one drawing. The band and the box still
-tell them apart, the band by its name and the box by a bar that walks against an outline that waves.
+**No flag's name says FLAG** (#497), where the canvas writes the word on every face: the seven face
+artboards and DashComponents draw "Yellow flag", "Blue flag", "Green flag" and "Black flag" on band D,
+and PagesAndAlerts draws "Red flag" (3 · RedFlag), "Black flag · furled" (5 · BlackFurled), "Black
+flag" (6 · BlackFlag), "Yellow flag" (11 · YellowFlag), "Blue flag · GT3 behind" (20 · BlueFlag) and
+"Green flag" (21 · GreenFlag). Band D and its corner blocks write RED, BLACK, YELLOW, BLUE and GREEN
+instead, as the pit wall's band does, and the blue flag's detail reads BLUE · P4 GT3. The names that
+never carried the word, WHITE · LAST LAP, GREEN · SET, GREEN · READY, DISQUALIFIED, MEATBALL, DEBRIS
+and the full course yellow's two forms among them, do not move, and nor do the rows of the LED
+profile, which name lamps in the plugin's Lights settings rather than anything a dash draws. The
+canvas therefore owes the rename, or the author owes its reversal.
+
+**The furled black is named Black, as the black flag is** (#497), in this table and on the site, and
+it reads BLACK wherever a dash writes its name, where the band used to write BLACK FLAG · FURLED, as
+the canvas's "Black flag · furled" does, and the full-screen block FURLED. The two yellows share a
+name as well and are told apart by the flash; the two blacks are not, since neither of them flashes,
+so on the band and on the block a furled black and a black flag are one drawing, which is the
+consequence the author accepted with the name. The box alone still tells them apart, by a bar that
+walks against an outline that waves, and elsewhere the two are told apart by their id and their rank.
 
 ### What the band does that the box does not, and the reverse
 
@@ -204,7 +216,7 @@ is the near-white the face already outlines it with, for the same reason.
 **Waving is blinking.** iRacing publishes `yellow` and `yellowWaving` separately and a driver has
 to tell them apart at a glance. That is a pattern question rather than a colour one, and blinking
 is the pattern with no pixels to spare. Since #497 it is also the only thing that tells them apart
-on any surface: the two carry one name, the band writes YELLOW FLAG for both, since the canvas names
+on any surface: the two carry one name, the band writes YELLOW for both, since the canvas names
 a yellow flag and never a waved one, and it is the band's flash, like the box's blink, that says the
 flag is being waved. Where the two are listed side by side, in the table above and on the site, they
 are told apart by that motion in the same way.

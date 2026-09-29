@@ -393,9 +393,9 @@ describe('the flag settles into the blocks at the ends of the band', () => {
         const expected = text === undefined ? [] : [text, text];
         expect({ face: face.folder, id: condition.id, names: names.map((n) => n.text) }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
-      // And the blue block writes its own name and never the car behind: "BLUE FLAG · P4 GT3" is
-      // wider than any block at any size, so the detail belongs to the seconds the flag has the band.
-      expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE FLAG · GT3');
+      // And the blue block writes its own name and never the car behind, which belongs to the seconds
+      // the flag has the band.
+      expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE · GT3');
       // The incident likewise: the block writes INCIDENT, unbound, and its count against the limit
       // is the whole band's for the seconds it has it.
       for (const label of labelsOf(cornerLayerOf(face, 'incident').children)) {
