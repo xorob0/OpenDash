@@ -249,7 +249,7 @@ describe('one ordered list, shared with the face', () => {
 
   test('band D draws every one of them, so no condition is the box’s alone', () => {
     // The face used to draw the six SimHub normalises and the box all fifteen, so a red flag, a
-    // disqualification, a furled black, a meatball, a full-course caution, a waved yellow, the
+    // disqualification, a furled black, a meatball, a full course yellow, a waved yellow, the
     // debris flag and the start gantry were invisible on a dash with no box beside it. The band
     // draws the whole alert catalogue now, of which the box's list is the flag half, in order.
     const band = flagStrip(rect(0, 0, 1920, 60)).map((i) => i.name);
@@ -273,7 +273,7 @@ describe('several conditions true at once', () => {
     { name: 'green alone', bits: ['green'], expect: 'green' },
     { name: 'a local yellow', bits: ['yellow'], expect: 'yellow' },
     { name: 'a waved yellow also sets yellow', bits: ['yellow', 'yellowWaving'], expect: 'yellowWaving' },
-    { name: 'a full-course caution sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
+    { name: 'a full course yellow sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
     { name: 'debris under a yellow', bits: ['yellow', 'debris'], expect: 'yellow' },
     { name: 'debris alone', bits: ['debris'], expect: 'debris' },
     { name: 'red outranks everything', bits: ['red', 'yellow', 'caution', 'black'], expect: 'red' },
@@ -403,9 +403,9 @@ describe('sixty-four pixels', () => {
     for (const frame of flagFrames('yellowWaving') ?? []) expect(frame.durationMs).toBe(half);
   });
 
-  test('a full-course caution writes SC in black on yellow, blinking, so the letters are what tell it from a waved yellow', () => {
-    // The whole-track condition and the waved yellow are both the yellow flag blinking at the band's
-    // rate, so the only thing that can separate them is what is cut out of the panel: the letters.
+  test('a full course yellow writes SC in black on yellow, blinking, so the letters are what tell it from a yellow being waved', () => {
+    // The whole-track condition and the yellow being waved are both the yellow flag blinking at the
+    // band's rate, so the only thing that can separate them is what is cut out of the panel: the letters.
     const caution = flagFrames('caution') ?? [];
     const waving = flagFrames('yellowWaving') ?? [];
     expect(caution).toHaveLength(2);
@@ -422,15 +422,15 @@ describe('sixty-four pixels', () => {
     ]);
     expect(new Set(caution[0]?.pixels.flat().filter((p) => p !== null))).toEqual(new Set([ds.purpose.flag.yellow]));
     expect(caution[0]?.pixels).not.toEqual(waving[0]?.pixels);
-    // The other half of the beat is the waved yellow's own dark, so the rhythm is the one the driver
-    // already reads as waved and nothing but the letters differs.
+    // The other half of the beat is the dark the yellow being waved blinks against, so the rhythm is
+    // the one the driver already reads as waved and nothing but the letters differs.
     expect(caution[1]?.pixels).toEqual(waving[1]?.pixels);
     expect(caution[1]?.pixels.flat().every((p) => p === null)).toBe(true);
   });
 
   test('no flag draws two halves of the panel in turn, which is the double yellow’s picture', () => {
     // iRacing never raises a double yellow, so the picture is reserved for it rather than lent to
-    // the full-course caution, which drew it until #499: one picture with two meanings teaches the wrong one.
+    // the full course yellow, which drew it until #499: one picture with two meanings teaches the wrong one.
     const lit = (frame: MatrixFrame): string => frame.pixels.map((row) => row.map((p) => (p === null ? '.' : '#')).join('')).join('/');
     const left = Array.from({ length: 8 }, () => '####....').join('/');
     const right = Array.from({ length: 8 }, () => '....####').join('/');

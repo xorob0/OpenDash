@@ -3807,7 +3807,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "RED FLAG",
+        "Text": "RED",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -3935,7 +3935,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "BLACK FLAG · FURLED",
+        "Text": "BLACK",
         "TextColor": "#FFF5F7FA",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -3999,7 +3999,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "BLACK FLAG",
+        "Text": "BLACK",
         "TextColor": "#FFF5F7FA",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -4114,7 +4114,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "SAFETY CAR",
+        "Text": "FULL COURSE YELLOW",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -4178,7 +4178,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "WAVED YELLOW",
+        "Text": "YELLOW",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -4258,7 +4258,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "YELLOW FLAG",
+        "Text": "YELLOW",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -5187,7 +5187,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "BLUE FLAG",
+        "Text": "BLUE",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -5219,7 +5219,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "BLUE FLAG · GT3",
+        "Text": "BLUE · GT3",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -5234,7 +5234,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "Text": {
             "Formula": {
-              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
             },
             "Mode": 2
           },
@@ -5257,7 +5257,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "BLUE FLAG · P4 GT3",
+        "Text": "BLUE · P4 GT3",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -5272,7 +5272,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "Text": {
             "Formula": {
-              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
             },
             "Mode": 2
           },
@@ -5399,7 +5399,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "FontWeight": "Bold",
         "FontStyle": "Normal",
         "FontSize": 15,
-        "Text": "GREEN FLAG",
+        "Text": "GREEN",
         "TextColor": "#FF0A0B0D",
         "HorizontalAlignment": 1,
         "VerticalAlignment": 0,
@@ -9461,7 +9461,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -9589,7 +9589,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -9653,7 +9653,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -9768,7 +9768,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -9832,7 +9832,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -9912,7 +9912,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -10841,7 +10841,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -10873,7 +10873,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -10888,7 +10888,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -10911,7 +10911,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -10926,7 +10926,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -11053,7 +11053,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -17814,7 +17814,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -17942,7 +17942,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18006,7 +18006,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18121,7 +18121,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18185,7 +18185,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18265,7 +18265,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18954,7 +18954,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -18986,7 +18986,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -19001,7 +19001,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -19024,7 +19024,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -19039,7 +19039,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -19166,7 +19166,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25035,7 +25035,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25163,7 +25163,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25227,7 +25227,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25342,7 +25342,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25406,7 +25406,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -25486,7 +25486,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -26295,7 +26295,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -26327,7 +26327,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -26342,7 +26342,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -26365,7 +26365,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -26380,7 +26380,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -26507,7 +26507,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -32616,7 +32616,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -32744,7 +32744,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -32808,7 +32808,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -32923,7 +32923,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -32987,7 +32987,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -33067,7 +33067,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -33591,7 +33591,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -33623,7 +33623,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -33638,7 +33638,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -33661,7 +33661,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -33676,7 +33676,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -33803,7 +33803,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39299,7 +39299,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39427,7 +39427,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39491,7 +39491,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39606,7 +39606,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39670,7 +39670,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -39750,7 +39750,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -40259,7 +40259,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -40291,7 +40291,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -40306,7 +40306,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -40329,7 +40329,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -40344,7 +40344,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -40471,7 +40471,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -45952,7 +45952,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -46080,7 +46080,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -46144,7 +46144,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -46259,7 +46259,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -46323,7 +46323,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -46403,7 +46403,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -47092,7 +47092,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -47124,7 +47124,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -47139,7 +47139,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -47162,7 +47162,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -47177,7 +47177,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -47304,7 +47304,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61275,7 +61275,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "RED FLAG",
+              "Text": "RED",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61403,7 +61403,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG · FURLED",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61467,7 +61467,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLACK FLAG",
+              "Text": "BLACK",
               "TextColor": "#FFF5F7FA",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61582,7 +61582,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "SAFETY CAR",
+              "Text": "FULL COURSE YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61646,7 +61646,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "WAVED YELLOW",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -61726,7 +61726,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "YELLOW FLAG",
+              "Text": "YELLOW",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -62160,7 +62160,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG",
+              "Text": "BLUE",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -62192,7 +62192,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · GT3",
+              "Text": "BLUE · GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -62207,7 +62207,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
                   },
                   "Mode": 2
                 },
@@ -62230,7 +62230,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "BLUE FLAG · P4 GT3",
+              "Text": "BLUE · P4 GT3",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,
@@ -62245,7 +62245,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
                   },
                   "Mode": 2
                 },
@@ -62372,7 +62372,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "FontWeight": "Bold",
               "FontStyle": "Normal",
               "FontSize": 15,
-              "Text": "GREEN FLAG",
+              "Text": "GREEN",
               "TextColor": "#FF0A0B0D",
               "HorizontalAlignment": 1,
               "VerticalAlignment": 0,

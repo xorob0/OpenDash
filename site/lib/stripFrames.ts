@@ -39,7 +39,7 @@ export const FRAMES: Record<string, StripFrame> = {
   revs: { label: 'Revs, in the car’s own colours', revs: 0.7 },
   shift: { label: 'Shift now', revs: 1, shift: true },
   blue: { label: 'Blue flag', revs: 0.45, race: { ink: 'info' } },
-  yellow: { label: 'Waved yellow', revs: 0.45, race: { ink: 'yellow', blink: true } },
+  yellow: { label: 'Yellow flag', revs: 0.45, race: { ink: 'yellow', blink: true } },
   spotter: { label: 'A car on your left', revs: 0.62, spotter: { left: true } },
   fuel: { label: 'Low fuel', revs: 0.5, car: { ink: 'danger', blink: true } },
   abs: { label: 'ABS, under braking', revs: 0.18, aid: { ink: 'caution' } },
@@ -65,7 +65,7 @@ export function scripted(t: number): StripFrame {
   if (at(15.5, 18)) return { ...FRAMES.limiter!, label: FRAMES.limiter!.label };
   const over: StripFrame = { label: 'Revs, in the car’s own colours', revs, shift };
   if (at(4, 6.5)) return { ...over, race: { ink: 'info' }, label: 'Blue flag' };
-  if (at(6.5, 9)) return { ...over, race: { ink: 'yellow', blink: true }, label: 'Waved yellow' };
+  if (at(6.5, 9)) return { ...over, race: { ink: 'yellow', blink: true }, label: 'Yellow flag' };
   if (at(9, 11.5)) return { ...over, spotter: { left: true }, label: 'A car on your left' };
   if (at(11.5, 13.5)) return { ...over, aid: { ink: 'caution' }, label: 'ABS, under braking' };
   if (at(13.5, 15.5)) return { ...over, car: { ink: 'danger', blink: true }, label: 'Low fuel' };

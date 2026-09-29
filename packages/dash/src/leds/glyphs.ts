@@ -13,11 +13,11 @@
  *   - **Waving is blinking.** iRacing publishes `yellow` and `yellowWaving` separately and the two
  *     have to be told apart at a glance, which is a pattern question rather than a colour one. The
  *     rate is `indicator.flagBand.flashHz`, so the box pulses with the band on the face.
- *   - **A full-course caution is written.** Two yellows waved in turn is the double yellow's
+ *   - **A full course yellow is written.** Two yellows waved in turn is the double yellow's
  *     picture, and iRacing never raises a double yellow, so drawing the whole-track condition that
  *     way would teach a driver the wrong flag. The box writes SC in unlit pixels on a yellow panel
  *     instead, since a word says what a colour cannot, and it blinks at the band's rate as the
- *     waved yellow does: the letters are what tell the two apart.
+ *     yellow being waved does: the letters are what tell the two apart.
  *   - **Movement means act.** A flag that ends or interrupts the race moves; a flag that informs is
  *     held, which is why blue is a still panel although it is the flag a driver sees most often.
  *     `motion` in flags.ts is that rule written down and flagBox.test.ts holds the drawings to it,
@@ -174,7 +174,7 @@ export const SMALL_BLACK: Grid = [
   '........',
 ];
 
-/** Black furled, the bar at the top of its walk. */
+/** The furled black, the bar at the top of its walk. */
 export const FURLED_HIGH: Grid = [
   '........',
   '........',
@@ -186,7 +186,7 @@ export const FURLED_HIGH: Grid = [
   '........',
 ];
 
-/** Black furled: the same flag rolled up, so it is a bar rather than a field. */
+/** The furled black: the same flag rolled up, so it is a bar rather than a field. */
 export const FURLED: Grid = [
   '........',
   '........',
@@ -198,7 +198,7 @@ export const FURLED: Grid = [
   '........',
 ];
 
-/** Black furled, the bottom of its walk. One row above the start gantry's bar, and a different hue. */
+/** The furled black, the bottom of its walk. One row above the start gantry's bar, and a different hue. */
 export const FURLED_LOW: Grid = [
   '........',
   '........',
@@ -283,7 +283,7 @@ export const CHEQUERED_INVERSE: Grid = [
 ];
 
 /**
- * Full-course caution: SC cut out of the yellow, each letter three columns by six rows with a column
+ * Full course yellow: SC cut out of the yellow, each letter three columns by six rows with a column
  * of yellow between them. The letters are unlit pixels, which is the only black a lit panel can show;
  * a black flag, having no lit field around it, is drawn in near-white instead. Seven columns of letter
  * in eight leave one edge without a margin, and it is the C's: its open side is the only side of
@@ -305,7 +305,7 @@ export const CAUTION: Grid = [
   'YYYYYYYY',
 ];
 
-/** Yellow: solid and steady. Waved yellow is this, blinking. */
+/** Yellow: solid and steady. The yellow being waved is this, blinking. */
 export const YELLOW: Grid = solid('Y');
 
 /** Debris: yellow with danger stripes, the pattern `purpose.flag.debris` already describes. */
@@ -400,8 +400,9 @@ export function flagFrames(id: string): MatrixFrame[] | undefined {
     case 'chequered':
       return blinkFrames(CHEQUERED, CHEQUERED_INVERSE, FLAG_PALETTE, BLINK_HZ, id);
     case 'caution':
-      // Blinking, because the condition moves; and against the dark, as the waved yellow blinks,
-      // rather than against the plain yellow, which is a standing yellow for half of every beat.
+      // Blinking, because the condition moves; and against the dark, as the yellow being waved
+      // blinks, rather than against the plain yellow, which is a standing yellow for half of every
+      // beat.
       return blinkFrames(CAUTION, DARK, FLAG_PALETTE, BLINK_HZ, id);
     case 'yellowWaving':
       return blinkFrames(YELLOW, DARK, FLAG_PALETTE, BLINK_HZ, id);
