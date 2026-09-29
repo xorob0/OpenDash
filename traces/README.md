@@ -13,9 +13,15 @@ committed file.
 ## Recording
 
 ```bash
-bun run record                 # every scenario
+bun run record                 # every scenario that keeps a trace
 bun run record green pit       # some of them
 ```
+
+The bare form records the scenarios `scripts/trace.test.ts` expects a trace for, which is every
+scenario the emulator ships except the ones `UNTRACED_SCENARIOS` in
+[scripts/emulator.ts](../scripts/emulator.ts) names and says why for. Naming one of those records
+it anyway, since that is how a scenario comes off the list, and warns that the trace fails that test
+until the name is taken off.
 
 The command claims the VM, installs [the recorder plugin](../tools/trace-recorder/README.md) into
 SimHub, runs each scenario past it once and writes the file here. `--frames`, `--hz` and
