@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import {
+  cardsIn,
   COLOUR_TOLERANCE,
   DASH_STUDIO,
   EXPECTED_SCREEN,
@@ -12,6 +13,7 @@ import {
   lookPoints,
   openedLine,
   openFailure,
+  parseColumn,
   parseLook,
   pressAfter,
   readLook,
@@ -24,6 +26,7 @@ import {
   type FailureContext,
   type LookSamples,
   type Rgb,
+  type Run,
   type Seen,
 } from './gui.ts';
 
@@ -60,6 +63,9 @@ describe('the display mode the coordinates need', () => {
 // the search box and a filtered row's card, each with and without the offer above them.
 const MEASURED = {
   offerBand: [158, 210],
+  offerBandX: [1325, 2725],
+  noThanks: { x: [2627, 2712], y: [171, 197] },
+  enableItNow: [2516, 2620],
   searchBox: [201, 224],
   searchBoxUnderOffer: [262, 285],
   card: [299, 377],
@@ -114,6 +120,17 @@ describe('where openDashboard clicks and looks', () => {
   test("the row's points sit inside the card, with and without the offer", () => {
     for (const [, y] of lookPoints(where(0, 0, false).rowY).row) expect(within(y, MEASURED.card)).toBe(true);
     for (const [, y] of lookPoints(where(0, 0, true).rowY).row) expect(within(y, MEASURED.cardUnderOffer)).toBe(true);
+  });
+
+  test('"No thanks" is clicked on "No thanks", and never on "Enable it now" beside it', () => {
+    const x = Math.round(EXPECTED_SCREEN.width * TRACK_LAYOUT_OFFER.x);
+    expect(within(x, MEASURED.noThanks.x)).toBe(true);
+    expect(within(TRACK_LAYOUT_OFFER.y, MEASURED.noThanks.y)).toBe(true);
+    expect(within(x, MEASURED.enableItNow)).toBe(false);
+  });
+
+  test("the offer's points are inside the band's width as well as its height", () => {
+    for (const [x] of lookPoints(336).offer) expect(within(x, MEASURED.offerBandX)).toBe(true);
   });
 
   // The pointer is drawn into the framebuffer the look reads.
@@ -194,6 +211,7 @@ describe("the host's look line", () => {
 
 const attempt = (seen: Seen, over: Partial<Attempt> = {}): Attempt => ({
   rowY: 336,
+  measured: true,
   offerSeen: false,
   underOffer: false,
   seen,
@@ -207,6 +225,7 @@ const firstLine = (s: string) => s.split('\n')[0]!;
 
 describe('what is pressed and what is tried again', () => {
   test('Start is withheld only where a press cannot be right', () => {
+    expect(pressAfter({ kind: 'empty' })).toBe(false);
     expect(pressAfter({ kind: 'hovered' })).toBe(true);
     expect(pressAfter({ kind: 'row' })).toBe(true);
     expect(pressAfter({ kind: 'unknown', colour: '#123456' })).toBe(true);
@@ -215,15 +234,19 @@ describe('what is pressed and what is tried again', () => {
     expect(pressAfter({ kind: 'moved', now: 'up' })).toBe(false);
   });
 
-  test('a pass is redone when the page moved, or a lit row opened the wrong dashboard', () => {
-    expect(repeatPass(attempt({ kind: 'moved', now: 'up' }))).toBe(true);
-    expect(repeatPass(attempt({ kind: 'hovered' }, { strays: ['Formula Sport'] }))).toBe(true);
+  test('a pass is redone when the page moved, or a lit row opened a dashboard from an unfiltered list', () => {
+    expect(repeatPass(attempt({ kind: 'moved', now: 'up' }), 'OpenDash 850x480')).toBe(true);
+    expect(repeatPass(attempt({ kind: 'moved', now: 'partial' }), 'OpenDash 850x480')).toBe(true);
+    expect(repeatPass(attempt({ kind: 'hovered' }, { strays: ['Formula Sport'] }), 'OpenDash 850x480')).toBe(true);
   });
 
-  test('and not otherwise, since then the next offset is the better guess', () => {
-    expect(repeatPass(attempt({ kind: 'hovered' }))).toBe(false);
-    expect(repeatPass(attempt({ kind: 'page' }))).toBe(false);
-    expect(repeatPass(attempt({ kind: 'unknown', colour: '#123456' }, { strays: ['Formula Sport'] }))).toBe(false);
+  test('and not otherwise, since then the same pass would do the same thing', () => {
+    expect(repeatPass(attempt({ kind: 'hovered' }), 'OpenDash 850x480')).toBe(false);
+    expect(repeatPass(attempt({ kind: 'page' }), 'OpenDash 850x480')).toBe(false);
+    expect(repeatPass(attempt({ kind: 'empty' }), 'OpenDash 850x480')).toBe(false);
+    expect(repeatPass(attempt({ kind: 'unknown', colour: '#123456' }, { strays: ['Formula Sport'] }), 'OpenDash 850x480')).toBe(false);
+    // The list was filtered, and the row was the wrong one in it: typing it again changes nothing.
+    expect(repeatPass(attempt({ kind: 'hovered' }, { strays: ['OpenDash Pit wall'] }), 'OpenDash')).toBe(false);
   });
 });
 
@@ -241,16 +264,26 @@ describe('what a success prints', () => {
 });
 
 describe('what a failure says first', () => {
-  test('SimHub gone is #303, whatever the passes saw', () => {
-    const line = firstLine(openFailure({ ...ctx, running: false }, [attempt({ kind: 'hovered' })]));
-    expect(line).toContain('SimHub is not running any more');
-    expect(line).toContain('#303');
+  test('SimHub gone is #303, whatever the passes saw, and ends by saying to start it', () => {
+    const message = openFailure({ ...ctx, running: false }, [attempt({ kind: 'hovered' })]);
+    expect(firstLine(message)).toContain('SimHub is not running any more');
+    expect(firstLine(message)).toContain('#303');
+    expect(message.split('\n').at(-1)).toStartWith('Start SimHub again');
+    expect(message).not.toContain('Open it by hand');
   });
 
-  test('a lit row that opened another dashboard is the filter, by name', () => {
+  test('a lit row that opened a dashboard the filter does not match is the filter, by name', () => {
     const line = firstLine(openFailure(ctx, [attempt({ kind: 'hovered' }, { strays: ['Formula Sport'] })]));
     expect(line).toContain('"Formula Sport"');
     expect(line).toContain('had not narrowed');
+  });
+
+  // The face's filter is "OpenDash", which every package's name begins with.
+  test('one the filter does match is the wrong row, and the keys are not blamed', () => {
+    const face = { ...ctx, name: 'OpenDash', filter: 'OpenDash' };
+    const line = firstLine(openFailure(face, [attempt({ kind: 'hovered' }, { strays: ['OpenDash Pit wall'] })]));
+    expect(line).toContain('which "OpenDash" also matches');
+    expect(line).not.toContain('had not narrowed');
   });
 
   test('a lit row that opened nothing is the Quick run menu', () => {
@@ -274,10 +307,22 @@ describe('what a failure says first', () => {
     expect(line).toContain('61 px');
   });
 
-  test('nothing anywhere names every place it looked', () => {
-    const line = firstLine(openFailure(ctx, [attempt({ kind: 'page' }), attempt({ kind: 'page' }, { rowY: 557 })]));
+  test('a list read empty says so, and blames the filter', () => {
+    const message = openFailure(ctx, [attempt({ kind: 'empty' }), attempt({ kind: 'empty' })]);
+    expect(firstLine(message)).toContain('Dash Studio listed no dashboard row at all');
+    expect(firstLine(message)).toContain('"OpenDash 850x480" matched nothing');
+    // No y for a pass that found nothing to aim at.
+    expect(message).toContain('  attempt 1: Dash Studio listed no dashboard row to hover; nothing pressed');
+  });
+
+  test('nothing where an offset was guessed names every place it looked', () => {
+    const line = firstLine(openFailure(ctx, [attempt({ kind: 'page' }, { measured: false }), attempt({ kind: 'page' }, { rowY: 557, measured: false })]));
     expect(line).toContain('y 336 or y 557');
     expect(line).toContain('matched nothing');
+  });
+
+  test('a guessed row says it was guessed', () => {
+    expect(openFailure(ctx, [attempt({ kind: 'hovered' }, { measured: false })])).toContain('at y 336, guessed because the list could not be read');
   });
 
   test('a window gone before a later pass leads, and keeps the passes before it', () => {
@@ -298,7 +343,7 @@ describe('the rest of a failure', () => {
 
   test('one line per pass, saying where it worked', () => {
     expect(lines.filter((l) => l.startsWith('  attempt ')).length).toBe(3);
-    expect(message).toContain('  attempt 2 at y 397 (61 px lower, under the track-layout offer)');
+    expect(message).toContain('  attempt 2 at y 397 (under the track-layout offer)');
   });
 
   test('whether this is #303, both ways and when nobody could tell', () => {
@@ -312,8 +357,76 @@ describe('the rest of a failure', () => {
     expect(openFailure({ ...ctx, offerAtEnd: true }, [attempt({ kind: 'page' })])).toContain('MapOnlineSuggestionDiscarded');
   });
 
-  test('the picture, and the way out last', () => {
-    expect(message).toContain('build/vm-open.png');
+  test('an offer at the end is news only when the last pass was not already working under it', () => {
+    expect(openFailure({ ...ctx, offerAtEnd: true }, [attempt({ kind: 'page' })])).toContain('may have come back');
+    expect(openFailure({ ...ctx, offerAtEnd: true }, [attempt({ kind: 'hovered' }, { underOffer: true })])).not.toContain('may have come back');
+  });
+
+  // Line one is all that `bun run shots` and `bun run clips` print.
+  test('the picture is named on line one, and the way out is last', () => {
+    expect(firstLine(message)).toEndWith('The screen as this gave up is build/vm-open.png.');
     expect(lines.at(-1)).toStartWith('Open it by hand once');
+  });
+});
+
+// The look column (x 2400) as the guest drew it on 2026-09-29, from the search box down, in the three
+// layouts seen that day. `[top, bottom, colour]`, runs under 3 px left out as the host leaves them out.
+const run = (top: number, bottom: number, colour: Rgb): Run => ({ top, bottom, colour });
+const SEARCH: Rgb = [0x22, 0x22, 0x22];
+const LAYOUTS = {
+  /** Filtered to one package, nothing above the list. */
+  plain: [run(226, 298, PAGE), run(299, 377, ROW), run(378, 1859, PAGE)],
+  /** The same, under the offer: 61 px lower. */
+  underOffer: [run(287, 359, PAGE), run(360, 438, ROW), run(439, 1859, PAGE)],
+  /** A Last used group collapsed above the list, which no offset covered. */
+  collapsedLastUsed: [run(226, 362, PAGE), run(363, 441, ROW), run(442, 1859, PAGE)],
+  /** Unfiltered with Last used open: its cards are left of the column, and the list's start at 529. */
+  openLastUsed: [run(226, 528, PAGE), run(529, 607, ROW), run(608, 611, PAGE), run(612, 690, ROW), run(691, 1859, PAGE)],
+};
+
+describe('finding the rows in the list', () => {
+  test('one filtered row, wherever the list starts', () => {
+    expect(cardsIn(LAYOUTS.plain)).toEqual([[299, 377]]);
+    expect(cardsIn(LAYOUTS.underOffer)).toEqual([[360, 438]]);
+    expect(cardsIn(LAYOUTS.collapsedLastUsed)).toEqual([[363, 441]]);
+  });
+
+  test('rows in list order, with the Last used band left out', () => {
+    expect(cardsIn(LAYOUTS.openLastUsed)).toEqual([
+      [529, 607],
+      [612, 690],
+    ]);
+  });
+
+  test('a row still lit from the last hover is a row', () => {
+    expect(cardsIn([run(299, 377, LIT)])).toEqual([[299, 377]]);
+  });
+
+  test('the search box, a thin line and a tall panel are not rows', () => {
+    expect(cardsIn([run(201, 224, SEARCH), run(300, 320, ROW), run(400, 700, ROW)])).toEqual([]);
+  });
+
+  test('the centre of a measured row is inside the card, where the offsets used to aim', () => {
+    const [[top, bottom]] = cardsIn(LAYOUTS.plain) as [[number, number]];
+    expect(Math.round((top + bottom) / 2)).toBe(338);
+    expect(within(Math.round((top + bottom) / 2), MEASURED.card)).toBe(true);
+  });
+});
+
+describe("the host's column line", () => {
+  test('is read as runs', () => {
+    expect(parseColumn('noise\ncolumn [[226,298,[37,37,37]],[299,377,[47,47,47]]]\n')).toEqual([run(226, 298, PAGE), run(299, 377, ROW)]);
+  });
+
+  test('an empty column is an empty list, not an unread one', () => {
+    expect(parseColumn('column []')).toEqual([]);
+  });
+
+  test('is refused when it is not runs of three', () => {
+    expect(parseColumn('look {}')).toBeNull();
+    expect(parseColumn('column {')).toBeNull();
+    expect(parseColumn('column [[1,2]]')).toBeNull();
+    expect(parseColumn('column [[1.5,2,[0,0,0]]]')).toBeNull();
+    expect(parseColumn('column [[1,2,[0,0,300]]]')).toBeNull();
   });
 });

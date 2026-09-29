@@ -12,12 +12,13 @@
  * column is a fraction of the screen width. Both were measured on the 3840 by 2160 guest, and
  * {@link EXPECTED_SCREEN} is now checked rather than assumed. Nothing else is trusted either:
  * `openDashboard` waits for SimHub's window to exist and to fill the screen before it measures
- * anything from it, asks Windows which dash windows exist afterwards, retries once, and fails with
- * what to do by hand rather than leaving the caller to wonder.
+ * anything from it, looks at the screen before it presses Start, asks Windows which dash windows
+ * exist afterwards, retries, and fails by saying what it saw rather than leaving the caller to
+ * wonder.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { onHost, powershell, psq, sleep, type Host, type RunResult } from './vm.ts';
+import { onHost, powershell, psq, screenshot, simhubRunning, sleep, type Host, type RunResult } from './vm.ts';
 
 const WINVM_DIR = '/opt/winvm';
 const VENV_PYTHON = `${WINVM_DIR}/mcp/.venv/bin/python`;
@@ -44,9 +45,11 @@ const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
  * matches; the face is now called plainly "OpenDash", every other package name begins with it, and
  * the band turned up.
  *
- * Which is why the second attempt is an offset and not a repeat, and why `maximiseSimHub` below has
- * to be the thing that waits: a first attempt that failed for any reason other than the band is not
- * retried by the second, it is only clicked 221 pixels further down, at nothing at all.
+ * These are now the fallback, and not how a row is found. The Last used strip also turned out to
+ * collapse, which moves the list 64 px rather than 221, and the track-layout offer adds 61 to
+ * either, so `openDashboard` reads where the cards are (`cardsIn`) and aims at the one it wants.
+ * Only a list that cannot be read is guessed at from these, the plain offset first and then the
+ * band's, which is why the passes are a list of offsets.
  */
 const LIST = { firstRow: 336, lastUsedBand: 221, rowHeight: 84, quickRunOffset: 86 } as const;
 /**
@@ -102,14 +105,19 @@ export const COLOUR_TOLERANCE = 2;
  * inside a card 78 px tall. The pointer is drawn into the framebuffer, so every point is more than
  * 100 px from where it rests.
  */
-const LOOK = { offerX: 1330, offerYs: [165, 184, 203], rowX: 2400, rowSpread: 25 } as const;
+const LOOK = { offerX: 1330, offerYs: [165, 184, 203], rowX: 2400, rowSpread: 25, listTo: 1860 } as const;
+/**
+ * How tall a dashboard row's card is on the look column, with room either side: 79 px measured, and
+ * nothing else on x 2400 between the search box and the licence panel is a card's colour at all.
+ */
+const CARD_HEIGHT = { min: 60, max: 100 } as const;
 /** How many times one call may redo a pass at the same offset, when a look says the offset was right. */
 export const MAX_REPEATS = 1;
 
 /**
  * The display mode every coordinate in this file was measured in, and the only one they hold in.
  *
- * `MENU` and `LIST` are absolute pixels, so at a smaller mode they land on whatever Dash Studio has
+ * `MENU`, `LIST` and `LOOK` are absolute pixels, so at a smaller mode they land on whatever Dash Studio has
  * drawn there instead -- which on 2026-09-27 was empty space twice in a row, reported as nothing but
  * "could not be opened". The guest had come back at 1280x800 after a container restart, which is the
  * way this happens: the mode is set on the interactive session and a restart does not keep it.
@@ -155,9 +163,9 @@ export const hex = (c: Rgb): string => `#${c.map((v) => v.toString(16).padStart(
 export const sameColour = (a: Rgb, b: Rgb, tolerance = COLOUR_TOLERANCE): boolean => a.every((v, i) => Math.abs(v - b[i]!) <= tolerance);
 
 /**
- * Where a pass clicks the search box, hovers the row and presses Windowed, for a list that starts
- * `bandOffset` lower because of the Last used band, and `TRACK_LAYOUT_OFFER.shift` lower again when
- * the pass is working under the offer.
+ * Where a pass clicks the search box, and where it guesses the row and Windowed are when the list
+ * cannot be read: `bandOffset` lower for the Last used band, and `TRACK_LAYOUT_OFFER.shift` lower
+ * again, the search box included, when the pass is working under the offer.
  */
 export function where(bandOffset: number, index: number, underOffer: boolean): { searchY: number; rowY: number; windowedY: number } {
   const shift = underOffer ? TRACK_LAYOUT_OFFER.shift : 0;
@@ -203,6 +211,51 @@ export function parseLook(stdout: string): LookSamples | null {
   return isTriple(offer) && isTriple(row) ? { offer, row } : null;
 }
 
+/** A stretch of one colour down the look column, first and last y inclusive. */
+export interface Run {
+  top: number;
+  bottom: number;
+  colour: Rgb;
+}
+
+/** The `column` line out of the host's output, or null when there is none or it is not a list of runs. */
+export function parseColumn(stdout: string): Run[] | null {
+  const line = stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.startsWith('column '));
+  if (!line) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line.slice('column '.length));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+  const runs: Run[] = [];
+  for (const r of parsed) {
+    if (!Array.isArray(r) || r.length !== 3 || !Number.isInteger(r[0]) || !Number.isInteger(r[1]) || !isRgb(r[2])) return null;
+    runs.push({ top: r[0], bottom: r[1], colour: r[2] });
+  }
+  return runs;
+}
+
+/**
+ * The dashboard rows Dash Studio is listing, as the top and bottom of each card down the look
+ * column, in the order they are listed.
+ *
+ * Measured rather than assumed because the list does not start in one place. The track-layout
+ * offer moves it 61 px, the Last used band 221 px when it is open and 64 px when it has been
+ * collapsed, and the two stack; a fixed offset per case was two guesses out of four and silently
+ * wrong for the rest. A lit card counts: the pointer may still be resting on one from before.
+ */
+export function cardsIn(runs: readonly Run[]): [number, number][] {
+  return runs
+    .filter((r) => sameColour(r.colour, DASH_STUDIO.row) || sameColour(r.colour, DASH_STUDIO.hoveredRow))
+    .filter((r) => r.bottom - r.top + 1 >= CARD_HEIGHT.min && r.bottom - r.top + 1 <= CARD_HEIGHT.max)
+    .map((r): [number, number] => [r.top, r.bottom]);
+}
+
 /** Whether the offer's band is on screen: all three points, none, or some, which is the band moving. */
 export type OfferState = 'up' | 'down' | 'partial';
 export function offerState(offer: readonly Rgb[]): OfferState {
@@ -216,9 +269,11 @@ export function offerState(offer: readonly Rgb[]): OfferState {
  * `hovered` is the row lit, which is the Start button up; `row` is a row that had not lit; `page` is
  * nothing there at all; `moved` is the offer come or gone since the pass decided where to click, so
  * the rows are not where the click would land; `unknown` is a colour none of the above; `unread` is
- * a look that could not be taken.
+ * a look that could not be taken. `empty` is decided before any of those: the list was read and
+ * held no row to hover.
  */
 export type Seen =
+  | { kind: 'empty' }
   | { kind: 'hovered' }
   | { kind: 'row' }
   | { kind: 'page' }
@@ -251,11 +306,13 @@ export function readLook(s: LookSamples, expected: 'up' | 'down'): Seen {
  * second dwell, a colour nobody measured, a look that failed -- so that a look which is wrong about
  * something costs a message and never a dashboard that would have opened.
  */
-export const pressAfter = (seen: Seen): boolean => seen.kind !== 'page' && seen.kind !== 'moved';
+export const pressAfter = (seen: Seen): boolean => seen.kind !== 'empty' && seen.kind !== 'page' && seen.kind !== 'moved';
 
 /** One pass of `openDashboard`, as its failure message reports it. */
 export interface Attempt {
   rowY: number;
+  /** `rowY` is a card found in the list; false when the list could not be read and an offset was guessed. */
+  measured: boolean;
   /** The look after the first "No thanks" still found the offer, whole or in part. */
   offerSeen: boolean;
   /** The offer was still up after the second, so this pass worked `TRACK_LAYOUT_OFFER.shift` lower. */
@@ -269,12 +326,20 @@ export interface Attempt {
 }
 
 /**
- * Whether the next pass should be this pass again rather than the next offset: when the page moved
- * under it, or when a lit row opened some other dashboard, which says the offset was right and the
- * filter was not.
+ * Whether a dashboard that opened instead of the one asked for came from a list the filter never
+ * narrowed. One whose name the filter matches was listed because of it, so the keys arrived and the
+ * row was the wrong one; only one the filter does not match says the keys did not.
  */
-export const repeatPass = (a: Attempt): boolean =>
-  a.seen.kind === 'moved' || (a.pressed && a.seen.kind === 'hovered' && a.strays.length > 0);
+export const unfiltered = (strays: readonly string[], filter: string): boolean =>
+  strays.some((n) => !n.toLowerCase().includes(filter.toLowerCase()));
+
+/**
+ * Whether the next pass should be this pass again rather than the next one: when the page moved
+ * under it, or when a lit row opened a dashboard the filter does not match, which says the list was
+ * never filtered and typing it again is what might help.
+ */
+export const repeatPass = (a: Attempt, filter: string): boolean =>
+  a.seen.kind === 'moved' || (a.pressed && a.seen.kind === 'hovered' && unfiltered(a.strays, filter));
 
 /** What a success prints. One line, because `bun run dev` indents it under its step. */
 export const openedLine = (name: string, attempt: number, underOffer: boolean): string =>
@@ -284,6 +349,8 @@ export const openedLine = (name: string, attempt: number, underOffer: boolean): 
 /** A pass's reading in a few words, for its line in a failure and for `OPENDASH_GUI_DEBUG`. */
 export function describeSeen(seen: Seen, looks = 1): string {
   switch (seen.kind) {
+    case 'empty':
+      return 'Dash Studio listed no dashboard row to hover';
     case 'hovered':
       return 'the row lit up';
     case 'row':
@@ -317,7 +384,7 @@ const quoted = (s: string) => `"${s}"`;
 
 /** The pass a failure is explained by: the last one that pressed, else the last that saw something. */
 function leadAttempt(attempts: readonly Attempt[]): Attempt | null {
-  return attempts.filter((a) => a.pressed).at(-1) ?? attempts.filter((a) => a.seen.kind !== 'page').at(-1) ?? null;
+  return attempts.filter((a) => a.pressed).at(-1) ?? attempts.filter((a) => a.seen.kind !== 'page' && a.seen.kind !== 'empty').at(-1) ?? null;
 }
 
 /** Line one of a failure, which is the only line `bun run shots` and `bun run clips` keep. */
@@ -327,9 +394,13 @@ function failureLead(ctx: FailureContext, attempts: readonly Attempt[]): string 
   if (ctx.noWindow) return `SimHub's window was not there when attempt ${attempts.length + 1} began (${ctx.noWindow}), so nothing more was clicked.`;
   const lead = leadAttempt(attempts);
   if (!lead) {
-    const ys = [...new Set(attempts.map((a) => `y ${a.rowY}`))].join(' or ');
+    const guessed = attempts.filter((a) => a.seen.kind === 'page').map((a) => `y ${a.rowY}`);
+    const where =
+      guessed.length === 0
+        ? 'Dash Studio listed no dashboard row at all below the search box'
+        : `there was no dashboard row under the pointer at ${[...new Set(guessed)].join(' or ')}, only the page background`;
     return (
-      `there was no dashboard row under the pointer at ${ys}, only the page background, so nothing was pressed: ${quoted(ctx.filter)} matched nothing in Dash Studio's list. ` +
+      `${where}, so nothing was pressed: ${quoted(ctx.filter)} matched nothing in the list. ` +
       `Either it is not installed (SimHub reads the list only at startup, and \`bun run vm install\` restarts it), or the search box kept an earlier run's text and the name was typed after it.`
     );
   }
@@ -342,7 +413,9 @@ function failureLead(ctx: FailureContext, attempts: readonly Attempt[]): string 
     return `SimHub's track-layout offer was moving (only part of its band was on screen), so where the rows were could not be known and the row at ${at} was not pressed.`;
   }
   if (lead.strays.length > 0)
-    return `the lit row at ${at} opened ${lead.strays.map(quoted).join(', ')} instead, so typing ${quoted(ctx.filter)} had not narrowed Dash Studio's list to it (the keys did not all reach the search box); it was closed again.`;
+    return unfiltered(lead.strays, ctx.filter)
+      ? `the lit row at ${at} opened ${lead.strays.map(quoted).join(', ')} instead, so typing ${quoted(ctx.filter)} had not narrowed Dash Studio's list to it (the keys did not all reach the search box); it was closed again.`
+      : `the lit row at ${at} opened ${lead.strays.map(quoted).join(', ')} instead, which ${quoted(ctx.filter)} also matches, so the list was filtered and the row was the wrong one: pass a filter only ${quoted(ctx.name)} matches, or its index in the list. It was closed again.`;
   switch (seen.kind) {
     case 'hovered':
       return `the row at ${at} lit up under the pointer and Start then Windowed were pressed, but no ${quoted(ctx.name)} window appeared within 14 s: the Windowed entry of the Quick run menu was missed.`;
@@ -353,7 +426,8 @@ function failureLead(ctx: FailureContext, attempts: readonly Attempt[]): string 
     case 'unread':
       return `the look before Start could not read the screen (${seen.why}), so Start was pressed unchecked, as before, and nothing opened.`;
     case 'page':
-      // leadAttempt never returns an unpressed page reading.
+    case 'empty':
+      // leadAttempt never returns an unpressed page or empty reading, and neither is ever pressed.
       return `there was no dashboard row under the pointer at ${at}.`;
   }
 }
@@ -364,27 +438,34 @@ export const OFFER_COMES_BACK =
   '(MapOnlineSuggestionDiscarded in PluginsData\\Common\\DashStudioSettings_2.json).';
 
 /**
- * The whole message a failed `openDashboard` returns. Line one says what was seen, because it is
- * the only line two of the callers print; the lines after it are the passes one by one, whether this
- * is #303, the offer if it was met, and the picture.
+ * The whole message a failed `openDashboard` returns. Line one says what was seen and where the
+ * picture is, because it is the only line two of the callers print; the lines after it are the passes
+ * one by one, whether this is #303, and the offer if it was met.
  */
 export function openFailure(ctx: FailureContext, attempts: readonly Attempt[]): string {
-  const lines = [`could not open ${ctx.name}: ${failureLead(ctx, attempts)}`];
+  const picture = ctx.picture ? ` The screen as this gave up is ${ctx.picture}.` : '';
+  const lines = [`could not open ${ctx.name}: ${failureLead(ctx, attempts)}${picture}`];
   attempts.forEach((a, i) => {
     const outcome = !a.pressed ? 'nothing pressed' : a.strays.length > 0 ? `opened ${a.strays.map(quoted).join(', ')} instead, closed` : 'Start and Windowed pressed, no window';
-    const under = a.underOffer ? ` (${TRACK_LAYOUT_OFFER.shift} px lower, under the track-layout offer)` : '';
-    lines.push(`  attempt ${i + 1} at y ${a.rowY}${under}: ${describeSeen(a.seen, a.looks)}; ${outcome}`);
+    const where = a.seen.kind === 'empty' ? '' : ` at y ${a.rowY}${a.measured ? '' : ', guessed because the list could not be read'}`;
+    const under = a.underOffer ? ` (under the track-layout offer)` : '';
+    lines.push(`  attempt ${i + 1}${where}${under}: ${describeSeen(a.seen, a.looks)}; ${outcome}`);
   });
   if (ctx.noWindow) lines.push(`  attempt ${attempts.length + 1} did not start: ${ctx.noWindow}`);
   if (ctx.running === true) lines.push('SimHub was still running after the last attempt, so this is not #303.');
   if (ctx.running === null) lines.push('Whether SimHub is still running could not be read: the guest did not answer.');
   const stillUp = attempts.flatMap((a, i) => (a.offerSeen ? [i + 1] : []));
   if (stillUp.length > 0) lines.push(`SimHub's track-layout offer was still up after the first "No thanks" in attempt ${stillUp.join(' and ')}.`);
-  if (ctx.offerAtEnd)
+  // An offer the last pass was already working under is no news.
+  const offerCameBack = ctx.offerAtEnd === true && attempts.at(-1)?.underOffer !== true;
+  if (offerCameBack)
     lines.push(`SimHub's track-layout offer was up when this gave up, so it may have come back after the last look and moved everything ${TRACK_LAYOUT_OFFER.shift} px down.`);
-  if (stillUp.length > 0 || ctx.offerAtEnd) lines.push(OFFER_COMES_BACK);
-  if (ctx.picture) lines.push(`The screen as this gave up is ${ctx.picture}.`);
-  lines.push(`Open it by hand once (Dash Studio, find ${ctx.name}, Start, Windowed) and run this again; everything else will be in place.`);
+  if (stillUp.length > 0 || offerCameBack) lines.push(OFFER_COMES_BACK);
+  lines.push(
+    ctx.running === false
+      ? 'Start SimHub again (`bun run vm install` restarts it) and run this again.'
+      : `Open it by hand once (Dash Studio, find ${ctx.name}, Start, Windowed) and run this again; everything else will be in place.`,
+  );
   return lines.join('\n');
 }
 
@@ -745,6 +826,92 @@ export interface OpenOptions {
   filter?: string;
 }
 
+/** A look at the screen, or why none could be taken. `column` is there when the look was asked for it and could read it. */
+type Look = { ok: true; samples: LookSamples; column: Run[] | null } | { ok: false; why: string };
+
+/**
+ * Reads the nine pixels of `lookPoints(rowY)` off the guest's framebuffer, after resting the
+ * pointer at `hover` for as long as a row takes to light when one is given.
+ *
+ * The rest and the read are one VNC session, because a hover does not survive a reconnection. The
+ * framebuffer is read where vncdotool keeps it rather than saved as a PNG and reopened: about a
+ * third of a second on this host, which matters in a call that looks at least twice per pass.
+ */
+function lookAt(host: Host, rowY: number, opts: { hover?: { x: number; y: number }; listFrom?: number } = {}): Look {
+  const points = lookPoints(rowY);
+  const { hover, listFrom } = opts;
+  const column =
+    listFrom === undefined
+      ? []
+      : [
+          // The look column from `listFrom` down, as runs of one colour; a run under 3 px is a glyph's
+          // edge and says nothing, so it is left out to keep the line short.
+          `x, top, end = ${LOOK.rowX}, ${Math.round(listFrom)}, ${LOOK.listTo}`,
+          'runs, prev, start = [], None, top',
+          'for y in range(top, end + 1):',
+          '    p = list(im.getpixel((x, y)))[:3] if y < end else None',
+          '    if p != prev:',
+          '        if prev is not None and y - start >= 3: runs.append([start, y - 1, prev])',
+          '        prev, start = p, y',
+          `print('column ' + json.dumps(runs, separators=(',', ':')))`,
+        ];
+  const r = vnc(
+    host,
+    [
+      ...(hover ? [`client.mouseMove(${Math.round(hover.x)}, ${Math.round(hover.y)})`, `time.sleep(${HOVER_SECONDS})`] : []),
+      'import json',
+      'client.refreshScreen()',
+      'im = client.screen',
+      `points = ${JSON.stringify(points)}`,
+      `print('look ' + json.dumps({k: [list(im.getpixel(tuple(p)))[:3] for p in v] for k, v in points.items()}, separators=(',', ':')))`,
+      ...column,
+    ].join('\n'),
+    60_000,
+  );
+  if (!r.ok) {
+    const last = r.stderr.split('\n').map((l) => l.trim()).filter(Boolean).at(-1);
+    return { ok: false, why: last ?? `exit ${r.code}` };
+  }
+  const samples = parseLook(r.stdout);
+  if (!samples) return { ok: false, why: 'no look line in its output' };
+  return { ok: true, samples, column: listFrom === undefined ? null : parseColumn(r.stdout) };
+}
+
+/**
+ * The cards Dash Studio is listing below the search box at `searchY`, or null when the list could
+ * not be read. A list with fewer than `atLeast` cards is read once more after two seconds, since
+ * the search filters as it is typed into and the last keys may still be drawing.
+ */
+function listedCards(host: Host, searchY: number, atLeast: number): [number, number][] | null {
+  const read = () => {
+    const look = lookAt(host, LIST.firstRow, { listFrom: searchY + 12 });
+    return look.ok && look.column ? cardsIn(look.column) : null;
+  };
+  const cards = read();
+  if (cards === null || cards.length >= atLeast) return cards;
+  sleep(2);
+  return read();
+}
+
+/** The offer's state right now, or null when the screen could not be read. */
+function offerNow(host: Host): OfferState | null {
+  const look = lookAt(host, LIST.firstRow);
+  return look.ok ? offerState(look.samples.offer) : null;
+}
+
+/** Rests the pointer on the row at `rowY` and says what is under it, for a pass that expects the offer `underOffer`. */
+function seeRow(host: Host, x: number, rowY: number, underOffer: boolean): Seen {
+  const look = lookAt(host, rowY, { hover: { x, y: rowY } });
+  return look.ok ? readLook(look.samples, underOffer ? 'up' : 'down') : { kind: 'unread', why: look.why };
+}
+
+/**
+ * Where the screen is saved when `openDashboard` gives up on `name`: one file per dashboard, so a
+ * batch that loses two keeps both pictures.
+ */
+const openFailedPng = (name: string): string =>
+  path.join(path.resolve(import.meta.dir, '..'), 'build', `vm-open-${name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`);
+
 /**
  * Opens a dashboard in a window: Dash Studio, dismiss the track-layout offer, filter the list,
  * hover the row so its Start button appears, click it, then Windowed from the Quick run menu.
@@ -753,6 +920,16 @@ export interface OpenOptions {
  * the click, and the Quick run menu highlights its item on hover before it will take a press; a
  * click sent to a coordinate the pointer has only just reached lands on neither. That is SimHub's
  * behaviour rather than a race, and it is why this hovers for two seconds twice.
+ *
+ * Looks at the screen keep the clicks honest (#308). The first, after "No thanks", says whether
+ * the track-layout offer went: one still up is clicked again, and one that stays after that is
+ * worked under, the search box `TRACK_LAYOUT_OFFER.shift` pixels lower, instead of being typed past.
+ * The second, once the filter is in, reads where the list's cards are, so the row is aimed at
+ * rather than assumed. The third, with the pointer resting on that row, says whether it lit: no row
+ * to hover, nothing under the pointer, or an offer that came or went since the first look, and Start
+ * is not pressed, since the press would land on the wrong thing. Anything else is pressed as before.
+ * When nothing opens, the first line of the failure says what the looks saw, and whether SimHub was
+ * still running, which is what tells this apart from #303.
  */
 export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const already = openDashboards(host);
@@ -767,25 +944,40 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
 
   const searchX = Math.round(size.width * CONTENT.searchX);
   const rowX = Math.round(size.width * CONTENT.rowX);
+  const noThanksX = Math.round(size.width * TRACK_LAYOUT_OFFER.x);
   const row = opts.index ?? 0;
+  const filter = opts.filter ?? opts.name;
+  const debug = (line: string) => {
+    if (process.env.OPENDASH_GUI_DEBUG) console.error(`[debug] ${line}`);
+  };
 
-  // Whether the "Last used" band is there cannot be read off the screen from here, so both places
-  // the first row can be are tried. The plain one first: it is the one that is right when the
-  // search names a single package, which is every call but the face's.
-  const offsets = [0, LIST.lastUsedBand];
-  for (const [attempt, bandOffset] of offsets.map((o, i) => [i + 1, o] as const)) {
-    const rowY = LIST.firstRow + bandOffset + row * LIST.rowHeight;
+  // Two passes, whose offsets matter only when the list cannot be read and the row is guessed: the
+  // plain one first, then the Last used band's. A pass whose look says doing it again would help --
+  // the page moved under it, or its keys never reached the search box -- is redone once, which is
+  // why this is a list that can grow.
+  const bands: number[] = [0, LIST.lastUsedBand];
+  const attempts: Attempt[] = [];
+  let repeats = 0;
+  let noWindow: string | undefined;
+  for (let i = 0; i < bands.length; i++) {
+    const bandOffset = bands[i]!;
     // Read, not fired and forgotten. Every coordinate below is measured from a SimHub filling the
     // screen, so if the window is not there yet there is nothing to click and no offset that helps:
     // say so instead of spending the second attempt clicking the desktop at a different height.
     const maximised = maximiseSimHub(host);
     if (!maximised.stdout.startsWith('rect')) {
+      const why = maximised.stdout || maximised.stderr || 'maximising SimHub produced nothing';
+      if (attempts.length > 0) {
+        // A later pass: what the earlier ones saw is still the better half of the explanation.
+        noWindow = why;
+        break;
+      }
       return {
         ok: false,
         code: 1,
         stdout: '',
         stderr:
-          `${maximised.stdout || maximised.stderr || 'maximising SimHub produced nothing'}.\n` +
+          `${why}.\n` +
           `Nothing was clicked: every coordinate here is measured from a SimHub filling the screen. ` +
           `Its window takes around half a minute to appear after the process starts, so a restart ` +
           `that is merely slow looks the same as one that failed; \`bun run vm shot\` shows which.`,
@@ -794,9 +986,31 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     sleep(2);
     click(host, MENU.x, MENU.dashStudio);
     sleep(4);
-    click(host, Math.round(size.width * TRACK_LAYOUT_OFFER.x), TRACK_LAYOUT_OFFER.y);
+    click(host, noThanksX, TRACK_LAYOUT_OFFER.y);
     sleep(2);
-    click(host, searchX, LIST.firstRow - 123);
+    // The blind click above cannot say whether it took, and a page it missed is 61 px out on every
+    // click that follows, the search box included. So look before typing anything.
+    const initial = offerNow(host);
+    // Caught drawing: give it the time the click was given, and then treat it as whatever it became.
+    let first = initial;
+    if (first === 'partial') {
+      sleep(2);
+      first = offerNow(host);
+    }
+    let second: OfferState | null = null;
+    if (first === 'up') {
+      click(host, noThanksX, TRACK_LAYOUT_OFFER.y);
+      sleep(2);
+      second = offerNow(host);
+    }
+    const offerSeen = initial === 'up' || initial === 'partial';
+    // Worked under only on the evidence of a look after the second click. An unreadable look is taken
+    // as the offer gone, as it was before looks existed; the row look says 'moved' if it was not.
+    const underOffer = second === 'up';
+    debug(`attempt ${i + 1}: after "No thanks" the offer is ${[initial, ...(first !== initial ? [first] : []), ...(second ? [second] : [])].map((o) => o ?? 'unread').join(', then ')}`);
+
+    const at = where(bandOffset, row, underOffer);
+    click(host, searchX, at.searchY);
     sleep(1);
     // Emptied rather than selected. The box keeps what the last run typed, and a select-all that
     // lands while the box is not yet focused leaves that text in place, so the filter becomes the
@@ -806,36 +1020,70 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     sleep(1);
     press(host, 'del');
     sleep(1);
-    type(host, opts.filter ?? opts.name);
+    type(host, filter);
     sleep(3);
-    // Hover, then press: the Start button is inside the row and appears only under the pointer.
-    click(host, rowX, rowY, HOVER_SECONDS);
-    sleep(3);
-    click(host, rowX + 49, rowY + LIST.quickRunOffset, HOVER_SECONDS);
-    sleep(14);
-    const open = openDashboards(host);
-    if (open.includes(opts.name)) {
-      return { ok: true, code: 0, stdout: `opened ${opts.name}${attempt > 1 ? ` (on attempt ${attempt})` : ''}`, stderr: '' };
+
+    // Find the row rather than assume it. The list starts in more places than an offset can say,
+    // so the cards are read down one column, and the offsets are only the fallback for a list that
+    // could not be read.
+    const cards = listedCards(host, at.searchY, row + 1);
+    const card = cards?.[row];
+    const rowY = card ? Math.round((card[0] + card[1]) / 2) : at.rowY;
+    const windowedY = rowY + LIST.quickRunOffset;
+    const listing = cards === null ? 'unread' : cards.length === 0 ? 'empty' : cards.map(([top, bottom]) => `${top}..${bottom}`).join(', ');
+
+    // Look before pressing: the row lights under the pointer when its Start button is up. A row
+    // that has not lit is given one more dwell, since a busy SimHub draws late.
+    let seen: Seen = { kind: 'empty' };
+    let looks = 0;
+    if (cards === null || card) {
+      seen = seeRow(host, rowX, rowY, underOffer);
+      looks = 1;
+      if (seen.kind === 'row') {
+        seen = seeRow(host, rowX, rowY, underOffer);
+        looks = 2;
+      }
     }
-    // A guess at the wrong offset lands on another row and opens the wrong dashboard. Close what
-    // this opened before guessing again, so a failure leaves the rig as it found it.
-    const strays = open.filter((n) => !already.includes(n));
-    if (strays.length > 0) {
-      closeDashboards(host);
-      sleep(2);
+    debug(`attempt ${i + 1}: list ${listing}; at y ${rowY}${underOffer ? ', under the offer' : ''}, ${describeSeen(seen, looks)}`);
+
+    let strays: string[] = [];
+    const pressed = pressAfter(seen);
+    if (pressed) {
+      // Hover, then press: the Start button is inside the row and appears only under the pointer.
+      click(host, rowX, rowY, HOVER_SECONDS);
+      sleep(3);
+      click(host, rowX + 49, windowedY, HOVER_SECONDS);
+      sleep(14);
+      const open = openDashboards(host);
+      if (open.includes(opts.name)) return { ok: true, code: 0, stdout: openedLine(opts.name, i + 1, underOffer), stderr: '' };
+      // A guess at the wrong offset lands on another row and opens the wrong dashboard. Close what
+      // this opened before guessing again, so a failure leaves the rig as it found it.
+      strays = open.filter((n) => !already.includes(n));
+      if (strays.length > 0) {
+        closeDashboards(host);
+        sleep(2);
+      }
+    }
+    const attempt: Attempt = { rowY, measured: cards !== null, offerSeen, underOffer, seen, looks, pressed, strays };
+    attempts.push(attempt);
+    if (repeats < MAX_REPEATS && repeatPass(attempt, filter)) {
+      bands.splice(i + 1, 0, bandOffset);
+      repeats++;
     }
   }
 
+  // Only a failure gets here, and only a failure pays for these: whether the offer came back after
+  // the last look, whether SimHub is still there at all, and the screen as it was left.
+  const end = lookAt(host, attempts.at(-1)?.rowY ?? LIST.firstRow);
+  const offerAtEnd = end.ok && offerState(end.samples.offer) === 'up';
+  const running = simhubRunning(host);
+  const picture = openFailedPng(opts.name);
+  const shot = screenshot(host, picture);
   return {
     ok: false,
     code: 1,
     stdout: '',
-    stderr:
-      `could not open ${opts.name} after two attempts.\n` +
-      `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
-      `filters the list and presses Start, and the coordinates it uses were measured at ` +
-      `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
-      `Open it by hand once (Dash Studio, find ${opts.name}, Start, Windowed) and run this again; everything else will be in place.`,
+    stderr: openFailure({ name: opts.name, filter, running, noWindow, offerAtEnd, picture: shot.ok ? path.relative(process.cwd(), picture) : undefined }, attempts),
   };
 }
 
