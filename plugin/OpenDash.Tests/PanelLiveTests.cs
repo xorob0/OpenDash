@@ -18,15 +18,37 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_game_with_nothing_running_is_its_name()
+        public void A_closed_sim_is_no_game_running_whatever_SimHub_has_selected()
         {
+            // SimHub names the selected game on every frame, running or not.
             var card = PanelLive.Card(new LiveStatus("iRacing", false, null, null, null, null));
+            Assert.Equal("No game running", card.Eyebrow);
+            Assert.Equal(Theme.StatusNotInstalled, card.DotHex);
+            Assert.False(card.Live);
+            // Even with a car and a track left over from the last session.
+            Assert.Equal("No game running", PanelLive.Card(new LiveStatus("iRacing", false, "x", "Radical SR8", "Monza", "Race")).Eyebrow);
+        }
+
+        [Fact]
+        public void A_game_running_with_nothing_in_it_is_its_name()
+        {
+            var card = PanelLive.Card(new LiveStatus("iRacing", true, null, null, null, null));
             Assert.Equal("iRacing", card.Eyebrow);
             Assert.Equal(Theme.TextSecondary, card.EyebrowHex);
             Assert.Null(card.Line1);
+            Assert.Null(card.Line2);
             Assert.False(card.Live);
-            // Running with nothing to name is still no session.
-            Assert.False(PanelLive.Card(new LiveStatus("iRacing", true, null, null, null, null)).Live);
+            // A session type alone is not a session to name.
+            Assert.False(PanelLive.Card(new LiveStatus("iRacing", true, null, null, null, "Practice")).Live);
+        }
+
+        [Fact]
+        public void The_name_is_the_one_a_person_reads_and_is_not_shortened_here()
+        {
+            // The plugin hands the display name; the sidebar trims what does not fit its 151 px.
+            var card = PanelLive.Card(new LiveStatus("Assetto Corsa Competizione", true, "ferrari_296_gt3", "Ferrari 296 GT3", "Spa", "Race"));
+            Assert.Equal("Live · Assetto Corsa Competizione", card.Eyebrow);
+            Assert.True(card.Live);
         }
 
         [Fact]

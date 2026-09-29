@@ -505,6 +505,25 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The game as a person names it ("iRacing", "Assetto Corsa Competizione"), which SimHub's game
+        /// manager carries beside the code GameData.GameName holds ("IRacing", "AssettoCorsaCompetizione");
+        /// the code when the display name is not there.
+        /// </summary>
+        private static string GameDisplayName(PluginManager pluginManager, GameData data)
+        {
+            if (data == null) return null;
+            try
+            {
+                var shown = pluginManager == null || pluginManager.GameManager == null ? null : pluginManager.GameManager.GameDisplayName;
+                return string.IsNullOrWhiteSpace(shown) ? data.GameName : shown;
+            }
+            catch (Exception)
+            {
+                return data.GameName;
+            }
+        }
+
+        /// <summary>
         /// One frame of what OpenDash reads from SimHub. Each frame it copies the class best lap out
         /// of the leaderboard, compares the game, car, track and session names the panel shows with
         /// the copy it holds and replaces that copy only when one of them moved, and runs the car's own
@@ -530,7 +549,7 @@ namespace OpenDashPlugin
                 // something in it moved, so a frame in which nothing did allocates nothing for the
                 // panel's copy and the interface thread is not handed a new object sixty times a second.
                 var named = data == null ? null : data.NewData;
-                var gameName = data == null ? null : data.GameName;
+                var gameName = GameDisplayName(pluginManager, data);
                 var gameRunning = data != null && data.GameRunning;
                 var carId = named == null ? null : named.CarId;
                 var carModel = named == null ? null : named.CarModel;

@@ -1,7 +1,7 @@
 // PanelLive.cs: what the sidebar's live card says about the game SimHub is reading.
 //
-// Three states and no more, because the card is read at a glance: no game at all, a game with nothing
-// running in it, and a session with a car and a track. The plugin copies the six values out of the frame
+// Three states and no more, because the card is read at a glance: no game running, a game running with
+// nothing in it yet, and a session with a car and a track. The plugin copies the six values out of the frame
 // it is handed (LiveStatus.cs); this decides the words and the dot. Nothing here is telemetry.
 //
 // Pure: PanelLiveTests holds the three states.
@@ -64,22 +64,25 @@ namespace OpenDashPlugin
         /// The card for these values.
         /// </summary>
         /// <remarks>
-        /// SimHub knows which game it is set to read before the game is started, so a game name alone is a
-        /// game with nothing running and says only its name, in grey. A session is the game running with
-        /// something to name in it; the eyebrow turns green and reads "Live · iRacing", and the lines are
-        /// the car and "track · session", each left out where the sim did not say.
+        /// SimHub always has a game selected and names it on every frame, running or not, so the name alone
+        /// says nothing about whether anything is running: a closed sim is "No game running". A game that
+        /// runs with no car and no track to name -- its menus -- says only its name, in grey. A session is
+        /// the game running with a car or a track in it; the eyebrow turns green and reads "Live · iRacing",
+        /// and the lines are the car and "track · session", each left out where the sim did not say. The
+        /// name is SimHub's display name ("iRacing", "Assetto Corsa Competizione"), which the plugin copies
+        /// in place of its code, and the sidebar trims the eyebrow when it is longer than the card.
         /// </remarks>
         public static LiveCard Card(string gameName, bool gameRunning, string car, string track, string session)
         {
             var game = Clean(gameName);
-            if (game == null) return new LiveCard(NoGame, Theme.TextSecondary, null, null, Theme.StatusNotInstalled, false);
+            if (!gameRunning || game == null) return new LiveCard(NoGame, Theme.TextSecondary, null, null, Theme.StatusNotInstalled, false);
             var carName = Clean(car);
-            var place = Join(Clean(track), Clean(session));
-            if (!gameRunning || (carName == null && place == null))
+            var trackName = Clean(track);
+            if (carName == null && trackName == null)
             {
                 return new LiveCard(game, Theme.TextSecondary, null, null, Theme.StatusNotInstalled, false);
             }
-            return new LiveCard("Live · " + game, Theme.StatusUpToDate, carName, place, Theme.StatusUpToDate, true);
+            return new LiveCard("Live · " + game, Theme.StatusUpToDate, carName, Join(trackName, Clean(session)), Theme.StatusUpToDate, true);
         }
 
         private static string Clean(string value)
