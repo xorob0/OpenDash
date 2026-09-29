@@ -1310,6 +1310,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, differing.LightsOilTemp);
             foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(0, differing.MatrixOilTemp(matrix));
 
+            // Unless slot 1 holds no panel. Removing one leaves its thresholds in the slot, so a rig that
+            // added Left and Right and then removed Left still carries Left's 150 in slot 1; the box that
+            // is on the rig is Right, and its 130 is the one it keeps warning at.
+            var removed = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[null,\"Right\",null,null],\"FlagBoxMatrixOilTemp\":[150,130,0,0],\"FlagBoxMatrixWaterTemp\":[0,112,0,0]}");
+            removed.Normalise();
+            Assert.Equal(130, removed.LightsOilTemp);
+            Assert.Equal(112, removed.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(130, removed.MatrixOilTemp(matrix));
+
             // Once the rig has an answer, a hand-edited panel entry is put back to it on the next load.
             settings.FlagBoxMatrixOilTemp[2] = 90;
             settings.Normalise();

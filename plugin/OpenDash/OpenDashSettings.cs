@@ -714,12 +714,13 @@ namespace OpenDashPlugin
             // After that, because a file may carry the gear switch under either spelling and the
             // collapse has to read whichever one it ended up in.
             CollapseFlagBoxGearIntoRest();
-            // After the old scalars have been emptied into the arrays, because a file that predates the
-            // rig-wide thresholds takes matrix 1's, and that may be where a legacy scalar just went.
-            NormaliseLightsTemps();
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
             NormaliseMatrixPanels();
+            // After both of those: a file that predates the rig-wide thresholds takes the first panel's,
+            // which may be where a legacy scalar just went, and which panel is first is only known once
+            // the names are.
+            NormaliseLightsTemps();
             NormaliseLedBars();
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
             // both through isnull() with its own default, so an unrecognised spelling has to become a
@@ -730,16 +731,34 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The rig's two thresholds, taken from matrix 1 when a file predates them, and written into
-        /// every panel's entry so that what is published per panel is the rig's answer.
+        /// The rig's two thresholds, taken from the first panel in use when a file predates them, and
+        /// written into every panel's entry so that what is published per panel is the rig's answer.
         /// </summary>
+        /// <remarks>
+        /// The first slot with a name rather than slot 1, because removing a panel leaves its thresholds
+        /// behind in the slot: a rig that added Left and Right and then removed Left still has Left's
+        /// numbers in slot 1, and they are not what the box on the rig warns at. A file with no names at
+        /// all is from before panels were instances, and there slot 1 was the one box.
+        /// </remarks>
         private void NormaliseLightsTemps()
         {
-            if (!LightsOilTemp.HasValue) LightsOilTemp = FlagBoxMatrixOilTemp[0];
-            if (!LightsWaterTemp.HasValue) LightsWaterTemp = FlagBoxMatrixWaterTemp[0];
+            var first = FirstPanelSlot();
+            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, first, 0);
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, first, 0);
             if (LightsOilTemp.Value < 0) LightsOilTemp = 0;
             if (LightsWaterTemp.Value < 0) LightsWaterTemp = 0;
             FillTemps();
+        }
+
+        /// <summary>The first slot holding a panel, or 1 when none does.</summary>
+        private int FirstPanelSlot()
+        {
+            if (FlagBoxMatrixName == null) return 1;
+            for (var i = 0; i < FlagBoxMatrixName.Length; i++)
+            {
+                if (FlagBoxMatrixName[i] != null) return i + 1;
+            }
+            return 1;
         }
 
         private void FillTemps()
@@ -758,7 +777,7 @@ namespace OpenDashPlugin
         public void SetLightsOilTemp(int value)
         {
             LightsOilTemp = value < 0 ? 0 : value;
-            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, 1, 0);
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, FirstPanelSlot(), 0);
             FillTemps();
         }
 
@@ -766,7 +785,7 @@ namespace OpenDashPlugin
         public void SetLightsWaterTemp(int value)
         {
             LightsWaterTemp = value < 0 ? 0 : value;
-            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, 1, 0);
+            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, FirstPanelSlot(), 0);
             FillTemps();
         }
 
