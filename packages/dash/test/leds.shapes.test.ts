@@ -24,7 +24,8 @@ describe('the profile file names', () => {
     // The count is the product of the two ranges, and what is pinned first is that arithmetic: every
     // side against every centre, the long bare runs after them, and the shapes that shipped before the
     // grid and fall outside it. The total of 121 is then pinned as well, on purpose, as the #503
-    // count: it is the number of profiles in the DLL, so widening a range fails here and says so.
+    // count: it is the number of strip profiles in the DLL (the flag box is the hundred and
+    // twenty-second), so widening a range fails here and says so.
     expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
     const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
     const shapes = [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];

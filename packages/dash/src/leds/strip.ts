@@ -220,8 +220,9 @@ export const LEGACY_SHAPES: readonly StripShape[] = [
  * to read. What it costs is bytes, about half a megabyte gzipped across the release, and work in the
  * panel: the Install tab inflates every embedded strip profile each time it builds its rows, and the
  * Lights tab does the same for every bar it looks up, so the twins double that from about 21 MB of
- * JSON a call to 43 MB, each profile a string on net48's large object heap. Caching the texts once a
- * session, or reading only the one resource a bar needs by name, is the plugin's follow-up. What it
+ * JSON bytes a call to 43 MB, twice that as .NET strings, each profile on net48's large object heap
+ * and kept alive by the Install rows' Update closures while the tab is drawn. Reading only the one
+ * resource a bar needs by name, or caching the texts once a session, is #518. What it
  * buys is that a strip whose data line enters at the far end works on any geometry, rather than on
  * the one that happened to be spelled.
  *

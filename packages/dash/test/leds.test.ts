@@ -121,7 +121,7 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('3-9-3').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
-  test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
+  test('only the Fanatec wiring and the far-end twins are remapped, and each covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
     // Since #503 that is the Fanatec wiring and the far-end twin of every plain shape, and nothing
