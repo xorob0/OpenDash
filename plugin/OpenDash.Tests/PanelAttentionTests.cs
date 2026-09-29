@@ -136,12 +136,15 @@ namespace OpenDashPlugin.Tests
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Outdated, true));
             input.FlagBox = FlagBoxInstallState.Outdated;
             Assert.Equal(new[] { "Wheel rim's profile has an update" }, PanelAttention.Find(input).Select(i => i.Title));
-            // Its press is on Updates until the LEDs page's header has one, and the Updates item wears the dot
-            // for it, which its badge does not say.
+            // Filed where the LEDs page says its press is (PanelLeds.StripUpdateRoute): on Updates until the
+            // LEDs page's header has one, and the Updates item wears the dot for it, which its badge does not
+            // say. The route is the LEDs page's constant, so moving the press moves the issue and the dot.
+            Assert.Equal(new PanelRoute(PanelPage.Updates, PanelUpdates.AnchorLights), PanelLeds.StripUpdateRoute);
             var outdated = PanelAttention.Find(input).Single();
-            Assert.Equal(PanelPage.Updates, outdated.Page);
-            Assert.Equal(PanelUpdates.AnchorLights, outdated.Anchor);
+            Assert.Equal(PanelLeds.StripUpdateRoute.Page, outdated.Page);
+            Assert.Equal(PanelLeds.StripUpdateRoute.Anchor, outdated.Anchor);
             Assert.Equal("Update it to the version this OpenDash carries.", outdated.Detail);
+            Assert.Equal("Open " + PanelNav.Label(PanelLeds.StripUpdateRoute.Page), outdated.ActionLabel);
             Assert.Equal("Open Updates", outdated.ActionLabel);
             Assert.True(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
             input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });

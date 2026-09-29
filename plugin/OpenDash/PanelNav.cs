@@ -92,7 +92,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether the Updates item wears the amber dot: when Home has something to fix there that its badge
         /// does not already say. The badge carries a waiting restart and a plugin offer; a strip profile's
-        /// update, which Home sends to Updates until the LEDs page has its own press, has only the dot.
+        /// update, filed wherever PanelLeds.StripUpdateRoute says its press is, has only the dot, and on
+        /// whichever item that page is.
         /// </summary>
         public static bool UpdatesWarns(IEnumerable<PanelIssue> issues)
         {

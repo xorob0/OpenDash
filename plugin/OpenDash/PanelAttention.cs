@@ -220,17 +220,17 @@ namespace OpenDashPlugin
 
             foreach (var strip in strips.Where(s => s.Profile == FlagBoxInstallState.Outdated))
             {
-                // On Updates, which is where a strip profile's Update press is until the LEDs page's header
-                // carries one (ReinstallBar and UpdateBars are the shell's, for that header): an issue
-                // whose press lands where there is nothing to press is worse than one that sends the
-                // driver a page further. Meanwhile the Updates item wears the dot for it
-                // (PanelNav.UpdatesWarns), so the sidebar says where the press is. When the LEDs header
-                // has its press, this moves to PanelPage.Leds with the strip's namespace as its subject.
+                // Filed where the Update press is, which the LEDs page says (PanelLeds.StripUpdateRoute):
+                // Updates' lights section until the LEDs header carries the press, then LEDs. An issue whose
+                // press lands where there is nothing to press is worse than one that sends the driver a page
+                // further, and the item that wears the dot follows the issue's page (PanelNav.Warns and
+                // UpdatesWarns), so neither this nor PanelNav changes when the press moves.
+                var route = PanelLeds.StripUpdateRoute;
                 issues.Add(new PanelIssue(
-                    StripOutdated + strip.Namespace, PanelPage.Updates, strip.Namespace,
+                    StripOutdated + strip.Namespace, route.Page, strip.Namespace,
                     strip.Name + "'s profile has an update",
                     OutdatedDetail,
-                    null, Open(PanelUpdates.Title), PanelIssueAction.Navigate, PanelUpdates.AnchorLights));
+                    null, Open(PanelNav.Label(route.Page)), PanelIssueAction.Navigate, route.Anchor));
             }
             if (matrices.Count > 0 && input.FlagBox == FlagBoxInstallState.Outdated)
             {

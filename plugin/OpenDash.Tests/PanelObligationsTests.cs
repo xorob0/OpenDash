@@ -116,5 +116,22 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("leaveActions.RemoveAll(pair => string.Equals(pair.Key, key, StringComparison.Ordinal));", code);
             Assert.DoesNotContain("OnLeave(() =>", code);
         }
+
+        /// <summary>
+        /// A press that changes what needs fixing asks again and redraws the sidebar, as the Matrix header's
+        /// does: the Updates page's strip and flag box Update presses and a strip's device move redrew only
+        /// their own row, and the Matrix and Updates dots and Home's list kept the old state until a page change.
+        /// </summary>
+        [Fact]
+        public void A_press_that_moves_what_needs_fixing_refreshes_it()
+        {
+            var updates = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Updates.Lights.cs"));
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(updates, @"draw\((update|press)\(\)\);\s*RefreshAttention\(\);\s*RefreshSidebar\(\);").Count);
+            var leds = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Lights.cs"));
+            var move = leds.Substring(leds.IndexOf("private void MoveLedBar(", StringComparison.Ordinal));
+            move = move.Substring(0, move.IndexOf("private FrameworkElement BuildLedBarActions(", StringComparison.Ordinal));
+            Assert.Contains("RefreshAttention();", move);
+            Assert.Contains("RefreshSidebar();", move);
+        }
     }
 }

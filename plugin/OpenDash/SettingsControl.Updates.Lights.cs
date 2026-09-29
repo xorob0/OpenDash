@@ -142,7 +142,13 @@ namespace OpenDashPlugin
                 }
                 var button = Ui.PrimaryButton(state.Button, PanelMetrics.RowButtonHeight);
                 button.MinWidth = ButtonMinWidth;
-                button.Click += (sender, args) => draw(update());
+                button.Click += (sender, args) =>
+                {
+                    draw(update());
+                    // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
+                    RefreshAttention();
+                    RefreshSidebar();
+                };
                 actionHost.Child = button;
             };
             draw(plan);
@@ -188,7 +194,13 @@ namespace OpenDashPlugin
                 // the disabled state at the canvas's 40 per cent, so nothing here has to dim it.
                 button.IsEnabled = current.State != FlagBoxInstallState.NotEmbedded
                     && current.State != FlagBoxInstallState.Unavailable;
-                button.Click += (sender, args) => draw(press());
+                button.Click += (sender, args) =>
+                {
+                    draw(press());
+                    // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
+                    RefreshAttention();
+                    RefreshSidebar();
+                };
                 actionHost.Child = button;
                 row.ToolTip = tooltip(current);
                 if (adopt != null) adopt(button);

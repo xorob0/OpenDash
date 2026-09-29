@@ -257,6 +257,9 @@ namespace OpenDashPlugin
             var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarAddFailed(bar.Name);
             if (ok && plan.Note != null) line += " " + plan.Note;
             Say(line, ok && plan.Note == null);
+            // The strip's device, and so whether its profile is selected, moved with the press.
+            RefreshAttention();
+            RefreshSidebar();
         }
 
         private FrameworkElement BuildLedBarActions(string ns)

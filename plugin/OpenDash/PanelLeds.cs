@@ -21,6 +21,15 @@ namespace OpenDashPlugin
         public const string AnchorMirrorFit = "leds.mirror-fit";
         public const string AnchorCarTables = "leds.car-tables";
 
+        /// <summary>
+        /// Where a strip profile's Update is pressed, which is where Home's issue and the sidebar's dot send
+        /// the driver: Updates' lights section, until this page's header carries the press (ReinstallBar and
+        /// UpdateBars are the shell's, for that header). The LEDs page agent moves this to
+        /// new PanelRoute(PanelPage.Leds, AnchorStrips) when it adds the press; PanelAttention and PanelNav read
+        /// it, so neither shell file has to change with it.
+        /// </summary>
+        public static readonly PanelRoute StripUpdateRoute = new PanelRoute(PanelPage.Updates, PanelUpdates.AnchorLights);
+
         // The rows' titles, which the page draws and search lists, so the two cannot drift apart.
         public const string CentreDisplayTitle = "Centre display";
         public const string FlagAnimationTitle = "Flag animation";
