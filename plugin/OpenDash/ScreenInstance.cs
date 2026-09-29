@@ -11,7 +11,6 @@
 // been bound to it with no diagnostic.
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace OpenDashPlugin
 {
@@ -254,8 +253,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The force in effect, or null. Written by the panel and by Init, read on SimHub's own thread
-        /// whenever a dashboard evaluates the property, which is why it is a single reference.
+        /// The force in effect, or null. Written by Init, by the panel and by a glance button, each on
+        /// its own thread, and read on SimHub's whenever a dashboard evaluates the property, which is why
+        /// it is a single reference.
         /// </summary>
         private volatile ModuleForce force;
 
