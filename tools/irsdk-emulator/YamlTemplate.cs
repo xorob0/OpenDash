@@ -67,17 +67,33 @@ namespace IrsdkEmulator
         public string Render()
         {
             _dirty = false;
-            string r = Placeholder.Replace(_template, m =>
-            {
-                string key = m.Groups[1].Value;
-                if (_values.TryGetValue(key, out var v)) return v;
-                if (_warned.Add(key)) Log("yaml: placeholder {{" + key + "}} has no value, rendering empty");
-                return "";
-            });
+            string r = Expand(_template, 0);
             // iRacing terminates the YAML document with "...\n"; make sure we end with a newline.
             if (!r.EndsWith("\n")) r += "\n";
             return r;
         }
+
+        /// <summary>
+        /// Substitutes every placeholder, and the placeholders inside a substituted value in turn, so that a scenario
+        /// can route one value into another: `"QualifyResultsPositions": "{{ResultsPositions}}"` is how a scenario
+        /// hands the field driver's standings to the session it is running, whichever that is (#307).
+        /// </summary>
+        private string Expand(string text, int depth)
+        {
+            return Placeholder.Replace(text, m =>
+            {
+                string key = m.Groups[1].Value;
+                if (_values.TryGetValue(key, out var v))
+                {
+                    if (depth >= MaxDepth) throw new InvalidOperationException("yaml: placeholder {{" + key + "}} nests deeper than " + MaxDepth + ", which is a cycle");
+                    return v.IndexOf("{{", StringComparison.Ordinal) < 0 ? v : Expand(v, depth + 1);
+                }
+                if (_warned.Add(key)) Log("yaml: placeholder {{" + key + "}} has no value, rendering empty");
+                return "";
+            });
+        }
+
+        private const int MaxDepth = 8;
 
         public List<string> Placeholders()
         {
