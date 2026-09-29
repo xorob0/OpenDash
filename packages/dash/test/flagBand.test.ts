@@ -400,6 +400,25 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       }
     });
 
+    test(`${face.folder} draws the debris flag's red stripes in both blocks, so a settled debris flag is never a yellow`, () => {
+      // Where a block holds no name, colour is all a driver has, and the debris flag's yellow alone
+      // was the yellow flag's. Its stripes are never fewer than three, so even sixteen pixels carry
+      // one red between two yellow, clear of both ends of the block (#498).
+      const layer = cornerLayerOf(face, 'debris');
+      for (const end of ['left', 'right'] as const) {
+        const parts = layer.children.filter((c): c is RectangleItem => c.kind === 'rect' && c.name.startsWith(`flagCorner.debris.${end}.`));
+        const stripes = parts.filter((p) => p.backgroundColor === ds.purpose.flag.debrisStripe);
+        expect({ face: face.folder, end, ground: parts[0]?.backgroundColor, stripes: stripes.length >= 1 }).toEqual({ face: face.folder, end, ground: ds.purpose.flag.debris, stripes: true });
+        for (const stripe of stripes) {
+          expect({
+            stripe: stripe.name,
+            fullHeight: stripe.rect.top === blocks[end].top && stripe.rect.height === blocks[end].height,
+            clearOfTheEnds: stripe.rect.left > blocks[end].left && stripe.rect.left + stripe.rect.width < blocks[end].left + blocks[end].width,
+          }).toEqual({ stripe: stripe.name, fullHeight: true, clearOfTheEnds: true });
+        }
+      }
+    });
+
     test(`${face.folder} keeps the waved yellow blinking in both blocks, and blinks nothing else`, () => {
       // A blinking flag keeps blinking in the block: waving is what a waved yellow means, and it
       // does not stop meaning it because the page came back.

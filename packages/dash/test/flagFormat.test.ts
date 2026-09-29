@@ -404,3 +404,78 @@ describe('the full-screen chequer is a board of whole checks', () => {
     });
   }
 });
+
+/**
+ * Every full-screen debris flag the build draws, once per block, keyed as the chequers are. The
+ * block is where a driver who asked for the flag that cannot be missed looks, and it was a yellow
+ * named DEBRIS; since #498 it is the flag, the yellow under red stripes, with the name on a plate.
+ */
+const DEBRIS: { where: string; children: Item[] }[] = (() => {
+  const found = new Map<string, { where: string; children: Item[] }>();
+  for (const { pkg } of composePackages({ version: '0.0.0-test', log: () => {} }, true)) {
+    for (const item of pkg.dashboards.flatMap(itemsOf)) {
+      if (item.kind !== 'layer' || !item.name.endsWith('flagFull.debris')) continue;
+      const ground = item.children[0];
+      if (ground?.kind !== 'rect') throw new Error(`${item.name} does not open with its ground`);
+      const where = `${pkg.folderName} ${ground.rect.width} x ${ground.rect.height}`;
+      if (!found.has(where)) found.set(where, { where, children: item.children });
+    }
+  }
+  return [...found.values()];
+})();
+
+describe('the full-screen debris flag is yellow with red stripes', () => {
+  test('on every block the build draws the chequer on', () => {
+    expect(DEBRIS.map((d) => d.where)).toEqual(CHEQUERS.map((c) => c.where));
+  });
+
+  for (const { where, children } of DEBRIS) {
+    test(`${where} lays its stripes on the chequer's columns, and its name on a plate of the yellow`, () => {
+      const [ground, ...rest] = children;
+      if (ground?.kind !== 'rect') throw new Error(`${where} opens with its ground`);
+      const block = ground.rect;
+      expect({ where, fill: ground.backgroundColor, border: ground.border }).toEqual({ where, fill: ds.purpose.flag.debris, border: undefined });
+
+      // The stripes are the chequer's columns on the same block, every other one of them red and the
+      // first and last yellow, so the two patterns are drawn at one scale and the flag opens and
+      // closes on its yellow; three columns is the fewest, which is one red stripe.
+      const stripes = rest.filter((r): r is RectangleItem => r.kind === 'rect' && r.backgroundColor === ds.purpose.flag.debrisStripe);
+      const chequer = CHEQUERS.find((c) => c.where === where)!;
+      const columns = [...new Set(chequer.squares.flatMap((s) => [s.rect.left, right(s.rect)]))].sort((a, b) => a - b);
+      const drawn = [block.left, ...stripes.flatMap((s) => [s.rect.left, right(s.rect)]), right(block)];
+      expect({ where, edges: drawn }).toEqual({ where, edges: columns });
+      expect({ where, stripes: stripes.length >= 1 }).toEqual({ where, stripes: true });
+      for (const stripe of stripes) expect({ stripe: stripe.name, top: stripe.rect.top, bottom: bottom(stripe.rect) }).toEqual({ stripe: stripe.name, top: block.top, bottom: bottom(block) });
+
+      // The plate: drawn over every stripe and under the name, inside the block, and round the name's
+      // ink and its canvas line box, so no glyph of a name half the face high straddles a stripe.
+      const plate = rest.find((r): r is RectangleItem => r.kind === 'rect' && r.name.endsWith('.plate'));
+      const name = rest.find((r): r is TextItem => r.kind === 'text');
+      if (!plate || !name) throw new Error(`${where} names the flag on a plate`);
+      const order = children.map((c) => c.name);
+      expect({ where, overStripes: order.indexOf(plate.name) > order.indexOf(stripes.at(-1)!.name), underName: order.indexOf(name.name) > order.indexOf(plate.name) }).toEqual({
+        where,
+        overStripes: true,
+        underName: true,
+      });
+      expect({ where, fill: plate.backgroundColor, inside: contains(block, plate.rect), text: name.text, ink: name.textColor }).toEqual({
+        where,
+        fill: ds.purpose.flag.debris,
+        inside: true,
+        text: 'DEBRIS',
+        ink: ds.purpose.flag.onFlag,
+      });
+      const size = flagFullNameSize(block);
+      const width = measureText('BarlowCondensedBold', name.text, size);
+      const centre = block.left + block.width / 2;
+      const lineTop = block.top + (block.height - size) / 2;
+      expect({
+        where,
+        left: plate.rect.left <= centre - width / 2,
+        right: right(plate.rect) >= centre + width / 2,
+        top: plate.rect.top <= lineTop,
+        bottom: bottom(plate.rect) >= lineTop + size,
+      }).toEqual({ where, left: true, right: true, top: true, bottom: true });
+    });
+  }
+});

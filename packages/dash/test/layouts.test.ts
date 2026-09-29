@@ -23,7 +23,7 @@ import { buildLayout, buildPackage } from '../src/dashboard.ts';
 import { centre, contains, distance, overlaps, rect, type Rect } from '../src/design/geometry.ts';
 import { FONT_METRICS, WPF_BASELINE } from '../src/design/metrics.ts';
 import { rungForSlot, rungSpec, type Rung } from '../src/design/rung.ts';
-import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type TextItem } from '../src/generator.ts';
+import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type RectangleItem, type TextItem } from '../src/generator.ts';
 import { gearItems, hero, type HeroGeometry } from '../src/hero/hero.ts';
 import {
   cardRung,
@@ -616,6 +616,14 @@ describe('800 x 286 nano', () => {
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
     for (const c of checks) expect(c.rect.height).toBe(6);
     expect(checks.map((c) => c.rect.width).filter((w) => w !== 6)).toEqual([2]);
+    // The debris flag is its stripes rather than a yellow, since the strip writes no name to tell it
+    // from the yellow flag: 133 stripes as near 6 px as 800 divides, every other one red, the first
+    // and last yellow.
+    const [debrisGround, ...debrisStripes] = layerNamed(items, 'flag.debris').children.filter((c): c is RectangleItem => c.kind === 'rect');
+    expect({ rect: debrisGround?.rect, fill: debrisGround?.backgroundColor }).toEqual({ rect: rect(0, 274, 800, 12), fill: '#FFD400' });
+    expect(debrisStripes).toHaveLength(66);
+    for (const s of debrisStripes) expect({ name: s.name, fill: s.backgroundColor, height: s.rect.height, wide: s.rect.width === 6 || s.rect.width === 7 }).toEqual({ name: s.name, fill: '#FF2D46', height: 12, wide: true });
+    expect({ first: debrisStripes[0]!.rect.left, last: debrisStripes.at(-1)!.rect.left + debrisStripes.at(-1)!.rect.width }).toEqual({ first: 6, last: 794 });
     // The flash is a band over the fill and not the layer: a blinking layer draws nothing for half
     // of every cycle, and what a flag covers has to stay covered.
     expect(layerNamed(items, 'flag.yellowWaving').blink).toBeUndefined();
@@ -636,7 +644,7 @@ describe('800 x 286 nano', () => {
       if (spec.shape === 'chequer') continue;
       const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
       if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
-      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: spec.run?.sample ?? spec.label });
+      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: ('run' in spec ? spec.run?.sample : undefined) ?? spec.label });
       expect({ id: condition.id, opens: label.text.startsWith(spec.label) }).toEqual({ id: condition.id, opens: true });
     }
   });

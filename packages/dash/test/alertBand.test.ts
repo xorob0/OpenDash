@@ -1,5 +1,5 @@
 /**
- * The alert band: the three shapes it is allowed to take, and the promise that only one of them is
+ * The alert band: the four shapes it is allowed to take, and the promise that only one of them is
  * ever drawn.
  *
  * Band D used to draw the six flags SimHub normalises and the 8x8 box drew all fifteen conditions
@@ -8,7 +8,7 @@
  * the dash. The band reads the catalogue now, and since #109 the catalogue is twenty: the fifteen
  * flags and five car alerts, ranked in one list. What is asserted here is what that costs: that the
  * twenty still exclude one another, the flags exactly as the box's do, that each takes one of the
- * three shapes and no fourth, and that every one of them is opaque over the whole band, since a flag
+ * four shapes and no fifth, and that every one of them is opaque over the whole band, since a flag
  * takes band D over precisely so that the page underneath cannot be read.
  *
  * Nothing in the repository evaluates a binding, so `visible()` below carries the same small
@@ -22,6 +22,7 @@ import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_FLASH_MS, type AlertBandSty
 import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
 import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
+import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { ALERT_CATALOGUE, flagBit, isFlag, type SessionFlagBit } from '../src/flags.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
@@ -88,8 +89,11 @@ describe('the band is the catalogue', () => {
     expect(layers().map((l) => l.name)).toEqual(ALERT_CATALOGUE.map((c) => `flag.${c.id}`));
   });
 
-  test('three shapes and no fourth', () => {
-    expect(new Set(ALERT_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer']));
+  test('four shapes and no fifth, the canvas’s bands, outlined bands and two patterns', () => {
+    expect(new Set(ALERT_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer', 'striped']));
+    // Each pattern is one flag's: the board is the chequer's and the stripes are the debris flag's.
+    expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'chequer').map((c) => c.id)).toEqual(['chequered']);
+    expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'striped').map((c) => c.id)).toEqual(['debris']);
   });
 
   test('every band names itself, except the chequer, which has no name to write', () => {
@@ -248,6 +252,87 @@ describe('every shape is opaque over the whole band', () => {
     for (const condition of ALERT_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
       const blinking = [...walkItems([layerOf(condition.id)])].filter((i) => i.blink?.enabled);
       expect({ id: condition.id, blinking: blinking.map((i) => i.name) }).toEqual({ id: condition.id, blinking: [] });
+    }
+  });
+});
+
+/**
+ * What a layer draws, with its names taken off and its rectangles counted from the frame: two
+ * conditions whose drawings are equal are one band to a driver, whatever they are called.
+ */
+const drawing = (layer: LayerItem, frame: Rect): unknown[] =>
+  [...walkItems([layer])]
+    .filter((i) => i.kind !== 'layer')
+    .map((i) => ({
+      kind: i.kind,
+      at: { ...i.rect, left: i.rect.left - frame.left, top: i.rect.top - frame.top },
+      fill: i.kind === 'rect' ? i.backgroundColor : undefined,
+      border: i.kind === 'rect' ? i.border : undefined,
+      ink: i.kind === 'text' ? i.textColor : undefined,
+      blink: i.blink,
+    }));
+
+/**
+ * The debris flag is yellow with red stripes, and since #498 every band draws the stripes. Drawn as a
+ * yellow named DEBRIS it was the yellow flag wherever no name was written: the nano's strip, the
+ * companion's, and the sixteen or twelve pixels a settled flag keeps on a face with no corner block.
+ */
+describe('the debris flag is its yellow and red wherever it is drawn', () => {
+  const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };
+  const FRAMES: { where: string; frame: Rect; style: AlertBandStyle }[] = [
+    { where: 'the widest band', frame: WIDE, style: ALERT_BAND_STYLES.standard },
+    { where: 'the portrait band', frame: NARROW, style: ALERT_BAND_STYLES.standard },
+    { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+  ];
+
+  for (const { where, frame, style } of FRAMES) {
+    test(`${where}: the yellow, and red stripes of one width that open and close on it`, () => {
+      const [ground, ...rest] = rects(layerOf('debris', frame, style));
+      // A pattern with no border, as the chequer has none: the stripes run to the band's own edges.
+      expect({ where, rect: ground!.rect, fill: ground!.backgroundColor, border: ground!.border }).toEqual({ where, rect: frame, fill: ds.purpose.flag.debris, border: undefined });
+      const stripes = rest.filter((r) => r.backgroundColor === ds.purpose.flag.debrisStripe);
+      expect({ where, stripes: stripes.length >= 1 }).toEqual({ where, stripes: true });
+      for (const stripe of stripes) {
+        expect({ stripe: stripe.name, top: stripe.rect.top, height: stripe.rect.height }).toEqual({ stripe: stripe.name, top: frame.top, height: frame.height });
+      }
+      // Yellow at both ends, and every run of either colour within a pixel of every other, which is
+      // what an odd count of equal stripes is.
+      const edges = [frame.left, ...stripes.flatMap((s) => [s.rect.left, s.rect.left + s.rect.width]), frame.left + frame.width];
+      const runs = edges.slice(1).map((edge, i) => edge - edges[i]!);
+      expect({ where, runs, even: Math.max(...runs) - Math.min(...runs) <= 1, empty: runs.some((r) => r <= 0) }).toMatchObject({ where, even: true, empty: false });
+    });
+  }
+
+  test('its name sits on a plate of its yellow, over the stripes and inside the band', () => {
+    for (const frame of [WIDE, NARROW]) {
+      const layer = layerOf('debris', frame);
+      const order = layer.children.map((c) => c.name);
+      const plate = rects(layer).find((r) => r.name === 'flag.debris.plate');
+      const name = texts(layer)[0];
+      if (!plate || !name) throw new Error('the debris band names itself on a plate');
+      expect({ fill: plate.backgroundColor, inside: contains(frame, plate.rect), ink: name.textColor }).toEqual({ fill: ds.purpose.flag.debris, inside: true, ink: ds.purpose.flag.onFlag });
+      // Over every stripe and under the name.
+      const lastStripe = Math.max(...order.map((n, i) => (/\.s\d+$/.test(n) ? i : -1)));
+      expect({ plate: order.indexOf(plate.name) > lastStripe, name: order.indexOf(name.name) > order.indexOf(plate.name) }).toEqual({ plate: true, name: true });
+      // Round the name's ink, measured in the face it is drawn in, and round its canvas line box.
+      const ink = measureText('BarlowBold', name.text, name.fontSize);
+      const centre = frame.left + frame.width / 2;
+      const lineTop = frame.top + (frame.height - name.fontSize) / 2;
+      expect({
+        left: plate.rect.left <= centre - ink / 2,
+        right: plate.rect.left + plate.rect.width >= centre + ink / 2,
+        top: plate.rect.top <= lineTop,
+        bottom: plate.rect.top + plate.rect.height >= lineTop + name.fontSize,
+      }).toEqual({ left: true, right: true, top: true, bottom: true });
+    }
+  });
+
+  test('and where no name is written, it is not the yellow flag', () => {
+    for (const { where, frame, style } of FRAMES.filter((f) => !f.style.labels)) {
+      expect({ where, drawn: drawing(layerOf('debris', frame, style), frame) }).not.toEqual({ where, drawn: drawing(layerOf('yellow', frame, style), frame) });
     }
   });
 });

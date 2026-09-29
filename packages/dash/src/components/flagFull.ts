@@ -18,14 +18,16 @@
  * named the condition and the block, having no state for it, drew nothing at all: the driver who had
  * asked for the flag that cannot be missed saw the least of it.
  *
- * The three shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
- * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, and
- * the chequer as a board with no name. Three things differ at this scale and are why the block is
- * not a style of the band. The flash covers the whole frame rather than an inset one, since a block
- * that is the face has no 3 px edge to keep through the dark phase; the type is measured down rather
- * than set, because a name one label row high is measured against sixty pixels and a name nearly
- * half the face high is measured against the face; and the chequer's checks are counted rather than
- * sized, because a block can be taller than it is wide and a band never is.
+ * The four shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
+ * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, the
+ * chequer as a board with no name, and the debris flag's stripes with its name on a plate of its
+ * yellow. Three things differ at this scale and are why the block is not a style of the band. The
+ * flash covers the whole frame rather than an inset one, since a block that is the face has no 3 px
+ * edge to keep through the dark phase; the type is measured down rather than set, because a name one
+ * label row high is measured against sixty pixels and a name nearly half the face high is measured
+ * against the face; and the two patterns are counted rather than sized, because a block can be taller
+ * than it is wide and a band never is. The stripes are the one shape whose rectangles are the band's
+ * own, `stripes`, since what makes them the flag is the count rather than the width either passes.
  *
  * The frame is handed in rather than computed here, because a component is a function of a
  * rectangle: `bodyRect` in `zones/layout.ts` is what every face passes, and the same component
@@ -39,6 +41,7 @@ import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 import { ALERT_CATALOGUE, bandVisible, type AlertCondition } from '../flags.ts';
+import { namePlate, nearestOdd, stripes } from './alertBand.ts';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
 /**
@@ -203,9 +206,6 @@ const outlinedFull = (name: string, frame: Rect, colour: Hex, text: string): Ite
  */
 const FLAG_FULL_CHEQUER_ACROSS = 3;
 
-/** The odd count nearest to `n`, and never less than one. */
-const nearestOdd = (n: number): number => Math.max(1, 2 * Math.round((n - 1) / 2) + 1);
-
 /**
  * The chequer: the band's board at the block's scale, opening on the ground one square in, so that
  * the two formats are one flag in one phase rather than two drawings of it.
@@ -238,6 +238,28 @@ function chequeredFull(name: string, frame: Rect): Item[] {
   return children;
 }
 
+/**
+ * The debris flag at the block's scale: the yellow, red stripes a check of the block's own chequer
+ * wide, and the name on a plate of the yellow.
+ *
+ * A check wide, so that the two patterns are one scale on the block as they are on the band, and
+ * counted by the same rule as the band's stripes, so both ends are yellow. That makes three stripes
+ * on the portrait face and the portrait companion, whose blocks are about as wide as they are tall:
+ * one red between two yellow, and the plate laid over the middle of it, which leaves the red above
+ * and below the name. The plate is what keeps a name half the face high off the edges between the
+ * two colours.
+ */
+function stripedFull(name: string, frame: Rect, colour: Hex, stripe: Hex, text: string): Item[] {
+  const size = flagFullNameSize(frame);
+  const lineTop = frame.top + (frame.height - size) / 2;
+  return [
+    band(`${name}.band`, frame, colour),
+    ...stripes(name, frame, Math.min(frame.width, frame.height) / FLAG_FULL_CHEQUER_ACROSS, stripe),
+    namePlate(`${name}.plate`, frame, measureText('BarlowCondensedBold', text, size), lineTop, size, ds.space[4], colour),
+    flagFullName(`${name}.name`, frame, text, ds.purpose.flag.onFlag),
+  ];
+}
+
 /** The shape the condition asks for, at the block's scale. */
 const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[] => {
   const spec = condition.band;
@@ -248,6 +270,8 @@ const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[
       return outlinedFull(name, frame, spec.colour, blockName(condition));
     case 'chequer':
       return chequeredFull(name, frame);
+    case 'striped':
+      return stripedFull(name, frame, spec.colour, spec.stripe, blockName(condition));
   }
 };
 

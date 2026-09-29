@@ -103,11 +103,17 @@ export const safeBitSet: BitTest = (bit) => eq(isnull(flagBit(bit), num(0)), num
 export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_Blue' | 'Flag_White' | 'Flag_Green';
 
 /**
- * How a band draws the condition: three shapes and no fourth, which is the canvas's own rule for
- * the alert catalogue. A filled bar carries its label in `purpose.flag.onFlag`; an outlined bar is
- * an opaque `surface.base` ground with a 3 px border and its label both in the alert's colour,
- * which is how a near-black flag is drawn on a near-black face; the chequer is the board, and it
- * is the one condition with no name to write on it.
+ * How a band draws the condition: four shapes and no fifth, which is the canvas's own rule for the
+ * alert catalogue, bands, outlined bands and two patterns. A filled bar carries its label in
+ * `purpose.flag.onFlag`; an outlined bar is an opaque `surface.base` ground with a 3 px border and its
+ * label both in the alert's colour, which is how a near-black flag is drawn on a near-black face; the
+ * chequer is the board, and it is the one condition with no name to write on it; and the stripes are
+ * the debris flag's, `stripe` over `colour`, with the label on a plate of `colour`.
+ *
+ * The fourth exists because a name is written only where there is width for one. Drawn as a filled
+ * yellow named DEBRIS, the debris flag was the yellow flag on the nano, in a settled corner too
+ * narrow for the word and on the LED strip, which is to say wherever a driver was reading colour
+ * rather than words; #498 draws the pattern the flag is made of instead.
  *
  * It lives beside the condition rather than in the component for the reason `motion` does: a
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
@@ -116,7 +122,8 @@ export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_B
 export type AlertBandSpec =
   | { shape: 'filled'; colour: Hex; label: string; flash?: true; run?: BandRun }
   | { shape: 'outlined'; colour: Hex; label: string; run?: BandRun }
-  | { shape: 'chequer' };
+  | { shape: 'chequer' }
+  | { shape: 'striped'; colour: Hex; stripe: Hex; label: string };
 
 /**
  * What the whole band writes in place of its label, for the one condition with a number to say: the
@@ -422,10 +429,17 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
     band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'WAVED YELLOW', flash: true },
   },
   { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG' }, faceFlag: 'Flag_Yellow' },
-  // `purpose.flag.debris` is the yellow, and the canvas draws the band as that yellow under danger
-  // stripes. The stripes are a fourth shape and are not drawn: the name carries the difference on
-  // the standard band, and on the nano, which writes no name, a debris flag reads as a yellow.
-  { id: 'debris', name: 'Debris', critical: true, motion: 'moves', bits: ['debris'], band: { shape: 'filled', colour: ds.purpose.flag.debris, label: 'DEBRIS' } },
+  // `purpose.flag.debris` is the yellow and `debrisStripe` the red over it, which is the flag. The
+  // stripes are vertical where the canvas draws them at 135 degrees, `components/alertBand.ts` says
+  // why, and they are what tells it from the yellow flag wherever no name is written.
+  {
+    id: 'debris',
+    name: 'Debris',
+    critical: true,
+    motion: 'moves',
+    bits: ['debris'],
+    band: { shape: 'striped', colour: ds.purpose.flag.debris, stripe: ds.purpose.flag.debrisStripe, label: 'DEBRIS' },
+  },
   INCIDENT,
   { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE FLAG' }, faceFlag: 'Flag_Blue' },
   // In iRacing the white bit is the last lap and nothing else, which is why the name says so.

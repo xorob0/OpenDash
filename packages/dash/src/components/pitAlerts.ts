@@ -27,7 +27,7 @@
  * both places. The catalogue's half also asks whether anybody is in the car, since on the circuit
  * SimHub's reading of the ignition is off whenever nobody is.
  *
- * Two of `alertBand`'s three shapes, at the artboards' border: a filled band for the correct state,
+ * Two of `alertBand`'s four shapes, at the artboards' border: a filled band for the correct state,
  * outlined bands for the four that are not. `purpose.pitLimiter` and `purpose.flag.white` are both
  * `#FFFFFF`, so the mistake and the correct state differ in shape rather than in colour, which is
  * the same reasoning the flag box writes down for the same pair of states.

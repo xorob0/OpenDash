@@ -25,7 +25,8 @@
  * property is not a boolean.
  *
  * The nano's 12 px strip is too thin for a name, so its style drops the names and thins the
- * outline to 2 px; at that size a debris flag and a yellow are one band, which flags.ts records.
+ * outline to 2 px. What tells two conditions apart there is their shape and colour alone, which is
+ * why the debris flag draws its stripes rather than being a yellow with a name on it (#498).
  *
  * One condition says more than its own name. A blue flag is thrown for a car that is about to
  * arrive, and which car that is decides whether a driver lifts or holds the line, so
@@ -37,7 +38,7 @@
 import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
-import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
+import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, stripedBand, type AlertBandStyle } from './alertBand.ts';
 import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
@@ -76,6 +77,8 @@ const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: Aler
       return outlinedBand(name, frame, style, spec.colour, spec.label);
     case 'chequer':
       return chequerBand(name, frame);
+    case 'striped':
+      return stripedBand(name, frame, style, spec.colour, spec.stripe, spec.label);
   }
 };
 
@@ -85,7 +88,7 @@ const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: Aler
  * writes no run, and the settled corner blocks draw `shapeParts` alone, so the run is the takeover's.
  */
 const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
-  if (spec.shape === 'chequer' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
+  if (spec.shape === 'chequer' || spec.shape === 'striped' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
   const ink = spec.shape === 'filled' ? ds.purpose.flag.onFlag : spec.colour;
   return [
     ...shapeParts(name, frame, { ...style, labels: false }, spec),
@@ -244,9 +247,11 @@ export interface FlagCornerBlocks {
  * All nineteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
  * so the answer comes out per face rather than per condition: on the four faces with no corner block a
  * settled flag is a colour, and a colour is a family rather than a member -- the three blacks are one
- * outlined sliver and the debris flag is a yellow. zones.md §6 weighs that against holding the whole
- * band for the length of a caution, and §10 records what the canvas still owes those four faces. A
- * neutral alert is the exception that has no colour to fall back on, and draws nothing there.
+ * outlined sliver. The debris flag is not a yellow there, since #498: its stripes are never fewer than
+ * three, so sixteen pixels still hold one red between two yellow. zones.md §6 weighs that against
+ * holding the whole band for the length of a caution, and §10 records what the canvas still owes
+ * those four faces. A neutral alert is the exception that has no colour to fall back on, and draws
+ * nothing there.
  */
 const cornerNameFits = (block: Rect, text: string): boolean =>
   measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;

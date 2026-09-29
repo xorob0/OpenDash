@@ -173,10 +173,11 @@ const engineRunning = (): Expr => gt(g('Rpms'), num(0));
  * flags. A condition with no row is skipped rather than allowed to hold the lamp dark, which is the
  * same rule `drawnFlags()` applies to a condition with no glyph.
  *
- * On the rates: the black family is the fast tier because it is addressed to this car, and
- * everything else is the flag band's own 2 Hz, so a yellow on the face and a yellow on the strip
- * flash together. On the colours: where a row names a second lit colour it is because the second
- * colour is itself the fact, and where it does not, the off phase is {@link BLINK_OFF}.
+ * On the rates: the black family is the fast tier because it is addressed to this car, the debris
+ * flag takes it for the urgency of something on the road, and everything else is the flag band's
+ * own 2 Hz, so a yellow on the face and a yellow on the strip flash together. On the colours: where a
+ * row names a second lit colour it is because the second colour is itself the fact, and where it
+ * does not, the off phase is {@link BLINK_OFF}.
  *
  * Two rows the canvas draws are missing, and both are blocked on a token rather than on this file:
  *
@@ -226,9 +227,19 @@ export const FLAG_ROWS: readonly FlagRow[] = [
     blinkDelayMs: SLOW_BLINK_MS,
   },
   { id: 'yellow', label: 'Yellow flag', conditions: ['yellowWaving', 'yellow'], color: ds.purpose.flag.yellow, blinkDelayMs: SLOW_BLINK_MS },
-  // The yellow hue at the fast rate, which is the one thing a lamp has left to say "and there is
-  // something on the road" with.
-  { id: 'debris', label: 'Debris flag', conditions: ['debris'], color: ds.purpose.flag.debris, blinkDelayMs: FAST_BLINK_MS },
+  // The flag's two colours, its yellow and its stripes' red, alternating at the fast rate, which is
+  // what the band's stripes are on a lamp. The yellow alone at that rate was all a lamp had to say
+  // "and there is something on the road" with, and a glance at it caught the yellow flag. The red is
+  // also the low-fuel lamp's, which shares this lamp on a two-LED side, but that one blinks it
+  // against darkness at the slow rate and this one against the yellow at the fast one.
+  {
+    id: 'debris',
+    label: 'Debris flag',
+    conditions: ['debris'],
+    color: ds.purpose.flag.debris,
+    blinkColor: ds.purpose.flag.debrisStripe,
+    blinkDelayMs: FAST_BLINK_MS,
+  },
   { id: 'blue', label: 'Blue flag', conditions: ['blue'], color: ds.purpose.flag.blue, blinkDelayMs: SLOW_BLINK_MS },
   { id: 'white', label: 'White flag', conditions: ['white'], color: ds.purpose.flag.white, blinkDelayMs: SLOW_BLINK_MS },
   { id: 'green', label: 'Green flag', conditions: ['green'], color: ds.purpose.flag.green, blinkDelayMs: SLOW_BLINK_MS },

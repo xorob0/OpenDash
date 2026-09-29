@@ -1,11 +1,17 @@
 /**
- * alertBand: the shapes a band on the face is allowed to take, and there are three of them.
+ * alertBand: the shapes a band on the face is allowed to take, and there are four of them.
  *
  * The canvas states the rule for the whole alert catalogue — "the only shapes are bands, outlined
  * bands and two patterns; nothing else on the face is allowed to compete with them" — and this file
- * is the first three of those four. A filled bar, a bar outlined in the alert's colour, and the
- * chequer. The second pattern, the debris flag's danger stripes, is not drawn, and
- * docs/design/flag-box.md says so beside the condition.
+ * is all four. A filled bar, a bar outlined in the alert's colour, the chequer, and the debris flag's
+ * red stripes over its yellow.
+ *
+ * The stripes were the one shape left out, on the grounds that the name carries the difference, and
+ * #498 reversed that: the name is written only where there is width for it, so on the nano's strip,
+ * in the sixteen pixels a settled flag keeps on a face with no corner block and on the LED strip, a
+ * debris flag was a yellow flag. They are vertical where the canvas draws them at 135 degrees, which
+ * is how the real flag is made and needs nothing SimHub is not known to draw: a diagonal stripe is a
+ * rotated rectangle clipped to the band, and docs/research/simhub-dash-format.md establishes neither.
  *
  * Which condition takes which shape is not decided here: `AlertBandSpec` in flags.ts carries it
  * beside the condition, and `flagStrip.ts` joins the two. A shape is therefore a function of a
@@ -18,6 +24,7 @@
  */
 import type { FontWeight, Hex, Item, Rect, RectangleItem, TextItem } from '../generator.ts';
 import type { Expr } from '../bind.ts';
+import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -137,4 +144,66 @@ export function chequerBand(name: string, frame: Rect): Item[] {
     }
   }
   return children;
+}
+
+/** The odd count nearest to `n`, and never less than one. */
+export const nearestOdd = (n: number): number => Math.max(1, 2 * Math.round((n - 1) / 2) + 1);
+
+/**
+ * The debris flag's stripes, as the rectangles laid over its ground: every other one of an odd count
+ * of equal vertical stripes, each as near `width` as the frame divides into.
+ *
+ * Odd, so that the flag opens and closes on its ground and is the same at both ends; and never fewer
+ * than three, so that the narrowest rectangle a band is drawn in, the twelve or sixteen pixels a
+ * settled flag keeps on a face with no corner block, still carries one stripe between two runs of
+ * the ground rather than being the yellow flag. The edges are rounded and the stripes cut between
+ * them, as the full-screen chequer cuts its squares, so that no stripe is a pixel wider than another
+ * for want of a fraction and the last one ends where the frame does.
+ *
+ * Exported because the full-screen block draws the same flag at its own scale, and the rule that
+ * makes it the same flag is this one rather than the width either passes.
+ */
+export function stripes(name: string, frame: Rect, width: number, colour: Hex): RectangleItem[] {
+  const count = Math.max(3, nearestOdd(frame.width / width));
+  const edge = (k: number): number => Math.round(frame.left + (k * frame.width) / count);
+  const drawn: RectangleItem[] = [];
+  for (let k = 1; k < count; k += 2) drawn.push(band(`${name}.s${String(k).padStart(2, '0')}`, rect(edge(k), frame.top, edge(k + 1) - edge(k), frame.height), colour));
+  return drawn;
+}
+
+/**
+ * The ground a name is written on over the stripes: the flag's own colour, centred on the frame,
+ * covering the name's measured width and its line box with `pad` round both, and never outside the
+ * frame.
+ *
+ * Dark ink reads on the red as well as on the yellow, but a word cut by the edge between two colours
+ * is read as two shapes before it is read as a word, and a stripe half the band high is narrower than
+ * DEBRIS, so the word would always straddle one. The canvas writes the name straight over its
+ * stripes, so the plate is an addition to its drawing rather than a reading of it.
+ */
+export function namePlate(name: string, frame: Rect, textWidth: number, lineTop: number, size: number, pad: number, colour: Hex): RectangleItem {
+  const width = Math.min(frame.width, Math.ceil(textWidth) + 2 * pad);
+  const top = Math.max(frame.top, Math.floor(lineTop - pad));
+  const bottom = Math.min(frame.top + frame.height, Math.ceil(lineTop + size + pad));
+  return band(name, rect(frame.left + Math.floor((frame.width - width) / 2), top, width, bottom - top), colour);
+}
+
+/**
+ * The debris flag: its yellow over the whole rectangle, red stripes across it, and its name, where
+ * the style writes one, on a plate of the yellow.
+ *
+ * A stripe is as wide as the chequer's check on the same band, half the band high, so that the
+ * canvas's two patterns are drawn at one scale. It carries no border, as the chequer carries none:
+ * the pattern is the flag, and three pixels of yellow over the ends of every stripe would frame it as
+ * a yellow band with red marks inside. Nothing here flashes, since the debris flag is held on the
+ * band; it is the lamp that alternates the two colours, `leds/effects.ts`.
+ */
+export function stripedBand(name: string, frame: Rect, style: AlertBandStyle, colour: Hex, stripe: Hex, text: string): Item[] {
+  const named = style.labels
+    ? [
+        namePlate(`${name}.plate`, frame, measureText('BarlowBold', text, ds.size.label), labelY(frame), ds.size.label, ds.space[2], colour),
+        alertBandName(`${name}.label`, frame, text, ds.purpose.flag.onFlag),
+      ]
+    : [];
+  return [band(`${name}.band`, frame, colour), ...stripes(name, frame, frame.height / 2, stripe), ...named];
 }
