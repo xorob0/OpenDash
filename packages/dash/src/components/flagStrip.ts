@@ -283,11 +283,11 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
- * One thing the takeover has that this does not: the blue flag's detail. "BLUE · P4 GT3" would fit
- * the corner blocks of the four faces that have them and not the sixteen pixels of the other four,
- * and a block that wrote it on some faces and not on the others would be a different drawing
- * per face. The blue block writes BLUE where that fits, and the detail belongs to the seconds
- * the flag has the band. The incident's count is the same: the block writes INCIDENT.
+ * One thing the takeover has that this does not: the blue flag's detail. "BLUE · P99 LMP2" is
+ * narrower than FULL COURSE YELLOW and so would fit every corner block there is, so it is left out by
+ * choice rather than for want of room: #380 gives the settled flag its colour and its name, and the
+ * car behind is news for the seconds the flag has the band. The blue block writes BLUE where that
+ * fits. The incident's count is the same: the block writes INCIDENT.
  *
  * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has
  * no layer here at all rather than an empty one.

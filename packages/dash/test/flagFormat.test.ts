@@ -327,11 +327,11 @@ describe('the full-screen name fits the block it is centred on', () => {
     // conditions rather than six is the difference between the widest of each set. Shortened to the
     // sheets' one word, that is MEATBALL against YELLOW, and it is only binding where the block is
     // narrow against its height: every landscape face still lands on the fraction the sheets quote,
-    // and the portrait one drops from 183 px to 143. The band's own labels would have made it 69,
-    // which is why the block does not simply write them. The three car alerts it gained with #109,
-    // IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so cost nothing, and so does
-    // the full course yellow of #497: the size is measured against FCY, and FULL COURSE YELLOW is
-    // written only where it fits at that size.
+    // and the portrait one drops from 183 px to 143. The band's own labels, FCY for the full course
+    // yellow, would have made it 84, which is why the block does not simply write them. The three car
+    // alerts it gained with #109, IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so
+    // cost nothing, and so does the full course yellow of #497: the size is measured against FCY, and
+    // FULL COURSE YELLOW is written only where it fits at that size.
     const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
     expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
     expect(FLAG_FULL_NAMES).toEqual([...new Set(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);

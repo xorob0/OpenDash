@@ -151,7 +151,10 @@ export interface BandRun {
 interface CatalogueEntry {
   /** Stable id: the container description in the profile and the key in the docs table. */
   id: string;
-  /** As the pit wall names it. */
+  /**
+   * As the site lists it, where it is listed at all. No dash draws it: the band and the full-screen
+   * block write names of their own.
+   */
   name: string;
   /** How band D draws it. Every condition has one, so that the band and the box cannot differ. */
   band: AlertBandSpec;

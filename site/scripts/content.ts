@@ -239,8 +239,10 @@ export interface SiteFlag {
   /** Survives the box's "critical flags only" switch. */
   critical: boolean;
   /**
-   * The band flashes it and the box blinks it. A yellow being waved and a standing one carry the same
-   * name, #497, so where the two are listed side by side it is their motion that tells them apart.
+   * The band flashes it, which only the yellow being waved does. A yellow being waved and a standing
+   * one carry the same name, #497, so where the two are listed side by side it is the flash that tells
+   * them apart. It is not the box's motion, which moves several conditions the band holds steady, the
+   * full course yellow among them.
    */
   blinks: boolean;
 }

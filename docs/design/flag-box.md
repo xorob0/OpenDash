@@ -115,6 +115,8 @@ name as well and are told apart by the flash; the two blacks are not, since neit
 so on the band and on the block a furled black and a black flag are one drawing, which is the
 consequence the author accepted with the name. The box alone still tells them apart, by a bar that
 walks against an outline that waves, and elsewhere the two are told apart by their id and their rank.
+The site's priority list shows no id, so it carries them as two identical rows reading Black, the
+third and the fourth.
 
 ### What the band does that the box does not, and the reverse
 
