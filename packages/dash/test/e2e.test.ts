@@ -13,6 +13,7 @@ import {
   BuildError,
   DEFAULT_OUT_DIR,
   FLAG_BOX_FILE,
+  FLAG_BOX_GLYPHS_FILE,
   FLAG_BOX_SHEET_FILE,
   main,
   MANIFEST_FILE,
@@ -194,7 +195,7 @@ describe('widget build on disk', () => {
     }
     expect(listFiles(join(widget.out, REFERENCE_CARD_FACE))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
     // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
     // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
     expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual([...fontsForPanel().map((f) => basename(f)), FONT_LICENCE.name].sort());
@@ -365,7 +366,7 @@ describe('widget build on disk', () => {
   });
 
   test('the build log names every file written', () => {
-    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, MANIFEST_FILE];
+    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, FLAG_BOX_GLYPHS_FILE, MANIFEST_FILE];
     for (const rel of files) expect({ rel, logged: log.some((line) => line.startsWith('wrote ') && line.includes(rel)) }).toEqual({ rel, logged: true });
     // Every warning but one: a package nobody has photographed says so on every build, and the
     // machine that can take the picture is the VM, which ADR 0008 is the record of not requiring.
@@ -550,7 +551,7 @@ describe('LED profiles on disk', () => {
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
     expect(lit.stripProfiles.map((p) => p.shape!.id)).toEqual(ALL_SHAPES.map((s) => s.id));
     expect(readdirSync(lit.out).sort()).toEqual(
-      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort(),
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort(),
     );
     // A profile is not a dashboard: no folder, no .djson, no zip.
     expect(readdirSync(lit.out).filter((f) => f.endsWith('.simhubdash'))).toEqual([]);
@@ -621,7 +622,7 @@ describe('second screens on disk', () => {
     expect(readdirSync(second.out).sort()).toEqual(
       // The profile is written by every build, not only the one that builds the faces: it is not
       // tied to a package and there is nothing to select it out of.
-      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
     );
   });
 

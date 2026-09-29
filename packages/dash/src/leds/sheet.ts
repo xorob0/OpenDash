@@ -110,3 +110,47 @@ export function contactSheet(glyphs: readonly Glyph[] = glyphCatalogue()): strin
   parts.push('</svg>');
   return `${parts.join('\n')}\n`;
 }
+
+/** The version of {@link glyphSheetJson}'s shape. Raised when a field changes meaning or leaves. */
+export const GLYPH_SHEET_SCHEMA_VERSION = 1;
+
+/**
+ * The same catalogue as data: every glyph, every frame, every cell, for the plugin to draw. #503.
+ *
+ * The settings panel previews the box and paints the rig page's tiles from the very pictures the
+ * profile is built from, and a C# copy of the glyphs would be a second place for a flag to be drawn
+ * wrongly. So the build writes them out and the plugin embeds the file: a change to the chequered
+ * flag here reaches the panel with the profile, and nothing on the plugin side knows what a flag
+ * looks like.
+ *
+ * The shape is `{ schemaVersion, rows, columns, glyphs: [{ name, kind, frames }] }` in
+ * {@link glyphCatalogue}'s order, each frame `rows` rows of `columns` cells, a cell `#RRGGBB` or
+ * `null` for an unlit LED. Every frame is kept, not only the first the SVG draws, because the panel
+ * animates what the box animates. One row per line, so that a diff of it is a diff of pictures, and
+ * deterministic, with a trailing newline, for the reason the sheet is.
+ */
+export function glyphSheetJson(glyphs: readonly Glyph[] = glyphCatalogue()): string {
+  const frame = (f: readonly (readonly (Hex | null)[])[]): string =>
+    ['        [', f.map((row) => `          ${JSON.stringify(row)}`).join(',\n'), '        ]'].join('\n');
+  const glyph = (g: Glyph): string =>
+    [
+      '    {',
+      `      "name": ${JSON.stringify(g.name)},`,
+      `      "kind": ${JSON.stringify(g.kind)},`,
+      '      "frames": [',
+      g.frames.map(frame).join(',\n'),
+      '      ]',
+      '    }',
+    ].join('\n');
+  return [
+    '{',
+    `  "schemaVersion": ${GLYPH_SHEET_SCHEMA_VERSION},`,
+    `  "rows": ${ROWS},`,
+    `  "columns": ${COLUMNS},`,
+    '  "glyphs": [',
+    glyphs.map(glyph).join(',\n'),
+    '  ]',
+    '}',
+    '',
+  ].join('\n');
+}
