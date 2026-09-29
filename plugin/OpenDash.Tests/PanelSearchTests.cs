@@ -192,7 +192,7 @@ namespace OpenDashPlugin.Tests
         {
             var sources = PageSources.ToDictionary(
                 pair => pair.Key,
-                pair => string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), pair.Value + "*.cs").Select(File.ReadAllText)));
+                pair => string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), pair.Value + "*.cs").Select(RepoPaths.Code)));
             var constants = typeof(PanelSearch).Assembly.GetTypes()
                 .Where(type => type.Namespace == "OpenDashPlugin" && type.IsAbstract && type.IsSealed)
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static)

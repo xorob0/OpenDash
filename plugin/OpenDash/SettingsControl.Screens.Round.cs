@@ -2,7 +2,7 @@
 // its card on the Screens page: the slot picture, the rig-wide rev bar it reads, and the duplicate warning.
 //
 // Re-hosted from the old Rig tab by the #503 foundation; the Screens page agent owns it. It leaves with the
-// cards in #146, and its rev bar row is the one that writes the rig-wide RevBar (Settings.SetRevBar).
+// cards in #146, and its rev bar row is the one that writes the rig-wide rev bar, through its setter.
 using System;
 using System.Collections.Generic;
 using System.Linq;

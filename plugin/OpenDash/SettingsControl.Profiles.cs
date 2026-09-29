@@ -8,7 +8,7 @@
 //
 // NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS, which is the consent half of ADR 0013. SafePlan and
 // BarCensus only ask SimHub what it already holds, and the profiles are read out of the assembly rather than
-// off disk. A strip's embedded profile is always looked up by LedBar.ProfileShapeId, which is the reversed
+// off disk. A strip's embedded profile is always looked up by the strip's profile shape, which is the reversed
 // twin for a strip wired from the far end: looked up by its Shape it finds the plain wiring and installs that.
 using System;
 using System.Collections.Generic;

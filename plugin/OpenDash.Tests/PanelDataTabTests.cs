@@ -20,7 +20,7 @@ namespace OpenDashPlugin.Tests
             // search finds the section by it.
             Assert.Equal("Race data", PanelDataTab.SectionTitle);
             Assert.Null(PanelDataTab.SectionCaption);
-            var page = File.ReadAllText(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
+            var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
             Assert.Contains("PageSection(PanelDataTab.SectionTitle,", page);
             Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelDataTab.SectionTitle && entry.Route.Anchor == PanelSettings.AnchorRaceData);
         }
@@ -35,7 +35,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_rig_setting_can_be_reached_from_the_panel()
         {
-            var sources = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var sources = string.Concat(RepoPaths.SettingsControlCode());
             var unreachable = Contract.SharedPropertyNames()
                 // The twelve slots are the card face's own and sit on that screen's pane, which writes
                 // them through Contract.SlotProperty rather than by name. ShiftLights has no control
@@ -90,7 +90,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
             Assert.Equal(new[] { "Session best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
             Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
-            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var source = string.Concat(RepoPaths.SettingsControlCode());
             Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels,", source);
         }
 
@@ -107,7 +107,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Hundredths", "Thousandths" }, PanelDataTab.DeltaPrecisionLabels);
             Assert.Equal(Contract.DeltaPrecisions.Length, PanelDataTab.DeltaPrecisionLabels.Length);
             Assert.DoesNotContain(PanelDataTab.DeltaPrecisionLabels, label => label.Any(char.IsDigit));
-            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var source = string.Concat(RepoPaths.SettingsControlCode());
             Assert.Contains("BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels,", source);
             // Directly under the reference it qualifies.
             var reference = source.IndexOf("Ui.Row(PanelDataTab.DeltaTitle,", StringComparison.Ordinal);

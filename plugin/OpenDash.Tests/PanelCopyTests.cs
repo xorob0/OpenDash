@@ -21,7 +21,7 @@ namespace OpenDashPlugin.Tests
         public void The_add_card_says_what_it_adds()
         {
             Assert.Equal("Add a screen", PanelAddScreen.SectionTitle);
-            var screens = File.ReadAllText(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Screens.cs"));
+            var screens = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Screens.cs"));
             Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle,", screens);
         }
 
@@ -166,7 +166,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Hold to show one page, release to put the zone back. Bound as a hold, whatever press type you pick.", PanelCopy.PitWallGlance);
             Assert.Equal("Hold to show one module, release to go back to the one you were on. Bound as a hold, whatever press type you pick.", PanelCopy.CompanionGlance);
 
-            var panel = string.Join("\n", RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var panel = string.Join("\n", RepoPaths.SettingsControlCode());
             // The correction the sentence announces is still made, and made to the one press type
             // SimHub releases on.
             Assert.Contains("mapping.PressType = PressType.During", panel);

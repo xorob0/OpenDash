@@ -148,7 +148,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_form_hands_on_the_id_the_switch_decides()
         {
-            var lights = File.ReadAllText(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Lights.cs"));
+            var lights = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Lights.cs"));
             Assert.Contains("AddLedBar(PanelLights.BarShapeId(side, centre, fanatec)", lights);
             Assert.Contains("DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec))", lights);
             Assert.Contains("PanelLights.OffersFanatec(census)", lights);

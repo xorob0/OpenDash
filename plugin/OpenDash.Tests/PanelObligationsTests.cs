@@ -17,7 +17,7 @@ namespace OpenDashPlugin.Tests
     {
         private static string Sources()
         {
-            return string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            return string.Concat(RepoPaths.SettingsControlCode());
         }
 
         [Fact]
@@ -40,6 +40,29 @@ namespace OpenDashPlugin.Tests
             // by its shape, it finds the plain profile and installs it on a strip wired the other way.
             Assert.DoesNotContain("TryGetValue(bar.Shape", sources);
             Assert.DoesNotContain("entry.Id, bar.Shape", sources);
+        }
+
+        /// <summary>
+        /// Every reader of the panel's sources reads code alone. A comment that named an anchor --
+        /// "(Settings.SetRevBar)", "writes Contract.LedRpmStyleCar" -- kept a pin green with the code that did
+        /// it deleted, so comments are dropped and literals kept.
+        /// </summary>
+        [Fact]
+        public void The_panels_sources_are_read_as_code_alone()
+        {
+            var source = string.Join("\n",
+                "// Settings.SetRevBar in a comment",
+                "var url = \"https://example.org/a\"; /* Contract.LedRpmStyles */ var c = '/';",
+                "/// <summary>Contract.LedRpmStyleCar</summary>",
+                "var s = $\"{(x ? \"a//b\" : \"c\")} //kept\"; var v = @\"C:\\x \"\"//\"\" y\";");
+            var code = RepoPaths.StripComments(source);
+            Assert.DoesNotContain("SetRevBar", code);
+            Assert.DoesNotContain("LedRpmStyles", code);
+            Assert.DoesNotContain("LedRpmStyleCar", code);
+            Assert.Contains("\"https://example.org/a\"", code);
+            Assert.Contains("'/'", code);
+            Assert.Contains("$\"{(x ? \"a//b\" : \"c\")} //kept\"", code);
+            Assert.Contains("@\"C:\\x \"\"//\"\" y\"", code);
         }
     }
 }

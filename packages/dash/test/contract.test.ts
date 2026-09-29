@@ -467,8 +467,109 @@ describe('settings', () => {
   });
 });
 
-/** The plugin sources mirror contract.ts; a missing file fails here rather than skipping. */
-const pluginSource = (file: string): string => readFileSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash', file), 'utf8');
+/**
+ * A C# source as code alone: its line and block comments dropped, its string and character literals kept
+ * whole. A pin on what the plugin does is not satisfied by a comment naming the thing; one that read
+ * "(Contract.LedRpmStyles)" in a comment stayed green with the code that used the set deleted. The
+ * plugin's own RepoPaths.StripComments is the same scan.
+ */
+const stringStarts = (source: string, i: number): boolean => {
+  const c = source[i];
+  if (c === '"') return true;
+  if (c !== '@' && c !== '$') return false;
+  if (source[i + 1] === '"') return true;
+  return (source[i + 1] === '@' || source[i + 1] === '$') && source[i + 1] !== c && source[i + 2] === '"';
+};
+
+const stringEnd = (source: string, start: number): number => {
+  let i = start;
+  let verbatim = false;
+  let interpolated = false;
+  while (source[i] !== '"') {
+    if (source[i] === '@') verbatim = true;
+    if (source[i] === '$') interpolated = true;
+    i++;
+  }
+  i++;
+  while (i < source.length) {
+    const c = source[i];
+    if (interpolated && c === '{') {
+      if (source[i + 1] === '{') {
+        i += 2;
+        continue;
+      }
+      let depth = 1;
+      i++;
+      while (i < source.length && depth > 0) {
+        if (stringStarts(source, i)) {
+          i = stringEnd(source, i);
+          continue;
+        }
+        if (source[i] === '{') depth++;
+        else if (source[i] === '}') depth--;
+        i++;
+      }
+      continue;
+    }
+    if (verbatim) {
+      if (c === '"') {
+        if (source[i + 1] === '"') {
+          i += 2;
+          continue;
+        }
+        return i + 1;
+      }
+      i++;
+      continue;
+    }
+    if (c === '\\') {
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === '\n') return i + 1;
+    i++;
+  }
+  return source.length;
+};
+
+const stripCsComments = (source: string): string => {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    const next = source[i + 1];
+    if (c === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end < 0 ? source.length : end + 2;
+      out += ' ';
+      continue;
+    }
+    if (c === "'") {
+      const start = i++;
+      while (i < source.length && source[i] !== "'" && source[i] !== '\n') i += source[i] === '\\' ? 2 : 1;
+      i = Math.min(source.length, i + 1);
+      out += source.slice(start, i);
+      continue;
+    }
+    if (stringStarts(source, i)) {
+      const end = stringEnd(source, i);
+      out += source.slice(i, end);
+      i = end;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+};
+
+/** The plugin sources mirror contract.ts; a missing file fails here rather than skipping. Read as code alone. */
+const pluginSource = (file: string): string =>
+  stripCsComments(readFileSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash', file), 'utf8'));
 
 /**
  * The settings panel as one string.
@@ -492,6 +593,23 @@ const pinnedProperties = (): string[] =>
     .filter((line) => line.length > 0 && !line.startsWith('#'));
 
 describe('plugin mirror', () => {
+  test('reads the plugin as code, comments dropped and literals kept', () => {
+    const source = [
+      '// Contract.LedRpmStyleCar in a comment',
+      'var url = "https://example.org/a"; /* Settings.SetRevBar */ var c = \'/\';',
+      '/// <summary>Contract.LedRpmStyles</summary>',
+      'var s = $"{(x ? "a//b" : "c")} //kept"; var v = @"C:\\x ""//"" y";',
+    ].join('\n');
+    const code = stripCsComments(source);
+    expect(code).not.toContain('LedRpmStyleCar');
+    expect(code).not.toContain('SetRevBar');
+    expect(code).not.toContain('LedRpmStyles');
+    expect(code).toContain('"https://example.org/a"');
+    expect(code).toContain("'/'");
+    expect(code).toContain('$"{(x ? "a//b" : "c")} //kept"');
+    expect(code).toContain('@"C:\\x ""//"" y"');
+  });
+
   test('the declared list is the pinned one, which the plugin is checked against too', () => {
     // The gap this closes: each side built its own list and nothing compared them, so LedCentre and
     // LedRpmStyle could be declared here, read by every generated .ledsprofile, attached by nothing,

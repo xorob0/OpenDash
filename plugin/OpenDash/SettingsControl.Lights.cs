@@ -4,10 +4,10 @@
 // Re-hosted by the #503 foundation from the old Lights tab's strip section, so every control keeps working
 // while the LEDs page agent rebuilds it to Leds.dc.html and AddLeds.dc.html. Installing, moving and the census
 // are in SettingsControl.Profiles.cs, shared with Matrix, Updates and Home; every one of them finds a strip's
-// embedded profile by LedBar.ProfileShapeId, which is the reversed twin for a strip wired from the far end.
+// embedded profile by the strip's profile shape, which is the reversed twin for a strip wired from the far end.
 //
 // #369 turns the four-value rev light style into one switch, the car's own rev lights on or off: on writes
-// Contract.LedRpmStyleCar and off Contract.LedRpmStyleLeftToRight. The switch is drawn below, in the group.
+// the car's own style and off the plain ladder. The switch is drawn below, in the group.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -144,10 +144,10 @@ namespace OpenDashPlugin
                         if (live != null) live.Centre = value;
                         Save();
                     });
-                // #369: one switch, the car's own rev lights or not. On writes Contract.LedRpmStyleCar and off
-                // the plain left-to-right ladder, each through the set the contract declares
-                // (Contract.LedRpmStyles), so nothing the contract has retired can be written; a strip
-                // carrying a retired style has been normalised to left to right and reads as off.
+                // #369: one switch, the car's own rev lights or not. On writes the car's own style and off the
+                // plain left-to-right ladder, each through the contract's style set, so nothing the contract
+                // has retired can be written; a strip carrying a retired style has been normalised to left to
+                // right and reads as off.
                 var style = BuildToggle(Settings.BarRpmStyle(ns) == Contract.LedRpmStyleCar, on =>
                 {
                     var live = Settings.LedBarByNamespace(ns);
