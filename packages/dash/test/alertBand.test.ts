@@ -3,8 +3,8 @@
  * ever drawn.
  *
  * Band D used to draw the six flags SimHub normalises and the 8x8 box drew all fifteen conditions
- * of `FLAG_CATALOGUE`, so a red flag, a disqualification, a furled black, a meatball, a full-course
- * caution, a waved yellow, the debris flag and the start gantry were on the box and invisible on
+ * of `FLAG_CATALOGUE`, so a red flag, a disqualification, a furled black, a meatball, a full course
+ * yellow, a waved yellow, the debris flag and the start gantry were on the box and invisible on
  * the dash. The band reads the catalogue now, and since #762 the catalogue is twenty: the fifteen
  * flags and five car alerts, ranked in one list. What is asserted here is what that costs: that the
  * twenty still exclude one another, the flags exactly as the box's do, that each takes one of the
@@ -418,7 +418,7 @@ describe('several conditions raised at once', () => {
     { name: 'nothing out', bits: [], expect: undefined },
     { name: 'a local yellow', bits: ['yellow'], expect: 'yellow' },
     { name: 'a waved yellow also sets yellow', bits: ['yellow', 'yellowWaving'], expect: 'yellowWaving' },
-    { name: 'a full-course caution sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
+    { name: 'a full course yellow sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
     { name: 'red outranks everything', bits: ['red', 'yellow', 'caution', 'black'], expect: 'red' },
     { name: 'a black flag on the last lap', bits: ['black', 'white'], expect: 'black' },
     { name: 'disqualified outranks the black flag it comes with', bits: ['black', 'disqualify'], expect: 'disqualify' },

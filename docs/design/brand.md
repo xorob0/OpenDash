@@ -122,9 +122,9 @@ the pop-ups and the panel alike:
 - A unit is in the case its symbol has: `km/h`, `mph`, `kPa`, `psi`, `bar`, `L`, `gal`, `°C`, `s`.
   The spelling lives in one place, the unit words in `packages/dash/src/second/values.ts`, which is
   where a sim's enum (`KMH`, `Kpa`, `Gallons`) becomes the symbol a driver reads.
-- Capitals are for a word that is a name in capitals on its own account: a flag (`YELLOW FLAG`,
-  `BLUE FLAG`, `SAFETY CAR`), an acronym or a driving aid and the lamps that show them
-  (`RPM`, `ABS`, `TC`, `DRS`, `KERS`, `BB`, `FL`), and a class name on its chip (`GT3`, `LMP2`).
+- Capitals are for a word that is a name in capitals on its own account: a flag (`YELLOW`, `BLUE`,
+  `FULL COURSE YELLOW`), an acronym or a driving aid and the lamps that show them (`RPM`, `ABS`,
+  `TC`, `DRS`, `KERS`, `BB`, `FL`), and a class name on its chip (`GT3`, `LMP2`).
 
 Those capitals are typed in the source string rather than applied by a helper, so that a search for
 a capitalised literal finds every one of them; `label()` draws what it is given, and the panel's

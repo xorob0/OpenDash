@@ -20,7 +20,7 @@
  * `zones/face.ts`, after the pit alerts, so the limiter banner at the top of zone A is the one thing
  * that is not covered where the two rectangles meet. Band D is outside it altogether, which is
  * deliberate and is the same call the pit alerts made: a lap review and a flag are answers to
- * different questions, and a driver crossing the line under a full-course caution needs both. The
+ * different questions, and a driver crossing the line under a full course yellow needs both. The
  * rev bar and the bar of settled values are outside it for the same reason they are outside the
  * pop-up.
  *

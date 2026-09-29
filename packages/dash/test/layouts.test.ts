@@ -581,8 +581,8 @@ describe('800 x 286 nano', () => {
 
   test('the 12 px flag strip has no labels, a 2 px outline and 6 px checks', () => {
     // The strip draws the whole catalogue, one layer per condition, rather than the six properties
-    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full-course
-    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now, and so
+    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full course
+    // yellow, a waved yellow, the debris flag and the start gantry are on the nano too now, and so
     // are the car alerts. Push to pass and the headlight flash are not: they are white, which without
     // a name is the white flag or the black flag, and the strip writes no names.
     const flags = items.filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.'));
