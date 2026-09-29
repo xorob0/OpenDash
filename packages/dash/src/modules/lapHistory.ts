@@ -18,7 +18,7 @@
  * driver sets, which no setting holds; #326 is that setting and the colouring it drives, and it
  * needs the column before it needs the heading.
  */
-import type { Item, LayerItem, Monospace } from '../generator.ts';
+import type { Item, LayerItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
@@ -71,8 +71,8 @@ const COLUMN_SIZE = 24;
 const PAD_X = ds.space[2];
 
 /** A column: what the catalogue draws at this size, never narrower than the cells and their slack. */
-const columnWidth = (canvas: number, fs: number, chars: Chars, mono: Monospace = cells('SemiBold', fs)): number =>
-  Math.max(monoWidth(mono, chars) + boxSlack(fs), Math.round((canvas * fs) / COLUMN_SIZE));
+const columnWidth = (canvas: number, fs: number, chars: Chars): number =>
+  Math.max(monoWidth(cells('SemiBold', fs), chars) + boxSlack(fs), Math.round((canvas * fs) / COLUMN_SIZE));
 
 /**
  * The type a row carries: the values a driver reads, and the lap number that says which lap they are.
