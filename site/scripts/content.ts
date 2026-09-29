@@ -44,7 +44,7 @@ import {
 } from '../../packages/dash/src/contract.ts';
 import { FLAG_CATALOGUE, type FlagCondition } from '../../packages/dash/src/flags.ts';
 import { lampsForSide, type LampRole } from '../../packages/dash/src/leds/lamps.ts';
-import { ALL_SHAPES, LEGACY_SHAPES, type StripShape } from '../../packages/dash/src/leds/strip.ts';
+import { ALL_SHAPES, BASE_SHAPES, LEGACY_SHAPES, type StripShape } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
 import type { ZoneLayout } from '../../packages/dash/src/zones/layout.ts';
 import { sectionFor, versionsIn } from '../../scripts/changelog.ts';
@@ -157,6 +157,11 @@ export interface SiteStripShape {
   legacy: boolean;
 }
 
+/**
+ * The shapes as the site lists them. Pass the geometries, `BASE_SHAPES`, and not `ALL_SHAPES`: the
+ * far-end twin of each is a wiring the plugin installs by a switch on the bar, not a shape a driver
+ * picks, and a twin in this list would add a row to the Lights page's grid (#503).
+ */
 export function stripShapes(all: readonly StripShape[], legacy: readonly StripShape[]): SiteStripShape[] {
   const legacyIds = new Set(legacy.map((s) => s.id));
   return all.map((s) => ({
@@ -293,8 +298,8 @@ export const PIT_WALL_PAGES = ${json(PIT_WALL_PAGES)} as const;
 /** The flags, ranked: the first one that is out takes the surface. */
 export const FLAGS: SiteFlag[] = ${json(flags(FLAG_CATALOGUE))};
 
-/** Every strip shape the build writes a profile for. */
-export const STRIP_SHAPES: SiteStripShape[] = ${json(stripShapes(ALL_SHAPES, LEGACY_SHAPES))};
+/** Every strip shape the build writes a profile for, as a geometry: each is wired from either end too. */
+export const STRIP_SHAPES: SiteStripShape[] = ${json(stripShapes(BASE_SHAPES, LEGACY_SHAPES))};
 
 /** The lamps of a side of 0 to 5 LEDs, outermost first, indexed by the side's length. */
 export const LAMPS: SiteLamp[][] = ${json(lampTable())};
@@ -314,6 +319,6 @@ export const RELEASES: Release[] = ${json(releases(changelog))};
   writeFileSync(outPath, body);
   const packages = manifest ? sitePackages(manifest).length : 0;
   console.log(
-    `wrote lib/content.generated.ts (${packages} packages, ${MODULE_CATALOGUE.length} pages, ${ALL_SHAPES.length} strip shapes, ${downloads(buildDir).length} downloads, ${releases(changelog).length} releases)`,
+    `wrote lib/content.generated.ts (${packages} packages, ${MODULE_CATALOGUE.length} pages, ${BASE_SHAPES.length} strip shapes, ${ALL_SHAPES.length} strip profiles, ${downloads(buildDir).length} downloads, ${releases(changelog).length} releases)`,
   );
 }

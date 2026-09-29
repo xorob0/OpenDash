@@ -97,9 +97,10 @@ namespace OpenDashPlugin
         /// A profile's text, whether the bytes are JSON or a gzip of it.
         /// </summary>
         /// <remarks>
-        /// The grid is sixty-three shapes and a profile is a third of a megabyte of NCalc, four fifths
-        /// of it the same conditions written out once per LED; embedded raw that is twenty megabytes of
-        /// assembly for files nobody reads. Gzip takes it to five hundred kilobytes, and the file name
+        /// The build writes a hundred and twenty-two profiles, the strips wired from either end and the
+        /// flag box, and a profile is a third of a megabyte of NCalc, four fifths of it the same
+        /// conditions written out once per LED; embedded raw that is forty-four megabytes of assembly
+        /// for files nobody reads. Gzip takes it to under a megabyte, and the file name
         /// does not change with it -- the resource is still `OpenDash 3-9-3.ledsprofile`, so every name,
         /// every selection and every shape id is what it was, and only the reading of the bytes knows.
         ///

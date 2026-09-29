@@ -124,17 +124,30 @@ describe('the strip shapes', () => {
   test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    // Since #503 that is the Fanatec wiring and the far-end twin of every plain shape, and a twin is
-    // exactly its plain sibling's geometry read from the other end of the whole device.
-    for (const s of ALL_SHAPES.filter((s) => s.positions)) {
-      if (s.id === '3-9-3-fanatec') continue;
-      expect({ id: s.id, twin: s.id.endsWith('-reversed') }).toMatchObject({ twin: true });
-      const plain = shapeById(s.id.slice(0, -'-reversed'.length));
-      expect({ id: s.id, sibling: plain !== undefined && plain.positions === undefined }).toMatchObject({ sibling: true });
-      expect({ id: s.id, geometry: [s.left, s.centre, s.right, s.extraRuns] }).toEqual({ id: s.id, geometry: [plain!.left, plain!.centre, plain!.right, plain!.extraRuns] });
-      expect({ id: s.id, positions: s.positions }).toEqual({ id: s.id, positions: reversedPositions(deviceLength(s)) });
+    // Since #503 that is the Fanatec wiring and the far-end twin of every plain shape, and nothing
+    // else: the set is pinned exactly, so a twin that loses its list fails here as a new remap would.
+    const twins = ALL_SHAPES.filter((s) => s.id.endsWith('-reversed')).map((s) => s.id);
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', ...twins].sort());
+    expect(twins).toContain('4-14-4-reversed');
+    // Every plain shape has exactly one twin, with its geometry, and the twin reads the main run from
+    // the other end: its first stripLength positions are stripLength..1. That is what a strip of the
+    // main run's length fed from the far end has, whether or not the device carries extra runs.
+    const plain = ALL_SHAPES.filter((s) => !s.positions);
+    expect(plain.length).toBe(twins.length);
+    for (const s of plain) {
+      const twin = shapeById(`${s.id}-reversed`);
+      expect({ id: s.id, twin: twin !== undefined }).toMatchObject({ twin: true });
+      expect({ id: s.id, geometry: [twin!.left, twin!.centre, twin!.right, twin!.extraRuns] }).toEqual({ id: s.id, geometry: [s.left, s.centre, s.right, s.extraRuns] });
+      expect({ id: s.id, main: twin!.positions!.slice(0, stripLength(s)) }).toEqual({ id: s.id, main: [...reversedPositions(stripLength(s))] });
+      // ...and an extra run stays where it is wired, after the main run and in its own order.
+      expect({ id: s.id, extra: twin!.positions!.slice(stripLength(s)) }).toEqual({
+        id: s.id,
+        extra: Array.from({ length: deviceLength(s) - stripLength(s) }, (_, i) => stripLength(s) + 1 + i),
+      });
     }
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id)).toContain('4-14-4-reversed');
+    // The one twin with extra runs, spelled out: the GridSim row is the profile every plain 3/10/3
+    // strip uses, and reversing the whole device put its lamps on LEDs 19 to 34 of a strip of 16.
+    expect(shapeById('3-10-3-reversed')!.positions!.slice(0, 17)).toEqual([16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 17]);
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {
@@ -633,7 +646,9 @@ describe('every generated profile', () => {
       });
       expect({ shape: shape.id, errors: result.errors.map((e) => `${e.code} ${e.path}`) }).toMatchObject({ errors: [] });
     }
-  });
+    // A hundred and twenty-one profiles built and validated take about three seconds here; CI runners
+    // have been a half slower than that (#425), which is too close to bun's five-second default.
+  }, 20_000);
 
   test('uses only ContainerTypes SimHub 9.12.6 resolves', () => {
     for (const shape of ALL_SHAPES) {

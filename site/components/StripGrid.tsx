@@ -12,7 +12,7 @@ export function StripGrid() {
     <div className={styles.wrap}>
       <div className={styles.scroll}>
         <table className={styles.table}>
-          <caption className="label">Sides down, centre across. Every cell is 1 profile.</caption>
+          <caption className="label">Sides down, centre across. Every cell is 1 shape, wired from either end.</caption>
           <thead>
             <tr>
               <th scope="col" className={styles.corner}>
