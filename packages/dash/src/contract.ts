@@ -133,6 +133,29 @@ export const DRIVER_NAME_FORMAT_SETTING = 'DriverNameFormat';
 export const DRIVER_NAME_TEAM_SETTING = 'DriverNameTeam';
 
 /**
+ * How a clock of the day is written: `24h` is `14:32` and `12h` is `2:32 PM`. #324.
+ *
+ * Both clocks follow it, the wall clock and the sim's time of day, wherever either is drawn: the
+ * bar's two fields, band D's corner, the pit wall header and the idle screen. Rig-wide for the
+ * reason the driver name format is: which of the two a driver reads without thinking is a fact about
+ * the driver, and it does not change between the rim and the pit wall.
+ *
+ * **The meridiem is the whole difficulty, and it is not a formatting preference.** Every clock is
+ * drawn in monospaced cells, and a twelve-hour clock needs room for `AM` and `PM` that a
+ * twenty-four-hour clock does not, so a box sized for `14:32` clips `2:32 PM` without a word from
+ * WPF. Nor can the suffix go in a cell at all: `M` is one of the glyphs `font.cell.excluded` names,
+ * so rule 19 of `docs/design/zones.md` keeps it out of any value. The digits therefore stay a
+ * value -- `12:59` is the same four digits and a colon as `23:59`, so one budget holds both -- and
+ * the meridiem follows them as a proportional word, drawn only while this reads `12h`. Every surface
+ * measures its box for the twelve-hour clock, since the setting is read at runtime and the box is
+ * cut at build time, and moves the digits back to where a twenty-four-hour clock draws them when the
+ * word is not there. `timeOfDay` in `second/values.ts` is the reading.
+ */
+export type ClockFormat = '24h' | '12h';
+export const CLOCK_FORMATS: readonly ClockFormat[] = ['24h', '12h'];
+export const CLOCK_FORMAT_SETTING = 'ClockFormat';
+
+/**
  * Whether a newer OpenDash than the rig runs exists, as the plugin last heard from GitHub. #755.
  *
  * Published rather than chosen, like {@link CAR_LADDER_CHOSEN}, and read by one surface: the idle
@@ -224,6 +247,9 @@ export const DEFAULTS = {
   // and so that the default is the one format that discards nothing.
   DriverNameFormat: 'full' as DriverNameFormat,
   DriverNameTeam: false,
+  // What every clock drew before there was a choice, so a rig that never opens the setting is
+  // unchanged, and the form that fits every box without the word after it.
+  ClockFormat: '24h' as ClockFormat,
 } as const;
 
 /**
@@ -275,8 +301,18 @@ export function dashProperties(): string[] {
   // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
   // ends with an idle screen, and the group is pinned in order. #755.
   // And the class best after them, published for the same reason and read by every package that
-  // draws a session best.
-  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION, CLASS_BEST_LAP];
+  // draws a session best. And the clock format after that, since every package's idle screen draws
+  // the wall clock. #324.
+  const shared = [
+    REV_BAR_SETTING,
+    BLUE_FLAG_DETAIL_SETTING,
+    DRIVER_NAME_FORMAT_SETTING,
+    DRIVER_NAME_TEAM_SETTING,
+    UPDATE_AVAILABLE,
+    UPDATE_VERSION,
+    CLASS_BEST_LAP,
+    CLOCK_FORMAT_SETTING,
+  ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
@@ -483,6 +519,10 @@ export const setting = {
   driverNameFormatIs: (format: DriverNameFormat): Expr => eq(setting.driverNameFormat(), str(format)),
   /** `isnull([OpenDash.DriverNameTeam], false)`: whether a list names the team rather than the driver. */
   driverNameTeam: (): Expr => isnull(prop(propertyName(DRIVER_NAME_TEAM_SETTING)), String(DEFAULTS.DriverNameTeam)),
+  /** `isnull([OpenDash.ClockFormat], '24h')`: how a clock of the day is written. #324. */
+  clockFormat: (): Expr => isnull(prop(propertyName(CLOCK_FORMAT_SETTING)), str(DEFAULTS.ClockFormat)),
+  /** `isnull([OpenDash.ClockFormat], '24h') = '12h'`: whether clocks are written in the given format. */
+  clockFormatIs: (format: ClockFormat): Expr => eq(setting.clockFormat(), str(format)),
   /** `isnull([OpenDash.UpdateAvailable], false)`: whether the idle screen says an update exists. */
   updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
   /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */

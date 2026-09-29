@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79199,6],"recorded":"2026-09-18","simHub":"unknown","asserted":["DataCorePlugin.GameRunning","DataCorePlugin.GameData.BestLapOpponentSameClassPosition","OpenDash.UpdateAvailable","OpenDash.UpdateVersion","DataCorePlugin.GameData.BestLapOpponent.BestLapTime","OpenDash.ClassBestLap"]}
+{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79199,6],"recorded":"2026-09-18","simHub":"unknown","asserted":["DataCorePlugin.GameRunning","DataCorePlugin.GameData.BestLapOpponentSameClassPosition","OpenDash.UpdateAvailable","OpenDash.UpdateVersion","DataCorePlugin.GameData.BestLapOpponent.BestLapTime","OpenDash.ClassBestLap","OpenDash.ClockFormat"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -140,6 +140,7 @@
 {"p":"OpenDash.CarLadderStage","v":-1}
 {"p":"OpenDash.CarLadderTopRpm","v":0}
 {"p":"OpenDash.ClassBestLap","t":"timespan","v":"00:01:37.2680000"}
+{"p":"OpenDash.ClockFormat","v":"24h"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
 {"p":"OpenDash.DeltaReference","v":"session"}
 {"p":"OpenDash.DriverNameFormat","v":"full"}

@@ -60,6 +60,7 @@ import {
   lastLap,
   listNeighbour,
   localClock,
+  meridiemWidest,
   minutesClock,
   NO_TIME,
   NO_VALUE,
@@ -67,11 +68,12 @@ import {
   sectorTime,
   settledFuelTimeLeft,
   simClock,
+  twelveHour,
   windKmh,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -113,6 +115,12 @@ export interface BandField {
   afterBind?: string;
   /** The longest spelling `afterBind` can produce, which the box is measured by. */
   afterWidest?: string;
+  /**
+   * While the unit is drawn at all, for a unit a setting brings and takes away: the `AM` or `PM` of a
+   * clock the rig writes to twelve hours (#324). The field is measured with the unit whatever this
+   * says, the box being cut at build time and the setting read at runtime.
+   */
+  afterWhen?: string;
   /**
    * How wide the value really draws, which is where the unit after it sits.
    *
@@ -690,7 +698,7 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
             size: ds.size.labelSm,
             ...(field.afterBind ? { bind: field.afterBind, widest: field.afterWidest ?? field.after } : {}),
             leftBind: drawn ? add(at.leftAt() ?? num(at.x), drawn, num(FIELD_GAP)) : at.leftAt(valueWidth + FIELD_GAP),
-            visibleBind: at.visibleBind,
+            visibleBind: field.afterWhen === undefined ? at.visibleBind : at.visibleBind === undefined ? field.afterWhen : and(at.visibleBind, field.afterWhen),
           }),
         );
       }
@@ -880,11 +888,28 @@ const cornerLamps = (): { id: string; text: string; on: string; colour: `#${stri
   },
 ];
 
-/** The two clocks in the right corner. */
-const cornerClocks = (): BandField[] => [
-  { id: 'clock', label: 'Clock', sample: '13:11', bind: localClock(), chars: CHARS.clock },
-  { id: 'sim', label: 'Sim', sample: '19:26', bind: simClock(), chars: CHARS.clock },
-];
+/**
+ * The two clocks in the right corner, each measured with the `AM` or `PM` a twelve-hour clock writes
+ * after it, which is drawn as band D draws any unit and only while the rig asks for it. #324.
+ */
+const cornerClocks = (): BandField[] =>
+  (
+    [
+      { id: 'clock', label: 'Clock', sample: '13:11', clock: localClock() },
+      { id: 'sim', label: 'Sim', sample: '19:26', clock: simClock() },
+    ] as const
+  ).map(({ id, label, sample, clock }) => ({
+    id,
+    label,
+    sample,
+    bind: clock.text,
+    chars: CHARS.timeOfDay,
+    drawn: clock.drawn,
+    after: 'PM',
+    afterBind: clock.meridiem,
+    afterWidest: meridiemWidest('BarlowMedium'),
+    afterWhen: twelveHour(),
+  }));
 
 /**
  * How much of the band each corner block takes, padding included.
@@ -997,12 +1022,34 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   // Laid from the right edge rather than from a computed start, so that Sim ends against the band's
   // own padding whatever the clocks measure, and each clock is right aligned inside its box for the
   // same reason: a field whose allowance is wider than its digits left them short of the edge.
+  //
+  // A clock's `AM` or `PM` sits against the edge of its box and the digits one gap in front of it,
+  // right aligned as well; while the rig writes twenty-four hours there is no word and the digits
+  // move up to the edge, which is where a twenty-four-hour clock has always ended.
   let right = frame.left + frame.width - m.padX;
   for (const field of [...clocks].reverse()) {
     const w = fieldWidth(field, valueFs, labelFs);
     right -= w;
     items.push(label(`${prefix}${field.id}.label`, field.label, right, labelTop, w, { size: labelFs, hAlign: 'right' }));
-    items.push(numeral(`${prefix}${field.id}.value`, field.sample, right, valueTop, valueFs, field.chars, { bind: field.bind, width: w, hAlign: 'right' }));
+    const room = field.after ? FIELD_GAP + unitWidth(field) : 0;
+    items.push(
+      numeral(`${prefix}${field.id}.value`, field.sample, right + room, valueTop, valueFs, field.chars, {
+        bind: field.bind,
+        width: w - room,
+        hAlign: 'right',
+        leftBind: field.afterWhen === undefined ? undefined : iff(field.afterWhen, num(right), num(right + room)),
+      }),
+    );
+    if (field.after) {
+      items.push(
+        unit(`${prefix}${field.id}.unit`, field.after, right + w - unitWidth(field), valueTop + (valueFs - ds.size.labelSm), unitWidth(field), {
+          size: ds.size.labelSm,
+          hAlign: 'right',
+          ...(field.afterBind ? { bind: field.afterBind, widest: field.afterWidest ?? field.after } : {}),
+          visibleBind: field.afterWhen,
+        }),
+      );
+    }
     right -= CORNER_GAP;
   }
 

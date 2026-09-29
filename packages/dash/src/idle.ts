@@ -69,11 +69,14 @@
 import type { Hex, Rect, Screen, TextItem } from './generator.ts';
 import { wordmark, wordmarkWidth } from './components/wordmark.ts';
 import { measureText } from './design/advances.ts';
-import { boxSlack, cells, monoWidth } from './design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth } from './design/metrics.ts';
 import { centre, distance, rect, type Circle } from './design/geometry.ts';
 import { label } from './elements/label.ts';
 import { numeral } from './elements/numeral.ts';
-import { CHARS, localClock } from './second/values.ts';
+import { unit } from './elements/unit.ts';
+import { drawnWithin } from './second/drawn.ts';
+import { UNIT_GAP } from './second/field.ts';
+import { CHARS, localClock, meridiemWidest, twelveHour } from './second/values.ts';
 import { setting, UPDATE_VERSION_CHARACTERS, UPDATE_VERSION_MAX_LENGTH } from './contract.ts';
 import { ncalc } from './generator.ts';
 import { ds } from './tokens.ts';
@@ -153,7 +156,58 @@ export const IDLE_MARGIN = ds.space[5];
 const left = (cx: number, width: number): number => Math.round(cx - width / 2);
 
 /** The clock's box: its cells plus the slack every value's box gets, which is what `numeral` draws. */
-const clockWidth = (fs: number): number => monoWidth(cells('SemiBold', fs), CHARS.minutesClock) + boxSlack(fs);
+const clockWidth = (fs: number): number => monoWidth(cells('SemiBold', fs), CHARS.timeOfDay) + boxSlack(fs);
+
+/**
+ * The `AM` or `PM` a twelve-hour clock hangs after its digits (#324): a unit, at the label size the
+ * state line is set in on every rung but the last, and in the unit's dimmer ink.
+ */
+const MERIDIEM_SIZE = ds.size.label;
+const MERIDIEM_WIDEST = meridiemWidest('BarlowMedium');
+const meridiemWidth = (): number => Math.ceil(measureText('BarlowMedium', MERIDIEM_WIDEST, MERIDIEM_SIZE));
+
+/**
+ * The room the clock asks the stack for: its cells, and the gap and the word a twelve-hour clock hangs
+ * after them on *both* sides.
+ *
+ * Both, because the digits stay centred and the word hangs off their end, as a unit hangs off a
+ * figure, so the clock is not centred on its ink while the word is there. The stack is centred on
+ * each block's allowance, and an allowance the word could overrun would let a narrow frame keep a
+ * rung it has no room for. It is the twelve-hour clock whatever the setting says, since the rung is
+ * chosen at build time and the setting read at runtime.
+ */
+const clockInk = (fs: number): number => monoWidth(cells('SemiBold', fs), CHARS.timeOfDay) + 2 * (UNIT_GAP + meridiemWidth());
+
+/**
+ * The clock: the digits centred where the stack puts them, and the meridiem after them while the rig
+ * writes twelve hours.
+ *
+ * A twelve-hour hour is one digit or two, so the digits' own `Left` is bound to keep `9:05` centred
+ * where `14:32` is -- half the cell it does not draw either side -- and the word's is bound to the end
+ * of whichever reading is on the screen. On a twenty-four-hour clock both come to the design-time
+ * place, which is where the clock has always been drawn.
+ */
+function clockBlock(name: string, cx: number, y: number, fs: number): TextItem[] {
+  const { add, div, num, sub } = ncalc;
+  const mono = cells('SemiBold', fs);
+  const clock = localClock();
+  const x = left(cx, clockWidth(fs));
+  const cellsWide = monoWidth(mono, CHARS.timeOfDay);
+  const drawn = drawnWithin('idle clock', clock.drawn, CHARS.timeOfDay, mono);
+  // Where the digits start, half the width they do not draw to the right of the box's own left.
+  const digits = add(num(x), div(sub(num(cellsWide), drawn), num(2)));
+  const wordY = canvasYForBaseline(canvasBaseline(y, fs), MERIDIEM_SIZE);
+  return [
+    numeral(name, CLOCK_SAMPLE, x, y, fs, CHARS.timeOfDay, { bind: clock.text, leftBind: digits }),
+    unit(`${name}.unit`, 'PM', x + cellsWide + UNIT_GAP, wordY, meridiemWidth() + 2, {
+      size: MERIDIEM_SIZE,
+      bind: clock.meridiem,
+      widest: MERIDIEM_WIDEST,
+      visibleBind: twelveHour(),
+      leftBind: add(digits, drawn, num(UNIT_GAP)),
+    }),
+  ];
+}
 
 /** The state line's box, measured in the weight a label is drawn in. */
 const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', IDLE_STATE, fs)) + 2;
@@ -185,8 +239,8 @@ const BLOCKS: Record<IdleBlock, IdleBlockSpec> = {
     },
   },
   clock: {
-    ink: (fs) => monoWidth(cells('SemiBold', fs), CHARS.minutesClock),
-    draw: (name, cx, y, fs) => [numeral(name, CLOCK_SAMPLE, left(cx, clockWidth(fs)), y, fs, CHARS.minutesClock, { bind: localClock() })],
+    ink: (fs) => clockInk(fs),
+    draw: (name, cx, y, fs) => clockBlock(name, cx, y, fs),
   },
   state: {
     ink: (fs) => stateWidth(fs),

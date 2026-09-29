@@ -935,7 +935,8 @@ describe('band D keeps its rank clear of its corners', () => {
 /**
  * The bar has a scale of its own, read off each artboard rather than taken from the zone density
  * ramp: a 15 px label, a value, a dimmer denominator six pixels after it, and the gap between two
- * readouts. The numbers are the artboards' own, so they are asserted literally.
+ * readouts. The numbers are the artboards' own, so they are asserted literally. The `AM` or `PM` a
+ * twelve-hour clock writes after itself is set as a denominator is, and is held to its scale.
  */
 describe('the bar is drawn at the scale its artboard draws', () => {
   /** The side padding every artboard gives the bar. */
@@ -962,7 +963,7 @@ describe('the bar is drawn at the scale its artboard draws', () => {
         value: { size: scale.valueSize, color: ds.color.text.primary },
       };
       for (const item of items()) {
-        const kind = item.name.endsWith('.label') ? 'label' : item.name.endsWith('.denominator') ? 'denominator' : 'value';
+        const kind = item.name.endsWith('.label') ? 'label' : item.name.endsWith('.denominator') || item.name.endsWith('.unit') ? 'denominator' : 'value';
         expect({ item: item.name, size: item.fontSize, color: item.textColor }).toMatchObject(expected[kind]);
       }
     });
@@ -977,7 +978,7 @@ describe('the bar is drawn at the scale its artboard draws', () => {
         }
       }
       // Every field of the outermost right slot ends against the padding, whatever it is made of:
-      // a value, or a value and the denominator after it.
+      // a value, or a value and the denominator after it, or a clock and the meridiem after it.
       const outer = `bar.Right${face.barFieldsPerEnd}.`;
       const fields = new Set(drawn.filter((i) => i.name.startsWith(outer)).map((i) => i.name.split('.').slice(0, 3).join('.')));
       for (const field of fields) {
