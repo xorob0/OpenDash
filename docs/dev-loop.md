@@ -84,8 +84,16 @@ It is the fragile part of the loop and it is treated as such. The coordinates ar
 from the window's top-left for the menu and a fraction of the screen width for the centred content
 column, the window is **waited for** and then put where they expect it, every other window that
 could take a click is minimised, and the result is checked by asking Windows which dash windows
-exist. It retries once and then tells you to open it by hand, which is enough, since everything
-else will already be in place.
+exist.
+
+Since #308 it also **looks before it clicks**, at a few pixels read over the same VNC. After "No
+thanks" it checks SimHub's track-layout offer went, clicks it again if not, and works 61 px lower
+under one that will not go. Once the filter is in it reads where the list's cards are rather than
+assuming where the first row starts, and it rests the pointer on the row and checks it lit before
+pressing Start. When nothing opens, the first line says what the looks saw -- no row in the list, a
+row that would not light, the offer, a dashboard opened from a list the filter never narrowed, or
+SimHub gone, which is #303 -- and `build/vm-open-<dashboard>.png` is the screen as it gave up. Then
+it tells you to open it by hand, which is enough, since everything else will already be in place.
 
 ## The flag box, which has no hardware
 
@@ -183,6 +191,14 @@ the guest is in and the one they need, and point at `/opt/winvm/shared/setres.ps
 run in the interactive session because that is whose display it is. The coordinates themselves were left alone;
 a fraction of the height would be a guess at a page nobody has measured at a second mode, and a guess
 opens the wrong dashboard instead of saying so.
+
+**SimHub's track-layout offer comes back after every restart.** Dash Studio offers prebuilt track
+layouts in a band at the top of its page, and the band pushes the search box and every row 61 px
+down. "No thanks" is only remembered: SimHub keeps it in memory as `MapOnlineSuggestionDiscarded`
+and writes it to `PluginsData\Common\DashStudioSettings_2.json` when it exits cleanly, and `bun run
+vm` restarts SimHub by killing it. So every install brings the offer back, and a script that clicks
+it away blind cannot tell a click that took from one that missed. `openDashboard` looks (#308), and
+[testing-vm.md](testing-vm.md) has how to bring the offer back on purpose to test against it.
 
 **Bun does not deliver signals to a handler.** On 1.3.3, `process.on('SIGINT', ...)` registers a
 handler that is never called, and registering it suppresses the default action, so a long running
