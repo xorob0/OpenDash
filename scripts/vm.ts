@@ -206,6 +206,33 @@ Start-Sleep -Seconds 3
     90,
   );
 
+/**
+ * Whether SimHub's process exists, or null when the guest did not say.
+ *
+ * Asked over SSH rather than in the desktop, which is right for this question and only this one:
+ * `Get-Process` sees every session's processes, so it answers for the interactive SimHub even from
+ * session 0, where its windows are invisible. It exists for the one moment a caller has to tell two
+ * failures apart that look identical from the outside -- a dashboard that would not open because a
+ * click missed, and one that could not because SimHub had gone (#303).
+ */
+export function simhubRunning(host: Host): boolean | null {
+  const r = powershell(
+    host,
+    `$p = Get-Process SimHubWPF -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($p) { "running $($p.Id)" } else { 'not running' }`,
+    60,
+  );
+  return r.ok ? parseSimhubRunning(r.stdout) : null;
+}
+
+/** Reads `simhubRunning`'s answer, and says nothing rather than guess at output it does not recognise. */
+export function parseSimhubRunning(stdout: string): boolean | null {
+  const lines = stdout.split('\n').map((l) => l.replace(/^﻿/, '').trim());
+  if (lines.some((l) => /^running \d+$/.test(l))) return true;
+  if (lines.includes('not running')) return false;
+  return null;
+}
+
 export function simhubStart(host: Host, waitSeconds = 40): RunResult {
   return powershell(
     host,
