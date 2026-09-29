@@ -321,8 +321,9 @@ Close SimHub, delete `OpenDash.dll` from the SimHub folder and, if you want the 
 too, delete the folders of the Sizes table under `DashTemplates` (`OpenDash`,
 `OpenDash 1280x480` and the rest) and the folder of any second screen of a size, which is
 `OpenDash` followed by the name you gave it, with the `.zip` copies kept beside them. The settings
-file named above can be deleted as well. The fonts copied into `DashFonts` (Barlow) are harmless
-and shared with other dashboards.
+file named above can be deleted as well. The fonts copied into `DashFonts` (Barlow and openDash
+Display) are harmless and shared with other dashboards; an update that replaces one of them sets
+the older copy aside in `DashFonts\_Backups`, where it can be deleted.
 
 ## Troubleshooting
 
