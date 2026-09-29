@@ -413,13 +413,17 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   // The flash is the waved yellow's and not the standing yellow's, which is the rule the box keeps
   // under "waving is blinking". Band D used to flash on SimHub's `Flag_Yellow`, which folds the two
   // together, so a standing yellow strobed for as long as it was out.
+  //
+  // The flash is also all that tells the two apart, since both are named YELLOW FLAG, #497. A yellow
+  // being waved is the yellow flag, the canvas names no other, and a driver reads the difference in
+  // the band's movement rather than in a word.
   {
     id: 'yellowWaving',
-    name: 'Waved yellow',
+    name: 'Yellow',
     critical: true,
     motion: 'moves',
     bits: ['yellowWaving'],
-    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'WAVED YELLOW', flash: true },
+    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG', flash: true },
   },
   { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG' }, faceFlag: 'Flag_Yellow' },
   // `purpose.flag.debris` is the yellow, and the canvas draws the band as that yellow under danger

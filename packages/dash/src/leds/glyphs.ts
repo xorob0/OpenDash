@@ -303,7 +303,7 @@ export const CAUTION_RIGHT: Grid = [
   '....YYYY',
 ];
 
-/** Yellow: solid and steady. Waved yellow is this, blinking. */
+/** Yellow: solid and steady. The yellow being waved is this, blinking. */
 export const YELLOW: Grid = solid('Y');
 
 /** Debris: yellow with danger stripes, the pattern `purpose.flag.debris` already describes. */

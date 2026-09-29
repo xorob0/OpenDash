@@ -45,7 +45,7 @@
     {"at": 41, "log": "6/20 black: BLACK FLAG", "set": {"SessionFlags": "black"}},
     {"at": 48, "log": "7/20 meatball: MEATBALL, orange", "set": {"SessionFlags": "repair"}},
     {"at": 55, "log": "8/20 full-course caution: SAFETY CAR", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},
-    {"at": 62, "log": "9/20 waved yellow: WAVED YELLOW, flashing", "set": {"SessionFlags": "yellow|yellowWaving"}},
+    {"at": 62, "log": "9/20 yellow: YELLOW FLAG, flashing", "set": {"SessionFlags": "yellow|yellowWaving"}},
     {"at": 69, "log": "10/20 yellow: YELLOW FLAG, steady", "set": {"SessionFlags": "yellow"}},
     {"at": 76, "log": "11/20 debris: DEBRIS", "set": {"SessionFlags": "debris"}},
     // An event: three seconds after the count moves, and nothing afterwards. A second with nothing

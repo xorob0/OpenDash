@@ -81,6 +81,17 @@ describe('the flags', () => {
     const firstQuiet = list.findIndex((f) => !f.critical);
     expect(list.slice(firstQuiet).every((f) => !f.critical)).toBe(true);
   });
+
+  test('name two conditions alike only where their motion tells them apart', () => {
+    // The yellow being waved is named as the standing one is, #497, and the list tells them apart by
+    // the blink rather than by a word the driver never sees.
+    const yellows = list.filter((f) => f.id === 'yellowWaving' || f.id === 'yellow');
+    expect(yellows.map(({ id, name, blinks }) => ({ id, name, blinks }))).toEqual([
+      { id: 'yellowWaving', name: 'Yellow', blinks: true },
+      { id: 'yellow', name: 'Yellow', blinks: false },
+    ]);
+    expect(new Set(list.map((f) => `${f.name} ${f.blinks}`)).size).toBe(list.length);
+  });
 });
 
 describe('the package list', () => {

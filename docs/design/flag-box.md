@@ -39,7 +39,7 @@ the band itself.
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
 | 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
 | 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
-| 7 | Waved yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "WAVED YELLOW", flashing. |
+| 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW FLAG", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
 | 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE FLAG". |
@@ -172,7 +172,11 @@ is the near-white the face already outlines it with, for the same reason.
 
 **Waving is blinking.** iRacing publishes `yellow` and `yellowWaving` separately and a driver has
 to tell them apart at a glance. That is a pattern question rather than a colour one, and blinking
-is the pattern with no pixels to spare.
+is the pattern with no pixels to spare. Since #497 it is also the only thing that tells them apart
+on any surface: the two carry one name, the band writes YELLOW FLAG for both, since the canvas names
+a yellow flag and never a waved one, and it is the band's flash, like the box's blink, that says the
+flag is being waved. Where the two are listed side by side, in the table above and on the site, they
+are told apart by that motion in the same way.
 
 **A full-course caution is banded.** The whole-track condition must never look like one corner's
 yellow, and bands are legible at this size where a pace-car silhouette is not.
@@ -444,7 +448,7 @@ does not publish it, not that it was forgotten.
 |---|---|
 | **Engine off, ignition off, incident, push to pass, headlight flash** (canvas 1, 2, 15, 24 and 25), **on the box** | They are drawn on every band, [above](#what-band-d-draws-that-the-box-does-not), and not on the box. They are not flags, and the box's own answer to a car switched off is the dim standby mark under [When nobody is racing](#when-nobody-is-racing). The LED strips leave the flash out for their own reason, `DROPPED` in `leds/effects.ts`: a lamp spent on what the driver's hand just did is a lamp not spent on an aid. |
 | **Virtual safety car, with the delta to the reference speed** (canvas 8) | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing; there is no reference speed to be over or under. |
-| **Double yellow** (canvas 9) | iRacing publishes one yellow and one waved yellow. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
+| **Double yellow** (canvas 9) | iRacing publishes one yellow, standing or waved. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
 | **Yellow per sector** (canvas 10) | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
 | **Stop and go, drive through, a penalty with its value** (canvas 12, 13 and 14) | None is published. iRacing tells a driver which penalty in the chat and flies the black flag, and the telemetry carries the flag and nothing of the text: no penalty type, no seconds. The black flag is drawn; which penalty it is, is not, and a band that said "DRIVE THROUGH" from a guess would be wrong the first time the penalty was a stop and go. |
 | **White for a slow car** (canvas 17) | iRacing's `white` is the last lap and nothing else. There is no slow-car white in the bitfield. |

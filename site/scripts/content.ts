@@ -238,9 +238,15 @@ export interface SiteFlag {
   name: string;
   /** Survives the box's "critical flags only" switch. */
   critical: boolean;
+  /**
+   * The band flashes it and the box blinks it. A yellow being waved and a standing one carry the same
+   * name, #497, so where the two are listed side by side it is their motion that tells them apart.
+   */
+  blinks: boolean;
 }
 
-export const flags = (catalogue: readonly FlagCondition[]): SiteFlag[] => catalogue.map(({ id, name, critical }) => ({ id, name, critical }));
+export const flags = (catalogue: readonly FlagCondition[]): SiteFlag[] =>
+  catalogue.map(({ id, name, critical, band }) => ({ id, name, critical, blinks: band.shape === 'filled' && band.flash === true }));
 
 /** A page or field of a face zone, as the contract lists it. */
 export interface SitePage {

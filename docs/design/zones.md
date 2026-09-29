@@ -1132,7 +1132,8 @@ and the reasons, and §10 the departures from the canvas.
 Three consequences are worth stating. The band is iRacing's, as the box already was, since
 `SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
 approximation of a flag nobody published. The flash belongs to the waved yellow and no longer to the
-standing one, the folded property having strobed both. And the green flag alone reads a normalised
+standing one, the folded property having strobed both, and since #497 it is all that tells the two
+apart, both being named YELLOW FLAG. And the green flag alone reads a normalised
 property, `Flag_Green`, because iRacing holds the `green` bit for a whole green-flag stint and
 SimHub's own limiter on that property is the only clock there is; without it band D would be a solid
 green bar over the fuel page for an entire race.
