@@ -40,6 +40,36 @@ namespace OpenDashPlugin
         /// <summary>The embedded package this screen was made from, so it can be written again.</summary>
         public string Package { get; set; }
 
+        /// <summary>
+        /// Whether the migration made this screen and the driver has neither kept it nor removed it since.
+        /// </summary>
+        /// <remarks>
+        /// A rig built from a settings file written before ADR 0017 holds one screen per folder the old
+        /// plugin wrote, which was every package it embedded, so most of them are screens nobody owns, and
+        /// only the driver can say which. The Rig tab asks the driver to remove those for as long as any
+        /// screen on the rig says this (PanelRig), which is why the fact is carried here rather than
+        /// guessed from how many screens the rig holds: a rig of five added by hand was told to remove
+        /// dashboards it had just asked for, and a migrated rig of four was never told at all (#478).
+        ///
+        /// True from the migration until <see cref="Keep"/>, false on a screen added from the Rig tab.
+        /// Null only in a settings file written before it was recorded, which OpenDashSettings.Normalise
+        /// answers from what such a rig still holds.
+        /// </remarks>
+        public bool? Unclaimed { get; set; }
+
+        /// <summary>
+        /// The driver keeping this screen: changing something on it, renaming, resizing or reinstalling it,
+        /// or answering Keep it when asked to remove it.
+        /// </summary>
+        /// <remarks>
+        /// Each of those is something only somebody with the screen would do to it. Looking at its card is
+        /// not, so selecting one keeps nothing.
+        /// </remarks>
+        public void Keep()
+        {
+            Unclaimed = false;
+        }
+
         /// <summary>The zones, the bar and the glance. Null on a screen that is not a face.</summary>
         public FaceSettings Face { get; set; }
 
@@ -501,6 +531,7 @@ namespace OpenDashPlugin
                 Height = Height,
                 Folder = Folder,
                 Package = Package,
+                Unclaimed = Unclaimed,
                 Face = Face == null ? null : Face.Clone(),
                 FlagFormat = FlagFormat,
                 LapReview = LapReview,

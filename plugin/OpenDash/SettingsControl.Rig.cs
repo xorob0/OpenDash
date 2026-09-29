@@ -56,7 +56,7 @@ namespace OpenDashPlugin
                 rows.Add(BuildEmptyRig());
                 return Ui.VStack(0, Ui.Section("Your rig", rows.ToArray()));
             }
-            if (rig.Count > 4) rows.Add(BuildCrowdedRigNote());
+            if (PanelRig.ShowsUnclaimedNote(rig)) rows.Add(BuildUnclaimedNote());
 
             var screen = Selected;
             rows.Add(BuildScreenHeader(screen));
@@ -175,13 +175,13 @@ namespace OpenDashPlugin
         /// Older versions installed every package the plugin embeds, so a rig migrated from one of them
         /// holds a dozen cards for screens nobody owns. Nothing is deleted on their behalf (ADR 0017),
         /// so the panel says what to do instead, and the line goes when it stops being true rather than
-        /// when somebody dismisses it.
+        /// when somebody dismisses it. PanelRig decides when that is.
         /// </remarks>
-        private FrameworkElement BuildCrowdedRigNote()
+        private FrameworkElement BuildUnclaimedNote()
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption("Remove the dashboards you have no screen for.");
+            var text = Ui.Caption(PanelRig.UnclaimedNote);
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -251,7 +251,7 @@ namespace OpenDashPlugin
             write.Click += (sender, args) =>
             {
                 var result = plugin.Installer.Write(screen);
-                Save();
+                Save(screen);
                 plugin.Installer.Refresh();
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
@@ -263,7 +263,7 @@ namespace OpenDashPlugin
         {
             if (screen.IsCompanion) return BuildCompanionPane(screen);
             if (screen.IsPitWall) return BuildPitWallPane(screen);
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return BuildSlotsPane();
+            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return BuildSlotsPane(screen);
             return BuildFacePane(screen);
         }
 
@@ -512,6 +512,9 @@ namespace OpenDashPlugin
         /// left the screen listed under the name the driver had just stopped using.</summary>
         private void SaveEdit(ScreenInstance screen, string wanted, PackageEntry entry)
         {
+            // Whatever was changed, even nothing: pressing Save on a screen's own edit panel is the driver
+            // saying that this one is theirs.
+            screen.Keep();
             var sizeChanged = entry != null && (entry.Width != screen.Width || entry.Height != screen.Height);
             switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
             {
@@ -534,6 +537,7 @@ namespace OpenDashPlugin
                         result.Ok ? Theme.TextSecondary : Theme.Caution);
                     return;
                 default:
+                    Save();
                     Redraw();
                     return;
             }
@@ -562,7 +566,7 @@ namespace OpenDashPlugin
         private void ReinstallScreen(ScreenInstance screen)
         {
             var result = plugin.Installer.Write(screen);
-            Save();
+            Save(screen);
             plugin.Installer.Refresh();
             selected = screen.Namespace;
             Redraw();
@@ -665,7 +669,13 @@ namespace OpenDashPlugin
                     result.Ok ? Theme.TextSecondary : Theme.Caution);
             };
             var cancel = BuildSecondaryButton("Keep it", "Leaves this screen alone.");
-            cancel.Click += (sender, args) => Redraw();
+            // The answer to the question the line over the cards asks of a migrated screen, as much as
+            // Remove it is, so it keeps the screen as well as going back.
+            cancel.Click += (sender, args) =>
+            {
+                Save(screen);
+                Redraw();
+            };
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
                 Ui.Caption("Removes the screen, its dashboard and its settings." + bound),
