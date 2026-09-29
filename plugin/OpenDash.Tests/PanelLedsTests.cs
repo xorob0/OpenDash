@@ -15,6 +15,14 @@ namespace OpenDashPlugin.Tests
             // #369: one switch where there was a four-way chooser.
             Assert.Equal("Car's own rev lights", PanelLeds.CarRevLightsTitle);
             Assert.Equal("Off fills the strip left to right.", PanelLeds.CarRevLightsCaption);
+            Assert.Equal("Centre display", PanelLeds.CentreDisplayTitle);
+            Assert.Equal("Flag animation", PanelLeds.FlagAnimationTitle);
+            Assert.Equal("Full-strip spotter", PanelLeds.SpotterTitle);
+            Assert.Equal("Car shift light width", PanelLeds.MirrorFitTitle);
+            foreach (var title in new[] { PanelLeds.CarRevLightsTitle, PanelLeds.CentreDisplayTitle, PanelLeds.FlagAnimationTitle, PanelLeds.SpotterTitle, PanelLeds.MirrorFitTitle })
+            {
+                Assert.Contains(PanelLeds.Search, entry => entry.Label == title);
+            }
             Assert.All(PanelLeds.Search, entry => Assert.StartsWith("leds.", entry.Route.Anchor, StringComparison.Ordinal));
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.BarsTitle && entry.Route.Anchor == PanelLeds.AnchorStrips);
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.CarTablesTitle && entry.Route.Anchor == PanelLeds.AnchorCarTables);

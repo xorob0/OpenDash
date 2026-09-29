@@ -19,6 +19,12 @@ namespace OpenDashPlugin
         public const string AnchorMirrorFit = "leds.mirror-fit";
         public const string AnchorCarTables = "leds.car-tables";
 
+        // The rows' titles, which the page draws and search lists, so the two cannot drift apart.
+        public const string CentreDisplayTitle = "Centre display";
+        public const string FlagAnimationTitle = "Flag animation";
+        public const string SpotterTitle = "Full-strip spotter";
+        public const string MirrorFitTitle = "Car shift light width";
+
         /// <summary>The #369 switch: the car's own rev lights, or the plain ladder.</summary>
         public const string CarRevLightsTitle = "Car's own rev lights";
         public const string CarRevLightsCaption = "Off fills the strip left to right.";
@@ -28,11 +34,11 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(PanelLights.BarsTitle, PanelPage.Leds, AnchorStrips, "strip", "wheel", "rim", "brow"),
             new PanelSearch.Entry(PanelLights.AddBar, PanelPage.Leds, AnchorStrips, "strip", "new"),
             new PanelSearch.Entry(PanelLights.BarDeviceTitle, PanelPage.Leds, AnchorDevice, "device", "arduino", "wheel"),
-            new PanelSearch.Entry("Centre display", PanelPage.Leds, AnchorCentre, "middle", "brake", "throttle", "fuel"),
+            new PanelSearch.Entry(CentreDisplayTitle, PanelPage.Leds, AnchorCentre, "middle", "brake", "throttle", "fuel"),
             new PanelSearch.Entry(CarRevLightsTitle, PanelPage.Leds, AnchorRevStyle, "rev light style", "car-specific", "shift lights", "rpm"),
-            new PanelSearch.Entry("Flag animation", PanelPage.Leds, AnchorFlagAnimation, "flags"),
-            new PanelSearch.Entry("Full-strip spotter", PanelPage.Leds, AnchorSpotter, "car alongside"),
-            new PanelSearch.Entry("Car shift light width", PanelPage.Leds, AnchorMirrorFit, "stretch", "true size"),
+            new PanelSearch.Entry(FlagAnimationTitle, PanelPage.Leds, AnchorFlagAnimation, "flags"),
+            new PanelSearch.Entry(SpotterTitle, PanelPage.Leds, AnchorSpotter, "car alongside"),
+            new PanelSearch.Entry(MirrorFitTitle, PanelPage.Leds, AnchorMirrorFit, "stretch", "true size"),
             new PanelSearch.Entry(PanelLights.CarTablesTitle, PanelPage.Leds, AnchorCarTables, "lovely", "car data", "download"),
         };
     }

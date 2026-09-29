@@ -14,6 +14,8 @@ namespace OpenDashPlugin
         public const string LightsTitle = "Lights OpenDash can install";
         public const string LinksTitle = "Support";
 
+        public const string CheckTitle = "Check for updates";
+
         public const string AnchorPlugin = "updates.plugin";
         public const string AnchorCheck = "updates.check";
         public const string AnchorPackages = "updates.packages";
@@ -23,7 +25,7 @@ namespace OpenDashPlugin
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(PluginTitle, PanelPage.Updates, AnchorPlugin, "version", "reinstall", "update"),
-            new PanelSearch.Entry("Check for updates", PanelPage.Updates, AnchorCheck, "update", "github", "release"),
+            new PanelSearch.Entry(CheckTitle, PanelPage.Updates, AnchorCheck, "update", "github", "release"),
             new PanelSearch.Entry("Reinstall", PanelPage.Updates, AnchorPlugin, "repair", "dashboards"),
             new PanelSearch.Entry("Put mine back", PanelPage.Updates, AnchorPlugin, "restore", "edited"),
             new PanelSearch.Entry(PackagesTitle, PanelPage.Updates, AnchorPackages, "dashboards", "packages"),

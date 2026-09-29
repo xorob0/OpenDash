@@ -47,7 +47,7 @@ namespace OpenDashPlugin
             groups.Add(BuildAddLedBarRow());
 
             // Rig-wide: what a mirrored bar does on a strip that is not the car's length.
-            var fit = Ui.Anchor(Ui.Row("Car shift light width", "Only for a strip using the car's own rev lights.",
+            var fit = Ui.Anchor(Ui.Row(PanelLeds.MirrorFitTitle, "Only for a strip using the car's own rev lights.",
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })), PanelLeds.AnchorMirrorFit);
 
@@ -155,9 +155,9 @@ namespace OpenDashPlugin
                 return Ui.VStack(0,
                     preview,
                     Ui.Anchor(BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)), PanelLeds.AnchorDevice),
-                    Ui.Anchor(Ui.Row("Centre display", "The LEDs at each end are not affected.", centre), PanelLeds.AnchorCentre),
+                    Ui.Anchor(Ui.Row(PanelLeds.CentreDisplayTitle, "The LEDs at each end are not affected.", centre), PanelLeds.AnchorCentre),
                     Ui.Anchor(Ui.Row(PanelLeds.CarRevLightsTitle, PanelLeds.CarRevLightsCaption, style), PanelLeds.AnchorRevStyle),
-                    Ui.Anchor(Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
+                    Ui.Anchor(Ui.Row(PanelLeds.FlagAnimationTitle, "Off shows each flag as a steady colour.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
@@ -165,7 +165,7 @@ namespace OpenDashPlugin
                             Save();
                         })), PanelLeds.AnchorFlagAnimation),
                     // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
-                    Ui.Anchor(Ui.Row("Full-strip spotter", "Off lights only the end nearest the car alongside.",
+                    Ui.Anchor(Ui.Row(PanelLeds.SpotterTitle, "Off lights only the end nearest the car alongside.",
                         BuildToggle(Settings.BarSpotterWhole(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);

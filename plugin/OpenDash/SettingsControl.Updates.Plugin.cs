@@ -77,7 +77,7 @@ namespace OpenDashPlugin
             checkButton.Click += (sender, args) => Check(manual: true);
 
             var right = Ui.HStack(24, checkButton, toggle);
-            return Ui.Row("Check for updates", UpdateWording.CheckCaption, right);
+            return Ui.Row(PanelUpdates.CheckTitle, UpdateWording.CheckCaption, right);
         }
 
         private Button BuildUpdateButton(Border progressHost)
