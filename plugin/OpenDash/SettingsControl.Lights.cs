@@ -7,8 +7,7 @@
 // embedded profile by LedBar.ProfileShapeId, which is the reversed twin for a strip wired from the far end.
 //
 // #369 turns the four-value rev light style into one switch, the car's own rev lights on or off: on writes
-// Contract.LedRpmStyleCar and off Contract.LedRpmStyleLeftToRight. Until the LEDs page lands the chooser
-// below still offers every style Contract.LedRpmStyles declares.
+// Contract.LedRpmStyleCar and off Contract.LedRpmStyleLeftToRight. The switch is drawn below, in the group.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -48,7 +47,7 @@ namespace OpenDashPlugin
             groups.Add(BuildAddLedBarRow());
 
             // Rig-wide: what a mirrored bar does on a strip that is not the car's length.
-            var fit = Ui.Anchor(Ui.Row("Car shift light width", "Only for the Car-specific rev light style.",
+            var fit = Ui.Anchor(Ui.Row("Car shift light width", "Only for a strip using the car's own rev lights.",
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })), PanelLeds.AnchorMirrorFit);
 
@@ -136,15 +135,16 @@ namespace OpenDashPlugin
                         if (live != null) live.Centre = value;
                         Save();
                     });
-                // Contract.LedRpmStyleCar is the value the rebuilt LEDs page's single switch writes (#369);
-                // until then the chooser offers every style the contract declares.
-                var style = BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.BarRpmStyle(ns) ?? Contract.LedRpmStyleCar, 220,
-                    value =>
-                    {
-                        var live = Settings.LedBarByNamespace(ns);
-                        if (live != null) live.RpmStyle = value;
-                        Save();
-                    });
+                // #369: one switch, the car's own rev lights or not. On writes Contract.LedRpmStyleCar and off
+                // the plain left-to-right ladder, each through the set the contract declares
+                // (Contract.LedRpmStyles), so nothing the contract has retired can be written; a strip
+                // carrying a retired style has been normalised to left to right and reads as off.
+                var style = BuildToggle(Settings.BarRpmStyle(ns) == Contract.LedRpmStyleCar, on =>
+                {
+                    var live = Settings.LedBarByNamespace(ns);
+                    if (live != null) live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+                    Save();
+                });
                 IList<string> notOffered;
                 var targets = LedTargets.All(out notOffered);
                 // What the strip shows with the revs half way, from the rules the Rig page paints with.
@@ -156,7 +156,7 @@ namespace OpenDashPlugin
                     preview,
                     Ui.Anchor(BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)), PanelLeds.AnchorDevice),
                     Ui.Anchor(Ui.Row("Centre display", "The LEDs at each end are not affected.", centre), PanelLeds.AnchorCentre),
-                    Ui.Anchor(Ui.Row("Rev light style", "Car-specific copies the car you are driving.", style), PanelLeds.AnchorRevStyle),
+                    Ui.Anchor(Ui.Row(PanelLeds.CarRevLightsTitle, PanelLeds.CarRevLightsCaption, style), PanelLeds.AnchorRevStyle),
                     Ui.Anchor(Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {

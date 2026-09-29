@@ -12,6 +12,9 @@ namespace OpenDashPlugin.Tests
         public void The_leds_page_is_titled_and_its_rows_are_found_where_they_are()
         {
             Assert.Equal("LEDs", PanelLeds.Title);
+            // #369: one switch where there was a four-way chooser.
+            Assert.Equal("Car's own rev lights", PanelLeds.CarRevLightsTitle);
+            Assert.Equal("Off fills the strip left to right.", PanelLeds.CarRevLightsCaption);
             Assert.All(PanelLeds.Search, entry => Assert.StartsWith("leds.", entry.Route.Anchor, StringComparison.Ordinal));
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.BarsTitle && entry.Route.Anchor == PanelLeds.AnchorStrips);
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.CarTablesTitle && entry.Route.Anchor == PanelLeds.AnchorCarTables);

@@ -19,13 +19,17 @@ namespace OpenDashPlugin
         public const string AnchorMirrorFit = "leds.mirror-fit";
         public const string AnchorCarTables = "leds.car-tables";
 
+        /// <summary>The #369 switch: the car's own rev lights, or the plain ladder.</summary>
+        public const string CarRevLightsTitle = "Car's own rev lights";
+        public const string CarRevLightsCaption = "Off fills the strip left to right.";
+
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(PanelLights.BarsTitle, PanelPage.Leds, AnchorStrips, "strip", "wheel", "rim", "brow"),
             new PanelSearch.Entry(PanelLights.AddBar, PanelPage.Leds, AnchorStrips, "strip", "new"),
             new PanelSearch.Entry(PanelLights.BarDeviceTitle, PanelPage.Leds, AnchorDevice, "device", "arduino", "wheel"),
             new PanelSearch.Entry("Centre display", PanelPage.Leds, AnchorCentre, "middle", "brake", "throttle", "fuel"),
-            new PanelSearch.Entry("Rev light style", PanelPage.Leds, AnchorRevStyle, "car-specific", "shift lights", "rpm"),
+            new PanelSearch.Entry(CarRevLightsTitle, PanelPage.Leds, AnchorRevStyle, "rev light style", "car-specific", "shift lights", "rpm"),
             new PanelSearch.Entry("Flag animation", PanelPage.Leds, AnchorFlagAnimation, "flags"),
             new PanelSearch.Entry("Full-strip spotter", PanelPage.Leds, AnchorSpotter, "car alongside"),
             new PanelSearch.Entry("Car shift light width", PanelPage.Leds, AnchorMirrorFit, "stretch", "true size"),

@@ -19,17 +19,6 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>
-        /// One label per <see cref="Contract.LedRpmStyles"/> value, in its order. Car-specific heads the
-        /// list because the value does, and it is the one a driver is offered first.
-        /// </summary>
-        /// <remarks>
-        /// It used to read "The car's own", which is a possessive with no head noun: the reader has to
-        /// guess what it owns, and the three names beside it are patterns rather than owners, so there is
-        /// nothing to guess from. Car-specific is what Lovely Sim Racing calls these tables, so a driver
-        /// who met them there recognises the word. docs/design/voice.md keeps the rule.
-        /// </remarks>
-        public static readonly string[] RpmStyleLabels = { "Car-specific", "Left to right", "Meet in middle", "F1" };
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
         public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
@@ -299,7 +288,7 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, "
+            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
             + "so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
