@@ -2,11 +2,11 @@
 //
 // The same move PackageExtractor makes for a second screen, on a smaller artefact: a profile is written
 // for a shape and reads the rig-wide `OpenDash.Led*` names, and a bar is an instance of a shape that has
-// to read its own. Three bracketed property references, the profile's name and its id: that is the whole
-// of the rewrite, and it is string surgery rather than a JSON round trip on purpose. Re-serialising
+// to read its own. The bar's own bracketed property references, the profile's name and its id: that is
+// the whole of the rewrite, and it is string surgery rather than a JSON round trip on purpose. Re-serialising
 // somebody's scene graph through a library we do not control is what PackageExtractor refuses for the
 // dashboards, for the same reason -- what SimHub reads back has to be what the build wrote, less exactly
-// the two fields and three names named here.
+// the two fields and the names BarSettings lists.
 //
 // The id the rewrite gives a bar is also how the bar is found again in SimHub, so the census of what
 // SimHub holds for the rig's bars (Plan) lives here beside it rather than beside the embedded profile.
@@ -27,16 +27,28 @@ namespace OpenDashPlugin
         /// The properties a bar owns, which are the ones a rewrite moves under its namespace.
         /// </summary>
         /// <remarks>
+        /// The four a strip always had, then its own brightness and its fifteen effect switches (#503):
+        /// twenty names, in the order the contract declares them.
+        ///
         /// Everything else a strip profile reads stays rig-wide and is deliberately not here.
-        /// `LightsBrightness`, `LightsNightMode` and `LightsNightBrightness` are how bright the rig is;
-        /// `LightsLowFuelLaps` is the rig's one answer to "am I low", read by the faces and the box as
-        /// well; and `LedMirrorReady` with the packed `LedMirror<n>` runs is the *car's* own shift
+        /// `LightsBrightness` is the brightness a bar with none of its own falls back to, and
+        /// `LightsNightMode` with `LightsNightBrightness` is the rig's night, which dims every bar at
+        /// once; `LightsLowFuelLaps` is the rig's one answer to "am I low", read by the faces and the box
+        /// as well; and `LedMirrorReady` with the packed `LedMirror<n>` runs is the *car's* own shift
         /// pattern, which is a fact about the car and not a setting on a strip.
         /// </remarks>
-        public static readonly string[] BarSettings =
+        public static readonly string[] BarSettings = OwnSettings();
+
+        private static string[] OwnSettings()
         {
-            Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole,
-        };
+            var names = new List<string>
+            {
+                Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole,
+                Contract.LedBrightness,
+            };
+            names.AddRange(Contract.LedEffectSettings());
+            return names.ToArray();
+        }
 
         /// <summary>`LedCentre` under one bar's namespace: `RimLedCentre`.</summary>
         public static string Property(string ns, string setting)

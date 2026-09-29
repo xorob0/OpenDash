@@ -423,6 +423,66 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// One bar's own brightness, or null when it follows the rig's -- which is also what a bar that
+        /// has gone reads. What <c>&lt;ns&gt;LedBrightness</c> publishes: the profile falls back to
+        /// LightsBrightness on a null, so a bar with no answer of its own is exactly as bright as the rig.
+        /// </summary>
+        public int? BarBrightness(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null || !bar.Brightness.HasValue) return null;
+            return Contract.NormaliseBrightness(bar.Brightness.Value);
+        }
+
+        /// <summary>Sets one bar's own brightness, or clears it back to the rig's with null.</summary>
+        public void SetBarBrightness(string ns, int? percent)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null) return;
+            bar.Brightness = percent.HasValue ? Contract.NormaliseBrightness(percent.Value) : (int?)null;
+        }
+
+        /// <summary>Whether one bar draws an effect. On for a bar that has gone, which is what a strip
+        /// nobody configured draws.</summary>
+        public bool BarEffectEnabled(string ns, string effectId)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null || bar.EffectEnabled(effectId);
+        }
+
+        /// <summary>Turns one effect on or off on one bar; any flag row switches every flag row.</summary>
+        public void SetBarEffect(string ns, string effectId, bool enabled)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null) return;
+            bar.SetEffect(effectId, enabled);
+        }
+
+        /// <summary>Whether one bar is wired from the far end. False for a bar that has gone.</summary>
+        public bool BarReversed(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar != null && bar.Reversed && bar.SupportsReversal;
+        }
+
+        /// <summary>
+        /// Sets which end a bar is wired from, and says whether that changed the profile it installs.
+        /// </summary>
+        /// <remarks>
+        /// True means the bar's profile is now the other twin and has to be installed again for SimHub
+        /// to draw the change, which the caller does. A shape with a wiring of its own has no twin, so
+        /// the switch is refused and nothing changes.
+        /// </remarks>
+        public bool SetBarReversed(string ns, bool reversed)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null || !bar.SupportsReversal) return false;
+            var before = bar.ProfileShapeId;
+            bar.Reversed = reversed;
+            return !string.Equals(before, bar.ProfileShapeId, StringComparison.Ordinal);
+        }
+
+        /// <summary>
         /// Adds a bar of a shape, with the rig's own settings as its starting point.
         /// </summary>
         /// <remarks>
@@ -451,6 +511,12 @@ namespace OpenDashPlugin
                 RpmStyle = LedRpmStyle,
                 FlagAnimation = LedFlagAnimation,
                 Device = device,
+                // As bright as the rig, drawing everything, wired the plain way: the three a driver
+                // changes on the LEDs page once they have seen the strip lit. A reversed shape id still
+                // arrives reversed, which Normalise reads off the id.
+                Reversed = false,
+                Brightness = null,
+                EffectsOff = new List<string>(),
             };
             added.Normalise();
             LedBars.Add(added);
