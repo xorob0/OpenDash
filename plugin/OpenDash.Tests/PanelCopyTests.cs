@@ -159,15 +159,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Bound as a hold, whatever press type you pick.", PanelCopy.GlanceBoundAsHold);
             Assert.Equal("Hold to show one page, release to return. Bound as a hold, whatever press type you pick.", PanelCopy.FaceGlance);
             Assert.Equal("Hold to show one page, release to put the zone back. Bound as a hold, whatever press type you pick.", PanelCopy.PitWallGlance);
+            Assert.Equal("Hold to show one module, release to go back to the one you were on. Bound as a hold, whatever press type you pick.", PanelCopy.CompanionGlance);
 
             var panel = string.Join("\n", RepoPaths.SettingsControlSources().Select(File.ReadAllText));
             // The correction the sentence announces is still made, and made to the one press type
             // SimHub releases on.
             Assert.Contains("mapping.PressType = PressType.During", panel);
             var holds = Regex.Matches(panel, @"BuildBinder\([^;]*hold: true\)").Count;
-            Assert.Equal(2, holds);
+            // A face, a pit wall and a companion.
+            Assert.Equal(3, holds);
             Assert.Contains("Ui.Caption(PanelCopy.FaceGlance)", panel);
             Assert.Contains("Ui.Caption(PanelCopy.PitWallGlance)", panel);
+            Assert.Contains("Ui.Caption(PanelCopy.CompanionGlance)", panel);
             Assert.DoesNotContain("\"Hold to show one page", panel);
         }
 

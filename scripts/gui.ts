@@ -7,14 +7,15 @@
  * back after a restart, which was measured rather than assumed. So `bun run dev` drives the mouse,
  * over the same QEMU VNC that takes the screenshots.
  *
- * Coordinates are the fragile part and are treated as such. Everything anchored to the window's
- * top-left, which is the left menu, is a fixed pixel offset; everything in the centred content
- * column is a fraction of the screen width. Both were measured on the 3840 by 2160 guest, and
+ * Coordinates are the fragile part and are treated as such. They are measured from SimHub's client
+ * area rather than from the screen: everything anchored to its top-left, which is the left menu and
+ * every height, is a fixed pixel offset, and everything across the centred content column is a
+ * fraction of its width. Both were measured on the 3840 by 2160 guest, and
  * {@link EXPECTED_SCREEN} is now checked rather than assumed. Nothing else is trusted either:
  * `openDashboard` waits for SimHub's window to exist and to fill the screen before it measures
  * anything from it, looks at the screen before it presses Start, asks Windows which dash windows
- * exist afterwards, retries, and fails by saying what it saw rather than leaving the caller to
- * wonder.
+ * exist afterwards, retries, and fails by saying what it saw, or that SimHub exited when it has,
+ * rather than leaving the caller to wonder.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -23,12 +24,13 @@ import { onHost, powershell, psq, screenshot, simhubRunning, sleep, type Host, t
 const WINVM_DIR = '/opt/winvm';
 const VENV_PYTHON = `${WINVM_DIR}/mcp/.venv/bin/python`;
 
-/** Where the left menu's entries sit, measured from the top-left of a maximised SimHub. */
+/** Where the left menu's entries sit, in pixels from the top-left of SimHub's client area. */
 const MENU = { x: 100, dashStudio: 248 } as const;
-/** Where things in the centred content column sit, as a fraction of the screen width. */
+/** Where things in the centred content column sit, as a fraction of SimHub's client area width. */
 const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
 /**
- * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest.
+ * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest from the top of
+ * SimHub's client area.
  *
  * `firstRow` is a point inside the first row's card, not its top: the card spans y=302..380 and 336
  * is the middle of it. `quickRunOffset` is measured from that same point, and it deliberately lands
@@ -97,7 +99,7 @@ export const DASH_STUDIO = {
 } as const satisfies Record<string, Rgb>;
 export const COLOUR_TOLERANCE = 2;
 /**
- * Where a look samples, in absolute pixels like `MENU` and `LIST`.
+ * Where a look samples, in pixels from the top-left of SimHub's client area, like `MENU` and `LIST`.
  *
  * Three points each, so that one pixel under a glyph cannot decide anything. The offer's are on x
  * 1330, a column that crosses only the band and the page; the row's are on x 2400, right of every
@@ -163,14 +165,12 @@ export const hex = (c: Rgb): string => `#${c.map((v) => v.toString(16).padStart(
 export const sameColour = (a: Rgb, b: Rgb, tolerance = COLOUR_TOLERANCE): boolean => a.every((v, i) => Math.abs(v - b[i]!) <= tolerance);
 
 /**
- * Where a pass clicks the search box, and where it guesses the row and Windowed are when the list
- * cannot be read: `bandOffset` lower for the Last used band, and `TRACK_LAYOUT_OFFER.shift` lower
- * again, the search box included, when the pass is working under the offer.
+ * Where a pass guesses its row is, in SimHub's client area, when the list cannot be read:
+ * `bandOffset` lower for the Last used band, and `TRACK_LAYOUT_OFFER.shift` lower again when the pass
+ * is working under the offer.
  */
-export function where(bandOffset: number, index: number, underOffer: boolean): { searchY: number; rowY: number; windowedY: number } {
-  const shift = underOffer ? TRACK_LAYOUT_OFFER.shift : 0;
-  const rowY = LIST.firstRow + bandOffset + shift + index * LIST.rowHeight;
-  return { searchY: LIST.firstRow - 123 + shift, rowY, windowedY: rowY + LIST.quickRunOffset };
+export function guessRow(bandOffset: number, index: number, underOffer: boolean): number {
+  return LIST.firstRow + bandOffset + (underOffer ? TRACK_LAYOUT_OFFER.shift : 0) + index * LIST.rowHeight;
 }
 
 /** The three points a look reads on the offer's band, and the three it reads on the row at `rowY`. */
@@ -390,7 +390,7 @@ function leadAttempt(attempts: readonly Attempt[]): Attempt | null {
 /** Line one of a failure, which is the only line `bun run shots` and `bun run clips` keep. */
 function failureLead(ctx: FailureContext, attempts: readonly Attempt[]): string {
   if (ctx.running === false)
-    return `SimHub is not running any more, so nothing it was sent could open anything; that is #303, not a coordinate, and \`bun run vm logs 80\` shows why it stopped.`;
+    return `SimHub exited while it was being clicked, so the coordinates are not what to look at; \`bun run vm logs 80\` shows how it ended (#303).`;
   if (ctx.noWindow) return `SimHub's window was not there when attempt ${attempts.length + 1} began (${ctx.noWindow}), so nothing more was clicked.`;
   const lead = leadAttempt(attempts);
   if (!lead) {
@@ -441,6 +441,10 @@ export const OFFER_COMES_BACK =
  * The whole message a failed `openDashboard` returns. Line one says what was seen and where the
  * picture is, because it is the only line two of the callers print; the lines after it are the passes
  * one by one, whether this is #303, and the offer if it was met.
+ *
+ * A SimHub that exited leads everything else. The default advice is about the clicking, and on
+ * 2026-09-13 it cost an hour: SimHub had exited under the clicks, so no coordinate was ever going to
+ * help, and the message sends the reader to SimHub's log instead of to Dash Studio.
  */
 export function openFailure(ctx: FailureContext, attempts: readonly Attempt[]): string {
   const picture = ctx.picture ? ` The screen as this gave up is ${ctx.picture}.` : '';
@@ -452,6 +456,10 @@ export function openFailure(ctx: FailureContext, attempts: readonly Attempt[]): 
     lines.push(`  attempt ${i + 1}${where}${under}: ${describeSeen(a.seen, a.looks)}; ${outcome}`);
   });
   if (ctx.noWindow) lines.push(`  attempt ${attempts.length + 1} did not start: ${ctx.noWindow}`);
+  if (ctx.running === false)
+    lines.push(
+      'When this happened on 2026-09-13 the log held WatchDog "Abnormal Inactivity" dumps and no exception, which is a guest too short of CPU or memory to keep SimHub up rather than a fault in any package.',
+    );
   if (ctx.running === true) lines.push('SimHub was still running after the last attempt, so this is not #303.');
   if (ctx.running === null) lines.push('Whether SimHub is still running could not be read: the guest did not answer.');
   const stillUp = attempts.flatMap((a, i) => (a.offerSeen ? [i + 1] : []));
@@ -463,7 +471,7 @@ export function openFailure(ctx: FailureContext, attempts: readonly Attempt[]): 
   if (stillUp.length > 0 || offerCameBack) lines.push(OFFER_COMES_BACK);
   lines.push(
     ctx.running === false
-      ? 'Start SimHub again (`bun run vm install` restarts it) and run this again.'
+      ? 'Running this again restarts it.'
       : `Open it by hand once (Dash Studio, find ${ctx.name}, Start, Windowed) and run this again; everything else will be in place.`,
   );
   return lines.join('\n');
@@ -512,7 +520,7 @@ export function type(host: Host, text: string): RunResult {
 export const press = (host: Host, ...keys: string[]): RunResult =>
   vnc(host, keys.map((k) => `client.keyPress(${JSON.stringify(k)})\ntime.sleep(0.05)`).join('\n'));
 
-/** The guest's display size, which the content-column coordinates are a fraction of. */
+/** The guest's display size, for the mode check; the clicks are measured from SimHub's window. */
 export function screenSize(host: Host): { width: number; height: number } | null {
   const r = onHost(
     host,
@@ -639,6 +647,10 @@ public class OpenDashWindows {
     return list;
   }
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+  /// <summary>The client area in screen coordinates, as left, top, width, height.</summary>
+  public static int[] Client(IntPtr h) { RECT c; GetClientRect(h, out c); var p = new POINT(); ClientToScreen(h, ref p); return new int[] { p.X, p.Y, c.Right, c.Bottom }; }
   public static void Move(IntPtr h, int x, int y) { SetWindowPos(h, IntPtr.Zero, x, y, 0, 0, 0x0001 | 0x0004 | 0x0010); }
   /// <summary>Places a window so that its CLIENT area is exactly cx by cy at (x, y).</summary>
   public static void Fit(IntPtr h, int x, int y, int cx, int cy) {
@@ -695,9 +707,10 @@ Start-Sleep -Milliseconds 900`,
 }
 
 /**
- * Waits for SimHub's main window and puts it where the coordinates below expect it: top-left,
- * filling the screen. Prints `rect x,y WxH` once it is there, and otherwise a line saying what it
- * waited for and never got, which the caller is expected to read.
+ * Waits for SimHub's main window and maximises it. Once it is there, prints `client x,y WxH`: the
+ * part of its client area that is on the screen, which is what every click is measured from,
+ * followed by the unclipped area in brackets. Otherwise it prints a line saying what it waited for
+ * and never got, which the caller is expected to read.
  *
  * **The waiting is the point of this function, and the lack of it was a bug.** `vm.ts`'s
  * `simhubStart` returns as soon as the process exists, which on this guest is about a second after
@@ -726,6 +739,11 @@ Start-Sleep -Milliseconds 900`,
  * on a window WPF has not finished laying out -- but only when the window is not zoomed afterwards.
  * The splash is zoomed and still the wrong shape, and forcing that one to the working area would
  * make it pass the test and hand the caller a splash to click on.
+ *
+ * The client area is clipped to the working area before it is reported. A maximised window hangs
+ * its resize border off every edge of the working area, and a WPF window that draws its own chrome
+ * can hang its client area off with it; clipped, a maximised SimHub reports the working area either
+ * way, which is where every coordinate in this file was measured from.
  */
 export function maximiseSimHub(host: Host, waitSeconds = 120): RunResult {
   return inDesktopScript(
@@ -769,7 +787,12 @@ while ($true) {
       $r = [OpenDashWindows]::Rect($found)
     }
     if (Covers $r) {
-      "rect {0},{1} {2}x{3}" -f $r[0], $r[1], $r[2], $r[3]
+      $client = [OpenDashWindows]::Client($found)
+      $left = [Math]::Max($client[0], $work.X)
+      $top = [Math]::Max($client[1], $work.Y)
+      $right = [Math]::Min($client[0] + $client[2], $work.X + $work.Width)
+      $bottom = [Math]::Min($client[1] + $client[3], $work.Y + $work.Height)
+      "client {0},{1} {2}x{3} (unclipped {4},{5} {6}x{7})" -f $left, $top, ($right - $left), ($bottom - $top), $client[0], $client[1], $client[2], $client[3]
       exit
     }
     $last = "SimHub's window is {0}x{1} at {2},{3}, which does not cover the {4}x{5} working area; still starting" -f $r[2], $r[3], $r[0], $r[1], $work.Width, $work.Height
@@ -826,19 +849,63 @@ export interface OpenOptions {
   filter?: string;
 }
 
+/** The part of SimHub's client area that is on the screen, in screen pixels. */
+export interface ClientArea {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** The client area `maximiseSimHub` reports, or null when what it printed is why there is none. */
+export function parseClientArea(report: string): ClientArea | null {
+  const match = /^client (-?\d+),(-?\d+) (\d+)x(\d+)/.exec(report.trim());
+  if (!match) return null;
+  const [left, top, width, height] = match.slice(1).map(Number) as [number, number, number, number];
+  return width > 0 && height > 0 ? { left, top, width, height } : null;
+}
+
+/**
+ * Where each of `openDashboard`'s clicks lands, given SimHub's client area and how far down its
+ * row is. Offsets are added to the area's top-left and fractions are of its width, so an area that
+ * does not begin at the screen's origin, as with a taskbar on the left or at the top, moves every
+ * click with it. Only the maximised width has been measured, so a fraction at any other width is a
+ * guess that `openDashboard` does not make: it refuses a window that is not maximised.
+ *
+ * `underOffer` moves the search box down by the track-layout offer's `shift`, for a pass working
+ * under an offer that would not go (#308); the row is whatever `rowY` says, since the row is found
+ * in the list rather than assumed.
+ */
+export function aimAt(client: ClientArea, rowY: number, underOffer = false) {
+  const across = (fraction: number) => Math.round(client.left + client.width * fraction);
+  const down = (pixels: number) => client.top + pixels;
+  const rowX = across(CONTENT.rowX);
+  return {
+    dashStudio: { x: client.left + MENU.x, y: down(MENU.dashStudio) },
+    trackLayoutOffer: { x: across(TRACK_LAYOUT_OFFER.x), y: down(TRACK_LAYOUT_OFFER.y) },
+    search: { x: across(CONTENT.searchX), y: down(LIST.firstRow - 123 + (underOffer ? TRACK_LAYOUT_OFFER.shift : 0)) },
+    row: { x: rowX, y: down(rowY) },
+    windowed: { x: rowX + 49, y: down(rowY + LIST.quickRunOffset) },
+  };
+}
+
 /** A look at the screen, or why none could be taken. `column` is there when the look was asked for it and could read it. */
 type Look = { ok: true; samples: LookSamples; column: Run[] | null } | { ok: false; why: string };
 
 /**
  * Reads the nine pixels of `lookPoints(rowY)` off the guest's framebuffer, after resting the
- * pointer at `hover` for as long as a row takes to light when one is given.
+ * pointer at `hover` for as long as a row takes to light when one is given, and with `listFrom` the
+ * look column from there down. Everything given and returned is in SimHub's client area, as the
+ * clicks are; the framebuffer is the screen, so the translation is made here and nowhere else.
  *
  * The rest and the read are one VNC session, because a hover does not survive a reconnection. The
  * framebuffer is read where vncdotool keeps it rather than saved as a PNG and reopened: about a
  * third of a second on this host, which matters in a call that looks at least twice per pass.
  */
-function lookAt(host: Host, rowY: number, opts: { hover?: { x: number; y: number }; listFrom?: number } = {}): Look {
-  const points = lookPoints(rowY);
+function lookAt(host: Host, client: ClientArea, rowY: number, opts: { hover?: { x: number; y: number }; listFrom?: number } = {}): Look {
+  const toScreen = ([x, y]: [number, number]): [number, number] => [client.left + x, client.top + y];
+  const { offer, row } = lookPoints(rowY);
+  const points = { offer: offer.map(toScreen), row: row.map(toScreen) };
   const { hover, listFrom } = opts;
   const column =
     listFrom === undefined
@@ -846,12 +913,12 @@ function lookAt(host: Host, rowY: number, opts: { hover?: { x: number; y: number
       : [
           // The look column from `listFrom` down, as runs of one colour; a run under 3 px is a glyph's
           // edge and says nothing, so it is left out to keep the line short.
-          `x, top, end = ${LOOK.rowX}, ${Math.round(listFrom)}, ${LOOK.listTo}`,
+          `x, top, end = ${client.left + LOOK.rowX}, ${client.top + Math.round(listFrom)}, ${client.top + LOOK.listTo}`,
           'runs, prev, start = [], None, top',
           'for y in range(top, end + 1):',
           '    p = list(im.getpixel((x, y)))[:3] if y < end else None',
           '    if p != prev:',
-          '        if prev is not None and y - start >= 3: runs.append([start, y - 1, prev])',
+          `        if prev is not None and y - start >= 3: runs.append([start - ${client.top}, y - 1 - ${client.top}, prev])`,
           '        prev, start = p, y',
           `print('column ' + json.dumps(runs, separators=(',', ':')))`,
         ];
@@ -878,13 +945,13 @@ function lookAt(host: Host, rowY: number, opts: { hover?: { x: number; y: number
 }
 
 /**
- * The cards Dash Studio is listing below the search box at `searchY`, or null when the list could
- * not be read. A list with fewer than `atLeast` cards is read once more after two seconds, since
- * the search filters as it is typed into and the last keys may still be drawing.
+ * The cards Dash Studio is listing below the search box at `searchY`, in the client area, or null
+ * when the list could not be read. A list with fewer than `atLeast` cards is read once more after
+ * two seconds, since the search filters as it is typed into and the last keys may still be drawing.
  */
-function listedCards(host: Host, searchY: number, atLeast: number): [number, number][] | null {
+function listedCards(host: Host, client: ClientArea, searchY: number, atLeast: number): [number, number][] | null {
   const read = () => {
-    const look = lookAt(host, LIST.firstRow, { listFrom: searchY + 12 });
+    const look = lookAt(host, client, LIST.firstRow, { listFrom: searchY + 12 });
     return look.ok && look.column ? cardsIn(look.column) : null;
   };
   const cards = read();
@@ -894,14 +961,17 @@ function listedCards(host: Host, searchY: number, atLeast: number): [number, num
 }
 
 /** The offer's state right now, or null when the screen could not be read. */
-function offerNow(host: Host): OfferState | null {
-  const look = lookAt(host, LIST.firstRow);
+function offerNow(host: Host, client: ClientArea): OfferState | null {
+  const look = lookAt(host, client, LIST.firstRow);
   return look.ok ? offerState(look.samples.offer) : null;
 }
 
-/** Rests the pointer on the row at `rowY` and says what is under it, for a pass that expects the offer `underOffer`. */
-function seeRow(host: Host, x: number, rowY: number, underOffer: boolean): Seen {
-  const look = lookAt(host, rowY, { hover: { x, y: rowY } });
+/**
+ * Rests the pointer at `at`, on the screen, on the row at `rowY` in the client area, and says what
+ * is under it, for a pass that expects the offer `underOffer`.
+ */
+function seeRow(host: Host, client: ClientArea, at: { x: number; y: number }, rowY: number, underOffer: boolean): Seen {
+  const look = lookAt(host, client, rowY, { hover: at });
   return look.ok ? readLook(look.samples, underOffer ? 'up' : 'down') : { kind: 'unread', why: look.why };
 }
 
@@ -942,9 +1012,6 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const wrongMode = screenModeProblem(size);
   if (wrongMode) return { ok: false, code: 1, stdout: '', stderr: wrongMode };
 
-  const searchX = Math.round(size.width * CONTENT.searchX);
-  const rowX = Math.round(size.width * CONTENT.rowX);
-  const noThanksX = Math.round(size.width * TRACK_LAYOUT_OFFER.x);
   const row = opts.index ?? 0;
   const filter = opts.filter ?? opts.name;
   const debug = (line: string) => {
@@ -959,13 +1026,16 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const attempts: Attempt[] = [];
   let repeats = 0;
   let noWindow: string | undefined;
+  let lastClient: ClientArea | null = null;
   for (let i = 0; i < bands.length; i++) {
     const bandOffset = bands[i]!;
-    // Read, not fired and forgotten. Every coordinate below is measured from a SimHub filling the
-    // screen, so if the window is not there yet there is nothing to click and no offset that helps:
-    // say so instead of spending the second attempt clicking the desktop at a different height.
+    // Read, not fired and forgotten. Every coordinate below is measured from SimHub's client area
+    // and was only ever measured with it filling the screen, so if the window is not there yet
+    // there is nothing to click and no offset that helps: say so instead of spending the second
+    // attempt clicking the desktop at a different height.
     const maximised = maximiseSimHub(host);
-    if (!maximised.stdout.startsWith('rect')) {
+    const client = parseClientArea(maximised.stdout);
+    if (!client) {
       const why = maximised.stdout || maximised.stderr || 'maximising SimHub produced nothing';
       if (attempts.length > 0) {
         // A later pass: what the earlier ones saw is still the better half of the explanation.
@@ -983,25 +1053,27 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
           `that is merely slow looks the same as one that failed; \`bun run vm shot\` shows which.`,
       };
     }
+    lastClient = client;
+    const menu = aimAt(client, LIST.firstRow);
     sleep(2);
-    click(host, MENU.x, MENU.dashStudio);
+    click(host, menu.dashStudio.x, menu.dashStudio.y);
     sleep(4);
-    click(host, noThanksX, TRACK_LAYOUT_OFFER.y);
+    click(host, menu.trackLayoutOffer.x, menu.trackLayoutOffer.y);
     sleep(2);
     // The blind click above cannot say whether it took, and a page it missed is 61 px out on every
     // click that follows, the search box included. So look before typing anything.
-    const initial = offerNow(host);
+    const initial = offerNow(host, client);
     // Caught drawing: give it the time the click was given, and then treat it as whatever it became.
     let first = initial;
     if (first === 'partial') {
       sleep(2);
-      first = offerNow(host);
+      first = offerNow(host, client);
     }
     let second: OfferState | null = null;
     if (first === 'up') {
-      click(host, noThanksX, TRACK_LAYOUT_OFFER.y);
+      click(host, menu.trackLayoutOffer.x, menu.trackLayoutOffer.y);
       sleep(2);
-      second = offerNow(host);
+      second = offerNow(host, client);
     }
     const offerSeen = initial === 'up' || initial === 'partial';
     // Worked under only on the evidence of a look after the second click. An unreadable look is taken
@@ -1009,8 +1081,8 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     const underOffer = second === 'up';
     debug(`attempt ${i + 1}: after "No thanks" the offer is ${[initial, ...(first !== initial ? [first] : []), ...(second ? [second] : [])].map((o) => o ?? 'unread').join(', then ')}`);
 
-    const at = where(bandOffset, row, underOffer);
-    click(host, searchX, at.searchY);
+    const search = aimAt(client, LIST.firstRow, underOffer).search;
+    click(host, search.x, search.y);
     sleep(1);
     // Emptied rather than selected. The box keeps what the last run typed, and a select-all that
     // lands while the box is not yet focused leaves that text in place, so the filter becomes the
@@ -1026,10 +1098,10 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     // Find the row rather than assume it. The list starts in more places than an offset can say,
     // so the cards are read down one column, and the offsets are only the fallback for a list that
     // could not be read.
-    const cards = listedCards(host, at.searchY, row + 1);
+    const cards = listedCards(host, client, search.y - client.top, row + 1);
     const card = cards?.[row];
-    const rowY = card ? Math.round((card[0] + card[1]) / 2) : at.rowY;
-    const windowedY = rowY + LIST.quickRunOffset;
+    const rowY = card ? Math.round((card[0] + card[1]) / 2) : guessRow(bandOffset, row, underOffer);
+    const aim = aimAt(client, rowY, underOffer);
     const listing = cards === null ? 'unread' : cards.length === 0 ? 'empty' : cards.map(([top, bottom]) => `${top}..${bottom}`).join(', ');
 
     // Look before pressing: the row lights under the pointer when its Start button is up. A row
@@ -1037,10 +1109,10 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     let seen: Seen = { kind: 'empty' };
     let looks = 0;
     if (cards === null || card) {
-      seen = seeRow(host, rowX, rowY, underOffer);
+      seen = seeRow(host, client, aim.row, rowY, underOffer);
       looks = 1;
       if (seen.kind === 'row') {
-        seen = seeRow(host, rowX, rowY, underOffer);
+        seen = seeRow(host, client, aim.row, rowY, underOffer);
         looks = 2;
       }
     }
@@ -1050,9 +1122,9 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     const pressed = pressAfter(seen);
     if (pressed) {
       // Hover, then press: the Start button is inside the row and appears only under the pointer.
-      click(host, rowX, rowY, HOVER_SECONDS);
+      click(host, aim.row.x, aim.row.y, HOVER_SECONDS);
       sleep(3);
-      click(host, rowX + 49, windowedY, HOVER_SECONDS);
+      click(host, aim.windowed.x, aim.windowed.y, HOVER_SECONDS);
       sleep(14);
       const open = openDashboards(host);
       if (open.includes(opts.name)) return { ok: true, code: 0, stdout: openedLine(opts.name, i + 1, underOffer), stderr: '' };
@@ -1073,10 +1145,12 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   }
 
   // Only a failure gets here, and only a failure pays for these: whether the offer came back after
-  // the last look, whether SimHub is still there at all, and the screen as it was left.
-  const end = lookAt(host, attempts.at(-1)?.rowY ?? LIST.firstRow);
-  const offerAtEnd = end.ok && offerState(end.samples.offer) === 'up';
+  // the last look, whether SimHub is still there at all, and the screen as it was left. SimHub is
+  // asked here and not earlier: the maximise at the top of each pass already names one that is gone,
+  // so the case left is one that died after its window was found, under the clicks.
   const running = simhubRunning(host);
+  const end = lastClient && running !== false ? lookAt(host, lastClient, attempts.at(-1)?.rowY ?? LIST.firstRow) : null;
+  const offerAtEnd = end?.ok === true && offerState(end.samples.offer) === 'up';
   const picture = openFailedPng(opts.name);
   const shot = screenshot(host, picture);
   return {

@@ -283,15 +283,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(11, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
         }
 
-        /// <summary>A companion's section binds no action of OpenDash's: its paging is SimHub's, bound on
-        /// the device the companion runs on.</summary>
+        /// <summary>A companion's section binds one action of OpenDash's, the held glance: its paging is
+        /// SimHub's, bound on the device the companion runs on.</summary>
         [Fact]
-        public void A_companion_has_no_wheel_action_to_bind()
+        public void A_companion_binds_its_glance_and_nothing_to_page_with()
         {
             // SimHub's own NextScreen and PreviousScreen, bound in the Controls and events of the device
             // the companion runs on, are what page it from a button, and a tap on the screen is what pages
-            // it from the screen. See ContractTests and ScreenActionsTests.
-            Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, "Companion"));
+            // it from the screen. The glance is OpenDash's (#362). See ContractTests and ScreenActionsTests.
+            Assert.Equal(new[] { "CompanionHoldQuickGlance" }, Contract.ScreenActionNames(Contract.KindCompanion, "Companion").ToArray());
         }
     }
 }

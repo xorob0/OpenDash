@@ -125,8 +125,9 @@ earns it the space: it carries what does not change during a lap, two fields at 
 car settings your sim publishes between them.
 
 A page is never scaled. It is laid out for the shape of the box it is given: it sheds its secondary
-rows before it shrinks its numerals, and it grows to fill a box it does not fill — until it meets
-the height, the width, or the next size up its own type ramp, whichever comes first. So a bigger
+rows before it shrinks its numerals, and it grows to fill a box it does not fill — every size on it
+by the same factor, until it meets the height, the width, or 2.2 times the size it was drawn at,
+whichever comes first. So a bigger
 screen shows more in each zone, and what it does show is drawn at a size that suits the room rather
 than at whatever size the smallest screen settled on.
 
@@ -154,7 +155,7 @@ still running one from an earlier release reads the twelve as well; they are bui
 comparison on a rig, and no release publishes them. They are ordinary properties
 like the rest, so a dashboard or an LED profile of your own may read them, and they are not
 deprecated and are not being removed. The two round faces keep the twelve-slot design of 0.1.x on
-purpose; a round face becomes zones on a ring after 1.0, and the release that converts it is the one
+purpose; a round face becomes zones on a ring before 1.0 (#487), and the release that converts it is the one
 that will say what happens to these twelve.
 
 ## The second screens

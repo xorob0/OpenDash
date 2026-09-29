@@ -1,11 +1,11 @@
 /**
  * The parts of `scripts/vm.ts` that are decidable without a VM: quoting, the CLIXML that
  * PowerShell writes over SSH, how the host is chosen, when a claim on the VM has gone stale and
- * how a run notices that its own claim changed hands, and whether SimHub is running.
+ * how a run notices that its own claim changed hands.
  * Everything else in that file is a remote side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { claimLost, cleanClixml, inputMapping, parseActivation, parseSimhubRunning, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
+import { claimLost, cleanClixml, inputMapping, parseActivation, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
 
 describe('quoting', () => {
   test('a shell argument survives a quote in a path', () => {
@@ -214,25 +214,5 @@ describe("SimHub's record of which plugins are enabled", () => {
     // from being written back a second time.
     expect(() => parseActivation(JSON.stringify({ value: [entries], Count: 1 }))).toThrow(/not an array/);
     expect(() => parseActivation(JSON.stringify([{ IsEnabled: true }]))).toThrow(/names no plugin class/);
-  });
-});
-
-describe('whether SimHub is running', () => {
-  test('a process id is a yes', () => {
-    expect(parseSimhubRunning('running 4312\r\n')).toBe(true);
-  });
-
-  test('the explicit no is a no, byte order mark and all', () => {
-    expect(parseSimhubRunning('\uFEFFnot running\n')).toBe(false);
-  });
-
-  // A guest that did not answer, or answered with an error, is not evidence that SimHub stopped: #303 is
-  // named only on a real "not running".
-  test('nothing at all is not an answer', () => {
-    expect(parseSimhubRunning('')).toBeNull();
-  });
-
-  test('an error from Get-Process is not an answer either', () => {
-    expect(parseSimhubRunning('Get-Process : Access is denied')).toBeNull();
   });
 });

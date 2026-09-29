@@ -232,12 +232,11 @@ namespace OpenDashPlugin
         {
             Log.Info("OpenDash plugin " + Version + " starting");
             LoadSettings();
-            // Every zone starts on the page it is set to open on, which is what that setting means.
+            // Every zone starts on the page it is set to open on, which is what that setting means. A
+            // companion is held on its start module for a window measured from here rather than from the
+            // first frame, because a rig with no game running still loads its dashboards and a companion
+            // sitting in the menus should be on its start module too; the force ends by itself.
             Settings.OpenOnStartPages();
-            // And the moment the companions stop being held there. Measured from here rather than from
-            // the first frame, because a rig with no game running still loads its dashboards and a
-            // companion sitting in the menus should be on its start module too.
-            releaseStartModulesAt = DateTime.UtcNow + Contract.CompanionOpenOnWindow;
             try
             {
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
@@ -441,26 +440,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// One frame of the car's own bar. The only telemetry OpenDash reads, and the only thing it
-        /// computes (ADR 0018).
-        ///
-        /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
-        /// or the sim closed it sets one field and returns, and the table lookup happens on a car
-        /// change rather than per frame. Nothing here may throw -- SimHub calls this from its own loop
-        /// and an exception here would be one per frame -- so the whole body is guarded and a failure
-        /// leaves the strip on the published ladder.</para>
-        /// </summary>
-        /// <summary>
-        /// When the companions stop being held on their start module, or null once they have been let go.
-        /// </summary>
-        /// <remarks>
-        /// Set by `Init`, read by `DataUpdate`, and the only clock involved. A companion opens on a chosen
-        /// module because the plugin leaves exactly one of its screens enabled and SimHub moves off the
-        /// rest; this is when that stops and the driver's own taps take over.
-        /// </remarks>
-        private DateTime? releaseStartModulesAt;
-
-        /// <summary>
         /// The best lap of the player's class on the last frame SimHub finished, or null. What
         /// <see cref="Contract.ClassBestLap"/> publishes.
         /// </summary>
@@ -472,6 +451,16 @@ namespace OpenDashPlugin
         /// </remarks>
         private volatile object classBestLap;
 
+        /// <summary>
+        /// One frame of the car's own bar. The only telemetry OpenDash reads, and the only thing it
+        /// computes (ADR 0018).
+        ///
+        /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
+        /// or the sim closed it sets one field and returns, and the table lookup happens on a car
+        /// change rather than per frame. Nothing here may throw -- SimHub calls this from its own loop
+        /// and an exception here would be one per frame -- so the whole body is guarded and a failure
+        /// leaves the strip on the published ladder.</para>
+        /// </summary>
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             try
@@ -482,11 +471,6 @@ namespace OpenDashPlugin
                     ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
                     : null;
 
-                if (releaseStartModulesAt != null && DateTime.UtcNow >= releaseStartModulesAt.Value)
-                {
-                    releaseStartModulesAt = null;
-                    Settings.ReleaseStartModules();
-                }
                 var telemetry = data == null ? null : data.NewData;
                 // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
                 // opinion falls back to: the mirror is one computation feeding every strip, so gating it
@@ -600,7 +584,7 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
             // The twelve card slots. They are attached unconditionally and are not deprecated: a round
-            // face becomes zones on a ring after 1.0 (#145), and until it does these are the only
+            // face becomes zones on a ring before 1.0 (#145, #487), and until it does these are the only
             // card-slot properties the two round packages read, the published OpenDash slots <size>
             // faces read four to twelve of them besides, and no zone face reads one. Deleting a mode
             // attachment above is not safe for a round face on that account: both round packages also
@@ -629,6 +613,9 @@ namespace OpenDashPlugin
             // And the class best, filled by DataUpdate from the frame SimHub has finished. Not a setting:
             // published because SimHub keeps it and does not publish it. See Contract.ClassBestLap.
             this.AttachDelegate(Contract.ClassBestLap, () => classBestLap);
+            // And the clock format, shared because a driver reads a clock one way on every screen, and
+            // every package's idle screen draws the wall clock. #324.
+            this.AttachDelegate(Contract.ClockFormat, () => Settings.ClockFormat);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -688,8 +675,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// The actions a driver binds to a wheel button, which are exactly the ones
         /// Contract.ScreenActionNames lists for the rig's screens: five per face, one per zone and one
-        /// held for a glance; the glance alone on a pit wall; and nothing on a companion, which SimHub
-        /// pages itself. ScreenActions walks that list and says what each name does, so the list and
+        /// held for a glance; the glance alone on a pit wall and on a companion, which SimHub pages
+        /// itself. ScreenActions walks that list and says what each name does, so the list and
         /// the registration cannot disagree, and ScreenActionsTests holds what arrives here.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not

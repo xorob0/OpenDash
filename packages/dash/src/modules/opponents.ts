@@ -73,7 +73,7 @@ import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
-import { densityOf, nextOnRamp, rampOf } from '../second/density.ts';
+import { densityOf, grownAtMost, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
@@ -449,11 +449,11 @@ export const opponents = defineModule('opponents', (ctx) => {
     }) ?? canvas;
 
   // Rule 20. A page that has shed nothing and drawn its gap at the density's `big` spends the room it
-  // has left on the gap, a pixel at a time from the next size up the ramp, the first size at which
-  // both blocks still fit being the one taken.
+  // has left on the gap, a pixel at a time from as far as the rule lets it grow, the first size at
+  // which both blocks still fit being the one taken.
   let type = settled.type;
   if (type.gap === d.big && settled.keep.length === declared.length) {
-    for (let size = nextOnRamp(d.big, ctx.density); size > d.big; size--) {
+    for (let size = Math.floor(grownAtMost(d.big, ctx.density)); size > d.big; size--) {
       if (fits({ ...type, gap: size }, settled.keep)) {
         type = { ...type, gap: size };
         break;

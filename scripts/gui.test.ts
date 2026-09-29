@@ -1,18 +1,22 @@
 /**
  * What `scripts/gui.ts` decides without a VM: whether the guest's display is in the mode its
- * coordinates were measured in, what a look at Dash Studio reads, and what a failure to open a
- * dashboard says first. The clicking itself is a remote side effect and is proved by running it.
+ * coordinates were measured in, where in SimHub's window each click lands, what a look at Dash
+ * Studio reads, and what a failure to open a dashboard says first. The clicking itself is a remote
+ * side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
 import {
+  aimAt,
   cardsIn,
   COLOUR_TOLERANCE,
   DASH_STUDIO,
   EXPECTED_SCREEN,
+  guessRow,
   hex,
   lookPoints,
   openedLine,
   openFailure,
+  parseClientArea,
   parseColumn,
   parseLook,
   pressAfter,
@@ -21,7 +25,6 @@ import {
   sameColour,
   screenModeProblem,
   TRACK_LAYOUT_OFFER,
-  where,
   type Attempt,
   type FailureContext,
   type LookSamples,
@@ -97,20 +100,25 @@ describe('the colours a look knows', () => {
 });
 
 describe('where openDashboard clicks and looks', () => {
-  test('without the offer, the clicks are the ones it has always made', () => {
-    expect(where(0, 0, false)).toEqual({ searchY: 213, rowY: 336, windowedY: 422 });
-    expect(where(221, 0, false).rowY).toBe(557);
+  // SimHub's client area when maximised on the guest, which is where every value here was measured.
+  const client = { left: 0, top: 0, width: 3840, height: 2120 };
+
+  test('a guessed row is where the offsets always put it', () => {
+    expect(guessRow(0, 0, false)).toBe(336);
+    expect(guessRow(221, 0, false)).toBe(557);
+    expect(guessRow(0, 1, false)).toBe(420);
   });
 
-  test('under the offer, every click is its 61 px lower', () => {
+  test('under the offer, a guessed row is its 61 px lower', () => {
     expect(TRACK_LAYOUT_OFFER.shift).toBe(61);
-    expect(where(0, 0, true)).toEqual({ searchY: 274, rowY: 397, windowedY: 483 });
-    expect(where(221, 0, true).rowY).toBe(618);
+    expect(guessRow(0, 0, true)).toBe(397);
+    expect(guessRow(221, 0, true)).toBe(618);
+    expect(aimAt(client, guessRow(0, 0, true), true).windowed.y).toBe(483);
   });
 
   test('the search click lands in the box, with and without the offer', () => {
-    expect(within(where(0, 0, false).searchY, MEASURED.searchBox)).toBe(true);
-    expect(within(where(0, 0, true).searchY, MEASURED.searchBoxUnderOffer)).toBe(true);
+    expect(within(aimAt(client, 336).search.y, MEASURED.searchBox)).toBe(true);
+    expect(within(aimAt(client, 336, true).search.y, MEASURED.searchBoxUnderOffer)).toBe(true);
   });
 
   test("the offer's points sit inside its band", () => {
@@ -118,8 +126,8 @@ describe('where openDashboard clicks and looks', () => {
   });
 
   test("the row's points sit inside the card, with and without the offer", () => {
-    for (const [, y] of lookPoints(where(0, 0, false).rowY).row) expect(within(y, MEASURED.card)).toBe(true);
-    for (const [, y] of lookPoints(where(0, 0, true).rowY).row) expect(within(y, MEASURED.cardUnderOffer)).toBe(true);
+    for (const [, y] of lookPoints(guessRow(0, 0, false)).row) expect(within(y, MEASURED.card)).toBe(true);
+    for (const [, y] of lookPoints(guessRow(0, 0, true)).row) expect(within(y, MEASURED.cardUnderOffer)).toBe(true);
   });
 
   test('"No thanks" is clicked on "No thanks", and never on "Enable it now" beside it', () => {
@@ -264,12 +272,30 @@ describe('what a success prints', () => {
 });
 
 describe('what a failure says first', () => {
-  test('SimHub gone is #303, whatever the passes saw, and ends by saying to start it', () => {
+  // #303: SimHub exiting under the clicks and the clicks missing both end in a dashboard that did not
+  // open, and the advice for one is useless for the other.
+  test('a SimHub that is gone is named on the first line, whatever the passes saw', () => {
+    const line = firstLine(openFailure({ ...ctx, running: false }, [attempt({ kind: 'hovered' })]));
+    expect(line).toContain('OpenDash 850x480');
+    expect(line).toContain('SimHub exited');
+  });
+
+  test('a SimHub that is gone sends the reader to its log, not to Dash Studio', () => {
     const message = openFailure({ ...ctx, running: false }, [attempt({ kind: 'hovered' })]);
-    expect(firstLine(message)).toContain('SimHub is not running any more');
-    expect(firstLine(message)).toContain('#303');
-    expect(message.split('\n').at(-1)).toStartWith('Start SimHub again');
+    expect(message).toContain('bun run vm logs');
     expect(message).not.toContain('Open it by hand');
+  });
+
+  test('a SimHub still running leaves the clicking as the thing to look at', () => {
+    const message = openFailure(ctx, [attempt({ kind: 'hovered' })]);
+    expect(message).toContain('Open it by hand');
+    expect(message).not.toContain('exited');
+  });
+
+  test('a SimHub that could not be asked about is not declared dead', () => {
+    const unknown = openFailure({ ...ctx, running: null }, [attempt({ kind: 'hovered' })]);
+    expect(firstLine(unknown)).toBe(firstLine(openFailure(ctx, [attempt({ kind: 'hovered' })])));
+    expect(unknown).not.toContain('exited');
   });
 
   test('a lit row that opened a dashboard the filter does not match is the filter, by name', () => {
@@ -428,5 +454,50 @@ describe("the host's column line", () => {
     expect(parseColumn('column [[1,2]]')).toBeNull();
     expect(parseColumn('column [[1.5,2,[0,0,0]]]')).toBeNull();
     expect(parseColumn('column [[1,2,[0,0,300]]]')).toBeNull();
+  });
+});
+
+/**
+ * #303: the clicks are measured from SimHub's client area rather than from the display. On the rig
+ * the maximised client area is the working area, so every click has to land exactly where it did
+ * when the coordinates were measured against the screen.
+ */
+describe("where the clicks land in SimHub's window", () => {
+  const maximised = { left: 0, top: 0, width: 3840, height: 2120 };
+
+  test('the client area is read from what the maximise prints', () => {
+    expect(parseClientArea('client 0,0 3840x2120 (unclipped -8,-8 3856x2136)')).toEqual(maximised);
+  });
+
+  test('a maximise that never arrived has no client area to aim at', () => {
+    expect(parseClientArea('SimHub is not running after 120s')).toBeNull();
+    expect(
+      parseClientArea("SimHub's window is 1300x760 at 78,0, which does not cover the 3840x2120 working area; still starting after 120s"),
+    ).toBeNull();
+    expect(parseClientArea('')).toBeNull();
+  });
+
+  test('a maximised SimHub is clicked exactly where the coordinates were measured', () => {
+    expect(aimAt(maximised, 336)).toEqual({
+      dashStudio: { x: 100, y: 248 },
+      trackLayoutOffer: { x: 2669, y: 182 },
+      search: { x: 2004, y: 213 },
+      row: { x: 1471, y: 336 },
+      windowed: { x: 1520, y: 422 },
+    });
+  });
+
+  test('a client area away from the origin moves every click with it', () => {
+    const moved = aimAt({ ...maximised, left: 60, top: 40 }, 336);
+    const home = aimAt(maximised, 336);
+    for (const key of Object.keys(home) as (keyof typeof home)[]) {
+      expect(moved[key]).toEqual({ x: home[key].x + 60, y: home[key].y + 40 });
+    }
+  });
+
+  test('under an offer that would not go, the search box is clicked its 61 px lower', () => {
+    expect(aimAt(maximised, 336, true).search).toEqual({ x: 2004, y: 274 });
+    // The row is wherever it was found; only the search box moves with the offer here.
+    expect(aimAt(maximised, 397, true).row).toEqual({ x: 1471, y: 397 });
   });
 });

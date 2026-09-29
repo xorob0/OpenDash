@@ -117,6 +117,11 @@ namespace OpenDashPlugin
         /// team, so a mixed grid draws teams for the entries that have one.</summary>
         public bool DriverNameTeam { get; set; } = Contract.DefaultDriverNameTeam;
 
+        /// <summary>How a clock of the day is written, "24h" or "12h": one of Contract.ClockFormats.
+        /// Shared, because a driver reads a clock one way wherever it is drawn, and both the wall clock
+        /// and the sim's time of day follow it. #324.</summary>
+        public string ClockFormat { get; set; } = Contract.DefaultClockFormat;
+
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
@@ -794,6 +799,7 @@ namespace OpenDashPlugin
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
             BlueFlagDetail = Contract.NormaliseChoice(BlueFlagDetail, Contract.BlueFlagDetails, Contract.DefaultBlueFlagDetail);
             DriverNameFormat = Contract.NormaliseChoice(DriverNameFormat, Contract.DriverNameFormats, Contract.DefaultDriverNameFormat);
+            ClockFormat = Contract.NormaliseChoice(ClockFormat, Contract.ClockFormats, Contract.DefaultClockFormat);
             NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
@@ -1258,8 +1264,14 @@ namespace OpenDashPlugin
 
         public void EndScreenGlance(string ns)
         {
+            EndScreenGlance(ns, DateTime.UtcNow);
+        }
+
+        /// <summary>The same, released at a given moment, from which a companion's way back is timed.</summary>
+        public void EndScreenGlance(string ns, DateTime now)
+        {
             var screen = ScreenByNamespace(ns);
-            if (screen != null) screen.EndQuickGlance();
+            if (screen != null) screen.EndQuickGlance(now);
         }
 
         /// <summary>The page one zone of one pit wall shows, by the key naming its page and slot.</summary>
@@ -1293,17 +1305,14 @@ namespace OpenDashPlugin
         /// <summary>The module one companion is being forced onto, or -1 once the window has passed.</summary>
         public int ScreenCompanionOpenOn(string ns)
         {
-            var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultCompanionOpenOn : screen.CompanionOpenOn;
+            return ScreenCompanionOpenOn(ns, DateTime.UtcNow);
         }
 
-        /// <summary>Hands every companion's paging back to SimHub, which Init does once the window passes.</summary>
-        public void ReleaseStartModules()
+        /// <summary>The same, as it reads at a given moment.</summary>
+        public int ScreenCompanionOpenOn(string ns, DateTime now)
         {
-            foreach (var screen in RigScreens())
-            {
-                if (screen.IsCompanion) screen.ReleaseStartModule();
-            }
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionOpenOn : screen.CompanionOpenOnAt(now);
         }
 
         /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>
@@ -1644,10 +1653,16 @@ namespace OpenDashPlugin
         /// when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
+            OpenOnStartPages(DateTime.UtcNow);
+        }
+
+        /// <summary>The same, with the companions' window measured from a given moment.</summary>
+        public void OpenOnStartPages(DateTime now)
+        {
             foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
             foreach (var screen in RigScreens())
             {
-                if (screen != null && screen.IsCompanion) screen.OpenOnStartModule();
+                if (screen != null && screen.IsCompanion) screen.OpenOnStartModule(now);
             }
         }
 
@@ -1722,6 +1737,7 @@ namespace OpenDashPlugin
             BlueFlagDetail = other.BlueFlagDetail;
             DriverNameFormat = other.DriverNameFormat;
             DriverNameTeam = other.DriverNameTeam;
+            ClockFormat = other.ClockFormat;
             Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();

@@ -154,12 +154,15 @@ model's rather than as any face's own — the eight published `OpenDash slots <s
 to twelve of them besides — and the release that converts the round faces is the one that carries the
 warning. #170 records that resolution.
 
-**The conversion owes a ticket of its own, and until one is filed this record is #146's blocker.**
-Naming "the conversion" is not the same as tracking it, and three obligations sit inside it: the
-canvas's two round artboards, the panel's round picker, and which of the twenty-one pages survive a
-140 × 108 box. All three are written in section 9 of [design/zones.md](../design/zones.md) and none
-of them has an issue number, so the ticket is the first thing to file when #145 closes and its number
-belongs here and in section 9 in place of this paragraph.
+**Amended 2026-09-29 (#487): the conversion is before 1.0, and the card path is retired with it.**
+The amendment above said the interval was deliberate. What was deliberate was not shipping a
+conversion ahead of its artboards, and that stands; what does not stand is a 1.0 carrying two
+rendering models, one of them the design 0.1.0 replaced. So the "after 1.0" of the 2026-09-27
+amendment is withdrawn: #487 is the conversion, it is on the 1.0 gate, and #146 retires the card
+path once it lands, in that order. The two obligations outside this repository, the artboards and
+the round picker, are unchanged and are #487's blockers rather than reasons to wait past the
+release. `OpenDash.Slot01`–`Slot12` stay attached and undeprecated until #487, and its release
+carries the warning about them, as #170 resolved.
 
 [design/zones.md](../design/zones.md) section 9 is the written form of the design, part by part, and
 is where the open questions inside it live: which of the twenty-one pages survive a 140 × 108 box, and

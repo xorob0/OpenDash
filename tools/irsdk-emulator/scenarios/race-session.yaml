@@ -119,11 +119,8 @@ SessionInfo:
    SessionSkipped: 0
    SessionRunGroupsUsed: 0
    SessionEnforceTireCompoundChange: 0
-   ResultsPositions:
-   ResultsFastestLap:
-   - CarIdx: 255
-     FastestLap: 0
-     FastestTime: -1.0000
+   ResultsPositions:{{QualifyResultsPositions}}
+   ResultsFastestLap:{{QualifyResultsFastestLap}}
    ResultsAverageLapTime: -1.0000
    ResultsNumCautionFlags: 0
    ResultsNumCautionLaps: 0
@@ -141,10 +138,8 @@ SessionInfo:
    SessionSkipped: 0
    SessionRunGroupsUsed: 0
    SessionEnforceTireCompoundChange: 0
-   ResultsPositions:
-{{ResultsPositions}}
-   ResultsFastestLap:
-{{ResultsFastestLap}}
+   ResultsPositions:{{RaceResultsPositions}}
+   ResultsFastestLap:{{RaceResultsFastestLap}}
    ResultsAverageLapTime: 98.9000
    ResultsNumCautionFlags: 0
    ResultsNumCautionLaps: 0
