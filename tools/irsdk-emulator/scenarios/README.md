@@ -102,6 +102,18 @@ catalogue can be watched twice without restarting the emulator and two runs are 
 the only scenario that drives states nothing on the screen shows, and
 [docs/design/flag-box.md](../../../docs/design/flag-box.md) says what each one should look like.
 
+`alerts.json` is the same walk for the screens: the twenty conditions of the alert catalogue that
+band D, the companion's strip and the pit wall's band draw, in their rank, seven seconds each so
+that a condition is seen with the whole band and then settled into the block at each end of it. The
+five car alerts are driven through what SimHub reads them from -- `Voltage` to 0 for the ignition,
+the stalled bit of `EngineWarnings`, `PlayerCarMyIncidentCount`, `CarIdxP2P_Status` at the player's
+index and `dcHeadlightFlash` pressed and released -- and the session's incident limit is 17, through
+the `IncidentLimit` placeholder, so the incident is counted against one. After the walk come the
+cases the ranking is for, several conditions out at once, and then the two places nothing should
+draw on band D: the garage, where there is no voltage and so, to SimHub, no ignition, and the pit
+lane, where the ignition and the stall are the pit family's instead. It loops after 220 s, and
+[docs/design/flag-box.md](../../../docs/design/flag-box.md) says what each state should look like.
+
 `notc.json` is the same field in a car with no `dcTractionControl` or `dcABS` at all — SimHub then
 reports level 0 and the dashes have to show `--` rather than a zero — in a timed race rather than
 a lap-counted one. `quali.json` extends it and moves the telemetry to the qualifying session.

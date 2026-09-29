@@ -323,6 +323,10 @@ const PUSH_TO_PASS: CarAlert = {
  * momentary button, which is what docs/research/lights-review.md takes it for, and a toggle, which is
  * what iRacing's own description calls it -- since either moves the value when the driver flashes.
  *
+ * Unlike an incident, a flash under anything above it is not told later. The control is back where it
+ * was by the time the band is free, so the window, asked then, finds nothing moved, which is right: a
+ * flash from ten seconds ago is not news.
+ *
  * The LED strips leave it out (`DROPPED` in `leds/effects.ts`): a lamp spent on what the driver's hand
  * just did is a lamp not spent on an aid. The band is not a lamp. This is the last condition of the
  * list, so it takes the band only when nothing else wants it, and it is what the canvas asks for.
