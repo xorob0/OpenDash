@@ -72,6 +72,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/*.ledsprofile
+            build/flag-box-glyphs.json
             build/flag-box.svg
             build/manifest.json
             build/fonts/*.ttf
@@ -90,14 +91,20 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # The plugin embeds Resources/*.simhubdash and the .ledsprofile (both gitignored); take them
-      # from the dash job. flag-box.svg rides along as the contact sheet a reviewer looks at; it is
-      # not embedded, and the csproj only globs the two extensions it wants.
+      # The plugin embeds Resources/*.simhubdash, the .ledsprofile and flag-box-glyphs.json (all
+      # gitignored); take them from the dash job. flag-box.svg rides along as the contact sheet a
+      # reviewer looks at; it is not embedded, and the csproj only takes the files it names.
       - name: Download dashboard packages
         uses: actions/download-artifact@v4
         with:
           name: opendash-dash
           path: plugin/OpenDash/Resources/
+
+      # The csproj embeds the glyph sheet only where it exists, so a plugin built without it loads and
+      # draws its flag box previews bare. if-no-files-found counts the upload list as a whole, so
+      # this is the check that the one file arrived (#503).
+      - name: Check the flag box glyphs arrived
+        run: test -s plugin/OpenDash/Resources/flag-box-glyphs.json
 
       - name: Test plugin logic
         run: dotnet test plugin/OpenDash.Tests

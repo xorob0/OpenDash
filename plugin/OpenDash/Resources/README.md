@@ -19,6 +19,10 @@ in the plugin and `FLAG_BOX_PROFILE_NAME` in `packages/dash/src/leds/profile.ts`
 out by sort order: `OpenDash 0-10-0.ledsprofile` sorts first, and taking that one would hand SimHub's
 matrix driver a ten-LED strip.
 
+`flag-box-glyphs.json` is build output too: the flag box's glyphs as 8x8 cells, which the panel
+draws its previews from, so they are the glyphs the box will show. The csproj embeds it only where
+it exists, and a plugin built without it draws those previews bare.
+
 `fonts/` is build output too, and for the same reason. The settings panel draws in the faces the
 dash face draws in, and the condensed ones are renamed as they leave the dash build, so embedding
 them straight from `packages/dash/fonts` would embed the wrong family; see
@@ -30,6 +34,7 @@ To build a plugin locally that carries the dashboard:
 bun run build
 cp build/*.simhubdash plugin/OpenDash/Resources/
 cp build/*.ledsprofile plugin/OpenDash/Resources/
+cp build/flag-box-glyphs.json plugin/OpenDash/Resources/
 cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release
 ```
