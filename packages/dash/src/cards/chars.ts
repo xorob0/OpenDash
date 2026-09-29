@@ -8,8 +8,6 @@ import type { Chars } from '../design/metrics.ts';
 export const CURRENT_LAP_CHARS: Chars = { digits: 5, specials: 2 };
 /** `m:ss.fff`; laps over ten minutes overflow the box to the right, which SimHub allows. */
 export const LAP_TIME_CHARS: Chars = { digits: 6, specials: 2 };
-/** `+12.34` */
-export const DELTA_CHARS: Chars = { digits: 5, specials: 1 };
 /** `24` */
 export const POSITION_CHARS: Chars = { digits: 2, specials: 0 };
 /** `12` laps or `h:mm:ss` with a two-digit hour. */

@@ -108,6 +108,13 @@ been completed, and together they draw the level delta the other two references 
 have nothing to compare against. Every trace was recorded with `OpenDash.DeltaReference` at `session`, so no
 replay of them reads either column; the next `bun run record` picks both up and drops the entries.
 
+It added a third, `OpenDash.DeltaPrecision` at a constant `hundredths`, and unlike the two above this
+one is what a re-record will write. It is a setting rather than telemetry, a plugin nobody has opened
+publishes its default, and the default is hundredths. The traces were taken before the setting
+existed, so none of them can say that for itself, but every one of them was taken while the delta
+could only be drawn to two places, which is what hundredths draws. The next `bun run record` reads it
+from the plugin and drops the entry.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be

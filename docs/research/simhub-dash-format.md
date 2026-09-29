@@ -799,6 +799,21 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
 - The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`). That SimHub exposes
   them under these names on a live iRacing session follows from how it passes raw telemetry through,
   as the flag bits above do, and is not yet confirmed on the VM.
+- **A format's pattern is written as a literal, so a precision is an `if` around two formats.** The
+  pattern `format(v, '0.00', true)` was verified with is a string literal, and `fmt` and `signed` in
+  `packages/generator/src/ncalc.ts` quote whatever they are given: a pattern passed to them as an
+  expression is emitted as the text of the expression, and the delta draws that text. So the delta's
+  precision is `if(<thousandths>, format(v, '0.000', true), format(v, '0.00', true))`, as
+  `referenceDeltaText` writes it. Whether SimHub's `format` would take a bound pattern at all has not
+  been tried, and nothing needs it to.
+- **`format` rounds a half away from zero.** .NET Framework, which SimHub runs on, formats a double
+  with a custom pattern by first taking fifteen significant digits and then rounding the last place
+  half away from zero, so 0.005 to two places is `0.01`, and 9.9995 to three is `10.000` although the
+  double is a hair under the half. That is why the band inside which the delta is drawn level is
+  strictly under half a unit of the last place: at the half the figure has already gained a digit.
+  The evaluator in `packages/dash/test/ncalcEval.ts` formats with JavaScript's `toFixed`, which rounds
+  the double itself, and so parts from the dash at a reading such as 12.345 to two places. This is
+  from the .NET reference source and has not been measured on the VM.
 
 ## Sources
 

@@ -29,13 +29,13 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, deltaColour, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game, signed, raw } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game, raw } = ncalc;
 
 /** A pit wall panel draws at zone density with the pit wall's own label: 24 px numerals, 13 px labels. */
 const DENSITY = 'panel' as const;
@@ -132,7 +132,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Lap delta' });
   const value = referenceDelta();
-  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'vs session best', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
+  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'vs session best', { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(value), chars: CHARS.referenceDelta, fs: d.big, colorBind: referenceDeltaColour(value) }, {
     labelBind: referenceLabel(),
     labelWidest: REFERENCE_LABEL_WIDEST,
   });

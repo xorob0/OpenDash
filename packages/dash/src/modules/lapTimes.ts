@@ -23,21 +23,23 @@ import {
   carPosition,
   positionDigits,
   currentLap,
-  deltaColour,
   estimatedLap,
   fieldSize,
   lapTime,
   lastLap,
   player,
   positionDrawn,
+  REFERENCE_DELTA_WIDEST,
   referenceDelta,
+  referenceDeltaColour,
+  referenceDeltaText,
   sectorLast,
   sectorTime,
   sessionBestLap,
 } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, shapeIn } from './module.ts';
 
-const { fmt, signed, concat, str, isnull, num, driver, iff } = ncalc;
+const { fmt, concat, str, isnull, num, driver, iff } = ncalc;
 
 /** The delta's label, which is the canvas's, and the longer of the two its binding can draw. */
 const DELTA_LABEL_WIDEST = 'Delta to your best';
@@ -86,7 +88,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
     ctx,
     'delta',
     DELTA_LABEL_WIDEST,
-    { sample: '\u22120.21', bind: signed(delta, '0.00'), chars: CHARS.delta, fs: d.mid, colorBind: deltaColour(delta) },
+    { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(delta), chars: CHARS.referenceDelta, fs: d.mid, colorBind: referenceDeltaColour(delta) },
     { labelBind: iff(setting.deltaReferenceIs('lastlap'), str('Delta to last lap'), str(DELTA_LABEL_WIDEST)), labelWidest: DELTA_LABEL_WIDEST },
   );
   /**

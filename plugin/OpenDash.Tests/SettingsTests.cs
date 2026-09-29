@@ -22,6 +22,8 @@ namespace OpenDashPlugin.Tests
             // The place in the driver's own class, which a single-class field reads the same as overall. #432.
             Assert.Equal("class", settings.PositionMode);
             Assert.Equal("session", settings.DeltaReference);
+            // Two places, which is what every package drew before the setting existed. #322.
+            Assert.Equal("hundredths", settings.DeltaPrecision);
             Assert.Equal("auto", settings.SessionProgress);
             // The name as the sim reports it, and the driver rather than the team: the two defaults that
             // leave a rig which never opens the setting drawing what it drew before.
@@ -198,6 +200,31 @@ namespace OpenDashPlugin.Tests
             var junk = new OpenDashSettings { DeltaReference = "previous" };
             junk.Normalise();
             Assert.Equal("session", junk.DeltaReference);
+
+            var fine = new OpenDashSettings { DeltaPrecision = "Thousandths" };
+            fine.Normalise();
+            Assert.Equal("thousandths", fine.DeltaPrecision);
+
+            // Junk, and a file written before the setting existed, both read the default.
+            var places = new OpenDashSettings { DeltaPrecision = "3" };
+            places.Normalise();
+            Assert.Equal("hundredths", places.DeltaPrecision);
+            var older = JsonSerializer.Deserialize<OpenDashSettings>("{\"DeltaReference\":\"alltime\"}");
+            older.Normalise();
+            Assert.Equal("hundredths", older.DeltaPrecision);
+            var missing = new OpenDashSettings { DeltaPrecision = null };
+            missing.Normalise();
+            Assert.Equal("hundredths", missing.DeltaPrecision);
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_delta()
+        {
+            var source = new OpenDashSettings { DeltaReference = "lastlap", DeltaPrecision = "thousandths" };
+            var target = new OpenDashSettings();
+            target.CopyFrom(source);
+            Assert.Equal("lastlap", target.DeltaReference);
+            Assert.Equal("thousandths", target.DeltaPrecision);
         }
 
         [Fact]
@@ -1334,11 +1361,12 @@ namespace OpenDashPlugin.Tests
         {
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
-            // blue flag detail, the two that say how a driver is named, the idle screen's two and the
-            // class best, which every screen shares, and one group per screen the rig holds.
+            // blue flag detail, the two that say how a driver is named, the idle screen's two, the
+            // class best and the delta's precision, which every screen shares, and one group per screen
+            // the rig holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(23, shared);
+            Assert.Equal(24, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.

@@ -28,7 +28,10 @@ namespace OpenDashPlugin.Tests
         public void It_is_published_with_the_shared_group_and_not_offered_as_a_setting()
         {
             var shared = Contract.SharedPropertyNames().ToList();
-            Assert.Equal(Contract.ClassBestLap, shared.Last());
+            // Appended after the idle screen's two, and kept at the index it shipped at when the delta's
+            // precision was appended after it (#322).
+            Assert.Equal(shared.IndexOf(Contract.UpdateVersion) + 1, shared.IndexOf(Contract.ClassBestLap));
+            Assert.Equal(22, shared.IndexOf(Contract.ClassBestLap));
             Assert.Equal("ClassBestLap", Contract.ClassBestLap);
         }
     }

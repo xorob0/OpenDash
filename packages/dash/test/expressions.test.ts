@@ -140,25 +140,32 @@ describe('card expressions', () => {
     expect(formulaOf(textItem('bestLap', 'value'), 'TextColor')).not.toContain('#B14BFF');
   });
 
-  test('delta reads the reference setting and colours by sign with a 5 ms deadband', () => {
+  test('delta reads the reference setting and colours by sign, level within half a unit of its last place', () => {
     const text = formulaOf(textItem('delta', 'value'), 'Text');
     expect(text).toContain("isnull([OpenDash.DeltaReference], 'session')");
     expect(text).toContain('[PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds]');
     // The card reads the one reading the second screens draw, so the third reference reaches it too.
     expect(text).toContain(values.referenceDelta());
     expect(text).toContain('[DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap]');
+    // Two literal patterns with the precision choosing between them, `format` taking only a literal.
+    expect(text).toContain(values.referenceDeltaText(values.referenceDelta()));
     expect(text).toContain("'0.00', true)");
+    expect(text).toContain("'0.000', true)");
     expect(text).toContain("'-', '−'");
     const colour = formulaOf(textItem('delta', 'value'), 'TextColor');
     expect(colour).toContain("< (0), '#00D96A'");
     expect(colour).toContain("'#FF2D46'");
-    // The deadband decides the text and the colour together, so a level delta cannot be drawn as
-    // "+0.00" in the resting white: it is the bare "0.00" the canvas draws.
-    const deadband = `if((abs(${values.referenceDelta()})) <= (0.005), `;
+    // The band decides the text and the colour together, so a level delta cannot be drawn as
+    // "+0.00" in the resting white: it is the bare "0.00" the canvas draws, or "0.000" at
+    // thousandths. Half a unit of the last place, and strictly inside it, because 0.005 is drawn
+    // "+0.01" at hundredths and is not level. #322.
+    const band = "if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)";
+    expect(values.referenceDeltaBand()).toBe(band);
+    const deadband = `if((abs(${values.referenceDelta()})) < (${band}), `;
     expect(text.startsWith(deadband)).toBe(true);
     expect(colour.startsWith(deadband)).toBe(true);
-    expect(text).toContain("<= (0.005), '0.00'");
-    expect(colour).toContain("<= (0.005), '#F5F7FA'");
+    expect(text).toContain(`${deadband}if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00')`);
+    expect(colour).toContain(`${deadband}'#F5F7FA'`);
   });
 
   test('assists show -- without the raw field, OFF at zero', () => {
@@ -596,7 +603,10 @@ describe('module expressions', () => {
 
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
     const value = moduleItem('delta', 'delta.value');
-    expect(formulaOf(value, 'Text')).toMatch(/^replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)$/);
+    // To thousandths or to hundredths, and the minus is replaced in both.
+    expect(formulaOf(value, 'Text')).toMatch(
+      /^if\(\(isnull\(\[OpenDash\.DeltaPrecision\], 'hundredths'\)\) = \('thousandths'\), replace\(format\(.*, '0\.000', true\), '-', '\u2212'\), replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)\)$/,
+    );
     expect(value.text).toBe('\u22120.21');
     expect(moduleItem('delta', 'scale.0').text).toBe('\u22122.0');
     expect(moduleItem('delta', 'scale.4').text).toBe('+2.0');

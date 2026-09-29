@@ -82,8 +82,22 @@ export const NO_TIME = noTime();
 export const CHARS = {
   /** `1:42.905` */
   lapTime: { digits: 6, specials: 2 } as Chars,
-  /** `-0.21` */
+  /**
+   * `-0.21`: a signed delta to two places. The sector deltas, the lap review's two and the lap
+   * history's column; the live delta to the reference has a budget of its own, {@link CHARS.referenceDelta}.
+   */
   delta: { digits: 5, specials: 1 } as Chars,
+  /**
+   * `−12.345`: the live delta to the reference, at the most places the precision setting draws it to.
+   *
+   * Its own budget rather than {@link CHARS.delta} widened, for the reason {@link CHARS.margin} gives:
+   * the sector deltas share that one, and a sixth cell on each of three sectors wraps the compact
+   * sector rank of the delta page onto a second line. The sign, two whole digits and three decimals,
+   * whichever precision is chosen: a box cannot change its cells at runtime (SimHub marks `CharWidth`
+   * `[NoBinding]`), so the one box is cut for the longer of the two readings and a two-place delta
+   * sits left in it, as every other value sits in the cells cut for its longest reading. #322.
+   */
+  referenceDelta: { digits: 6, specials: 1 } as Chars,
   /** `-5.886` */
   relativeGap: { digits: 6, specials: 1 } as Chars,
   /** `+1L` or `+12.6` */
@@ -1378,6 +1392,82 @@ export const referenceLabel = (): Expr =>
  * both measure by it and a copy in each is how the two would come to disagree with the binding.
  */
 export const REFERENCE_LABEL_WIDEST = 'vs all-time best';
+
+/** Whether the live delta is drawn to thousandths rather than to the default hundredths. */
+const inThousandths = (): Expr => setting.deltaPrecisionIs('thousandths');
+
+/**
+ * The live delta to the reference as it is drawn: signed, with a true minus, to the places the
+ * precision setting asks for.
+ *
+ * One helper for the five surfaces that draw it -- card 3, the delta page, Lap times, the lap pop-up
+ * and the pit wall's Lap delta panel -- so that no two of them can draw one reading to different
+ * places. The sector deltas, the lap review's two deltas and the lap history's column are other
+ * comparisons with formats of their own and do not come through here.
+ *
+ * The choice is an `if` around two formats rather than one format with a bound pattern. `signed`
+ * writes its pattern as a string literal, and a pattern that was itself an expression would be
+ * emitted as the text of that expression; `format` has never been verified with anything but a
+ * literal pattern either. #322.
+ */
+export const referenceDeltaText = (seconds: Expr): Expr => iff(inThousandths(), signed(seconds, '0.000'), signed(seconds, '0.00'));
+
+/**
+ * The longest reading {@link referenceDeltaText} is budgeted for, which is what every box that draws
+ * it declares as its `widest`: two whole digits and three places, the true minus taking a digit
+ * cell. The samples stay the canvas's `−0.21`, which is the short end of the range; this is what the
+ * fit tests measure instead, since a monospaced box is measured by what it declares rather than by
+ * its budget.
+ */
+export const REFERENCE_DELTA_WIDEST = `${MINUS}12.345`;
+
+/**
+ * Half a unit of the last place the live delta is drawn to: 0.005 at hundredths, 0.0005 at
+ * thousandths.
+ *
+ * The band inside which a delta is level exists because the number drawn does not carry anything
+ * finer. At hundredths a delta of four thousandths is drawn `+0.00`, and colouring it as slower is a
+ * claim the figure does not make; at thousandths the same delta is drawn `+0.004`, and the figure
+ * does make it, so the band narrows with the precision. A band that stayed at 0.005 would draw
+ * `+0.004` in the resting white, which is a thousandths setting showing a thousandth and then
+ * disowning it.
+ */
+export const referenceDeltaBand = (): Expr => iff(inThousandths(), num(0.0005), num(0.005));
+
+/**
+ * Whether the live delta is level: inside {@link referenceDeltaBand}, which is exactly the readings
+ * {@link referenceDeltaText} draws as a zero.
+ *
+ * Strictly inside. .NET rounds a half away from zero, so 0.005 at hundredths is drawn `+0.01` and a
+ * band that took it in would colour a `+0.01` as level. The lap history's column, drawn to three
+ * places, calls a lap the session best by the same strict edge, `< 0.0005`.
+ */
+export const referenceDeltaLevel = (seconds: Expr): Expr => lt(abs(seconds), referenceDeltaBand());
+
+/**
+ * The colour of the live delta: level inside the band, then faster below zero and slower above it.
+ *
+ * One predicate with the text rather than {@link deltaColour}'s own band, so the figure and its colour
+ * cannot disagree at either precision: a figure drawn as a zero is white and a figure drawn as
+ * anything else is green or red. Card 3 draws its resting `0.00` off the same predicate.
+ */
+export const referenceDeltaColour = (seconds: Expr): Expr =>
+  iff(referenceDeltaLevel(seconds), str(dsColour.zero), iff(lt(seconds, num(0)), str(dsColour.faster), str(dsColour.slower)));
+
+/**
+ * How wide the live delta really draws, for the caption that follows it: the places the setting asks
+ * for, and as many whole digits as the budget leaves once the sign and those places are taken. A
+ * caption placed at the end of the three-place budget would stand a cell off a two-place figure.
+ *
+ * The whole digits are counted per precision rather than written as two, because the six cells hold
+ * three whole digits at hundredths: a long stop in the pits can take the delta past a hundred
+ * seconds, `+100.00` fits the box, and a caption placed for two digits would sit on its last one.
+ */
+export const referenceDeltaDrawn = (seconds: Expr): DrawnFigure => {
+  const figure = (decimals: number): DrawnFigure =>
+    drawnFigure({ value: seconds, digits: CHARS.referenceDelta.digits - 1 - decimals, decimals, signed: true });
+  return drawnEither(inThousandths(), figure(3), figure(2));
+};
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);
 export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTime`);

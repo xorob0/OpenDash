@@ -80,11 +80,13 @@ const drawn = (s: Site, props: Props) => ({ text: evalNcalc(s.text, props), colo
 
 /**
  * The figure a reading draws at two decimals, written independently of the evaluator's `format`:
- * a true minus, a plus for anything not negative, and the card's bare "0.00" inside its deadband.
- * The readings used are chosen away from a half-cent, so no rounding rule is being tested here.
+ * a true minus, a plus for anything not negative, and the card's bare "0.00" inside its deadband,
+ * which is strictly under half a hundredth. The readings used are chosen away from a half-cent, so no
+ * rounding rule is being tested here; `deltaPrecision.test.ts` tests the band's edge, at both
+ * precisions.
  */
 const figure = (seconds: number, bareAtRest: boolean): string => {
-  if (bareAtRest && Math.abs(seconds) <= 0.005) return '0.00';
+  if (bareAtRest && Math.abs(seconds) < 0.005) return '0.00';
   return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(2)}`;
 };
 

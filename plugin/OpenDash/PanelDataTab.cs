@@ -4,8 +4,9 @@
 // Apart from SettingsControl.Data.cs for the reason PanelLights.cs is apart from
 // SettingsControl.Lights.cs: the tab is WPF and the net8.0 test project cannot compile a line of it, so
 // copy a test can hold has to live where it can reach. Some rows here say something the canvas does not,
-// on purpose -- the Position row's sentences, the delta reference's third segment -- and a constant with
-// a test on it is the only way that stays a decision rather than a drift.
+// on purpose -- the Position row's sentences, the delta reference's third segment, the whole of the delta
+// precision row -- and a constant with a test on it is the only way that stays a decision rather than a
+// drift.
 // Pure: no WPF types.
 namespace OpenDashPlugin
 {
@@ -79,6 +80,25 @@ namespace OpenDashPlugin
         /// third is one it does not carry yet (#322).
         /// </remarks>
         public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
+
+        /// <summary>The row under the delta reference, which the canvas does not draw at all (#322).</summary>
+        public const string DeltaPrecisionTitle = "Delta precision";
+
+        /// <summary>What each answer is for, which is the one thing the two words cannot say.</summary>
+        /// <remarks>
+        /// The control already shows the two values, so the caption does not list them; what it adds is
+        /// when a driver would want each, a hotlap being decided by the third place and a race being read
+        /// in a glance at two.
+        /// </remarks>
+        public const string DeltaPrecisionCaption = "Thousandths for a hotlap, hundredths to read at a glance.";
+
+        /// <summary>One label per precision, in the contract's order.</summary>
+        /// <remarks>
+        /// Words, where the driver names row answers its question with worked examples. `0.21` and `0.214`
+        /// would be numerals drawn in the panel's Barlow, and the canvas's fourth rule keeps numerals to
+        /// Barlow Condensed.
+        /// </remarks>
+        public static readonly string[] DeltaPrecisionLabels = { "Hundredths", "Thousandths" };
 
         public const string SessionTitle = "Session progress";
 

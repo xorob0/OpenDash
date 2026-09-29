@@ -172,6 +172,23 @@ export const UPDATE_VERSION = 'UpdateVersion';
  */
 export const CLASS_BEST_LAP = 'ClassBestLap';
 
+/**
+ * How many places the live delta is drawn to: hundredths, `−0.21`, or thousandths, `−0.214`.
+ *
+ * Rig-wide, like the reference it qualifies: a delta read to the thousandth on the rim and to the
+ * hundredth on the pit wall would be two answers to one question. Hundredths by default, because two
+ * places are what a driver reads at a glance and what the canvas draws; thousandths are for a hotlap,
+ * where a lap is won by them.
+ *
+ * It governs the five surfaces that draw the live delta to the reference and nothing else: the
+ * sector deltas, the lap review and the lap history compare other things and keep their own formats.
+ * Every box that draws the live delta is cut for three places whichever is chosen, which is what
+ * lets a runtime setting change the length of a text at all (ADR 0011). `referenceDeltaText` in
+ * `second/values.ts` is the one place the choice is read. #322.
+ */
+export type DeltaPrecision = 'hundredths' | 'thousandths';
+export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -180,6 +197,7 @@ export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzAB
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime', 'lastlap'];
+export const DELTA_PRECISIONS: readonly DeltaPrecision[] = ['hundredths', 'thousandths'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
 export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
 export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['car', 'leftToRight', 'meetInMiddle', 'f1'];
@@ -227,6 +245,8 @@ export const DEFAULTS = {
   // and so that the default is the one format that discards nothing.
   DriverNameFormat: 'full' as DriverNameFormat,
   DriverNameTeam: false,
+  // Two places, which is what the canvas draws and what reads at a glance.
+  DeltaPrecision: 'hundredths' as DeltaPrecision,
 } as const;
 
 /**
@@ -278,8 +298,18 @@ export function dashProperties(): string[] {
   // The idle screen's two, appended to the shared group for the reason `RevBar` was: every package
   // ends with an idle screen, and the group is pinned in order. #83.
   // And the class best after them, published for the same reason and read by every package that
-  // draws a session best.
-  const shared = [REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION, CLASS_BEST_LAP];
+  // draws a session best. And the delta's precision after that, chosen rather than published, and
+  // appended for the same reason. #322.
+  const shared = [
+    REV_BAR_SETTING,
+    BLUE_FLAG_DETAIL_SETTING,
+    DRIVER_NAME_FORMAT_SETTING,
+    DRIVER_NAME_TEAM_SETTING,
+    UPDATE_AVAILABLE,
+    UPDATE_VERSION,
+    CLASS_BEST_LAP,
+    DELTA_PRECISION_SETTING,
+  ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
@@ -457,6 +487,10 @@ export const setting = {
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
   /** `isnull([OpenDash.DeltaReference], 'session') = 'lastlap'`: whether the delta is against the given reference. */
   deltaReferenceIs: (reference: DeltaReference): Expr => eq(setting.deltaReference(), str(reference)),
+  /** `isnull([OpenDash.DeltaPrecision], 'hundredths')`: how many places the live delta is drawn to. */
+  deltaPrecision: (): Expr => isnull(prop(propertyName(DELTA_PRECISION_SETTING)), str(DEFAULTS.DeltaPrecision)),
+  /** `isnull([OpenDash.DeltaPrecision], 'hundredths') = 'thousandths'`: whether the live delta is drawn to the given precision. */
+  deltaPrecisionIs: (precision: DeltaPrecision): Expr => eq(setting.deltaPrecision(), str(precision)),
   /** `isnull([OpenDash.SessionProgress], 'auto')` */
   sessionProgress: (): Expr => isnull(prop(propertyName('SessionProgress')), str(DEFAULTS.SessionProgress)),
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */

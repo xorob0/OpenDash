@@ -97,6 +97,28 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels,", source);
         }
 
+        /// <remarks>
+        /// A row the canvas does not draw (#322), so its words are held here rather than to the canvas.
+        /// The labels are words and not worked examples: a numeral on the panel is drawn in Barlow, and the
+        /// canvas keeps numerals to Barlow Condensed.
+        /// </remarks>
+        [Fact]
+        public void The_delta_precision_row_names_both_precisions_in_words()
+        {
+            Assert.Equal("Delta precision", PanelDataTab.DeltaPrecisionTitle);
+            Assert.Equal("Thousandths for a hotlap, hundredths to read at a glance.", PanelDataTab.DeltaPrecisionCaption);
+            Assert.Equal(new[] { "Hundredths", "Thousandths" }, PanelDataTab.DeltaPrecisionLabels);
+            Assert.Equal(Contract.DeltaPrecisions.Length, PanelDataTab.DeltaPrecisionLabels.Length);
+            Assert.DoesNotContain(PanelDataTab.DeltaPrecisionLabels, label => label.Any(char.IsDigit));
+            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            Assert.Contains("BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels,", source);
+            // Directly under the reference it qualifies.
+            var reference = source.IndexOf("Ui.Row(PanelDataTab.DeltaTitle,", StringComparison.Ordinal);
+            var precision = source.IndexOf("Ui.Row(PanelDataTab.DeltaPrecisionTitle,", StringComparison.Ordinal);
+            Assert.True(reference >= 0 && precision > reference, "the precision row is not under the reference row");
+            Assert.Equal(-1, source.IndexOf("Ui.Row(", reference + 1, precision - reference - 1, StringComparison.Ordinal));
+        }
+
         [Fact]
         public void The_team_row_says_what_happens_to_a_car_with_no_team()
         {

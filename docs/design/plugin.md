@@ -242,6 +242,9 @@ These apply to every screen
   Delta reference           [ Session best | All-time best | Last lap ]
   Which lap the delta compares against.
 
+  Delta precision                      [ Hundredths | Thousandths ]
+  Thousandths for a hotlap, hundredths to read at a glance.
+
   Session progress                     [ Auto | Laps | Time ]
   Auto shows laps when the session declares a lap count, time otherwise.
 
@@ -276,6 +279,19 @@ before this one, which SimHub does not publish. The label is the canvas's own na
 one the Last lap card and the Lap times page already draw, and the row's caption holds for all three,
 since each of them is a lap. Three values is still a segmented control by the component sheet's rule.
 `PanelDataTab.DeltaLabels` holds the words, with a test that counts them against the contract.
+
+**The delta precision row is not on the canvas at all.** The canvas draws every live delta to two
+places, and [#322](https://github.com/xorob0/OpenDash/issues/322) lets a driver ask for three, which
+is what a hotlap is decided by. It sits directly under the reference because it qualifies the same
+number, and it is rig-wide for the reason the reference is: a delta read to the thousandth on the rim
+and to the hundredth on the pit wall is two answers to one question. The two values are words rather
+than worked examples such as `0.21` and `0.214`, although the driver names row answers its question
+with examples: a name is set in the panel's own face, and a numeral would be too, in Barlow, where the
+canvas's fourth rule keeps numerals to Barlow Condensed. The caption says what each is for, which the
+two words cannot. Neither answer moves
+anything on a screen but the digits, since every box that draws the delta is cut for three places
+whichever is chosen; [ADR 0011](../decisions/0011-personalisation.md) is why that is the condition of
+the setting existing at all.
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it

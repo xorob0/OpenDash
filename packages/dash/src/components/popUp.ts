@@ -38,12 +38,12 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { flagBox } from '../contract.ts';
-import { CHARS, hasTime, lapTime, lastLap, referenceDelta, tankIsLow } from '../second/values.ts';
+import { CHARS, hasTime, lapTime, lastLap, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaText, tankIsLow } from '../second/values.ts';
 import { FIT_LADDER } from '../second/field.ts';
 import { ds } from '../tokens.ts';
 import { FLAG_BLINK_MS } from './flagStrip.ts';
 
-const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, signed, str, timespanToSeconds } = ncalc;
+const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, str, timespanToSeconds } = ncalc;
 
 /**
  * The box the pagesandalerts artboard draws.
@@ -223,7 +223,7 @@ export const LAP_POP_UP: PopUpSpec = {
   label: { text: 'Lap' },
   value: { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime },
   colour: ds.color.text.primary,
-  secondary: { sample: '−0.21', bind: signed(referenceDelta(), '0.00'), chars: CHARS.delta },
+  secondary: { sample: '−0.21', bind: referenceDeltaText(referenceDelta()), widest: REFERENCE_DELTA_WIDEST, chars: CHARS.referenceDelta },
   when: atTheLine(),
 };
 

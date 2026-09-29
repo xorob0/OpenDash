@@ -81,7 +81,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -110,8 +110,9 @@ namespace OpenDashPlugin.Tests
             // it is flashing now: 47 of the 85 measured cars give no flash, and OpenDash's own redline
             // flash was going out with them. And 345 before the idle screen could say that a newer
             // release exists, and which (#83), and 347 before the plugin had to publish the class best,
-            // which SimHub keeps and never publishes.
-            Assert.Equal(348, names.Count);
+            // which SimHub keeps and never publishes, and 348 before the live delta could be drawn to
+            // thousandths as well as hundredths (#322).
+            Assert.Equal(349, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -146,6 +147,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("UpdateVersion", names[21]);
             // And the class best after them, published because SimHub keeps it and does not publish it.
             Assert.Equal("ClassBestLap", names[22]);
+            // And the delta's precision after it, chosen rather than published, and shared because a
+            // delta read to the thousandth on the rim and to the hundredth on the pit wall is two
+            // answers to one question. #322.
+            Assert.Equal("DeltaPrecision", names[23]);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
             // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30
@@ -287,6 +292,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("lastlap", Contract.NormaliseChoice("LastLap", Contract.DeltaReferences, "session"));
             // Spelt as one word like its sibling, so "last lap" as a person would write it is not a value.
             Assert.Equal("session", Contract.NormaliseChoice("last lap", Contract.DeltaReferences, "session"));
+            Assert.Equal(new[] { "hundredths", "thousandths" }, Contract.DeltaPrecisions);
+            Assert.Equal("hundredths", Contract.DefaultDeltaPrecision);
+            Assert.Equal("thousandths", Contract.NormaliseChoice("Thousandths", Contract.DeltaPrecisions, Contract.DefaultDeltaPrecision));
+            // A number of places is not a value: the setting names a precision, and "3" is junk to it.
+            Assert.Equal("hundredths", Contract.NormaliseChoice("3", Contract.DeltaPrecisions, Contract.DefaultDeltaPrecision));
         }
 
         /// <summary>The dash package's contract.ts is the other half of the contract. When it exists, its
@@ -315,6 +325,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.PropertyNames().Take(4), ListOf(source, "const fixed"));
             Assert.Equal(Contract.PositionModes, ListOf(source, "POSITION_MODES"));
             Assert.Equal(Contract.DeltaReferences, ListOf(source, "DELTA_REFERENCES"));
+            Assert.Equal(Contract.DeltaPrecisions, ListOf(source, "DELTA_PRECISIONS"));
+            Assert.Contains("DeltaPrecision: '" + Contract.DefaultDeltaPrecision + "'", source);
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Equal(Contract.DriverNameFormats, ListOf(source, "DRIVER_NAME_FORMATS"));
             Assert.Contains("DriverNameFormat: '" + Contract.DefaultDriverNameFormat + "'", source);

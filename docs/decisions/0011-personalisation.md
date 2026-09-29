@@ -168,6 +168,7 @@ the project is written against.
 | Frame colour (#125) | **Runtime** | `BorderStyle.Bindings.BorderColor`, not the item-level spelling |
 | Frame thickness and corner radius (#125) | **Runtime, bounded** | `int` targets on the same sub-object. A border eats the text box, so the bound range must be one `textFit` already proves |
 | Frame on or off (#125) | **Runtime** | Thickness 0, or the item's `Visible` |
+| The places the live delta is drawn to (#322, added 2026-09-29) | **Runtime, bounded** | Two literal formats chosen by an `if`, in boxes cut for the longer of the two; see below |
 | The idle screen's image, logo and layout (#104) | **Runtime** | `ImagePath` is an unattributed bindable string, and a layout choice is a screen index, which the zones already prove |
 | Typeface (#126) | **Build input** | Not because nothing binds, but because nothing re-measures. See below |
 | A size step, a notch larger or smaller (#126) | **Build input** | `FontSize` binds and the box does not follow it; WPF clips what does not fit |
@@ -196,6 +197,35 @@ That is the line. **A property becomes a runtime setting when its value cannot c
 text fits.** Colour cannot. Position, size and face can. This rule also explains the two odd rows in
 the table: a border thickness binds but is bounded, because a border eats the padding a value needs;
 and a frame being switched off is free, because no box moves.
+
+### A setting that changes how long a text is
+
+Added 2026-09-29 for [#322](https://github.com/xorob0/OpenDash/issues/322), which lets a driver
+draw the live delta to thousandths as well as hundredths. That is a setting whose value changes
+whether a text fits, since `−0.214` is a cell longer than `−0.21`, and by the line above it would be
+a build input. It is a runtime setting anyway, on the terms the border thickness is: bounded.
+
+The binding chooses between two literal patterns, `format(v, '0.000', true)` and
+`format(v, '0.00', true)`, rather than binding the pattern: `format` has only ever been verified with
+a literal one, and the generator writes the pattern as a literal. And every box that draws the delta is cut for the longer of the two, the sign, two
+whole digits and three places, whichever the driver picks. So the box is still a literal the build
+measured, and what the fit tests measure it by is `−12.345`, declared as the item's `widest`, rather
+than a hope about what the expression returns. The character budget stays build-time, as the table
+says: the setting picks a format and never a budget.
+
+The price is paid by the driver who never touches it. A two-place delta sits in a box with an empty
+cell at its end, which is invisible where the figure is left aligned and is not where the box is
+centred or where a caption has to fit beside it: the portrait companion now draws the delta's caption
+under the number at both precisions, and a centred delta in a narrow zone sits half a cell further
+left. [zones.md](../design/zones.md) §10 records both. The other answer, a second drawing of every
+surface per precision swapped by `Visible`, keeps those two arrangements and doubles five surfaces
+to buy back one cell; it is the right answer where two variants differ in shape, which two signed
+figures a cell apart do not.
+
+So the rule gains a clause rather than an exception: **a setting may change how long a text is
+when every length it can produce is budgeted for at build time and declared where the fit tests can
+see it.** A setting that could not meet that, a free choice of format for instance, is still a build
+input.
 
 ### Fonts: a curated set, and it is a build input
 

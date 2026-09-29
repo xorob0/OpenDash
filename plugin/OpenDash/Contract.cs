@@ -21,6 +21,7 @@ namespace OpenDashPlugin
         public const string BlueFlagDetail = "BlueFlagDetail";
         public const string DriverNameFormat = "DriverNameFormat";
         public const string DriverNameTeam = "DriverNameTeam";
+        public const string DeltaPrecision = "DeltaPrecision";
 
         /// <summary>
         /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #83.
@@ -172,6 +173,23 @@ namespace OpenDashPlugin
         /// in the expression and this side only carries the choice. #322.</summary>
         public static readonly string[] DeltaReferences = { "session", "alltime", "lastlap" };
         public const string DefaultDeltaReference = "session";
+
+        /// <summary>
+        /// How many places the live delta is drawn to: hundredths or thousandths. Mirrors DELTA_PRECISIONS
+        /// in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared, like the reference it qualifies: a delta read to the thousandth on the rim and to the
+        /// hundredth on the pit wall would be two answers to one question. The plugin only publishes the
+        /// choice; the dashboard chooses between two literal formats with it, in boxes already cut for
+        /// three places, so neither answer moves anything on the screen but the digits. Appended to the
+        /// shared group after the class best, since both halves of the contract assert that group by
+        /// index. #322.
+        /// </remarks>
+        public static readonly string[] DeltaPrecisions = { "hundredths", "thousandths" };
+
+        /// <summary>Two places, which is what the canvas draws and what a driver reads at a glance.</summary>
+        public const string DefaultDeltaPrecision = "hundredths";
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
@@ -947,6 +965,8 @@ namespace OpenDashPlugin
             // And the class best, appended for the same reason and published rather than chosen: every
             // package that draws a session best reads it when the rig counts in class.
             yield return ClassBestLap;
+            // And the delta's precision, appended for the same reason and chosen on the Data tab. #322.
+            yield return DeltaPrecision;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

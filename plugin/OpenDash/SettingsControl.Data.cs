@@ -27,6 +27,13 @@ namespace OpenDashPlugin
                 Settings.DeltaReference = value;
                 Save();
             });
+            // Under the reference it qualifies, and rig-wide for the same reason: a delta read to the
+            // thousandth on the rim and to the hundredth on the pit wall is two answers. #322.
+            var deltaPrecision = BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels, Settings.DeltaPrecision, value =>
+            {
+                Settings.DeltaPrecision = value;
+                Save();
+            });
             var session = BuildSegmented(Contract.SessionProgressModes, new[] { "Auto", "Laps", "Time" }, Settings.SessionProgress, value =>
             {
                 Settings.SessionProgress = value;
@@ -59,6 +66,7 @@ namespace OpenDashPlugin
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
+                Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision),
                 Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),
                 Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag),
                 Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName),
