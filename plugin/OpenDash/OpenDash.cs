@@ -16,6 +16,7 @@
 // whether the car is one the tables have measured (#503). Copied out of the frame when one of them
 // changes and nothing is computed from them; no dashboard reads them, so they are not properties.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Controls;
@@ -53,6 +54,14 @@ namespace OpenDashPlugin
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
+
+        /// <summary>
+        /// The dashboard folders in DashTemplates when Init had finished writing the rig's own, which are the
+        /// templates SimHub loaded: it reads that list once, at startup. A screen whose folder is not in it was
+        /// added in this session and waits for a restart (PackageExtractor.WaitsForRestart). Null when the
+        /// folder could not be read, which says nothing rather than guess.
+        /// </summary>
+        public ISet<string> TemplatesAtStart { get; private set; }
 
         /// <summary>
         /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
@@ -280,6 +289,17 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Dashboard installation failed", ex);
+            }
+            try
+            {
+                // After Init's own writes, which are taken as loaded: whether SimHub reads its templates before
+                // or after them is not something the plugin can see, and this errs on the side of saying nothing.
+                TemplatesAtStart = PackageExtractor.InstalledFolders(Installer.SimHubRoot);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not list the dashboards SimHub loaded at startup: " + ex.Message);
+                TemplatesAtStart = null;
             }
             try
             {

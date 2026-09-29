@@ -5,15 +5,15 @@
 // no issue: a panel that guessed would put a warning on a rig that is fine. It runs on Go and on "Check
 // again", never on the tick, because it reads SimHub's device settings and the disk.
 //
-// Two facts are read that nothing read before #503. Whether a dashboard folder was written after SimHub
-// started is its write time against the process's start: SimHub reads its template list once at startup
-// (docs/dev-loop.md), so a folder written later is one SimHub has not loaded. And whether a strip's profile is
+// Two facts are read that nothing read before #503. Whether a screen's dashboard waits for a restart is
+// whether its folder is in DashTemplates now and was not in the list the plugin took when Init finished
+// (OpenDash.TemplatesAtStart): SimHub reads its template list once at startup (docs/dev-loop.md), so a folder
+// this session created is one SimHub has not loaded, and one it loaded stays loaded however often Dash Studio,
+// Reinstall or Edit rewrites it. And whether a strip's profile is
 // selected on its device is SimHub's own CurrentProfile on that device's LED settings, which is public. Which
 // matrix device shows which content slot is not reachable, so that rule never fires yet.
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace OpenDashPlugin
@@ -27,17 +27,6 @@ namespace OpenDashPlugin
         /// without asking SimHub again: read them through ScreenFacts, StripFacts and MatrixFacts. Never
         /// null; a fact nobody could read is null inside it.</summary>
         private AttentionInput attentionFacts = new AttentionInput();
-
-        /// <summary>
-        /// How long after SimHub starts a folder may still be written and be read by SimHub itself.
-        /// </summary>
-        /// <remarks>
-        /// The plugin's Init writes the rig's folders while SimHub is starting, and whether SimHub reads its
-        /// templates before or after that is not something the panel can see. Anything written in the first
-        /// two minutes is therefore taken as loaded, which errs on the side of saying nothing; a screen added
-        /// from the panel is added long after.
-        /// </remarks>
-        private static readonly TimeSpan StartupGrace = TimeSpan.FromMinutes(2);
 
         /// <summary>Asks SimHub again and keeps the answer. Run on every Go, so it opens only the profiles of the rig's own strips; never on the tick.</summary>
         private void RefreshAttention()
@@ -55,7 +44,7 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>What was last read about one screen -- Installed, WrittenSinceStart, Unclaimed -- or null
+        /// <summary>What was last read about one screen -- Installed, AddedSinceStart, Unclaimed -- or null
         /// when the rig has no such screen. Read while building, never on the tick.</summary>
         private AttentionScreen ScreenFacts(string ns)
         {
@@ -85,17 +74,18 @@ namespace OpenDashPlugin
         private AttentionInput Attention()
         {
             var input = new AttentionInput();
-            var since = LoadedBefore();
+            var atStart = plugin.TemplatesAtStart;
 
             foreach (var screen in Settings.RigScreens())
             {
                 if (screen == null) continue;
+                var installed = FolderInstalled(screen);
                 input.Screens.Add(new AttentionScreen
                 {
                     Name = screen.Name,
                     Namespace = screen.Namespace,
-                    Installed = FolderInstalled(screen),
-                    WrittenSinceStart = WrittenAfter(screen, since),
+                    Installed = installed,
+                    AddedSinceStart = PackageExtractor.WaitsForRestart(atStart, screen.Folder, installed),
                     Unclaimed = screen.Unclaimed == true,
                 });
             }
@@ -163,49 +153,6 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Warn("Could not tell whether " + screen.Folder + " is installed: " + ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary>The moment after which a folder written is one SimHub has not read, or null when the
-        /// process's start cannot be read.</summary>
-        private static DateTime? LoadedBefore()
-        {
-            try
-            {
-                using (var process = Process.GetCurrentProcess())
-                {
-                    return process.StartTime.ToUniversalTime() + StartupGrace;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not read when SimHub started: " + ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary>Whether the screen's folder or its dashboard was written after that moment.</summary>
-        private bool? WrittenAfter(ScreenInstance screen, DateTime? since)
-        {
-            if (since == null || screen.Folder == null) return null;
-            try
-            {
-                var root = plugin.Installer.SimHubRoot;
-                if (!PackageExtractor.IsInstalled(root, screen.Folder)) return null;
-                var folder = PackageExtractor.InstalledFolder(root, screen.Folder);
-                var written = Directory.GetLastWriteTimeUtc(folder);
-                var file = PackageExtractor.InstalledDashboard(root, screen.Folder);
-                if (file != null && File.Exists(file))
-                {
-                    var fileTime = File.GetLastWriteTimeUtc(file);
-                    if (fileTime > written) written = fileTime;
-                }
-                return written > since.Value;
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not tell when " + screen.Folder + " was written: " + ex.Message);
                 return null;
             }
         }

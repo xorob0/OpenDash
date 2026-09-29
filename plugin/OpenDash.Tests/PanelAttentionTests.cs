@@ -9,7 +9,7 @@ namespace OpenDashPlugin.Tests
     {
         private static AttentionScreen Screen(string name, bool? installed = true, bool? written = false, bool unclaimed = false)
         {
-            return new AttentionScreen { Name = name, Namespace = name.Replace(" ", string.Empty), Installed = installed, WrittenSinceStart = written, Unclaimed = unclaimed };
+            return new AttentionScreen { Name = name, Namespace = name.Replace(" ", string.Empty), Installed = installed, AddedSinceStart = written, Unclaimed = unclaimed };
         }
 
         private static AttentionStrip Strip(string name, FlagBoxInstallState? profile, bool? selected, string device = "Arduino RGB LEDs")

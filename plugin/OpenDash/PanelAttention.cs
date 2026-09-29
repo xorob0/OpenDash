@@ -86,8 +86,9 @@ namespace OpenDashPlugin
         /// <summary>Whether its dashboard folder is in DashTemplates.</summary>
         public bool? Installed { get; set; }
 
-        /// <summary>Whether that folder was written after SimHub started, so SimHub has not read it.</summary>
-        public bool? WrittenSinceStart { get; set; }
+        /// <summary>Whether that folder was created in this session, after SimHub loaded its templates, so
+        /// SimHub has not read it (PackageExtractor.WaitsForRestart).</summary>
+        public bool? AddedSinceStart { get; set; }
 
         /// <summary>Whether it is a screen a migration made that nobody has kept or removed.</summary>
         public bool Unclaimed { get; set; }
@@ -179,7 +180,7 @@ namespace OpenDashPlugin
                     null, InstallAgain, PanelIssueAction.Reinstall));
             }
 
-            foreach (var screen in screens.Where(s => s.Installed != false && s.WrittenSinceStart == true))
+            foreach (var screen in screens.Where(s => s.Installed != false && s.AddedSinceStart == true))
             {
                 issues.Add(new PanelIssue(
                     ScreenRestart + screen.Namespace, PanelPage.Screens, screen.Namespace,
