@@ -278,8 +278,32 @@ namespace OpenDashPlugin
         /// where the content has at least this much room.</summary>
         public const double TwoColumnFrom = 760;
 
-        /// <summary>The gap between a page's sections, which the artboards draw at 28.</summary>
+        /// <summary>The gap between a page's sections on Home, whose &lt;main&gt; Main.dc.html lays out at 28, and
+        /// on Settings, whose sections carry the same 28 as their own padding (.sec).</summary>
         public const double SectionGap = 28;
+
+        /// <summary>
+        /// The gap between a page's sections, which each artboard's &lt;main&gt; draws at its own: 28 on Home and
+        /// Settings, 22 on Screens, LEDs, Matrix and Shortcuts, 26 on Updates, 18 on Rig. PageLayout reads it
+        /// for the page that is showing.
+        /// </summary>
+        public static double SectionGapFor(PanelPage page)
+        {
+            switch (page)
+            {
+                case PanelPage.Screens:
+                case PanelPage.Leds:
+                case PanelPage.Matrix:
+                case PanelPage.Shortcuts:
+                    return 22;
+                case PanelPage.Updates:
+                    return 26;
+                case PanelPage.Rig:
+                    return 18;
+                default:
+                    return SectionGap;
+            }
+        }
 
         /// <summary>
         /// The room a page has to lay out in, for a control of that width, less <paramref name="scrollBar"/>:
@@ -334,6 +358,10 @@ namespace OpenDashPlugin
         public const double SheetTitleSize = 22;
         public const double SheetFooterPaddingTop = 18;
         public const double SheetFooterPaddingBottom = 24;
+
+        /// <summary>The body's padding is "0 28px" on both Add sheets: nothing under the last step, whose own
+        /// 20 below is what separates it from the footer.</summary>
+        public const double SheetBodyPaddingBottom = 0;
 
         /// <summary>The dim laid over the main column while a sheet is open.</summary>
         public const double SheetDimOpacity = 0.6;

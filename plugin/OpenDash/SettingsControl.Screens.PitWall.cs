@@ -109,7 +109,7 @@ namespace OpenDashPlugin
                         select));
                 }
                 var group = PageSection(pageName + " page", slots.ToArray());
-                group.Margin = new Thickness(0, 18, 0, 0);
+                group.Margin = new Thickness(0, PanelPitWallPlan.GroupGap, 0, 0);
                 rows.Add(group);
             }
             rows.Add(Ui.Anchor(Ui.Row("Web view address", "http or https only. Leave empty for none.", BuildWebViewBox(screen)), PanelScreens.AnchorWebView));

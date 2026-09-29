@@ -211,7 +211,7 @@ namespace OpenDashPlugin
             if (!string.IsNullOrEmpty(caption))
             {
                 var cap = Caption(caption, 520);
-                cap.Margin = new Thickness(0, 3, 0, 0);
+                cap.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
                 left.Children.Add(cap);
             }
 
@@ -544,6 +544,10 @@ namespace OpenDashPlugin
                 ToolTip = PanelSoon.Tip(ticket),
                 Background = System.Windows.Media.Brushes.Transparent,
             };
+            // The fade is drawn once, here. The IsEnabled above passes down to every control in the row, and
+            // each would add its own disabled 40 per cent on top of this 45 (0.18 in all) where the artboards
+            // draw .soon>* at .45 and nothing more; InSoon, inherited, tells them to leave it to the wrapper.
+            SetInSoon(wrapper, true);
             ToolTipService.SetShowOnDisabled(wrapper, true);
             if (title != null) AutomationName(wrapper, title);
             return wrapper;
@@ -565,6 +569,28 @@ namespace OpenDashPlugin
             return Soon(row, item);
         }
 
+        /// <summary>
+        /// Set on a Soon's wrapper and inherited by everything in it: the wrapper draws the fade, so a control
+        /// inside does not draw its own disabled fade on top.
+        /// </summary>
+        public static readonly DependencyProperty InSoonProperty = DependencyProperty.RegisterAttached(
+            "InSoon", typeof(bool), typeof(Ui), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
+
+        public static bool GetInSoon(DependencyObject element) { return (bool)element.GetValue(InSoonProperty); }
+
+        public static void SetInSoon(DependencyObject element, bool value) { element.SetValue(InSoonProperty, value); }
+
+        /// <summary>The kit's disabled fade as a template trigger: 40 per cent when the control is disabled,
+        /// unless a Soon's wrapper above it has already faded it.</summary>
+        internal static MultiTrigger DisabledFade()
+        {
+            var fade = new MultiTrigger();
+            fade.Conditions.Add(new Condition(UIElement.IsEnabledProperty, false));
+            fade.Conditions.Add(new Condition(InSoonProperty, false));
+            fade.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
+            return fade;
+        }
+
         private static void AutomationName(FrameworkElement element, string name)
         {
             System.Windows.Automation.AutomationProperties.SetName(element, name);
@@ -579,22 +605,22 @@ namespace OpenDashPlugin
         public static Button Chip(string text, bool pressed, Action click, string swatchHex = null)
         {
             var ink = pressed ? Theme.OnAccent : Theme.TextSecondary;
-            var label = Text(text, 13, FontWeights.Medium, ink);
+            var label = Text(text, PanelKit.ChipTextSize, FontWeights.Medium, ink);
             UIElement content = label;
             if (swatchHex != null)
             {
-                var swatch = new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = Brush(swatchHex), VerticalAlignment = VerticalAlignment.Center };
+                var swatch = new Border { Width = PanelKit.ChipSwatch, Height = PanelKit.ChipSwatch, CornerRadius = new CornerRadius(2), Background = Brush(swatchHex), VerticalAlignment = VerticalAlignment.Center };
                 if (string.Equals(swatchHex, Theme.TextPrimary, StringComparison.OrdinalIgnoreCase) && pressed)
                 {
                     swatch.BorderBrush = Brush(Theme.OnAccent);
                     swatch.BorderThickness = new Thickness(1);
                 }
-                content = HStack(6, swatch, label);
+                content = HStack(PanelKit.ChipSwatchGap, swatch, label);
             }
             var button = new Button
             {
-                Height = 30,
-                Padding = new Thickness(11, 0, 11, 0),
+                Height = PanelKit.ChipHeight,
+                Padding = new Thickness(PanelKit.ChipPaddingX, 0, PanelKit.ChipPaddingX, 0),
                 Background = pressed ? Brush(Theme.TextPrimary) : System.Windows.Media.Brushes.Transparent,
                 BorderBrush = Brush(pressed ? Theme.TextPrimary : Theme.Border),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
@@ -619,60 +645,45 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The Screens page's binding chip: what a button is bound to, on the raised ground; a dashed "Not
-        /// bound" when nothing is; and, when the bindings could not be read (<paramref name="bound"/> null),
-        /// a plain outlined chip carrying <paramref name="text"/> and making no claim either way. A click
-        /// goes wherever the caller says, which is Shortcuts.
+        /// The binding chip: what a button is bound to, on the raised ground; a dashed "Not bound" when
+        /// nothing is; and, when the bindings could not be read (<paramref name="bound"/> null), a plain
+        /// outlined chip carrying <paramref name="text"/> and making no claim either way. A press goes
+        /// wherever the caller says, which is Shortcuts.
         /// </summary>
-        public static FrameworkElement BindingChip(string text, bool? bound, Action click = null)
+        /// <remarks>
+        /// A button, as Screens.dc.html draws it (&lt;button class="chip"&gt;): it takes focus, wears the kit's
+        /// focus ring, answers Space and Enter, and fires on a click that began on it, where the Border it was
+        /// could not be reached from the keyboard and navigated on a drag released over it. Screens' .chip is
+        /// 26 high and 9 in; Shortcuts' and Settings' .key, <paramref name="key"/>, is 28 and 10.
+        /// </remarks>
+        public static Button BindingChip(string text, bool? bound, Action click = null, bool key = false)
         {
             var known = bound.HasValue;
             var isBound = bound == true;
-            var label = Text(known && !isBound ? NotBound : text, 13, FontWeights.Medium, isBound ? Theme.TextPrimary : Theme.TextSecondary);
-            var chip = new Border
+            var dashed = known && !isBound;
+            var label = Text(dashed ? NotBound : text, PanelKit.ChipTextSize, FontWeights.Medium, isBound ? Theme.TextPrimary : Theme.TextSecondary);
+            var paddingX = key ? PanelKit.KeyPaddingX : PanelKit.BindingChipPaddingX;
+            var chip = new Button
             {
-                Height = 26,
-                Padding = new Thickness(9, 0, 9, 0),
-                CornerRadius = new CornerRadius(Theme.Radius),
+                Height = key ? PanelKit.KeyHeight : PanelKit.BindingChipHeight,
+                Padding = new Thickness(paddingX, 0, paddingX, 0),
                 Background = isBound ? Brush(Theme.SurfaceRaised) : System.Windows.Media.Brushes.Transparent,
-                BorderBrush = known ? null : Brush(Theme.Border),
+                BorderBrush = known ? System.Windows.Media.Brushes.Transparent : Brush(Theme.Border),
                 BorderThickness = new Thickness(known ? 0 : PanelMetrics.BorderWeight),
-                Child = label,
+                Content = label,
                 VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Template = ButtonTemplate(null, dashed),
+                FocusVisualStyle = FocusRing(),
+                Focusable = click != null,
+                Cursor = click != null ? Cursors.Hand : Cursors.Arrow,
             };
-            FrameworkElement result = chip;
-            if (known && !isBound)
-            {
-                var grid = new Grid { VerticalAlignment = VerticalAlignment.Center };
-                grid.Children.Add(chip);
-                grid.Children.Add(DashedRectangle());
-                result = grid;
-            }
-            if (click != null)
-            {
-                result.Cursor = Cursors.Hand;
-                result.MouseLeftButtonUp += (sender, args) => click();
-            }
-            return result;
+            AutomationName(chip, dashed ? NotBound : text);
+            if (click != null) chip.Click += (sender, args) => click();
+            return chip;
         }
 
-        public const string NotBound = "Not bound";
-
-        private static Rectangle DashedRectangle()
-        {
-            var dashes = new DoubleCollection { PanelMetrics.DashOn, PanelMetrics.DashOff };
-            dashes.Freeze();
-            return new Rectangle
-            {
-                Stroke = Brush(Theme.Border),
-                StrokeThickness = PanelMetrics.BorderWeight,
-                StrokeDashArray = dashes,
-                RadiusX = Theme.Radius,
-                RadiusY = Theme.Radius,
-                IsHitTestVisible = false,
-                Margin = new Thickness(PanelMetrics.BorderWeight / 2),
-            };
-        }
+        public const string NotBound = PanelBindings.NotBound;
 
         /// <summary>
         /// A path through SimHub's menus: each step a 22 px crumb on the raised ground, a chevron between
@@ -729,33 +740,34 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The artboards' .step: a numbered stage of a sheet, a rule over it, 20 above and below, the number
-        /// in a 22 px ring beside its title and the body under both.
+        /// in a 22 px ring beside its 16 px title and the body 12 under both. The <paramref name="first"/>
+        /// step of a sheet has neither the rule nor the 20 above, as both Add sheets draw their first.
         /// </summary>
-        public static Border Step(int number, string title, UIElement body)
+        public static Border Step(int number, string title, UIElement body, bool first = false)
         {
             var ring = new Border
             {
-                Width = 22,
-                Height = 22,
-                CornerRadius = new CornerRadius(11),
+                Width = PanelKit.StepNumberSize,
+                Height = PanelKit.StepNumberSize,
+                CornerRadius = new CornerRadius(PanelKit.StepNumberSize / 2),
                 BorderBrush = Brush(Theme.Border),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
-                Child = Text(number.ToString(System.Globalization.CultureInfo.InvariantCulture), 12, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data),
+                Child = Text(number.ToString(System.Globalization.CultureInfo.InvariantCulture), PanelKit.StepNumberTextSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data),
             };
             ((TextBlock)ring.Child).HorizontalAlignment = HorizontalAlignment.Center;
-            var head = HStack(10, ring, Text(title, PanelShell.RowTitleSize, FontWeights.SemiBold, Theme.TextPrimary));
+            var head = HStack(PanelKit.StepHeadGap, ring, Text(title, PanelKit.StepTitleSize, FontWeights.SemiBold, Theme.TextPrimary));
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);
             if (body != null)
             {
-                var host = new ContentControl { Content = body, Margin = new Thickness(0, 12, 0, 0) };
+                var host = new ContentControl { Content = body, Margin = new Thickness(0, PanelKit.StepBodyGap, 0, 0) };
                 stack.Children.Add(host);
             }
             return new Border
             {
                 BorderBrush = Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
-                Padding = new Thickness(0, 20, 0, 20),
+                BorderThickness = new Thickness(0, first ? 0 : PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(0, first ? 0 : PanelKit.StepPaddingY, 0, PanelKit.StepPaddingY),
                 Child = stack,
             };
         }
@@ -768,7 +780,7 @@ namespace OpenDashPlugin
         {
             var icon = NavIcon(iconPath, Theme.Caution);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            icon.Margin = new Thickness(0, 1, 16, 0);
+            icon.Margin = new Thickness(0, 1, PanelKit.FixIconGap, 0);
             var body = new StackPanel { Orientation = Orientation.Vertical };
             body.Children.Add(Text(title, PanelShell.RowTitleSize, FontWeights.SemiBold, Theme.TextPrimary));
             if (!string.IsNullOrEmpty(detail))
@@ -780,7 +792,7 @@ namespace OpenDashPlugin
             if (steps != null && steps.Count > 0)
             {
                 var list = Steps(steps);
-                list.Margin = new Thickness(0, 10, 0, 0);
+                list.Margin = new Thickness(0, PanelKit.FixStepsGap, 0, 0);
                 body.Children.Add(list);
             }
             var dock = new DockPanel { LastChildFill = true };
@@ -789,7 +801,7 @@ namespace OpenDashPlugin
             if (action != null)
             {
                 action.VerticalAlignment = VerticalAlignment.Top;
-                action.Margin = new Thickness(16, 0, 0, 0);
+                action.Margin = new Thickness(PanelKit.FixIconGap, 0, 0, 0);
                 DockPanel.SetDock(action, Dock.Right);
                 dock.Children.Add(action);
             }
@@ -800,7 +812,7 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                 Background = Tint(Theme.Caution, 0.06),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Padding = new Thickness(18, 14, 18, 14),
+                Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingY, PanelKit.FixPaddingX, PanelKit.FixPaddingY),
                 Child = dock,
             };
         }
@@ -838,31 +850,31 @@ namespace OpenDashPlugin
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             if (thumb != null)
             {
-                thumb.Margin = new Thickness(0, 0, 0, 8);
+                thumb.Margin = new Thickness(0, 0, 0, PanelKit.CardGap);
                 rows.Children.Add(thumb);
             }
-            var title = Text(name ?? string.Empty, 14, FontWeights.SemiBold, Theme.TextPrimary);
+            var title = Text(name ?? string.Empty, PanelKit.CardNameSize, FontWeights.SemiBold, Theme.TextPrimary);
             title.TextTrimming = TextTrimming.CharacterEllipsis;
             rows.Children.Add(title);
             if (!string.IsNullOrEmpty(meta))
             {
-                var facts = Text(meta, 12, FontWeights.Normal, Theme.TextSecondary);
+                var facts = Text(meta, PanelKit.CardMetaSize, FontWeights.Normal, Theme.TextSecondary);
                 facts.TextTrimming = TextTrimming.CharacterEllipsis;
-                facts.Margin = new Thickness(0, 2, 0, 0);
+                facts.Margin = new Thickness(0, PanelKit.CardMetaGap, 0, 0);
                 rows.Children.Add(facts);
             }
             if (!string.IsNullOrEmpty(state))
             {
                 var hex = stateHex ?? Theme.TextSecondary;
-                var dot = new Ellipse { Width = 6, Height = 6, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
-                var line = HStack(6, dot, Text(state, 11, FontWeights.Normal, hex));
-                line.Margin = new Thickness(0, 8, 0, 0);
+                var dot = new Ellipse { Width = PanelKit.CardStateDot, Height = PanelKit.CardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
+                var line = HStack(PanelKit.CardStateGap, dot, Text(state, PanelKit.CardStateSize, FontWeights.Normal, hex));
+                line.Margin = new Thickness(0, PanelKit.CardGap, 0, 0);
                 rows.Children.Add(line);
             }
 
-            var bar = new Rectangle { Height = 2, Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent, VerticalAlignment = VerticalAlignment.Bottom };
+            var bar = new Rectangle { Height = PanelKit.CardFootBar, Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent, VerticalAlignment = VerticalAlignment.Bottom };
             var body = new Grid();
-            body.Children.Add(new Border { Padding = new Thickness(10), Child = rows });
+            body.Children.Add(new Border { Padding = new Thickness(PanelKit.CardPadding), Child = rows });
             body.Children.Add(bar);
 
             var button = new Button
@@ -889,18 +901,18 @@ namespace OpenDashPlugin
             var plus = NavIcon(PanelIcons.Add, Theme.TextSecondary);
             plus.HorizontalAlignment = HorizontalAlignment.Center;
             stack.Children.Add(plus);
-            var label = Text(text, 13, FontWeights.Medium, Theme.TextSecondary);
-            label.Margin = new Thickness(0, 6, 0, 0);
+            var label = Text(text, PanelKit.AddTileTextSize, FontWeights.Medium, Theme.TextSecondary);
+            label.Margin = new Thickness(0, PanelKit.AddTileGap, 0, 0);
             label.HorizontalAlignment = HorizontalAlignment.Center;
             stack.Children.Add(label);
             var button = new Button
             {
-                MinHeight = 96,
+                MinHeight = PanelKit.AddTileMinHeight,
                 Background = System.Windows.Media.Brushes.Transparent,
                 BorderBrush = System.Windows.Media.Brushes.Transparent,
                 Cursor = Cursors.Hand,
                 Content = stack,
-                Padding = new Thickness(10),
+                Padding = new Thickness(PanelKit.CardPadding),
                 FocusVisualStyle = FocusRing(),
                 Template = DashedCardTemplate(),
             };
@@ -922,9 +934,11 @@ namespace OpenDashPlugin
         /// its ticket in the hover.</param>
         public static Button ChoiceTile(UIElement content, bool selected, Action pick, bool centred = false, SoonItem soon = null)
         {
-            var edge = selected ? 2.0 : PanelMetrics.BorderWeight;
+            var edge = selected ? PanelKit.ChoiceTileChosenEdge : PanelMetrics.BorderWeight;
             // The padding takes back what the thicker border adds, so a tile does not move when it is chosen.
-            var inset = centred ? new Thickness(8, 12, 8, 10) : new Thickness(12);
+            var inset = centred
+                ? new Thickness(PanelKit.SizeTilePaddingX, PanelKit.SizeTilePaddingTop, PanelKit.SizeTilePaddingX, PanelKit.SizeTilePaddingBottom)
+                : new Thickness(PanelKit.ChoiceTilePadding);
             var less = edge - PanelMetrics.BorderWeight;
             var button = new Button
             {
@@ -964,8 +978,8 @@ namespace OpenDashPlugin
         {
             var ring = new Ellipse
             {
-                Width = 14,
-                Height = 14,
+                Width = PanelKit.RadioRing,
+                Height = PanelKit.RadioRing,
                 Stroke = Brush(selected ? Theme.Accent : Theme.Border),
                 StrokeThickness = selected ? 4 : PanelMetrics.BorderWeight,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -977,25 +991,25 @@ namespace OpenDashPlugin
                 ring.StrokeDashArray = dashes;
             }
             var dock = new DockPanel { LastChildFill = true };
-            ring.Margin = new Thickness(0, 0, 12, 0);
+            ring.Margin = new Thickness(0, 0, PanelKit.RadioRowGap, 0);
             DockPanel.SetDock(ring, Dock.Left);
             dock.Children.Add(ring);
             if (!string.IsNullOrEmpty(meta))
             {
-                var caption = Text(meta, 12, FontWeights.Normal, Theme.TextSecondary);
-                caption.Margin = new Thickness(12, 0, 0, 0);
+                var caption = Text(meta, PanelKit.RadioMetaSize, FontWeights.Normal, Theme.TextSecondary);
+                caption.Margin = new Thickness(PanelKit.RadioRowGap, 0, 0, 0);
                 caption.VerticalAlignment = VerticalAlignment.Center;
                 DockPanel.SetDock(caption, Dock.Right);
                 dock.Children.Add(caption);
             }
-            var label = Text(name ?? string.Empty, 14, FontWeights.Normal, enabled ? Theme.TextPrimary : Theme.TextSecondary);
+            var label = Text(name ?? string.Empty, PanelKit.RadioNameSize, FontWeights.Normal, enabled ? Theme.TextPrimary : Theme.TextSecondary);
             label.TextTrimming = TextTrimming.CharacterEllipsis;
             label.VerticalAlignment = VerticalAlignment.Center;
             dock.Children.Add(label);
 
             var bar = new Rectangle { Width = 2, Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Left };
             var body = new Grid();
-            body.Children.Add(new Border { Padding = new Thickness(12, 10, 12, 10), Child = dock });
+            body.Children.Add(new Border { Padding = new Thickness(PanelKit.RadioRowPaddingX, PanelKit.RadioRowPaddingY, PanelKit.RadioRowPaddingX, PanelKit.RadioRowPaddingY), Child = dock });
             body.Children.Add(bar);
             var button = new Button
             {
@@ -1191,9 +1205,7 @@ namespace OpenDashPlugin
             checkedTrigger.Setters.Add(new Setter(Shape.FillProperty, Brush(Theme.OnAccent), "knob"));
             checkedTrigger.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(PanelShell.SwitchWidth - PanelShell.SwitchKnob - PanelShell.SwitchInset, 0, 0, 0), "knob"));
             template.Triggers.Add(checkedTrigger);
-            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
-            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
-            template.Triggers.Add(disabled);
+            template.Triggers.Add(DisabledFade());
             return template;
         }
 
@@ -1205,10 +1217,10 @@ namespace OpenDashPlugin
         public static FrameworkElement Slider(int value, Action<int> changed, Action<int> preview = null, bool showValue = true)
         {
             var current = Math.Max(0, Math.Min(100, value));
-            var track = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Brush(Theme.Border), VerticalAlignment = VerticalAlignment.Center };
-            var fill = new Border { Height = 4, CornerRadius = new CornerRadius(2), Background = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
-            var thumb = new Ellipse { Width = 14, Height = 14, Fill = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
-            var surface = new Grid { Height = 22, Background = System.Windows.Media.Brushes.Transparent, Cursor = Cursors.Hand, Focusable = true, FocusVisualStyle = FocusRing(), MinWidth = 120 };
+            var track = new Border { Height = PanelKit.SliderTrack, CornerRadius = new CornerRadius(PanelKit.SliderTrack / 2), Background = Brush(Theme.Border), VerticalAlignment = VerticalAlignment.Center };
+            var fill = new Border { Height = PanelKit.SliderTrack, CornerRadius = new CornerRadius(PanelKit.SliderTrack / 2), Background = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+            var thumb = new Ellipse { Width = PanelKit.SliderThumb, Height = PanelKit.SliderThumb, Fill = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+            var surface = new Grid { Height = PanelKit.SliderHeight, Background = System.Windows.Media.Brushes.Transparent, Cursor = Cursors.Hand, Focusable = true, FocusVisualStyle = FocusRing(), MinWidth = PanelKit.SliderMinWidth };
             surface.Children.Add(track);
             surface.Children.Add(fill);
             surface.Children.Add(thumb);
@@ -1217,7 +1229,7 @@ namespace OpenDashPlugin
             TextBlock numeral = null;
             if (showValue)
             {
-                numeral = Text(current + "%", 15, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
+                numeral = Text(current + "%", PanelKit.SliderValueSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
                 Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular);
                 numeral.TextAlignment = TextAlignment.Right;
             }
@@ -1277,8 +1289,8 @@ namespace OpenDashPlugin
 
             if (numeral == null) return surface;
             var dock = new DockPanel { LastChildFill = true, VerticalAlignment = VerticalAlignment.Center };
-            numeral.Margin = new Thickness(12, 0, 0, 0);
-            numeral.MinWidth = 40;
+            numeral.Margin = new Thickness(PanelKit.SliderValueGap, 0, 0, 0);
+            numeral.MinWidth = PanelKit.SliderValueMinWidth;
             DockPanel.SetDock(numeral, Dock.Right);
             dock.Children.Add(numeral);
             dock.Children.Add(surface);
@@ -1441,12 +1453,28 @@ namespace OpenDashPlugin
                         args.Handled = true;
                         break;
                     case Key.Escape:
+                        // Only when there is something to put away. An Escape on an empty box with no list
+                        // open is left unhandled, so it reaches whatever holds the box: the rail's flyout,
+                        // which closes on it, or the sheet. Marking every Escape handled trapped a keyboard
+                        // user in the rail's flyout with an empty field.
+                        if ((host == null || !host.IsOpen) && string.IsNullOrEmpty(box.Text)) break;
                         if (host != null) host.IsOpen = false;
                         box.Text = string.Empty;
                         args.Handled = true;
                         break;
                 }
             };
+            if (host != null)
+            {
+                // The list goes when focus leaves the box for anything but the list itself: Tab away, and
+                // the list is not left open over the page.
+                box.LostKeyboardFocus += (sender, args) =>
+                {
+                    var to = args.NewFocus as Visual;
+                    if (to != null && frame.IsAncestorOf(to)) return;
+                    host.IsOpen = false;
+                };
+            }
             if (!popup) frame.Visibility = Visibility.Collapsed;
             return host ?? (FrameworkElement)frame;
         }

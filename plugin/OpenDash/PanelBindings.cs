@@ -27,6 +27,9 @@ namespace OpenDashPlugin
 
         public const string AnchorPrefix = "binding.";
 
+        /// <summary>What a chip says for an action nothing is bound to, on every page that draws one.</summary>
+        public const string NotBound = "Not bound";
+
         /// <summary>
         /// A SimHub trigger as a chip says it: the input's own name, without the plugin that reads it and
         /// with its underscores as spaces. "JoystickPlugin.FANATEC_Wheel_Button_3" is "FANATEC Wheel Button 3",

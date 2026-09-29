@@ -593,11 +593,13 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A page as the artboards lay one out: the title, with the page's own actions to its right, and
-        /// the sections under it 28 apart.
+        /// the sections under it as far apart as that page's artboard puts them
+        /// (<see cref="PanelShell.SectionGapFor"/>).
         /// </summary>
         private FrameworkElement PageLayout(string title, FrameworkElement actions, params UIElement[] sections)
         {
             var head = actions == null ? (FrameworkElement)Ui.PageTitle(title) : Ui.Row(Ui.PageTitle(title), actions);
+            var gap = PanelShell.SectionGapFor(route.Page);
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);
             foreach (var section in sections)
@@ -607,7 +609,7 @@ namespace OpenDashPlugin
                 if (element != null)
                 {
                     var margin = element.Margin;
-                    element.Margin = new Thickness(margin.Left, margin.Top + PanelShell.SectionGap, margin.Right, margin.Bottom);
+                    element.Margin = new Thickness(margin.Left, margin.Top + gap, margin.Right, margin.Bottom);
                 }
                 stack.Children.Add(section);
             }

@@ -23,13 +23,18 @@ namespace OpenDashPlugin
 
         public sealed class Option
         {
-            public Option(string value, string label, bool disabled = false, string tooltip = null)
+            public Option(string value, string label, bool disabled = false, string tooltip = null, double minWidth = 0)
             {
                 Value = value;
                 Label = label;
                 Disabled = disabled;
                 Tooltip = tooltip;
+                MinWidth = minWidth;
             }
+
+            /// <summary>What the option holds even when its word is short, its word centred in it: AddLeds'
+            /// ends buttons (None, 1 to 4) are 40 wide where the bare word would make them about 31.</summary>
+            public double MinWidth { get; }
 
             public string Value { get; }
             public string Label { get; }
@@ -84,8 +89,7 @@ namespace OpenDashPlugin
             KeyDown += OnKey;
             GotKeyboardFocus += (sender, args) => Paint();
             LostKeyboardFocus += (sender, args) => Paint();
-            // A locked bar fades the way a disabled button does, to the kit's 40 per cent.
-            IsEnabledChanged += (sender, args) => Opacity = IsEnabled ? 1 : PanelMetrics.DisabledOpacity;
+            // A locked bar fades the way a disabled button does, to the kit's 40 per cent: see OnPropertyChanged.
 
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
             Child = panel;
@@ -107,6 +111,20 @@ namespace OpenDashPlugin
         public string Selected => selected;
 
         /// <summary>
+        /// A locked bar fades the way a disabled button does, to the kit's 40 per cent, unless it sits in a
+        /// Soon, whose wrapper has already faded it (Ui.InSoon). Both properties arrive when the bar joins a
+        /// tree, in either order, so the fade is worked out again whenever either moves.
+        /// </summary>
+        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+            if (e.Property == IsEnabledProperty || e.Property == Ui.InSoonProperty)
+            {
+                Opacity = IsEnabled || Ui.GetInSoon(this) ? 1 : PanelMetrics.DisabledOpacity;
+            }
+        }
+
+        /// <summary>
         /// One option: the ground, the word, the line along its foot, and the focus ring over all three.
         /// </summary>
         private Cell BuildCell(Option option, bool first, bool last)
@@ -114,6 +132,7 @@ namespace OpenDashPlugin
             var corners = new CornerRadius(first ? 1 : 0, last ? 1 : 0, last ? 1 : 0, first ? 1 : 0);
             var text = Ui.Text(option.Label, OptionTextSize, FontWeights.Medium, Theme.TextSecondary);
             text.Margin = new Thickness(OptionPadding, 0, OptionPadding, 0);
+            if (option.MinWidth > 0) text.HorizontalAlignment = HorizontalAlignment.Center;
             var line = new Rectangle { Height = Underline, VerticalAlignment = VerticalAlignment.Bottom, Fill = System.Windows.Media.Brushes.Transparent, IsHitTestVisible = false };
             var ring = new Border
             {
@@ -134,6 +153,7 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(0, 0, last ? 0 : 1, 0),
                 CornerRadius = corners,
                 Cursor = option.Disabled ? Cursors.No : Cursors.Hand,
+                MinWidth = option.MinWidth,
                 Child = content,
                 ToolTip = option.Tooltip,
             };

@@ -24,11 +24,12 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The focus ring and the disabled fade every control of the kit is drawn with. (The old screen
-        /// card's sizes and colours were pinned here too; the card went with #503 and its pins with it.)
+        /// The dash a dashed frame is drawn with and the weight of every outline. (The old screen card's sizes
+        /// and colours were pinned here too; the card went with #503, and the kit's cards, chips and steps are
+        /// pinned in PanelKitTests.)
         /// </summary>
         [Fact]
-        public void The_focus_ring_and_the_disabled_fade_are_the_canvas_ones()
+        public void A_dashed_frame_has_a_dash_and_every_outline_is_one_pixel()
         {
             Assert.True(PanelMetrics.DashOn > 0 && PanelMetrics.DashOff > 0,
                 "a dashed frame -- the add tile, Not bound -- is the only thing telling it from a card at rest");

@@ -59,6 +59,10 @@ namespace OpenDashPlugin
 
         public const double AddressWidth = SelectWidth;
 
+        /// <summary>What sits above each page's group of zone rows: the 18 the artboard's section column puts
+        /// between its blocks.</summary>
+        public const double GroupGap = 18;
+
         /// <summary>What an empty address box shows. A watermark and never a value: Contract.NormaliseUrl
         /// keeps only an absolute address, so a bare scheme stored in the setting is blanked on the first
         /// commit and the box would empty itself in front of the user.</summary>

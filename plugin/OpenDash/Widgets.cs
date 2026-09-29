@@ -679,9 +679,7 @@ namespace OpenDashPlugin
             }
             // The whole button rather than its chrome, so that what is drawn beside the chrome fades with
             // it: the dashed frame is a sibling of the ground it outlines.
-            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
-            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
-            template.Triggers.Add(disabled);
+            template.Triggers.Add(DisabledFade());
             return template;
         }
 

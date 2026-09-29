@@ -26,13 +26,13 @@ namespace OpenDashPlugin
             {
                 var group = BuildScreenShortcuts(screen);
                 if (group == null) continue;
-                group.Margin = new Thickness(0, screens.Children.Count == 0 ? 0 : PanelShell.SectionGap, 0, 0);
+                group.Margin = new Thickness(0, screens.Children.Count == 0 ? 0 : PanelShell.SectionGapFor(PanelPage.Shortcuts), 0, 0);
                 screens.Children.Add(group);
             }
             var sections = new List<UIElement> { intro };
             if (screens.Children.Count > 0) sections.Add(Ui.Anchor(screens, PanelShortcuts.AnchorScreens));
             sections.Add(Ui.Anchor(BuildRigShortcuts(), PanelShortcuts.AnchorRig));
-            foreach (var item in PanelSoon.For(PanelPage.Shortcuts)) sections.Add(Ui.SoonRow(item, Ui.BindingChip(Ui.NotBound, false)));
+            foreach (var item in PanelSoon.For(PanelPage.Shortcuts)) sections.Add(Ui.SoonRow(item, Ui.BindingChip(Ui.NotBound, false, key: true)));
             return PageLayout(PanelShortcuts.Title, null, sections.ToArray());
         }
 

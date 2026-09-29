@@ -113,7 +113,7 @@ namespace OpenDashPlugin
                     }));
             }
             cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
-            return Ui.CardGrid(150, 10, 6, cards.ToArray());
+            return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, 6, cards.ToArray());
         }
 
         private bool Installed(ScreenInstance screen)

@@ -66,7 +66,7 @@ namespace OpenDashPlugin
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new Border { Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, 24), Child = body },
+                Content = new Border { Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, PanelShell.SheetBodyPaddingBottom), Child = body },
             };
 
             var dock = new DockPanel { LastChildFill = true };

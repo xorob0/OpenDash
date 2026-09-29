@@ -81,10 +81,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(216, PanelShell.SidebarWidthFor(PanelLayout.Full));
             Assert.Equal(56, PanelShell.SidebarWidthFor(PanelLayout.Rail));
             Assert.Equal(56, PanelShell.SidebarWidthFor(PanelLayout.Compact));
-            // The pages' padding: 36 above, 32 below, 28 between sections.
+            // The pages' padding: 36 above, 32 below.
             Assert.Equal(36, PanelShell.MainPaddingTop);
             Assert.Equal(32, PanelShell.MainPaddingBottom);
+        }
+
+        /// <summary>Each artboard's &lt;main&gt; puts its own gap between sections, and PageLayout reads it.</summary>
+        [Fact]
+        public void Each_page_spaces_its_sections_as_its_artboard_does()
+        {
+            // Main.dc.html's <main> gap 28, and Settings' .sec{padding-top:28px}.
             Assert.Equal(28, PanelShell.SectionGap);
+            Assert.Equal(28, PanelShell.SectionGapFor(PanelPage.Home));
+            Assert.Equal(28, PanelShell.SectionGapFor(PanelPage.Settings));
+            // Screens, Leds, Matrix and Shortcuts: gap 22.
+            Assert.Equal(22, PanelShell.SectionGapFor(PanelPage.Screens));
+            Assert.Equal(22, PanelShell.SectionGapFor(PanelPage.Leds));
+            Assert.Equal(22, PanelShell.SectionGapFor(PanelPage.Matrix));
+            Assert.Equal(22, PanelShell.SectionGapFor(PanelPage.Shortcuts));
+            // Updates 26, Rig 18.
+            Assert.Equal(26, PanelShell.SectionGapFor(PanelPage.Updates));
+            Assert.Equal(18, PanelShell.SectionGapFor(PanelPage.Rig));
         }
 
         [Fact]
@@ -272,6 +289,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(22, PanelShell.SheetTitleSize);
             Assert.Equal(18, PanelShell.SheetFooterPaddingTop);
             Assert.Equal(24, PanelShell.SheetFooterPaddingBottom);
+            // Both Add sheets' body: padding 0 28px, nothing under the last step.
+            Assert.Equal(0, PanelShell.SheetBodyPaddingBottom);
             Assert.Equal(0.6, PanelShell.SheetDimOpacity);
         }
     }
