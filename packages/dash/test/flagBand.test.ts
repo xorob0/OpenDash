@@ -22,7 +22,7 @@ import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
 import { ALERT_CATALOGUE, bandNames, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
-import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
+import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
 import { layout480round, layout800round, type Layout } from '../src/layouts/index.ts';
 import { ds } from '../src/tokens.ts';
@@ -376,7 +376,9 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
       // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
       // corner blocks hold every one of the nineteen names. Where a condition has two, which is the
-      // full course yellow's FULL COURSE YELLOW and FCY, the block writes the longest that fits it.
+      // full course yellow's FULL COURSE YELLOW and FCY, it writes the longest that fits the narrower
+      // block, and writes it at both ends: one settled flag carrying two names, or a name at one end
+      // and none at the other, would read as two conditions rather than one.
       for (const condition of ALERT_CATALOGUE) {
         const settled = cornerLayers(face).get(condition.id);
         if (!settled) continue;
@@ -386,8 +388,9 @@ describe('the flag settles into the blocks at the ends of the band', () => {
           const drawn = measureText('BarlowBold', name.widest ?? name.text, name.fontSize);
           expect({ item: name.name, drawn, box: name.rect.width, fits: drawn < name.rect.width }).toMatchObject({ fits: true });
         }
-        const fitting = (block: Rect): string | undefined => bandNames(condition.band).find((text) => measureText('BarlowBold', text, ds.size.label) < block.width - 2 * BLACK_FLAG_BORDER);
-        const expected = [fitting(blocks.left), fitting(blocks.right)].filter((text) => text !== undefined);
+        const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
+        const text = bandNames(condition.band).find((name) => measureText('BarlowBold', name, ds.size.label) < room);
+        const expected = text === undefined ? [] : [text, text];
         expect({ face: face.folder, id: condition.id, names: names.map((n) => n.text) }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
       // And the blue block writes its own name and never the car behind: "BLUE FLAG · P4 GT3" is
