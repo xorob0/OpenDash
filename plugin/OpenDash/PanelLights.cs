@@ -417,9 +417,5 @@ namespace OpenDashPlugin
         {
             return "SimHub matrix " + matrix;
         }
-
-        /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
-        /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
-        public const string RigWideTitle = "All lights";
     }
 }

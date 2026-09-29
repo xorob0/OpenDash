@@ -14,10 +14,15 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelCopyTests
     {
+        /// <summary>The dashed tile beside the screens says what it adds, and is drawn from the constant
+        /// pinned here: PanelCopy.AddScreen went with the old add card, and the tile draws
+        /// PanelAddScreen.SectionTitle, which is also its sheet's title.</summary>
         [Fact]
         public void The_add_card_says_what_it_adds()
         {
-            Assert.Equal("Add a screen", PanelCopy.AddScreen);
+            Assert.Equal("Add a screen", PanelAddScreen.SectionTitle);
+            var screens = File.ReadAllText(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Screens.cs"));
+            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle,", screens);
         }
 
         /// <summary>

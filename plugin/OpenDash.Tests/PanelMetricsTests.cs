@@ -21,53 +21,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.Radius, PanelMetrics.Radius);
             Assert.Equal(Theme.IconSize, PanelMetrics.IconSize);
             Assert.Equal(Theme.SurfaceZone, PanelMetrics.RowRule);
-            Assert.Equal(Theme.Rule, PanelMetrics.SectionRule);
-        }
-
-        /// <summary>The card, as design/canvas/PluginComponents.dc.html draws it: min-width 152, height 58,
-        /// padding 0 12, icon 10 from the text and the name 5 off the size.</summary>
-        [Fact]
-        public void The_screen_card_is_the_size_the_canvas_draws()
-        {
-            Assert.Equal(152, PanelMetrics.CardMinWidth);
-            Assert.Equal(58, PanelMetrics.CardHeight);
-            Assert.Equal(12, PanelMetrics.CardPaddingX);
-            Assert.Equal(10, PanelMetrics.CardIconGap);
-            Assert.Equal(5, PanelMetrics.CardLineGap);
-            Assert.Equal(2, PanelMetrics.Radius);
-        }
-
-        [Fact]
-        public void The_add_card_is_narrower_than_a_screen_card_and_as_tall()
-        {
-            Assert.Equal(132, PanelMetrics.AddCardMinWidth);
-            Assert.Equal(8, PanelMetrics.AddCardGap);
-            Assert.True(PanelMetrics.AddCardMinWidth < PanelMetrics.CardMinWidth,
-                "the add card is the narrow one: " + PanelMetrics.AddCardMinWidth + " against " + PanelMetrics.CardMinWidth);
-            Assert.True(PanelMetrics.DashOn > 0 && PanelMetrics.DashOff > 0,
-                "the add card's frame is dashed, and that is the only thing telling it from a card at rest");
         }
 
         /// <summary>
-        /// The selection cue, which is now quiet enough to be worth pinning: a uniform one pixel of accent
-        /// on ui.field, against a card at rest that is transparent inside ui.border. The accent icon and
-        /// the accent outline carry it alone -- the underline the card used to wear is gone.
+        /// The focus ring and the disabled fade every control of the kit is drawn with. (The old screen
+        /// card's sizes and colours were pinned here too; the card went with #503 and its pins with it.)
         /// </summary>
         [Fact]
-        public void A_card_says_it_is_selected_with_the_accent_and_nothing_else()
+        public void The_focus_ring_and_the_disabled_fade_are_the_canvas_ones()
         {
-            var selected = PanelMetrics.Card(true);
-            Assert.Equal(Theme.Field, selected.Fill);
-            Assert.Equal(Theme.Accent, selected.Border);
-            Assert.Equal(Theme.Accent, selected.Icon);
-            Assert.Equal(Theme.TextSecondary, selected.SizeLabel);
-
-            var rest = PanelMetrics.Card(false);
-            Assert.Null(rest.Fill);
-            Assert.Equal(Theme.Border, rest.Border);
-            Assert.Equal(Theme.TextLabel, rest.Icon);
-            Assert.Equal(Theme.TextLabel, rest.SizeLabel);
-
+            Assert.True(PanelMetrics.DashOn > 0 && PanelMetrics.DashOff > 0,
+                "a dashed frame -- the add tile, Not bound -- is the only thing telling it from a card at rest");
             Assert.Equal(1, PanelMetrics.BorderWeight);
         }
 
@@ -196,13 +160,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, Theme.FocusRing);
             Assert.Equal(2, Theme.FocusRingOffset);
             Assert.Equal(0.4, PanelMetrics.DisabledOpacity);
-        }
-
-        [Fact]
-        public void The_section_is_the_canvas_twenty_eight_over_twenty()
-        {
-            Assert.Equal(28, PanelMetrics.SectionPadding);
-            Assert.Equal(20, PanelMetrics.SectionGap);
         }
 
         [Fact]

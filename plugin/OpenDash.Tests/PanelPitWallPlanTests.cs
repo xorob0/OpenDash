@@ -257,7 +257,6 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_zone_list_is_the_size_the_canvas_draws()
         {
-            Assert.Equal(14, PanelPitWallPlan.RowGap);
             Assert.Equal(260, PanelPitWallPlan.SelectWidth);
             Assert.Equal(260, PanelPitWallPlan.AddressWidth);
             Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);

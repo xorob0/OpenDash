@@ -240,31 +240,6 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>A section: 1 px rule on top, 28 px of padding above it, a tracked label and its rows
-        /// 20 px apart, which is the canvas's .sec. Every tab is built out of these, so the numbers reflow
-        /// the panel.</summary>
-        public static Border Section(string label, params UIElement[] rows)
-        {
-            return Section(label, PanelMetrics.SectionGap, rows);
-        }
-
-        /// <summary>The same section with a gap of its own, for a tab whose rows are shorter than the rest
-        /// and would otherwise drift apart.</summary>
-        public static Border Section(string label, double gap, params UIElement[] rows)
-        {
-            var children = new List<UIElement> { Label(label) };
-            children.AddRange(rows);
-            return new Border
-            {
-                BorderBrush = Brush(PanelMetrics.SectionRule),
-                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
-                // Padding above the rule only: the gap between two sections is the next one's padding, so
-                // padding underneath as well would count it twice and put 56 px where the canvas draws 28.
-                Padding = new Thickness(0, PanelMetrics.SectionPadding, 0, 0),
-                Child = VStack(gap, children.ToArray()),
-            };
-        }
-
         /// <summary>
         /// A row of the Install tab: what the thing is on the left, the state it is in and the action on
         /// the right, over a one pixel rule.

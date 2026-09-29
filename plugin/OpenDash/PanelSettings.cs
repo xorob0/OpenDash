@@ -9,7 +9,6 @@ namespace OpenDashPlugin
     {
         public const string Title = "Settings";
 
-        public const string RaceDataTitle = "Race data";
         public const string FlagsTitle = "Flags";
         public const string AlertsTitle = "Alerts";
         public const string LightingTitle = "Lighting";
@@ -36,7 +35,7 @@ namespace OpenDashPlugin
 
         public static readonly PanelSearch.Entry[] Search =
         {
-            new PanelSearch.Entry(RaceDataTitle, PanelPage.Settings, AnchorRaceData),
+            new PanelSearch.Entry(PanelDataTab.SectionTitle, PanelPage.Settings, AnchorRaceData),
             new PanelSearch.Entry(PanelDataTab.PositionTitle, PanelPage.Settings, AnchorRaceData, "overall", "class"),
             new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorRaceData, "session best", "all-time best", "last lap"),
             new PanelSearch.Entry(PanelDataTab.DeltaPrecisionTitle, PanelPage.Settings, AnchorRaceData, "hundredths", "thousandths", "decimals"),

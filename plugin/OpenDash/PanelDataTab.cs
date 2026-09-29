@@ -1,8 +1,8 @@
-// PanelDataTab.cs: the words the Data tab puts beside each of its controls, and the gap it sets them
-// at.
+// PanelDataTab.cs: the words the race data rows put beside each of their controls, which were the Data
+// tab's and are the Settings page's Race data section since #503.
 //
-// Apart from SettingsControl.Data.cs for the reason PanelLights.cs is apart from
-// SettingsControl.Lights.cs: the tab is WPF and the net8.0 test project cannot compile a line of it, so
+// Apart from SettingsControl.Settings.cs for the reason PanelLights.cs is apart from
+// SettingsControl.Lights.cs: the page is WPF and the net8.0 test project cannot compile a line of it, so
 // copy a test can hold has to live where it can reach. Some rows here say something the canvas does not,
 // on purpose -- the Position row's sentences, the driver and team name rows, the delta reference's third
 // segment, the whole of the delta precision row and the clock row -- and a constant with a test on it is
@@ -12,21 +12,12 @@ namespace OpenDashPlugin
 {
     public static class PanelDataTab
     {
-        public const string SectionTitle = "These apply to every screen";
+        /// <summary>The heading the Settings page draws over these rows, which were the Data tab's: "Race
+        /// data", as the Settings artboard names the section (#503). The tab's own 22 px row gap went with
+        /// it; a row of the redesign carries its own padding.</summary>
+        public const string SectionTitle = "Race data";
 
         public const string SectionCaption = null;
-
-        /// <summary>Between one setting and the next on this tab, which is wider than the twenty every
-        /// other section on the panel is given.</summary>
-        /// <remarks>
-        /// The tab is short, so the column under the label reads as one block rather than as a handful
-        /// of separate settings unless they are pushed apart; the design audit takes the 22 off the
-        /// canvas. It is this tab's own number rather than PanelMetrics.SectionGap
-        /// because Install and Lights are long and lengthening them further buys nothing. 22 is off
-        /// design/tokens.json's space scale, which steps 16 to 24, so it is recorded here rather than
-        /// rounded to a token that would say something else.
-        /// </remarks>
-        public const double RowGap = 22;
 
         /// <summary>The rev bar's words, which now belong to a screen's own pane rather than to this
         /// tab. They stay here because this file is where the panel's copy a test can hold lives, and

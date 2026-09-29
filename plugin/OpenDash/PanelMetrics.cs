@@ -72,17 +72,6 @@ namespace OpenDashPlugin
         public const double Radius = Theme.Radius;
         public const double IconSize = Theme.IconSize;
 
-        // The screen card
-        public const double CardMinWidth = 152;
-        public const double CardHeight = 58;
-        public const double CardPaddingX = 12;
-        public const double CardIconGap = 10;
-        public const double CardLineGap = 5;
-
-        // The add card
-        public const double AddCardMinWidth = 132;
-        public const double AddCardGap = 8;
-
         /// <summary>The dash pattern, in multiples of the stroke. The canvas says `1px dashed` and leaves
         /// the pattern to the browser; this is what the browser draws it as.</summary>
         public const double DashOn = 3;
@@ -126,47 +115,6 @@ namespace OpenDashPlugin
         public const double ProgressWidth = 240;
         public const double ProgressBarHeight = 4;
         public const double ProgressGap = 8;
-
-        // The section
-        public const double SectionPadding = 28;
-        public const double SectionGap = 20;
-        public const string SectionRule = Theme.Rule;
-
-        /// <summary>The four colours a screen card carries. Selected decides the ink as well as the
-        /// brushes, which is why the card is built where the flag is in hand.</summary>
-        public sealed class CardColours
-        {
-            public CardColours(string fill, string border, string icon, string sizeLabel)
-            {
-                Fill = fill;
-                Border = border;
-                Icon = icon;
-                SizeLabel = sizeLabel;
-            }
-
-            /// <summary>The ground, or null for the rest card, which is transparent.</summary>
-            public string Fill { get; private set; }
-
-            public string Border { get; private set; }
-            public string Icon { get; private set; }
-            public string SizeLabel { get; private set; }
-        }
-
-        /// <summary>
-        /// A card's colours in the state it is in.
-        /// </summary>
-        /// <remarks>
-        /// The selected card used to be a raised fill under an accent underline. It is now the quieter
-        /// pair the canvas draws -- ui.field under a uniform one pixel of accent -- so the accent icon and
-        /// the accent outline are the whole of the cue, and the rest card is transparent with its icon and
-        /// its size in text.label.
-        /// </remarks>
-        public static CardColours Card(bool selected)
-        {
-            return selected
-                ? new CardColours(Theme.Field, Theme.Accent, Theme.Accent, Theme.TextSecondary)
-                : new CardColours(null, Theme.Border, Theme.TextLabel, Theme.TextLabel);
-        }
 
         /// <summary>The percentage a fraction reads as, clamped: a run that reports more than it has done
         /// must not put a number over a hundred on the panel.</summary>

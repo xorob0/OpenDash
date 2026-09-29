@@ -1,4 +1,4 @@
-// PanelDataTabTests.cs: the Data tab's copy and its one spacing of its own.
+// PanelDataTabTests.cs: the race data rows' copy, which was the Data tab's and is the Settings page's.
 //
 // The Position row carries two sentences the canvas does not, which is a decision and not an oversight; a
 // later reader comparing the tab against the canvas would otherwise delete them as a difference. Pinning
@@ -16,16 +16,13 @@ namespace OpenDashPlugin.Tests
         public void The_section_says_what_the_canvas_says()
         {
             // The heading is the whole of what the section has to say, so it carries no caption
-            // restating it; docs/design/voice.md is the rule.
-            Assert.Equal("These apply to every screen", PanelDataTab.SectionTitle);
+            // restating it; docs/design/voice.md is the rule. The Settings page draws this constant and
+            // search finds the section by it.
+            Assert.Equal("Race data", PanelDataTab.SectionTitle);
             Assert.Null(PanelDataTab.SectionCaption);
-        }
-
-        [Fact]
-        public void The_rows_sit_wider_apart_than_a_section_elsewhere_on_the_panel()
-        {
-            Assert.Equal(22, PanelDataTab.RowGap);
-            Assert.NotEqual(PanelMetrics.SectionGap, PanelDataTab.RowGap);
+            var page = File.ReadAllText(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
+            Assert.Contains("PageSection(PanelDataTab.SectionTitle,", page);
+            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelDataTab.SectionTitle && entry.Route.Anchor == PanelSettings.AnchorRaceData);
         }
 
         /// <remarks>
@@ -44,7 +41,7 @@ namespace OpenDashPlugin.Tests
                 // them through Contract.SlotProperty rather than by name. ShiftLights has no control
                 // because RevBar supersedes it and SetRevBar writes both; the two cannot disagree. The
                 // idle screen's two are published rather than chosen, and the one setting behind them is
-                // the update check's switch on the Install tab (#83). The class best is published from
+                // the update check's switch on the Updates page (#83). The class best is published from
                 // SimHub's own frame and nobody sets it.
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
                 .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion && name != Contract.ClassBestLap)

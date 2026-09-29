@@ -52,9 +52,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelFacePlan.BandGap);
             Assert.Equal(11, PanelFacePlan.CountCaptionSize);
             Assert.Equal(12, PanelFacePlan.CountChevronSize);
-            Assert.Equal(22, PanelFacePlan.BindingGap);
             Assert.Equal(200, PanelFacePlan.GlanceSelectWidth);
-            Assert.Equal(12, PanelFacePlan.GlanceBinderGap);
             Assert.True(PanelFacePlan.CountCaptionSize < Theme.SizeLabel,
                 "a count is set smaller than a value, which is what tells the two apart in a cell");
             Assert.True(PanelFacePlan.CountChevronSize < Theme.IconSize,

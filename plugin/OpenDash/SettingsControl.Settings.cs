@@ -70,7 +70,7 @@ namespace OpenDashPlugin
                 Save();
             });
 
-            return PageSection(PanelSettings.RaceDataTitle,
+            return PageSection(PanelDataTab.SectionTitle,
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
                 Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision),

@@ -45,8 +45,6 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PluginDescription = "Dashboards for the screens on your rig, and a page to choose what each one shows.";
 
-        public const string AddScreen = "Add a screen";
-
         /// <summary>The sentence under the empty rig's pill, which the pill has already said is empty.</summary>
         /// <remarks>
         /// Here rather than inline in the WPF file so that a test can hold the wording: it is the one
