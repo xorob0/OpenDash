@@ -185,5 +185,94 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(0.45, PanelShell.SoonOpacity);
         }
+
+        /// <summary>The rest of the sidebar's numbers, off Sidebar.dc.html.</summary>
+        [Fact]
+        public void The_rest_of_the_sidebar_is_the_artboards()
+        {
+            Assert.Equal(56, PanelShell.RailWidth);
+            Assert.Equal(8, PanelShell.RailPaddingX);
+            // The mark row: an 18 px mark, the 21 px wordmark and the 14 px version, 8 in.
+            Assert.Equal(8, PanelShell.MarkRowPaddingX);
+            Assert.Equal(18, PanelShell.MarkSize);
+            Assert.Equal(21, PanelShell.WordmarkSize);
+            Assert.Equal(14, PanelShell.VersionSize);
+            // Search: 10 in, a 14 px lens, 13 px text.
+            Assert.Equal(10, PanelShell.SearchPaddingX);
+            Assert.Equal(14, PanelShell.SearchIconSize);
+            Assert.Equal(13, PanelShell.SearchTextSize);
+            // The live card: 12 in, lines 5 apart, rows of 14, 18 and 16, a 7 px dot; the rail's 22.
+            Assert.Equal(12, PanelShell.LiveCardPaddingX);
+            Assert.Equal(5, PanelShell.LiveLineGap);
+            Assert.Equal(14, PanelShell.LiveEyebrowHeight);
+            Assert.Equal(18, PanelShell.LiveCarHeight);
+            Assert.Equal(16, PanelShell.LiveTrackHeight);
+            Assert.Equal(7, PanelShell.LiveDotSize);
+            Assert.Equal(22, PanelShell.RailLiveHeight);
+            // An item's inside: 10 in, a 15 px count, a 7 px amber dot; the rule 10 in from either side.
+            Assert.Equal(10, PanelShell.NavItemPaddingX);
+            Assert.Equal(15, PanelShell.NavCountSize);
+            Assert.Equal(7, PanelShell.NavWarnSize);
+            Assert.Equal(8, PanelShell.NavDividerMarginY);
+            Assert.Equal(10, PanelShell.NavDividerMarginX);
+            // The foot: 14 above and below night mode, 8 in, Updates 4 under it, its badge 20 high, 6 in, 13 px.
+            Assert.Equal(14, PanelShell.FootPaddingY);
+            Assert.Equal(8, PanelShell.FootPaddingX);
+            Assert.Equal(4, PanelShell.UpdatesGap);
+            Assert.Equal(20, PanelShell.BadgeHeight);
+            Assert.Equal(6, PanelShell.BadgePaddingX);
+            Assert.Equal(13, PanelShell.BadgeTextSize);
+        }
+
+        /// <summary>What every page shares, off the page artboards' classes.</summary>
+        [Fact]
+        public void The_pages_share_the_artboards_type_and_rows()
+        {
+            // The page title at 30, .h2 at 17 and its larger 19, the sheet-like sub-heading at 22, .lbl at 11.
+            Assert.Equal(30, PanelShell.PageTitleSize);
+            Assert.Equal(17, PanelShell.HeadingSize);
+            Assert.Equal(19, PanelShell.HeadingLargeSize);
+            Assert.Equal(22, PanelShell.SubHeadingSize);
+            Assert.Equal(11, PanelShell.EyebrowSize);
+            // .row: a 15 px title, 12 above and below, 24 between the title and its control; a sub-row 16 in.
+            Assert.Equal(15, PanelShell.RowTitleSize);
+            Assert.Equal(12, PanelShell.RowPaddingY);
+            Assert.Equal(24, PanelShell.RowGap);
+            Assert.Equal(16, PanelShell.SubRowIndent);
+            // .soontag and .new: 18 high, 6 in, 10 px; .crumb: 22 high, 7 in, 12 px; a message at 13.
+            Assert.Equal(18, PanelShell.TagHeight);
+            Assert.Equal(6, PanelShell.TagPaddingX);
+            Assert.Equal(10, PanelShell.TagTextSize);
+            Assert.Equal(22, PanelShell.CrumbHeight);
+            Assert.Equal(7, PanelShell.CrumbPaddingX);
+            Assert.Equal(12, PanelShell.CrumbTextSize);
+            Assert.Equal(13, PanelShell.MessageTextSize);
+            // .inp: 30 high, 10 in, 13 px; .num-in: 64 by 30, 8 in, 15 px.
+            Assert.Equal(30, PanelShell.InputHeight);
+            Assert.Equal(10, PanelShell.InputPaddingX);
+            Assert.Equal(13, PanelShell.InputTextSize);
+            Assert.Equal(64, PanelShell.NumberInputWidth);
+            Assert.Equal(8, PanelShell.NumberInputPaddingX);
+            Assert.Equal(15, PanelShell.NumberInputTextSize);
+            // The main column's ceiling, and the room two columns need.
+            Assert.Equal(1112, PanelShell.ContentMax);
+            Assert.Equal(760, PanelShell.TwoColumnFrom);
+        }
+
+        /// <summary>The sheet, off AddScreen.dc.html and AddLeds.dc.html: 560 wide, 28 in, a 22 px title
+        /// under 24 and over 18, a footer 18 above and 24 below, over a dim at 60 %.</summary>
+        [Fact]
+        public void The_sheet_is_the_artboards()
+        {
+            Assert.Equal(560, PanelShell.SheetWidthMax);
+            Assert.Equal(900, PanelShell.SheetFullFrom);
+            Assert.Equal(28, PanelShell.SheetPaddingX);
+            Assert.Equal(24, PanelShell.SheetHeaderPaddingTop);
+            Assert.Equal(18, PanelShell.SheetHeaderPaddingBottom);
+            Assert.Equal(22, PanelShell.SheetTitleSize);
+            Assert.Equal(18, PanelShell.SheetFooterPaddingTop);
+            Assert.Equal(24, PanelShell.SheetFooterPaddingBottom);
+            Assert.Equal(0.6, PanelShell.SheetDimOpacity);
+        }
     }
 }

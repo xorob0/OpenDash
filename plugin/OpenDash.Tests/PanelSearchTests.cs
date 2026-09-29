@@ -62,7 +62,7 @@ namespace OpenDashPlugin.Tests
         public void A_hit_reads_as_its_label_and_its_page_and_leads_to_its_row()
         {
             var hit = PanelSearch.Find(Entries, "night").Single();
-            Assert.Equal("Night mode — Settings", hit.Text);
+            Assert.Equal("Night mode · Settings", hit.Text);
             Assert.Equal(PanelRoute.To(PanelPage.Settings, "settings.lighting"), hit.Route);
             Assert.Equal("No setting matches.", PanelSearch.NoMatch);
         }
@@ -99,6 +99,42 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Throws<ArgumentException>(() => new PanelSearch.Entry(" ", PanelRoute.Home));
             Assert.Throws<ArgumentNullException>(() => new PanelSearch.Entry("Row", (PanelRoute)null));
+        }
+
+        /// <summary>A greyed row is listed, so somebody looking for a theme finds that it is coming, and a
+        /// hit lands on its page and its row.</summary>
+        [Fact]
+        public void Every_greyed_row_is_found_by_its_title_and_leads_to_its_own_row()
+        {
+            var all = PanelSearch.All().ToList();
+            foreach (var item in PanelSoon.All)
+            {
+                Assert.Contains(all, entry => entry.Label == item.Title && entry.Route.Page == item.Page && entry.Route.Anchor == item.Anchor);
+            }
+            foreach (var query in new[] { "theme", "tyre", "yellow flags", "pop-ups", "incidents", "real hardware" })
+            {
+                Assert.NotEmpty(PanelSearch.Find(all, query));
+            }
+            // Listed once: the Rig page no longer types its greyed switch in beside the registry's entry.
+            Assert.Single(all, entry => entry.Label == PanelRigMap.RealHardwareTitle);
+        }
+
+        /// <summary>A result is labelled by the row or heading it lands on, so the words in the list are the
+        /// words on the page; other words for it are keywords.</summary>
+        [Fact]
+        public void A_result_names_what_the_page_draws()
+        {
+            var labels = PanelSearch.All().Select(entry => entry.Label).ToList();
+            foreach (var invented in new[] { "Rig layout", "Your screens", "Flag box profile", "Wheel buttons", "Night mode button", "Brightness buttons", "Car-specific thresholds" })
+            {
+                Assert.DoesNotContain(invented, labels);
+            }
+            Assert.Contains(PanelShortcuts.RigActionLabel(Contract.BrightnessUpAction), labels);
+            Assert.Contains(PanelMatrix.CarShiftPointsTitle, labels);
+            Assert.Contains(FlagBoxProfile.ProfileName, labels);
+            // The words that were the labels still find them.
+            Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "wheel buttons"));
+            Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "flag box profile"));
         }
     }
 }

@@ -46,7 +46,7 @@ namespace OpenDashPlugin
 
         public static readonly PanelSearch.Entry[] Search =
         {
-            new PanelSearch.Entry("Your screens", PanelPage.Screens, AnchorCards, "rig", "dashboard", "display"),
+            new PanelSearch.Entry(Title, PanelPage.Screens, AnchorCards, "your screens", "rig", "dashboard", "display"),
             new PanelSearch.Entry(PanelAddScreen.AddButton, PanelPage.Screens, AnchorCards, "new", "dashboard", "display"),
             new PanelSearch.Entry(PanelDataTab.RevBarTitle, PanelPage.Screens, AnchorRevBar, "shift lights", "rev bar", "rpm"),
             new PanelSearch.Entry("Flag display", PanelPage.Screens, AnchorFlagDisplay, "band d", "full screen"),

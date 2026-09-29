@@ -31,7 +31,7 @@ namespace OpenDashPlugin
             return Ui.VStack(0,
                 PageSection("Layout", BuildPitWallPicture()),
                 PageSection("Zones", Ui.VStack(0, BuildPitWallRows(screen))),
-                Ui.Row("Quick glance", null, Ui.HStack(8, BuildPitWallGlanceSelect(screen), chip)));
+                Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8, BuildPitWallGlanceSelect(screen), chip)));
         }
 
         /// <summary>Which of the three pages this pit wall shows, which is set here and nowhere else.</summary>

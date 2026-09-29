@@ -7,6 +7,7 @@
 // Pure: no WPF.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenDashPlugin
 {
@@ -64,6 +65,10 @@ namespace OpenDashPlugin
 
         public const string ResetLayout = "Reset layout";
 
+        /// <summary>The greyed switch in the header (#506), by its registry title; search finds it through
+        /// PanelSoon rather than an entry of this page's own.</summary>
+        public const string RealHardwareTitle = "Real hardware";
+
         /// <summary>The name over a tile, and the gap under it.</summary>
         public const double NameHeight = 16;
         public const double NameGap = 6;
@@ -80,14 +85,17 @@ namespace OpenDashPlugin
 
         public static readonly PanelSearch.Entry[] Search =
         {
-            new PanelSearch.Entry("Rig layout", PanelPage.Rig, AnchorCanvas, "map", "arrange", "tiles"),
+            new PanelSearch.Entry(Title, PanelPage.Rig, AnchorCanvas, "rig layout", "map", "arrange", "tiles"),
             new PanelSearch.Entry("Flags", PanelPage.Rig, AnchorScenarios, "emulate", "test", "yellow", "blue", "chequered"),
             new PanelSearch.Entry("Spotter", PanelPage.Rig, AnchorScenarios, "emulate", "car left", "car right"),
             new PanelSearch.Entry("Pit lane", PanelPage.Rig, AnchorScenarios, "emulate", "limiter", "speeding"),
             new PanelSearch.Entry("Warnings", PanelPage.Rig, AnchorScenarios, "emulate", "fuel", "oil", "water"),
             new PanelSearch.Entry("Revs", PanelPage.Rig, AnchorScenarios, "emulate", "shift point", "rpm"),
-            new PanelSearch.Entry("Real hardware", PanelPage.Rig, AnchorCanvas, "light"),
         };
+
+        /// <summary>The empty edge round a laid-out canvas, and the gap between two tiles across and down.</summary>
+        public const double LayoutMargin = 24;
+        public const double LayoutGap = 28;
 
         /// <summary>
         /// Where the tiles go before anybody has arranged them: by kind, in rows across the canvas, each row
@@ -100,12 +108,15 @@ namespace OpenDashPlugin
         /// </remarks>
         public static IList<RigTile> AutoLayout(IEnumerable<RigTile> tiles, double canvasWidth)
         {
-            const double margin = 24;
-            const double gap = 28;
+            const double margin = LayoutMargin;
+            const double gap = LayoutGap;
             var placed = new List<RigTile>();
             if (tiles == null) return placed;
-            var ordered = new List<RigTile>(tiles);
-            ordered.Sort((a, b) => Order(a.Kind).CompareTo(Order(b.Kind)));
+            // Stable, so tiles of one kind keep the rig's order: List.Sort is not, and laid a rig of pit wall
+            // A, pit wall B and a rim out as the rim, B, A.
+            var ordered = tiles.Where(tile => tile != null).Select((tile, index) => new { tile, index })
+                .OrderBy(entry => Order(entry.tile.Kind)).ThenBy(entry => entry.index)
+                .Select(entry => entry.tile).ToList();
 
             var x = margin;
             var y = margin;

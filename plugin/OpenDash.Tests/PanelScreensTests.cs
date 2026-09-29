@@ -200,5 +200,24 @@ namespace OpenDashPlugin.Tests
             read.Normalise();
             return read;
         }
+
+        /// <summary>The page's title, the anchors its rows carry, and what search finds on it.</summary>
+        [Fact]
+        public void The_screens_page_is_titled_and_its_rows_are_found_where_they_are()
+        {
+            Assert.Equal("Screens", PanelScreens.Title);
+            var anchors = new[]
+            {
+                PanelScreens.AnchorCards, PanelScreens.AnchorRevBar, PanelScreens.AnchorFlagDisplay, PanelScreens.AnchorLapReview,
+                PanelScreens.AnchorZones, PanelScreens.AnchorPitWallPage, PanelScreens.AnchorWebView, PanelScreens.AnchorModules,
+                PanelScreens.AnchorFirstModule, PanelScreens.AnchorSlots,
+            };
+            Assert.All(anchors, anchor => Assert.StartsWith("screens.", anchor, System.StringComparison.Ordinal));
+            Assert.Equal(anchors.Length, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(anchors)));
+            Assert.All(PanelScreens.Search, entry => Assert.Contains(entry.Route.Anchor, anchors));
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.Title && entry.Route.Anchor == PanelScreens.AnchorCards);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelDataTab.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
+        }
     }
 }

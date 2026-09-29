@@ -37,7 +37,7 @@ namespace OpenDashPlugin
                 // name on SimHub's Arduino page and finding an OpenDash profile instead.
                 Ui.Caption(PanelLights.BoxCaption(FlagBoxName())),
                 // The rig's answer to "is a car alongside" slides in or snaps, on every panel alike.
-                Ui.Anchor(Ui.Row("Spotter bar animation", "The bar slides in from the edge.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation));
+                Ui.Anchor(Ui.Row(PanelMatrix.SpotterAnimationTitle, "The bar slides in from the edge.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation));
 
             return PageLayout(PanelMatrix.Title, null,
                 Ui.Anchor(BuildFlagBoxProfile(), PanelMatrix.AnchorProfile),
@@ -168,20 +168,20 @@ namespace OpenDashPlugin
                 preview.Margin = new Thickness(0, 0, 0, 12);
                 return Ui.VStack(0,
                     preview,
-                    Ui.Row("Idle display", null, rest),
+                    Ui.Row(PanelMatrix.IdleDisplayTitle, null, rest),
                     Ui.Row("Race flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
                     Ui.Row("Pit status", "Limiter, pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
                     Ui.Row("Spotter", "Warns about cars alongside.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
                     Ui.Row("Car warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
                     // Which side the box is physically on. One to the left of the wheel lighting for a car on
                     // the right is worse than no box at all, so it is asked rather than guessed.
-                    Ui.Row("Mounting side", "Only lights for cars on this side.", side),
-                    Ui.Row("Critical flags only", "Stays dark for the chequer, white, green and start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
-                    Ui.Row("Shift colours", "Off keeps the gear one colour as the revs rise.", BuildToggle(Settings.MatrixGearBands(m), on => { Settings.FlagBoxMatrixGearBands[m - 1] = on; Save(); })),
-                    Ui.Row("Redline flash", "Off keeps the gear steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
+                    Ui.Row(PanelMatrix.MountingSideTitle, "Only lights for cars on this side.", side),
+                    Ui.Row(PanelMatrix.CriticalFlagsOnlyTitle, "Stays dark for the chequer, white, green and start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
+                    Ui.Row(PanelMatrix.ShiftColoursTitle, "Off keeps the gear one colour as the revs rise.", BuildToggle(Settings.MatrixGearBands(m), on => { Settings.FlagBoxMatrixGearBands[m - 1] = on; Save(); })),
+                    Ui.Row(PanelMatrix.RedlineFlashTitle, "Off keeps the gear steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
                     // The same answer the strips give, offered here because the digit is the one other thing on
                     // the rig those tables can colour.
-                    Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
+                    Ui.Row(PanelMatrix.CarShiftPointsTitle, "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
                     BuildMatrixPanelActions(m));
             }, opened => { if (opened) Select(PanelPage.Matrix, m.ToString(System.Globalization.CultureInfo.InvariantCulture)); });
         }

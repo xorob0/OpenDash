@@ -554,7 +554,8 @@ namespace OpenDashPlugin
         public static Border Soon(FrameworkElement row, SoonItem item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            return SoonWith(row, item.Ticket, item.Title);
+            // Anchored, so a search for it lands on it (PanelSearch lists every registry entry).
+            return Anchor(SoonWith(row, item.Ticket, item.Title), item.Anchor);
         }
 
         /// <summary>A greyed switch row for a registry entry: the commonest shape a Soon takes.</summary>

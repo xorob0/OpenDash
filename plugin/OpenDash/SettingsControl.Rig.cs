@@ -32,6 +32,10 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>Whether a hand can move the tiles. False until the Rig page agent lands drag, which
+        /// turns it on together with the canvas's hint.</summary>
+        private static readonly bool RigTilesDraggable = false;
+
         private FrameworkElement BuildRigPage(PanelRoute to)
         {
             var night = Ui.Switch(Settings.LightsNightMode, on =>
@@ -40,7 +44,8 @@ namespace OpenDashPlugin
                 Save();
                 ShowLightingChange();
             });
-            var hardware = Ui.Soon(Ui.HStack(10, Ui.Text("Real hardware", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), PanelSoon.Find("Real hardware"));
+            var real = PanelSoon.Find(PanelRigMap.RealHardwareTitle);
+            var hardware = Ui.Soon(Ui.HStack(10, Ui.Text(real.Title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), real);
             var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text("Night mode", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
 
             var title = Ui.HStack(12, Ui.PageTitle(PanelRigMap.Title), Ui.NewTag());
@@ -69,10 +74,14 @@ namespace OpenDashPlugin
                 Canvas.SetTop(drawn, tile.Y);
                 canvas.Children.Add(drawn);
             }
-            var hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
-            Canvas.SetLeft(hint, 14);
-            Canvas.SetBottom(hint, 12);
-            canvas.Children.Add(hint);
+            // The hint tells the driver to drag, so it is drawn only once the tiles can be dragged.
+            if (RigTilesDraggable)
+            {
+                var hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
+                Canvas.SetLeft(hint, 14);
+                Canvas.SetBottom(hint, 12);
+                canvas.Children.Add(hint);
+            }
             if (tiles.Count == 0)
             {
                 var empty = Ui.Caption("Add a screen, a strip or a matrix and it appears here.");

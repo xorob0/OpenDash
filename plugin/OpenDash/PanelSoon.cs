@@ -6,6 +6,8 @@
 // number to the set of open tickets this was checked against, and a greyed row cannot cite a ticket that
 // closed (#370, #145 and #487 did; #322 shipped, so its rows are live).
 //
+// Search lists every entry (PanelSearch.All), so somebody looking for a theme finds that it is coming.
+//
 // Pure: no WPF. Ui.Soon draws an entry.
 using System;
 using System.Collections.Generic;
@@ -31,6 +33,12 @@ namespace OpenDashPlugin
         public PanelPage Page { get; private set; }
 
         public string Tip { get { return PanelSoon.Tip(Ticket); } }
+
+        /// <summary>
+        /// The anchor the greyed row carries (Ui.Soon puts it there), which a search hit scrolls to:
+        /// "soon.", the ticket and the title's slug, so two rows of one ticket are two anchors.
+        /// </summary>
+        public string Anchor { get { return "soon." + Ticket.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + Contract.Slug(Title).ToLowerInvariant(); } }
     }
 
     public static class PanelSoon
@@ -71,7 +79,7 @@ namespace OpenDashPlugin
             new SoonItem(509, "Pit limiter lights", PanelPage.Leds),
 
             // Matrix.
-            new SoonItem(371, "Colour everything by RPM", PanelPage.Matrix),
+            new SoonItem(371, "RPM colour for everything", PanelPage.Matrix),
             new SoonItem(363, "SimHub device", PanelPage.Matrix),
             new SoonItem(505, "Priority order", PanelPage.Matrix),
 
@@ -79,8 +87,8 @@ namespace OpenDashPlugin
             new SoonItem(506, "Real hardware", PanelPage.Rig),
 
             // Shortcuts.
-            new SoonItem(511, "Run the Rig test", PanelPage.Shortcuts),
-            new SoonItem(510, "Dismiss the alert", PanelPage.Shortcuts),
+            new SoonItem(511, "Rig test", PanelPage.Shortcuts),
+            new SoonItem(510, "Alert dismissal", PanelPage.Shortcuts),
 
             // Settings.
             new SoonItem(326, "Fuel target per lap", PanelPage.Settings),
@@ -90,7 +98,7 @@ namespace OpenDashPlugin
             new SoonItem(507, "Pit window open", PanelPage.Settings),
             new SoonItem(508, "Incidents", PanelPage.Settings),
             new SoonItem(110, "Hybrid battery low", PanelPage.Settings),
-            new SoonItem(512, "Alert surfaces", PanelPage.Settings),
+            new SoonItem(512, "Where each alert shows", PanelPage.Settings),
             new SoonItem(128, "Sim time of day", PanelPage.Settings),
             new SoonItem(128, "Screen dimming", PanelPage.Settings),
             new SoonItem(99, "Theme", PanelPage.Settings),

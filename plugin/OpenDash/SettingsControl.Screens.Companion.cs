@@ -105,7 +105,7 @@ namespace OpenDashPlugin
                 })), PanelScreens.AnchorFirstModule),
                 // Any module, the ones the rotation has off included: a glance is asked for by holding a
                 // button, and the rotation is about what a tap steps through.
-                Ui.Row("Quick glance", null, Ui.HStack(8,
+                Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8,
                     BuildModuleSelect(screen, Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value =>
                     {
                         screen.CompanionQuickGlance = value;

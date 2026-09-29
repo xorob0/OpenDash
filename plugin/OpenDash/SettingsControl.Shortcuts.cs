@@ -62,14 +62,14 @@ namespace OpenDashPlugin
                 var zone = PanelFacePlan.ZoneLabel(letter);
                 var next = Contract.CycleZoneAction(screen.Namespace, letter);
                 var back = Contract.CycleZoneBackAction(screen.Namespace, letter);
-                rows.Add(Ui.Anchor(Ui.Row(zone + " · next page", null,
-                    BuildBinder(next, screen.Name + " · zone " + letter)), PanelBindings.Anchor(next)));
-                rows.Add(Ui.Anchor(Ui.SettingRow(zone + " · previous page",
-                    BuildBinder(back, screen.Name + " · zone " + letter + " back"),
+                rows.Add(Ui.Anchor(Ui.Row(PanelShortcuts.ZoneRow(zone, true), null,
+                    BuildBinder(next, PanelShortcuts.ZoneBinderName(screen.Name, zone, true))), PanelBindings.Anchor(next)));
+                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.ZoneRow(zone, false),
+                    BuildBinder(back, PanelShortcuts.ZoneBinderName(screen.Name, zone, false)),
                     null, Ui.NewTag()), PanelBindings.Anchor(back)));
             }
             var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row("Quick glance", null,
+            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
                 BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             rows.Add(glance);
             var caption = Ui.Caption(PanelCopy.FaceGlance);
@@ -83,7 +83,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallShortcuts(ScreenInstance screen)
         {
             var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row("Quick glance", "A keyboard key works too.",
+            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
                 BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             var caption = Ui.Caption(PanelCopy.PitWallGlance);
             caption.Margin = new Thickness(0, 0, 0, 8);
@@ -95,7 +95,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionShortcuts(ScreenInstance screen)
         {
             var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row("Quick glance", null,
+            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
                 BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             var caption = Ui.Caption(PanelCopy.CompanionGlance);
             caption.Margin = new Thickness(0, 0, 0, 8);

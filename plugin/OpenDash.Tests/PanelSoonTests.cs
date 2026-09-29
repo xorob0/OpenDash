@@ -66,15 +66,33 @@ namespace OpenDashPlugin.Tests
         public void A_title_is_a_noun_phrase_and_not_an_instruction()
         {
             // voice.md: "Light the real hardware" became "Real hardware", "Light each LED in turn" "Each LED
-            // in turn", "Follow the sim's time of day" "Sim time of day".
+            // in turn", "Follow the sim's time of day" "Sim time of day"; and the review's three, "Run the
+            // Rig test", "Dismiss the alert" and "Colour everything by RPM".
             Assert.NotNull(PanelSoon.Find("Real hardware"));
             Assert.NotNull(PanelSoon.Find("Each LED in turn"));
             Assert.NotNull(PanelSoon.Find("Sim time of day"));
+            Assert.NotNull(PanelSoon.Find("Rig test"));
+            Assert.NotNull(PanelSoon.Find("Alert dismissal"));
+            Assert.NotNull(PanelSoon.Find("RPM colour for everything"));
+            // No title opens on a verb telling the driver to do something.
+            // Verbs only: "Colour vision" and "Colours" are nouns, so "Colour" is not listed; the old "Colour
+            // everything by RPM" is held out by name.
+            Assert.Null(PanelSoon.Find("Colour everything by RPM"));
+            var imperatives = new[] { "Run", "Dismiss", "Follow", "Dim", "Use", "Show", "Sweep", "Try", "Set", "Add", "Turn", "Pick", "Choose", "Enable", "Disable" };
             foreach (var item in PanelSoon.All)
             {
+                var first = item.Title.Split(' ')[0];
+                Assert.DoesNotContain(first, imperatives);
                 Assert.False(item.Title.EndsWith(".", StringComparison.Ordinal), item.Title);
                 Assert.DoesNotContain("openDash", item.Title, StringComparison.Ordinal);
             }
+        }
+
+        [Fact]
+        public void Every_greyed_row_has_an_anchor_of_its_own()
+        {
+            Assert.Equal("soon.506.realhardware", PanelSoon.Find("Real hardware").Anchor);
+            Assert.Equal(PanelSoon.All.Count, PanelSoon.All.Select(item => item.Anchor).Distinct(StringComparer.Ordinal).Count());
         }
 
         [Fact]

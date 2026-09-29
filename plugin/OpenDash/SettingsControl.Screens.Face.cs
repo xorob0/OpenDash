@@ -578,7 +578,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildFaceGlanceRow(ScreenInstance screen)
         {
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
-            return Ui.Row("Quick glance", null, Ui.HStack(8, BuildGlanceSelect(screen), chip));
+            return Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8, BuildGlanceSelect(screen), chip));
         }
 
         /// <summary>

@@ -21,14 +21,15 @@ namespace OpenDashPlugin
         {
             switch (page)
             {
-                case PanelPage.Home: return "Home";
-                case PanelPage.Rig: return "Rig";
-                case PanelPage.Screens: return "Screens";
-                case PanelPage.Leds: return "LEDs";
-                case PanelPage.Matrix: return "Matrix";
-                case PanelPage.Shortcuts: return "Shortcuts";
-                case PanelPage.Settings: return "Settings";
-                case PanelPage.Updates: return "Updates";
+                // Each page's own title, so the item and the heading it opens on are one string.
+                case PanelPage.Home: return PanelHome.Title;
+                case PanelPage.Rig: return PanelRigMap.Title;
+                case PanelPage.Screens: return PanelScreens.Title;
+                case PanelPage.Leds: return PanelLeds.Title;
+                case PanelPage.Matrix: return PanelMatrix.Title;
+                case PanelPage.Shortcuts: return PanelShortcuts.Title;
+                case PanelPage.Settings: return PanelSettings.Title;
+                case PanelPage.Updates: return PanelUpdates.Title;
                 default: throw new ArgumentOutOfRangeException("page", page, "no such page");
             }
         }

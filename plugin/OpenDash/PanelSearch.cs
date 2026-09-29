@@ -59,8 +59,9 @@ namespace OpenDashPlugin
 
             public string PageLabel { get { return PanelNav.Label(Entry.Route.Page); } }
 
-            /// <summary>What the list shows: "Delta reference — Settings".</summary>
-            public string Text { get { return Label + " — " + PageLabel; } }
+            /// <summary>What the list shows: "Delta reference · Settings", with the separator the rest of the
+            /// panel uses.</summary>
+            public string Text { get { return Label + " · " + PageLabel; } }
         }
 
         public const int DefaultMax = 8;
@@ -131,7 +132,8 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Every page's entries, in sidebar order, then Updates.</summary>
+        /// <summary>Every page's entries, in sidebar order, then Updates, then every greyed row of the
+        /// registry, each routed to its page and its own anchor.</summary>
         public static IEnumerable<Entry> All()
         {
             return PanelHome.Search
@@ -141,7 +143,13 @@ namespace OpenDashPlugin
                 .Concat(PanelMatrix.Search)
                 .Concat(PanelShortcuts.Search)
                 .Concat(PanelSettings.Search)
-                .Concat(PanelUpdates.Search);
+                .Concat(PanelUpdates.Search)
+                .Concat(Soon);
         }
+
+        /// <summary>The registry's greyed rows as entries: found by their title, and by "soon".</summary>
+        public static readonly Entry[] Soon = PanelSoon.All
+            .Select(item => new Entry(item.Title, item.Page, item.Anchor, PanelSoon.Tag.ToLowerInvariant(), "coming"))
+            .ToArray();
     }
 }
