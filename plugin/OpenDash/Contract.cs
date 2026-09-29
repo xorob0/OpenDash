@@ -22,6 +22,7 @@ namespace OpenDashPlugin
         public const string DriverNameFormat = "DriverNameFormat";
         public const string DriverNameTeam = "DriverNameTeam";
         public const string ClockFormat = "ClockFormat";
+        public const string DeltaPrecision = "DeltaPrecision";
 
         /// <summary>
         /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #83.
@@ -168,8 +169,29 @@ namespace OpenDashPlugin
         /// single-class field reads the same either way. A saved value is kept as it is. #432.</summary>
         public const string DefaultPositionMode = "class";
 
-        public static readonly string[] DeltaReferences = { "session", "alltime" };
+        /// <summary>The session best, the all-time best, or the lap before this one. The last is iRacing's own
+        /// live delta rather than SimHub's, which publishes none against the last lap; the dash reads it
+        /// in the expression and this side only carries the choice. #322.</summary>
+        public static readonly string[] DeltaReferences = { "session", "alltime", "lastlap" };
         public const string DefaultDeltaReference = "session";
+
+        /// <summary>
+        /// How many places the live delta is drawn to: hundredths or thousandths. Mirrors DELTA_PRECISIONS
+        /// in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared, like the reference it qualifies: a delta read to the thousandth on the rim and to the
+        /// hundredth on the pit wall would be two answers to one question. The plugin only publishes the
+        /// choice; the dashboard chooses between two literal formats with it, in boxes already cut for
+        /// three places, so neither answer resizes or rearranges a box: the digits change, and the delta
+        /// page's caption, which follows the figure it draws, moves by the cell a third place adds.
+        /// Appended to the shared group after the clock format, since both halves of the contract assert
+        /// that group by index. #322.
+        /// </remarks>
+        public static readonly string[] DeltaPrecisions = { "hundredths", "thousandths" };
+
+        /// <summary>Two places, which is what the canvas draws and what a driver reads at a glance.</summary>
+        public const string DefaultDeltaPrecision = "hundredths";
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
@@ -968,6 +990,8 @@ namespace OpenDashPlugin
             // And the clock format, appended for the same reason and shared because every package's
             // idle screen draws the wall clock. #324.
             yield return ClockFormat;
+            // And the delta's precision, appended for the same reason and chosen on the Data tab. #322.
+            yield return DeltaPrecision;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -1477,10 +1501,13 @@ namespace OpenDashPlugin
         /// How long a released glance asks the companion to go back, before the paging is SimHub's again.
         /// </summary>
         /// <remarks>
-        /// SimHub chooses the screen on every data frame, sixty a second, so the move happens on the first
-        /// of them; the rest is margin. It is short because while it stands the one screen enabled is the
-        /// one being gone back to, so a tap does nothing, and a driver who releases the button and reaches
-        /// for the screen should find it answering.
+        /// SimHub chooses a dashboard's screen on its data loop: ten frames a second on the free edition,
+        /// up to sixty licensed, and fewer when the dash's refresh setting skips frames or the interface
+        /// is still drawing the last one. The move happens on the first frame after the release; a second
+        /// is ten of them on the free edition, which is where it was seen working (#362). It is short
+        /// because while it stands the one screen enabled is the one being gone back to, so a tap does
+        /// nothing, and a driver who releases the button and reaches for the screen should find it
+        /// answering.
         /// </remarks>
         public static readonly TimeSpan CompanionBackWindow = TimeSpan.FromSeconds(1);
 

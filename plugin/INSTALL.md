@@ -261,7 +261,8 @@ nothing to save and no restart.
 | Rig tab, a pit wall's Zones | Wide zone | any of the six wide pages (Tower page only) |
 | Rig tab, a pit wall's Zones | Web view address | an http or https address, or empty |
 | Data tab | Position | Overall, Class |
-| Data tab | Delta reference | Session best, All-time best |
+| Data tab | Delta reference | Session best, All-time best, Last lap (iRacing's own delta to the lap before this one; level until a lap has been completed) |
+| Data tab | Delta precision | Hundredths, Thousandths; the delta takes the same room either way |
 | Data tab | Session progress | Auto, Laps, Time |
 | Install tab, This plugin | Check for updates | on, off; asks GitHub once a day and sends nothing about you |
 | Install tab, This plugin | Reinstall | writes every dashboard on your rig again; your settings are kept |
@@ -277,10 +278,10 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480ZoneAStart` the one it opens on, `Face1920x480BarLeft1` a bar field and
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
-`OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12`,
-`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallPage`, the pit wall's zones
-named for their page and letter (`OpenDash.PitWallRaceA`, `PitWallTowerWide`, `PitWallTelemetryC`
-and the rest) and `OpenDash.WebViewUrl`.
+`OpenDash.DeltaPrecision`, `OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to
+`OpenDash.Slot12`, `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallPage`, the
+pit wall's zones named for their page and letter (`OpenDash.PitWallRaceA`, `PitWallTowerWide`,
+`PitWallTelemetryC` and the rest) and `OpenDash.WebViewUrl`.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are read by two of the dashboards the plugin installs:
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in

@@ -21,7 +21,11 @@ export const SLOT_MAX = 12;
 
 export type RevBarMode = 'shift' | 'rpm' | 'off';
 export type PositionMode = 'overall' | 'class';
-export type DeltaReference = 'session' | 'alltime';
+/**
+ * What the live delta is measured against. `lastlap` is iRacing's own delta to the lap before this
+ * one, which SimHub's lap tracker does not publish: see `lastLapDelta` in `second/values.ts`. #322.
+ */
+export type DeltaReference = 'session' | 'alltime' | 'lastlap';
 export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
  * What the middle of an RGB strip shows. It decides the middle alone: the sides of a strip are
@@ -192,6 +196,23 @@ export const UPDATE_VERSION = 'UpdateVersion';
  */
 export const CLASS_BEST_LAP = 'ClassBestLap';
 
+/**
+ * How many places the live delta is drawn to: hundredths, `−0.21`, or thousandths, `−0.214`.
+ *
+ * Rig-wide, like the reference it qualifies: a delta read to the thousandth on the rim and to the
+ * hundredth on the pit wall would be two answers to one question. Hundredths by default, because two
+ * places are what a driver reads at a glance and what the canvas draws; thousandths are for a hotlap,
+ * where a lap is won by them.
+ *
+ * It governs the five surfaces that draw the live delta to the reference and nothing else: the
+ * sector deltas, the lap review and the lap history compare other things and keep their own formats.
+ * Every box that draws the live delta is cut for three places whichever is chosen, which is what
+ * lets a runtime setting change the length of a text at all (ADR 0011). `referenceDeltaText` in
+ * `second/values.ts` is the one place the choice is read. #322.
+ */
+export type DeltaPrecision = 'hundredths' | 'thousandths';
+export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -199,7 +220,8 @@ export const UPDATE_VERSION_MAX_LENGTH = 12;
 export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-';
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
-export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
+export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime', 'lastlap'];
+export const DELTA_PRECISIONS: readonly DeltaPrecision[] = ['hundredths', 'thousandths'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
 export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
 export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['car', 'leftToRight', 'meetInMiddle', 'f1'];
@@ -250,6 +272,8 @@ export const DEFAULTS = {
   // What every clock drew before there was a choice, so a rig that never opens the setting is
   // unchanged, and the form that fits every box without the word after it.
   ClockFormat: '24h' as ClockFormat,
+  // Two places, which is what the canvas draws and what reads at a glance.
+  DeltaPrecision: 'hundredths' as DeltaPrecision,
 } as const;
 
 /**
@@ -302,7 +326,8 @@ export function dashProperties(): string[] {
   // ends with an idle screen, and the group is pinned in order. #83.
   // And the class best after them, published for the same reason and read by every package that
   // draws a session best. And the clock format after that, since every package's idle screen draws
-  // the wall clock. #324.
+  // the wall clock. #324. And the delta's precision after that, chosen rather than published, and
+  // appended for the same reason. #322.
   const shared = [
     REV_BAR_SETTING,
     BLUE_FLAG_DETAIL_SETTING,
@@ -312,6 +337,7 @@ export function dashProperties(): string[] {
     UPDATE_VERSION,
     CLASS_BEST_LAP,
     CLOCK_FORMAT_SETTING,
+    DELTA_PRECISION_SETTING,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -488,6 +514,12 @@ export const setting = {
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
+  /** `isnull([OpenDash.DeltaReference], 'session') = 'lastlap'`: whether the delta is against the given reference. */
+  deltaReferenceIs: (reference: DeltaReference): Expr => eq(setting.deltaReference(), str(reference)),
+  /** `isnull([OpenDash.DeltaPrecision], 'hundredths')`: how many places the live delta is drawn to. */
+  deltaPrecision: (): Expr => isnull(prop(propertyName(DELTA_PRECISION_SETTING)), str(DEFAULTS.DeltaPrecision)),
+  /** `isnull([OpenDash.DeltaPrecision], 'hundredths') = 'thousandths'`: whether the live delta is drawn to the given precision. */
+  deltaPrecisionIs: (precision: DeltaPrecision): Expr => eq(setting.deltaPrecision(), str(precision)),
   /** `isnull([OpenDash.SessionProgress], 'auto')` */
   sessionProgress: (): Expr => isnull(prop(propertyName('SessionProgress')), str(DEFAULTS.SessionProgress)),
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */

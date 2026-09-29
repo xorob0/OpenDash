@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["OpenDash.ClockFormat","DataCorePlugin.GameData.EngineStarted","DataCorePlugin.GameData.PushToPassActive","DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["OpenDash.ClockFormat","DataCorePlugin.GameData.EngineStarted","DataCorePlugin.GameData.PushToPassActive","DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash","DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap","DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK","OpenDash.DeltaPrecision"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -91,6 +91,8 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.IsOnTrack","v":true}
 {"p":"DataCorePlugin.GameRawData.Telemetry.LFtempCM","v":[85.9999,85.9993,85.9982,85.9964,85.994,85.9911,85.9875,85.9834,85.9787,85.9735,85.9677,85.9613,85.9543,85.9468,85.9388,85.9303,85.9212,85.9116,85.9015,85.8909,85.8798,85.8683,85.8562,85.8438,85.8309,85.8176,85.8038,85.7897,85.7751,85.7603,85.745,85.7294,85.7135,85.6973,85.6808,85.664,85.6469,85.6296,85.6121,85.5944,85.5764,85.5583,85.5401,85.5217,85.5032,85.4845,85.4658,85.4471,85.4283,85.4094,85.3906,85.3717,85.3529,85.3342,85.3155,85.2968,85.2783,85.2599,85.2417,85.2236,85.2057,85.1879,85.1704,85.1531,85.136,85.1192,85.1027,85.0892,85.0706,85.055,85.0397,85.0249,85.0103,84.9962,84.9825,84.9691,84.9562,84.9438,84.9317,84.9202,84.9091,84.8985,84.8884,84.8788,84.8697,84.8612,84.8532,84.8457,84.8387,84.8324,84.8265,84.8213,84.8166,84.8125,84.8089,84.806,84.8036,84.8018,84.8007,84.8001,84.8001,84.8007,84.8018,84.8036,84.806,84.8089,84.8125,84.8166,84.8213,84.8265,84.8324,84.8387,84.8457,84.8532,84.8612,84.8697,84.8788,84.8884,84.8985,84.9091,84.9202,84.9317,84.9438,84.9562,84.9691,84.9825,84.9962,85.0103,85.0249,85.0397,85.055,85.0706,85.0865,85.1027,85.1192,85.136,85.1531,85.1704,85.1879,85.2057,85.2236,85.2417,85.2599,85.2783,85.2968,85.3155,85.3342,85.3529,85.3717,85.3906,85.4094,85.4283,85.4471,85.4658,85.4845,85.5032,85.5217,85.5401,85.5583,85.5764,85.5944,85.6121,85.6296,85.6469,85.664,85.6808,85.6973,85.7135,85.7294,85.745,85.7603,85.7751,85.7897,85.8015,85.8176,85.8309,85.8438,85.8562,85.8683,85.8798,85.8909,85.9015,85.9116,85.9212,85.9303,85.9388,85.9468,85.9543,85.9613,85.9677,85.9735,85.9787,85.9834,85.9875,85.9911,85.994,85.9964,85.9982,85.9993,85.9999]}
 {"p":"DataCorePlugin.GameRawData.Telemetry.LRtempCM","v":84.8}
+{"p":"DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap","v":0}
+{"p":"DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK","v":false}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PitSvFlags","v":63}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PitSvFuel","v":46.5}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount","v":0}
@@ -145,6 +147,7 @@
 {"p":"OpenDash.ClassBestLap","t":"timespan","v":"00:01:37.2680000"}
 {"p":"OpenDash.ClockFormat","v":"24h"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
+{"p":"OpenDash.DeltaPrecision","v":"hundredths"}
 {"p":"OpenDash.DeltaReference","v":"session"}
 {"p":"OpenDash.DriverNameFormat","v":"full"}
 {"p":"OpenDash.DriverNameTeam","v":false}

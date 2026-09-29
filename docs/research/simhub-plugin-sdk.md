@@ -184,7 +184,8 @@ dashboard of one release are always the same bytes. It then attaches one propert
 |---|---|
 | `OpenDash.ShiftLights` | `bool` |
 | `OpenDash.PositionMode` | `"overall"` or `"class"` |
-| `OpenDash.DeltaReference` | `"session"` or `"alltime"` |
+| `OpenDash.DeltaReference` | `"session"`, `"alltime"` or `"lastlap"` |
+| `OpenDash.DeltaPrecision` | `"hundredths"` or `"thousandths"` |
 | `OpenDash.SessionProgress` | `"auto"`, `"laps"` or `"time"` |
 | `OpenDash.Slot01` to `OpenDash.Slot12` | `int`, a card number |
 

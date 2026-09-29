@@ -257,7 +257,7 @@ exports[`card snapshots card 3 delta 1`] = `
     "TextWrapping": "NoWrap",
     "Left": 16,
     "Top": 65,
-    "Width": 176,
+    "Width": 207,
     "Height": 78,
     "Visible": true,
     "BackgroundColor": "#00FFFFFF",
@@ -265,13 +265,13 @@ exports[`card snapshots card 3 delta 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+          "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
         },
         "Mode": 2
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+          "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
         },
         "Mode": 2
       }
@@ -12373,7 +12373,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 65,
-          "Width": 176,
+          "Width": 207,
           "Height": 78,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -12381,13 +12381,13 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -19414,7 +19414,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 76,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -19422,13 +19422,13 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -26399,7 +26399,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 60,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -26407,13 +26407,13 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -32771,7 +32771,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 44,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -32779,13 +32779,13 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -39098,7 +39098,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 44,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -39106,13 +39106,13 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -45989,7 +45989,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 84,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -45997,13 +45997,13 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -53010,7 +53010,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 12,
           "Top": 37,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -53018,13 +53018,13 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -59157,7 +59157,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 16,
           "Top": 52,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -59165,13 +59165,13 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -64282,7 +64282,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 12,
           "Top": 44,
-          "Width": 91,
+          "Width": 107,
           "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -64290,13 +64290,13 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -70113,7 +70113,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 12,
           "Top": 37,
-          "Width": 125,
+          "Width": 147,
           "Height": 57,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
@@ -70121,13 +70121,13 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), '0.000', '0.00'), if(((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths')) and ((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (99.9995)), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.000', true), '-', '−'), replace(format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))), '0.00', true), '-', '−')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
+                "Expression": "if((abs(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0))))) < (if((isnull([OpenDash.DeltaPrecision], 'hundredths')) = ('thousandths'), 0.0005, 0.005)), '#F5F7FA', if((if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), isnull([PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], 0), if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), if(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK], false), (isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap], 0)) * (1.0), 0), isnull([PersistantTrackerPlugin.SessionBestLiveDeltaSeconds], 0)))) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }

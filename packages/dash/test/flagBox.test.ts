@@ -403,18 +403,40 @@ describe('sixty-four pixels', () => {
     for (const frame of flagFrames('yellowWaving') ?? []) expect(frame.durationMs).toBe(half);
   });
 
-  test('a full course yellow is two flags waved in turn, so it never looks like a local yellow', () => {
-    // The whole-track condition and the local one are both the yellow flag, so the only thing that
-    // can separate them is the pattern: two half panels alternating against one solid panel.
+  test('a full course yellow writes SC in black on yellow, blinking, so the letters are what tell it from a yellow being waved', () => {
+    // The whole-track condition and the yellow being waved are both the yellow flag blinking at the
+    // band's rate, so the only thing that can separate them is what is cut out of the panel: the letters.
     const caution = flagFrames('caution') ?? [];
-    const yellow = flagFrames('yellow')?.[0]?.pixels ?? [];
+    const waving = flagFrames('yellowWaving') ?? [];
     expect(caution).toHaveLength(2);
     const picture = (frame: MatrixFrame | undefined): string[] => (frame?.pixels ?? []).map((row) => row.map((p) => (p === null ? '.' : 'Y')).join(''));
-    expect(picture(caution[0])).toEqual(Array.from({ length: 8 }, () => 'YYYY....'));
-    expect(picture(caution[1])).toEqual(Array.from({ length: 8 }, () => '....YYYY'));
-    for (const frame of caution) {
-      expect(frame.pixels).not.toEqual(yellow);
-      expect(new Set(frame.pixels.flat().filter((p) => p !== null))).toEqual(new Set([ds.purpose.flag.yellow]));
+    expect(picture(caution[0])).toEqual([
+      'YYYYYYYY',
+      'Y...Y...',
+      'Y.YYY.YY',
+      'Y...Y.YY',
+      'YYY.Y.YY',
+      'YYY.Y.YY',
+      'Y...Y...',
+      'YYYYYYYY',
+    ]);
+    expect(new Set(caution[0]?.pixels.flat().filter((p) => p !== null))).toEqual(new Set([ds.purpose.flag.yellow]));
+    expect(caution[0]?.pixels).not.toEqual(waving[0]?.pixels);
+    // The other half of the beat is the dark the yellow being waved blinks against, so the rhythm is
+    // the one the driver already reads as waved and nothing but the letters differs.
+    expect(caution[1]?.pixels).toEqual(waving[1]?.pixels);
+    expect(caution[1]?.pixels.flat().every((p) => p === null)).toBe(true);
+  });
+
+  test('no flag draws two halves of the panel in turn, which is the double yellow’s picture', () => {
+    // iRacing never raises a double yellow, so the picture is reserved for it rather than lent to
+    // the full course yellow, which drew it until #499: one picture with two meanings teaches the wrong one.
+    const lit = (frame: MatrixFrame): string => frame.pixels.map((row) => row.map((p) => (p === null ? '.' : '#')).join('')).join('/');
+    const left = Array.from({ length: 8 }, () => '####....').join('/');
+    const right = Array.from({ length: 8 }, () => '....####').join('/');
+    for (const condition of FLAG_CATALOGUE) {
+      const halves = (flagFrames(condition.id) ?? []).map(lit).filter((shape) => shape === left || shape === right);
+      expect({ id: condition.id, halves }).toEqual({ id: condition.id, halves: [] });
     }
   });
 

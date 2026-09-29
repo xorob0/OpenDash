@@ -203,8 +203,9 @@ namespace OpenDashPlugin.Tests
             var shared = Contract.SharedPropertyNames().ToList();
             Assert.Contains(Contract.UpdateAvailable, shared);
             Assert.Contains(Contract.UpdateVersion, shared);
-            // Appended together, so every name that shipped before them keeps its index -- and at the
-            // index they shipped at, which names appended after them do not move.
+            // Appended together, so every name that shipped before them keeps its index, and at the index
+            // they shipped at, which nothing appended after them moves: the class best (#454), the clock
+            // format (#324) and the delta's precision (#322) came later and went on the end.
             var at = shared.IndexOf(Contract.UpdateAvailable);
             Assert.Equal(new[] { Contract.UpdateAvailable, Contract.UpdateVersion }, shared.Skip(at).Take(2));
             Assert.Equal(20, at);

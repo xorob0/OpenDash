@@ -201,12 +201,12 @@ driver's screen loads, reading the properties the panel has just written; nothin
 is drawn by OpenDash. [ADR 0020](decisions/0020-the-panel-draws-what-it-configures.md) is the record,
 and it states how far the line moved and what would move it further.
 
-The settings are the shift lights, the position mode, the delta reference, the session progress
-mode, the four zones of the face (the page each shows, which pages are enabled, and the page it
-opens on), the quick glance, the bar's four end fields, twelve card slots, twenty-one companion
-module switches, five pit wall zone assignments and a web view address. Because they are ordinary
-SimHub properties, another dashboard or an LED profile can read them, and a change reaches the
-running dashboard at once without restarting SimHub or reopening the dashboard.
+The settings are the shift lights, the position mode, the delta reference and the places the delta
+is drawn to, the session progress mode, the four zones of the face (the page each shows, which pages
+are enabled, and the page it opens on), the quick glance, the bar's four end fields, twelve card
+slots, twenty-one companion module switches, five pit wall zone assignments and a web view address.
+Because they are ordinary SimHub properties, another dashboard or an LED profile can read them, and
+a change reaches the running dashboard at once without restarting SimHub or reopening the dashboard.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are the twelve card slots. Of the faces the plugin installs
 the only readers are the two round ones: `OpenDash 480 round` reads the first two and
@@ -243,9 +243,10 @@ be reviewed. See [ADR 0002](decisions/0002-djson-generated-from-source.md).
 
 **Computed telemetry of our own.** The plugin does not compute, and
 [ADR 0009](decisions/0009-does-the-plugin-compute.md) is why the refusal turned out to be cheap to
-keep: SimHub already publishes the fuel family and the delta family, and the rest of what the
-catalogue draws is arithmetic over properties that exist, done in the expression. A five-lap
-average is `PreviousLap_00` to `_04` and a division, not a state machine.
+keep: SimHub already publishes the fuel family and the delta family, iRacing publishes the one
+delta SimHub lacks, the live delta to the last lap, and the rest of what the catalogue draws is
+arithmetic over properties that exist, done in the expression. A five-lap average is
+`PreviousLap_00` to `_04` and a division, not a state machine.
 
 Two things fall outside that and are honestly labelled rather than quietly empty: virtual energy,
 which only Le Mans Ultimate publishes, and strength of field, which SimHub does not expose at all.
@@ -261,7 +262,9 @@ colours, the frames and the idle screen are settings read through bindings like 
 What stays refused is anything a binding cannot reach without giving up the guarantee that a glyph
 is never clipped. A typeface, a font size, a spacing and a position are consumed by a layout
 decision in TypeScript, and a value that arrives after the build cannot re-run it. Those are build
-inputs, and a package built from a user's own tokens is #132.
+inputs, and a package built from a user's own tokens is #132. A setting that only changes how long a
+text is, as the delta's precision does (#322), is not refused, because every length it can produce
+was budgeted for when the box was cut; ADR 0011 records that condition.
 
 The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
 apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
