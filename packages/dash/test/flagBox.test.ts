@@ -249,7 +249,7 @@ describe('one ordered list, shared with the face', () => {
 
   test('band D draws every one of them, so no condition is the box’s alone', () => {
     // The face used to draw the six SimHub normalises and the box all fifteen, so a red flag, a
-    // disqualification, a furled black, a meatball, a full-course caution, a waved yellow, the
+    // disqualification, a furled black, a meatball, a full course yellow, a waved yellow, the
     // debris flag and the start gantry were invisible on a dash with no box beside it. The band
     // draws the whole alert catalogue now, of which the box's list is the flag half, in order.
     const band = flagStrip(rect(0, 0, 1920, 60)).map((i) => i.name);
@@ -273,7 +273,7 @@ describe('several conditions true at once', () => {
     { name: 'green alone', bits: ['green'], expect: 'green' },
     { name: 'a local yellow', bits: ['yellow'], expect: 'yellow' },
     { name: 'a waved yellow also sets yellow', bits: ['yellow', 'yellowWaving'], expect: 'yellowWaving' },
-    { name: 'a full-course caution sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
+    { name: 'a full course yellow sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
     { name: 'debris under a yellow', bits: ['yellow', 'debris'], expect: 'yellow' },
     { name: 'debris alone', bits: ['debris'], expect: 'debris' },
     { name: 'red outranks everything', bits: ['red', 'yellow', 'caution', 'black'], expect: 'red' },
@@ -403,7 +403,7 @@ describe('sixty-four pixels', () => {
     for (const frame of flagFrames('yellowWaving') ?? []) expect(frame.durationMs).toBe(half);
   });
 
-  test('a full-course caution is two flags waved in turn, so it never looks like a local yellow', () => {
+  test('a full course yellow is two flags waved in turn, so it never looks like a local yellow', () => {
     // The whole-track condition and the local one are both the yellow flag, so the only thing that
     // can separate them is the pattern: two half panels alternating against one solid panel.
     const caution = flagFrames('caution') ?? [];

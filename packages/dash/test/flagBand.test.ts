@@ -258,10 +258,10 @@ describe('the waved yellow flash', () => {
  * What the flag does once its few seconds are up: it settles into the block at each end of the band
  * and gives the page back, #380.
  *
- * The ticket's own case is a safety car on the 850 x 480 face with 2.1 litres in the tank: the band
- * read SAFETY CAR and nothing on the face said fuel, for as long as the caution lasted, which is
- * several minutes, and a caution is exactly when a driver decides whether to pit. The flag has said
- * everything it has to say after two seconds.
+ * The ticket's own case is a full course yellow on the 850 x 480 face with 2.1 litres in the tank: the
+ * band read SAFETY CAR then, and nothing on the face said fuel, for as long as the caution lasted,
+ * which is several minutes, and a caution is exactly when a driver decides whether to pit. The flag
+ * has said everything it has to say after two seconds.
  *
  * The blocks are the band's own, not the flag's: `bandFlagBlocks` hands back the corner blocks on the
  * four faces that draw them and the side padding on the four that do not, so a settled flag can

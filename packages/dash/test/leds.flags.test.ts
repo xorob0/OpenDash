@@ -266,7 +266,7 @@ describe('what one flag looks like beside another', () => {
     expect(chequer.blinkDelayMs).toBe(SLOW_BLINK_MS);
   });
 
-  test('the full-course caution alternates two lit colours, to say the whole track rather than this corner', () => {
+  test('the full course yellow alternates two lit colours, to say the whole track rather than this corner', () => {
     const caution = effect('flag.caution');
     expect(new Set([caution.color, caution.blinkColor])).toEqual(new Set([ds.color.caution.primary, ds.purpose.flag.yellow]));
     // The amber is the steady half: the caution and the plain yellow share a lamp and a rate, so the

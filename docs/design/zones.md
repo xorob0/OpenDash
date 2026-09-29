@@ -1108,10 +1108,10 @@ no new screen, so the author can do it cheaply.
 
 **It draws the whole flag catalogue, which is fifteen conditions and not six.** The band used to
 read the six `Flag_*` properties SimHub normalises, and those are a lossy summary of what iRacing
-publishes: `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one
-band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black, a
-meatball, a full course yellow, a waved yellow, the debris flag and the start gantry were therefore
-drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
+publishes: `Flag_Yellow` folds the standing yellow, the yellow being waved and both cautions into
+one band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black,
+a meatball, a full course yellow, a yellow being waved, the debris flag and the start gantry were
+therefore drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
 about which of two live flags won. The band reads `ALERT_CATALOGUE` in
 `packages/dash/src/flags.ts` now, through the same `conditionVisible` the box ranks with, so the
 three surfaces that draw flags cannot disagree. Which condition takes which shape, and which rank,
@@ -1132,8 +1132,8 @@ and the reasons, and §10 the departures from the canvas.
 
 Three consequences are worth stating. The band is iRacing's, as the box already was, since
 `SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
-approximation of a flag nobody published. The flash belongs to the waved yellow and no longer to the
-standing one, the folded property having strobed both, and since #497 it is all that tells the two
+approximation of a flag nobody published. The flash belongs to the yellow being waved and no longer
+to the standing one, the folded property having strobed both, and since #497 it is all that tells the two
 apart, both being named YELLOW FLAG. And the green flag alone reads a normalised
 property, `Flag_Green`, because iRacing holds the `green` bit for a whole green-flag stint and
 SimHub's own limiter on that property is the only clock there is; without it band D would be a solid

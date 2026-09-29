@@ -16,7 +16,7 @@
  * has to move, then the correct state last: `Pit limiter` is information and everything above it is
  * a mistake. The pit alerts are not ranked against the race alerts, because the two draw in
  * different rectangles and never contend: band D holds the flag while this rectangle holds the pit
- * state, and a driver serving a stop under a full-course caution needs both. In the full-screen flag
+ * state, and a driver serving a stop under a full course yellow needs both. In the full-screen flag
  * format the block does cover this rectangle, and the face draws the pit alert over it deliberately,
  * for the same reason.
  *
