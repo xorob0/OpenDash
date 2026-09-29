@@ -193,18 +193,41 @@ namespace OpenDashPlugin
         /// The same count zoneCyclePosition makes in contract.ts, taken in the zone's own order rather
         /// than the catalogue's. A page the mask has turned off -- which a held glance can show -- still
         /// counts itself, so it reads as the one after the enabled pages before it.
+        ///
+        /// A dashboard reads this for every zone of every face each frame, so it walks the stored order
+        /// in place when that is already whole, which Normalise and SetOrder see to, and builds the
+        /// repaired copy <see cref="Order"/> hands out only for a file nothing has normalised yet.
         /// </remarks>
         public int Position(string letter)
         {
+            var index = ZoneIndex(letter);
             var page = Zone(letter);
             var mask = Mask(letter);
+            var stored = Orders != null && index < Orders.Length ? Orders[index] : null;
+            var order = IsWholeOrder(stored, Contract.FaceZonePageCounts[index]) ? stored : Order(letter);
             var position = 1;
-            foreach (var candidate in Order(letter))
+            foreach (var candidate in order)
             {
                 if (candidate == page) break;
                 if ((mask & (1 << candidate)) != 0) position++;
             }
             return position;
+        }
+
+        /// <summary>Whether an order holds every page of a catalogue of that many exactly once, which is
+        /// what <see cref="Contract.NormaliseOrder"/> would leave as it is. Allocates nothing.</summary>
+        private static bool IsWholeOrder(int[] order, int count)
+        {
+            if (order == null || order.Length != count || count > 64) return false;
+            var seen = 0UL;
+            foreach (var page in order)
+            {
+                if (page < 0 || page >= count) return false;
+                var bit = 1UL << page;
+                if ((seen & bit) != 0) return false;
+                seen |= bit;
+            }
+            return true;
         }
 
         public bool PageEnabled(string letter, int page)

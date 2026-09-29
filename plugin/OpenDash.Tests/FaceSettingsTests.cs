@@ -188,6 +188,29 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, face.Position("A"));
             face.Zones[0] = 2;
             Assert.Equal(3, face.Position("A"));
+
+            // An order a hand has broken -- a page twice, one missing -- is counted as Order() repairs
+            // it, not as it lies: [3, 3, 0, 2] is 3, 0, 2 and then 1.
+            face = Fresh();
+            face.Orders[0] = new[] { 3, 3, 0, 2 };
+            face.Zones[0] = 1;
+            Assert.Equal(4, face.Position("A"));
+        }
+
+        [Fact]
+        public void Position_costs_nothing_to_read_on_a_normalised_face()
+        {
+            // The zone header's "N / M" reads it for every zone of every face each dashboard frame.
+            var face = Fresh();
+            face.SetOrder("A", new[] { 3, 1, 0, 2 });
+            face.SetPageEnabled("B", 2, false);
+            foreach (var letter in Contract.FaceZoneLetters) face.Position(letter);
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var frame = 0; frame < 100; frame++)
+            {
+                foreach (var letter in Contract.FaceZoneLetters) face.Position(letter);
+            }
+            Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
         }
 
         [Fact]
