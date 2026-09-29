@@ -599,10 +599,14 @@ namespace OpenDashPlugin.Tests
             // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the
             // legacy list already spells, plus the five that shipped before the grid. And since #503 a
             // reversed twin of every plain shape but the 4/14/4, which had one: fifty-nine more, riding
-            // in their siblings' rows, for 121. A build from before the twins has none.
+            // in their siblings' rows, for 121. On CI Resources/ holds this commit's own dash build, so
+            // all fifty-nine are required there: LedBar.SupportsReversal offers the switch on every plain
+            // shape, and a package without the twins would leave ProfileShapeId naming a profile nothing
+            // embeds. Only a stale build/ in a local checkout, from before the twins, may carry none.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();
             var twins = members.Count(id => id.EndsWith("-reversed", StringComparison.Ordinal) && id != "4-14-4-reversed");
-            Assert.True(twins == 0 || twins == 59, twins + " reversed twins");
+            if (OnCI) Assert.True(twins == 59, twins + " reversed twins; CI builds the dash from this commit and needs all 59");
+            else Assert.True(twins == 0 || twins == 59, twins + " reversed twins");
             Assert.Equal(62 + twins, members.Count);
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
