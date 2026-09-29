@@ -236,8 +236,11 @@ namespace OpenDashPlugin.Tests
         /// Every factory of the kit counts, not only Text, Label and Numeral: the pages draw most of their
         /// words through PageTitle, Prose, Chip, Crumbs, Button and the rows, and a "—" handed to any of
         /// them is the same typed icon. An argument that is a literal on its own is read wherever it sits
-        /// in the call, so <c>Ui.Crumbs("Devices", "›")</c> fails; a literal joined into a longer string
-        /// (a " · " between two names) is a separator and is not an argument on its own.
+        /// in the call, so <c>Ui.Crumbs("Devices", "›")</c> fails, and so does a literal that starts an
+        /// argument even when more is joined after it (<c>Ui.Text("› " + name)</c>), which is a typed icon
+        /// leading a word; a literal joined into the middle of a longer string (a " · " between two names)
+        /// is a separator and is not held. Text, Label and Numeral are read whatever class qualifies them,
+        /// so a helper of another name cannot carry a glyph past the guard.
         /// </remarks>
         [Fact]
         public void The_panel_never_builds_an_icon_out_of_text()
@@ -248,17 +251,7 @@ namespace OpenDashPlugin.Tests
             var typed = new List<string>();
             foreach (var source in sources)
             {
-                var text = File.ReadAllText(source);
-                foreach (Match call in Regex.Matches(text, @"(?:\bUi\.[A-Z]\w*|(?<![\w.])(?:Text|Label|Numeral))\s*\("))
-                {
-                    foreach (var literal in LiteralArguments(text, call.Index + call.Length))
-                    {
-                        if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit))
-                        {
-                            typed.Add(Path.GetFileName(source) + ": " + call.Value + "\"" + literal + "\"");
-                        }
-                    }
-                }
+                typed.AddRange(TypedGlyphs(File.ReadAllText(source)).Select(found => Path.GetFileName(source) + ": " + found));
             }
 
             Assert.True(typed.Count == 0,
@@ -266,7 +259,25 @@ namespace OpenDashPlugin.Tests
                 Environment.NewLine + string.Join(Environment.NewLine, typed));
         }
 
-        /// <summary>The kit's factories are all held, not just the three this test was first written for.</summary>
+        /// <summary>
+        /// The glyphs handed to a text factory in one source: every Ui.* factory, and Text, Label and Numeral
+        /// under any qualifier, with each argument that is a literal or starts with one.
+        /// </summary>
+        private static List<string> TypedGlyphs(string text)
+        {
+            var typed = new List<string>();
+            foreach (Match call in Regex.Matches(text, @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\("))
+            {
+                foreach (var literal in LiteralArguments(text, call.Index + call.Length))
+                {
+                    if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit)) typed.Add(call.Value + "\"" + literal + "\"");
+                }
+            }
+            return typed;
+        }
+
+        /// <summary>The kit's factories are all held, not just the three this test was first written for,
+        /// and the cases the first guard caught are still caught.</summary>
         [Fact]
         public void The_glyph_guard_reads_every_factory_and_every_argument()
         {
@@ -274,11 +285,24 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "—" }, LiteralArguments("Ui.Prose(\"—\", 13);", "Ui.Prose(".Length).ToArray());
             Assert.Empty(LiteralArguments("Ui.Text(a + \" · \" + b, 13);", "Ui.Text(".Length));
             Assert.Empty(LiteralArguments("Ui.Chip(Name(\"+\"), false, null);", "Ui.Chip(".Length));
+
+            // A glyph leading a joined argument is a typed icon beside a word.
+            Assert.Single(TypedGlyphs("Ui.Text(\"› \" + name, 13);"));
+            Assert.Single(TypedGlyphs("Ui.Label(\"— \" + value);"));
+            // Text, Label and Numeral under any qualifier, not only Ui's.
+            Assert.Single(TypedGlyphs("Kit.Text(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Text(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Ui.Crumbs(\"Devices\", \"›\");"));
+            // A separator between two words, and a word, pass.
+            Assert.Empty(TypedGlyphs("Ui.Text(a + \" · \" + b, 13);"));
+            Assert.Empty(TypedGlyphs("Ui.Text(\"Laps · \" + count, 13);"));
+            Assert.Empty(TypedGlyphs("SetText(\"—\");"));
         }
 
         /// <summary>
         /// The arguments of the call that opens just before <paramref name="start"/> which are a string
-        /// literal and nothing else, read to the call's closing parenthesis.
+        /// literal and nothing else, or which start with one (the literal is returned), read to the call's
+        /// closing parenthesis.
         /// </summary>
         private static List<string> LiteralArguments(string text, int start)
         {
@@ -286,6 +310,7 @@ namespace OpenDashPlugin.Tests
             var depth = 1;
             var argument = new System.Text.StringBuilder();
             string only = null;
+            string leading = null;
             var parts = 0;
             for (var i = start; i < text.Length && depth > 0; i++)
             {
@@ -300,7 +325,12 @@ namespace OpenDashPlugin.Tests
                         value.Append(text[end]);
                         end++;
                     }
-                    if (depth == 1) { only = value.ToString(); parts++; }
+                    if (depth == 1)
+                    {
+                        if (parts == 0) leading = value.ToString();
+                        only = value.ToString();
+                        parts++;
+                    }
                     i = end;
                     continue;
                 }
@@ -310,7 +340,9 @@ namespace OpenDashPlugin.Tests
                 if (depth == 1 || depth == 0)
                 {
                     if (parts == 1 && only != null) literals.Add(only);
+                    else if (leading != null) literals.Add(leading);
                     only = null;
+                    leading = null;
                     parts = 0;
                     argument.Clear();
                 }
