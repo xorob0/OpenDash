@@ -584,7 +584,7 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
             // The twelve card slots. They are attached unconditionally and are not deprecated: a round
-            // face becomes zones on a ring after 1.0 (#145), and until it does these are the only
+            // face becomes zones on a ring before 1.0 (#145, #487), and until it does these are the only
             // card-slot properties the two round packages read, the published OpenDash slots <size>
             // faces read four to twelve of them besides, and no zone face reads one. Deleting a mode
             // attachment above is not safe for a round face on that account: both round packages also
@@ -613,6 +613,9 @@ namespace OpenDashPlugin
             // And the class best, filled by DataUpdate from the frame SimHub has finished. Not a setting:
             // published because SimHub keeps it and does not publish it. See Contract.ClassBestLap.
             this.AttachDelegate(Contract.ClassBestLap, () => classBestLap);
+            // And the clock format, shared because a driver reads a clock one way on every screen, and
+            // every package's idle screen draws the wall clock. #324.
+            this.AttachDelegate(Contract.ClockFormat, () => Settings.ClockFormat);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

@@ -98,6 +98,11 @@ session best as the empty placeholder rather than as a car nobody observed. Ever
 with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
 `bun run record` picks the property up by itself and drops the entry.
 
+Every trace asserts `OpenDash.ClockFormat` since #324, at a constant `24h`, which is what the plugin
+publishes until a driver changes it and so what a re-record will write. It was added by hand because
+the idle screen every package carries reads it, and a trace that lacks a property a binding reads
+fails the check above.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be

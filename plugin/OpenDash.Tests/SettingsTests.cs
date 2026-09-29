@@ -27,6 +27,8 @@ namespace OpenDashPlugin.Tests
             // leave a rig which never opens the setting drawing what it drew before.
             Assert.Equal("full", settings.DriverNameFormat);
             Assert.False(settings.DriverNameTeam);
+            // Twenty-four hours, which is what every clock drew before the setting existed. #324.
+            Assert.Equal("24h", settings.ClockFormat);
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
         }
 
@@ -1326,11 +1328,12 @@ namespace OpenDashPlugin.Tests
         {
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
-            // blue flag detail, the two that say how a driver is named, the idle screen's two and the
-            // class best, which every screen shares, and one group per screen the rig holds.
+            // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
+            // best and the clock format, which every screen shares, and one group per screen the rig
+            // holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(23, shared);
+            Assert.Equal(24, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.
