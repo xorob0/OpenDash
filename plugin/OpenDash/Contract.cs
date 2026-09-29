@@ -1438,7 +1438,8 @@ namespace OpenDashPlugin
         public const int DefaultCompanionOpenOn = -1;
 
         /// <summary>
-        /// How long after SimHub loads a companion is held on its start module.
+        /// How long a companion is held on its start module, after SimHub loads or after the panel
+        /// chooses a new one.
         /// </summary>
         /// <remarks>
         /// Long enough for SimHub to have loaded the dashboard and evaluated its screens, short enough

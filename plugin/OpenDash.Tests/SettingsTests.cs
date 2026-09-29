@@ -1729,6 +1729,42 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_forced_start_module_lets_go_by_itself_however_it_was_forced()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Normalise();
+            var companion = settings.ScreenOf("Companion");
+            var init = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+            var justBefore = Contract.CompanionOpenOnWindow - TimeSpan.FromMilliseconds(1);
+
+            // Nothing is forced before anything has asked, which is also what a package with no plugin reads.
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", init));
+
+            // Init: held on the start module for the window, then handed back to SimHub's paging.
+            companion.CompanionStart = 7;
+            settings.OpenOnStartPages(init);
+            Assert.Equal(7, settings.ScreenCompanionOpenOn("Companion", init));
+            Assert.Equal(7, settings.ScreenCompanionOpenOn("Companion", init + justBefore));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", init + Contract.CompanionOpenOnWindow));
+
+            // The panel choosing a start module twenty minutes in. This one used to be let go by nothing:
+            // the only release was a clock Init armed once, so a companion the driver had been tapping
+            // froze on the module, taps and all, until SimHub restarted.
+            var later = init + TimeSpan.FromMinutes(20);
+            companion.CompanionStart = 3;
+            companion.OpenOnStartModule(later);
+            Assert.Equal(3, settings.ScreenCompanionOpenOn("Companion", later + justBefore));
+            // A save normalises the screen in the middle of the window, and that does not drop the force.
+            settings.Normalise();
+            Assert.Equal(3, settings.ScreenCompanionOpenOn("Companion", later + justBefore));
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Companion", later + Contract.CompanionOpenOnWindow));
+
+            // A screen the rig no longer holds forces nothing rather than throwing on SimHub's thread.
+            Assert.Equal(Contract.DefaultCompanionOpenOn, settings.ScreenCompanionOpenOn("Gone", later));
+        }
+
+        [Fact]
         public void A_pit_wall_glance_borrows_one_zone_and_gives_it_back()
         {
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };

@@ -959,8 +959,9 @@ namespace OpenDashPlugin
                 {
                     screen.CompanionStart = value;
                     // And force it now, so the screen in front of you moves rather than waiting for the
-                    // next SimHub start. Somebody choosing where it opens is looking at the thing.
-                    screen.OpenOnStartModule();
+                    // next SimHub start. Somebody choosing where it opens is looking at the thing. The
+                    // force lets go by itself after the same window Init's does, so the taps come back.
+                    screen.OpenOnStartModule(DateTime.UtcNow);
                 })));
         }
 

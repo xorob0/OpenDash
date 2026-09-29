@@ -468,7 +468,7 @@ describe('plugin mirror', () => {
     // The start module writes its setting and forces it, which is what moves the screen now: the
     // page above is no longer read by the package.
     expect(panel).toContain('screen.CompanionStart = value;');
-    expect(panel).toContain('screen.OpenOnStartModule();');
+    expect(panel).toContain('screen.OpenOnStartModule(DateTime.UtcNow);');
     // The glance does not, because coming back needs a module OpenDash cannot name. #362.
     expect(panel).not.toContain('screen.CompanionQuickGlance = value');
     // And no binder offers an action the companion no longer registers.

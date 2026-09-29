@@ -215,16 +215,45 @@ namespace OpenDashPlugin
         public string CompanionFlagFormat { get; set; }
 
         /// <summary>
-        /// The module this companion is being forced onto, or -1 for none. Live state, never saved.
+        /// The module this companion is being forced onto, or -1 for none, as it reads at a moment.
         /// </summary>
         /// <remarks>
-        /// Held at <see cref="CompanionStart"/> for the first seconds of a SimHub run and then cleared,
+        /// Held at <see cref="CompanionStart"/> for the first seconds of a SimHub run and then let go,
         /// which is the whole of how a companion still opens on a chosen module: one enabled screen is
         /// one SimHub selects. It is not saved because it describes a moment rather than a preference --
         /// the preference is CompanionStart, which is.
+        ///
+        /// A force carries its own end, and that is read here rather than cleared by a clock. It used to
+        /// be one timer on the plugin, armed once by Init: the panel forcing a start module chosen later
+        /// in the session set a force that nothing ever released, and a companion that had been tapped
+        /// freely froze on that module, taps and all, until SimHub restarted.
         /// </remarks>
-        [JsonIgnore]
-        public int CompanionOpenOn { get; set; } = Contract.DefaultCompanionOpenOn;
+        public int CompanionOpenOnAt(DateTime now)
+        {
+            // One read of the reference: the module and the end it carries are always the same force's.
+            var current = force;
+            return current != null && now < current.Until ? current.Module : Contract.DefaultCompanionOpenOn;
+        }
+
+        /// <summary>A module forced until a moment. Immutable, so that one reference is one whole force.</summary>
+        private sealed class ModuleForce
+        {
+            public ModuleForce(int module, DateTime until)
+            {
+                Module = module;
+                Until = until;
+            }
+
+            public int Module { get; }
+
+            public DateTime Until { get; }
+        }
+
+        /// <summary>
+        /// The force in effect, or null. Written by the panel and by Init, read on SimHub's own thread
+        /// whenever a dashboard evaluates the property, which is why it is a single reference.
+        /// </summary>
+        private volatile ModuleForce force;
 
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
@@ -435,7 +464,7 @@ namespace OpenDashPlugin
                 CompanionStart = 0;
                 CompanionQuickGlance = 0;
                 CompanionFlagFormat = null;
-                CompanionOpenOn = Contract.DefaultCompanionOpenOn;
+                force = null;
             }
         }
 
@@ -454,21 +483,18 @@ namespace OpenDashPlugin
             return mask == 0 ? (1 << OpenDashPlugin.Modules.Count) - 1 : mask;
         }
 
-        /// <summary>Puts the companion on the module it opens on, which is what Init does to a face.</summary>
-        public void OpenOnStartModule()
+        /// <summary>
+        /// Puts the companion on the module it opens on, which is what Init does to a face, and hands
+        /// the paging back to SimHub once <see cref="Contract.CompanionOpenOnWindow"/> has passed.
+        /// </summary>
+        public void OpenOnStartModule(DateTime now)
         {
             if (!IsCompanion) return;
             CompanionPage = Contract.FirstEnabledFrom(CompanionStart, ModuleMask(), OpenDashPlugin.Modules.Count);
             // And force it, which is what actually moves the screen: the page above is no longer read
             // by the package. Past the modules the rotation has turned off, because forcing one that is
             // switched off would leave no screen enabled at all and a companion drawing nothing.
-            CompanionOpenOn = CompanionPage;
-        }
-
-        /// <summary>Stops forcing a module, which hands the paging back to SimHub and to the driver.</summary>
-        public void ReleaseStartModule()
-        {
-            if (IsCompanion) CompanionOpenOn = Contract.DefaultCompanionOpenOn;
+            force = new ModuleForce(CompanionPage, now + Contract.CompanionOpenOnWindow);
         }
 
         /// <summary>
