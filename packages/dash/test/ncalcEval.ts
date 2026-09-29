@@ -14,8 +14,33 @@
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning
  * is the number it arrives at, and `signed` puts a `replace` and a sign flag in the way.
+ *
+ * Every number is a JavaScript double, except one passed as a {@link Single}, which is how a raw
+ * iRacing float reaches a binding.
  */
 export type Props = Record<string, unknown>;
+
+/**
+ * A boxed System.Single: an iRacing irsdk_float, which SimHub passes to a binding unchanged, and
+ * which `if` and `isnull` hand on unchanged.
+ *
+ * SimHub's `format(v, pattern, true)` writes its `+` only when the value is a double, a decimal or an
+ * int, so a Single is formatted by .NET alone: a minus where the figure is negative and not a zero,
+ * and nothing in front of anything else. The arithmetic, `abs` and the comparisons read it through
+ * `valueOf`, which is the double it widens to, as NCalc promotes it; `=` does not, since it is
+ * JavaScript's strict equality here, and nothing compares a Single with it. What the evaluator
+ * cannot model is the other operand's type: NCalc keeps a Single times the Int32 `1` a Single, where
+ * JavaScript's `* 1` makes a number of it like `* 1.0` does.
+ */
+export class Single {
+  constructor(readonly v: number) {}
+  valueOf(): number {
+    return Math.fround(this.v);
+  }
+  toString(): string {
+    return String(this.valueOf());
+  }
+}
 
 /**
  * The key `rootdashboardscreenname()` answers from: the name of the screen SimHub drew last. Not a
@@ -29,6 +54,15 @@ const formatNumber = (value: number, pattern: string, addSign = false): string =
   const [i = '0', f] = Math.abs(value).toFixed(frac.length).split('.');
   const sign = value < 0 ? '-' : addSign ? '+' : '';
   return `${sign}${i.padStart(int.length, '0')}${f ? `.${f}` : ''}`;
+};
+
+/**
+ * A Single formatted with no sign asked of SimHub: .NET Framework writes a minus only where the
+ * rounded figure has a digit that is not zero, so -0.004 to two places is `0.00`.
+ */
+const formatSingle = (value: Single, pattern: string): string => {
+  const text = formatNumber(Math.abs(value.valueOf()), pattern);
+  return value.valueOf() < 0 && /[1-9]/.test(text) ? `-${text}` : text;
 };
 
 /**
@@ -76,7 +110,11 @@ export function evalNcalc(expression: string, props: Props): unknown {
     IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
     isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),
     format: (value: unknown, pattern: string, addSign = false): string =>
-      value instanceof Date ? formatDate(value, pattern) : formatNumber(value as number, pattern, addSign),
+      value instanceof Date
+        ? formatDate(value, pattern)
+        : value instanceof Single
+          ? formatSingle(value, pattern)
+          : formatNumber(value as number, pattern, addSign),
     // NCalc's `in`, which compares as `=` does: two strings as strings.
     IN: (value: unknown, ...options: unknown[]): boolean => options.some((option) => option === value),
     replace: (v: string, from: string, to: string): string => String(v).split(from).join(to),

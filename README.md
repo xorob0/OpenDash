@@ -137,11 +137,12 @@ it: `OpenDash.Face850x480ZoneA` is the page zone A of the base face is showing, 
 it has its own set, so two screens on one rig are configured apart.
 
 What every screen shares carries no such name: `OpenDash.RevBar`, `OpenDash.PositionMode`,
-`OpenDash.DeltaReference` and `OpenDash.SessionProgress`. `OpenDash.RevBar` is `shift`, `rpm` or
-`off`, for a wheel that already has LEDs across its top. On a rectangular zone face `off` selects a
-second arrangement of the screen, with the well's room given back; on everything that has no such
-arrangement -- the round faces' rev arc, the companion's speedo -- it falls back to the plain RPM
-bar rather than going dark, which is what ADR 0004 records.
+`OpenDash.DeltaReference`, `OpenDash.DeltaPrecision` and `OpenDash.SessionProgress`.
+`OpenDash.DeltaPrecision` is `hundredths` or `thousandths`, the places the live delta is drawn to,
+and `OpenDash.RevBar` is `shift`, `rpm` or `off`, for a wheel that already has LEDs across its top.
+On a rectangular zone face `off` selects a second arrangement of the screen, with the well's room
+given back; on everything that has no such arrangement -- the round faces' rev arc, the companion's
+speedo -- it falls back to the plain RPM bar rather than going dark, which is what ADR 0004 records.
 `OpenDash.ShiftLights` is still attached beside it as the deprecated alias, true only in the
 `shift` state. `OpenDash.UpdateAvailable` and `OpenDash.UpdateVersion` are what the plugin last
 heard from GitHub about a newer release, which the idle screen draws: false and empty with update

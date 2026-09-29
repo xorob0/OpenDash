@@ -38,7 +38,7 @@
     {"at": 16, "log": "3/15 black furled: a bar", "set": {"SessionFlags": "furled"}},
     {"at": 22, "log": "4/15 black: an outline", "set": {"SessionFlags": "black"}},
     {"at": 28, "log": "5/15 meatball: an orange disc", "set": {"SessionFlags": "repair"}},
-    {"at": 34, "log": "6/15 full-course caution: yellow in bands", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},
+    {"at": 34, "log": "6/15 full-course caution: SC in black on yellow, blinking", "set": {"SessionFlags": "yellow|yellowWaving|caution|cautionWaving"}},
     {"at": 40, "log": "7/15 waved yellow: yellow, blinking", "set": {"SessionFlags": "yellow|yellowWaving"}},
     {"at": 46, "log": "8/15 yellow: solid, steady", "set": {"SessionFlags": "yellow"}},
     {"at": 52, "log": "9/15 debris: yellow with danger stripes", "set": {"SessionFlags": "debris"}},

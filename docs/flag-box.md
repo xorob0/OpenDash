@@ -131,7 +131,7 @@ you can learn the box away from the car.
 | 4 | Black furled — a bar | ● |
 | 5 | Meatball — an orange disc | ● |
 | 6 | Chequered — a checkerboard | |
-| 7 | Full-course caution — yellow in bands | ● |
+| 7 | Full-course caution — SC in black on yellow, blinking | ● |
 | 8 | Waved yellow — yellow, blinking | ● |
 | 9 | Yellow — solid, steady | ● |
 | 10 | Debris — yellow with danger stripes | ● |
@@ -152,8 +152,9 @@ moment.
 
 A black flag is an **outline** because black is the absence of light: a black panel is a box that
 is off. A waved yellow is the yellow flag **blinking**, which is how you tell it from a standing
-one without a second colour. The pit limiter is a **frame** in the lane and an **exclamation mark**
-out of it, so you never have to judge by colour alone.
+one without a second colour. A full-course caution blinks as well, with **SC** cut out of the
+yellow, so the letters are how you tell it from a waved yellow. The pit limiter is a **frame** in
+the lane and an **exclamation mark** out of it, so you never have to judge by colour alone.
 
 ## What it does not do
 

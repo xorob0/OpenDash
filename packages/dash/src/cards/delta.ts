@@ -1,31 +1,32 @@
 /**
- * Card 3, Delta: the live delta to the session best or the all-time best per OpenDash.DeltaReference,
- * signed with two decimals, green when faster, red when slower, white within 5 ms.
+ * Card 3, Delta: the live delta to the session best, the all-time best or the last lap per
+ * OpenDash.DeltaReference, signed, to hundredths or thousandths per OpenDash.DeltaPrecision, green
+ * when faster, red when slower, white while it is level.
+ *
+ * The reading is `referenceDelta()`, the one every second screen draws. The card used to carry a
+ * switch of its own between the two plugin properties, which is a second place for a third reference
+ * to be forgotten; one reading is what keeps the card and the delta module on the same lap. The
+ * figure, its colour and the band inside which it is level are the second screens' too, for the same
+ * reason: `referenceDeltaText`, `referenceDeltaColour` and `referenceDeltaLevel` in `second/values.ts`.
  */
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { setting } from '../contract.ts';
+import { CHARS, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaLevel, referenceDeltaText } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
-import { DELTA_CHARS } from './chars.ts';
 
-const { prop, eq, lt, le, abs, num, iff, str, signed, isnull } = ncalc;
-
-/** Deltas within this many seconds of zero are drawn in delta.zero. */
-export const DELTA_DEADBAND = 0.005;
-
-export const SESSION_DELTA = 'PersistantTrackerPlugin.SessionBestLiveDeltaSeconds';
-export const ALLTIME_DELTA = 'PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds';
-
-/** The delta the card reads, per the setting. */
-export const deltaSeconds = (): string => iff(eq(setting.deltaReference(), str('alltime')), prop(ALLTIME_DELTA), prop(SESSION_DELTA));
+const { iff, str } = ncalc;
 
 export const delta = defineCard('delta', (slot, rung, prefix, meta) => {
-  const safe = isnull(deltaSeconds(), num(0));
+  // Null-safe already: each of the three readings defaults to zero where its property is absent.
+  const safe = referenceDelta();
   // One predicate behind both the text and the colour. A forced sign wrote "+0.00" for a delta the
-  // deadband had already called level, so the card drew a plus in the resting white; the canvas
-  // draws a bare "0.00" there, and the two cannot disagree while they are read off the same test.
-  const resting = le(abs(safe), num(DELTA_DEADBAND));
+  // band had already called level, so the card drew a plus in the resting white; the canvas draws a
+  // bare "0.00" there, and the two cannot disagree while they are read off the same test. The band
+  // is half a unit of the last place drawn, so it narrows to 0.0005 when the card draws thousandths
+  // and the resting figure gains the third zero with it.
+  const resting = referenceDeltaLevel(safe);
   return readout(
     slot,
     rung,
@@ -33,10 +34,12 @@ export const delta = defineCard('delta', (slot, rung, prefix, meta) => {
     { text: meta.label },
     {
       sample: '−0.21',
-      bind: iff(resting, str('0.00'), signed(safe, '0.00')),
-      chars: DELTA_CHARS,
+      // The box is cut for three places whichever is drawn, and measured by the longest of them.
+      widest: REFERENCE_DELTA_WIDEST,
+      bind: iff(resting, iff(setting.deltaPrecisionIs('thousandths'), str('0.000'), str('0.00')), referenceDeltaText(safe)),
+      chars: CHARS.referenceDelta,
       color: ds.purpose.delta.zero,
-      colorBind: iff(resting, str(ds.purpose.delta.zero), iff(lt(safe, num(0)), str(ds.purpose.delta.faster), str(ds.purpose.delta.slower))),
+      colorBind: referenceDeltaColour(safe),
     },
   );
 });

@@ -38,7 +38,7 @@ the band itself.
 | 3 | Black furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
 | 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Outlined `purpose.flag.orange` on the near-black ground, "MEATBALL". |
-| 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
+| 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | SC written in black on a yellow panel, blinking. The letters are all that tell it from a waved yellow. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
 | 7 | Waved yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "WAVED YELLOW", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Striped: `purpose.flag.debris` under vertical stripes of `purpose.flag.debris.stripe`, "DEBRIS" on a plate of the yellow. |
@@ -193,8 +193,36 @@ is the near-white the face already outlines it with, for the same reason.
 to tell them apart at a glance. That is a pattern question rather than a colour one, and blinking
 is the pattern with no pixels to spare.
 
-**A full-course caution is banded.** The whole-track condition must never look like one corner's
-yellow, and bands are legible at this size where a pace-car silhouette is not.
+**A full-course caution is written.** The whole-track condition used to be drawn as two yellow
+halves waved in turn, which is how a marshal post flies a double yellow, and iRacing never raises a
+double yellow; a picture that carries two meanings teaches a driver the wrong one, so the halves are
+left to the flag they belong to, [below](#what-is-not-drawn-and-why). The box writes SC instead, in
+unlit pixels on a yellow panel, each letter three columns by six rows with a column of yellow between
+them. Seven columns of letter in eight leave one edge without a margin, and it is the C's, since its
+open side is the only side of either letter with no stroke on it. The picture blinks against the dark
+at the band's rate, as the waved yellow does, because the condition moves; consequently the letters
+are the whole of the difference between the two, which is deliberate. They are SC, which is the
+author's choice for a panel eight columns wide, whatever the band calls the condition (#497).
+Whether strokes one unlit pixel wide survive a diffuser, which spreads the light of the pixels around
+them into the letter, has not been seen on a panel. The canvas's Flag box page still draws the caution
+as the two halves, captioned as the double yellow a marshal post flies, and owes a redrawn tile.
+
+The spotter's bar takes part of the word, since it is painted over any flag, [below](#the-spotter): a
+car on the left removes the S's left stroke, a car on the right reduces the C to a single unlit
+column, and cars on both sides leave neither letter readable. That is likeliest under the caution
+itself, when a double-file restart lines the field up two abreast. The picture still differs from a
+plain yellow, so the two conditions are not confused, but the word is lost for as long as the bar is
+lit, and no placement of the letters avoids it, because one bar two columns wide leaves six columns
+and two leave four, where the pair needs seven. Whether the bar should yield to the caution, or the damaged word be
+accepted while a car is alongside, is the author's decision and is not taken here.
+
+The rule this file used to state here, namely that the whole-track condition must never look like
+one corner's yellow, no longer holds on every surface. On the face the caution is a filled yellow band
+carrying its name, as a yellow flag is, and the author has accepted that only the word tells the two
+apart there: where no word is written, on the nano and in a settled flag too narrow for one, they are
+the same yellow. The LED strip does keep a difference of colour, alternating the caution amber with
+the flag yellow (`leds/effects.ts`), which is the only vocabulary a lamp has and is not the
+two-halves picture.
 
 **Blue moves.** A blue flag with a moving arrow says which way to look. A static blue square says
 a colour.
@@ -252,7 +280,10 @@ blanked the warnings and the gear beneath it. It is now the last container of th
 that panel's own Spotter switch and on nothing else: no flag bit, no pit condition, and nothing
 below it excludes it in turn. Its frames light two columns of an edge and leave the rest of the
 panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
-it, so a standing yellow keeps columns three to six while the bar says which side. The consequence
+it, so a standing yellow keeps columns three to six while the bar says which side. A full-course
+caution does not come through whole, on the other hand, because SC runs to both edges and the bar
+takes the S or the C; [its own paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no
+placement avoids that and leaves the remedy to the author. The consequence
 worth stating is that on a rig with one box the gear now shows through the middle of the panel
 while a car is alongside, which is the behaviour this is for.
 
@@ -463,7 +494,7 @@ does not publish it, not that it was forgotten.
 |---|---|
 | **Engine off, ignition off, incident, push to pass, headlight flash** (canvas 1, 2, 15, 24 and 25), **on the box** | They are drawn on every band, [above](#what-band-d-draws-that-the-box-does-not), and not on the box. They are not flags, and the box's own answer to a car switched off is the dim standby mark under [When nobody is racing](#when-nobody-is-racing). The LED strips leave the flash out for their own reason, `DROPPED` in `leds/effects.ts`: a lamp spent on what the driver's hand just did is a lamp not spent on an aid. |
 | **Virtual safety car, with the delta to the reference speed** (canvas 8) | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing; there is no reference speed to be over or under. |
-| **Double yellow** (canvas 9) | iRacing publishes one yellow and one waved yellow. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
+| **Double yellow** (canvas 9) | iRacing publishes one yellow and one waved yellow. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. On the box its picture would be two yellow halves waved in turn, which is how a marshal post flies it, and that picture is reserved for it: the full-course caution drew it until #499, no condition draws it now, and `flagBox.test.ts` holds every flag to that. |
 | **Yellow per sector** (canvas 10) | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
 | **Stop and go, drive through, a penalty with its value** (canvas 12, 13 and 14) | None is published. iRacing tells a driver which penalty in the chat and flies the black flag, and the telemetry carries the flag and nothing of the text: no penalty type, no seconds. The black flag is drawn; which penalty it is, is not, and a band that said "DRIVE THROUGH" from a guess would be wrong the first time the penalty was a stop and go. |
 | **White for a slow car** (canvas 17) | iRacing's `white` is the last lap and nothing else. There is no slow-car white in the bitfield. |

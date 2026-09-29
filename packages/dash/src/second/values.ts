@@ -85,8 +85,24 @@ export const NO_TIME = noTime();
 export const CHARS = {
   /** `1:42.905` */
   lapTime: { digits: 6, specials: 2 } as Chars,
-  /** `-0.21` */
+  /**
+   * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
+   * sector deltas and the lap review's two draw it to two places, which leaves two whole digits; the
+   * lap history's column draws it to three, `+0.594`, which leaves one. The live delta to the
+   * reference has a budget of its own, {@link CHARS.referenceDelta}.
+   */
   delta: { digits: 5, specials: 1 } as Chars,
+  /**
+   * `−12.345`: the live delta to the reference, at the most places the precision setting draws it to.
+   *
+   * Its own budget rather than {@link CHARS.delta} widened, for the reason {@link CHARS.margin} gives:
+   * the sector deltas share that one, and a sixth cell on each of three sectors wraps the compact
+   * sector rank of the delta page onto a second line. The sign, two whole digits and three decimals,
+   * whichever precision is chosen: a box cannot change its cells at runtime (SimHub marks `CharWidth`
+   * `[NoBinding]`), so the one box is cut for the longer of the two readings and a two-place delta
+   * sits left in it, as every other value sits in the cells cut for its longest reading. #322.
+   */
+  referenceDelta: { digits: 6, specials: 1 } as Chars,
   /** `-5.886` */
   relativeGap: { digits: 6, specials: 1 } as Chars,
   /** `+1L` or `+12.6` */
@@ -1478,11 +1494,149 @@ export const estimatedLap = (): Expr => prop('PersistantTrackerPlugin.EstimatedL
 export const sessionBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin.SessionBestLiveDeltaSeconds'), num(0));
 export const allTimeBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds'), num(0));
 
-/** The delta the screens show, per the plugin's DeltaReference. */
-export const referenceDelta = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), allTimeBestDelta(), sessionBestDelta());
+/** The raw telemetry field that carries iRacing's live delta to the last lap, spelt as iRacing spells it. */
+export const LAST_LAP_DELTA = 'LapDeltaToSessionLastlLap';
 
-/** The label that says which reference the delta is against. */
-export const referenceLabel = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), str('vs all-time best'), str('vs session best'));
+/**
+ * The live delta to the lap before this one, which is iRacing's own reading and not SimHub's.
+ *
+ * SimHub's lap tracker publishes a live delta to the session best and to the all-time best and to
+ * nothing else; its `*LastLapDelta` properties are the finished lap's, written once at the line, and
+ * say nothing while the next lap runs. iRacing publishes the running comparison itself, as
+ * `LapDeltaToSessionLastlLap` (the second `l` is iRacing's), with `_OK` saying whether it has a lap
+ * to compare against. Reading it here is what ADR 0009 asks for: a published property read in the
+ * expression, where computing it would need the previous lap kept by distance, which is memory
+ * between frames.
+ *
+ * Gated on `_OK` and zero without it, which is what the other two references draw when they have no
+ * lap to compare against: SimHub publishes 0 there. The flag's fallback is the bare literal `false`
+ * and not the string, because a raw telemetry boolean arrives as `true` or `false` (see `inTheCar`
+ * in `components/changeNotification.ts`), so a sim that publishes neither field, or no telemetry at
+ * all, reads a level delta rather than an error.
+ *
+ * Multiplied by `1.0` to make it a double. iRacing publishes the reading as an irsdk_float, and it
+ * reaches the binding as a boxed System.Single: SimHub's raw telemetry passes it through unchanged,
+ * and so do `if` and `isnull`. SimHub's `format(v, pattern, true)` writes its `+` only for a double,
+ * a decimal or an int, so without the promotion a slower or level last-lap delta would lose its sign,
+ * and the delta page's caption, placed by {@link referenceDeltaDrawn} with the sign's cell counted,
+ * would stand a cell right of the figure. The literal is `1.0` and not `num(1)`: NCalc reads `1` as
+ * an Int32, and a Single times an Int32 is still a Single, where a Single times the double `1.0` is a
+ * double. The colour never needed it, since `abs` and `<` promote the value themselves.
+ */
+export const lastLapDelta = (): Expr =>
+  iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), mul(isnull(raw(LAST_LAP_DELTA), num(0)), '1.0'), num(0));
+
+/**
+ * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
+ * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
+ * different laps. An unknown value reads the session best, which is the default.
+ */
+export const referenceDelta = (): Expr =>
+  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+
+/**
+ * The label that says which reference the delta is against.
+ *
+ * "vs last lap" rather than "vs previous": the lap review already uses "vs previous" for a finished
+ * lap against the one before it, which is a different comparison drawn at a different moment.
+ */
+export const referenceLabel = (): Expr =>
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str('vs session best')));
+
+/**
+ * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is
+ * measured by. Written once here, beside the binding, because the delta module and the pit wall
+ * both measure by it and a copy in each is how the two would come to disagree with the binding.
+ */
+export const REFERENCE_LABEL_WIDEST = 'vs all-time best';
+
+/** Whether the live delta is drawn to thousandths rather than to the default hundredths. */
+const inThousandths = (): Expr => setting.deltaPrecisionIs('thousandths');
+
+/**
+ * Whether this reading is drawn to three places: thousandths chosen, and a figure short enough to hold
+ * them. A delta of 100 s or more (a long stop, or the lap after one against the last lap) would need a
+ * seventh cell at three places, so it is drawn to hundredths, which `+100.00` fits. The edge is the
+ * half under which .NET still rounds to two whole digits: 99.9995 to three places is `100.000`.
+ */
+const drawnToThousandths = (seconds: Expr): Expr => and(inThousandths(), lt(abs(seconds), num(99.9995)));
+
+/**
+ * The live delta to the reference as it is drawn: signed, with a true minus, to the places the
+ * precision setting asks for, except that a delta of 100 s or more is drawn to hundredths at either
+ * setting, since three places would take it past the box ({@link drawnToThousandths}).
+ *
+ * One helper for the five surfaces that draw it -- card 3, the delta page, Lap times, the lap pop-up
+ * and the pit wall's Lap delta panel -- so that no two of them can draw one reading to different
+ * places. The sector deltas, the lap review's two deltas and the lap history's column are other
+ * comparisons with formats of their own and do not come through here.
+ *
+ * The choice is an `if` around two formats rather than one format with a bound pattern. `signed`
+ * writes its pattern as a string literal, and a pattern that was itself an expression would be
+ * emitted as the text of that expression; `format` has never been verified with anything but a
+ * literal pattern either. #322.
+ */
+export const referenceDeltaText = (seconds: Expr): Expr => iff(drawnToThousandths(seconds), signed(seconds, '0.000'), signed(seconds, '0.00'));
+
+/**
+ * The longest reading {@link referenceDeltaText} is budgeted for, which is what every box that draws
+ * it declares as its `widest`: two whole digits and three places, the true minus taking a digit
+ * cell. The same six cells hold three whole digits and two places, which is how a delta of 100 s or
+ * more is drawn, so every reading under 1000 s fits. The samples stay the canvas's `−0.21`, which is
+ * the short end of the range; this is what the fit tests measure instead, since a monospaced box is
+ * measured by what it declares rather than by its budget.
+ */
+export const REFERENCE_DELTA_WIDEST = `${MINUS}12.345`;
+
+/**
+ * Half a unit of the last place the live delta is drawn to: 0.005 at hundredths, 0.0005 at
+ * thousandths.
+ *
+ * The band inside which a delta is level exists because the number drawn does not carry anything
+ * finer. At hundredths a delta of four thousandths is drawn `+0.00`, and colouring it as slower is a
+ * claim the figure does not make; at thousandths the same delta is drawn `+0.004`, and the figure
+ * does make it, so the band narrows with the precision. A band that stayed at 0.005 would draw
+ * `+0.004` in the resting white, which is a thousandths setting showing a thousandth and then
+ * disowning it.
+ */
+export const referenceDeltaBand = (): Expr => iff(inThousandths(), num(0.0005), num(0.005));
+
+/**
+ * Whether the live delta is level: inside {@link referenceDeltaBand}, which is exactly the readings
+ * {@link referenceDeltaText} draws as a zero.
+ *
+ * Strictly inside. .NET rounds a half away from zero, so 0.005 at hundredths is drawn `+0.01` and a
+ * band that took it in would colour a `+0.01` as level. The lap history's column, drawn to three
+ * places, calls a lap the session best by the same strict edge, `< 0.0005`.
+ */
+export const referenceDeltaLevel = (seconds: Expr): Expr => lt(abs(seconds), referenceDeltaBand());
+
+/**
+ * The colour of the live delta: level inside the band, then faster below zero and slower above it.
+ *
+ * One predicate with the text rather than {@link deltaColour}'s own band, so the figure and its colour
+ * cannot disagree at either precision: a figure drawn as a zero is white and a figure drawn as
+ * anything else is green or red. Card 3 draws its resting `0.00` off the same predicate.
+ */
+export const referenceDeltaColour = (seconds: Expr): Expr =>
+  iff(referenceDeltaLevel(seconds), str(dsColour.zero), iff(lt(seconds, num(0)), str(dsColour.faster), str(dsColour.slower)));
+
+/**
+ * How wide the live delta really draws, for the caption that follows it: the places the setting asks
+ * for, and as many whole digits as the budget leaves once the sign and those places are taken. A
+ * caption placed at the end of the three-place budget would stand a cell off a two-place figure.
+ *
+ * The whole digits are counted per precision rather than written as two, because the six cells hold
+ * three whole digits at hundredths: a long stop in the pits can take the delta past a hundred
+ * seconds, `+100.00` fits the box, and a caption placed for two digits would sit on its last one.
+ * A delta that long is drawn to hundredths at either setting, so the caption asks the same question
+ * of the reading that {@link referenceDeltaText} does.
+ */
+export const referenceDeltaDrawn = (seconds: Expr): DrawnFigure => {
+  const figure = (decimals: number): DrawnFigure =>
+    drawnFigure({ value: seconds, digits: CHARS.referenceDelta.digits - 1 - decimals, decimals, signed: true });
+  return drawnEither(drawnToThousandths(seconds), figure(3), figure(2));
+};
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);
 export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTime`);

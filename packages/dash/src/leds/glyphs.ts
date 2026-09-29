@@ -13,8 +13,11 @@
  *   - **Waving is blinking.** iRacing publishes `yellow` and `yellowWaving` separately and the two
  *     have to be told apart at a glance, which is a pattern question rather than a colour one. The
  *     rate is `indicator.flagBand.flashHz`, so the box pulses with the band on the face.
- *   - **A full-course caution is two flags, not one.** The whole-track condition is waved left and
- *     right in turn, so it never looks like a local yellow, which is the panel solid.
+ *   - **A full-course caution is written.** Two yellows waved in turn is the double yellow's
+ *     picture, and iRacing never raises a double yellow, so drawing the whole-track condition that
+ *     way would teach a driver the wrong flag. The box writes SC in unlit pixels on a yellow panel
+ *     instead, since a word says what a colour cannot, and it blinks at the band's rate as the
+ *     waved yellow does: the letters are what tell the two apart.
  *   - **Movement means act.** A flag that ends or interrupts the race moves; a flag that informs is
  *     held, which is why blue is a still panel although it is the flag a driver sees most often.
  *     `motion` in flags.ts is that rule written down and flagBox.test.ts holds the drawings to it,
@@ -279,28 +282,27 @@ export const CHEQUERED_INVERSE: Grid = [
   'CC..CC..',
 ];
 
-/** Full-course caution, the first of the two flags: half a panel, so it is never a local yellow. */
-export const CAUTION_LEFT: Grid = [
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-  'YYYY....',
-];
-
-/** Full-course caution, the second flag. Two waved in turn is how the whole track is called. */
-export const CAUTION_RIGHT: Grid = [
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
-  '....YYYY',
+/**
+ * Full-course caution: SC cut out of the yellow, each letter three columns by six rows with a column
+ * of yellow between them. The letters are unlit pixels, which is the only black a lit panel can show;
+ * a black flag, having no lit field around it, is drawn in near-white instead. Seven columns of letter
+ * in eight leave one edge without a margin, and it is the C's: its open side is the only side of
+ * either letter with no stroke on it, so the edge of the panel takes nothing the letter is read by.
+ *
+ * The spotter's bar is painted over any flag, and a car alongside therefore takes the S or the C. No
+ * placement escapes it, since one bar two columns wide leaves six columns, two leave four, and the
+ * pair needs seven; docs/design/flag-box.md leaves whether the bar should yield to the caution to the
+ * author.
+ */
+export const CAUTION: Grid = [
+  'YYYYYYYY',
+  'Y...Y...',
+  'Y.YYY.YY',
+  'Y...Y.YY',
+  'YYY.Y.YY',
+  'YYY.Y.YY',
+  'Y...Y...',
+  'YYYYYYYY',
 ];
 
 /** Yellow: solid and steady. Waved yellow is this, blinking. */
@@ -398,7 +400,9 @@ export function flagFrames(id: string): MatrixFrame[] | undefined {
     case 'chequered':
       return blinkFrames(CHEQUERED, CHEQUERED_INVERSE, FLAG_PALETTE, BLINK_HZ, id);
     case 'caution':
-      return blinkFrames(CAUTION_LEFT, CAUTION_RIGHT, FLAG_PALETTE, BLINK_HZ, id);
+      // Blinking, because the condition moves; and against the dark, as the waved yellow blinks,
+      // rather than against the plain yellow, which is a standing yellow for half of every beat.
+      return blinkFrames(CAUTION, DARK, FLAG_PALETTE, BLINK_HZ, id);
     case 'yellowWaving':
       return blinkFrames(YELLOW, DARK, FLAG_PALETTE, BLINK_HZ, id);
     case 'yellow':

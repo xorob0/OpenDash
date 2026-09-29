@@ -108,6 +108,25 @@ the same shape of exception as ADR 0018, which reads telemetry because no proper
 from, and the package stays complete without the plugin, falling back on the row lookup, which is
 right on every frame SimHub is not mid-build.
 
+### A delta SimHub does not publish and iRacing does
+
+Added 2026-09-29 for #322. The delta family above is SimHub's live delta to the session best and to
+the all-time best; `PersistantTrackerPlugin`'s `*LastLapDelta` properties are the finished lap's,
+written at the line, and no property carries a running comparison with the lap before this one. The
+ticket asked for one on the belief that SimHub published it, and SimHub 9.12.6, decompiled, does not.
+
+iRacing does. Its telemetry carries `LapDeltaToSessionLastlLap`, the second `l` being iRacing's own,
+with `_OK` saying whether there is a last lap to compare against, and SimHub passes raw telemetry
+through as `DataCorePlugin.GameRawData.Telemetry.*`. The last-lap reference therefore reads that
+property in the expression, gated on its `_OK`, which is the decision above applied rather than an
+exception to it: a published property, read where it is drawn, with the package complete without the
+plugin.
+
+Computing the same number ourselves would have been the thing this record refuses. A live delta is
+the current lap's time at this point of the track against the previous lap's time at the same point,
+so it needs the previous lap kept by distance, frame after frame, which is memory between frames and
+the second of the conditions below.
+
 ## What would reopen this
 
 An expression is not a good place for arithmetic that is long, shared between many items, or
