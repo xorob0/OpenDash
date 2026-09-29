@@ -392,28 +392,34 @@ describe('a rank fills the box it is given', () => {
  * The catalogue gives the last lap a full-width line, sets the two bests beside it in two equal
  * columns under it, and ends on the delta alone.
  */
-describe("lap times' grid drawing", () => {
-  const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
-  /** The catalogue's own `grid` drawing, and every zone body of a face that the bands read as one. */
-  const gridBodies = (): { at: string; body: Rect; density: Density }[] => {
-    const bodies = new Map<string, { at: string; body: Rect; density: Density }>();
-    const { width, height } = SHAPE_ARCHETYPES.grid;
-    bodies.set('catalogue', { at: 'catalogue', body: contentRect(rect(0, 0, width, height), 'zone'), density: 'zone' });
-    for (const layout of ZONE_FACES) {
-      for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
-        for (const zone of zonesOf(arrangement)) {
-          if (zone.zone === 'A' || zone.zone === 'D') continue;
-          const density = densityForBox(zone.size);
-          const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
-          const shape = shapeOf(body);
-          if (shape.width !== 'medium' || shape.height !== 'medium') continue;
-          const at = `${body.width}x${body.height}`;
-          bodies.set(at, { at, body, density });
-        }
+/**
+ * The catalogue's own drawing of one shape, and every zone body of a face whose bands are that
+ * shape's: the boxes a page's drawing at that shape really answers.
+ */
+const faceBodiesOf = (archetype: 'grid' | 'tall'): { at: string; body: Rect; density: Density }[] => {
+  const wanted = shapeOf(SHAPE_ARCHETYPES[archetype]);
+  const bodies = new Map<string, { at: string; body: Rect; density: Density }>();
+  const { width, height } = SHAPE_ARCHETYPES[archetype];
+  bodies.set('catalogue', { at: 'catalogue', body: contentRect(rect(0, 0, width, height), 'zone'), density: 'zone' });
+  for (const layout of ZONE_FACES) {
+    for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+      for (const zone of zonesOf(arrangement)) {
+        if (zone.zone === 'A' || zone.zone === 'D') continue;
+        const density = densityForBox(zone.size);
+        const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+        const shape = shapeOf(body);
+        if (shape.width !== wanted.width || shape.height !== wanted.height) continue;
+        const at = `${body.width}x${body.height}`;
+        bodies.set(at, { at, body, density });
       }
     }
-    return [...bodies.values()];
-  };
+  }
+  return [...bodies.values()];
+};
+
+describe("lap times' grid drawing", () => {
+  const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
+  const gridBodies = (): { at: string; body: Rect; density: Density }[] => faceBodiesOf('grid');
 
   test('is found at every grid body a face produces', () => {
     // The 1280 x 400 and 1280 x 480 faces in both arrangements; a test that measured none of them
@@ -442,6 +448,52 @@ describe("lap times' grid drawing", () => {
         expect({ at, line: onLineOf(delta) }).toEqual({ at, line: ['b.delta.value'] });
         expect({ at, below: delta.rect.top > sessionBest.rect.top }).toEqual({ at, below: true });
       }
+    }
+  });
+});
+
+/**
+ * Lap times at `tall` promotes its times (#330).
+ *
+ * The catalogue draws the three times at 88 over a 34 px rank at `tall`, where it draws 46 over 34
+ * at every other shape. Growing cannot reach that, since rule 20 grows every size by one factor and
+ * keeps 46 over 34 however far it goes; what the drawing does is rule 17's other lever, a tall box
+ * promoting the lead a size. So the times take the next name up the ramp and the rank under them
+ * stays, and then the page grows into its box.
+ */
+describe("lap times' tall drawing", () => {
+  const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
+  const sizesAt = (body: Rect, density: Density): { times: number[]; rest: number[] } => {
+    const values = [...walkItems(lapTimes.build({ frame: body, density, prefix: 'b.' }))].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+    const size = (id: string): number => values.find((i) => i.name === `b.${id}.value`)?.fontSize ?? 0;
+    return { times: ['last', 'sessionBest', 'yourBest'].map(size), rest: ['laps', 'estimated', 'delta'].map(size).filter((fs) => fs > 0) };
+  };
+
+  test('is found at every tall body a face produces', () => {
+    // The 1280 x 720 face in both arrangements, and the catalogue's own 360 x 470.
+    expect(faceBodiesOf('tall').length).toBeGreaterThan(2);
+  });
+
+  test('draws the three times a ramp size above the rank under them', () => {
+    for (const { at, body, density } of faceBodiesOf('tall')) {
+      const { times, rest } = sizesAt(body, density);
+      const d = densityOf(density);
+      expect({ at, oneSize: new Set(times).size, drew: rest.length }).toEqual({ at, oneSize: 1, drew: 3 });
+      // The ratio of the promoted drawing, `hero` over `mid`, rather than the `big` over `mid` every
+      // other shape draws: 64 over 34 in a zone, which is 1.88 where the catalogue's 88 over 46 is 1.91.
+      const ratio = times[0]! / rest[0]!;
+      expect({ at, ratio: Math.abs(ratio - d.hero / d.mid) < 0.04 }).toEqual({ at, ratio: true });
+      // And grown into the box on top of that: past the promoted size, which is the ramp's top.
+      expect({ at, grew: times[0]! > d.hero }).toEqual({ at, grew: true });
+    }
+  });
+
+  test('and a grid box, whose height is not tall, draws the times at the size every other shape does', () => {
+    for (const { at, body, density } of faceBodiesOf('grid')) {
+      const { times, rest } = sizesAt(body, density);
+      if (rest.length === 0) continue;
+      const d = densityOf(density);
+      expect({ at, ratio: Math.abs(times[0]! / rest[0]! - d.big / d.mid) < 0.04 }).toEqual({ at, ratio: true });
     }
   });
 });
