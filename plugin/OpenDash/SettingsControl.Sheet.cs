@@ -28,7 +28,21 @@ namespace OpenDashPlugin
         {
             // Both sheet artboards dim in the inset ground and edge the sheet in the border ink.
             var dim = new Border { Background = Ui.Tint(Theme.SurfaceInset, PanelShell.SheetDimOpacity), Cursor = Cursors.Arrow };
-            dim.MouseLeftButtonDown += (sender, args) => CloseSheet();
+            // The dim closes the sheet on the release that ends a press on it, and holds the mouse between
+            // the two. It closed on the press, so the release went to whatever the collapsed layer had
+            // covered, and a segmented bar under the dim took it as a choice and saved it.
+            dim.MouseLeftButtonDown += (sender, args) =>
+            {
+                args.Handled = true;
+                dim.CaptureMouse();
+            };
+            dim.MouseLeftButtonUp += (sender, args) =>
+            {
+                if (!dim.IsMouseCaptured) return;
+                args.Handled = true;
+                dim.ReleaseMouseCapture();
+                CloseSheet();
+            };
             sheetPanel.HorizontalAlignment = HorizontalAlignment.Right;
             sheetPanel.Background = Ui.Brush(Theme.SurfaceBase);
             sheetPanel.BorderBrush = Ui.Brush(Theme.Border);

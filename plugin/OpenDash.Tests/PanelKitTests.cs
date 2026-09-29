@@ -131,5 +131,49 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(".Click +=", body);
             Assert.DoesNotContain("MouseLeftButtonUp", body);
         }
+
+        /// <summary>
+        /// Nothing in the panel acts on a release it did not see pressed. A segmented option chose on any
+        /// MouseLeftButtonUp over it, so the click that dismissed a sheet's dim -- pressed on the dim, released
+        /// on what the collapsed layer had covered -- rewrote the setting under the pointer. Every handler of
+        /// the release sits in a file that takes the mouse on the press, and reads that capture on the release.
+        /// </summary>
+        [Fact]
+        public void No_release_acts_without_a_press_on_the_same_control()
+        {
+            var sources = Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), "*.cs");
+            var handlers = 0;
+            foreach (var path in sources)
+            {
+                var text = File.ReadAllText(path);
+                foreach (Match up in Regex.Matches(text, @"(\w+)\.MouseLeftButtonUp \+="))
+                {
+                    handlers++;
+                    var control = up.Groups[1].Value;
+                    var name = Path.GetFileName(path) + " " + control;
+                    Assert.True(Regex.IsMatch(text, control + @"\.MouseLeftButtonDown \+="), name + " is pressed before it is released");
+                    Assert.True(Regex.IsMatch(text, @"\b" + control + @"\.CaptureMouse\(\)"), name + " takes the mouse on the press");
+                    var body = text.Substring(up.Index, Math.Min(400, text.Length - up.Index));
+                    Assert.True(body.Contains(control + ".IsMouseCaptured"), name + " acts only on the release that ends its own press");
+                }
+            }
+            Assert.True(handlers >= 2, "the segmented option and the sheet's dim answer a release");
+        }
+
+        /// <summary>The segmented bar is one of them by name, and the sheet's dim closes on the matching
+        /// release and marks the press handled, so the release that dismisses the sheet reaches nothing.</summary>
+        [Fact]
+        public void A_segmented_option_and_the_dim_act_on_their_own_press_and_release()
+        {
+            var root = Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var segmented = File.ReadAllText(Path.Combine(root, "Segmented.cs"));
+            Assert.Contains("box.MouseLeftButtonDown +=", segmented);
+            Assert.Contains("box.CaptureMouse()", segmented);
+            Assert.Contains("if (!box.IsMouseCaptured) return;", segmented);
+            var sheet = File.ReadAllText(Path.Combine(root, "SettingsControl.Sheet.cs"));
+            Assert.DoesNotContain("dim.MouseLeftButtonDown += (sender, args) => CloseSheet();", sheet);
+            Assert.Contains("dim.CaptureMouse()", sheet);
+            Assert.Contains("if (!dim.IsMouseCaptured) return;", sheet);
+        }
     }
 }

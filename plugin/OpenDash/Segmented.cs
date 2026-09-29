@@ -161,8 +161,22 @@ namespace OpenDashPlugin
             var value = option.Value;
             if (!option.Disabled)
             {
+                // An option chooses on a release that follows a press on that same option, as a button does.
+                // It chose on any release over it, so the click that dismissed a sheet's dim or a flyout -- the
+                // press on the dim, the release on whatever the collapsed layer had covered -- rewrote the
+                // setting under the pointer. The press takes the mouse, and only the release that ends that
+                // press, inside the option, chooses.
+                box.MouseLeftButtonDown += (sender, args) =>
+                {
+                    if (box.CaptureMouse()) args.Handled = true;
+                };
                 box.MouseLeftButtonUp += (sender, args) =>
                 {
+                    if (!box.IsMouseCaptured) return;
+                    box.ReleaseMouseCapture();
+                    args.Handled = true;
+                    var at = args.GetPosition(box);
+                    if (at.X < 0 || at.Y < 0 || at.X > box.ActualWidth || at.Y > box.ActualHeight) return;
                     // A pointer leaves the keyboard where it clicked, so that the arrows carry on from the
                     // option the hand chose rather than from the one it left.
                     Focus();
