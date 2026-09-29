@@ -243,11 +243,10 @@ function chequeredFull(name: string, frame: Rect): Item[] {
  * wide, and the name on a plate of the yellow.
  *
  * A check wide, so that the two patterns are one scale on the block as they are on the band, and
- * counted by the same rule as the band's stripes, so both ends are yellow. That makes three stripes
- * on the portrait face and the portrait companion, whose blocks are about as wide as they are tall:
- * one red between two yellow, and the plate laid over the middle of it, which leaves the red above
- * and below the name. The plate is what keeps a name half the face high off the edges between the
- * two colours.
+ * counted by the same rule as the band's stripes, so both ends are yellow. On the three portrait
+ * blocks, the face's, the companion's and the pit wall's, that is three stripes: one red between two
+ * yellow, with the plate laid over the middle of it, which leaves the red above and below the name.
+ * The plate is what keeps a name half the face high off the edges between the two colours.
  */
 function stripedFull(name: string, frame: Rect, colour: Hex, stripe: Hex, text: string): Item[] {
   const size = flagFullNameSize(frame);

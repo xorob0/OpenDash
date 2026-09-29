@@ -196,8 +196,8 @@ export function namePlate(name: string, frame: Rect, textWidth: number, lineTop:
  * A stripe is as wide as the chequer's check on the same band, half the band high, so that the
  * canvas's two patterns are drawn at one scale. It carries no border, as the chequer carries none:
  * the pattern is the flag, and three pixels of yellow over the ends of every stripe would frame it as
- * a yellow band with red marks inside. Nothing here flashes, since the debris flag is held on the
- * band; it is the lamp that alternates the two colours, `leds/effects.ts`.
+ * a yellow band with red marks inside. Nothing here flashes, the waved yellow being the one band
+ * that does; it is the lamp that alternates the two colours, `leds/effects.ts`.
  */
 export function stripedBand(name: string, frame: Rect, style: AlertBandStyle, colour: Hex, stripe: Hex, text: string): Item[] {
   const named = style.labels
