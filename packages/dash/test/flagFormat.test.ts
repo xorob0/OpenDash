@@ -520,3 +520,51 @@ describe('the full-screen debris flag is yellow with red stripes', () => {
     });
   }
 });
+
+/**
+ * Every full-screen meatball the build draws, once per block, keyed as the chequers are. The faces
+ * are held above against the block their layout derives; this is every block besides, and it is the
+ * companions and the pit walls that matter here, since the portrait companion and the portrait pit
+ * wall are the only blocks taller than they are wide, which is where the width rather than the
+ * height sizes the disc.
+ */
+const MEATBALLS: { where: string; block: Rect; children: Item[] }[] = (() => {
+  const found = new Map<string, { where: string; block: Rect; children: Item[] }>();
+  for (const { pkg } of composePackages({ version: '0.0.0-test', log: () => {} }, true)) {
+    for (const item of pkg.dashboards.flatMap(itemsOf)) {
+      if (item.kind !== 'layer' || !item.name.endsWith('flagFull.meatball')) continue;
+      const ground = item.children[0];
+      if (ground?.kind !== 'rect') throw new Error(`${item.name} does not open with its ground`);
+      const where = `${pkg.folderName} ${ground.rect.width} x ${ground.rect.height}`;
+      if (!found.has(where)) found.set(where, { where, block: ground.rect, children: item.children });
+    }
+  }
+  return [...found.values()];
+})();
+
+describe('the full-screen meatball keeps its disc inside every block', () => {
+  test('on every block the build draws the chequer on, the two taller than they are wide among them', () => {
+    expect(MEATBALLS.map((m) => m.where)).toEqual(CHEQUERS.map((c) => c.where));
+    const tall = MEATBALLS.filter(({ block }) => block.height > block.width).map((m) => m.where);
+    expect(tall).toEqual(['OpenDash Companion portrait 480 x 758', 'OpenDash Pit wall portrait 1080 x 1856']);
+  });
+
+  for (const { where, block, children } of MEATBALLS) {
+    test(`${where} draws the near-black block and its orange disc, two thirds of the shorter side, in the middle`, () => {
+      const [ground, disc] = children;
+      if (children.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${where} draws the meatball as a ground and a disc`);
+      const side = Math.min(block.width, block.height);
+      const centre = { x: disc.rect.left + disc.rect.width / 2, y: disc.rect.top + disc.rect.height / 2 };
+      expect({
+        where,
+        fill: ground.backgroundColor,
+        border: ground.border,
+        disc: disc.fillColor,
+        round: disc.rect.width === disc.rect.height,
+        size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * side) <= 1,
+        inside: contains(block, disc.rect),
+        centred: Math.abs(centre.x - (block.left + block.width / 2)) <= 0.5 && Math.abs(centre.y - (block.top + block.height / 2)) <= 0.5,
+      }).toEqual({ where, fill: ds.color.surface.base, border: undefined, disc: ds.purpose.flag.orange, round: true, size: true, inside: true, centred: true });
+    });
+  }
+});
