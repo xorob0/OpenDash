@@ -536,6 +536,35 @@ expressed at all: what a package does not ship is resolved by WPF to whatever it
 than to a named alternative, which is why a weight has to be bundled before it may be drawn. Blumlaut
 ships `D-DINCondensed-Bold.ttf`; Daniel Newman ships Reddit Mono, Reddit Sans and Inter.
 
+### A font copied into a running SimHub is not drawn until it restarts (2026-09-28, #441)
+
+One could think that `FontHelper.RefreshFonts()`, which SimHub's importer calls after copying a
+package's fonts and which the plugin reaches by reflection, loads what was copied. In reality it does
+not, and nothing a plugin can do in-process does. `FontHelper` builds its list with
+`Fonts.GetFontFamilies(new Uri(new FileInfo("DashFonts\\").FullName))`, and WPF answers that with a
+DirectWrite font collection created through the shared DirectWrite factory, keyed by the folder's
+URI. The factory keeps that collection for the life of the process, so the refresh, which asks for
+the same URI, is handed the collection built the first time the folder was read. Above it, WPF keeps
+each resolved family in `MS.Internal.FontCache.TypefaceMetricsCache`, keyed by a family identity that
+compares the location without regard to case.
+
+Measured with PresentationCore 4.8.4682 on the VM, in a process that had read a folder holding the
+Bold and SemiBold faces of openDash Display: after `openDashDisplay-Light.ttf` and
+`Barlow-SemiBold.ttf` were copied in, the folder listed only openDash Display, without Barlow, and a
+Light `Typeface` resolved to `openDashDisplay-SemiBold.ttf`. Emptying `TypefaceMetricsCache` and
+running two full collections changed nothing. The same folder under a URI spelled in lower case was
+enumerated afresh and listed Barlow, yet Light still resolved to SemiBold, because the family
+identity found the stale entry. In SimHub itself, a face written by Reinstall into a running SimHub
+was not drawn by the dashboard after it was closed and reopened, and was drawn after a restart; the
+update of run A on the ticket met the same thing.
+
+Two consequences follow. A face has to be in `DashFonts` before SimHub first reads the folder, which
+the plugin's first start after an update achieves: on the VM it wrote Light about a quarter of a second
+after it started, and SimHub opened its dashboard twelve seconds later, drawing Light. And whatever
+writes a font into a running SimHub has to ask for a restart rather than a reopen, which is what
+`UpdateWording.RestartToSee` is for. A face in use is not locked against writing, on the other hand:
+one an open dashboard was drawing from was overwritten, and moved out and back, while SimHub ran.
+
 ### No letter spacing
 
 No text item in any of the roughly thirty `.djson` files examined carries a letter-spacing,

@@ -7,13 +7,16 @@
  * and SimHub shows one, exactly as it does with the rev bar, so the assertions here are structural:
  * that the block is the union of the three zones and nothing more, that the parts outside it are
  * untouched, that the two formats cannot both draw, and that the name fits the block it is centred
- * on at all eight sizes rather than being clipped by WPF on the narrow ones.
+ * on at all eight sizes rather than being clipped by WPF on the narrow ones. The chequer is held on
+ * every screen that draws the block, the companion and the pit wall included, since those are where
+ * a board cut at its edge showed first; #473.
  *
  * The rectangles the FaceVariants sheets quote are pinned below, not because the code reads them --
  * it derives the block from each layout -- but because the derivation is only worth having if it
  * agrees with what was drawn.
  */
 import { describe, expect, test } from 'bun:test';
+import { composePackages } from '../src/build.ts';
 import { zone as zoneSetting } from '../src/contract.ts';
 import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize } from '../src/components/flagFull.ts';
 import { flagTakingBand } from '../src/components/flagStrip.ts';
@@ -21,9 +24,9 @@ import { bandRaised, conditionVisible, FLAG_CATALOGUE } from '../src/flags.ts';
 import { ncalc } from '../src/generator.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
-import type { Item, LayerItem, Rect, TextItem } from '../src/generator.ts';
+import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
-import { walkItems } from '../src/walk.ts';
+import { itemsOf, walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
 import { bodyRect } from '../src/zones/layout.ts';
 
@@ -300,6 +303,77 @@ describe('the full-screen format costs the gear', () => {
       // And the group is drawn after the zone widgets, so the gear is under it rather than over it.
       const widget = items.findIndex((i) => i.name === 'zoneA');
       expect({ widget, group: items.indexOf(full), after: items.indexOf(full) > widget }).toMatchObject({ after: true });
+    });
+  }
+});
+
+/**
+ * Every full-screen chequer the build draws, once per block: the faces in both arrangements, both
+ * companions and both pit walls. A companion repeats its block on twenty-one screens, so a board is
+ * keyed by its package and its size rather than tested once per screen.
+ */
+const CHEQUERS: { where: string; ground: RectangleItem; squares: RectangleItem[] }[] = (() => {
+  const found = new Map<string, { where: string; ground: RectangleItem; squares: RectangleItem[] }>();
+  for (const { pkg } of composePackages({ version: '0.0.0-test', log: () => {} }, true)) {
+    for (const item of pkg.dashboards.flatMap(itemsOf)) {
+      if (item.kind !== 'layer' || !item.name.endsWith('flagFull.chequered')) continue;
+      const [ground, ...squares] = item.children;
+      if (ground?.kind !== 'rect' || !squares.every((s): s is RectangleItem => s.kind === 'rect')) throw new Error(`${item.name} is not a ground and its squares`);
+      const where = `${pkg.folderName} ${ground.rect.width} x ${ground.rect.height}`;
+      if (!found.has(where)) found.set(where, { where, ground, squares });
+    }
+  }
+  return [...found.values()];
+})();
+
+describe('the full-screen chequer is a board of whole checks', () => {
+  test('on every block the build draws one on', () => {
+    // Eight faces in two arrangements each, two companions and two pit walls.
+    expect(CHEQUERS.map((c) => c.where)).toHaveLength(20);
+  });
+
+  for (const { where, ground, squares } of CHEQUERS) {
+    test(`${where} ends on a whole check at every edge, in the band's phase`, () => {
+      const block = ground.rect;
+      expect({ where, ground: ground.backgroundColor }).toEqual({ where, ground: ds.color.surface.base });
+
+      // The lines between the checks, read off the squares. A light square in every other cell of
+      // every row puts an edge on every line, the block's own four included.
+      const lines = (edges: number[]): number[] => [...new Set(edges)].sort((a, b) => a - b);
+      const xs = lines(squares.flatMap((s) => [s.rect.left, right(s.rect)]));
+      const ys = lines(squares.flatMap((s) => [s.rect.top, bottom(s.rect)]));
+      expect({ where, left: xs[0], right: xs.at(-1), top: ys[0], bottom: ys.at(-1) }).toEqual({ where, left: block.left, right: right(block), top: block.top, bottom: bottom(block) });
+
+      // Odd both ways, so the board is the same at either end and at the top and bottom; and three
+      // at least, because fewer is a quartered flag or two stripes rather than a chequer.
+      const columns = xs.length - 1;
+      const rows = ys.length - 1;
+      expect({ where, columns, rows, odd: columns % 2 === 1 && rows % 2 === 1, enough: Math.min(columns, rows) >= 3 }).toMatchObject({ odd: true, enough: true });
+
+      // Every cell is within a pixel of every other, which is what a square cut at the block's edge
+      // is not, and near enough square to read as a check rather than as a bar.
+      const spans = (at: number[]): number[] => at.slice(1).map((edge, i) => edge - at[i]!);
+      const widths = spans(xs);
+      const heights = spans(ys);
+      expect({ where, widths: Math.max(...widths) - Math.min(...widths) <= 1, heights: Math.max(...heights) - Math.min(...heights) <= 1 }).toEqual({ where, widths: true, heights: true });
+
+      // Each square is exactly one cell, the cell is light where row and column differ in parity, so
+      // the board opens on the ground at the top left, and every such cell is drawn once.
+      const cells = new Set<string>();
+      for (const square of squares) {
+        const column = xs.indexOf(square.rect.left);
+        const row = ys.indexOf(square.rect.top);
+        const aspect = square.rect.width / square.rect.height;
+        expect({
+          square: square.name,
+          colour: square.backgroundColor,
+          oneCell: xs[column + 1] === right(square.rect) && ys[row + 1] === bottom(square.rect),
+          light: (row + column) % 2 === 1,
+          nearSquare: aspect >= 0.85 && aspect <= 1.18,
+        }).toEqual({ square: square.name, colour: ds.purpose.flag.chequer, oneCell: true, light: true, nearSquare: true });
+        cells.add(`${row},${column}`);
+      }
+      expect({ where, drawn: cells.size, squares: squares.length }).toEqual({ where, drawn: Math.floor((columns * rows) / 2), squares: Math.floor((columns * rows) / 2) });
     });
   }
 });

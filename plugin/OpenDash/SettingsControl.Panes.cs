@@ -7,6 +7,9 @@
 // carries just enough of it for a plan, since the plugin cannot read a layout file.
 //
 // The pit wall gets a picture of its three pages for the same reason: its letters are positions.
+//
+// Every change here is saved through Save(screen) rather than Save(), because setting something on a
+// screen is the driver keeping it, which is what answers the line over the cards for a migrated one.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +68,7 @@ namespace OpenDashPlugin
             var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
             {
                 Settings.SetScreenRevBar(screen.Namespace, value);
-                Save();
+                Save(screen);
                 // The plan above redraws without the well, which is the whole of what Off does.
                 Redraw();
             });
@@ -88,7 +91,7 @@ namespace OpenDashPlugin
             var control = BuildSegmented(Contract.FlagFormats, new[] { "Band D", "Full screen" }, Settings.ScreenFlagFormat(screen.Namespace), value =>
             {
                 screen.FlagFormat = value;
-                Save();
+                Save(screen);
             });
             var row = Ui.Row(
                 "Flag display",
@@ -113,7 +116,7 @@ namespace OpenDashPlugin
             var control = BuildSegmented(Contract.LapReviewModes, new[] { "Off", "Races", "Always" }, Settings.ScreenLapReview(screen.Namespace), value =>
             {
                 screen.LapReview = value;
-                Save();
+                Save(screen);
             });
             var row = Ui.Row(
                 "Lap review",
@@ -202,7 +205,7 @@ namespace OpenDashPlugin
                 var select = BuildPageSelect(FacePages.BarFields, screen.Face.BarField(captured), 200, index =>
                 {
                     screen.Face.SetBarField(captured, index);
-                    Save();
+                    Save(screen);
                     Ui.SetDropText(button, BarEndCaption(screen, firstSlot, secondSlot));
                 });
                 rows.Add(Ui.Row(Ui.Label(secondSlot == null ? "Field" : slot == firstSlot ? "First" : "Second"), select));
@@ -315,7 +318,7 @@ namespace OpenDashPlugin
             var select = BuildPageSelect(pages, screen.Face.Start(letter), width, index =>
             {
                 screen.Face.SetStart(letter, index);
-                Save();
+                Save(screen);
                 RefreshZone(screen, letter);
                 RefreshFaceWarning(screen);
             });
@@ -341,7 +344,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildClassFilterRow(ScreenInstance screen, string letter)
         {
-            var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(); });
+            var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(screen); });
             toggle.ToolTip = "Show only your own class in zone " + letter;
             toggle.VerticalAlignment = VerticalAlignment.Center;
             toggle.HorizontalAlignment = HorizontalAlignment.Left;
@@ -478,7 +481,7 @@ namespace OpenDashPlugin
         private void SetPage(ScreenInstance screen, string letter, int page, bool enabled)
         {
             screen.Face.SetPageEnabled(letter, page, enabled);
-            Save();
+            Save(screen);
             RefreshZone(screen, letter);
             RefreshFaceWarning(screen);
         }
@@ -500,7 +503,7 @@ namespace OpenDashPlugin
                     if (pages[i].Number != keep) screen.Face.SetPageEnabled(letter, pages[i].Number, false);
                 }
             }
-            Save();
+            Save(screen);
             RefreshZone(screen, letter);
             RefreshFaceWarning(screen);
         }
@@ -618,7 +621,7 @@ namespace OpenDashPlugin
             {
                 if (select.SelectedIndex < 0 || select.SelectedIndex >= options.Length) return;
                 screen.Face.QuickGlance = options[select.SelectedIndex];
-                Save();
+                Save(screen);
                 // The clash line counts the glance among the participants, so the warning has to be asked
                 // again here and not only when a zone moves.
                 RefreshFaceWarning(screen);
@@ -671,7 +674,7 @@ namespace OpenDashPlugin
             {
                 if (select.SelectedIndex < 0) return;
                 screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
-                Save();
+                Save(screen);
             };
             return Ui.Row("Page", "Does not change while you race.", select);
         }
@@ -694,7 +697,7 @@ namespace OpenDashPlugin
             {
                 if (select.SelectedIndex < 0 || select.SelectedIndex >= options.Length) return;
                 screen.PitWallQuickGlance = options[select.SelectedIndex];
-                Save();
+                Save(screen);
             };
             return select;
         }
@@ -723,7 +726,7 @@ namespace OpenDashPlugin
                     var select = BuildZoneSelect(
                         captured.Wide ? ZonePages.Wide : ZonePages.Standard,
                         screen.ZonePage(captured.Key),
-                        page => { screen.SetZonePage(captured.Key, page); Save(); });
+                        page => { screen.SetZonePage(captured.Key, page); Save(screen); });
                     slots.Add(Ui.Row(
                         captured.Wide ? "Wide zone" : "Zone " + captured.Slot,
                         PanelPitWallPlan.ZoneDescription(captured),
@@ -734,7 +737,7 @@ namespace OpenDashPlugin
             rows.Add(Ui.Row("Web view address", "http or https only. Leave empty for none.", BuildWebViewBox(screen)));
             // One answer for the screen and not one per zone, as a face has: the four zones are widgets
             // pointed at one dashboard file per rectangle, so two zones of one column are the same file.
-            var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(); });
+            var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(screen); });
             classOnly.ToolTip = "Show only your own class";
             rows.Add(Ui.Row("My class only", null, classOnly));
             rows.Add(BuildPitWallFlagRow(screen));
@@ -859,7 +862,7 @@ namespace OpenDashPlugin
             Action commit = () =>
             {
                 screen.WebViewUrl = Contract.NormaliseUrl(box.Text);
-                Save();
+                Save(screen);
                 if (box.Text != screen.WebViewUrl) box.Text = screen.WebViewUrl;
             };
             box.TextChanged += (sender, args) => reread();
@@ -903,7 +906,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>One module of the catalogue, numbered as the panel numbers them.</summary>
-        private ComboBox BuildModuleSelect(int selected, string tooltip, Action<int> chosen)
+        private ComboBox BuildModuleSelect(ScreenInstance screen, int selected, string tooltip, Action<int> chosen)
         {
             var select = new ComboBox
             {
@@ -918,7 +921,7 @@ namespace OpenDashPlugin
             {
                 if (select.SelectedIndex < 0 || select.SelectedIndex >= Modules.Count) return;
                 chosen(select.SelectedIndex);
-                Save();
+                Save(screen);
             };
             return select;
         }
@@ -952,7 +955,7 @@ namespace OpenDashPlugin
             startText.MaxWidth = 420;
             return Ui.Section("Module paging",
                 Ui.Caption(PanelCopy.CompanionPaging, BodyWidth),
-                Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
+                Ui.Row(startText, BuildModuleSelect(screen, Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
                     screen.CompanionStart = value;
                     // And force it now, so the screen in front of you moves rather than waiting for the
@@ -972,7 +975,7 @@ namespace OpenDashPlugin
                 Contract.CompanionFlagFormats,
                 new[] { "Off", "Bar", "Full screen" },
                 Settings.ScreenCompanionFlagFormat(screen.Namespace),
-                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(); });
+                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(screen); });
             return Ui.Row(text, segmented);
         }
 
@@ -988,7 +991,7 @@ namespace OpenDashPlugin
                 Contract.CompanionFlagFormats,
                 new[] { "Off", "Bar", "Full screen" },
                 Settings.ScreenPitWallFlagFormat(screen.Namespace),
-                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(); });
+                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(screen); });
             return Ui.Row(text, segmented);
         }
 
@@ -1002,7 +1005,7 @@ namespace OpenDashPlugin
             {
                 if (screen.Modules == null || index >= screen.Modules.Length) return;
                 screen.Modules[index] = on;
-                Save();
+                Save(screen);
             });
             toggle.HorizontalAlignment = HorizontalAlignment.Right;
             var row = Ui.Row(name, toggle);
@@ -1020,13 +1023,16 @@ namespace OpenDashPlugin
         /// On its own screen card rather than in a section of its own, which is how the card model
         /// survives the redesign without cluttering it: it is on screen only if you installed one. It
         /// leaves with the cards in #146.
+        ///
+        /// The slots are the rig's and not this screen's, but the screen is carried down all the same:
+        /// changing one here is still somebody setting up the card face whose pane this is.
         /// </remarks>
-        private FrameworkElement BuildSlotsPane()
+        private FrameworkElement BuildSlotsPane(ScreenInstance screen)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal };
-            row.Children.Add(BuildSlotGrid(1));
+            row.Children.Add(BuildSlotGrid(screen, 1));
             row.Children.Add(BuildHeroCell());
-            row.Children.Add(BuildSlotGrid(7));
+            row.Children.Add(BuildSlotGrid(screen, 7));
             var picture = new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -1037,7 +1043,7 @@ namespace OpenDashPlugin
             return Ui.VStack(12,
                 Ui.Caption("Any card in any slot. A face with fewer slots uses the first ones.", BodyWidth),
                 picture,
-                BuildSlotsRevBarRow(),
+                BuildSlotsRevBarRow(screen),
                 BuildSlotWarning());
         }
 
@@ -1052,12 +1058,12 @@ namespace OpenDashPlugin
         /// something this fixes, and it is here so that a driver with a round face does not lose the
         /// switch when the zone faces take their own.
         /// </remarks>
-        private FrameworkElement BuildSlotsRevBarRow()
+        private FrameworkElement BuildSlotsRevBarRow(ScreenInstance screen)
         {
             var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);
-                Save();
+                Save(screen);
             });
             var row = Ui.Row(
                 PanelDataTab.RevBarTitle,
@@ -1067,7 +1073,7 @@ namespace OpenDashPlugin
             return row;
         }
 
-        private FrameworkElement BuildSlotGrid(int firstSlot)
+        private FrameworkElement BuildSlotGrid(ScreenInstance screen, int firstSlot)
         {
             var grid = new Grid { Width = 337, Height = 165, Background = Ui.Brush(Theme.Rule) };
             for (var c = 0; c < 3; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1076,7 +1082,7 @@ namespace OpenDashPlugin
             {
                 var column = i % 3;
                 var rowIndex = i / 3;
-                var cell = BuildSlotCell(firstSlot + i);
+                var cell = BuildSlotCell(screen, firstSlot + i);
                 cell.Margin = new Thickness(column > 0 ? 1 : 0, rowIndex > 0 ? 1 : 0, 0, 0);
                 Grid.SetColumn(cell, column);
                 Grid.SetRow(cell, rowIndex);
@@ -1085,10 +1091,10 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        private FrameworkElement BuildSlotCell(int slot)
+        private FrameworkElement BuildSlotCell(ScreenInstance screen, int slot)
         {
             var label = Ui.Label("Slot " + slot.ToString("00"));
-            var picker = BuildSlotSelect(slot);
+            var picker = BuildSlotSelect(screen, slot);
             var dock = new DockPanel { LastChildFill = false };
             DockPanel.SetDock(label, Dock.Top);
             DockPanel.SetDock(picker, Dock.Bottom);
@@ -1098,7 +1104,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every card in card-number order, so that SelectedIndex is the card number.</summary>
-        private ComboBox BuildSlotSelect(int slot)
+        private ComboBox BuildSlotSelect(ScreenInstance screen, int slot)
         {
             var box = new ComboBox
             {
@@ -1115,7 +1121,7 @@ namespace OpenDashPlugin
             {
                 if (box.SelectedIndex < 0) return;
                 Settings.SetSlot((int)box.Tag, box.SelectedIndex);
-                Save();
+                Save(screen);
                 RefreshSlotWarning();
             };
             return box;

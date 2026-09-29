@@ -969,6 +969,7 @@ namespace OpenDashPlugin
                 kept.Add(screen);
             }
             Rig = kept;
+            AnswerUnclaimed(kept);
             // Spent: MigratedRig() has emptied it into the rig, and a second copy left behind would be
             // serialised, read by something one day, and disagree.
             if (Faces != null && Faces.Count > 0) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
@@ -1059,7 +1060,49 @@ namespace OpenDashPlugin
                     });
                 }
             }
+            // Every one of them is the migration's guess at the rig rather than the driver's choice, and
+            // stays so until the driver keeps it or removes it: the fact the Rig tab's line reads.
+            foreach (var screen in rig) screen.Unclaimed = true;
             return rig;
+        }
+
+        /// <summary>
+        /// Answers, for a rig written before a screen said so, whether each screen is one the migration
+        /// made and the driver has not yet kept (#478).
+        /// </summary>
+        /// <remarks>
+        /// Every release from 0.3.0-rc.1 migrated a rig and wrote it back without recording which screens
+        /// the migration had made, and the panel guessed from how many there were. What such a rig still
+        /// holds answers part of the question, and the rest is answered conservatively.
+        ///
+        /// Which screens the migration made is answered for most of them. A screen added from the Rig tab
+        /// has always recorded the package it was made from, and the migration recorded none; the start
+        /// has since filled one in for the migrated screens whose folder spells no size, which are the
+        /// companion, the pit wall and the round faces, and those can no longer be told from an added one.
+        ///
+        /// Whether the driver has kept one is answered only where keeping it left a trace: a rename left
+        /// the name, and a resize left a package. A screen configured since left none, its settings having
+        /// been carried over from the old file. Whether the driver has removed any is answered by the
+        /// folder record, which forgets nothing, so a folder OpenDash wrote that no screen holds any more
+        /// is a screen somebody removed or moved.
+        ///
+        /// A migrated screen therefore counts as unclaimed only while the rig is still as the migration
+        /// left it and the screen still carries the name the migration gave it. A rig whose driver has
+        /// begun to remove screens is taken as dealt with, because telling somebody to remove dashboards
+        /// is the worse mistake to make about a rig whose remaining screens are all theirs.
+        /// </remarks>
+        private void AnswerUnclaimed(List<ScreenInstance> rig)
+        {
+            if (!rig.Any(screen => screen.Unclaimed == null)) return;
+            var asMigrated = FolderFingerprints == null || FolderFingerprints.Keys.All(folder =>
+                rig.Any(screen => string.Equals(screen.Folder, folder, StringComparison.OrdinalIgnoreCase)));
+            foreach (var screen in rig)
+            {
+                if (screen.Unclaimed != null) continue;
+                screen.Unclaimed = asMigrated
+                    && screen.Package == null
+                    && string.Equals(screen.Name, screen.SizeLabel, StringComparison.Ordinal);
+            }
         }
 
         /// <summary>The rig, readable before Normalise() has filled it.</summary>
@@ -1339,6 +1382,8 @@ namespace OpenDashPlugin
                 if (screen != null && screen.Folder != null) folders.Add(screen.Folder);
             }
             var added = PackageCatalogue.NewScreen(entry, PackageCatalogue.UniqueName(wanted, names), taken, folders);
+            // Chosen, which is the one thing a screen the migration made is not.
+            added.Unclaimed = false;
             Rig.Add(added);
             return added;
         }
@@ -1500,6 +1545,7 @@ namespace OpenDashPlugin
                     Height = face.Height,
                     Namespace = ns,
                     Name = face.Width + " × " + face.Height,
+                    Unclaimed = false,
                 };
                 screen.Normalise();
                 Rig.Add(screen);
