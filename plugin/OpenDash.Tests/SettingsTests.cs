@@ -1336,6 +1336,59 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_settings_file_from_before_the_panel_rebuild_loads_with_the_new_answers_defaulted()
+        {
+            // What a 0.3.0-rc.7 rig has on disk: no pit-lane switch, no rig thresholds, a retired rev
+            // look on the rig and on a bar, and a reversed 4/14/4. Json.NET, which is what SimHub reads
+            // it with. #503.
+            var json = "{\"LedRpmStyle\":\"f1\",\"FlagBoxMatrixOilTemp\":[248,0,0,0],"
+                + "\"LedBars\":[{\"Name\":\"MLD\",\"Namespace\":\"LedMLD\",\"Shape\":\"4-14-4-reversed\",\"RpmStyle\":\"meetInMiddle\"}]}";
+            var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.True(settings.FlagsInPitLane);
+            Assert.Equal("leftToRight", settings.LedRpmStyle);
+            Assert.Equal(248, settings.LightsOilTemp);
+            Assert.Equal(0, settings.LightsWaterTemp);
+            var bar = settings.LedBarByNamespace("LedMLD");
+            Assert.Equal("leftToRight", bar.RpmStyle);
+            Assert.Equal("4-14-4", bar.Shape);
+            Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
+            Assert.Null(bar.Brightness);
+            Assert.Empty(bar.EffectsOff);
+
+            // And what this version writes, it reads back.
+            settings.FlagsInPitLane = false;
+            settings.SetLightsWaterTemp(230);
+            settings.SetBarBrightness("LedMLD", 40);
+            settings.SetBarEffect("LedMLD", "drs", false);
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.False(back.FlagsInPitLane);
+            Assert.Equal(248, back.LightsOilTemp);
+            Assert.Equal(230, back.MatrixWaterTemp(3));
+            Assert.Equal(40, back.BarBrightness("LedMLD"));
+            Assert.False(back.BarEffectEnabled("LedMLD", "drs"));
+            Assert.True(back.BarReversed("LedMLD"));
+        }
+
+        [Fact]
+        public void A_faces_zone_positions_are_declared_with_the_face()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Normalise();
+            var names = settings.DeclaredProperties().ToList();
+            foreach (var letter in Contract.FaceZoneLetters) Assert.Contains("Face1920x480Zone" + letter + "Position", names);
+            Assert.Contains(Contract.FlagsInPitLane, names);
+            // A zone opens on its start page, and the header counts from one.
+            settings.OpenOnStartPages();
+            Assert.Equal(1, settings.ScreenFace("Face1920x480").Position("A"));
+            Assert.Equal(15, settings.ScreenFace("Face1920x480").Position("C"));
+            // A screen the rig no longer holds reads a default rather than throwing on SimHub's thread.
+            Assert.Equal(1, settings.ScreenFace("Gone").Position("A"));
+        }
+
+        [Fact]
         public void A_button_toggles_night_mode_and_steps_the_brightness_in_force()
         {
             var settings = new OpenDashSettings { LightsBrightness = 60, LightsNightBrightness = 25 };
