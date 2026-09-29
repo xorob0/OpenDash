@@ -903,6 +903,26 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_catalogue_order_steps_back_as_the_count_overload_does()
+        {
+            // The count overload is the order one under the identity order, pages outside the
+            // catalogue and an empty catalogue included.
+            foreach (var n in new[] { 0, 1, 4, 8 })
+            {
+                var identity = Contract.NormaliseOrder(null, n);
+                for (var page = -2; page <= n + 1; page++)
+                {
+                    for (var mask = 0; mask < 1 << Math.Max(n, 1); mask++)
+                    {
+                        Assert.Equal(Contract.LastEnabledBefore(page, mask, identity), Contract.LastEnabledBefore(page, mask, n));
+                    }
+                }
+            }
+            Assert.Equal(3, Contract.LastEnabledBefore(0, 0xF, 4));
+            Assert.Equal(1, Contract.LastEnabledBefore(3, 0xF & ~(1 << 2), 4));
+        }
+
+        [Fact]
         public void A_zone_steps_forward_and_back_through_its_own_order()
         {
             var order = new[] { 3, 0, 2, 1 };

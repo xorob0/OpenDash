@@ -2148,6 +2148,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The last enabled page before the given one in the catalogue's own order, wrapping: <see
+        /// cref="LastEnabledBefore(int, int, int[])"/> for a zone nobody has reordered, as <see
+        /// cref="FirstEnabledFrom"/> is <see cref="FirstEnabledInOrder"/> for one.
+        /// </summary>
+        public static int LastEnabledBefore(int page, int mask, int count)
+        {
+            return LastEnabledBefore(page, mask, NormaliseOrder(null, count));
+        }
+
+        /// <summary>
         /// An order a zone cycles in, repaired: the values in range and seen for the first time, in the
         /// order given, then every page it left out, ascending. Null is the catalogue's own order.
         /// </summary>
