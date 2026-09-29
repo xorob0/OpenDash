@@ -456,8 +456,13 @@ Two worked examples first, because they are the two that show why it cannot be d
 
 - **Lap times.** `wide`: last lap, session best, your best, laps, estimated, delta to your best —
   six. `grid`: drops laps and estimated — four. So what goes is neither the tail of the row nor
-  the narrowest field; the delta outlives both of the values drawn before it. `tall narrow`: the
-  same four as `grid`, one per line. `tall`: all six again, stacked.
+  the narrowest field; the delta outlives both of the values drawn before it. The four are set out
+  as the drawing sets them rather than wrapped: the last lap alone on the first line, the two bests
+  on two equal columns under it, and the delta alone at the foot. A greedy wrap at 437 px puts two
+  lap times on a line, so it gave `[last · session best]`, `[your best]`, `[delta]`, the value a
+  driver reads first sharing its line; `shape.test.ts` holds the drawing at every `grid` body a
+  face produces. `tall narrow`: the same four as `grid`, one per line. `tall`: all six again,
+  stacked.
 
   The `tall narrow` row used to be two, which is what the catalogue draws at 274 × 300, and it was
   wrong about the box it really answers: a zone that stacks one column has room for four of them,

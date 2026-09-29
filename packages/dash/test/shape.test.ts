@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { MODULES } from '../src/modules/index.ts';
-import { rect } from '../src/design/geometry.ts';
+import { rect, type Rect } from '../src/design/geometry.ts';
 import { walkItems } from '../src/walk.ts';
 import {
   ARCHETYPES,
@@ -26,8 +26,8 @@ import { zoneFrame } from '../src/second/header.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { fieldsRow } from '../src/modules/module.ts';
 import { rule } from '../src/elements/rule.ts';
-import { fixedRow, stack, type StackRow } from '../src/second/layout.ts';
-import type { FieldSpec } from '../src/second/field.ts';
+import { contentRect, fixedRow, stack, type StackRow } from '../src/second/layout.ts';
+import { cellWidth, type FieldSpec } from '../src/second/field.ts';
 import { cellOverruns } from './monoGlyphs.ts';
 import { drawingOf } from './moduleItems.ts';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -347,6 +347,68 @@ describe('a rank fills the box it is given', () => {
     const sectors = MODULES.find((m) => m.id === 'sectors')!;
     const items = valuesOf(sectors.build({ frame: rect(0, 0, 737, 270), density: 'zone', prefix: 'b.' }));
     for (const item of items) expect({ name: item.name, onRamp: rampOf('zone').includes(item.fontSize) }).toEqual({ name: item.name, onRamp: true });
+  });
+});
+
+/**
+ * Lap times at `grid` is the catalogue's arrangement rather than a wrap (#330).
+ *
+ * At 430 px two lap times fit a line, so the greedy wrap gave `[last · session best]`, `[your best]`,
+ * `[delta]`: the four values the drawing keeps, with the one a driver reads first sharing its line.
+ * The catalogue gives the last lap a full-width line, sets the two bests beside it in two equal
+ * columns under it, and ends on the delta alone.
+ */
+describe("lap times' grid drawing", () => {
+  const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
+  /** The catalogue's own `grid` drawing, and every zone body of a face that the bands read as one. */
+  const gridBodies = (): { at: string; body: Rect; density: Density }[] => {
+    const bodies = new Map<string, { at: string; body: Rect; density: Density }>();
+    const { width, height } = SHAPE_ARCHETYPES.grid;
+    bodies.set('catalogue', { at: 'catalogue', body: contentRect(rect(0, 0, width, height), 'zone'), density: 'zone' });
+    for (const layout of ZONE_FACES) {
+      for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+        for (const zone of zonesOf(arrangement)) {
+          if (zone.zone === 'A' || zone.zone === 'D') continue;
+          const density = densityForBox(zone.size);
+          const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+          const shape = shapeOf(body);
+          if (shape.width !== 'medium' || shape.height !== 'medium') continue;
+          const at = `${body.width}x${body.height}`;
+          bodies.set(at, { at, body, density });
+        }
+      }
+    }
+    return [...bodies.values()];
+  };
+
+  test('is found at every grid body a face produces', () => {
+    // The 1280 x 400 and 1280 x 480 faces in both arrangements; a test that measured none of them
+    // would pass whatever the page did.
+    expect(gridBodies().length).toBeGreaterThan(2);
+  });
+
+  test('gives the last lap a line of its own and the two bests the next, on equal columns', () => {
+    for (const { at, body, density } of gridBodies()) {
+      const values = [...walkItems(lapTimes.build({ frame: body, density, prefix: 'b.' }))].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+      const value = (id: string): TextItem | undefined => values.find((i) => i.name === `b.${id}.value`);
+      const last = value('last')!;
+      const sessionBest = value('sessionBest')!;
+      const yourBest = value('yourBest')!;
+      const onLineOf = (item: TextItem): string[] => values.filter((i) => i.rect.top === item.rect.top).map((i) => i.name);
+      expect({ at, line: onLineOf(last) }).toEqual({ at, line: ['b.last.value'] });
+      expect({ at, line: onLineOf(sessionBest) }).toEqual({ at, line: ['b.sessionBest.value', 'b.yourBest.value'] });
+      expect({ at, below: sessionBest.rect.top > last.rect.top }).toEqual({ at, below: true });
+      // Two equal columns rather than two fields packed to their own widths: the second best starts
+      // one cell and one gap in, whatever its digits.
+      const gap = densityOf(density).gapX;
+      expect({ at, left: yourBest.rect.left }).toEqual({ at, left: body.left + cellWidth(body.width, 2, gap) + gap });
+      // The delta, where the box keeps it, ends the page on a line of its own.
+      const delta = value('delta');
+      if (delta) {
+        expect({ at, line: onLineOf(delta) }).toEqual({ at, line: ['b.delta.value'] });
+        expect({ at, below: delta.rect.top > sessionBest.rect.top }).toEqual({ at, below: true });
+      }
+    }
   });
 });
 
