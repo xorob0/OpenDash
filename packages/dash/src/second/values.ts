@@ -1511,8 +1511,18 @@ export const LAST_LAP_DELTA = 'LapDeltaToSessionLastlLap';
  * and not the string, because a raw telemetry boolean arrives as `true` or `false` (see `inTheCar`
  * in `components/changeNotification.ts`), so a sim that publishes neither field, or no telemetry at
  * all, reads a level delta rather than an error.
+ *
+ * Multiplied by `1.0` to make it a double. iRacing publishes the reading as an irsdk_float, and it
+ * reaches the binding as a boxed System.Single: SimHub's raw telemetry passes it through unchanged,
+ * and so do `if` and `isnull`. SimHub's `format(v, pattern, true)` writes its `+` only for a double,
+ * a decimal or an int, so without the promotion a slower or level last-lap delta would lose its sign,
+ * and the delta page's caption, placed by {@link referenceDeltaDrawn} with the sign's cell counted,
+ * would stand a cell right of the figure. The literal is `1.0` and not `num(1)`: NCalc reads `1` as
+ * an Int32, and a Single times an Int32 is still a Single, where a Single times the double `1.0` is a
+ * double. The colour never needed it, since `abs` and `<` promote the value themselves.
  */
-export const lastLapDelta = (): Expr => iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), isnull(raw(LAST_LAP_DELTA), num(0)), num(0));
+export const lastLapDelta = (): Expr =>
+  iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), mul(isnull(raw(LAST_LAP_DELTA), num(0)), '1.0'), num(0));
 
 /**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the

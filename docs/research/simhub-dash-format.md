@@ -834,6 +834,17 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
   `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
   delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+- **A raw iRacing float is a boxed System.Single, and `format` does not sign one.** iRacing publishes
+  the delta as an irsdk_float; the SDK reads it with `ReadSingle`, the raw telemetry is a dictionary
+  of objects that SimHub exposes unchanged, and NCalc's `if` and SimHub's `isnull` hand their
+  argument on unchanged too. `format(v, pattern, true)` (`NCalcEngineBase.Function_Format_Core`)
+  writes its `+` only when the value is a double, a decimal or an int, so a Single comes out as .NET
+  formats it alone: `0.21` for a slower delta where the session best draws `+0.21`, `0.00` for a
+  level one, and `0.00` for a small negative one where a double draws `-0.00`. `abs` and the
+  comparisons promote it, so a colour is right where the figure is not. The fix is to make it a
+  double before it is formatted, by `* 1.0` and not `* 1`: NCalc parses `1` as an Int32, and a Single
+  times an Int32 is still a Single, where a Single times the double `1.0` is a double.
+  `lastLapDelta` does that.
 - The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`). That SimHub exposes
   them under these names on a live iRacing session follows from how it passes raw telemetry through,
   as the flag bits above do, and is not yet confirmed on the VM.

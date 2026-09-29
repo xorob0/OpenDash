@@ -10,7 +10,9 @@
  *
  * The third reference is iRacing's own live delta to the last lap (#322), which SimHub does not
  * publish; it is read from raw telemetry and gated on iRacing's `_OK`, so the cases where it is not
- * there -- no lap yet, another sim, no telemetry at all -- are pinned as well.
+ * there -- no lap yet, another sim, no telemetry at all -- are pinned as well. iRacing publishes it
+ * as a float, so every frame gives it as a {@link Single}, which SimHub's `format` does not sign, and
+ * what a site draws is the float's figure.
  */
 import { describe, expect, test } from 'bun:test';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -18,6 +20,7 @@ import { delta as deltaCard } from '../src/cards/delta.ts';
 import { LAP_POP_UP, popUp, POP_UP_HEIGHT, POP_UP_WIDTH } from '../src/components/popUp.ts';
 import { DEFAULTS, DELTA_REFERENCES } from '../src/contract.ts';
 import { measureText } from '../src/design/advances.ts';
+import { ncalc } from '../src/generator.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { lapDeltaPanel } from '../src/screens/pitwall.ts';
@@ -26,7 +29,7 @@ import type { Density } from '../src/second/density.ts';
 import { LAST_LAP_DELTA, REFERENCE_LABEL_WIDEST, lastLapDelta, referenceDelta, referenceLabel } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { evalNcalc, Single, type Props } from './ncalcEval.ts';
 
 const SESSION = 'PersistantTrackerPlugin.SessionBestLiveDeltaSeconds';
 const ALLTIME = 'PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds';
@@ -96,13 +99,16 @@ const colourOf = (figureText: string): string => {
   return figureText.startsWith('−') ? ds.purpose.delta.faster : ds.purpose.delta.slower;
 };
 
-/** A frame in which each reference reads something different, the last lap's with iRacing's own flag. */
+/**
+ * A frame in which each reference reads something different, the last lap's with iRacing's own flag,
+ * and as the float iRacing publishes it.
+ */
 const frame = (reference: string | undefined, values: { session?: number | null; alltime?: number | null; last?: number | null; ok?: boolean | null }): Props => {
   const props: Props = {};
   if (reference !== undefined) props[REFERENCE] = reference;
   if (values.session !== undefined) props[SESSION] = values.session;
   if (values.alltime !== undefined) props[ALLTIME] = values.alltime;
-  if (values.last !== undefined) props[LAST] = values.last;
+  if (values.last !== undefined) props[LAST] = typeof values.last === 'number' ? new Single(values.last) : values.last;
   if (values.ok !== undefined) props[LAST_OK] = values.ok;
   return props;
 };
@@ -150,7 +156,8 @@ describe('the delta reference (#322)', () => {
             last: reads === 'last' ? reading : others + 2,
             ok: true,
           });
-          const expected = figure(reading, s.bareAtRest);
+          // The last lap's reading is iRacing's float, so its figure is the float's.
+          const expected = figure(reads === 'last' ? Math.fround(reading) : reading, s.bareAtRest);
           const got = drawn(s, props);
           expect({ site: s.name, reference, reading, text: got.text }).toEqual({ site: s.name, reference, reading, text: expected });
           if (got.colour !== undefined) expect({ site: s.name, reference, reading, colour: got.colour }).toEqual({ site: s.name, reference, reading, colour: colourOf(expected) });
@@ -172,7 +179,7 @@ describe('the delta reference (#322)', () => {
       { last: undefined, ok: undefined },
     ] as const;
     for (const s of SITES) {
-      expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(-0.4, s.bareAtRest));
+      expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(Math.fround(-0.4), s.bareAtRest));
       for (const values of level) {
         const got = drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, ...values }));
         expect({ site: s.name, values, text: got.text }).toEqual({ site: s.name, values, text: figure(0, s.bareAtRest) });
@@ -180,6 +187,25 @@ describe('the delta reference (#322)', () => {
       }
     }
     expect(evalNcalc(lastLapDelta(), {})).toBe(0);
+  });
+
+  test("the last lap is signed although iRacing's float is not", () => {
+    // SimHub's `format` writes its `+` only for a double, a decimal or an int, and a raw iRacing float
+    // reaches it as a Single, so the reading has to be made a double before it is formatted.
+    const bare = (x: number): unknown => evalNcalc(ncalc.signed(ncalc.isnull('[X]', '0'), '0.00'), { X: new Single(x) });
+    expect(bare(0.21)).toBe('0.21');
+    expect(bare(0)).toBe('0.00');
+    expect(bare(-0.004)).toBe('0.00');
+    expect(bare(-0.21)).toBe('−0.21');
+    const promoted = (x: number): unknown => evalNcalc(ncalc.signed(lastLapDelta(), '0.00'), { [LAST]: new Single(x), [LAST_OK]: true });
+    expect(promoted(0.21)).toBe('+0.21');
+    expect(promoted(0)).toBe('+0.00');
+    expect(promoted(-0.004)).toBe('−0.00');
+    expect(promoted(-0.21)).toBe('−0.21');
+    // By a double. NCalc reads a bare `1` as an Int32, and a Single times an Int32 is still a Single;
+    // the evaluator's numbers are all doubles and cannot tell `* 1` from `* 1.0`, so the literal is
+    // the one part of the formula pinned by its text.
+    expect(lastLapDelta()).toContain(' * (1.0)');
   });
 
   test('the last lap reading reaches no site that is not asked for it', () => {

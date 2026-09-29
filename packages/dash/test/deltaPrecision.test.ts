@@ -33,7 +33,7 @@ import { contentRect } from '../src/second/layout.ts';
 import { CHARS, LAST_LAP_DELTA, REFERENCE_DELTA_WIDEST, referenceDelta } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { expressionsOf, itemsOf, walkItems } from '../src/walk.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { evalNcalc, Single, type Props } from './ncalcEval.ts';
 
 const SESSION = 'PersistantTrackerPlugin.SessionBestLiveDeltaSeconds';
 const ALLTIME = 'PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds';
@@ -127,20 +127,26 @@ const colourOf = (text: string): string => {
   return text.startsWith('−') ? ds.purpose.delta.faster : ds.purpose.delta.slower;
 };
 
-/** A frame in which the three references read different things, so a site reading the wrong one shows. */
+/**
+ * A frame in which the three references read different things, so a site reading the wrong one shows.
+ * The last lap's is iRacing's float, which is how it reaches a binding.
+ */
 const frame = (reference: string | undefined, precision: string | undefined, reading: number): Props => {
   const reads = reference === 'alltime' ? 'alltime' : reference === 'lastlap' ? 'last' : 'session';
   const other = reading + 3.333;
   const props: Props = {
     [SESSION]: reads === 'session' ? reading : other,
     [ALLTIME]: reads === 'alltime' ? reading : other + 1,
-    [LAST]: reads === 'last' ? reading : other + 2,
+    [LAST]: new Single(reads === 'last' ? reading : other + 2),
     [LAST_OK]: true,
   };
   if (reference !== undefined) props[REFERENCE] = reference;
   if (precision !== undefined) props[PRECISION] = precision;
   return props;
 };
+
+/** The reading a reference draws: the last lap's is the float iRacing publishes. */
+const asRead = (reference: string | undefined, reading: number): number => (reference === 'lastlap' ? Math.fround(reading) : reading);
 
 /**
  * The readings, from level to the longest the budget is cut for, and both sides of both edges of the
@@ -160,7 +166,7 @@ describe('the delta precision (#322)', () => {
     // No plugin at all: no reference, no precision, and every surface draws the session best to two
     // places, which is what every package drew before either setting existed.
     for (const s of SITES) {
-      const props: Props = { [SESSION]: -0.214, [ALLTIME]: 0.5, [LAST]: 0.7, [LAST_OK]: true };
+      const props: Props = { [SESSION]: -0.214, [ALLTIME]: 0.5, [LAST]: new Single(0.7), [LAST_OK]: true };
       expect({ site: s.name, text: drawn(s, props).text }).toEqual({ site: s.name, text: '−0.21' });
     }
   });
@@ -179,7 +185,7 @@ describe('the delta precision (#322)', () => {
         for (const reference of REFERENCES) {
           for (const reading of READINGS) {
             const got = drawn(s, frame(reference, precision, reading));
-            const expected = figure(reading, placesOf(precision), s.bareAtRest);
+            const expected = figure(asRead(reference, reading), placesOf(precision), s.bareAtRest);
             const at = { site: s.name, reference, precision, reading };
             expect({ ...at, text: got.text }).toEqual({ ...at, text: expected });
             if (got.colour !== undefined) expect({ ...at, colour: got.colour }).toEqual({ ...at, colour: colourOf(got.text) });
@@ -212,7 +218,7 @@ describe('the delta precision (#322)', () => {
     for (const s of SITES) {
       for (const precision of DELTA_PRECISIONS) {
         const places = placesOf(precision);
-        const got = drawn(s, { [REFERENCE]: 'lastlap', [PRECISION]: precision, [SESSION]: 0.7, [LAST]: -0.4, [LAST_OK]: false });
+        const got = drawn(s, { [REFERENCE]: 'lastlap', [PRECISION]: precision, [SESSION]: 0.7, [LAST]: new Single(-0.4), [LAST_OK]: false });
         expect({ site: s.name, precision, text: got.text }).toEqual({ site: s.name, precision, text: figure(0, places, s.bareAtRest) });
         if (got.colour !== undefined) expect({ site: s.name, precision, colour: got.colour }).toEqual({ site: s.name, precision, colour: ds.purpose.delta.zero });
       }
@@ -250,25 +256,30 @@ describe('the delta precision (#322)', () => {
     }
   });
 
-  test("the delta page's caption follows the figure it draws, at either precision", () => {
+  test("the delta page's caption follows the figure it draws, at either precision and against every reference", () => {
     for (const box of MODULE_BOXES.filter((b) => b.density !== 'compact' && b.name !== 'portrait companion')) {
       const items = moduleItems('delta', box.frame, box.density);
       const value = named(items, 'delta.delta.value');
       const caption = texts(items).find((i) => i.name.startsWith('delta.delta.') && i !== value && formula(i, 'Left') !== undefined);
       if (caption === undefined) throw new Error(`the delta page in the ${box.name} box draws no caption beside the figure`);
       const left = formula(caption, 'Left')!;
-      for (const precision of DELTA_PRECISIONS) {
-        // Not at a half of the last place. The caption is placed by `round` and the figure written
-        // by `format`, and at a half the two can round opposite ways, in the evaluator and on the dash
-        // alike; where that carries a digit, as 9.9995 does to `10.000`, the caption would sit a cell
-        // off for as long as the delta read exactly that, which is a frame at most.
-        const half = (reading: number): boolean => Math.abs(((Math.abs(reading) * 10 ** placesOf(precision)) % 1) - 0.5) < 1e-6;
-        for (const reading of READINGS.filter((r) => !half(r))) {
-          const props = frame('session', precision, reading);
-          const figureText = String(evalNcalc(textOf(value), props));
-          // Rounded to the pixel, since a rect is laid on whole pixels and a binding is not.
-          const gap = Math.round(Number(evalNcalc(left, props)) - (value.rect.left + textWidth(figureText, value.monospace!)));
-          expect({ box: box.name, precision, reading, gap }).toEqual({ box: box.name, precision, reading, gap: 10 });
+      // Every reference, the last lap's float among them: a figure `format` wrote without its sign
+      // would end a cell before the caption placed for it.
+      for (const reference of DELTA_REFERENCES) {
+        for (const precision of DELTA_PRECISIONS) {
+          // Not at a half of the last place. The caption is placed by `round` and the figure written
+          // by `format`, and at a half the two can round opposite ways, in the evaluator and on the
+          // dash alike; where that carries a digit, as 9.9995 does to `10.000`, the caption would sit a
+          // cell off for as long as the delta read exactly that, which is a frame at most.
+          const half = (reading: number): boolean => Math.abs(((Math.abs(asRead(reference, reading)) * 10 ** placesOf(precision)) % 1) - 0.5) < 1e-6;
+          for (const reading of READINGS.filter((r) => !half(r))) {
+            const props = frame(reference, precision, reading);
+            const figureText = String(evalNcalc(textOf(value), props));
+            // Rounded to the pixel, since a rect is laid on whole pixels and a binding is not.
+            const gap = Math.round(Number(evalNcalc(left, props)) - (value.rect.left + textWidth(figureText, value.monospace!)));
+            const at = { box: box.name, reference, precision, reading };
+            expect({ ...at, gap }).toEqual({ ...at, gap: 10 });
+          }
         }
       }
     }
