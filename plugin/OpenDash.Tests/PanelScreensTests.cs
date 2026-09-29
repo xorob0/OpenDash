@@ -242,5 +242,25 @@ namespace OpenDashPlugin.Tests
             // The note an upgrading user meets, in the noun and verbs Home uses.
             Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
         }
+
+        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
+        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        [Fact]
+        public void Its_anchor_ids_are_pinned()
+        {
+            Assert.Equal(new[]
+            {
+                "AnchorCards = screens.cards",
+                "AnchorFirstModule = screens.first-module",
+                "AnchorFlagDisplay = screens.flag-display",
+                "AnchorLapReview = screens.lap-review",
+                "AnchorModules = screens.modules",
+                "AnchorPitWallPage = screens.pitwall-page",
+                "AnchorRevBar = screens.revbar",
+                "AnchorSlots = screens.slots",
+                "AnchorWebView = screens.webview",
+                "AnchorZones = screens.zones",
+            }, AnchorTable.Of(typeof(PanelScreens)));
+        }
     }
 }

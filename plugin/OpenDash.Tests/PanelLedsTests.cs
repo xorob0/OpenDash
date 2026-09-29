@@ -29,5 +29,23 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.BarsTitle && entry.Route.Anchor == PanelLeds.AnchorStrips);
             Assert.Contains(PanelLeds.Search, entry => entry.Label == PanelLights.CarTablesTitle && entry.Route.Anchor == PanelLeds.AnchorCarTables);
         }
+
+        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
+        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        [Fact]
+        public void Its_anchor_ids_are_pinned()
+        {
+            Assert.Equal(new[]
+            {
+                "AnchorCarTables = leds.car-tables",
+                "AnchorCentre = leds.centre",
+                "AnchorDevice = leds.device",
+                "AnchorFlagAnimation = leds.flag-animation",
+                "AnchorMirrorFit = leds.mirror-fit",
+                "AnchorRevStyle = leds.rev-style",
+                "AnchorSpotter = leds.spotter",
+                "AnchorStrips = leds.strips",
+            }, AnchorTable.Of(typeof(PanelLeds)));
+        }
     }
 }

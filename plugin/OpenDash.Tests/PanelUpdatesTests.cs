@@ -27,5 +27,20 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains(PanelUpdates.Search, entry => entry.Label == title);
             }
         }
+
+        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
+        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        [Fact]
+        public void Its_anchor_ids_are_pinned()
+        {
+            Assert.Equal(new[]
+            {
+                "AnchorCheck = updates.check",
+                "AnchorLights = updates.lights",
+                "AnchorLinks = updates.links",
+                "AnchorPackages = updates.packages",
+                "AnchorPlugin = updates.plugin",
+            }, AnchorTable.Of(typeof(PanelUpdates)));
+        }
     }
 }

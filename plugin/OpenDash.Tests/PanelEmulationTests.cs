@@ -238,5 +238,73 @@ namespace OpenDashPlugin.Tests
             // Rig.dc.html: eight 10 px cells, 2 apart, inside 6.
             Assert.Equal(8 * 10 + 7 * 2 + 12, MatrixStyle.Rig.Side);
         }
+
+        /// <summary>
+        /// Every number each style is drawn with, not only the LED and the cell: a radius, a gap, a group gap
+        /// or a padding moved on one style changes that picture on its page and nothing else would say so.
+        /// </summary>
+        [Fact]
+        public void Every_number_of_every_style_is_pinned()
+        {
+            // led, radius, gap, group gap, pad x, pad y, corner radius
+            Assert.Equal(new double[] { 11, 2, 2, 7, 8, 7, Theme.Radius }, Numbers(StripStyle.Home));
+            Assert.Equal(new double[] { 14, 3, 3, 8, 8, 6, 3 }, Numbers(StripStyle.Rig));
+            Assert.Equal(new double[] { 9, 2, 2, 6, 0, 0, 0 }, Numbers(StripStyle.Card));
+            Assert.Equal(new double[] { 30, 3, 6, 24, 0, 0, 0 }, Numbers(StripStyle.Preview));
+            Assert.Equal(new double[] { 14, 2, 3, 8, 8, 8, Theme.Radius }, Numbers(StripStyle.AddLeds));
+            // cell, gap, pad, corner radius
+            Assert.Equal(new double[] { 6, 1, 4, Theme.Radius }, Numbers(MatrixStyle.Home));
+            Assert.Equal(new double[] { 10, 2, 6, 3 }, Numbers(MatrixStyle.Rig));
+            Assert.Equal(new double[] { 5, 1, 4, 0 }, Numbers(MatrixStyle.Card));
+            Assert.Equal(new double[] { 26, 6, 0, 0 }, Numbers(MatrixStyle.Preview));
+        }
+
+        private static double[] Numbers(StripStyle style)
+        {
+            return new[] { style.Led, style.Radius, style.Gap, style.GroupGap, style.PadX, style.PadY, style.CornerRadius };
+        }
+
+        private static double[] Numbers(MatrixStyle style)
+        {
+            return new[] { style.Cell, style.Gap, style.Pad, style.CornerRadius };
+        }
+
+        /// <summary>
+        /// The emulation writes the dash's own band words (ruling 26), so each face band's text is read out of
+        /// packages/dash/src/flags.ts -- and the limiter's out of pitAlerts.ts -- rather than typed twice.
+        /// </summary>
+        [Theory]
+        [InlineData(PanelEmulation.Green, "green")]
+        [InlineData(PanelEmulation.Yellow, "yellow")]
+        [InlineData(PanelEmulation.Blue, "blue")]
+        [InlineData(PanelEmulation.White, "white")]
+        [InlineData(PanelEmulation.Black, "black")]
+        [InlineData(PanelEmulation.Red, "red")]
+        public void A_flag_band_is_the_dashs_own_label(string scenario, string flagId)
+        {
+            Assert.Equal(DashBandLabel(flagId), PanelEmulation.Band(scenario).Text);
+        }
+
+        [Fact]
+        public void The_limiter_band_is_the_dashs_own_label()
+        {
+            var alerts = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "components", "pitAlerts.ts"));
+            var limiter = System.Text.RegularExpressions.Regex.Match(alerts, @"\{ id: 'limiter', label: '([^']+)'");
+            Assert.True(limiter.Success, "pitAlerts.ts no longer declares the limiter's band as { id: 'limiter', label: ... }");
+            Assert.Equal(limiter.Groups[1].Value, PanelEmulation.Band(PanelEmulation.Limiter).Text);
+        }
+
+        /// <summary>The band label of one condition in flags.ts' catalogue, found by its id.</summary>
+        private static string DashBandLabel(string id)
+        {
+            var flags = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "flags.ts"));
+            var start = System.Text.RegularExpressions.Regex.Match(flags, @"\bid: '" + id + "',");
+            Assert.True(start.Success, "flags.ts has no condition with id '" + id + "'");
+            var next = flags.IndexOf("id: '", start.Index + start.Length, StringComparison.Ordinal);
+            var entry = next < 0 ? flags.Substring(start.Index) : flags.Substring(start.Index, next - start.Index);
+            var label = System.Text.RegularExpressions.Regex.Match(entry, @"label: '([^']+)'");
+            Assert.True(label.Success, "flags.ts' '" + id + "' has no band label");
+            return label.Groups[1].Value;
+        }
     }
 }

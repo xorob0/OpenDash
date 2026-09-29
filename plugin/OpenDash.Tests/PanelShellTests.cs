@@ -107,6 +107,15 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
         /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
+        /// <summary>How long a resize and a burst of wheel presses are let settle before a page is rebuilt.
+        /// Page agents take LightingSettleMs as the coalescing hook, so a change is a decision, not a drift.</summary>
+        [Fact]
+        public void A_resize_and_a_lighting_burst_settle_before_a_rebuild()
+        {
+            Assert.Equal(150, PanelShell.ResizeSettleMs);
+            Assert.Equal(120, PanelShell.LightingSettleMs);
+        }
+
         [Fact]
         public void The_rail_holds_what_fits_inside_its_rule()
         {
