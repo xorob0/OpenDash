@@ -20,7 +20,17 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { propertiesRead } from '../packages/dash/src/properties.ts';
-import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, tail as emulatorLog, upload as uploadEmulator, scenarios } from './emulator.ts';
+import {
+  build as buildEmulator,
+  runningPid,
+  start as startEmulator,
+  stop as stopEmulator,
+  tail as emulatorLog,
+  upload as uploadEmulator,
+  scenarios,
+  tracedScenarioNames,
+  UNTRACED_SCENARIOS,
+} from './emulator.ts';
 import {
   TRACE_DIR,
   TRACE_VERSION,
@@ -473,8 +483,10 @@ const USAGE = `record: turn an emulator scenario into a committed telemetry trac
 
   bun run record [scenario ...] [--hz 10] [--frames 200] [--warm-up 120] [--no-build] [--keep]
 
-  scenario      one or more; default every scenario the emulator ships
-                ${scenarios().join(', ') || '(none)'}
+  scenario      one or more; default every scenario a committed trace is expected for
+                ${tracedScenarioNames().join(', ') || '(none)'}
+                ${UNTRACED_SCENARIOS.join(', ')} are recorded only when named,
+                and nothing replays one until it comes off UNTRACED_SCENARIOS in scripts/emulator.ts
   --hz          frames per second of recorded telemetry; default ${DEFAULT_HZ}
   --frames      how many frames; default ${DEFAULT_FRAMES}, which is ${DEFAULT_FRAMES / DEFAULT_HZ} seconds
   --warm-up     seconds of telemetry to let pass before the first frame; default ${DEFAULT_WARM_UP_SECONDS},
@@ -486,6 +498,17 @@ It claims the VM, installs a recorder plugin into SimHub, runs each scenario pas
 writes traces/<scenario>.ndjson. Read the diff before committing: a trace is a reviewed artefact,
 not a build output.
 `;
+
+/**
+ * What to say about a scenario named on the command line that is meant to have no trace. It is
+ * recorded all the same, since naming one is how it leaves UNTRACED_SCENARIOS, but until it does
+ * nothing replays the file and `trace.test.ts` fails on it.
+ */
+export function untracedWarnings(names: readonly string[]): string[] {
+  return names
+    .filter((name) => UNTRACED_SCENARIOS.includes(name))
+    .map((name) => `${name} is in UNTRACED_SCENARIOS: nothing replays its trace, and trace.test.ts fails on it until the name comes off that list in scripts/emulator.ts`);
+}
 
 export function parseArgs(argv: readonly string[]): RecordOptions | { help: true } {
   if (argv.includes('--help') || argv.includes('-h')) return { help: true };
@@ -515,7 +538,9 @@ export function parseArgs(argv: readonly string[]): RecordOptions | { help: true
   const hz = whole('hz', DEFAULT_HZ);
   if (TICK_RATE % hz !== 0) throw new RecordingError(`--hz must divide the emulator's ${TICK_RATE} Hz tick, and ${hz} does not`);
   return {
-    scenarios: positional.length > 0 ? positional : scenarios(),
+    // Only the scenarios a trace is expected for: the others would cost the VM two and a half
+    // minutes each and write files trace.test.ts refuses (#519).
+    scenarios: positional.length > 0 ? positional : tracedScenarioNames(),
     hz,
     frames: whole('frames', DEFAULT_FRAMES),
     warmUpSeconds: whole('warm-up', DEFAULT_WARM_UP_SECONDS),
@@ -541,6 +566,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     console.error('there is no scenario to record');
     return 1;
   }
+  for (const warning of untracedWarnings(opts.scenarios)) console.warn(warning);
   return record(resolveHost(), opts);
 }
 
