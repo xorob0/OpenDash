@@ -53,6 +53,9 @@ const SHARE_UNC = '\\\\host.lan\\Data';
 export const UNTRACED_SCENARIOS: readonly string[] = [
   // flagbox drives lights, not a dashboard.
   'flagbox',
+  // alerts walks the alert catalogue over 220 seconds, one condition every seven, and is watched on
+  // the VM rather than replayed: a trace holds twenty seconds, which is three of its states (#109).
+  'alerts',
   // gallery exists to be photographed for the website, and clip to be filmed; nothing replays them.
   'gallery',
   'clip',

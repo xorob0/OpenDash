@@ -14,7 +14,7 @@ import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
 import { CHEQUER_SIZE, chequerCount, chequerRim, chequerStep } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
-import { FLAG_CATALOGUE } from '../src/flags.ts';
+import { ALERT_CATALOGUE } from '../src/flags.ts';
 import { GEAR_SIZES, gear, ghostedGearWidth } from '../src/components/gear.ts';
 import { gridColumnWidth } from '../src/components/grid2x2.ts';
 import { revArcAngle } from '../src/components/revArc.ts';
@@ -582,9 +582,11 @@ describe('800 x 286 nano', () => {
   test('the 12 px flag strip has no labels, a 2 px outline and 6 px checks', () => {
     // The strip draws the whole catalogue, one layer per condition, rather than the six properties
     // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full-course
-    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now.
+    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now, and so
+    // are the car alerts. Push to pass and the headlight flash are not: they are white, which without
+    // a name is the white flag or the black flag, and the strip writes no names.
     const flags = items.filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.'));
-    expect(flags.map((f) => f.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
+    expect(flags.map((f) => f.name)).toEqual(ALERT_CATALOGUE.filter((c) => !('neutral' in c && c.neutral)).map((c) => `flag.${c.id}`));
     for (const f of flags) {
       for (const child of walkItems(f.children)) {
         expect(child.kind).toBe('rect');
@@ -627,12 +629,15 @@ describe('800 x 286 nano', () => {
     const black = layerNamed(standard, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border?.top).toBe(3);
-    // Every name the catalogue gives, drawn once and only at the standard size.
-    const named = FLAG_CATALOGUE.filter((c) => c.band.shape !== 'chequer');
-    for (const condition of named) {
+    // Every name the catalogue gives, drawn once and only at the standard size: the label, or the
+    // run a condition writes in its place while it has the band, which opens with the label.
+    for (const condition of ALERT_CATALOGUE) {
+      const spec = condition.band;
+      if (spec.shape === 'chequer') continue;
       const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
       if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
-      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: condition.band.shape === 'chequer' ? '' : condition.band.label });
+      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: spec.run?.sample ?? spec.label });
+      expect({ id: condition.id, opens: label.text.startsWith(spec.label) }).toEqual({ id: condition.id, opens: true });
     }
   });
 });

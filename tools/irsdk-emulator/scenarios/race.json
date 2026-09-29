@@ -37,7 +37,11 @@
     "DriverCarSLFirstRPM": "7800.000",
     "DriverCarSLShiftRPM": "8400.000",
     "DriverCarSLLastRPM": "8800.000",
-    "DriverCarSLBlinkRPM": "9000.000"
+    "DriverCarSLBlinkRPM": "9000.000",
+    // The session's incident limit, which iRacing writes as a number or as "unlimited". A placeholder
+    // since #109, so that the alerts scenario can count an incident against a limit of 17; every
+    // other scenario renders the word it always did.
+    "IncidentLimit": "unlimited"
   },
 
   // All variables of the built-in catalogue are present (with their defaults); the entries below

@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["OpenDash.ClockFormat"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["OpenDash.ClockFormat","DataCorePlugin.GameData.EngineStarted","DataCorePlugin.GameData.PushToPassActive","DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -25,6 +25,7 @@
 {"p":"DataCorePlugin.GameData.CurrentLapTime","t":"timespan","v":"00:00:36.1770000"}
 {"p":"DataCorePlugin.GameData.DRSAvailable","v":0}
 {"p":"DataCorePlugin.GameData.EngineIgnitionOn","v":1}
+{"p":"DataCorePlugin.GameData.EngineStarted","v":1}
 {"p":"DataCorePlugin.GameData.Flag_Black","v":0}
 {"p":"DataCorePlugin.GameData.Flag_Blue","v":0}
 {"p":"DataCorePlugin.GameData.Flag_Checkered","v":0}
@@ -43,6 +44,7 @@
 {"p":"DataCorePlugin.GameData.PitLimiterOn","v":1}
 {"p":"DataCorePlugin.GameData.PlayerClassOpponentsCount","v":12}
 {"p":"DataCorePlugin.GameData.Position","v":9}
+{"p":"DataCorePlugin.GameData.PushToPassActive","v":false}
 {"p":"DataCorePlugin.GameData.RemainingLaps","v":13}
 {"p":"DataCorePlugin.GameData.RoadTemperature","v":31.5}
 {"p":"DataCorePlugin.GameData.Rpms","v":1350}
@@ -122,6 +124,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcAntiRollFront","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcAntiRollRear","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcFuelMixture","v":1}
+{"p":"DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash","v":false}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle","v":false}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcThrottleShape","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dcTractionControl","v":3}

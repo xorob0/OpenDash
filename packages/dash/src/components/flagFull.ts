@@ -9,8 +9,11 @@
  * values and band D are outside the block and keep drawing.
  *
  * It is a sibling of `flagStrip` rather than a mode of it, and the two now read one list: every
- * condition of `FLAG_CATALOGUE`, ranked by the band's own `conditionVisible`, so that the format a
- * driver chose cannot change which flag is out. When the format first landed it drew the six
+ * condition of `ALERT_CATALOGUE`, ranked by the band's own `bandVisible`, so that the format a
+ * driver chose cannot change which condition is out. The two neutral alerts, push to pass and the
+ * headlight flash, are ranked and not drawn: the block is the flag that cannot be missed, and what the
+ * driver's own hand has just done is not worth the gear for the length of a push to pass.
+ * `CarAlert.neutral` says why their colour cannot stand without a name either. When the format first landed it drew the six
  * properties SimHub normalises, which meant that under a red flag or a full-course caution the band
  * named the condition and the block, having no state for it, drew nothing at all: the driver who had
  * asked for the flag that cannot be missed saw the least of it.
@@ -35,7 +38,7 @@ import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
-import { bandRaised, conditionVisible, FLAG_CATALOGUE, type FlagCondition } from '../flags.ts';
+import { ALERT_CATALOGUE, bandVisible, type AlertCondition } from '../flags.ts';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
 /**
@@ -72,10 +75,12 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * asks it to and sixty pixels of 15 px label have the room. Here one size serves every state and
  * that size is the widest name divided into the block, so `BLUE · P24 LMP2` would not shrink the
  * blue alone: it would set RED, BLACK and SAFETY at a third of their height on every face, which is
- * fifteen conditions paying for one. A block is the flag that cannot be missed, and a class code
- * half the face high is not what makes it one.
+ * every condition on the block paying for one. A block is the flag that cannot be missed, and a class
+ * code half the face high is not what makes it one.
  */
 const BLOCK_NAMES: Readonly<Record<string, string>> = {
+  ignition: 'IGNITION',
+  engine: 'ENGINE',
   red: 'RED',
   disqualify: 'DSQ',
   furled: 'FURLED',
@@ -85,6 +90,7 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
   yellowWaving: 'YELLOW',
   yellow: 'YELLOW',
   debris: 'DEBRIS',
+  incident: 'INCIDENT',
   blue: 'BLUE',
   white: 'WHITE',
   green: 'GREEN',
@@ -100,17 +106,23 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
  * gate `AlertBandSpec` is for the band, expressed as a throw because a `FlagCondition`'s id is a
  * string and no type can be made to refuse it.
  */
-const blockName = (condition: FlagCondition): string => {
+const blockName = (condition: AlertCondition): string => {
   const name = BLOCK_NAMES[condition.id];
   if (name === undefined) throw new RangeError(`${condition.id} has no name on the full-screen block`);
   return name;
 };
 
+/** Whether the block draws the condition at all: everything but the two neutral alerts. */
+const onTheBlock = (condition: AlertCondition): boolean => !('neutral' in condition && condition.neutral);
+
+/** The conditions the block draws, in the catalogue's order. */
+const BLOCK_CONDITIONS: readonly AlertCondition[] = ALERT_CATALOGUE.filter(onTheBlock);
+
 /** Whether the condition carries a name at all. The chequer is the one that does not. */
-const named = (condition: FlagCondition): boolean => condition.band.shape !== 'chequer';
+const named = (condition: AlertCondition): boolean => condition.band.shape !== 'chequer';
 
 /** Every name the format can draw, once each, which is what the one size is measured against. */
-export const FLAG_FULL_NAMES: readonly string[] = [...new Set(FLAG_CATALOGUE.filter(named).map(blockName))];
+export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.filter(named).map(blockName))];
 
 /**
  * One size for every name on a face: the sheets' fraction of the block, shrunk until the widest
@@ -227,7 +239,7 @@ function chequeredFull(name: string, frame: Rect): Item[] {
 }
 
 /** The shape the condition asks for, at the block's scale. */
-const blockParts = (name: string, frame: Rect, condition: FlagCondition): Item[] => {
+const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[] => {
   const spec = condition.band;
   switch (spec.shape) {
     case 'filled':
@@ -243,19 +255,20 @@ const blockParts = (name: string, frame: Rect, condition: FlagCondition): Item[]
  * One Layer per condition over `frame`, each visible when its condition is raised and none above it
  * in the catalogue is.
  *
- * `bandRaised` and the same `false` for the critical-flags switch as band D, which is what makes the
- * two formats one reading of one list: null-safe, so a sim publishing no `SessionFlagsDetails`
- * leaves the block dark rather than covering the gear with the highest-ranked flag in it, and
- * limited where a bit outlives the flag it announces, so the green does not sit over zone A for a
- * whole stint.
+ * `bandVisible`, the band's own ranking, which is what makes the two formats one reading of one
+ * list: null-safe, so a sim publishing no `SessionFlagsDetails` leaves the block dark rather than
+ * covering the gear with the highest-ranked flag in it, and limited where a bit outlives the flag it
+ * announces, so the green does not sit over zone A for a whole stint. The two neutral alerts have no
+ * layer and still rank, so a push to pass leaves the block dark rather than letting the flash under it
+ * through.
  */
 export function flagFull(frame: Rect, prefix = 'flagFull'): LayerItem[] {
-  return FLAG_CATALOGUE.map((condition) => {
+  return BLOCK_CONDITIONS.map((condition) => {
     const name = `${prefix}.${condition.id}`;
     return withMoreBindings({
       kind: 'layer',
       name,
       children: blockParts(name, frame, condition),
-    }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
+    }, { Visible: bandVisible(condition) });
   });
 }
