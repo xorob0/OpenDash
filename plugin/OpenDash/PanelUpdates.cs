@@ -16,6 +16,11 @@ namespace OpenDashPlugin
 
         public const string CheckTitle = "Check for updates";
 
+        /// <summary>The presses and links the page draws, which search lists by the same words.</summary>
+        public const string PutMineBack = "Put mine back";
+        public const string DocumentationLink = "Documentation";
+        public const string ReportIssueLink = "Report an issue";
+
         public const string AnchorPlugin = "updates.plugin";
         public const string AnchorCheck = "updates.check";
         public const string AnchorPackages = "updates.packages";
@@ -26,12 +31,12 @@ namespace OpenDashPlugin
         {
             new PanelSearch.Entry(PluginTitle, PanelPage.Updates, AnchorPlugin, "version", "reinstall", "update"),
             new PanelSearch.Entry(CheckTitle, PanelPage.Updates, AnchorCheck, "update", "github", "release"),
-            new PanelSearch.Entry("Reinstall", PanelPage.Updates, AnchorPlugin, "repair", "dashboards"),
-            new PanelSearch.Entry("Put mine back", PanelPage.Updates, AnchorPlugin, "restore", "edited"),
+            new PanelSearch.Entry(PanelConfirmation.ReinstallLabel, PanelPage.Updates, AnchorPlugin, "repair", "dashboards"),
+            new PanelSearch.Entry(PutMineBack, PanelPage.Updates, AnchorPlugin, "restore", "edited"),
             new PanelSearch.Entry(PackagesTitle, PanelPage.Updates, AnchorPackages, "dashboards", "packages"),
             new PanelSearch.Entry(LightsTitle, PanelPage.Updates, AnchorLights, "profiles", "strip", "flag box"),
-            new PanelSearch.Entry("Documentation", PanelPage.Updates, AnchorLinks, "guide", "help"),
-            new PanelSearch.Entry("Report an issue", PanelPage.Updates, AnchorLinks, "bug", "github", "support"),
+            new PanelSearch.Entry(DocumentationLink, PanelPage.Updates, AnchorLinks, "guide", "help"),
+            new PanelSearch.Entry(ReportIssueLink, PanelPage.Updates, AnchorLinks, "bug", "github", "support"),
         };
     }
 }

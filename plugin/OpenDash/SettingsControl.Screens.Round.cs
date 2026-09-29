@@ -52,7 +52,7 @@ namespace OpenDashPlugin
             var warning = BuildSlotWarning();
             warning.Margin = new Thickness(0, 12, 0, 0);
             return Ui.Anchor(Ui.VStack(0,
-                PageSection("Slots", intro, picture),
+                PageSection(PanelScreens.SlotsTitle, intro, picture),
                 BuildSlotsRevBarRow(screen),
                 warning), PanelScreens.AnchorSlots);
         }

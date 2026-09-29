@@ -97,16 +97,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("rather than yours", installed);
             Assert.DoesNotContain("Matrix page", installed);
 
-            // The tabs went with #503: the profile is installed from the Matrix page's own header.
+            // The tabs went with #503: the profile is installed from its own row, directly above this caption
+            // on the Matrix page, so the caption says nothing of where.
             Assert.Equal(
-                "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below;"
-                    + " install it at the top of the Matrix page.",
+                "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below.",
                 PanelLights.BoxCaption("OpenDash Flag box"));
         }
 
         /// <summary>
-        /// A panel added on a rig where SimHub has no profile of ours is sent to the Matrix page's header,
-        /// and every state that is not a profile in SimHub says the same thing.
+        /// A panel added on a rig where SimHub has no profile of ours is sent to the top of the page it was
+        /// added on, the Matrix page, and every state that is not a profile in SimHub says the same thing.
         /// </summary>
         /// <remarks>
         /// Outdated counts as installed: an old copy paints the box, so the driver is told to select it
@@ -120,7 +120,8 @@ namespace OpenDashPlugin.Tests
         public void A_panel_added_without_the_profile_is_sent_to_the_Matrix_page(FlagBoxInstallState state)
         {
             Assert.True(PanelLights.PanelNeedsInstall(state));
-            Assert.Contains("install it at the top of the Matrix page.", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+            Assert.Contains("install it at the top of this page.", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+            Assert.DoesNotContain("Matrix page", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
         }
 
         /// <summary>A strip whose profile could not be installed is sent to Updates, which lists what

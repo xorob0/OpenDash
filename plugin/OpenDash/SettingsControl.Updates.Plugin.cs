@@ -164,7 +164,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private Button BuildRestoreButton()
         {
-            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards your last update replaced.");
+            var button = BuildSecondaryButton(PanelUpdates.PutMineBack, "Restore the dashboards your last update replaced.");
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => RestoreKept();
             return button;

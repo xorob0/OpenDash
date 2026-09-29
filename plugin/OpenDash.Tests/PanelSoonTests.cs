@@ -4,7 +4,10 @@
 // that closes takes its row out of the greyed set (its control is built), so this list changes with it;
 // #370, #145 and #487 closed before the rebuild and are deliberately absent, and #322 shipped.
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -79,10 +82,17 @@ namespace OpenDashPlugin.Tests
             // everything by RPM" is held out by name.
             Assert.Null(PanelSoon.Find("Colour everything by RPM"));
             var imperatives = new[] { "Run", "Dismiss", "Follow", "Dim", "Use", "Show", "Sweep", "Try", "Set", "Add", "Turn", "Pick", "Choose", "Enable", "Disable" };
+            // Nor on a question word: "Where each alert shows" is a sentence pretending to be a heading, the
+            // failure voice.md names in "What each zone shows". #512's row is "Alert display", in the panel's
+            // own "X display" pattern.
+            var clauses = new[] { "Where", "What", "When", "Which", "How", "Who", "Why", "Whether" };
+            Assert.NotNull(PanelSoon.Find("Alert display"));
+            Assert.Null(PanelSoon.Find("Where each alert shows"));
             foreach (var item in PanelSoon.All)
             {
                 var first = item.Title.Split(' ')[0];
                 Assert.DoesNotContain(first, imperatives);
+                Assert.DoesNotContain(first, clauses);
                 Assert.False(item.Title.EndsWith(".", StringComparison.Ordinal), item.Title);
                 Assert.DoesNotContain("openDash", item.Title, StringComparison.Ordinal);
             }
@@ -100,6 +110,46 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Soon", PanelSoon.Tag);
             Assert.Equal("New", PanelSoon.NewTag);
+        }
+
+        /// <summary>
+        /// The rows search may send a driver to are the rows the pages draw: a page that draws every row the
+        /// registry gives it calls PanelSoon.For(PanelPage.X), and a page that draws one calls
+        /// PanelSoon.Find(title). Read from the sources, because the pages are WPF and no test compiles them;
+        /// a page agent that draws its rows has to list its page in DrawnOnPages for search to find them.
+        /// </summary>
+        [Fact]
+        public void Search_lists_exactly_the_greyed_rows_the_pages_draw()
+        {
+            var pages = new HashSet<PanelPage>();
+            var titles = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var source in RepoPaths.SettingsControlSources())
+            {
+                var text = File.ReadAllText(source);
+                foreach (Match call in Regex.Matches(text, @"PanelSoon\.For\(PanelPage\.(\w+)\)"))
+                {
+                    pages.Add((PanelPage)Enum.Parse(typeof(PanelPage), call.Groups[1].Value));
+                }
+                foreach (Match call in Regex.Matches(text, @"PanelSoon\.Find\(([^)]+)\)"))
+                {
+                    titles.Add(Resolve(call.Groups[1].Value.Trim()));
+                }
+            }
+            Assert.Equal(pages.OrderBy(p => p), PanelSoon.DrawnOnPages.OrderBy(p => p));
+            Assert.Equal(titles.OrderBy(t => t, StringComparer.Ordinal), PanelSoon.DrawnOneByOne.OrderBy(t => t, StringComparer.Ordinal));
+        }
+
+        /// <summary>A Find argument as the title it names: a literal, or a Panel constant read by reflection.</summary>
+        private static string Resolve(string argument)
+        {
+            if (argument.StartsWith("\"", StringComparison.Ordinal)) return argument.Trim('"');
+            var dot = argument.LastIndexOf('.');
+            Assert.True(dot > 0, "PanelSoon.Find is given " + argument + ", which this test cannot read");
+            var type = typeof(PanelSoon).Assembly.GetType("OpenDashPlugin." + argument.Substring(0, dot));
+            Assert.NotNull(type);
+            var field = type.GetField(argument.Substring(dot + 1));
+            Assert.NotNull(field);
+            return (string)field.GetValue(null);
         }
     }
 }

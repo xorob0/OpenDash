@@ -1,5 +1,8 @@
 // PanelSearchTests.cs: how the sidebar's search ranks what it finds, and that every page's rows are in it.
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.IO;
 using System.Linq;
 using Xunit;
 
@@ -101,20 +104,25 @@ namespace OpenDashPlugin.Tests
             Assert.Throws<ArgumentNullException>(() => new PanelSearch.Entry("Row", (PanelRoute)null));
         }
 
-        /// <summary>A greyed row is listed, so somebody looking for a theme finds that it is coming, and a
-        /// hit lands on its page and its row.</summary>
+        /// <summary>A greyed row a page draws is listed, so somebody looking for it finds that it is coming,
+        /// and a hit lands on its page and its row; a row no page draws yet is not, since its hit would land
+        /// on nothing.</summary>
         [Fact]
-        public void Every_greyed_row_is_found_by_its_title_and_leads_to_its_own_row()
+        public void Every_drawn_greyed_row_is_found_by_its_title_and_leads_to_its_own_row()
         {
             var all = PanelSearch.All().ToList();
             foreach (var item in PanelSoon.All)
             {
-                Assert.Contains(all, entry => entry.Label == item.Title && entry.Route.Page == item.Page && entry.Route.Anchor == item.Anchor);
+                var listed = all.Any(entry => entry.Label == item.Title && entry.Route.Page == item.Page && entry.Route.Anchor == item.Anchor);
+                Assert.True(listed == PanelSoon.IsDrawn(item), item.Title + (listed ? " is listed and drawn nowhere" : " is drawn and not listed"));
             }
-            foreach (var query in new[] { "theme", "tyre", "yellow flags", "pop-ups", "incidents", "real hardware" })
+            foreach (var query in new[] { "real hardware", "rig test", "alert dismissal" })
             {
                 Assert.NotEmpty(PanelSearch.Find(all, query));
             }
+            // #116 and #85 are only ever drawn inside the Add sheet, which search cannot open: not listed.
+            Assert.Empty(PanelSearch.Find(all, "flags screen"));
+            Assert.Empty(PanelSearch.Find(all, "your displays"));
             // Listed once: the Rig page no longer types its greyed switch in beside the registry's entry.
             Assert.Single(all, entry => entry.Label == PanelRigMap.RealHardwareTitle);
         }
@@ -135,6 +143,73 @@ namespace OpenDashPlugin.Tests
             // The words that were the labels still find them.
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "wheel buttons"));
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "flag box profile"));
+        }
+            /// <summary>The files that build each page, which a label has to be drawn from.</summary>
+        private static readonly Dictionary<PanelPage, string> PageSources = new Dictionary<PanelPage, string>
+        {
+            { PanelPage.Home, "SettingsControl.Home" },
+            { PanelPage.Rig, "SettingsControl.Rig" },
+            { PanelPage.Screens, "SettingsControl.Screens" },
+            { PanelPage.Leds, "SettingsControl.Lights" },
+            { PanelPage.Matrix, "SettingsControl.Matrix" },
+            { PanelPage.Shortcuts, "SettingsControl.Shortcuts" },
+            { PanelPage.Settings, "SettingsControl.Settings" },
+            { PanelPage.Updates, "SettingsControl.Updates" },
+        };
+
+        /// <summary>
+        /// Labels a page draws through something other than the constant: each with the reason, so the list
+        /// is a record rather than a way round the test.
+        /// </summary>
+        private static readonly Dictionary<string, string> DrawnOtherwise = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // The Reinstall button's label is bound to the update line, through PanelConfirmation.Label.
+            { PanelConfirmation.ReinstallLabel, "LabelFromTheLine(ReplacingAction.Reinstall)" },
+            // The scenario chips' groups are drawn from the list the constants are built into.
+            { PanelEmulation.FlagsGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.SpotterGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.PitLaneGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.WarningsGroup, "PanelEmulation.Groups" },
+            { PanelEmulation.RevsGroup, "PanelEmulation.Groups" },
+            // A zone's rows read "Band D · next page", built from these by PanelShortcuts.ZoneRow.
+            { PanelShortcuts.NextPageTitle, "PanelShortcuts.ZoneRow(" },
+            { PanelShortcuts.PreviousPageTitle, "PanelShortcuts.ZoneRow(" },
+            // The flag box row names the profile as SimHub lists it, FlagBoxName(), whose fallback is this.
+            { FlagBoxProfile.ProfileName, "FlagBoxName()" },
+            // The rig's own rows are drawn by their action, through the same function search names them by.
+            { PanelShortcuts.RigActionLabel(Contract.ToggleNightModeAction), "PanelShortcuts.RigActionLabel(" },
+            { PanelShortcuts.RigActionLabel(Contract.BrightnessUpAction), "PanelShortcuts.RigActionLabel(" },
+            { PanelShortcuts.RigActionLabel(Contract.BrightnessDownAction), "PanelShortcuts.RigActionLabel(" },
+        };
+
+        /// <summary>
+        /// Every search label on a page is a constant that page's own files draw, so a page agent who rewords
+        /// a row rewords its search entry with it: a label typed a second time in Panel&lt;Page&gt;.Search drifts
+        /// from the page and no other test notices.
+        /// </summary>
+        [Fact]
+        public void Every_search_label_is_a_constant_its_page_draws()
+        {
+            var sources = PageSources.ToDictionary(
+                pair => pair.Key,
+                pair => string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), pair.Value + "*.cs").Select(File.ReadAllText)));
+            var constants = typeof(PanelSearch).Assembly.GetTypes()
+                .Where(type => type.Namespace == "OpenDashPlugin" && type.IsAbstract && type.IsSealed)
+                .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static)
+                    .Where(field => field.FieldType == typeof(string) && (field.IsLiteral || field.IsInitOnly))
+                    .Select(field => new { Name = type.Name + "." + field.Name, Value = (string)field.GetValue(null) }))
+                .ToList();
+            var missing = new List<string>();
+            foreach (var entry in PanelSearch.All().Except(PanelSearch.Soon))
+            {
+                var page = entry.Route.Page;
+                var text = sources[page];
+                string otherwise;
+                if (DrawnOtherwise.TryGetValue(entry.Label, out otherwise) && text.Contains(otherwise)) continue;
+                var drawn = constants.Where(c => c.Value == entry.Label).Any(c => text.Contains(c.Name));
+                if (!drawn) missing.Add(entry.Label + " · " + page);
+            }
+            Assert.True(missing.Count == 0, "search labels no page draws from a constant:" + Environment.NewLine + string.Join(Environment.NewLine, missing));
         }
     }
 }

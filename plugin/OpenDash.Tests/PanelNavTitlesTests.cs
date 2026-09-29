@@ -6,7 +6,7 @@ using Xunit;
 
 namespace OpenDashPlugin.Tests
 {
-    public class PanelPageTitlesTests
+    public class PanelNavTitlesTests
     {
         /// <summary>The sidebar item and the heading of the page it opens are one string.</summary>
         [Fact]
@@ -27,6 +27,21 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Equal(titles[page], PanelNav.Label(page));
             }
+        }
+
+        /// <summary>The sidebar's and the search's own words, which no page draws.</summary>
+        [Fact]
+        public void The_sidebar_says_what_it_says_in_one_place()
+        {
+            Assert.Equal("Needs attention", PanelNav.WarnTooltip);
+            Assert.Equal("Restart", PanelNav.RestartBadge);
+            // The artboard's "Search settings" is "Search", which docs/design/plugin.md records.
+            Assert.Equal("Search", PanelSearch.Placeholder);
+            Assert.Equal("Searches every setting.", PanelSearch.RailTooltip);
+            Assert.Equal("No setting matches.", PanelSearch.NoMatch);
+            Assert.Equal("This page could not be drawn. See SimHub's log.", PanelShell.PageFailed);
+            Assert.Equal("Not bound", PanelBindings.NotBound);
+            Assert.Equal("Opens the Shortcuts page.", PanelBindings.ChipTooltip);
         }
     }
 }

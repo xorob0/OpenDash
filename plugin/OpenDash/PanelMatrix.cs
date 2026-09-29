@@ -22,8 +22,22 @@ namespace OpenDashPlugin
         public const string RedlineFlashTitle = "Redline flash";
 
         /// <summary>The digit's colours following the car's own shift lights: "shift points", as voice.md's
-        /// rulings name them; "thresholds" is the settings model's word, not the driver's.</summary>
-        public const string CarShiftPointsTitle = "Car-specific shift points";
+        /// rulings name them; "thresholds" is the settings model's word, not the driver's. "Car's own", the
+        /// qualifier the LEDs page's #369 switch uses for the same tables, so one source reads one way on
+        /// both pages (docs/design/plugin.md records the choice).</summary>
+        public const string CarShiftPointsTitle = "Car's own shift points";
+        public const string CarShiftPointsCaption = "Colours change where this car's own lights do.";
+
+        /// <summary>The section over the profile's panels, and the rows each panel has for what it shows.</summary>
+        public const string FlagBoxTitle = "The flag box";
+        public const string SpotterAnimationCaption = "The bar slides in from the edge.";
+        public const string RaceFlagsTitle = "Race flags";
+        public const string PitStatusTitle = "Pit status";
+        public const string PitStatusCaption = "Limiter, pit lane and speeding.";
+        public const string SpotterTitle = "Spotter";
+        public const string SpotterCaption = "Warns about cars alongside.";
+        public const string CarWarningsTitle = "Car warnings";
+        public const string CarWarningsCaption = "Low fuel, oil and water.";
 
         public static readonly PanelSearch.Entry[] Search =
         {
@@ -36,7 +50,10 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(CriticalFlagsOnlyTitle, PanelPage.Matrix, AnchorPanels, "chequer", "white", "green"),
             new PanelSearch.Entry(ShiftColoursTitle, PanelPage.Matrix, AnchorPanels, "gear", "revs"),
             new PanelSearch.Entry(RedlineFlashTitle, PanelPage.Matrix, AnchorPanels, "gear", "shift"),
-            new PanelSearch.Entry(CarShiftPointsTitle, PanelPage.Matrix, AnchorPanels, "lovely", "car data", "thresholds"),
+            new PanelSearch.Entry(RaceFlagsTitle, PanelPage.Matrix, AnchorPanels, "flags"),
+            new PanelSearch.Entry(PitStatusTitle, PanelPage.Matrix, AnchorPanels, "limiter", "pit lane", "speeding"),
+            new PanelSearch.Entry(CarWarningsTitle, PanelPage.Matrix, AnchorPanels, "fuel", "oil", "water"),
+            new PanelSearch.Entry(CarShiftPointsTitle, PanelPage.Matrix, AnchorPanels, "lovely", "car data", "car-specific", "thresholds"),
         };
     }
 }

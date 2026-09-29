@@ -89,11 +89,11 @@ namespace OpenDashPlugin
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(Title, PanelPage.Rig, AnchorCanvas, "rig layout", "map", "arrange", "tiles"),
-            new PanelSearch.Entry("Flags", PanelPage.Rig, AnchorScenarios, "emulate", "test", "yellow", "blue", "chequered"),
-            new PanelSearch.Entry("Spotter", PanelPage.Rig, AnchorScenarios, "emulate", "car left", "car right"),
-            new PanelSearch.Entry("Pit lane", PanelPage.Rig, AnchorScenarios, "emulate", "limiter", "speeding"),
-            new PanelSearch.Entry("Warnings", PanelPage.Rig, AnchorScenarios, "emulate", "fuel", "oil", "water"),
-            new PanelSearch.Entry("Revs", PanelPage.Rig, AnchorScenarios, "emulate", "shift point", "rpm"),
+            new PanelSearch.Entry(PanelEmulation.FlagsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "test", "yellow", "blue", "chequered"),
+            new PanelSearch.Entry(PanelEmulation.SpotterGroup, PanelPage.Rig, AnchorScenarios, "emulate", "car left", "car right"),
+            new PanelSearch.Entry(PanelEmulation.PitLaneGroup, PanelPage.Rig, AnchorScenarios, "emulate", "limiter", "speeding"),
+            new PanelSearch.Entry(PanelEmulation.WarningsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "fuel", "oil", "water"),
+            new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "shift point", "rpm"),
         };
 
         /// <summary>The empty edge round a laid-out canvas, and the gap between two tiles across and down.</summary>

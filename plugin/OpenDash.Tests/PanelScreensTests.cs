@@ -223,6 +223,24 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.Title && entry.Route.Anchor == PanelScreens.AnchorCards);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelDataTab.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
+            // The rows' titles, which the panes draw and search lists by the same constants.
+            Assert.Equal("Flag display", PanelScreens.FlagDisplayTitle);
+            Assert.Equal("Lap review", PanelScreens.LapReviewTitle);
+            Assert.Equal("Zones", PanelScreens.ZonesTitle);
+            Assert.Equal("Page", PanelScreens.PitWallPageTitle);
+            Assert.Equal("Web view address", PanelScreens.WebViewTitle);
+            Assert.Equal("Modules", PanelScreens.ModulesTitle);
+            Assert.Equal("First module", PanelScreens.FirstModuleTitle);
+            Assert.Equal("Slots", PanelScreens.SlotsTitle);
+            // The card's states, the header's Duplicate, and the fix box under a screen that is gone, whose
+            // detail is Home's too.
+            Assert.Equal("In SimHub", PanelScreens.InSimHub);
+            Assert.Equal("Missing", PanelScreens.Missing);
+            Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
+            Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
+            // The note an upgrading user meets, in the noun and verbs Home uses.
+            Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
         }
     }
 }

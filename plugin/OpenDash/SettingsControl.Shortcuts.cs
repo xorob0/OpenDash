@@ -20,7 +20,7 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildShortcutsPage(PanelRoute to)
         {
-            var intro = Ui.Caption("A wheel button, a button box or a key. Each screen has its own.", BodyWidth);
+            var intro = Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth);
             var screens = new StackPanel { Orientation = Orientation.Vertical };
             foreach (var screen in Settings.RigScreens())
             {

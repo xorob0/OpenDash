@@ -6,7 +6,11 @@
 // number to the set of open tickets this was checked against, and a greyed row cannot cite a ticket that
 // closed (#370, #145 and #487 did; #322 shipped, so its rows are live).
 //
-// Search lists every entry (PanelSearch.All), so somebody looking for a theme finds that it is coming.
+// Search lists every entry a page draws (PanelSearch.All), so somebody looking for a theme finds that it is
+// coming once the Settings page draws its row. An entry no page draws yet is left out of search, since a
+// result that opens a page with no such row is worse than none; PanelSoonTests reads the pages' sources and
+// holds DrawnOnPages and DrawnOneByOne to what they draw, so a page agent that draws its rows moves them into
+// search by adding its page here.
 //
 // Pure: no WPF. Ui.Soon draws an entry.
 using System;
@@ -98,7 +102,7 @@ namespace OpenDashPlugin
             new SoonItem(507, "Pit window open", PanelPage.Settings),
             new SoonItem(508, "Incidents", PanelPage.Settings),
             new SoonItem(110, "Hybrid battery low", PanelPage.Settings),
-            new SoonItem(512, "Where each alert shows", PanelPage.Settings),
+            new SoonItem(512, "Alert display", PanelPage.Settings),
             new SoonItem(128, "Sim time of day", PanelPage.Settings),
             new SoonItem(128, "Screen dimming", PanelPage.Settings),
             new SoonItem(99, "Theme", PanelPage.Settings),
@@ -109,6 +113,18 @@ namespace OpenDashPlugin
             new SoonItem(484, "Logo", PanelPage.Settings),
             new SoonItem(104, "Idle screen background", PanelPage.Settings),
         };
+
+        /// <summary>The pages whose build draws every greyed row the registry gives them (<see cref="For"/>).</summary>
+        public static readonly IReadOnlyList<PanelPage> DrawnOnPages = new[] { PanelPage.Shortcuts };
+
+        /// <summary>The greyed rows a page draws one at a time (<see cref="Find"/>), by title.</summary>
+        public static readonly IReadOnlyList<string> DrawnOneByOne = new[] { PanelRigMap.RealHardwareTitle };
+
+        /// <summary>Whether a page draws this greyed row, which is whether search may send a driver to it.</summary>
+        public static bool IsDrawn(SoonItem item)
+        {
+            return item != null && (DrawnOnPages.Contains(item.Page) || DrawnOneByOne.Contains(item.Title, StringComparer.Ordinal));
+        }
 
         /// <summary>Every greyed control on one page, in the order the page draws them.</summary>
         public static IEnumerable<SoonItem> For(PanelPage page)

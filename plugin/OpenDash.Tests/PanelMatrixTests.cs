@@ -18,9 +18,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Critical flags only", PanelMatrix.CriticalFlagsOnlyTitle);
             Assert.Equal("Shift colours", PanelMatrix.ShiftColoursTitle);
             Assert.Equal("Redline flash", PanelMatrix.RedlineFlashTitle);
-            // V44/V46: shift points, not thresholds, which is the settings model's word.
-            Assert.Equal("Car-specific shift points", PanelMatrix.CarShiftPointsTitle);
+            // Shift points, not thresholds, which is the settings model's word; and "Car's own", the
+            // qualifier the LEDs page's #369 switch gives the same tables.
+            Assert.Equal("Car's own shift points", PanelMatrix.CarShiftPointsTitle);
+            Assert.StartsWith("Car's own", PanelLeds.CarRevLightsTitle, StringComparison.Ordinal);
             Assert.DoesNotContain("threshold", PanelMatrix.CarShiftPointsTitle, StringComparison.OrdinalIgnoreCase);
+            // Nothing about a fallback the row cannot name, and no "table", which is internal vocabulary.
+            Assert.Equal("Colours change where this car's own lights do.", PanelMatrix.CarShiftPointsCaption);
+            Assert.Equal("The flag box", PanelMatrix.FlagBoxTitle);
+            Assert.Equal("The bar slides in from the edge.", PanelMatrix.SpotterAnimationCaption);
+            Assert.Equal("Race flags", PanelMatrix.RaceFlagsTitle);
+            Assert.Equal("Pit status", PanelMatrix.PitStatusTitle);
+            Assert.Equal("Limiter, pit lane and speeding.", PanelMatrix.PitStatusCaption);
+            Assert.Equal("Spotter", PanelMatrix.SpotterTitle);
+            Assert.Equal("Warns about cars alongside.", PanelMatrix.SpotterCaption);
+            Assert.Equal("Car warnings", PanelMatrix.CarWarningsTitle);
+            Assert.Equal("Low fuel, oil and water.", PanelMatrix.CarWarningsCaption);
         }
 
         [Fact]

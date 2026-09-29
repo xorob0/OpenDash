@@ -13,6 +13,9 @@ namespace OpenDashPlugin
         public const string AnchorScreens = "shortcuts.screens";
         public const string AnchorRig = "shortcuts.rig";
 
+        /// <summary>The line under the title, as ruled: what can be bound, and nothing the rows already show.</summary>
+        public const string IntroCaption = "A wheel button, a button box or a key.";
+
         /// <summary>What the rig's own actions are listed under.</summary>
         public const string RigGroupTitle = "Lights";
 

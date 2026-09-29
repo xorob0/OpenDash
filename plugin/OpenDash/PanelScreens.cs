@@ -46,6 +46,19 @@ namespace OpenDashPlugin
             return rig != null && rig.Any(screen => screen != null && screen.Unclaimed == true);
         }
 
+        /// <summary>A screen's header press that copies it.</summary>
+        public const string DuplicateTooltip = "Adds a second screen set up like this one.";
+
+        // The rows' titles, which the panes draw and search lists, so the two cannot drift apart.
+        public const string FlagDisplayTitle = "Flag display";
+        public const string LapReviewTitle = "Lap review";
+        public const string ZonesTitle = "Zones";
+        public const string PitWallPageTitle = "Page";
+        public const string WebViewTitle = "Web view address";
+        public const string ModulesTitle = "Modules";
+        public const string FirstModuleTitle = "First module";
+        public const string SlotsTitle = "Slots";
+
         // Anchors the page's rows carry, so search can scroll to them.
         public const string AnchorCards = "screens.cards";
         public const string AnchorRevBar = "screens.revbar";
@@ -63,14 +76,14 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(Title, PanelPage.Screens, AnchorCards, "your screens", "rig", "dashboard", "display"),
             new PanelSearch.Entry(PanelAddScreen.AddButton, PanelPage.Screens, AnchorCards, "new", "dashboard", "display"),
             new PanelSearch.Entry(PanelDataTab.RevBarTitle, PanelPage.Screens, AnchorRevBar, "shift lights", "rev bar", "rpm"),
-            new PanelSearch.Entry("Flag display", PanelPage.Screens, AnchorFlagDisplay, "band d", "full screen"),
-            new PanelSearch.Entry("Lap review", PanelPage.Screens, AnchorLapReview, "last lap"),
-            new PanelSearch.Entry("Zones", PanelPage.Screens, AnchorZones, "pages", "zone a", "zone b", "zone c", "band d", "class"),
-            new PanelSearch.Entry("Page", PanelPage.Screens, AnchorPitWallPage, "pit wall", "race", "tower", "telemetry"),
-            new PanelSearch.Entry("Web view address", PanelPage.Screens, AnchorWebView, "url", "pit wall"),
-            new PanelSearch.Entry("Modules", PanelPage.Screens, AnchorModules, "companion", "phone", "rotation"),
-            new PanelSearch.Entry("First module", PanelPage.Screens, AnchorFirstModule, "companion", "phone", "start"),
-            new PanelSearch.Entry("Slots", PanelPage.Screens, AnchorSlots, "card face", "round", "cards"),
+            new PanelSearch.Entry(FlagDisplayTitle, PanelPage.Screens, AnchorFlagDisplay, "band d", "full screen"),
+            new PanelSearch.Entry(LapReviewTitle, PanelPage.Screens, AnchorLapReview, "last lap"),
+            new PanelSearch.Entry(ZonesTitle, PanelPage.Screens, AnchorZones, "pages", "zone a", "zone b", "zone c", "band d", "class"),
+            new PanelSearch.Entry(PitWallPageTitle, PanelPage.Screens, AnchorPitWallPage, "pit wall", "race", "tower", "telemetry"),
+            new PanelSearch.Entry(WebViewTitle, PanelPage.Screens, AnchorWebView, "url", "pit wall"),
+            new PanelSearch.Entry(ModulesTitle, PanelPage.Screens, AnchorModules, "companion", "phone", "rotation"),
+            new PanelSearch.Entry(FirstModuleTitle, PanelPage.Screens, AnchorFirstModule, "companion", "phone", "start"),
+            new PanelSearch.Entry(SlotsTitle, PanelPage.Screens, AnchorSlots, "card face", "round", "cards"),
         };
     }
 }

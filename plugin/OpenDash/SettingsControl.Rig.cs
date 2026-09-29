@@ -47,7 +47,7 @@ namespace OpenDashPlugin
             });
             var real = PanelSoon.Find(PanelRigMap.RealHardwareTitle);
             var hardware = Ui.Soon(Ui.HStack(10, Ui.Text(real.Title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), real);
-            var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text("Night mode", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
+            var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text(PanelSettings.NightModeTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
 
             var title = Ui.HStack(12, Ui.PageTitle(PanelRigMap.Title), Ui.NewTag());
             var head = Ui.Row(title, actions);
@@ -85,7 +85,7 @@ namespace OpenDashPlugin
             }
             if (tiles.Count == 0)
             {
-                var screensPress = Ui.Button("Open Screens", PanelButtonKind.Outline, PanelButtonSize.Small);
+                var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);
                 screensPress.Click += (sender, args) => Go(PanelPage.Screens);
                 var empty = Ui.HStack(12, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
                 Canvas.SetLeft(empty, 24);
@@ -238,7 +238,7 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(band.Outlined ? 2 : 0),
                 Child = new TextBlock
                 {
-                    Text = band.Alert ? band.Text ?? string.Empty : "Band D",
+                    Text = band.Alert ? band.Text ?? string.Empty : string.Empty,
                     FontFamily = PanelFonts.Label,
                     FontSize = 10,
                     FontWeight = FontWeights.SemiBold,

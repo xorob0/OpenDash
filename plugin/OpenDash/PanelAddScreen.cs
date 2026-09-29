@@ -172,8 +172,22 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Card face";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return KindName(kind);
             return "Dash or wheel";
+        }
+
+        /// <summary>
+        /// A kind's name where a screen already has one: the card's facts and the header under its name
+        /// ("Round · 480 × 480"), as Screens.dc.html writes them. The Add sheet's tile says the same for the
+        /// three the sheet asks about in the same words, and asks about a face as "Dash or wheel", which is
+        /// the question rather than the name. Never the internal kind id: "Slots" is the settings model's.
+        /// </summary>
+        public static string KindName(string kind)
+        {
+            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
+            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Round";
+            return "Face";
         }
 
         public static string CaptionOf(string kind)

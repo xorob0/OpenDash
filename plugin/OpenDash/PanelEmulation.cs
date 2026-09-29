@@ -251,31 +251,37 @@ namespace OpenDashPlugin
         /// The chips, in the five groups Rig.dc.html draws, in the words the rest of the panel uses:
         /// "Pit limiter" rather than "Limiter on", and the temperatures by name rather than "hot".
         /// </summary>
+        public const string FlagsGroup = "Flags";
+        public const string SpotterGroup = "Spotter";
+        public const string PitLaneGroup = "Pit lane";
+        public const string WarningsGroup = "Warnings";
+        public const string RevsGroup = "Revs";
+
         public static readonly IReadOnlyList<EmulationGroup> Groups = new[]
         {
-            new EmulationGroup("Flags",
-                new EmulationScenario(Green, "Green", Theme.FlagGreen, "Flags"),
-                new EmulationScenario(Yellow, "Yellow", Theme.FlagYellow, "Flags"),
-                new EmulationScenario(Blue, "Blue", Theme.FlagBlue, "Flags"),
-                new EmulationScenario(White, "White", Theme.FlagWhite, "Flags"),
-                new EmulationScenario(Black, "Black", Theme.FlagBlack, "Flags"),
-                new EmulationScenario(Chequer, "Chequered", Theme.FlagChequer, "Flags"),
-                new EmulationScenario(Red, "Red", Theme.FlagRed, "Flags")),
-            new EmulationGroup("Spotter",
-                new EmulationScenario(CarLeft, "Car left", Theme.Caution, "Spotter"),
-                new EmulationScenario(CarRight, "Car right", Theme.Caution, "Spotter"),
-                new EmulationScenario(CarBoth, "Both sides", Theme.Caution, "Spotter")),
-            new EmulationGroup("Pit lane",
-                new EmulationScenario(Limiter, "Pit limiter", Theme.PitLimiter, "Pit lane"),
-                new EmulationScenario(Speeding, "Speeding", Theme.Danger, "Pit lane")),
-            new EmulationGroup("Warnings",
-                new EmulationScenario(LowFuel, "Low fuel", Theme.FlagYellow, "Warnings"),
-                new EmulationScenario(Oil, "Oil temperature", Theme.Caution, "Warnings"),
-                new EmulationScenario(Water, "Water temperature", Theme.Caution, "Warnings")),
-            new EmulationGroup("Revs",
-                new EmulationScenario(Idle, "Idle", Theme.SurfaceRaised, "Revs"),
-                new EmulationScenario(Mid, "Mid revs", Theme.ShiftStage1, "Revs"),
-                new EmulationScenario(Shift, "Shift point", Theme.ShiftStage3, "Revs")),
+            new EmulationGroup(FlagsGroup,
+                new EmulationScenario(Green, "Green", Theme.FlagGreen, FlagsGroup),
+                new EmulationScenario(Yellow, "Yellow", Theme.FlagYellow, FlagsGroup),
+                new EmulationScenario(Blue, "Blue", Theme.FlagBlue, FlagsGroup),
+                new EmulationScenario(White, "White", Theme.FlagWhite, FlagsGroup),
+                new EmulationScenario(Black, "Black", Theme.FlagBlack, FlagsGroup),
+                new EmulationScenario(Chequer, "Chequered", Theme.FlagChequer, FlagsGroup),
+                new EmulationScenario(Red, "Red", Theme.FlagRed, FlagsGroup)),
+            new EmulationGroup(SpotterGroup,
+                new EmulationScenario(CarLeft, "Car left", Theme.Caution, SpotterGroup),
+                new EmulationScenario(CarRight, "Car right", Theme.Caution, SpotterGroup),
+                new EmulationScenario(CarBoth, "Both sides", Theme.Caution, SpotterGroup)),
+            new EmulationGroup(PitLaneGroup,
+                new EmulationScenario(Limiter, "Pit limiter", Theme.PitLimiter, PitLaneGroup),
+                new EmulationScenario(Speeding, "Speeding", Theme.Danger, PitLaneGroup)),
+            new EmulationGroup(WarningsGroup,
+                new EmulationScenario(LowFuel, "Low fuel", Theme.FlagYellow, WarningsGroup),
+                new EmulationScenario(Oil, "Oil temperature", Theme.Caution, WarningsGroup),
+                new EmulationScenario(Water, "Water temperature", Theme.Caution, WarningsGroup)),
+            new EmulationGroup(RevsGroup,
+                new EmulationScenario(Idle, "Idle", Theme.SurfaceRaised, RevsGroup),
+                new EmulationScenario(Mid, "Mid revs", Theme.ShiftStage1, RevsGroup),
+                new EmulationScenario(Shift, "Shift point", Theme.ShiftStage3, RevsGroup)),
         };
 
         public static IEnumerable<EmulationScenario> Scenarios()

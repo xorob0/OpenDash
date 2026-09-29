@@ -30,7 +30,7 @@ namespace OpenDashPlugin
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             return Ui.VStack(0,
                 PageSection("Layout", BuildPitWallPicture()),
-                PageSection("Zones", Ui.VStack(0, BuildPitWallRows(screen))),
+                PageSection(PanelScreens.ZonesTitle, Ui.VStack(0, BuildPitWallRows(screen))),
                 Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8, BuildPitWallGlanceSelect(screen), chip)));
         }
 
@@ -52,7 +52,7 @@ namespace OpenDashPlugin
                 screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
                 Save(screen);
             };
-            return Ui.Anchor(Ui.Row("Page", "Does not change while you race.", select), PanelScreens.AnchorPitWallPage);
+            return Ui.Anchor(Ui.Row(PanelScreens.PitWallPageTitle, "Does not change while you race.", select), PanelScreens.AnchorPitWallPage);
         }
 
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
@@ -112,7 +112,7 @@ namespace OpenDashPlugin
                 group.Margin = new Thickness(0, PanelPitWallPlan.GroupGap, 0, 0);
                 rows.Add(group);
             }
-            rows.Add(Ui.Anchor(Ui.Row("Web view address", "http or https only. Leave empty for none.", BuildWebViewBox(screen)), PanelScreens.AnchorWebView));
+            rows.Add(Ui.Anchor(Ui.Row(PanelScreens.WebViewTitle, "http or https only. Leave empty for none.", BuildWebViewBox(screen)), PanelScreens.AnchorWebView));
             // One answer for the screen and not one per zone, as a face has: the four zones are widgets
             // pointed at one dashboard file per rectangle, so two zones of one column are the same file.
             var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(screen); });

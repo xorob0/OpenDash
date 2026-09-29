@@ -38,7 +38,7 @@ namespace OpenDashPlugin
                 BodyWidth);
             intro.Margin = new Thickness(0, 0, 0, 12);
             return Ui.VStack(0,
-                Ui.Anchor(PageSection("Modules", intro, grid), PanelScreens.AnchorModules),
+                Ui.Anchor(PageSection(PanelScreens.ModulesTitle, intro, grid), PanelScreens.AnchorModules),
                 BuildCompanionFlagRow(screen),
                 BuildCompanionPaging(screen));
         }
@@ -95,7 +95,7 @@ namespace OpenDashPlugin
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             var section = PageSection("Module paging",
                 paging,
-                Ui.Anchor(Ui.Row("First module", "Shown when a session starts.", BuildModuleSelect(screen, Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
+                Ui.Anchor(Ui.Row(PanelScreens.FirstModuleTitle, "Shown when a session starts.", BuildModuleSelect(screen, Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
                     screen.CompanionStart = value;
                     // And force it now, so the screen in front of you moves rather than waiting for the
@@ -124,7 +124,7 @@ namespace OpenDashPlugin
                 new[] { "Off", "Bar", "Full screen" },
                 Settings.ScreenCompanionFlagFormat(screen.Namespace),
                 value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(screen); });
-            return Ui.Row("Flag display", "Full screen covers the module. Bar is a thin strip at the foot.", segmented);
+            return Ui.Row(PanelScreens.FlagDisplayTitle, "Full screen covers the module. Bar is a thin strip at the foot.", segmented);
         }
 
         /// <summary>How this pit wall draws a flag. The bar by default, not the companion's full screen:
@@ -137,7 +137,7 @@ namespace OpenDashPlugin
                 new[] { "Off", "Bar", "Full screen" },
                 Settings.ScreenPitWallFlagFormat(screen.Namespace),
                 value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(screen); });
-            return Ui.Row("Flag display", "Bar is a strip under the header. Full screen covers the rest.", segmented);
+            return Ui.Row(PanelScreens.FlagDisplayTitle, "Bar is a strip under the header. Full screen covers the rest.", segmented);
         }
 
         /// <summary>"Tyres" and its toggle. The number and the description are the tooltip: the grid reads

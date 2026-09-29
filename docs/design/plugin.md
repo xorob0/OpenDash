@@ -52,8 +52,24 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
 - **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the
   plugin does not bundle.
 - **Voice replacements**: greyed rows are noun phrases ("Rig test", "Alert dismissal", "RPM colour for
-  everything", "Where each alert shows"); "Car-specific shift points", not thresholds; the #369 switch is
-  "Car's own rev lights"; a page is named as "the Screens page" wherever copy sends a driver to one.
+  everything", "Alert display"); the Matrix row is "Car's own shift points", not thresholds, and takes the
+  qualifier of the LEDs page's #369 switch, "Car's own rev lights", so the car's tables read one way on
+  both pages (voice.md settled "Car-specific" for a value in a chooser, which needed a head noun; a title
+  has one); a page is named as "the Screens page" wherever copy sends a driver to one.
+- **Every other artboard string the build words differently**, so that nobody comparing the two changes
+  it back:
+
+  | artboard | build | why |
+  |---|---|---|
+  | Main: "Try a flag or the spotter" | "Flags and spotter" | a label is a noun phrase, not an instruction |
+  | Main: "Dash brow isn't showing openDash" | "Dash brow's profile is not selected" | no contractions, and the wordmark is not spelled in a sentence |
+  | Main: "Its profile is installed but not selected on the device." | "Installed, but not selected in SimHub." | the title already names the profile; the caption says where |
+  | Main: "Pick openDash Dash brow" | Select "Dash brow" | SimHub's own verb, and the name the profile is listed under |
+  | Rig: "Limiter on" | "Pit limiter" | the word the rest of the panel uses for it |
+  | Rig: "Oil hot", "Water hot" | "Oil temperature", "Water temperature" | the Settings rows' names for the same alerts |
+  | Rig: "Light the real hardware" | "Real hardware" | a greyed title is a noun phrase |
+  | Rig: a face tile's band reads its content | the band is drawn empty at rest | "Band D" is the panel talking to itself |
+  | Sidebar: the search's label "Search settings" | "Search" as its placeholder and name, "Searches every setting." on the rail | the artboard's placeholder is "Search"; the rail, which has no placeholder, says the rest in its tooltip |
 
 ### Three tokens are owed
 
@@ -68,7 +84,15 @@ What is not expressed as a token is the geometry: the tab height, the underline 
 card's width and height are literals in `Widgets.cs`. They belong in the token file when somebody
 adds them there, and this paragraph is the record that they are missing rather than forgotten.
 
-## The tab bar
+## Before #503: the four tabs
+
+What follows is the record of the panel as four tabs -- Rig, Data, Lights and Install -- kept because the
+reasoning under each row still holds and the page agents rebuild from it. It describes what the plugin
+drew before [#503](https://github.com/xorob0/OpenDash/issues/503), not what it draws: the tab bar is gone,
+and each tab's rows are on the pages [Where everything moved](#where-everything-moved) names. A tab here
+is that tab, not a page; each section is rewritten for its page as that page lands.
+
+### The tab bar
 
 *Gone with #503, for the sidebar above. This section and the four below it describe the tabs as they
 were; each moves to its page, in the words of the table above, as the page agent rebuilds that page.*
@@ -80,7 +104,7 @@ The tab is remembered for the session and not persisted. A user who came to chan
 land where they left off within one sitting; a user coming back next week should land on Rig, which
 is the answer to "what is this".
 
-## Rig
+### Rig
 
 ```
 Rig                                                        Data   Lights   Install
@@ -107,7 +131,7 @@ and the namespace its properties carry. The namespace is there because
 move it, so a screen called "Rim" whose properties say `MainDash` has to be able to say so. It is a
 fact on the page rather than a thing to discover.
 
-### Adding one
+#### Adding one
 
 The add card opens a panel, not a dialog.
 
@@ -143,7 +167,7 @@ that a flat list of fourteen resolutions is the thing a new user gives up on. It
 because nothing in the SDK research says whether SimHub exposes the displays to a plugin. That is
 the first thing #85 has to check.
 
-### Removing one
+#### Removing one
 
 Removes the screen, its settings, and the folder it owns — and says so first, in those terms,
 naming the folder. It also says the thing that is easy to miss: **a wheel button bound to this
@@ -156,7 +180,7 @@ add failed — **keeps its card**, marked, with a button to write the package ba
 destroy the zone setup behind it and hide the thing that needs fixing, which is the same reasoning
 [#176](https://github.com/xorob0/OpenDash/issues/176) applies to a failed install.
 
-### The pane of a face
+#### The pane of a face
 
 A face is configured **on a picture of itself**, which is the part of the current panel worth
 keeping: "zone C" means nothing until you see where zone C is.
@@ -216,7 +240,7 @@ corrected rather than second-guessed.
 The clash line says what is doubled up and does not prevent it. Two zones on the same page is a
 thing people do on purpose.
 
-### The pane of a pit wall
+#### The pane of a pit wall
 
 The letters need a picture, so the pit wall gets one of its three pages rather than a plan of one
 screen:
@@ -236,7 +260,7 @@ Where the zones are
 
 Then a row per zone naming where it is, the wide zone, and the web view address.
 
-### The pane of a companion
+#### The pane of a companion
 
 A companion shows one module at a time and the header says which, so its pane is the rotation: the
 twenty-one modules as toggles, and one binder for "next module". A module that is off is skipped
@@ -245,14 +269,14 @@ when you page.
 Energy, Damage and Track rivals are off by default because iRacing publishes none of their data.
 The pane says so rather than letting a user switch one on and wonder why it is blank.
 
-### The pane of a slots face
+#### The pane of a slots face
 
 The twelve-slot picture, unchanged, for anyone running an `openDash slots <size>` package. It is on
 its own screen card rather than in a section of its own, which is the whole reason the card model
 survives the redesign without cluttering it: you see it only if you installed one. It leaves with
 the cards in [#146](https://github.com/xorob0/OpenDash/issues/146).
 
-## Data
+### Data
 
 The settings that are not per screen, because a lap time means the same thing on the rim as it does
 on the pit wall, and so does a name.
@@ -337,7 +361,7 @@ The rev bar is three states in one control rather than a toggle and a second tog
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it
 wants the third of them (#189).
 
-## Lights
+### Lights
 
 Everything about the 8x8 flag box, and about any light openDash drives later.
 [ADR 0013](../decisions/0013-lighting-hardware.md) is why the page exists;
@@ -408,7 +432,7 @@ rows of settings for hardware almost nobody owns, and the tab opens on the one m
 everything by default. This is the "less often used, but kept" rule applied where it costs the most
 scroll.
 
-### Why the page is shaped this way
+#### Why the page is shaped this way
 
 **Brightness is at the top and is named for the rig.** `LightsBrightness`, `LightsNightBrightness`
 and `LightsNightMode` are not flag-box settings: a driver who owns a flag box probably owns other
@@ -465,7 +489,7 @@ ticket if somebody asks for it; it is not smuggled in here.
 applies its own default, which is chosen from SimHub's `TemperatureUnit`. A driver in Fahrenheit
 who has never opened this page gets 248, not 120.
 
-## Install
+### Install
 
 The packages, and the plugin itself.
 

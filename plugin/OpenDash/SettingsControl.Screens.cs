@@ -77,9 +77,7 @@ namespace OpenDashPlugin
         /// <summary>The kind as a word, for the facts under a screen's name.</summary>
         private static string KindLabel(ScreenInstance screen)
         {
-            if (screen.IsCompanion) return "Companion";
-            if (screen.IsPitWall) return "Pit wall";
-            return screen.IsSlots ? "Slots" : "Face";
+            return PanelAddScreen.KindName(screen.Kind);
         }
 
         /// <summary>
@@ -169,7 +167,7 @@ namespace OpenDashPlugin
             edit.ToolTip = "Change this screen's name or size, or install its dashboard again.";
             edit.Click += (sender, args) => ShowEdit(screen);
             var duplicate = Ui.Button("Duplicate", PanelButtonKind.Outline, PanelButtonSize.Small);
-            duplicate.ToolTip = "Adds a second screen set up like this one.";
+            duplicate.ToolTip = PanelScreens.DuplicateTooltip;
             duplicate.Click += (sender, args) => DuplicateScreen(screen);
             var remove = Ui.Button("Remove", PanelButtonKind.GhostDanger, PanelButtonSize.Small);
             remove.ToolTip = "Removes this screen, its settings and its dashboard.";

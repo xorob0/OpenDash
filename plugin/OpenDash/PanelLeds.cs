@@ -29,6 +29,10 @@ namespace OpenDashPlugin
         public const string CarRevLightsTitle = "Car's own rev lights";
         public const string CarRevLightsCaption = "Off fills the strip left to right.";
 
+        /// <summary>The section of what is the same for every strip, and the width row's caption in it.</summary>
+        public const string EveryStripTitle = "Every strip";
+        public const string MirrorFitCaption = "Only for a strip using the car's own rev lights.";
+
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(PanelLights.BarsTitle, PanelPage.Leds, AnchorStrips, "strip", "wheel", "rim", "brow"),

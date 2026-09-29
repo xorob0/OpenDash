@@ -64,7 +64,7 @@ namespace OpenDashPlugin
                 },
                 manual => UpdateAnswered());
 
-            var links = Ui.HStack(24, BuildLink("Documentation", DocumentationUrl), BuildLink("Report an issue", IssuesUrl), Ui.Label("MIT licence"));
+            var links = Ui.HStack(24, BuildLink(PanelUpdates.DocumentationLink, DocumentationUrl), BuildLink(PanelUpdates.ReportIssueLink, IssuesUrl), Ui.Label("MIT licence"));
             return PageLayout(PanelUpdates.Title, null,
                 Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin),
                 Ui.Anchor(BuildPackageSection(), PanelUpdates.AnchorPackages),

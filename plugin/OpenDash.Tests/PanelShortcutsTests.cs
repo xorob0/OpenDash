@@ -12,6 +12,8 @@ namespace OpenDashPlugin.Tests
         public void Shortcuts_says_what_the_artboard_says()
         {
             Assert.Equal("Shortcuts", PanelShortcuts.Title);
+            // Ruling 49's intro, and nothing the rows under it already show.
+            Assert.Equal("A wheel button, a button box or a key.", PanelShortcuts.IntroCaption);
             Assert.Equal("Lights", PanelShortcuts.RigGroupTitle);
             Assert.Equal("Quick glance", PanelShortcuts.QuickGlanceTitle);
             Assert.Equal("Band D · next page", PanelShortcuts.ZoneRow("Band D", true));

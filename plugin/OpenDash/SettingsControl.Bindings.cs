@@ -93,7 +93,7 @@ namespace OpenDashPlugin
                 var text = PanelBindings.ChipText(triggers);
                 chip = Ui.BindingChip(text ?? Ui.NotBound, text != null, open);
             }
-            chip.ToolTip = "Opens Shortcuts.";
+            chip.ToolTip = PanelBindings.ChipTooltip;
             return chip;
         }
 

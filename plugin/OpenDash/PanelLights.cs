@@ -382,7 +382,7 @@ namespace OpenDashPlugin
                 ? where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
                     + " SimHub's list carries its name rather than yours."
                 : where + ". \"" + profile + "\" is the profile that paints it, and SimHub has not got it:"
-                    + " install it at the top of the Matrix page.";
+                    + " install it at the top of this page.";
         }
 
         /// <summary>Whether <see cref="PanelAdded"/> is asking for something to be done before the panel
@@ -392,12 +392,12 @@ namespace OpenDashPlugin
             return state != FlagBoxInstallState.UpToDate && state != FlagBoxInstallState.Outdated;
         }
 
-        /// <summary>The line under the flag box heading: one profile, named, and where it comes from.
-        /// It names the profile because the panels below do not carry their own.</summary>
+        /// <summary>The line under the flag box heading: one profile, named. It names the profile because
+        /// the panels below do not carry their own, and says nothing of where to install it: the profile's
+        /// own row, with its press, is directly above.</summary>
         public static string BoxCaption(string profile)
         {
-            return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below;"
-                + " install it at the top of the Matrix page.";
+            return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below.";
         }
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since

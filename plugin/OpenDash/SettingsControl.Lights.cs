@@ -52,13 +52,13 @@ namespace OpenDashPlugin
             groups.Add(BuildAddLedBarRow());
 
             // Rig-wide: what a mirrored bar does on a strip that is not the car's length.
-            var fit = Ui.Anchor(Ui.Row(PanelLeds.MirrorFitTitle, "Only for a strip using the car's own rev lights.",
+            var fit = Ui.Anchor(Ui.Row(PanelLeds.MirrorFitTitle, PanelLeds.MirrorFitCaption,
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })), PanelLeds.AnchorMirrorFit);
 
             return PageLayout(PanelLeds.Title, null,
                 Ui.Anchor(PageSection(PanelLights.BarsTitle, groups.ToArray()), PanelLeds.AnchorStrips),
-                PageSection("Every strip", fit, Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables)));
+                PageSection(PanelLeds.EveryStripTitle, fit, Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables)));
         }
 
         /// <summary>

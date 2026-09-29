@@ -193,7 +193,7 @@ namespace OpenDashPlugin
                 ShowLightingChange();
             });
             night.HorizontalAlignment = HorizontalAlignment.Left;
-            var rig = Ui.Button("Open Rig", PanelButtonKind.Outline, PanelButtonSize.Small);
+            var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small);
             rig.HorizontalAlignment = HorizontalAlignment.Left;
             rig.Click += (sender, args) => Go(PanelPage.Rig);
 
@@ -205,7 +205,7 @@ namespace OpenDashPlugin
             {
                 Ui.VStack(12, Ui.Eyebrow(label), slider),
                 Ui.VStack(12, Ui.Eyebrow(PanelSettings.NightModeTitle), night),
-                Ui.VStack(12, Ui.Eyebrow("Flags and spotter"), rig),
+                Ui.VStack(12, Ui.Eyebrow(PanelHome.TryTitle), rig),
             };
             for (var i = 0; i < cells.Length; i++)
             {

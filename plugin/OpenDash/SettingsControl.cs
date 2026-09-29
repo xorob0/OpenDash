@@ -594,7 +594,7 @@ namespace OpenDashPlugin
                 Log.Error("Drawing the " + PanelNav.Label(to.Page) + " page failed", ex);
                 return Ui.VStack(12,
                     Ui.PageTitle(PanelNav.Label(to.Page)),
-                    Ui.Prose("This page could not be drawn. See SimHub's log.", Theme.SizeBody, Theme.Caution));
+                    Ui.Prose(PanelShell.PageFailed, Theme.SizeBody, Theme.Caution));
             }
         }
 

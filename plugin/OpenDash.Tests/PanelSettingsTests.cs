@@ -21,7 +21,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Laps of fuel left.", PanelSettings.LowFuelCaption);
             Assert.Equal("Oil temperature", PanelSettings.OilTempTitle);
             Assert.Equal("Water temperature", PanelSettings.WaterTempTitle);
-            Assert.Equal("In SimHub's unit. 0 uses the default.", PanelSettings.TempCaption);
+            // Each threshold names its own default, which the artboard draws as the field's placeholder.
+            Assert.Equal("0 uses 120 °C (248 °F).", PanelSettings.OilTempCaption);
+            Assert.Equal("0 uses 110 °C (230 °F).", PanelSettings.WaterTempCaption);
             Assert.Equal("Brightness", PanelSettings.BrightnessTitle);
             Assert.Equal("SimHub's device brightness applies on top.", PanelSettings.BrightnessCaption);
             Assert.Equal("Night brightness", PanelSettings.NightBrightnessTitle);
@@ -32,7 +34,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_caption_is_a_sentence()
         {
-            foreach (var caption in new[] { PanelSettings.LowFuelCaption, PanelSettings.TempCaption, PanelSettings.BrightnessCaption, PanelSettings.NightBrightnessCaption })
+            foreach (var caption in new[] { PanelSettings.LowFuelCaption, PanelSettings.OilTempCaption, PanelSettings.WaterTempCaption, PanelSettings.BrightnessCaption, PanelSettings.NightBrightnessCaption })
             {
                 Assert.EndsWith(".", caption, StringComparison.Ordinal);
             }

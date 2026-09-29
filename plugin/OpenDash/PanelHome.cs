@@ -12,6 +12,10 @@ namespace OpenDashPlugin
         public const string RightNowTitle = "Right now";
         public const string QuickControlsTitle = "Quick controls";
 
+        /// <summary>The quick controls' third cell: what the Rig page tries, and the press that opens it.</summary>
+        public const string TryTitle = "Flags and spotter";
+        public static readonly string OpenRig = PanelAttention.Open(PanelRigMap.Title);
+
         public const string AnchorAttention = "home.attention";
         public const string AnchorRightNow = "home.right-now";
         public const string AnchorQuickControls = "home.quick-controls";

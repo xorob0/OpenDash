@@ -31,6 +31,9 @@ namespace OpenDashPlugin
         /// <summary>What a chip says for an action nothing is bound to, on every page that draws one.</summary>
         public const string NotBound = "Not bound";
 
+        /// <summary>A binding chip's hover on a page other than Shortcuts, naming the page its press opens.</summary>
+        public const string ChipTooltip = "Opens the Shortcuts page.";
+
         /// <summary>
         /// A SimHub trigger as every page names it, in the artboards' one form, "{source} · {input}": what reads
         /// the input, then the input. "KeyboardReaderPlugin.F9" is "Keyboard · F9"; a joystick is its device

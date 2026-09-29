@@ -377,6 +377,9 @@ namespace OpenDashPlugin
 
         // --- What the pages share -----------------------------------------------------------------------
 
+        /// <summary>What a page says in place of itself when drawing it threw.</summary>
+        public const string PageFailed = "This page could not be drawn. See SimHub's log.";
+
         /// <summary>A control that is drawn and not yet built: faded to this, and not answering.</summary>
         public const double SoonOpacity = 0.45;
 

@@ -96,8 +96,12 @@ namespace OpenDashPlugin
         public string Label(ReplacingAction action, string showing)
         {
             if (IsAsking(action, showing)) return ReplaceAnyway;
-            return action == ReplacingAction.Update ? "Update" : "Reinstall";
+            return action == ReplacingAction.Update ? UpdateLabel : ReinstallLabel;
         }
+
+        /// <summary>The two buttons' own verbs, which search lists the Reinstall row by.</summary>
+        public const string UpdateLabel = "Update";
+        public const string ReinstallLabel = "Reinstall";
 
         private bool IsAsking(ReplacingAction action, string showing)
         {

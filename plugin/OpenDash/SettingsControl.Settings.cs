@@ -117,8 +117,8 @@ namespace OpenDashPlugin
             var waterTemp = BuildNumberBox(Settings.LightsWaterTemp ?? 0, 0, 999, v => { Settings.SetLightsWaterTemp(v); Save(); });
             return PageSection(PanelSettings.AlertsTitle,
                 Ui.Row(PanelSettings.LowFuelTitle, PanelSettings.LowFuelCaption, lowFuel),
-                Ui.Row(PanelSettings.OilTempTitle, PanelSettings.TempCaption, oilTemp),
-                Ui.Row(PanelSettings.WaterTempTitle, PanelSettings.TempCaption, waterTemp));
+                Ui.Row(PanelSettings.OilTempTitle, PanelSettings.OilTempCaption, oilTemp),
+                Ui.Row(PanelSettings.WaterTempTitle, PanelSettings.WaterTempCaption, waterTemp));
         }
 
         /// <summary>Brightness and night mode are the rig's rather than any one device's, so they sit here and

@@ -3,8 +3,9 @@
 //
 // Each page owns its own list (Panel<Page>.Search), because a page agent adding a row is the one who knows
 // its words and where it sits, and the shell owns none of them. All() is their concatenation in sidebar
-// order, so a hit on Settings never outranks an equally good one on Home. A greyed row is listed as well:
-// somebody searching for a theme should find that it is coming rather than conclude it does not exist.
+// order, so a hit on Settings never outranks an equally good one on Home. A greyed row is listed as well once
+// its page draws it: somebody searching for a theme should find that it is coming rather than conclude it
+// does not exist, and should not be sent to a page with no such row.
 //
 // Pure: PanelSearchTests holds the ranking.
 using System;
@@ -133,7 +134,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every page's entries, in sidebar order, then Updates, then every greyed row of the
-        /// registry, each routed to its page and its own anchor.</summary>
+        /// registry that a page draws, each routed to its page and its own anchor.</summary>
         public static IEnumerable<Entry> All()
         {
             return PanelHome.Search
@@ -147,8 +148,10 @@ namespace OpenDashPlugin
                 .Concat(Soon);
         }
 
-        /// <summary>The registry's greyed rows as entries: found by their title, and by "soon".</summary>
+        /// <summary>The registry's greyed rows that a page draws, as entries: found by their title, and by
+        /// "soon". A row no page draws yet is not listed, since its hit would land on nothing.</summary>
         public static readonly Entry[] Soon = PanelSoon.All
+            .Where(PanelSoon.IsDrawn)
             .Select(item => new Entry(item.Title, item.Page, item.Anchor, PanelSoon.Tag.ToLowerInvariant(), "coming"))
             .ToArray();
     }

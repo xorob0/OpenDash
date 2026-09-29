@@ -78,7 +78,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <remarks>
-        /// The labels were an inline array in SettingsControl.Data.cs, where nothing could hold them to
+        /// The labels were an inline array in SettingsControl.Data.cs (now SettingsControl.Settings.cs), where nothing could hold them to
         /// the contract; the segmented control indexes them by value, so a third reference with two labels
         /// throws while the tab is drawn rather than in a test. #322 moved them here to be counted.
         /// </remarks>

@@ -573,7 +573,7 @@ namespace OpenDashPlugin.Tests
         {
             // The whole census end to end, off the files the plugin actually embeds: the file name gives
             // the shape id and the profile's own Name gives the row its title, exactly as
-            // SettingsControl.Install.Lights.cs reads them out of the assembly.
+            // SettingsControl.Updates.Lights.cs reads them out of the assembly.
             var built = BuiltProfiles();
             if (built == null)
             {

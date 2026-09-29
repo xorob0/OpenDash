@@ -109,7 +109,7 @@ namespace OpenDashPlugin
                 Save(screen);
             });
             var row = Ui.Row(
-                "Flag display",
+                PanelScreens.FlagDisplayTitle,
                 "Full screen covers the zones while the flag is out.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -134,7 +134,7 @@ namespace OpenDashPlugin
                 Save(screen);
             });
             var row = Ui.Row(
-                "Lap review",
+                PanelScreens.LapReviewTitle,
                 "Shows your last lap for four seconds after the line.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;

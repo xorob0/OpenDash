@@ -17,6 +17,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Lights OpenDash can install", PanelUpdates.LightsTitle);
             Assert.Equal("Support", PanelUpdates.LinksTitle);
             Assert.Equal("Check for updates", PanelUpdates.CheckTitle);
+            Assert.Equal("Put mine back", PanelUpdates.PutMineBack);
+            Assert.Equal("Documentation", PanelUpdates.DocumentationLink);
+            Assert.Equal("Report an issue", PanelUpdates.ReportIssueLink);
+            Assert.Equal("Reinstall", PanelConfirmation.ReinstallLabel);
+            Assert.Equal("Update", PanelConfirmation.UpdateLabel);
             foreach (var title in new[] { PanelUpdates.PluginTitle, PanelUpdates.PackagesTitle, PanelUpdates.LightsTitle })
             {
                 Assert.Contains(PanelUpdates.Search, entry => entry.Label == title);

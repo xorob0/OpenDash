@@ -1,7 +1,7 @@
 // PanelFacePlanTests.cs: the picture the Rig tab configures a face on, held against the canvas the way
 // PanelMetricsTests holds the rest of the panel's geometry.
 //
-// SettingsControl.Panes.cs is WPF and cannot be compiled here, which is why PanelFacePlan.cs exists: a
+// SettingsControl.Screens.Face.cs is WPF and cannot be compiled here, which is why PanelFacePlan.cs exists: a
 // picture whose rows are four constants rather than the face's own rectangles is caught here rather than
 // on the VM, where the only way to see it is to open the panel and measure it.
 using System;
