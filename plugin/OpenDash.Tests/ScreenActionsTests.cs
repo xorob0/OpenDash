@@ -63,7 +63,9 @@ namespace OpenDashPlugin.Tests
         public void What_is_registered_is_what_the_contract_lists_screen_by_screen()
         {
             var settings = RigOfEveryKind();
-            var expected = settings.RigScreens().SelectMany(s => Contract.ScreenActionNames(s.Kind, s.Namespace)).ToArray();
+            var expected = settings.RigScreens().SelectMany(s => Contract.ScreenActionNames(s.Kind, s.Namespace))
+                .Concat(Contract.RigActionNames())
+                .ToArray();
             Assert.Equal(expected, Record(settings).Select(r => r.Name).ToArray());
             // And that list, spelled out, so a contract that grew an action would fail here too rather
             // than being registered faithfully.
@@ -80,6 +82,9 @@ namespace OpenDashPlugin.Tests
                 "Face1920x480CycleZoneDBack",
                 "CompanionHoldQuickGlance",
                 "PitWallHoldQuickGlance",
+                "ToggleNightMode",
+                "BrightnessUp",
+                "BrightnessDown",
             }, expected);
         }
 
@@ -97,7 +102,8 @@ namespace OpenDashPlugin.Tests
             var companions = new OpenDashSettings { Rig = new List<ScreenInstance> { Screen(Contract.KindCompanion, 850, 480), Screen(Contract.KindCompanion, 480, 850) } };
             companions.Rig[1].Namespace = "Garage";
             companions.Normalise();
-            Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" }, Record(companions).Select(r => r.Name).ToArray());
+            Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" },
+                Record(companions).Select(r => r.Name).Except(Contract.RigActionNames()).ToArray());
         }
 
         [Fact]
@@ -147,6 +153,65 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultCompanionQuickGlance, settings.ScreenCompanionOpenOn("Companion"));
             registered["CompanionHoldQuickGlance"].Release();
             Assert.Contains(settings.ScreenCompanionOpenOn("Companion"), new[] { Contract.CompanionOpenOnBack, Contract.DefaultCompanionOpenOn });
+        }
+
+        [Fact]
+        public void A_zones_back_button_steps_it_backwards()
+        {
+            var settings = RigOfEveryKind();
+            var registered = Record(settings).ToDictionary(r => r.Name, StringComparer.Ordinal);
+            var face = settings.ScreenOf("Face1920x480").Face;
+            face.SetStart("A", 0);
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(3, face.Zones[0]);
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(2, face.Zones[0]);
+            registered["Face1920x480CycleZoneA"].Press();
+            Assert.Equal(3, face.Zones[0]);
+            // In the zone's own order, which is the driver's.
+            face.SetOrder("A", new[] { 3, 1, 0, 2 });
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(2, face.Zones[0]);
+            Assert.Null(registered["Face1920x480CycleZoneABack"].Release);
+        }
+
+        [Fact]
+        public void The_rigs_own_buttons_toggle_night_and_step_the_brightness_and_save()
+        {
+            var settings = RigOfEveryKind();
+            settings.LightsBrightness = 60;
+            var saves = 0;
+            var registered = new Dictionary<string, Registered>(StringComparer.Ordinal);
+            ScreenActions.Register(() => settings, (name, press, release) => registered[name] = new Registered { Name = name, Press = press, Release = release }, () => saves++);
+
+            // Pressed, not held: no release.
+            foreach (var name in Contract.RigActionNames()) Assert.Null(registered[name].Release);
+
+            registered["BrightnessUp"].Press();
+            Assert.Equal(70, settings.LightsBrightness);
+            Assert.Equal(1, saves);
+            registered["BrightnessDown"].Press();
+            registered["BrightnessDown"].Press();
+            Assert.Equal(50, settings.LightsBrightness);
+            for (var press = 0; press < 10; press++) registered["BrightnessDown"].Press();
+            Assert.Equal(Contract.BrightnessStepFloor, settings.LightsBrightness);
+
+            registered["ToggleNightMode"].Press();
+            Assert.True(settings.LightsNightMode);
+            // At night the buttons move the night brightness.
+            var night = settings.LightsNightBrightness;
+            registered["BrightnessUp"].Press();
+            Assert.Equal(night + Contract.BrightnessStep, settings.LightsNightBrightness);
+            Assert.Equal(Contract.BrightnessStepFloor, settings.LightsBrightness);
+            registered["ToggleNightMode"].Press();
+            Assert.False(settings.LightsNightMode);
+            Assert.Equal(16, saves);
+
+            // Without a save to call, a press still changes the setting.
+            var unsaved = RigOfEveryKind();
+            var bare = Record(unsaved).ToDictionary(r => r.Name, StringComparer.Ordinal);
+            bare["ToggleNightMode"].Press();
+            Assert.True(unsaved.LightsNightMode);
         }
 
         [Fact]

@@ -676,9 +676,10 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The actions a driver binds to a wheel button, which are exactly the ones
-        /// Contract.ScreenActionNames lists for the rig's screens: five per face, one per zone and one
-        /// held for a glance; the glance alone on a pit wall and on a companion, which SimHub pages
-        /// itself. ScreenActions walks that list and says what each name does, so the list and
+        /// Contract.ScreenActionNames lists for the rig's screens: nine per face, one per zone each way
+        /// and one held for a glance; the glance alone on a pit wall and on a companion, which SimHub
+        /// pages itself; and then Contract.RigActionNames, once for the rig. ScreenActions walks those
+        /// lists and says what each name does, so the lists and
         /// the registration cannot disagree, and ScreenActionsTests holds what arrives here.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
@@ -695,8 +696,11 @@ namespace OpenDashPlugin
         /// (ADR 0017). The panel warns before a remove that a button bound to that screen will go
         /// quiet, which is the cost said out loud rather than designed around.
         ///
-        /// An action only changes the live page. It does not save: the page a zone is showing is live
-        /// state, and Init puts every zone back on the page it opens on.
+        /// A screen's action only changes the live page. It does not save: the page a zone is showing
+        /// is live state, and Init puts every zone back on the page it opens on. The rig's own three --
+        /// night mode and the brightness steps (#503) -- change settings, so ScreenActions follows each
+        /// of their presses with the save handed in here, queued onto SimHub's interface thread because
+        /// a press arrives on whichever thread SimHub reads the button on.
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
@@ -705,7 +709,8 @@ namespace OpenDashPlugin
                     name,
                     typeof(OpenDash),
                     (manager, action) => press(),
-                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release())));
+                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release())),
+                () => OnInterfaceThread(SaveSettings));
         }
     }
 }

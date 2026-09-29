@@ -33,8 +33,13 @@ namespace OpenDashPlugin
         ///
         /// A name with no answer below throws. The contract grew an action this file does not know how
         /// to perform, and a row in Controls and events that does nothing is what this exists to prevent.
+        ///
+        /// After the screens, the rig's own three, Contract.RigActionNames: night mode, and the
+        /// brightness up and down a step (#503). Unlike a screen's they change a setting rather than a
+        /// live page, so each press is followed by <paramref name="persist"/>, which the plugin hands in
+        /// as a save; a rig that restarts in the dark should come back dimmed.
         /// </remarks>
-        public static void Register(Func<OpenDashSettings> settings, RegisterAction register)
+        public static void Register(Func<OpenDashSettings> settings, RegisterAction register, Action persist = null)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
             if (register == null) throw new ArgumentNullException(nameof(register));
@@ -51,6 +56,27 @@ namespace OpenDashPlugin
                     register(name, press, release);
                 }
             }
+            foreach (var name in Contract.RigActionNames())
+            {
+                register(name, RigPress(settings, name, persist), null);
+            }
+        }
+
+        /// <summary>What one of the rig's own actions does: the change, then the save.</summary>
+        private static Action RigPress(Func<OpenDashSettings> settings, string name, Action persist)
+        {
+            Action<OpenDashSettings> change;
+            if (string.Equals(name, Contract.ToggleNightModeAction, StringComparison.Ordinal)) change = s => s.ToggleNightMode();
+            else if (string.Equals(name, Contract.BrightnessUpAction, StringComparison.Ordinal)) change = s => s.StepBrightness(1);
+            else if (string.Equals(name, Contract.BrightnessDownAction, StringComparison.Ordinal)) change = s => s.StepBrightness(-1);
+            else throw new InvalidOperationException("The contract names a rig action nothing performs: " + name);
+            return () =>
+            {
+                var current = settings();
+                if (current == null) return;
+                change(current);
+                if (persist != null) persist();
+            };
         }
 
         /// <summary>What one of a screen's actions does, found by its name.</summary>
