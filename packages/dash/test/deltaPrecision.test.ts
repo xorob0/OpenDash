@@ -13,9 +13,9 @@
  *
  * The expected figures here are written with JavaScript's `toFixed`, which is also what the evaluator
  * formats with. .NET rounds a decimal half away from zero where `toFixed` rounds the binary double, so
- * the two part at a reading such as 12.345 to two places, `12.34` here and `12.35` on the dash. That
- * is a rounding of the last place, not a choice of precision, and the fit test below measures the
- * .NET roundings too.
+ * the two part where a decimal half is stored just under it: 1.2345 to three places is `1.234` here
+ * and `1.235` on the dash, and 9.9995 is `9.999` here and `10.000` on the dash. That is a rounding of
+ * the last place, not a choice of precision, and the fit test below measures the .NET roundings too.
  */
 import { describe, expect, test } from 'bun:test';
 import type { Item, Rect, TextItem } from '../src/generator.ts';
@@ -257,7 +257,7 @@ describe('the delta precision (#322)', () => {
 
   test('every reading any surface can draw fits its widest in its own cells, and the widest fits the box', () => {
     // The .NET roundings the evaluator does not make: a half in decimal that is under a half in binary.
-    const dotnet = ['+12.35', '−12.35', '+10.000', '−10.000', '+100.00', '−100.00'];
+    const dotnet = ['+10.000', '−10.000', '+1.235', '−1.235'];
     // And the longest a long stop draws, which is to two places at either precision: every reading
     // under 1000 s fits.
     const longest = ['+100.00', '−123.46', '+999.99', '−999.99'];

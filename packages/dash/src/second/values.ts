@@ -86,8 +86,10 @@ export const CHARS = {
   /** `1:42.905` */
   lapTime: { digits: 6, specials: 2 } as Chars,
   /**
-   * `-0.21`: a signed delta to two places. The sector deltas, the lap review's two and the lap
-   * history's column; the live delta to the reference has a budget of its own, {@link CHARS.referenceDelta}.
+   * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
+   * sector deltas and the lap review's two draw it to two places, which leaves two whole digits; the
+   * lap history's column draws it to three, `+0.594`, which leaves one. The live delta to the
+   * reference has a budget of its own, {@link CHARS.referenceDelta}.
    */
   delta: { digits: 5, specials: 1 } as Chars,
   /**

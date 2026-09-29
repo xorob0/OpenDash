@@ -183,9 +183,10 @@ namespace OpenDashPlugin
         /// Shared, like the reference it qualifies: a delta read to the thousandth on the rim and to the
         /// hundredth on the pit wall would be two answers to one question. The plugin only publishes the
         /// choice; the dashboard chooses between two literal formats with it, in boxes already cut for
-        /// three places, so neither answer moves anything on the screen but the digits. Appended to the
-        /// shared group after the class best, since both halves of the contract assert that group by
-        /// index. #322.
+        /// three places, so neither answer resizes or rearranges a box: the digits change, and the delta
+        /// page's caption, which follows the figure it draws, moves by the cell a third place adds.
+        /// Appended to the shared group after the clock format, since both halves of the contract assert
+        /// that group by index. #322.
         /// </remarks>
         public static readonly string[] DeltaPrecisions = { "hundredths", "thousandths" };
 

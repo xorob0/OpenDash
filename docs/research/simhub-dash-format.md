@@ -851,7 +851,9 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
 - **A format's pattern is written as a literal, so a precision is an `if` around two formats.** The
   pattern `format(v, '0.00', true)` was verified with is a string literal, and `fmt` and `signed` in
   `packages/generator/src/ncalc.ts` quote whatever they are given: a pattern passed to them as an
-  expression is emitted as the text of the expression, and the delta draws that text. So the delta's
+  expression is emitted as a string literal holding the expression's text, and .NET then reads that
+  text as a custom pattern: its `.` and `0` become placeholders and its quotes and commas vanish, so
+  the delta draws a mangled copy of the expression rather than a number. So the delta's
   precision is `if(<thousandths>, format(v, '0.000', true), format(v, '0.00', true))`, as
   `referenceDeltaText` writes it. Whether SimHub's `format` would take a bound pattern at all has not
   been tried, and nothing needs it to.
@@ -861,8 +863,10 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   double is a hair under the half. That is why the band inside which the delta is drawn level is
   strictly under half a unit of the last place: at the half the figure has already gained a digit.
   The evaluator in `packages/dash/test/ncalcEval.ts` formats with JavaScript's `toFixed`, which rounds
-  the double itself, and so parts from the dash at a reading such as 12.345 to two places. This is
-  from the .NET reference source and has not been measured on the VM.
+  the double itself, and so parts from the dash where a reading written as a decimal half is stored
+  as a double just under it: 1.005 to two places is `1.00` in the evaluator and `1.01` on the dash,
+  and 9.9995 to three is `9.999` against `10.000`. At 12.345 the double is just over the half, so both
+  draw `12.35`. This is from the .NET reference source and has not been measured on the VM.
 
 ## Sources
 
