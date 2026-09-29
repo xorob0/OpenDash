@@ -510,7 +510,7 @@ export const setting = {
 // reading the first two and the 800 the first six, and the eight `OpenDash slots <size>` card
 // faces, built for a comparison on a rig and published nowhere, read four to twelve of them besides. No zone face reads one. README.md publishes the
 // twelve as properties another dashboard or an LED profile may read. A round face becomes zones on a
-// ring after 1.0 (#145), and that release is the one that would carry a warning about the twelve;
+// ring before 1.0 (#145, #487), and that release is the one that carries a warning about the twelve;
 // none is promised before it (#170).
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,

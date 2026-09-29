@@ -600,7 +600,7 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
             // The twelve card slots. They are attached unconditionally and are not deprecated: a round
-            // face becomes zones on a ring after 1.0 (#145), and until it does these are the only
+            // face becomes zones on a ring before 1.0 (#145, #487), and until it does these are the only
             // card-slot properties the two round packages read, the published OpenDash slots <size>
             // faces read four to twelve of them besides, and no zone face reads one. Deleting a mode
             // attachment above is not safe for a round face on that account: both round packages also
