@@ -28,10 +28,10 @@ import {
   type LineOptions,
   type LinePlan,
 } from '../second/field.ts';
-import { densityOf } from '../second/density.ts';
+import { densityOf, isFace } from '../second/density.ts';
 import { fixedRow, type StackRow } from '../second/layout.ts';
 import type { Density } from '../second/density.ts';
-import { columnsAt, shapeOf, type Shape } from '../second/shape.ts';
+import { columnsAt, promotesLead, shapeOf, type Shape } from '../second/shape.ts';
 import { archetypeFor, keepsAt, keepsPart, keptAt, keptIds, type Archetype } from './shedding.ts';
 
 export interface ModuleContext {
@@ -95,6 +95,26 @@ export const shapeIn = (ctx: ModuleContext): Shape => ctx.shape ?? shapeOf(ctx.f
  * canvas points at for a box that short. See `archetypeFor`.
  */
 export const drawnAt = (ctx: ModuleContext): Archetype => archetypeFor(ctx.page, shapeIn(ctx), ctx.frame);
+
+/**
+ * The size a page's lead rank is drawn at: the density's `big`, or on a face whose zone is tall, the
+ * next name up the ramp. **Rule 17's other lever** (#330).
+ *
+ * The catalogue's `tall` drawings promote their first rank and leave the rank under it where it
+ * was: lap times 46 to 88 over the same 34, session and stint 34 to 76 over the same 34. Rule 20
+ * cannot draw that, since it grows every size on a page by one factor and so keeps whatever ratio
+ * the page started from; a tall box affording the lead a size more is what `promotesLead` has always
+ * said and what rule 17 names as the height's second job. One name up is 64 over 34 in a zone, 1.88,
+ * which is the catalogue's lap times to within a few per cent, and rule 20 then grows the page into
+ * the box the promotion leaves.
+ *
+ * A face only. The companion and the pit wall are drawn on artboards of their own screens, which do
+ * not promote, and the portrait companion's lap times already lead with a hero of their own drawing.
+ */
+export const leadRankSize = (ctx: ModuleContext): number => {
+  const d = densityOf(ctx.density);
+  return isFace(ctx.density) && promotesLead(shapeIn(ctx)) ? d.hero : d.big;
+};
 
 export type ModuleBuilder = (ctx: ModuleContext) => Item[];
 

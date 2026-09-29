@@ -98,6 +98,11 @@ session best as the empty placeholder rather than as a car nobody observed. Ever
 with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
 `bun run record` picks the property up by itself and drops the entry.
 
+Every trace asserts `OpenDash.ClockFormat` since #324, at a constant `24h`, which is what the plugin
+publishes until a driver changes it and so what a re-record will write. It was added by hand because
+the idle screen every package carries reads it, and a trace that lacks a property a binding reads
+fails the check above.
+
 Three more since #109, because the alert catalogue and the pit family read them, and none is a guess
 about the value. `DataCorePlugin.GameData.PushToPassActive` is `false` in all seven: SimHub's iRacing
 reader fills it from `CarIdxP2P_Status` at the player's index and hands it through as a `bool?` rather

@@ -223,6 +223,18 @@ while ((Get-Date) -lt $deadline) {
 }
 
 /**
+ * Whether SimHub's process exists, or null when the guest could not be asked. Null is kept apart
+ * from false because a caller that reads false goes on to say SimHub died, and an SSH hiccup is not
+ * grounds for that.
+ */
+export function simhubRunning(host: Host): boolean | null {
+  const r = powershell(host, `if (Get-Process SimHubWPF -ErrorAction SilentlyContinue) { 'running' } else { 'stopped' }`, 60);
+  const answer = r.stdout.trim();
+  if (!r.ok || (answer !== 'running' && answer !== 'stopped')) return null;
+  return answer === 'running';
+}
+
+/**
  * Tails the log SimHub is writing now.
  *
  * Not the newest by modification time: the guest clock drifts, so a rotated file can carry a

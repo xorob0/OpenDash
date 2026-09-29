@@ -21,6 +21,7 @@ namespace OpenDashPlugin
         public const string BlueFlagDetail = "BlueFlagDetail";
         public const string DriverNameFormat = "DriverNameFormat";
         public const string DriverNameTeam = "DriverNameTeam";
+        public const string ClockFormat = "ClockFormat";
 
         /// <summary>
         /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #83.
@@ -221,6 +222,26 @@ namespace OpenDashPlugin
         /// person's name and this chooses whose name is written. Off, because the driver is the answer
         /// for every other kind of racing.</summary>
         public const bool DefaultDriverNameTeam = false;
+
+        /// <summary>
+        /// How a clock of the day is written: "24h" is `14:32` and "12h" is `2:32 PM`. Mirrors
+        /// CLOCK_FORMATS in contract.ts. #324.
+        /// </summary>
+        /// <remarks>
+        /// Shared, for the reason the driver name format is: which of the two a driver reads without
+        /// thinking is a fact about the driver, and it is the same on the rim as on the pit wall. Both
+        /// clocks follow it, the wall clock and the sim's time of day.
+        ///
+        /// The plugin only publishes the choice. The difficulty is the dashboard's: a twelve-hour clock
+        /// writes a meridiem a twenty-four-hour one does not, the clocks are drawn in monospaced cells,
+        /// and `M` fits no cell, so every surface measures its box for the word and draws it as a
+        /// proportional run after the digits -- `timeOfDay` in second/values.ts.
+        /// </remarks>
+        public static readonly string[] ClockFormats = { "24h", "12h" };
+
+        /// <summary>What every clock drew before there was a choice, so a rig that never opens the
+        /// setting is unchanged.</summary>
+        public const string DefaultClockFormat = "24h";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -599,8 +620,8 @@ namespace OpenDashPlugin
         // --- The zone face ---------------------------------------------------------------------
         //
         // Additive: Slot01 to Slot12 stay, and they are not on their way out. They drive the two
-        // round faces, which ship on the card model until a round face becomes zones on a ring after
-        // 1.0 (#145), so the release that converts those faces is the one that would carry a warning
+        // round faces, which ship on the card model until a round face becomes zones on a ring before
+        // 1.0 (#145, #487), so the release that converts those faces is the one that carries a warning
         // about the twelve. The eight published OpenDash slots <size> card faces read them as well;
         // no zone face does. #170.
         //
@@ -944,6 +965,9 @@ namespace OpenDashPlugin
             // And the class best, appended for the same reason and published rather than chosen: every
             // package that draws a session best reads it when the rig counts in class.
             yield return ClassBestLap;
+            // And the clock format, appended for the same reason and shared because every package's
+            // idle screen draws the wall clock. #324.
+            yield return ClockFormat;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -1344,7 +1368,7 @@ namespace OpenDashPlugin
         /// release read four to twelve of them besides, and no zone face reads one. They are published
         /// in README.md as properties another dashboard or an LED profile may read, they are not
         /// deprecated, and no release is promised to remove them. The one that would is the release
-        /// converting the round faces to zones on a ring, which is after 1.0. #145, #170.
+        /// converting the round faces to zones on a ring, which is before 1.0. #145, #487, #170.
         /// </remarks>
         public static string SlotProperty(int slot)
         {
@@ -1412,8 +1436,8 @@ namespace OpenDashPlugin
         /// The start module and the glance module are not among them, and that is the idiom rather than
         /// an omission: a second-screen property has to be read by a package, which
         /// packages/dash/test/secondScreens.test.ts enforces, and nothing on the screen reads either of
-        /// them. The start is applied once by Init and the glance is a value the hold copies into the
-        /// page and copies back on release, which is exactly how a pit wall's own glance works.
+        /// them. Both reach the screen through CompanionOpenOn, forced for a moment: the start by Init
+        /// and the panel, the glance by its button.
         ///
         /// The page is appended after the twenty-one rather than put in front of them, because both
         /// halves of the contract assert this group by index.
@@ -1434,11 +1458,35 @@ namespace OpenDashPlugin
             return ns + "OpenOn";
         }
 
-        /// <summary>Force nothing, which is what every frame but the first few seconds reads.</summary>
+        /// <summary>Force nothing, which is what every frame but the forced ones reads.</summary>
         public const int DefaultCompanionOpenOn = -1;
 
         /// <summary>
-        /// How long after SimHub loads a companion is held on its start module.
+        /// Force the module the driver was on before the plugin forced one: the release of a held glance.
+        /// </summary>
+        /// <remarks>
+        /// The plugin cannot name that module. SimHub owns a companion's paging and publishes no property
+        /// naming the screen it shows, so the plugin never learns where a tap took it. The dashboard
+        /// does: it remembers the last module it drew that nobody forced, in a variable of its own
+        /// (companionVariables in packages/dash/src/contract.ts, which is where the mechanism is written
+        /// down), and while this value stands it forces that one. Mirrors COMPANION_OPEN_ON_BACK.
+        /// </remarks>
+        public const int CompanionOpenOnBack = -2;
+
+        /// <summary>
+        /// How long a released glance asks the companion to go back, before the paging is SimHub's again.
+        /// </summary>
+        /// <remarks>
+        /// SimHub chooses the screen on every data frame, sixty a second, so the move happens on the first
+        /// of them; the rest is margin. It is short because while it stands the one screen enabled is the
+        /// one being gone back to, so a tap does nothing, and a driver who releases the button and reaches
+        /// for the screen should find it answering.
+        /// </remarks>
+        public static readonly TimeSpan CompanionBackWindow = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// How long a companion is held on its start module, after SimHub loads or after the panel
+        /// chooses a new one.
         /// </summary>
         /// <remarks>
         /// Long enough for SimHub to have loaded the dashboard and evaluated its screens, short enough
@@ -1477,27 +1525,26 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Every action one companion registers, which is none: a companion is paged by SimHub, not by
-        /// OpenDash.
+        /// Every action one companion registers: the held glance, and nothing to page with.
         /// </summary>
         /// <remarks>
-        /// There were two -- next module, and hold for a glance -- and both moved `CompanionPage`,
-        /// which is what the screens were gated on. That gate is why a tap did nothing: SimHub's only
-        /// touch gesture maps a tap to the previous or next screen, and its navigation walks the
-        /// screens whose expression is true, so with one of twenty-one enabled there was nowhere to
-        /// go. The rotation alone gates them now, so SimHub's own NextScreen and PreviousScreen,
-        /// bound in the Controls and events of the device the companion runs on, page it from a wheel
-        /// button, and a tap pages it from the screen.
+        /// Paging is SimHub's. There used to be a next-module action beside the glance, and both moved
+        /// `CompanionPage`, which is what the screens were gated on. That gate is why a tap did nothing:
+        /// SimHub's only touch gesture maps a tap to the previous or next screen, and its navigation
+        /// walks the screens whose expression is true, so with one of twenty-one enabled there was
+        /// nowhere to go. The rotation alone gates them now, so SimHub's own NextScreen and
+        /// PreviousScreen, bound in the Controls and events of the device the companion runs on, page it
+        /// from a wheel button, and a tap pages it from the screen. A next-module action would be a
+        /// second binding for what NextScreen already does.
         ///
-        /// Registering an action that no longer moves anything would put a dead row in SimHub's
-        /// Controls and events, which is worse than not offering one. OpenDash.AttachActions registers
-        /// this list and nothing beside it, so that is true of SimHub and not only of the list; until
-        /// #435 it decided per kind for itself and registered both anyway. #362 is where they come
-        /// back if SimHub ever gives a plugin a way to choose the screen itself.
+        /// The glance came back with #362. It forces its module while held, which leaves one screen
+        /// standing and makes SimHub select it, and on release it asks the dashboard to go back
+        /// (CompanionOpenOnBack), since the dashboard is the one that knows where the driver had been.
+        /// OpenDash.AttachActions registers this list and nothing beside it.
         /// </remarks>
         public static IEnumerable<string> CompanionActionNames(string ns)
         {
-            yield break;
+            yield return HoldQuickGlanceActionFor(ns);
         }
 
         /// <summary>

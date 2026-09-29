@@ -135,13 +135,15 @@ export function rowsThatFit(rows: readonly StackRow[], height: number, gap: numb
  * it, because the room is on a screen a driver reads at arm's length with a corner coming.
  *
  * A stack grows until it meets an edge, and there are three: the height of the box, the width of
- * the box, and the next size up the density ramp (`growthCeiling`). The ramp is what makes this
- * filling rather than scaling -- a stack that has spent its room is the same drawing one size
- * larger, never a drawing stretched to a rectangle.
+ * the box, and `grownAtMost` (`growthCeiling` as a factor), which on a face is the canvas's own ×2.2
+ * and on the companion and the pit wall the next size up the density ramp.
  *
- * One factor for the whole stack, so the sizes keep their order: the 46 px lap time above a 34 px
- * delta stays above it. Rows that cannot grow -- a gauge, a trace, a table -- keep their height and
- * are simply part of the budget the growing rows are measured against.
+ * One factor for the whole stack, and that is what makes this filling rather than stretching: every
+ * value grows by it, so the sizes keep their order and their ratios -- the 46 px lap time above a
+ * 34 px delta stays above it by the same proportion -- and a stack that has spent its room is the
+ * same drawing larger, never a drawing pulled to the shape of its rectangle. Rows that cannot grow
+ * -- a gauge, a trace, a table -- keep their height and are simply part of the budget the growing
+ * rows are measured against.
  *
  * A stack already too tall for its box is left alone. It has nothing to spend, and `rowsThatFit` is
  * about to take a row off it.

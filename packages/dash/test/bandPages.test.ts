@@ -526,12 +526,18 @@ describe('the corner blocks at the ends of the band', () => {
   test('the right corner ends against the padding, with 18 between its groups and 6 between the lamps', () => {
     const band = BANDS['1920x480'];
     const items = corners('1920x480');
-    const sim = named(items, 'corner.sim.value');
-    const clock = named(items, 'corner.clock.value');
+    // Measured on the labels, which span their fields: a clock's value moves inside its field with the
+    // clock format, the digits standing one word in from the edge on a twelve-hour clock and against
+    // it on a twenty-four-hour one, and `clockFormat.test.ts` holds it there (#324).
+    const sim = named(items, 'corner.sim.label');
+    const clock = named(items, 'corner.clock.label');
     expect(sim.rect.left + sim.rect.width).toBe(band.width - bandMetrics(band).padX);
     expect(sim.rect.left - (clock.rect.left + clock.rect.width)).toBe(18);
-    expect(sim.hAlign).toBe('right');
-    expect(clock.hAlign).toBe('right');
+    for (const id of ['sim', 'clock']) {
+      const value = named(items, `corner.${id}.value`);
+      const field = named(items, `corner.${id}.label`);
+      expect({ id, hAlign: value.hAlign, end: value.rect.left + value.rect.width }).toEqual({ id, hAlign: 'right', end: field.rect.left + field.rect.width });
+    }
 
     const lamps = ['drs', 'p2p', 'spt'].map((id) => named(items, `corner.${id}`));
     expect(lamps[1]!.rect.left - (lamps[0]!.rect.left + lamps[0]!.rect.width)).toBe(6);

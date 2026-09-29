@@ -71,6 +71,8 @@ import {
   SLOT_MAX,
   slotSettingName,
   CLASS_BEST_LAP,
+  CLOCK_FORMATS,
+  CLOCK_FORMAT_SETTING,
   UPDATE_AVAILABLE,
   UPDATE_VERSION,
   UPDATE_VERSION_CHARACTERS,
@@ -129,13 +131,13 @@ describe('settings', () => {
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
     ]);
-    // The lone 7 is RevBar, the blue flag detail, the two that decide how a driver is named, the
-    // idle screen's two and the class best, which every screen shares with the four modes and the
-    // twelve slots.
+    // The lone 8 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two, the class best and the clock format, which every screen shares with the
+    // four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        7 +
+        8 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -174,8 +176,9 @@ describe('settings', () => {
     // to be told whether the car has a flash to give at all, because 47 of the 85 measured cars
     // publish none and OpenDash's own redline flash was going out with them. And 345 before the
     // idle screen could say that a newer release exists, and which (#83), and 347 before the
-    // plugin had to publish the class best, which SimHub keeps and never publishes.
-    expect(props).toHaveLength(348);
+    // plugin had to publish the class best, which SimHub keeps and never publishes, and 348 before a
+    // driver could say whether a clock reads 14:32 or 2:32 PM (#324).
+    expect(props).toHaveLength(349);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -198,6 +201,9 @@ describe('settings', () => {
     expect(props[9 + SLOT_MAX]).toBe('OpenDash.UpdateVersion');
     // And the class best after them, published because SimHub keeps it and does not publish it.
     expect(props[10 + SLOT_MAX]).toBe('OpenDash.ClassBestLap');
+    // And the clock format after that, shared because every package's idle screen draws the wall
+    // clock, and because a driver reads a clock one way on the rim and on the pit wall alike. #324.
+    expect(props[11 + SLOT_MAX]).toBe('OpenDash.ClockFormat');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -297,6 +303,7 @@ describe('settings', () => {
         UPDATE_AVAILABLE,
         UPDATE_VERSION,
         CLASS_BEST_LAP,
+        CLOCK_FORMAT_SETTING,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -453,9 +460,11 @@ describe('plugin mirror', () => {
    * The companion's page is published and nothing reads it, and the pane says who does the paging.
    *
    * This used to pin the opposite: the page attached, and a start module and a held glance offered
-   * on the pane to move it. All three are gone, and the reason is that they were what stopped a tap
+   * on the pane to move it. All three went, because the page they moved was what stopped a tap
    * working -- SimHub's only touch gesture maps a tap to the previous or next screen, its navigation
    * walks the screens whose expression is true, and OpenDash enabled exactly one of the twenty-one.
+   * The start module and the glance came back as forces through `CompanionOpenOn` (#362); the page
+   * did not.
    *
    * The property is still attached because it has shipped and #170 is the rule that an rc user's
    * properties do not vanish without a release of warning. What has to be true now is that the pane
@@ -468,9 +477,10 @@ describe('plugin mirror', () => {
     // The start module writes its setting and forces it, which is what moves the screen now: the
     // page above is no longer read by the package.
     expect(panel).toContain('screen.CompanionStart = value;');
-    expect(panel).toContain('screen.OpenOnStartModule();');
-    // The glance does not, because coming back needs a module OpenDash cannot name. #362.
-    expect(panel).not.toContain('screen.CompanionQuickGlance = value');
+    expect(panel).toContain('screen.OpenOnStartModule(DateTime.UtcNow);');
+    // The glance writes its module and is bound beside it as a hold, since the release is the way back.
+    expect(panel).toContain('screen.CompanionQuickGlance = value;');
+    expect(panel).toContain('Ui.Caption(PanelCopy.CompanionGlance)');
     // And no binder offers an action the companion no longer registers.
     expect(panel).not.toContain('Contract.NextModuleActionFor(screen.Namespace)');
     // The sentence that replaced them names both ways a companion is paged, and where the button is
@@ -563,6 +573,13 @@ describe('plugin mirror', () => {
     for (const name of [DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING]) {
       expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${name},`);
     }
+    // The clock format, shared and on the Data tab: the plugin publishes the choice and every surface
+    // that draws a clock of the day reads it. #324.
+    expect(source).toContain(`public const string ${CLOCK_FORMAT_SETTING} = "${CLOCK_FORMAT_SETTING}";`);
+    expect(source).toContain(`ClockFormats = ${csArray(CLOCK_FORMATS)};`);
+    expect(source).toContain(`public const string DefaultClockFormat = "${DEFAULTS.ClockFormat}";`);
+    expect(panelSource()).toContain('Contract.ClockFormats');
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${CLOCK_FORMAT_SETTING},`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

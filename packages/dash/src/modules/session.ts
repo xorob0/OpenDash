@@ -32,7 +32,7 @@ import {
   untimedMark,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { defineModule, fieldsRow, fld } from './module.ts';
+import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
 
@@ -44,17 +44,20 @@ export const session = defineModule('session', (ctx) => {
   // time left side by side whatever the driver had chosen. One of the two answers the question and
   // the rank closes over the other, which is what the setting is for.
   const time = showsTimeLeft();
+  // The first rank is promoted a size on a tall face, as the catalogue's `tall` drawing promotes it
+  // to 76 over the same 34; see `leadRankSize`.
+  const lead = leadRankSize(ctx);
   return stack(
     ctx.frame,
     [
       fieldsRow(
         [
-          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: d.big }),
+          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: lead }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
             bind: positionDigits(player()),
             chars: CHARS.position,
-            fs: d.big,
+            fs: lead,
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
             drawn: positionDrawn(player()),
           }),
@@ -62,7 +65,7 @@ export const session = defineModule('session', (ctx) => {
             sample: 'GT3 · P4',
             bind: concat(playerClass(), str(' · P'), fmt(classPosition, '0')),
             chars: CHARS.classPosition,
-            fs: d.big,
+            fs: lead,
           }, { visibleBind: gt(classOpponentCount(), num(0)) }),
         ],
         ctx,

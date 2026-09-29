@@ -11829,13 +11829,63 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(888) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "4e3ddf83-702e-5125-a068-8f54550b9444",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 1035,
+          "Top": 306,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((888) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "5c1df9bd-b045-5d5d-a964-2594e2557c09",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -18820,13 +18870,63 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "e9f19835-e176-5454-aa27-464408160988",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 715,
+          "Top": 306,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "6a7fab41-091e-57b1-97bf-f4a32b625650",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -25755,13 +25855,63 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "821328d6-7a88-5346-80fe-4502eb01258e",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 715,
+          "Top": 266,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "6f396270-6d1e-50c5-9ae9-104e067158e7",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -32077,13 +32227,63 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(353) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "f1588f68-e9e0-5cfe-88d6-e2900f01aefb",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 500,
+          "Top": 306,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((353) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "347338e6-3ba0-56da-b937-da1c8b2d8396",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -38354,13 +38554,63 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(328) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "3b216d9d-a94c-5a12-a406-53a4dbfaa277",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 475,
+          "Top": 306,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((328) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "5401d0e8-b2c3-56ee-8286-6e5693faa7b2",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -45195,13 +45445,63 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "cb8d0a01-24a8-5c3b-9e43-8c3a56d5362b",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 715,
+          "Top": 426,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((568) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "2e9ab047-a35d-592a-8dec-60bac5871e7b",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -52166,13 +52466,63 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(349) + (((100) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "34c37ef5-a0d3-502a-84af-3dda16d1ebb8",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 455,
+          "Top": 172,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((349) + (((100) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "10f49f92-93b5-500b-bbed-f53880fd361b",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -58263,13 +58613,63 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(228) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "bcdbc17f-6c37-5d60-bf08-f1da4be44fb1",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 375,
+          "Top": 409,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((228) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "23829d0e-91ef-58c9-85db-b6337e0d6fc3",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -63338,13 +63738,63 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(189) + (((100) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "779d0068-d71f-52fc-aa07-c320dbc73dc6",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 295,
+          "Top": 269,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((189) + (((100) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 100, 78), 100)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "8b518618-0028-5880-bb51-7dccd9067c8b",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },
@@ -69119,13 +69569,63 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format([DataCorePlugin.CurrentDateTime], 'HH:mm')"
+                "Expression": "if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), format([DataCorePlugin.CurrentDateTime], 'h:mm'), format([DataCorePlugin.CurrentDateTime], 'HH:mm'))"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "(328) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))"
               },
               "Mode": 2
             }
           },
           "Id": "5fa5a3a9-dc05-51fa-a00e-56206b90bfcc",
           "Name": "idle.clock",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 15,
+          "Text": "PM",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 475,
+          "Top": 466,
+          "Width": 23,
+          "Height": 19,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(in(format([DataCorePlugin.CurrentDateTime], 'HH'), '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'), 'PM', 'AM')"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "(isnull([OpenDash.ClockFormat], '24h')) = ('12h')"
+              },
+              "Mode": 2
+            },
+            "Left": {
+              "Formula": {
+                "Expression": "((328) + (((141) - (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141))) / (2))) + (if((isnull([OpenDash.ClockFormat], '24h')) = ('12h'), if(in(format([DataCorePlugin.CurrentDateTime], 'hh'), '10', '11', '12'), 141, 110), 141)) + (6)"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "89afd1e2-87a5-599b-a68b-721f980d09ff",
+          "Name": "idle.clock.unit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         },

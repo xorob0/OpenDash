@@ -23,8 +23,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The list is the contract's and this walks it, rather than deciding per kind a second time.
         /// It used to decide for itself, and the two disagreed: the contract said a companion
-        /// registers nothing, and this registered two actions per companion that moved a property no
-        /// package reads, two dead rows in SimHub's Controls and events (#435). With one list there is
+        /// registered nothing, and this registered two actions per companion that moved a property no
+        /// package read, two dead rows in SimHub's Controls and events (#435). With one list there is
         /// nothing to disagree with.
         ///
         /// The settings are read through a function and not held, both here and in every callback,
@@ -60,7 +60,7 @@ namespace OpenDashPlugin
         /// nothing rather than throw on SimHub's own thread, which the settings' readers already see to.
         ///
         /// The next-module answer is kept although no kind lists it today: it is what a companion
-        /// registered before SimHub took its paging, and #362 is where it comes back.
+        /// registered before SimHub took its paging, which SimHub's own NextScreen now does.
         /// </remarks>
         private static void Resolve(Func<OpenDashSettings> settings, string ns, string name, out Action press, out Action release)
         {

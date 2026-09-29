@@ -3,8 +3,10 @@
  * stop and a lap cost.
  *
  * The lead rank is the tank, the time, the margin to the end of the race and the estimated laps,
- * because those are the numbers a driver reads before deciding whether to stop. The rank used to sit
- * last, behind three spellings of one consumption.
+ * because those are the numbers a driver reads before deciding whether to stop. The estimate used to
+ * sit last, behind three spellings of one consumption, and the shedding table kept it there after
+ * the drawing had moved it; `shedding.ts` now declares the fields in the order they are drawn here,
+ * and says why that is the order (#334).
  *
  * The margin is the page's one answer rather than another measurement: the estimated laps beside it
  * and the laps left on the session page are the two terms of a subtraction a driver was doing
