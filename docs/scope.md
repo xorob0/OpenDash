@@ -13,9 +13,9 @@ contributor or an agent should read first, and the one that has to be amended wh
 > 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
 > faces. The twelve-slot ones they replaced are still built as `OpenDash slots <size>`, and they are
 > what they already were in practice: a comparison built for a rig from a local build, installed by
-> nothing and published nowhere (#438), until #146 deletes them. The two round faces ship on the card
-> model, and that is a decision rather than a gap: a round face becomes zones on a ring after 1.0,
-> and until it does it stays the design it is (#145).
+> nothing and published nowhere (#438), until #146 deletes them. The two round faces still ship on the card
+> model, and that is a decision rather than a gap: a round face becomes zones on a ring before 1.0
+> (#487), and until that lands it stays the design it is (#145).
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
@@ -85,8 +85,8 @@ card model, on purpose, and what they become is noted below.
 | `OpenDash 800x480` | 800 x 480 | derived from 850 x 480 |
 | `OpenDash 800x286` | 800 x 286 | no bar: the height is not there |
 | `OpenDash 600x686` | 600 x 686 | portrait, A over B over C |
-| `OpenDash 800 round` | 800 x 800 | the card model until after 1.0; see below |
-| `OpenDash 480 round` | 480 x 480 | the card model until after 1.0; see below |
+| `OpenDash 800 round` | 800 x 800 | the card model until #487 converts it; see below |
+| `OpenDash 480 round` | 480 x 480 | the card model until #487 converts it; see below |
 
 **The base size is 850 x 480 and the large size is 1280 x 480.** They are the pair anything that
 has to pick a face picks: the size `bun run dev` opens when no package is named, the two the
@@ -127,17 +127,18 @@ that the two cannot drift.
 every page of every catalogue, and the shape model. [ADR 0006](decisions/0006-the-zone-face.md) is
 why the model changed from twelve equal slots, which is what shipped in 0.1.0.
 
-**A round face becomes zones on a ring, after 1.0.** The rev arc it already has, zone A in the
+**A round face becomes zones on a ring, before 1.0 (#487).** The rev arc it already has, zone A in the
 middle, the rectangles its cards occupy today as small catalogue zones, and the flag on the ring:
 no bar and no band. That is the answer #145 took, of three, and
 [design/zones.md](design/zones.md) section 9 is the written form of it, with an amendment to
 [ADR 0006](decisions/0006-the-zone-face.md) recording the date.
 
 **Until that work is done the two round faces ship on the card model, deliberately.** They are
-decided and not yet converted, which is a different thing from undecided, and it is why the card
-path is not retired at 1.0 and why `OpenDash.Slot01` to `Slot12` stay (#170). The canvas owes two
-round artboards drawn on the new model and the plugin panel owes a round picker before the
-conversion can be built.
+decided and not yet converted, which is a different thing from undecided, and it is why
+`OpenDash.Slot01` to `Slot12` stay until #487 lands (#170). The card path is retired at 1.0: #487
+converts the round faces and #146 deletes the path behind them, in that order, and the rule that
+kept it through 1.0 was removed on 2026-09-29. The canvas owes two round artboards drawn on the new
+model and the plugin panel owes a round picker before the conversion can be built.
 
 ### The companion
 
@@ -213,9 +214,9 @@ the only readers are the two round ones: `OpenDash 480 round` reads the first tw
 eight `OpenDash slots <size>` packages of the banner above read them too, four to twelve each and
 all twelve at 1920 x 480 and 1280 x 720, because they are the card faces the zone faces replaced;
 the csproj keeps them out of the plugin's resources and no release publishes them, so they are
-built for a comparison on a rig and are no reason to keep anything. The one reason the card path is
-not retired at 1.0 is the round faces (#146). The twelve are not deprecated and no release is promised to remove them; the release that
-converts a round face to zones on a ring, which is after 1.0, is the one that says what becomes of
+built for a comparison on a rig and are no reason to keep anything. The card path is retired at 1.0,
+once #487 has converted the round faces (#146). The twelve are not deprecated and no release is promised to remove them before that; the release that
+converts a round face to zones on a ring, #487, is the one that says what becomes of
 them (#170).
 
 Every expression that reads an `OpenDash` property wraps it in `isnull()` with the default, and it

@@ -16,7 +16,11 @@ import type { Rect } from '../src/design/geometry.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 import { PIT_WALL_SIZES, portraitPage, racePage, telemetryPage, towerPage } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from '../src/screens/pitwallHeader.ts';
+import { CLOCK_FORMATS, CLOCK_FORMAT_SETTING, PROPERTY_PREFIX, type ClockFormat } from '../src/contract.ts';
+import { ncalc } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
+import { bindingExpression } from './monoGlyphs.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const header = (width: number, compact: boolean): Item[] =>
   pitWallHeader('h', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · test', page: 1, pages: compact ? 1 : 3, compact });
@@ -45,6 +49,31 @@ function readoutGroups(items: Item[]): { id: string; left: number; right: number
     spans.set(id, { left: Math.min(span?.left ?? r.left, r.left), right: Math.max(span?.right ?? 0, r.left + r.width) });
   }
   return [...spans].map(([id, span]) => ({ id, ...span })).sort((a, b) => a.left - b.left);
+}
+
+const CLOCK_FORMAT = `${PROPERTY_PREFIX}.${CLOCK_FORMAT_SETTING}`;
+
+/** Whether an expression asks which clock format the rig is on. */
+const readsClockFormat = (expression: string): boolean => ncalc.referencedProperties(expression).includes(CLOCK_FORMAT);
+
+/**
+ * The header as a rig draws it with its clocks in `format`: a part the format hides left out, and a
+ * part the format moves put where its `Left` sends it. #324.
+ *
+ * Only what the clock format decides is decided here. A part hidden for another reason -- the lap
+ * total of an untimed session, the incident limit of a session with none -- is kept, because the
+ * question is whether the strip has room for everything it may draw at once, and it may draw those.
+ */
+function underClockFormat(items: Item[], format: ClockFormat): Item[] {
+  const props = { [CLOCK_FORMAT]: format };
+  return items.flatMap((item): Item[] => {
+    if (item.kind === 'layer') return [item];
+    const visible = item.kind === 'text' ? bindingExpression(item, 'Visible') : '';
+    if (visible !== '' && readsClockFormat(visible) && evalNcalc(visible, props) !== true) return [];
+    const left = item.kind === 'text' ? bindingExpression(item, 'Left') : '';
+    if (left === '' || !readsClockFormat(left)) return [item];
+    return [{ ...item, rect: { ...item.rect, left: Number(evalNcalc(left, props)) } }];
+  });
 }
 
 /** Where the wordmark, the page name and the page squares end. */
@@ -78,9 +107,50 @@ describe('the pit wall header', () => {
   test('names each clock in front of its own value, and never behind it', () => {
     // The strip read "14:32 LOCAL 15:07 SIM" and was reported from a rig as not saying which clock
     // was the real one; every other group on it names itself first, and now these two do as well.
-    expect(partsOf(header(1920, false), 'simClock').map((i) => i.text)).toEqual(['Sim', '15:07']);
-    expect(partsOf(header(1920, false), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32']);
-    expect(partsOf(header(1080, true), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32']);
+    // The `PM` after each is the meridiem a twelve-hour clock writes, drawn only on one (#324).
+    expect(partsOf(header(1920, false), 'simClock').map((i) => i.text)).toEqual(['Sim', '15:07', 'PM']);
+    expect(partsOf(header(1920, false), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32', 'PM']);
+    expect(partsOf(header(1080, true), 'localClock').map((i) => i.text)).toEqual(['Local', '14:32', 'PM']);
+  });
+
+  test('writes a twelve-hour clock with its meridiem after it, and only a twelve-hour one', () => {
+    for (const items of [header(1920, false), header(1080, true)]) {
+      for (const id of ['simClock', 'localClock']) {
+        const parts = partsOf(items, id);
+        if (parts.length === 0) continue;
+        const [, value, word] = parts;
+        // The digits in the cells both formats share, right aligned so that `9:05` stands against its
+        // `PM` rather than a cell short of it.
+        expect({ id, chars: value!.monospace !== undefined, hAlign: value!.hAlign }).toEqual({ id, chars: true, hAlign: 'right' });
+        // The word in the label face, because `M` fits no cell, and measured by the wider of the two.
+        expect({ id, widest: word!.widest, monospace: word!.monospace }).toEqual({ id, widest: 'AM', monospace: undefined });
+        for (const format of CLOCK_FORMATS) {
+          const drawn = underClockFormat(items, format).some((i) => i.name === word!.name);
+          expect({ id, format, drawn }).toEqual({ id, format, drawn: format === '12h' });
+        }
+      }
+    }
+  });
+
+  test('ends against the padding under either clock format, with no hole where a word is not', () => {
+    // Laid out for the twelve-hour clock, which is the wider, and moved back to the edge on a
+    // twenty-four-hour one, so a rig that never opens the setting has no hole where the word is not.
+    for (const [width, compact] of [
+      [1920, false],
+      [1080, true],
+    ] as const) {
+      for (const format of CLOCK_FORMATS) {
+        const groups = readoutGroups(underClockFormat(header(width, compact), format));
+        const last = groups[groups.length - 1]!;
+        // Within the few pixels a value's box is short of the room its group gives it.
+        const edge = width - PIT_WALL_HEADER.padX;
+        expect({ width, format, right: last.right, flush: last.right <= edge && last.right >= edge - 4 }).toMatchObject({ flush: true });
+        for (let i = 1; i < groups.length; i++) {
+          const gap = groups[i]!.left - groups[i - 1]!.right;
+          expect({ width, format, after: groups[i]!.id, gap: gap >= PIT_WALL_HEADER.groupGap && gap <= PIT_WALL_HEADER.groupGap + 4 }).toMatchObject({ gap: true });
+        }
+      }
+    }
   });
 
   test('draws no flag on the strip', () => {
@@ -170,11 +240,15 @@ function expectNoOverlap(spans: { name: string; left: number; right: number }[])
 
 describe('a pit wall header never draws one text over another', () => {
   for (const page of PAGES) {
-    test(page.name, () => {
-      // Marks are held against their own values below rather than counted as neighbours: a mark and
-      // the value it replaces are drawn in the same place on purpose and never in the same frame.
-      expectNoOverlap(inkSpans(page.items).filter((span) => !span.name.endsWith('.mark')));
-    });
+    for (const format of CLOCK_FORMATS) {
+      test(`${page.name} with its clocks at ${format}`, () => {
+        // Marks are held against their own values below rather than counted as neighbours: a mark and
+        // the value it replaces are drawn in the same place on purpose and never in the same frame.
+        // The clocks are held in each format, since a twelve-hour clock's word takes a room a
+        // twenty-four-hour one gives back.
+        expectNoOverlap(inkSpans(underClockFormat(page.items, format)).filter((span) => !span.name.endsWith('.mark')));
+      });
+    }
   }
 
   test('a mark is drawn inside the box of the value it stands in for, so it needs no room of its own', () => {
@@ -210,6 +284,6 @@ describe('a pit wall header never draws one text over another', () => {
     });
     expect(items.some((i) => i.name === 'long.header.page')).toBe(false);
     expect(items.some((i) => i.name === 'long.header.square1')).toBe(true);
-    expectNoOverlap(inkSpans(items).filter((span) => !span.name.endsWith('.mark')));
+    for (const format of CLOCK_FORMATS) expectNoOverlap(inkSpans(underClockFormat(items, format)).filter((span) => !span.name.endsWith('.mark')));
   });
 });

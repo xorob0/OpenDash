@@ -191,7 +191,9 @@ is 824, 111, 272 × 30. It is not a page and it is not part of the catalogue; it
 **Five pit alerts share that one rectangle, ranked among themselves and not against band D.** Engage
 the limiter, disengage it, the limiter on in the lane, the ignition off and the engine off are one
 ordered list, of which at most one is ever out, each carrying its own test of whether the car is in
-the lane rather than the list carrying one. They are deliberately **not** ranked under the flag: the
+the lane rather than the list carrying one. The last two are the lane's half of a pair: out of the
+lane the same two readings are the alert catalogue's first two entries and draw on band D, so a car
+stalled on the circuit is told too, and the one condition is never drawn in both places. They are deliberately **not** ranked under the flag: the
 two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
 would blank the limiter band under a full-course caution, which is precisely when the pit lane is
 busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
@@ -225,16 +227,17 @@ of them has found the floor of the rule rather than a breach of it, and the canv
 qualification.
 
 **Rule 20.** *A rank fills the box it is given. It grows until it meets an edge, and there are
-three: the height of the box, the width of the box, and the next size up its density ramp.*
+three: the height of the box, the width of the box, and a ceiling, which on a face is ×2.2 and on
+the companion and the pit wall is the next size up its density ramp.*
 
 Rule 17 is one half of a thought and this is the other. Rule 17 says what a page does when its box
 is too small; rule 20 says what it does when the box is too large, which on this product is the
 commoner case — zone B of the 850 × 480 face is 274 × 328 and lap times was using 58 px of it.
 
-The ramp is the part that makes this filling rather than scaling. A rank grows by one factor, the
-whole stack at once, and no value may pass the next named size on `density.ts`'s ramp — so what
-comes out is the same drawing one size larger, with its hierarchy intact, and never a drawing
-stretched to a rectangle. Three consequences worth knowing:
+The one factor is the part that makes this filling rather than stretching. A rank grows by one
+factor, the whole stack at once, so every size on the page moves in proportion and what comes out
+is the same drawing larger, with its hierarchy intact, and never a drawing pulled to the shape of a
+rectangle. Four consequences worth knowing:
 
 - **All of the stack grows or none of it does.** A page whose sectors are a drawing and whose lap
   times are fields would otherwise grow the times alone until they matched the sectors above them.
@@ -251,6 +254,35 @@ stretched to a rectangle. Three consequences worth knowing:
   into three lines of one is the narrow zone stacking itself and is allowed; turning one line of
   three into two and one is the companion's lap times and is not. That is the difference between
   72 px and 75 px there, and 72 keeps the row.
+
+**Why the ceiling is ×2.2 on a face** ([#330](https://github.com/xorob0/OpenDash/issues/330)). It
+was the next size up the ramp everywhere until then, defended as what kept filling distinct from
+scaling. It did not do that job, since the one factor does, and all it decided was how far. What it
+decided was about ×1.35 in every box, because it is the smallest step any size on the page takes
+and every page mixing 46 and 34 takes the 34-to-46 one; and exactly ×1 on a page whose lead was
+already at the top of its ramp, which froze the delta, the speedo, the fuel, the stint and pit view,
+the five pages whose one big number is the point of them. Two of those got past it by working round
+the rule rather than through it — pit view cuts its numbers from the box and the stint draws its
+three leads at one size — and a ceiling that a page has to be redrawn to get past is the wrong
+ceiling. At the 1280 × 720 face's 445 × 516 zone it stopped lap times at 62 px with 170 px of the
+box unspent.
+
+The canvas answers the question the other way. Each `FaceVariants` sheet embeds the catalogue's
+drawing of every page, reflows it to that face's real zone and grows it "as one, hierarchy intact,
+until it meets the width, the height or a ceiling of ×2.2 (rule 20)", chipping the factor each page
+reached, from ×1.02 to ×2.2. That is this rule with another third edge, the canvas is the source,
+and so a face takes it. What stops a page on a face is now almost always its box, which is the edge
+the readability pass is about.
+
+The companion and the pit wall keep the ramp step, because their artboards are drawn at the size of
+the screen they are on. A page there is already the drawing of its box, and what growing has to
+spend is the difference between the artboard's module box and the build's, a matter of pixels. The
+×2.2 answers a zone the catalogue never drew, which is every zone of every face, since the catalogue
+draws a page at four archetype sizes and a face hands it a fifth. `grownAtMost` in `density.ts` is
+the one place both answers live, and the opponents page, which grows its gap by the same rule in a
+loop of its own, reads it too. Pit view reads neither, being cut from its box by rule 18 at the
+sizes the catalogue draws it, which is also how the sheets treat it: a page with a picture in it "is
+cut from its box (rule 18) and is not grown", and none of them chips it a factor.
 
 The room a grown stack may take is its box less its own tail at each end, not the flat two pixels
 `ROW_TAIL` reserved: a WPF line box runs about a tenth of the font size below the row it sits on,
@@ -313,6 +345,18 @@ proportional run in the value's own box, on the value's line and at the value's 
 hidden while it is drawn. A clock and its mark are therefore two items in one place and never both
 drawn — monospace is a property of the item, and no binding makes a cell wide for one reading and
 narrow for the next.
+
+And it covers a **meridiem**, the `AM` or `PM` a twelve-hour clock writes after its digits when the
+rig asks for one ([#324](https://github.com/xorob0/OpenDash/issues/324)). Both halves carry an `M`, so
+neither goes in a cell; the digits stay a value — `12:59` is the same four digits and a colon as
+`23:59`, so one budget, `CHARS.timeOfDay`, holds either format — and the word follows them as a
+proportional run, the way a unit follows its figure, drawn only while `OpenDash.ClockFormat` reads
+`12h`. What a setting cannot do is resize a box at runtime, so **every surface measures its clock
+with the word** and then gives the room back when the word is not there: the digits of a clock laid
+from the right move up to the edge, the pit wall header's groups move up behind them, and the idle
+screen's digits stay centred where the twenty-four-hour clock is and let the word hang after them. A
+twelve-hour hour is one digit or two, so the word is placed after the figure's drawn width, which is
+the rule #387 set for every follower. `clockFormat.test.ts` evaluates each surface under both formats.
 
 ---
 
@@ -456,8 +500,15 @@ Two worked examples first, because they are the two that show why it cannot be d
 
 - **Lap times.** `wide`: last lap, session best, your best, laps, estimated, delta to your best —
   six. `grid`: drops laps and estimated — four. So what goes is neither the tail of the row nor
-  the narrowest field; the delta outlives both of the values drawn before it. `tall narrow`: the
-  same four as `grid`, one per line. `tall`: all six again, stacked.
+  the narrowest field; the delta outlives both of the values drawn before it. The four are set out
+  as the drawing sets them rather than wrapped: the last lap alone on the first line, the two bests
+  on two equal columns under it, and the delta alone at the foot. A greedy wrap at 437 px puts two
+  lap times on a line, so it gave `[last · session best]`, `[your best]`, `[delta]`, the value a
+  driver reads first sharing its line; `shape.test.ts` holds the drawing at every `grid` body a
+  face produces. `tall narrow`: the same four as `grid`, one per line. `tall`: all six again,
+  stacked, and the three times promoted a size over the three under them, which is the drawing's
+  88 over 34: at the 1280 × 720 face's zone they draw at 100 px over 53, where the sheet draws 111
+  over 43.
 
   The `tall narrow` row used to be two, which is what the catalogue draws at 274 × 300, and it was
   wrong about the box it really answers: a zone that stacks one column has room for four of them,
@@ -594,6 +645,75 @@ canvas's row kept, which the name's budget alone could not refuse once a row had
 `tables.test.ts` walks every width from the gap alone to 1300 px at every density and pins where each
 step is taken, and `secondScreens.test.ts` names the boxes that give way beyond their shape.
 
+### How lap history answers its box
+
+Lap history is the third list, and it is not a `table()`: its rows are laps rather than cars, so none of
+a table's per-car machinery applies, and it lays out its own three columns. It answers its box in the
+same order all the same ([#343](https://github.com/xorob0/OpenDash/issues/343)), which it did not
+before. Every box drew the density's own row at the density's own value and stacked the rows from the
+top, so zone C of the 1280 × 720 face listed seven laps of 26 px over 334 px of nothing, and the narrow
+zones of the 850 × 480 face listed seven of 20 at 18 px.
+
+1. **Rows, to the count the page declares**: six at `wide` and at `grid`, and seven at the two tall
+   shapes, which is the catalogue's own count (§10 has the row). A box too short for them lists fewer,
+   counted at the density's own row, and ten is the other ceiling, since SimHub keeps ten previous laps.
+2. **Then type.** There are three steps, each a row the canvas draws at its own numerals: the compact
+   zone's 20 px row at 18, the zone's 26 px row at 24, which is the pit wall's sheet, and the catalogue's
+   34 px row at 34, which is the face's and the companion's. The row takes the largest step its height
+   allows whose columns the width holds, and never a step below the density's own. The width's edge is
+   the time: a 34 px `1:42.905` needs 147 px of column beside a 50 px lap number, which fits the 225 px
+   narrow zones of the 800 × 480 face and does not fit a 200 px one.
+3. **Then the rest as space.** The row is stretched to fill the body, with its rule at its foot. The
+   type stops at 34, the largest the canvas draws a list at anywhere, so a taller row buys air between
+   two laps and never a larger lap.
+
+**The lap number is an index**, and it is drawn a step down the ramp from the values it stands beside:
+24 under 34, 16 under 24, and 14 under the compact zone's 18. Every drawing of the page draws the lap
+number, the time and the third column at one size and tells them apart by colour alone. The build did
+the same, so the page read as a block of digits, when a driver compares the times down the page and
+reads the lap number only to find a row. The number keeps the label grey the drawings give it and is
+centred on the row, as a list centres its cells. It is drawn the way a list draws the car number
+beside the position, and §10 records the redraw this asks of the canvas.
+
+What that draws, at the zone bodies the faces hand the page:
+
+| Box | Drawing | Laps | Time over lap |
+|---|---|---|---|
+| 1920 × 480, zones B and C (745 × 276) | `wide` | 6 rows of 42 | 34 over 24 |
+| 1920 × 480 without the rev bar (745 × 320) | `wide` | 6 rows of 50 | 34 over 24 |
+| 1280 × 480, zones B and C (445 × 282) | `grid` | 6 rows of 43 | 34 over 24 |
+| 1280 × 480 without the rev bar (445 × 323) | `grid` | 6 rows of 50 | 34 over 24 |
+| 1280 × 400, zones B and C (445 × 220) | `tall narrow` | 7 rows of 31 | 24 over 16 |
+| 1280 × 400 without the rev bar (445 × 254) | `tall narrow` | 7 rows of 36 | 34 over 24 |
+| 850 × 480, zones B and C (250 × 290) | `tall narrow` | 7 rows of 41 | 34 over 24 |
+| 850 × 480 without the rev bar (250 × 328) | `tall narrow` | 7 rows of 46 | 34 over 24 |
+| 800 × 480, zones B and C (225 × 290) | `tall narrow` | 7 rows of 41 | 34 over 24 |
+| 800 × 480 without the rev bar (225 × 328) | `tall narrow` | 7 rows of 46 | 34 over 24 |
+| 1280 × 720, zones B and C (445 × 516) | `tall` | 7 rows of 73 | 34 over 24 |
+| 1280 × 720 without the rev bar (445 × 560) | `tall` | 7 rows of 80 | 34 over 24 |
+| 800 × 286, zones B and C (245 × 156) | `tall narrow` | 7 rows of 22 | 18 over 14 |
+| 800 × 286 without the rev bar (245 × 188) | `tall narrow` | 7 rows of 26 | 24 over 16 |
+| 600 × 686, zone B (576 × 122) | `grid` | 5 rows of 21 | 18 over 14 |
+| 600 × 686, zone C (576 × 112) | `grid` | 4 rows of 24 | 18 over 14 |
+
+**The pit wall takes the same plan.** Its reference zone keeps the 24 its sheet draws, six rows of 29 in
+607 × 196, and its taller zones take 34: six rows of 49 in the `519 × 359`, and seven of 61 in the
+portrait pit wall's. **The companion takes it too**, with six rows of 55 on its landscape page. Its
+portrait page, a `tall` box of 432 × 726 that no artboard draws, is where the space shows most: seven
+laps of 103 px. Whether that box should list the ten laps SimHub keeps instead is a question about the
+count and not the row, and it is the author's to answer; the catalogue's seven stand until then.
+
+**The fuel target is refused, together with its column.** The catalogue writes the target into the
+fuel column's heading, `Fuel · target 2.85` at `wide` and the bare `Fuel` at `grid`, so the target is a
+value in a heading rather than a heading of its own. The build draws no fuel column, as §10 and
+[second-screens.md](../second-screens.md) record, so the target has nothing to head, and beside
+`Δ best` it would read as a target for the delta. It is also a number the driver sets, which no setting
+holds: that is [#326](https://github.com/xorob0/OpenDash/issues/326), and #326 needs the column before
+it needs the heading.
+
+`lapHistory.test.ts` pins the index step and the fill at every box the build produces, the width edge,
+the 34 px ceiling, and the absence of a fuel heading.
+
 ### How the opponents page answers its box
 
 The opponents page is two cars rather than a list, but its identity row is a list row — a name beside
@@ -611,8 +731,9 @@ and 12 on the compact faces, under a gap drawn at 46 and 34.
    produces has the width for 15 and ten characters, the narrow faces included, since at `tall narrow`
    the name is alone on its line.
 2. **Then the gap grows.** Rule 20, for a page that has shed nothing: the gap, which is what the page is
-   read for, grows from the density's `big` towards the next size up the ramp until it meets the height
-   of the box, the width of its row or that size, both cars together. The heading, the name and the
+   read for, grows from the density's `big` until it meets the height of the box, the width of its row
+   or rule 20's ceiling, which is ×2.2 on a face and the next size up the ramp elsewhere, both cars
+   together. The heading, the name and the
    recaps keep their sizes, being labels and a list row.
 3. **Then the rest is space between the cars**, either side of the rule — the canvas's twelve at least,
    measured from the gap's line box as the canvas measures it, so the rule sits in the middle. The
@@ -646,7 +767,7 @@ a short box sheds the same line from both cars rather than emptying one of them.
 | 2 | Delta | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` |
 | 3 | Sectors | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` · `bestS1` · `bestS2` · `bestS3` | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` | `s1` · `s2` · `s3` · `yourBest` · `last` | `s1` · `s2` · `s3` · `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
-| 5 | Fuel | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `toEnd` · `toAdd` · `average` | `level` · `toEnd` · `toAdd` · `average` | `level` · `time` · `toEnd` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
+| 5 | Fuel | `level` · `time` · `toEnd` · `lapsLeft` · `toAdd` · `average` · `lastLap` · `thisLap` | `level` · `toEnd` · `toAdd` · `average` | `level` · `toEnd` · `toAdd` · `average` | `level` · `time` · `toEnd` · `lapsLeft` · `toAdd` · `average` · `lastLap` · `thisLap` |
 | 8 | Pit view | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` |
 | 9 | Car settings | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `tc` · `abs` · `bb` · `mix` | `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` |
 | 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` |
@@ -678,21 +799,36 @@ holding a drawing against a zone should find the argument rather than suspect a 
 
 - **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
   234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
-- **Fuel at `wide` and at `tall`.** The last lap, this lap and the five-lap average, where the zone
-  drawing carries one per-lap cell. The three come from the companion artboard, which is what the
-  `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
-  still one number.
+- **Fuel at `wide` and at `tall`.** Three consumptions under the refuel where both fuel sheets draw
+  two, the per-lap average and a five-lap one. The average is the same figure in both. The five-lap
+  one is not built, because no property says what an earlier lap cost
+  ([second-screens.md](../second-screens.md) records the datum), and the build draws the last lap
+  and this lap instead, the last lap being what band D's artboard draws beside the average. The
+  narrower shapes keep the average alone, since one number three ways is still one number.
+
+  **The order is the drawing's**, rank by rank and left to right, and it is argued rather than
+  copied, as the reading a driver makes before a stop: what is in the tank and how long it lasts,
+  whether that reaches the flag and how many laps it is worth, and then what to put in at the stop
+  and what a lap costs. Past the tank, a figure outranks the figures it is worked out from. The
+  margin is the estimate less the session's laps left, the estimate is the tank over the per-lap
+  average, and the refuel is the laps left at that average less the tank, so the estimate goes after
+  the margin and before every consumption, and the average goes first of the three because the
+  figures ahead of it are taken from it. Band D's fuel page sheds in the same order. The table used to list the estimate last, behind
+  the three consumptions, on a page that draws it in the lead rank at the lead size, so the one
+  number a driver counts down to the stop by was the first a short box gave up
+  ([#334](https://github.com/xorob0/OpenDash/issues/334)).
 - **Fuel's margin, at every shape.** `toEnd` is the signed figure saying whether the fuel in the
   tank reaches the end of the race and by how much, `+1.4` laps or `−3` minutes, and neither fuel
-  sheet draws it: `ZoneCatalogue.dc.html` describes the page as "fuel, fuel time, refuel, last lap,
-  2 and 5 lap averages, estimated laps, level gauge" and the companion artboard draws the same set.
+  sheet draws it: `CompanionModules.dc.html` describes the page as "fuel, fuel time, refuel, last
+  lap, 2 and 5 lap averages, estimated laps, level gauge", and `ZoneCatalogue.dc.html` draws those
+  less the last lap.
   It is taken all the same, because it is the only fuel question a race asks and the page already
   carried every term of it — the range and the estimated laps here, the laps left on the session
   page — so a driver was doing the subtraction himself between corners (#387).
 
   Where it sits is a preference rather than a transcription, and it is declared twice. At `wide` and
-  at `tall` it goes third and the estimated laps stay last, since the estimate is the working and this
-  is the answer. At `grid` and at `tall narrow` it takes the fuel time's place, which is the same
+  at `tall` it goes third and the estimated laps come after it, since the estimate is the working and
+  this is the answer. At `grid` and at `tall narrow` it takes the fuel time's place, which is the same
   trade at the only price those shapes can pay: the lead rank of a 250 px column is two readings
   grown to fill it and not three at the density's own size, so a third field there costs the page its
   growth and a rank besides. The fuel time is how long the tank lasts and the margin is that same
@@ -928,7 +1064,7 @@ what the window watches is the rank of the *winning* condition, `raisedRank` in
 `packages/dash/src/flags.ts`. A blinking flag keeps blinking in the block.
 
 So band D's own priority over time reads: **the flag alone for three seconds, then the flag at both
-ends over the page, then the page alone.** Nothing else about the ranking changes; the fifteen
+ends over the page, then the page alone.** Nothing else about the ranking changes; the twenty
 conditions are ranked by the same expression in both phases, so the phase decides the rectangle and
 never which flag wins.
 
@@ -975,11 +1111,23 @@ publishes: `Flag_Yellow` folds the standing yellow, the waved yellow and both ca
 band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black, a
 meatball, a full-course caution, a waved yellow, the debris flag and the start gantry were therefore
 drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
-about which of two live flags won. The band reads `FLAG_CATALOGUE` in
+about which of two live flags won. The band reads `ALERT_CATALOGUE` in
 `packages/dash/src/flags.ts` now, through the same `conditionVisible` the box ranks with, so the
 three surfaces that draw flags cannot disagree. Which condition takes which shape, and which rank,
 is tabulated in [flag-box.md](flag-box.md), which remains the single place a condition is refused
 with its reason.
+
+**And five car alerts ranked in the same list, since #109.** The canvas's alert catalogue is flags
+and car alerts in one order, and so is the band: the ignition off and the engine stalled out on the
+circuit rank above the red flag, an incident with its count against the limit below the flags that
+mean slow down, and push to pass and the headlight flash below the chequer. They take the band and
+settle into its blocks as a flag does, and every one of them reads whether anybody is in the car,
+which is `inTheCar` in `second/values.ts`, and reads it as "no" in a sim that does not say. In the lane the ignition and
+the stall are the pit family's instead, below. The incident and the flash are events, held for the
+same three seconds after the value they watch moves. Push to pass and the flash are white, which is
+two flags' colour without their name, so they are drawn only where the name is: not on the nano, not
+in a sixteen-pixel block, and not on the full-screen block. [flag-box.md](flag-box.md) has the table
+and the reasons, and §10 the departures from the canvas.
 
 Three consequences are worth stating. The band is iRacing's, as the box already was, since
 `SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
@@ -1035,6 +1183,11 @@ arrangement is: the round faces' rev arc and the companion's speedo draw the sam
 same setting, and a screen may not read a property another screen owns. `ShiftLights` is now its
 deprecated alias and stays attached for a release: an rc.2 user's properties do not vanish without
 warning (#170), and a package installed beside an older plugin falls back through it.
+
+`ClockFormat` is shared for the same reason: `24h` draws `14:32` and `12h` draws `2:32 PM`, the wall
+clock and the sim's time of day alike, and which of the two a driver reads without thinking does not
+change between the rim, the pit wall and the idle screen every package ends with. Rule 19 above says
+how a word that fits no cell is drawn after the digits.
 
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
 installed without the plugin shows each zone's start page and simply cannot cycle. That is still a
@@ -1108,12 +1261,14 @@ straight edge long enough to settle values along. It is taken because it reuses 
 rectangular faces already have, and because dropping the round faces would take fourteen packages to
 twelve over a question about two rectangles.
 
-**It is built after 1.0, and until then the two round faces ship on the card model deliberately.**
-That is the second half of the answer and the half a reader is most likely to need: the round faces
-are not undecided, they are decided and not yet converted. So through 1.0 `480round.ts` and
-`800round.ts` keep reading `layout.slots`, `OpenDash.Slot01` to `Slot12` keep driving them and
-nothing else ([§7](#7-the-settings-the-contract-fixes) and #170), and the card path is not retired at
-1.0 — #146 now waits on the conversion rather than on this answer.
+**It is built before 1.0 as #487, and until then the two round faces ship on the card model
+deliberately.** That is the second half of the answer and the half a reader is most likely to need:
+the round faces are not undecided, they are decided and not yet converted. So until #487 lands
+`480round.ts` and `800round.ts` keep reading `layout.slots`, `OpenDash.Slot01` to `Slot12` keep
+driving them and nothing else ([§7](#7-the-settings-the-contract-fixes) and #170), and the card path
+is retired at 1.0 behind it — #146 waits on #487 rather than on this answer. The rule that kept the
+card path through 1.0 was removed on 2026-09-29; [ADR 0006](../decisions/0006-the-zone-face.md)
+records the amendment.
 
 Part by part, what a round face becomes:
 
@@ -1145,12 +1300,9 @@ the catalogue would be read off.
 middle and the catalogue zones where the card rects are. Until the conversion the round faces keep
 the Layout section they have, which assigns cards to slots.
 
-**The three obligations above have no ticket yet.** The two artboards, the round picker and the
-catalogue a 140 × 108 box leaves are the conversion's work, and the conversion is a noun in this
-section rather than an issue number: #145 is the decision and closes with it, #146 waits on the
-conversion, and nothing tracks it. Filing it is the first thing to do when #145 closes, and its
-number replaces this paragraph and the matching one in
-[ADR 0006](../decisions/0006-the-zone-face.md#unresolved).
+**The three obligations above are #487.** The two artboards, the round picker and the catalogue a
+140 × 108 box leaves are that ticket's work; #145 was the decision and closed with it, and #146
+waits on #487.
 
 ---
 
@@ -1174,6 +1326,7 @@ a mistake in this document.
 | The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until #146 retires the card path. |
 | The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
 | The "D grid" chip | Every FaceVariants sheet chips band D as `grid`, whereas the band it draws is 1280 × 60, or 800 × 58 on the nano, which `second/shape.ts` bands as wide and short rather than as the 430 × 300 the `grid` archetype is. **Neither is taken, because the band does not consult the shape model at all**: `bandPages.ts` draws one centred rank for a wide short box, and only zones B and C ask `shapeOf` for their page. The 600 × 686 sheet chips its own zones B and C the same way, and they measure 600 × 160 and 600 × 150, which is wide and short again. |
+| The twelve-hour clock | No artboard draws one: every clock on the canvas reads `14:32`. The build's answer is recorded here rather than presented as the drawing's ([#324](https://github.com/xorob0/OpenDash/issues/324)). The `AM` or `PM` is set as each surface already sets what follows a figure — at the denominator's size and in its ink in the bar, as a band D unit in the corner, as a small label in the pit wall header and on the idle screen — and one gap after the digits. Every box a clock is drawn in is measured with it, so band D's corner, which was cut for the eight cells of `0:42:15` and drew `13:11`, is twelve pixels narrower measured for `12:59 AM` than it was, and its pages centre six pixels further right. How the word should look beside the figure is the author's to draw. |
 | The strip at 850 × 480 and 800 × 480 | Both artboards caption five cells, namely slip, TC, cut, bias and ABS, and the build keeps four at 850 and three at 800, which §3 tabulates and `barStrip.test.ts` pins. **The artboards' own scale is taken**: each face now draws the bar at the size its artboard gives it, so the narrower faces gain cells the earlier measured layout had shed. What the two still drop is cut at 850 and cut and slip at 800, and the cause is the ends rather than the strip, each end being laid out from its own edge for the widest entry the catalogue holds rather than for the entry actually selected. Raising the count further therefore means narrowing the reserved end or measuring the strip's values below the size the end fields use, and the canvas has made neither decision. The 600 × 686 sheet is no longer a disagreement: it draws its five cells in fixed 54 px columns at a 12 px gap, which is what the build now does, with four pixels to spare that the widest class name governs. |
 | The 600 × 686 well | The size's own chip names a 36 px well above the bar. The artboard draws the well at 6, 2, 588 × 32 with the segments at 12, 6, 576 × 24, and the bar begins at y 36, so that 36 is the room above the bar, being a 2 px face margin, the 32 px well and a 2 px gap, rather than the height of anything. **The artboard is taken** and §1 tabulates the 32. Were the well itself meant to be 36, the rect in `faces/600x686.ts` would move and `revBarReclaim` would become 38, which moves the second arrangement's table as well. |
 | Zone A, centred or filled | The face artboards centre zone A's block in its column, `justify-content: center` with a 198 px gear in a 320 px column at 1280 × 480, while the FaceVariants sheets caption the same zone "Zone A fills its column. Padding stays; empty height does not". **Both are taken, and they turn out not to disagree**: every page is cut from the column, each run being a share of its height rather than a size of its own, and what is then left over goes half above the page and half below it, so all four fill and all four centre. What the sheets ask for and the format refuses is the last three per cent of the gear, which is the subject of the row below. |
@@ -1183,13 +1336,16 @@ a mistake in this document.
 | DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
 | The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
 | The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
-| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [#327](https://github.com/xorob0/OpenDash/issues/327) and the twenty tickets under it. |
+| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 45 px, 55 with the rev bar off, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw is the canvas's to make and [#330](https://github.com/xorob0/OpenDash/issues/330) holds it open: the live canvas still drew two times at 34 on 29 September. |
 | Session's sixth field | The catalogue labels it *Est. laps* at `wide` and at `tall`, where the build labels it *Laps left*. **The build's label is kept**, on two grounds. Firstly, the value behind it is `RemainingLaps`, which is the session's own count of laps still to run, and no research note here describes that property as an estimate, so *Est.* would be a claim the datum does not make. Secondly, *Est. laps* is already the label of the fuel page's sixth field, where it carries `Computed.Fuel_RemainingLaps`, that is to say the range left in the tank; two pages drawing the same two words over two different quantities is precisely the confusion the rename would introduce. Either the catalogue renames this one, or the session field is rebound to something that is genuinely estimated. |
 | Session's third rank | The catalogue draws Strength, Incidents and Cars at `wide` and at `tall`, and **two of the three are built**. Strength of field is left out under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), which found it published by SimHub in no form at all and struck it from the bar's catalogue of end fields for the same reason. The row is therefore two fields wide rather than three, and it closes over the hole the way [§11](#11-a-field-that-is-not-there) describes. |
 | Lap history's third column | The catalogue draws the fuel each lap cost, at every shape, where the pit wall's wide page draws the delta to the session best. **The delta is taken, and only at `wide`**, because no previous-lap property carries a consumption beside the time and keeping one per lap would be the plugin remembering between frames, which [ADR 0009](../decisions/0009-does-the-plugin-compute.md) refuses. The three narrower shapes therefore list two columns where the drawing lists three, and [second-screens.md](../second-screens.md) records the datum that is not there. |
 | A slower lap's colour | The catalogue paints every lap slower than the session best in red and draws no middle band, whereas the module steps through caution at half a second behind and danger at a full second. **The ladder is kept**, since a lap half a second off and a lap a second off are two readings and a driver acts differently on them. The two were nonetheless the same red for as long as the caution branch read `purpose.fuel.low`, which resolves to the danger colour, so the ladder said nothing until that was put right. |
 | Lap history's row count | The catalogue lists six laps at `wide` and at `grid` and seven at the two tall shapes, while the companion artboard lists seven in a box the shape model reads as `wide`. **The catalogue is taken**, being the drawing of record at the four shapes, so the companion page lists six. A box too short for its declared count lists fewer regardless, which is why zone C of the 600 × 686 face lists four where its own sheet draws six. |
-| The ramp ceiling at `tall` | Rule 20 stops a rank at the next size up its ramp, which is one step of about 1.35, while the catalogue promotes far harder at `tall`: lap times 46 to 88, the delta 64 to 132, the speedo 64 to 128, and fuel, sectors, stint and session 34 to 76. Either the ceiling is too low or the drawings are, and nobody has decided which; the ceiling stands until somebody does, since it is what keeps filling a box distinct from scaling into one. |
+| Lap history's lap number | Every drawing of the page draws the lap number at the size of the time beside it, in the label grey: the catalogue's four, the companion's module 19 and the pit wall's two zones. **A step down the ramp is taken** ([#343](https://github.com/xorob0/OpenDash/issues/343)): 24 under a 34 px time, 16 under 24 and 14 under 18. Three columns at one size read as a block of digits, and the columns are not equal. The time is what a driver compares down the page; the lap number is an index, read to find a row and never across one, which is how a list already draws its car number beside the position. The grey is kept. The canvas owes the redraw on all seven drawings. |
+| Lap history's row | The catalogue draws 34 px rows at 34 at `wide`, `grid` and `tall`, and 28 px rows at 24 at `tall narrow`; the pit wall's sheet draws 26 at 24. The build drew the density's row in every box and stacked the rows from the top, however tall the box. **The row now fills the body and carries the largest type its height and width allow**, never past 34 ([#343](https://github.com/xorob0/OpenDash/issues/343); §5's *How lap history answers its box* has the steps). At `tall narrow` that is 34 wherever the zone has the height, one step past the drawing: the drawing's narrow row carries a fuel column the build does not have, and the two columns the build does have fit at 34 in a 225 px zone. The canvas owes a narrow drawing of two columns, or a statement that the narrow page stays at 24 whatever it carries. |
+| Lap history's fuel target | The catalogue writes `Fuel · target 2.85` over the third column at `wide`, and the companion and the pit wall's sheets do the same; `grid` writes the bare `Fuel`. **It is refused, together with its column** ([#343](https://github.com/xorob0/OpenDash/issues/343)). The target is a value in the fuel column's heading, and the build has no fuel column (see *Lap history's third column*), so there is nothing for it to head, and beside `Δ best` it would read as a target for the delta. It is also a number the driver sets, which no setting holds. [#326](https://github.com/xorob0/OpenDash/issues/326) is that setting and the colouring it drives, and it needs a per-lap consumption before it needs a heading. |
+| The ramp ceiling at `tall` | Rule 20 stopped a rank at the next size up its ramp, which is one step of about 1.35, while the catalogue promotes far harder at `tall`: lap times 46 to 88, the delta 64 to 132, the speedo 64 to 128, and fuel, sectors, stint and session 34 to 76. **The ceiling was too low, and on a face it is now the ×2.2 the `FaceVariants` sheets grow every page by** ([#330](https://github.com/xorob0/OpenDash/issues/330)); §2 has the argument, which is that the one factor rather than the ceiling is what keeps filling distinct from scaling. The companion and the pit wall keep the ramp step, their artboards being drawn at their own size. What the ceiling does not settle is the other half of these numbers: the catalogue's `tall` drawings do not only grow, they promote, the lead rank going up while the rank under it stays at 34, and that is rule 17's lever rather than rule 20's. **The promotion is taken too**, as `leadRankSize` in `modules/module.ts`: on a face whose zone is tall a page's lead rank is drawn at the next name up the ramp, `hero` over `mid`, 64 over 34 in a zone, which is the catalogue's lap times to within a few per cent, and rule 20 then grows the page into its box. Lap times takes it, and at the 1280 × 720 face draws 100 over 53 where it drew 62 over 46; session and stint take it too, their `tall` drawings promoting a first rank the others draw at 34 to 76 over the same 34, and draw 84 over 45 there. At the catalogue's own 360 × 470, which no face produces, the stint's promoted rank meets the height at 64 and the average lap its table sheds first goes. The delta, the speedo and the fuel promote at `tall` on the catalogue as well, and each has more to settle than a size, so the lever is theirs to take in [#331](https://github.com/xorob0/OpenDash/issues/331), [#333](https://github.com/xorob0/OpenDash/issues/333) and [#334](https://github.com/xorob0/OpenDash/issues/334); the sectors page is a drawn strip over a rank, which the strip sizes. |
 | The mini-sector strip | The catalogue and both companion artboards draw twelve mini-sectors under the sector times. **Three cells are taken**, one per real sector, because SimHub times sectors and not segments and [ADR 0009](../decisions/0009-does-the-plugin-compute.md) forbids inventing the data a twelve-cell strip would need. The canvas owes either a redraw at three or a caption saying the twelve are notional. The same strip is a second disagreement of its own: the FaceVariants sheets draw the sectors page as two ranks with nothing between them, so the 6 px strip the build puts there is an addition the drawings do not carry, and it is deliberate rather than accidental. |
 | Lap times at the companion | The companion artboard draws twelve fields in four ranks of 64, 46, 46 and 34, and the build draws nine: at the module box the build really hands the page, 802 by 336, the four ranks come to 337 px against 332 of room and the sector rank is shed. The 20 px are the flag band, which the artboard draws 12 high and `ds.indicator.flagBand.heightSm` gives 32. **The shedding is taken** rather than a page drawn past its box, and the twelfth field returns if the band ever comes down to the artboard's height. |
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
@@ -1198,9 +1354,9 @@ a mistake in this document.
 | The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stands in, the padding and the letter as well, so band D has no **D** for as long as a flag is out. §6 says why that is the cheaper of the two prices available. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. **The word is what a colour cannot carry**, so on those four faces a settled flag names a family and not a member: DISQUALIFIED, BLACK FLAG · FURLED and BLACK FLAG are one outlined sliver, DEBRIS and YELLOW FLAG one yellow sliver. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that colour alone is enough once the name has had its three seconds. |
 | The relative's row count | The catalogue draws six rows at `wide` and at `grid`, eight at `tall narrow` and eleven at `tall`, and the build divided the body by the row instead, which reached thirteen in zone C of the 1280 × 720 face and fifteen in its second arrangement. **A declaration is taken**, per shape since [#328](https://github.com/xorob0/OpenDash/issues/328): three cars either side of the player at `wide`, `grid` and `tall narrow`, seven rows, and five either side at `tall`, eleven, with at least one either side however short the box. The question the page answers is *is the car behind me going to be there at the next corner*, which is the two either side; the third is the traffic a driver is about to be in, and the fourth and fifth are worth their rows only where the zone is tall. Seven is the one odd count between the catalogue's six and eight. The canvas owes the count at every shape: one fewer than it draws at `tall narrow`, and one more at `wide` and at `grid`, where the companion artboard already draws seven. |
 | The leaderboard's row count | `ZoneCatalogue.dc.html` draws six rows at `wide`, `grid` and `tall` and eight at `tall narrow`; the companion artboard draws seven; and the build divided the body by the row, which reached fifteen in zone C of the 1280 × 720 face. **A declaration is taken** ([#328](https://github.com/xorob0/OpenDash/issues/328)): the catalogue's six at `grid` and eight at `tall narrow`, the companion's seven at `wide`, which is what the `wide` column of §5's table stands for, and eleven at `tall`, where the catalogue's six leave 250 px of its own 360 × 470 drawing empty and its relative lists eleven in the same box. **The declaration is a face's and the companion's, and not the pit wall's**: a pit wall zone lists every car its box holds, which is the ticket's own exception — buying rows is right where the question is *who is in the race* — so its `519 × 359` and `639 × 338` zones list the eight they listed before rather than the six and seven their shapes would declare. The companion's portrait page, which no artboard draws, takes the `tall` count and lists eleven rows of 64 where it listed seventeen of 40: a companion is one page read from the seat, the same eleven as its relative, with the leftover height spent as air between the rows rather than on six more cars. The canvas owes the `tall` drawing, a ruling between six and seven at `wide`, and a portrait companion artboard that says whether its leaderboard is eleven rows or the field. Which cars a zone's leaderboard should list, the head of the field or the cars around the player, is not decided: #328 left it to [#340](https://github.com/xorob0/OpenDash/issues/340), which took the columns and not this, and the build lists the head of the field. |
-| The list row's height | The canvas states one row height per shape — 34 px, and 28 in the narrow zone — and the build stretches it, on the relative since #339 and on the leaderboard since [#328](https://github.com/xorob0/OpenDash/issues/328). A declared count in a box that holds more leaves the difference somewhere, and `table()` leaves it above and below the block, `justify-content: center` being what every list body on the catalogue carries: eleven rows of 28 px in the 560 px body of the 1280 × 720 face's second arrangement is 328 px of list and 232 px of nothing. **The row fills the body instead**, in every box, and the type is chosen apart from it: the largest step of the list ramp the row's height and the name's budget both allow, and never past the 38 px row the canvas's tallest table draws, so what is bought above that is space between the rows and never size. §5's *How a list answers its box* has the steps and the budget rule. Until #328 the type was read off the height, so a box whose fill would have crossed a step that cost the name a letter kept a shorter row and left the rest as slack — five of them, zone C of the 1280 × 720 among them with 133 px above and below its block; they fill now, at the type they had. The canvas owes a row height per box rather than per shape, or a statement that the pitch is the build's to choose. |
+| The list row's height | The canvas states one row height per shape — 34 px, and 28 in the narrow zone — and the build stretches it, on the relative since #339, on the leaderboard since [#328](https://github.com/xorob0/OpenDash/issues/328), and on lap history since [#343](https://github.com/xorob0/OpenDash/issues/343), whose own row is described in *Lap history's row* above. A declared count in a box that holds more leaves the difference somewhere, and `table()` leaves it above and below the block, `justify-content: center` being what every list body on the catalogue carries: eleven rows of 28 px in the 560 px body of the 1280 × 720 face's second arrangement is 328 px of list and 232 px of nothing. **The row fills the body instead**, in every box, and the type is chosen apart from it: the largest step of the list ramp the row's height and the name's budget both allow, and never past the 38 px row the canvas's tallest table draws, so what is bought above that is space between the rows and never size. §5's *How a list answers its box* has the steps and the budget rule. Until #328 the type was read off the height, so a box whose fill would have crossed a step that cost the name a letter kept a shorter row and left the rest as slack — five of them, zone C of the 1280 × 720 among them with 133 px above and below its block; they fill now, at the type they had. The canvas owes a row height per box rather than per shape, or a statement that the pitch is the build's to choose. |
 | The driver name's size on a list row | The catalogue draws it at 13 px in every row of every list at every shape, under a gap drawn at 34. **15 is taken from the 34 px row up**, which is what the face labels at everywhere else and what the pit wall's own boards already draw a name at; `density.ts` calls 13 the floor rather than the size, and a column that says *who* sitting on the floor of the ramp is what [#339](https://github.com/xorob0/OpenDash/issues/339) is about. **13 stays in the 28 px row, and the reason is the catalogue rather than the count.** This row first said 15 would cost the narrow column three characters, "seven at 13 and five at 15 in the 82 px the 850 × 480 face gives it", and that was wrong everywhere it applied: the three boxes the 28 px row is handed are 82, 77 and 57 px of name column, where 15 costs one character, one character and nothing — seven against six, six against five, four against four. The six counts are pinned in `tables.test.ts`, a documented number nothing runs being a number that rots. **What [#328](https://github.com/xorob0/OpenDash/issues/328) changed is that a narrow zone is no longer held to the 28 px row.** A list that declares fewer rows than its box holds at 28 has the height the canvas draws a 15 px name in, and takes 15 there with its numerals held at 24, paying the one character: zones B and C of the 850 × 480 and 800 × 480 faces, both arrangements, and the 800 × 286 face without its rev bar. That is the ticket's question answered for the build — a 13 px name is not the right answer 600 mm from the eye where the zone has the height for 15 — and it is a second divergence the catalogue owes a redraw for: its `tall narrow` lists draw eight rows of 28 with the name at 13. Where the row is still 28, on the 800 × 286 face with its rev bar, the name stays at 13 with it. |
-| The opponents page's name and gap | The catalogue draws the page at the same size in every box it gives it: the name at 13 px beside the car number, the gap at 46, and the two blocks as one centred group with twelve pixels either side of the rule, so its `tall · 360 by 470` drawing leaves most of its own height empty and the portrait companion page drew 236 px of nothing above the page and below it. **The build takes three things the drawing does not** ([#341](https://github.com/xorob0/OpenDash/issues/341)): the name at 15, which is the relative's answer and the list row's, wherever the row has the width, which is every box the build produces; the name's box widened to the ten characters of the default format where the row has them; and the gap grown from the density's `big` towards the next size up its ramp under rule 20 — past 46 towards 64 in a zone, past 34 towards 46 on the compact faces, and past 64 as far as 116 on the companion — with the height it does not take spent between the two cars so that the page spans its zone. Only the gap grows: the heading and the recaps keep a label's size and the identity row a list row's, which applies rule 20's *all of the stack grows or none of it does* to the gap alone, and whether the car number and the recaps should grow with it is the author's to rule. The canvas owes the redraw at `tall` and at `grid`, and a ruling on whether the space goes between the cars, which is what the build does, or around the group, which is what `justify-content: center` does. Its `tall narrow` drawing also centres the group across the zone, which the build does not do, and its zone catalogue draws the car number at 24 where the pit wall sheets and the build draw it at 16. |
+| The opponents page's name and gap | The catalogue draws the page at the same size in every box it gives it: the name at 13 px beside the car number, the gap at 46, and the two blocks as one centred group with twelve pixels either side of the rule, so its `tall · 360 by 470` drawing leaves most of its own height empty and the portrait companion page drew 236 px of nothing above the page and below it. **The build takes three things the drawing does not** ([#341](https://github.com/xorob0/OpenDash/issues/341)): the name at 15, which is the relative's answer and the list row's, wherever the row has the width, which is every box the build produces; the name's box widened to the ten characters of the default format where the row has them; and the gap grown from the density's `big` under rule 20 — past 46 as far as 101 in a zone and past 34 as far as 74 on the compact faces, which is the face's ×2.2, and past 64 as far as 116 on the companion — with the height it does not take spent between the two cars so that the page spans its zone. Only the gap grows: the heading and the recaps keep a label's size and the identity row a list row's, which applies rule 20's *all of the stack grows or none of it does* to the gap alone, and whether the car number and the recaps should grow with it is the author's to rule. The canvas owes the redraw at `tall` and at `grid`, and a ruling on whether the space goes between the cars, which is what the build does, or around the group, which is what `justify-content: center` does. Its `tall narrow` drawing also centres the group across the zone, which the build does not do, and its zone catalogue draws the car number at 24 where the pit wall sheets and the build draw it at 16. |
 | The driver column's three-letter code | Every list on the catalogue and on the opponents page draws the driver as three upper-case letters, `KLX` and `MOR` and `TSA`, at 13 px and at every shape. **A name is taken instead.** The code was built as `left(name, 3)`, which makes Liam Byrne `LIA` and Hannah Fischer `HAN`: it identifies nobody and collides for any two drivers who share a first name, and it is drawn on the one page a driver reads to answer *who is that*. What the build draws is one of four formats the rig chooses between — the full name, `L. Byrne`, `B. Liam` or `Byrne Liam` — cut in the expression to the characters the column holds and closed with an ellipsis where it was cut, since WPF clips rather than truncates. The canvas owes the redraw at all four shapes, and with it an answer to the width, because **on the three narrow faces no format fits whole.** The budget per box, in characters of the widest glyph the name face draws, is 7 in the 82 px zone C of the 850 × 480 face, 6 in the 77 px of the 800 × 286 and 4 in the 57 px of the 800 × 480; 8 on the companion's portrait page; 10 or more everywhere else. `L. Byrne` is eight, so even the shortest of the four ellipsises at `tall narrow` — `L. BYR…` at 850 × 480 and `L. BY…` at 800 × 286, shouted by the row below and cut here — and at 800 × 480 the four formats draw `LIA…`, `L.…`, `B.…` and `BYR…`, which is one glyph more than the `LIA` this row deletes for two of them and the same three for the other two, a cut that lands on a space losing the space with it. `driverNames.test.ts` evaluates those four. **The column stays regardless**, a list of gaps belonging to nobody being [§11](#11-a-field-that-is-not-there)'s own failure and what `THE_ROW` refuses for as long as the name holds a letter and its ellipsis, which in the 28 px row is down to 191 px of body — 34 px under anything the build produces (see *What a row gives up* in §5). The lever the row still has is the position: the gap's 92 px is the canvas's floor over content that needs 79 at 24 px, so dropping a decimal would not narrow it, whereas giving the name the position's 40 px buys 11, 11 and 9 characters at the three faces. It is not taken, the position being what says whether the car behind is racing you or lapping you, and a third column dropped from a list being the canvas's decision rather than the build's. What the canvas therefore owes at `tall narrow` is either 93 px of name column — the eight characters the shortest format needs at 13 px — out of zones 249 to 274 px wide whose bodies are 225 to 250, or a column set with one column fewer in it. [#385](https://github.com/xorob0/OpenDash/issues/385) decided the formats; [#149](https://github.com/xorob0/OpenDash/issues/149) wants the same width again for a licence badge and a rating. |
 | The driver name's case on a list row | Every artboard writes the driver column in the sim's own mixed case, `Liam Byrne` and `Hannah Fischer`, the name being the one piece of prose on a row of labels. **Upper case is taken at every size a list draws a name at**, and the reason is a glyph rather than a preference. Barlow's `i` is a stem with its dot floating 0.080 em above it, which is 1.04 device pixels at the 13 px of the 28 px row; under two device pixels there is no pixel row the gap is certain to fall wholly inside at any sub-pixel phase, so the raster may shade the row above and the row below at partial coverage and bridge them. Four of the nine names in zone C of the VM's 850 × 480 face came back welded — `Llam B…` for Liam Byrne, `NIna H…` for Nina Hartmann, `Sofla …` for Sofia Rossi, `Henrlk…` for Henrik Solberg — and since `i` and `l` are the same height to within 0.017 em that is a different letter and not a blurred one, in the one column of the one page whose whole job is to say *who*. The three remedies answer to the same measurement and `advances.test.ts` holds all of it, read back out of the bundled outlines: **a heavier weight closes the gap** rather than opening it, 0.057 em at Bold against 0.080 at Medium, a fatter stem and a fatter dot being drawn into the same vertical; **a bigger size costs letters and still does not clear the bound**, 15 px buying 6, 5 and 4 characters in the three narrow boxes where 13 buys 7, 6 and 4; **upper case costs nothing**, no *unaccented* upper-case letter in any bundled face being drawn in two pieces at all, and the budget being counted in characters of the face's *widest* glyph, so shouting a name changes no budget anywhere and the six counts in the row above are the same numbers after it as before. **What it buys is the substitution rather than the construction**, which is the limit worth writing down: an accented capital is a mark floating over a letter, the same shape the `i` failed at, and four of them are tighter than it — `É`, `Å`, `Í` and `Ö` break at 0.064 to 0.076 em in the name face against the `i`'s 0.080, every one under two device pixels at 13 px and at 15 — so RÄIKKÖNEN may still come back with an umlaut welded to its A. That is a letter drawn badly where the `i` was a name read wrongly, a welded acute leaving `É` an `É` where a welded tittle left `Liam` a legal `Llam`, and there is no tighter bound to reach for, these being the marks the bundled faces draw. The line is therefore a size, `dottedLetterSize(NAME_FACE)`, which is 25 px — where the gap first reaches two device pixels — and every name any list draws is under it: 15 from the 34 px row up and 13 in the narrow zone's, the opponents page taking the same answer since [#341](https://github.com/xorob0/OpenDash/issues/341) where it drew 13 and 12 of its own. So every list shouts, the team name a rig may show in a driver's place with them, and the player's own `YOU` stops being the only shouted thing on the row. The canvas owes the redraw, or a ruling that the driver column may stay prose at a size no list is drawn at. [#339](https://github.com/xorob0/OpenDash/issues/339) is where it was found. |
 | What a name is corrected to before it is formatted | #385 asked for a bracketed prefix from the sim's entry list to be stripped and the words title-cased before any format is applied. **Neither is built, and neither can be.** SimHub's NCalc has no `indexof`, `substring` or `length`, so nothing in an expression can find the closing bracket of a prefix whose length varies; and its `tcase` is .NET's `TextInfo.ToTitleCase`, which lower-cases the rest of every word it capitalises unless the word is entirely upper case, so it turns McDonald into Mcdonald and leaves a shouted name shouting — which is the case it would have been reached for. A name is therefore drawn with the sim's own spelling and its own prefix, upper-cased by the row above and corrected in nothing. The two are not the same act: `ucase` is total, so there is no name it can get wrong, where `tcase` guesses at which letters a word wanted. Both would be corrections the plugin could make, and it cannot either: a name belongs to a car on a row and the plugin publishes no per-row property. |
@@ -1231,11 +1387,12 @@ lists the same things.
 | Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
 | Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
 | Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
-| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all fifteen conditions of `FLAG_CATALOGUE` over band D's rectangle, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
-| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own fifteen-condition catalogue through the band's own expression, and names each condition in a word short enough for a block measured on the longest of them, which is MEATBALL. |
+| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all twenty conditions of `ALERT_CATALOGUE` over band D's rectangle, the fifteen flags and five car alerts, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
+| The alert catalogue's car alerts | **Built from the five iRacing publishes, with four departures the author owes a ruling on** (#109). The ignition sits above the stalled engine, where PagesAndAlerts numbers them 2 and 1, because the pit family already ranked them that way and a face should not answer the same pair in two orders either side of the pit entry. The incident is outlined, where the sheet fills it, because `purpose.alert.incident` and `purpose.flag.orange` are both `#FFB300` and filled it would be the meatball. Push to pass and the headlight flash are drawn only where their name is written, because `purpose.alert.p2p` is white: filled it is the white flag and outlined the black family, and the nano, a sixteen-pixel block and the full-screen block would draw it without the word. And "Push to pass · 3 left" is written without the count, which iRacing publishes with two meanings by session type. The tokens are left as they are; the canvas either gives the two neutral alerts and the incident colours of their own or accepts these shapes. |
+| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own catalogue through the band's own expression, eighteen of its twenty conditions, the two neutral alerts apart, and names each condition in a word short enough for a block measured on the longest of them, which is MEATBALL. |
 | The chips "bar: 2 fields per end" and "band corners: yes" | **Built**: `barFieldsPerEnd` is 2 and `bandCorners` is true at this size. |
 | The chips "A grid", "B grid", "C grid" and "D grid" | Three of the four are what `shapeOf` returns for those rectangles. The fourth is the disagreement recorded above. |
-| A growth factor per page of zones B and C, from ×1.08 to ×2.07 | **Recorded, not checked.** A rank grows by rule 20 until it meets the width, the height or the next size on its ramp, and nothing compares the factor it reaches against the factor the sheet chips. |
+| A growth factor per page of zones B and C, from ×1.08 to ×2.07 | **Recorded, not checked**, although the ceiling the chips are measured against is now the build's own: a rank on a face grows by rule 20 until it meets the width, the height or ×2.2, as the sheet's pages do. The factors still differ wherever the build's drawing of a page differs from the catalogue's, and nothing compares the factor a page reaches against the factor the sheet chips. |
 
 ---
 

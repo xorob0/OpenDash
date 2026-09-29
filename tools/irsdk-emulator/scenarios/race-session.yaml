@@ -78,7 +78,7 @@ WeekendInfo:
   HasOpenRegistration: 0
   HardcoreLevel: 1
   NumJokerLaps: 0
-  IncidentLimit: unlimited
+  IncidentLimit: {{IncidentLimit}}
   FastRepairsLimit: unlimited
   GreenWhiteCheckeredLimit: 0
  TelemetryOptions:

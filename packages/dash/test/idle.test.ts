@@ -15,7 +15,8 @@ import { describe, expect, test } from 'bun:test';
 import { composePackages } from '../src/build.ts';
 import { rect } from '../src/design/geometry.ts';
 import { IDLE_BLOCKS, IDLE_MARGIN, IDLE_SCREEN_NAME, IDLE_STATE, IDLE_UPDATE_BARE, idleItems, idleScreen, updateMarkText, updateMarkVisible, updateMarkWidest } from '../src/idle.ts';
-import { UPDATE_AVAILABLE, UPDATE_VERSION, UPDATE_VERSION_MAX_LENGTH } from '../src/contract.ts';
+import { CLOCK_FORMAT_SETTING, UPDATE_AVAILABLE, UPDATE_VERSION, UPDATE_VERSION_MAX_LENGTH } from '../src/contract.ts';
+import { localClock, twelveHour } from '../src/second/values.ts';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { evalNcalc } from './ncalcEval.ts';
@@ -129,15 +130,23 @@ describe('what it draws', () => {
       const names = items.map((i) => i.name);
       // The mark on every package: it is shed where it cannot be drawn clear of the stack, and nothing
       // the build emits is such a frame. A package that lost it would say so here.
-      expect({ folder, names }).toEqual({ folder, names: ['idle.wordmark.open', 'idle.wordmark.dash', 'idle.clock', 'idle.state', 'idle.update'] });
-      // Three bindings on the whole screen: SimHub's own clock, and the mark's text and visibility,
-      // which are the plugin's. Anything else -- a best lap, a car, a driver, a session -- is a game's to
-      // publish, and a screen shown because no game is running would draw it as a dash.
-      const bound = items.flatMap((i) => Object.entries(i.bindings ?? {}).map(([target, b]) => `${i.name}.${target}=${typeof b?.formula === 'string' ? b.formula : b?.formula.expression}`));
-      expect({ folder, bound }).toEqual({
+      expect({ folder, names }).toEqual({ folder, names: ['idle.wordmark.open', 'idle.wordmark.dash', 'idle.clock', 'idle.clock.unit', 'idle.state', 'idle.update'] });
+      // SimHub's own clock -- its digits, and the `AM` or `PM` a twelve-hour clock hangs after them,
+      // each placed by how wide the digits draw (#324) -- and the mark's text and visibility, which are
+      // the plugin's. Anything else -- a best lap, a car, a driver, a session -- is a game's to publish,
+      // and a screen shown because no game is running would draw it as a dash.
+      const bound = Object.fromEntries(items.flatMap((i) => Object.entries(i.bindings ?? {}).map(([target, b]) => [`${i.name}.${target}`, typeof b?.formula === 'string' ? b.formula : b?.formula.expression])));
+      expect({ folder, bound: Object.keys(bound).sort() }).toEqual({
         folder,
-        bound: ["idle.clock.Text=format([DataCorePlugin.CurrentDateTime], 'HH:mm')", `idle.update.Text=${updateMarkText()}`, `idle.update.Visible=${updateMarkVisible()}`],
+        bound: ['idle.clock.Left', 'idle.clock.Text', 'idle.clock.unit.Left', 'idle.clock.unit.Text', 'idle.clock.unit.Visible', 'idle.update.Text', 'idle.update.Visible'],
       });
+      expect({ folder, clock: bound['idle.clock.Text'], word: bound['idle.clock.unit.Text'], shown: bound['idle.clock.unit.Visible'] }).toEqual({
+        folder,
+        clock: localClock().text,
+        word: localClock().meridiem,
+        shown: twelveHour(),
+      });
+      expect({ folder, text: bound['idle.update.Text'], visible: bound['idle.update.Visible'] }).toEqual({ folder, text: updateMarkText(), visible: updateMarkVisible() });
     }
   });
 
@@ -276,15 +285,17 @@ describe('it fits every frame the build emits', () => {
 });
 
 describe('it costs the packages nothing they were not already carrying', () => {
-  test('the idle screen reads the plugin for the update mark and nothing else', () => {
+  test('the idle screen reads the plugin for the update mark and the clock format, and nothing else', () => {
     // An idle screen whose content depended on a plugin setting would be a screen that changes with a
-    // plugin the package does not require. The mark is the one exception, and it is an exception only
-    // in the direction of silence: both reads carry a default that draws nothing (below).
+    // plugin the package does not require. The mark is one exception, and it is an exception only in
+    // the direction of silence: both reads carry a default that draws nothing (below). The clock
+    // format is the other, and it is an exception only in the direction of the clock the screen has
+    // always drawn: without the plugin it reads `24h` (#324, and `clockFormat.test.ts`).
     for (const { folder, main } of MAINS) {
       const items = itemsOf({ ...main, screens: [idleOf(main)] });
       const properties = items.flatMap((i) => Object.values(i.bindings ?? {}).map((b) => (typeof b?.formula === 'string' ? b.formula : (b?.formula.expression ?? ''))));
       const read = [...new Set(properties.flatMap((p) => [...p.matchAll(/\[(OpenDash\.[A-Za-z0-9]+)\]/g)].map((m) => m[1]!)))].sort();
-      expect({ folder, read }).toEqual({ folder, read: [`OpenDash.${UPDATE_AVAILABLE}`, `OpenDash.${UPDATE_VERSION}`] });
+      expect({ folder, read }).toEqual({ folder, read: [`OpenDash.${CLOCK_FORMAT_SETTING}`, `OpenDash.${UPDATE_AVAILABLE}`, `OpenDash.${UPDATE_VERSION}`] });
     }
   });
 });

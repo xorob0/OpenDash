@@ -58,6 +58,19 @@ export const isnull = (value: Expr, fallback: Expr): Expr => `isnull(${value}, $
 /** `isnull(value)`: true when the property is unavailable. */
 export const isNull = (value: Expr): Expr => `isnull(${value})`;
 
+/**
+ * `in(value, a, b, ...)`: whether `value` equals any of the rest.
+ *
+ * NCalc's own function, and a comparison rather than a reading: `EvaluationVisitor` compares each
+ * pair in the more precise of the two types, as `=` does, so two strings are matched as strings.
+ * That is what makes it the way to ask about a `format` of a date, which is text:
+ * `in(format(t, 'HH'), '12', ...)` is the afternoon without asking a string to compare as a number.
+ */
+export const isIn = (value: Expr, ...options: Expr[]): Expr => {
+  if (options.length === 0) throw new Error('in() takes a value and at least one to compare it against');
+  return `in(${value}, ${options.join(', ')})`;
+};
+
 /** .NET format string, e.g. `fmt(x, '0.0')`. With `addSign`, positive values get a leading `+`. */
 export const fmt = (value: Expr, pattern: string, addSign = false): Expr =>
   addSign ? `format(${value}, ${str(pattern)}, true)` : `format(${value}, ${str(pattern)})`;

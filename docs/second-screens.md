@@ -62,6 +62,15 @@ enabled screens -- so while a game runs the ring is the modules alone and a tap 
 between sessions it is the idle screen alone. Paging is a wheel button bound to the device's own
 `NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
 
+What OpenDash can do is choose a module for a moment. SimHub moves off a screen that stops being
+enabled, so leaving exactly one enabled makes SimHub select it, and once everything re-enables SimHub
+has no reason to leave. `CompanionOpenOn` names that module: the start module for a few seconds after
+SimHub loads, and the quick glance module while its button is held (#362). Going back on release is
+the half the plugin cannot name, since SimHub never says which module a tap reached; the dashboard
+knows, and keeps it in a variable of its own, so the release sets `CompanionOpenOn` to -2 ("the one
+you were on") for a second. `companionVariables` in `packages/dash/src/contract.ts` is the mechanism
+and `secondScreens.test.ts` walks it frame by frame.
+
 ## The pit wall
 
 Three landscape pages and one portrait page:
@@ -83,7 +92,10 @@ Every page draws one 64 px strip: the wordmark and the page name on the left, an
 laid out from the right edge inwards, the two clocks, the wind, the track state, the incident
 count, the time left and the session and lap. Each group names itself before its value, which is
 not decoration: the strip once wrote its clocks the other way round, as `14:32 LOCAL 15:07 SIM`,
-and a rig reported being unable to tell which was the wall clock and which was the sim's.
+and a rig reported being unable to tell which was the wall clock and which was the sim's. Both clocks
+follow `OpenDash.ClockFormat`: on a twelve-hour rig each writes `AM` or `PM` after its digits, the
+strip is laid out for that, and on a twenty-four-hour rig every group moves back up to the edge so
+no gap opens where the word would be (#324).
 
 **The flag is not on the strip.** It was, as a colour block and a word built from the six flags
 SimHub normalises, and it did not light on a rig; a 24 px block in the corner of a 1920 px header
@@ -236,8 +248,9 @@ has not arrived yet.
 | Car rectangles, the lane grid and a red outline on the threatening car (module 12) | SimHub's `RadarItem` exposes a scale, a player dot style and an opponent dot style. It draws no grid of its own, draws every opponent alike, and has no notion of a threat, so the cars are dots and the grid lines beneath them are rectangles the module draws itself. |
 | Spotter arrows (module 12) | SimHub has no path, so an arrow can only be a picture, and a picture carries no colour: a flank that is dim when the spotter is quiet and red when it calls would be two files a side. The flanks are rectangles that turn red on the side the spotter is calling, which reads better at a glance than a 46 px arrow would and carries the same meaning without the shape. |
 | The steering dial (module 10) | The catalogue draws a 96 px arc with a dot on its rim, turned by the wheel angle. SimHub draws no arc, and `Rotation` is a number written into the package rather than one of the properties a formula can drive, so nothing on the page can turn. The angle is drawn as a marker running along a track of the same width instead, since `Left` does bind. |
+| The five-lap fuel average (module 5) | Both fuel sheets draw `Avg 5` beside `Per lap`. SimHub publishes its own average, `Fuel_LitersPerLap`, the last lap's consumption and the current lap's, and nothing about the four laps before those, so a window of five would mean remembering between frames, which [decisions/0009-does-the-plugin-compute.md](decisions/0009-does-the-plugin-compute.md) refuses. The page draws the average, the last lap and this lap. |
 | Fuel used this stint (module 18) | SimHub publishes the last lap's consumption and the current lap's, and no figure at all for what the tank has given since the stop. Laps since the stop multiplied by the rolling average is an estimate wearing a measurement's label, so the field is left out rather than approximated. |
-| Per-lap fuel, and the fuel target drawn over it (module 19) | The previous-lap family carries ten lap times and their deltas to the session best, and no consumption beside them. Keeping one per lap would mean remembering between frames, which [decisions/0009-does-the-plugin-compute.md](decisions/0009-does-the-plugin-compute.md) refuses; the lap history therefore draws that delta where the catalogue draws fuel. |
+| Per-lap fuel, and the fuel target drawn over it (module 19) | The previous-lap family carries ten lap times and their deltas to the session best, and no consumption beside them. Keeping one per lap would mean remembering between frames, which [decisions/0009-does-the-plugin-compute.md](decisions/0009-does-the-plugin-compute.md) refuses; the lap history therefore draws that delta where the catalogue draws fuel. The target the catalogue writes into that column's heading, `Fuel · target 2.85`, goes with the column, because without the column there is nothing for it to head ([#343](https://github.com/xorob0/OpenDash/issues/343)). |
 | Round caps and round joins on a trace | `ChartItem` carries a colour, a thickness and a sample count, and nothing about how a line ends or how it turns, so every polyline the canvas draws round is drawn square and mitred here. It is the format rather than a setting left unset, and the only place it shows is a pedal at full application, where the canvas rounds the plateau and the build corners it. |
 | The licence badge and its safety rating, on a list row and on the opponents identity row | iRacing carries the licence in the session YAML and no reader for it has been verified, so the table declares the column and draws nothing in it rather than inventing a letter. The catalogue's 12 px `B` at the `tall` opponents shape is that badge, which is why the shedding table keeps the last lap there instead. |
 | The nationality flag beside a driver, 20 by 14 | A picture rather than text, so it waits on the image assets the flag box is waiting on: one file per country, each with the licence that has to travel with it. |

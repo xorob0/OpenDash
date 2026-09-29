@@ -128,6 +128,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Names the team instead of the driver, and keeps the driver where the sim has no team.", PanelDataTab.TeamNameCaption);
         }
 
+        /// <remarks>
+        /// Examples for the reason the driver names are: `14:32` beside `2:32 PM` is the answer, where
+        /// "24-hour" beside "12-hour" asks a reader to picture both. The caption is the one thing the
+        /// control cannot show, that the sim's clock follows the setting as well as the wall clock.
+        /// </remarks>
+        [Fact]
+        public void The_clock_row_shows_each_format_by_example()
+        {
+            Assert.Equal("Clock", PanelDataTab.ClockTitle);
+            Assert.Equal("The sim's time of day follows it too.", PanelDataTab.ClockCaption);
+            Assert.Equal(new[] { "14:32", "2:32 PM" }, PanelDataTab.ClockLabels);
+            Assert.Equal(Contract.ClockFormats.Length, PanelDataTab.ClockLabels.Length);
+        }
+
         [Fact]
         public void The_position_row_keeps_the_sentences_the_canvas_does_not_carry()
         {

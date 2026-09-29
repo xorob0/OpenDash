@@ -34,6 +34,7 @@ OpenDash.DriverNameTeam
 OpenDash.UpdateAvailable
 OpenDash.UpdateVersion
 OpenDash.ClassBestLap
+OpenDash.ClockFormat
 OpenDash.DeltaPrecision
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages

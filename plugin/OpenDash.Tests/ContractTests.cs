@@ -62,7 +62,8 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the rev bar mode, the blue flag detail, the two that decide
-            // how a driver is named, the idle screen's two, the zone face of every face that ships
+            // how a driver is named, the idle screen's two, the class best, the clock format, the delta's
+            // precision, the zone face of every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
@@ -81,7 +82,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -110,9 +111,10 @@ namespace OpenDashPlugin.Tests
             // it is flashing now: 47 of the 85 measured cars give no flash, and OpenDash's own redline
             // flash was going out with them. And 345 before the idle screen could say that a newer
             // release exists, and which (#83), and 347 before the plugin had to publish the class best,
-            // which SimHub keeps and never publishes, and 348 before the live delta could be drawn to
-            // thousandths as well as hundredths (#322).
-            Assert.Equal(349, names.Count);
+            // which SimHub keeps and never publishes, and 348 before a driver could say whether a clock
+            // reads 14:32 or 2:32 PM (#324), and 349 before the live delta could be drawn to thousandths
+            // as well as hundredths (#322).
+            Assert.Equal(350, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -147,10 +149,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("UpdateVersion", names[21]);
             // And the class best after them, published because SimHub keeps it and does not publish it.
             Assert.Equal("ClassBestLap", names[22]);
+            // And the clock format after that, shared because every package's idle screen draws the
+            // wall clock, and because a driver reads a clock one way wherever it is drawn. #324.
+            Assert.Equal("ClockFormat", names[23]);
+            Assert.Contains("ClockFormat", Contract.SharedPropertyNames());
             // And the delta's precision after it, chosen rather than published, and shared because a
             // delta read to the thousandth on the rim and to the hundredth on the pit wall is two
             // answers to one question. #322.
-            Assert.Equal("DeltaPrecision", names[23]);
+            Assert.Equal("DeltaPrecision", names[24]);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
             // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30
@@ -287,6 +293,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "full", "initialSurname", "initialFirstName", "surnameFirst" }, Contract.DriverNameFormats);
             Assert.Equal("full", Contract.NormaliseChoice("Full", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
             Assert.Equal("full", Contract.NormaliseChoice("initials", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
+            Assert.Equal(new[] { "24h", "12h" }, Contract.ClockFormats);
+            Assert.Equal("12h", Contract.NormaliseChoice("12H", Contract.ClockFormats, Contract.DefaultClockFormat));
+            // A value a later plugin might write, read by this one: the clock every package drew before.
+            Assert.Equal("24h", Contract.NormaliseChoice("iso", Contract.ClockFormats, Contract.DefaultClockFormat));
             Assert.Equal("alltime", Contract.NormaliseChoice("AllTime", Contract.DeltaReferences, "session"));
             Assert.Equal("session", Contract.NormaliseChoice("never", Contract.DeltaReferences, "session"));
             Assert.Equal("lastlap", Contract.NormaliseChoice("LastLap", Contract.DeltaReferences, "session"));
@@ -329,6 +339,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DeltaPrecision: '" + Contract.DefaultDeltaPrecision + "'", source);
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Equal(Contract.DriverNameFormats, ListOf(source, "DRIVER_NAME_FORMATS"));
+            Assert.Equal(Contract.ClockFormats, ListOf(source, "CLOCK_FORMATS"));
+            Assert.Contains("ClockFormat: '" + Contract.DefaultClockFormat + "'", source);
             Assert.Contains("DriverNameFormat: '" + Contract.DefaultDriverNameFormat + "'", source);
             Assert.Contains("DriverNameTeam: " + Contract.DefaultDriverNameTeam.ToString().ToLowerInvariant(), source);
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
@@ -730,16 +742,20 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_companion_registers_no_action_because_SimHub_pages_it()
+        public void A_companion_registers_its_glance_and_nothing_to_page_with()
         {
-            // None, and that is the change. Both of the companion's actions moved `CompanionPage`, the
+            // No next-module action: both of the companion's old actions moved `CompanionPage`, the
             // screens were gated on it, and that gate is why a tap on the phone did nothing: SimHub's
-            // only touch gesture maps a tap to the previous or next screen and its navigation walks
-            // the screens whose expression is true, so one of twenty-one enabled had nowhere to go.
-            // SimHub owns the paging now, and an action that moves nothing would be a dead row in its
-            // Controls and events.
-            Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix));
-            Assert.Empty(Contract.CompanionActionNames("Rim"));
+            // only touch gesture maps a tap to the previous or next screen and its navigation walks the
+            // screens whose expression is true, so one of twenty-one enabled had nowhere to go. SimHub
+            // owns the paging now, and a next-module action would be a second binding for NextScreen.
+            // The glance is back (#362): it forces its module for as long as it is held, and the
+            // dashboard remembers where to go back to.
+            Assert.Equal(new[] { "CompanionHoldQuickGlance" }, Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix).ToArray());
+            Assert.Equal(new[] { "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
+            // The release forces the way back, which is neither a module nor nothing, for a moment.
+            Assert.Equal(-2, Contract.CompanionOpenOnBack);
+            Assert.True(Contract.CompanionBackWindow > TimeSpan.Zero && Contract.CompanionBackWindow < Contract.CompanionOpenOnWindow);
             // The name is kept, because a face still uses the same spelling for its own zones.
             Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
             // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,

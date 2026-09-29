@@ -17,6 +17,7 @@ bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed
 bun run dev --scenario flagbox                # walk every state the flag box draws
+bun run dev --scenario alerts --keep          # walk the alert catalogue on band D, one condition every 7 s
 bun run dev --scenario nosession               # the game running with no session, for #406's notices
 bun run dev --scenario untimed                 # a lap race with no clock: #387's laps form, #439's mark
 ```
@@ -80,12 +81,14 @@ line argument, no setting, and `SaveAndRestoreOppenedDashboards` does not bring 
 back after a restart, which was measured rather than assumed. So that one step drives the mouse
 over VNC.
 
-It is the fragile part of the loop and it is treated as such. The coordinates are a fixed offset
-from the window's top-left for the menu and a fraction of the screen width for the centred content
-column, the window is **waited for** and then put where they expect it, every other window that
-could take a click is minimised, and the result is checked by asking Windows which dash windows
-exist. It retries once and then tells you to open it by hand, which is enough, since everything
-else will already be in place.
+It is the fragile part of the loop and it is treated as such. The coordinates are measured from
+SimHub's client area rather than from the screen, a fixed offset from its top-left for the menu and
+every height and a fraction of its width for the centred content column, the window is **waited
+for** and then maximised, every other window that could take a click is minimised, and the result
+is checked by asking Windows which dash windows exist. It retries once and then tells you to open
+it by hand, which is enough, since everything else will already be in place. The exception is a
+SimHub that has exited under the clicks, which it checks for before giving that advice and names
+instead, pointing at SimHub's log, because in that case no coordinate was ever going to help.
 
 ## The flag box, which has no hardware
 
@@ -173,8 +176,9 @@ coordinates at a 320 pixel strip. `maximiseSimHub` in [gui.ts](../scripts/gui.ts
 and it accepts nothing but a rectangle covering the desktop's working area.
 
 **The guest's display mode is part of the loop, and a container restart loses it.** `MENU` and
-`LIST` in [gui.ts](../scripts/gui.ts) are absolute pixels measured at 3840x2160; only the centred
-content column is a fraction of the width. On 2026-09-27 the VM came back at 1280x800 after a
+`LIST` in [gui.ts](../scripts/gui.ts) are pixel offsets from SimHub's client area measured at
+3840x2160; only the centred content column is a fraction of its width. On 2026-09-27 the VM came
+back at 1280x800 after a
 container restart and `openDashboard` clicked into empty space twice, reporting nothing but "could
 not be opened" — which sends the reader after coordinates that were right all along. The mode is now
 read as soon as the guest answers and before anything is built: `dev`, `shots`, `clips` and `modules`

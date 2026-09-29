@@ -27,9 +27,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void It_is_published_with_the_shared_group_and_not_offered_as_a_setting()
         {
+            // Appended after the idle screen's two, and at the index it shipped at rather than last: the
+            // shared group is appended to, and the clock format (#324) and the delta's precision (#322)
+            // came after it.
             var shared = Contract.SharedPropertyNames().ToList();
-            // Appended after the idle screen's two, and kept at the index it shipped at when the delta's
-            // precision was appended after it (#322).
             Assert.Equal(shared.IndexOf(Contract.UpdateVersion) + 1, shared.IndexOf(Contract.ClassBestLap));
             Assert.Equal(22, shared.IndexOf(Contract.ClassBestLap));
             Assert.Equal("ClassBestLap", Contract.ClassBestLap);

@@ -115,6 +115,23 @@ existed, so none of them can say that for itself, but every one of them was take
 could only be drawn to two places, which is what hundredths draws. The next `bun run record` reads it
 from the plugin and drops the entry.
 
+Every trace asserts `OpenDash.ClockFormat` since #324, at a constant `24h`, which is what the plugin
+publishes until a driver changes it and so what a re-record will write. It was added by hand because
+the idle screen every package carries reads it, and a trace that lacks a property a binding reads
+fails the check above.
+
+Three more since #109, because the alert catalogue and the pit family read them, and none is a guess
+about the value. `DataCorePlugin.GameData.PushToPassActive` is `false` in all seven: SimHub's iRacing
+reader fills it from `CarIdxP2P_Status` at the player's index and hands it through as a `bool?` rather
+than as 1 or 0, and the emulator publishes that array all `false`.
+`DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash` is `false`: a raw telemetry boolean the
+emulator publishes as `false`, the same type and default as `dcPitSpeedLimiterToggle`, which every
+trace recorded as `false`. `DataCorePlugin.GameData.EngineStarted` is 1: the reader computes it from
+its own ignition and the stalled bit of `EngineWarnings`, and every trace recorded `EngineIgnitionOn`
+at a constant 1 and an `EngineWarnings` that never carries the stalled bit, 8. They are asserted
+because the VM was held by another session when they were needed; the next recording of each
+scenario replaces them with what SimHub says.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be

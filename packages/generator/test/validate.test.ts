@@ -347,6 +347,66 @@ describe('plugin properties', () => {
   });
 });
 
+describe('dashboard variables', () => {
+  const withVariables = (items: Item[], variables: NonNullable<DashPackage['dashboards'][number]['variables']>): DashPackage => {
+    const pkg = single(items);
+    pkg.dashboards[0]!.variables = variables;
+    return pkg;
+  };
+
+  test('a variable read by a screen, an item and another variable, and a variable reading itself, is valid', () => {
+    const pkg = withVariables([rect('r', { bindings: { Visible: { mode: 'formula', formula: '[variable.kept] > 0' } } })], [
+      { name: 'seen', expression: 'isnull(rootdashboardscreenname(), \'\')', beforeScreenRoles: true },
+      { name: 'Kept', expression: 'if([variable.seen] = \'\', [variable.kept], 1)', beforeScreenRoles: true },
+    ]);
+    pkg.dashboards[0]!.screens[0]!.enabledExpression = '[variable.KEPT] >= 0';
+    const r = validatePackage(pkg, OPTS);
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  test('a read of a variable the dashboard does not declare is an error wherever it is', () => {
+    // SimHub finds no variable, falls through to a property of that name, and reads null: a screen
+    // gated on it is simply off.
+    const pkg = withVariables([rect('r', { bindings: { Visible: { mode: 'formula', formula: '[variable.typo] > 0' } } })], [
+      { name: 'real', expression: '[variable.other] + 1' },
+    ]);
+    pkg.dashboards[0]!.screens[0]!.enabledExpression = '[variable.missing] = 1';
+    expect(validatePackage(pkg, OPTS).errors.filter((x) => x.code === 'variable/undeclared').map((x) => x.path)).toEqual([
+      'OpenDash/OpenDash#variables.real',
+      'OpenDash/OpenDash/Main#enabledExpression',
+      'OpenDash/OpenDash/Main/r#Bindings.Visible',
+    ]);
+    // And a dashboard with no variables at all reads none.
+    const none = single([rect('r', { bindings: { Visible: { mode: 'formula', formula: '[variable.anything] > 0' } } })]);
+    expect(codes(validatePackage(none, OPTS).errors)).toContain('variable/undeclared');
+  });
+
+  test('a capital on the prefix is an error, because SimHub matches it case-sensitively', () => {
+    const pkg = withVariables([rect('r')], [{ name: 'real', expression: '1' }]);
+    pkg.dashboards[0]!.screens[0]!.enabledExpression = '[Variable.real] = 1';
+    expect(codes(validatePackage(pkg, OPTS).errors)).toEqual(['variable/prefix-case']);
+  });
+
+  test('names, duplicates, empty expressions and what an expression calls are checked', () => {
+    const r = validatePackage(withVariables([rect('r')], [
+      { name: 'ok', expression: '1' },
+      { name: 'OK', expression: '2' },
+      { name: 'has space', expression: '1' },
+      { name: 'blank', expression: '  ' },
+      { name: 'arity', expression: 'left([DataCorePlugin.GameData.CarModel], 4)' },
+      { name: 'undeclared', expression: '[OpenDash.Nope]' },
+    ]), OPTS);
+    expect(r.errors.map((x) => `${x.code} ${x.path}`)).toEqual([
+      'name/duplicate OpenDash/OpenDash#variables.OK',
+      'variable/name OpenDash/OpenDash#variables.has space',
+      'variable/empty-expression OpenDash/OpenDash#variables.blank',
+      'expression/arity OpenDash/OpenDash#variables.arity',
+      'property/undeclared OpenDash/OpenDash#variables.undeclared',
+    ]);
+  });
+});
+
 describe('fonts', () => {
   test('an empty or blank font family is an error, and is not reported again as unbundled', () => {
     const r = validatePackage(single([label('a', 'X', { font: '' }), label('b', 'Y', { font: '   ' }), numeral('v', '[X]')]), OPTS);

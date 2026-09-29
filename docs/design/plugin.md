@@ -256,6 +256,9 @@ These apply to every screen
   Team names                                              [ on/off ]
   Names the team instead of the driver, and keeps the driver where
   the sim has no team.
+
+  Clock                                          [ 14:32 | 2:32 PM ]
+  The sim's time of day follows it too.
 ```
 
 **The four name formats are shown as what they make of one name rather than described.** A value in a
@@ -272,6 +275,11 @@ does not offer.
 Naming a driver is here and not on a screen's pane because a name is read by a person, and the person
 does not change between the wheel and the pit wall ([#385](https://github.com/xorob0/OpenDash/issues/385)).
 
+**The clock is two worked examples of one time for the same reason**, `14:32` against `2:32 PM`. Its
+caption says the one thing the control cannot: that the sim's time of day follows the setting as well
+as the wall clock, which a row labelled "Clock" does not say on its own
+([#324](https://github.com/xorob0/OpenDash/issues/324)).
+
 **The delta reference has a third segment the canvas does not draw.** The Plugin artboard offers the
 session best and the all-time best; Last lap was added by
 [#322](https://github.com/xorob0/OpenDash/issues/322) and is iRacing's own live delta to the lap
@@ -284,11 +292,13 @@ since each of them is a lap. Three values is still a segmented control by the co
 places, and [#322](https://github.com/xorob0/OpenDash/issues/322) lets a driver ask for three, which
 is what a hotlap is decided by. It sits directly under the reference because it qualifies the same
 number, and it is rig-wide for the reason the reference is: a delta read to the thousandth on the rim
-and to the hundredth on the pit wall is two answers to one question. The two values are words rather
-than worked examples such as `0.21` and `0.214`, although the driver names row answers its question
-with examples: a name is set in the panel's own face, and a numeral would be too, in Barlow, where the
-canvas's fourth rule keeps numerals to Barlow Condensed. The caption says what each is for, which the
-two words cannot. Neither answer moves
+and to the hundredth on the pit wall is two answers to one question. The two values are words,
+although the driver names and the clock answer their questions with worked examples. A name is not a
+numeral, and a delta is nothing else: `0.21` and `0.214` would be set in the panel's own face, Barlow,
+where the canvas's fourth rule keeps numerals, version numbers in the plugin included, to Barlow
+Condensed. The clock's `14:32` and `2:32 PM` are drawn in that Barlow too. That is a disagreement
+between the build and the canvas for the canvas's owner to settle, not a precedent this row follows.
+The caption says what each is for, which the two words cannot. Neither answer moves
 anything on a screen but the digits, since every box that draws the delta is cut for three places
 whichever is chosen; [ADR 0011](../decisions/0011-personalisation.md) is why that is the condition of
 the setting existing at all.

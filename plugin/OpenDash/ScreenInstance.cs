@@ -11,7 +11,6 @@
 // been bound to it with no diagnostic.
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
 namespace OpenDashPlugin
 {
@@ -215,16 +214,50 @@ namespace OpenDashPlugin
         public string CompanionFlagFormat { get; set; }
 
         /// <summary>
-        /// The module this companion is being forced onto, or -1 for none. Live state, never saved.
+        /// The module this companion is being forced onto, or -1 for none, as it reads at a moment.
         /// </summary>
         /// <remarks>
-        /// Held at <see cref="CompanionStart"/> for the first seconds of a SimHub run and then cleared,
+        /// Held at <see cref="CompanionStart"/> for the first seconds of a SimHub run and then let go,
         /// which is the whole of how a companion still opens on a chosen module: one enabled screen is
         /// one SimHub selects. It is not saved because it describes a moment rather than a preference --
         /// the preference is CompanionStart, which is.
+        ///
+        /// A force carries its own end, and that is read here rather than cleared by a clock. It used to
+        /// be one timer on the plugin, armed once by Init: the panel forcing a start module chosen later
+        /// in the session set a force that nothing ever released, and a companion that had been tapped
+        /// freely froze on that module, taps and all, until SimHub restarted.
+        ///
+        /// A held glance forces too, with no end until its release, and the release forces
+        /// <see cref="Contract.CompanionOpenOnBack"/> for <see cref="Contract.CompanionBackWindow"/>.
+        /// Whichever of these was set last is the one in effect.
         /// </remarks>
-        [JsonIgnore]
-        public int CompanionOpenOn { get; set; } = Contract.DefaultCompanionOpenOn;
+        public int CompanionOpenOnAt(DateTime now)
+        {
+            // One read of the reference: the module and the end it carries are always the same force's.
+            var current = force;
+            return current != null && now < current.Until ? current.Module : Contract.DefaultCompanionOpenOn;
+        }
+
+        /// <summary>A module forced until a moment. Immutable, so that one reference is one whole force.</summary>
+        private sealed class ModuleForce
+        {
+            public ModuleForce(int module, DateTime until)
+            {
+                Module = module;
+                Until = until;
+            }
+
+            public int Module { get; }
+
+            public DateTime Until { get; }
+        }
+
+        /// <summary>
+        /// The force in effect, or null. Written by Init, by the panel and by a glance button, each on
+        /// its own thread, and read on SimHub's whenever a dashboard evaluates the property, which is why
+        /// it is a single reference.
+        /// </summary>
+        private volatile ModuleForce force;
 
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
@@ -435,7 +468,7 @@ namespace OpenDashPlugin
                 CompanionStart = 0;
                 CompanionQuickGlance = 0;
                 CompanionFlagFormat = null;
-                CompanionOpenOn = Contract.DefaultCompanionOpenOn;
+                force = null;
             }
         }
 
@@ -454,21 +487,18 @@ namespace OpenDashPlugin
             return mask == 0 ? (1 << OpenDashPlugin.Modules.Count) - 1 : mask;
         }
 
-        /// <summary>Puts the companion on the module it opens on, which is what Init does to a face.</summary>
-        public void OpenOnStartModule()
+        /// <summary>
+        /// Puts the companion on the module it opens on, which is what Init does to a face, and hands
+        /// the paging back to SimHub once <see cref="Contract.CompanionOpenOnWindow"/> has passed.
+        /// </summary>
+        public void OpenOnStartModule(DateTime now)
         {
             if (!IsCompanion) return;
             CompanionPage = Contract.FirstEnabledFrom(CompanionStart, ModuleMask(), OpenDashPlugin.Modules.Count);
             // And force it, which is what actually moves the screen: the page above is no longer read
             // by the package. Past the modules the rotation has turned off, because forcing one that is
             // switched off would leave no screen enabled at all and a companion drawing nothing.
-            CompanionOpenOn = CompanionPage;
-        }
-
-        /// <summary>Stops forcing a module, which hands the paging back to SimHub and to the driver.</summary>
-        public void ReleaseStartModule()
-        {
-            if (IsCompanion) CompanionOpenOn = Contract.DefaultCompanionOpenOn;
+            force = new ModuleForce(CompanionPage, now + Contract.CompanionOpenOnWindow);
         }
 
         /// <summary>
@@ -479,10 +509,9 @@ namespace OpenDashPlugin
         /// would bind this button: a press that landed on a module the driver had switched off would
         /// show a page the companion's own header counts as absent.
         ///
-        /// Nothing calls it from SimHub today. A companion registers no action (Contract.CompanionActionNames)
-        /// and the page it moves is read by no package, SimHub's own NextScreen paging the companion
-        /// instead. It stays, with the companion half of the glance below, because #362 is where both
-        /// come back if SimHub ever lets a plugin choose the screen.
+        /// Nothing calls it from SimHub today. A companion registers no next-module action
+        /// (Contract.CompanionActionNames) and the page it moves is read by no package, SimHub's own
+        /// NextScreen paging the companion instead.
         /// </remarks>
         public int CycleModule()
         {
@@ -499,6 +528,10 @@ namespace OpenDashPlugin
         /// The module does not have to be one the rotation leaves on, exactly as a face's glance page
         /// does not have to be one its mask enables: a glance is a thing a driver asked for by holding
         /// a button, and the rotation is about what the button steps through.
+        ///
+        /// On a companion "remembering" is the dashboard's to do. The force below leaves the glance
+        /// module the only screen enabled, so SimHub selects it; the module the driver had paged to is
+        /// one SimHub never tells the plugin, and the dashboard keeps it for the release.
         /// </remarks>
         public void BeginQuickGlance()
         {
@@ -514,6 +547,8 @@ namespace OpenDashPlugin
             {
                 glanceRestore = CompanionPage;
                 CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+                // For as long as the button is down, which the release ends.
+                force = new ModuleForce(CompanionPage, DateTime.MaxValue);
                 return;
             }
             if (!IsPitWall || PitWallZones == null) return;
@@ -532,13 +567,25 @@ namespace OpenDashPlugin
         /// <summary>Puts the screen back where it was. A release with no press does nothing.</summary>
         public void EndQuickGlance()
         {
+            EndQuickGlance(DateTime.UtcNow);
+        }
+
+        /// <summary>The same, released at a given moment, from which a companion's way back is timed.</summary>
+        public void EndQuickGlance(DateTime now)
+        {
             if (IsFace)
             {
                 if (Face != null) Face.EndQuickGlance();
                 return;
             }
             if (!GlanceHeld) return;
-            if (IsCompanion) CompanionPage = glanceRestore;
+            if (IsCompanion)
+            {
+                CompanionPage = glanceRestore;
+                // Back to the module the dashboard remembers, for long enough for SimHub to move there;
+                // after that nothing is forced and the paging is SimHub's again.
+                force = new ModuleForce(Contract.CompanionOpenOnBack, now + Contract.CompanionBackWindow);
+            }
             else if (glanceZone != null) SetZonePage(glanceZone, glanceRestore);
             glanceZone = null;
             glanceRestore = -1;

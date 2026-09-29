@@ -37,7 +37,7 @@ import {
   sectorTime,
   sessionBestLap,
 } from '../second/values.ts';
-import { defineModule, fieldsRow, fld, shapeIn } from './module.ts';
+import { defineModule, fieldsRow, fld, leadRankSize, shapeIn } from './module.ts';
 
 const { fmt, concat, str, isnull, num, driver, iff } = ncalc;
 
@@ -72,10 +72,16 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
    * 430 px two lap times fit a line, so the most important of the three ends up sharing one.
    */
   const grid = shape.width === 'medium' && shape.height === 'medium';
-  const last = fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: portrait ? d.hero : d.big });
+  /**
+   * The three times at the catalogue's `tall` are 88 over a 34 px rank, where every other shape
+   * draws 46 over 34: promoted a size on a tall face, which `leadRankSize` says for the pages that
+   * do it. The portrait companion has its own drawing, with the last lap alone at the hero.
+   */
+  const lead = leadRankSize(ctx);
+  const last = fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: portrait ? d.hero : lead });
   const bests = [
-    fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.big, color: ds.purpose.lap.sessionBest }),
-    fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.big }),
+    fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: lead, color: ds.purpose.lap.sessionBest }),
+    fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: lead }),
   ];
   const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
   const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });

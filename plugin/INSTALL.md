@@ -102,7 +102,7 @@ Four more dashboards are not faces for the wheel but second screens, described b
 | OpenDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
 
 **The two round faces are still the twelve-slot design, on purpose.** A round face becomes zones on
-a ring after 1.0 -- the rev arc it already has, one zone in the middle of the disc, its card
+a ring before 1.0 (#487) -- the rev arc it already has, one zone in the middle of the disc, its card
 rectangles as small zones of their own, and the flag on the ring -- and until that work is done the
 two ship as they are. Of the dashboards the plugin installs they are the only ones set up on the Rig
 tab in a Slots section rather than in zones, and they number their slots the left side first, then
@@ -143,12 +143,16 @@ The companion shows one module at a time: a big, calm page for a phone or a tabl
 wheel. There are twenty-one modules, listed under Modules on the companion's pane on the Rig tab,
 and each has its own switch. A module that is off is skipped entirely.
 
-Paging is SimHub's, not OpenDash's, so OpenDash registers no action for a companion. Tap the left
-or right half of the screen to change module. For a wheel button, open the device or window the
-companion runs on in SimHub, go to its "Controls and events", and bind **NextScreen**, with
-**PreviousScreen** to go back. Those bindings belong to that device, so the button that pages your
-companion does not page your dash. The OpenDash page says the same under the companion's Module
-paging.
+Paging is SimHub's, not OpenDash's. Tap the left or right half of the screen to change module. For
+a wheel button, open the device or window the companion runs on in SimHub, go to its "Controls and
+events", and bind **NextScreen**, with **PreviousScreen** to go back. Those bindings belong to that
+device, so the button that pages your companion does not page your dash. The OpenDash page says the
+same under the companion's Module paging.
+
+The **quick glance** is OpenDash's. Choose its module under Module paging and bind it beside the
+choice: hold the button and the companion shows that module, even one you have switched off, and
+release it and the companion goes back to the module it was on, wherever you had paged to. For a
+second after the release a tap does nothing while it moves back.
 
 Three modules are off when you install: **Energy**, **Damage** and **Track rivals**. iRacing
 publishes no virtual energy, no damage values at all and nothing a segment-by-segment rival

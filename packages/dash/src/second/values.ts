@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { ELLIPSIS } from '../design/advances.ts';
+import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
@@ -60,6 +60,9 @@ const {
   left,
   hms,
   ne,
+  isIn,
+  not,
+  isNull,
 } = ncalc;
 
 /** What a value shows when the sim has not given one. */
@@ -112,6 +115,14 @@ export const CHARS = {
   clock: { digits: 6, specials: 2 } as Chars,
   /** `08:46` */
   minutesClock: { digits: 4, specials: 1 } as Chars,
+  /**
+   * `14:32`, and `12:59` on a twelve-hour clock: the same four digits and a colon, so one budget
+   * holds either format. The `AM` or `PM` after a twelve-hour clock is a word beside the value and
+   * not a cell of it, `M` being a glyph no cell holds; see {@link TimeOfDay}. Its own budget rather
+   * than {@link CHARS.minutesClock}'s, which is a duration and reads `08:46` for the same cells, so
+   * that widening one cannot quietly widen the other.
+   */
+  timeOfDay: { digits: 4, specials: 1 } as Chars,
   /** `299` */
   speed: { digits: 3, specials: 0 } as Chars,
   /** `12,450` */
@@ -1103,6 +1114,64 @@ export const tankIsLow = (): Expr => and(fuelIsSettled(), lt(isnull(computed('Fu
  */
 export const ignitionOn = (): Expr => game('EngineIgnitionOn');
 
+/**
+ * The ignition is off.
+ *
+ * SimHub's iRacing reader has no ignition of iRacing's to pass through, and derives one: it is on
+ * while `Voltage` has been above zero within the last five frames (`IRacingManager` in the decompiled
+ * 9.12.6 ICarsReader.dll). That is why anything drawing this on track also needs {@link inTheCar}: a
+ * driver standing in the garage has no voltage, and so, to SimHub, an ignition switched off. A reader
+ * that overrides nothing gets `GameManagerBase`'s guess instead, `Rpms > 300`, which is an engine at
+ * idle rather than a switch.
+ *
+ * The property is a non-nullable `int` and is never absent while a game runs; the `isnull` default of
+ * 1 is for the frames before any game has, when there is no `NewData` to read it from.
+ */
+export const ignitionOff = (): Expr => eq(isnull(ignitionOn(), num(1)), num(0));
+
+/**
+ * The engine is not running: SimHub's `EngineStarted` at 0, which on iRacing is the ignition on and
+ * the stalled bit of `EngineWarnings` clear, held over five frames.
+ *
+ * SimHub's reading rather than the bit, although the bit is iRacing's own, because of what SimHub
+ * leaves out. `IRacingManager` ignores the stalled bit on an electric car, on a car whose idle RPM
+ * is 0, and on one whose model name says Hybrid -- which is a guess about names, but a guess somebody
+ * made because a hybrid raises the bit while it runs. The alert catalogue ranks this above a red
+ * flag, and ENGINE OFF over a flag on a car that is driving is the worst false alarm the face could
+ * give, so the reading that has already been corrected for it is the one to take.
+ *
+ * It is also true with the ignition off, which is SimHub's own definition; the pit family and the
+ * catalogue both rank the ignition above it, so the one that names the switch is what shows. Here
+ * rather than beside a drawing because both read it and have to agree about what an engine that has
+ * stopped is.
+ */
+export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)), num(0));
+
+/**
+ * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
+ * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
+ * change to this line.
+ *
+ * It is the stronger of the two questions #312 tells apart, and {@link inSession} is the weaker: a
+ * driver in the garage is in a session and not in the car. Everything that raises itself on a change
+ * or on a car state reads it, because in the garage and in the menus those are noise -- a setting
+ * that moves while a setup loads, and an ignition that SimHub reads as off whenever there is no
+ * voltage, which is whenever nobody is driving.
+ *
+ * Read as a boolean and not compared with a number. A raw telemetry boolean reaches a binding as
+ * `true` or `false`, where `GameData`'s booleans arrive as 1 and 0 -- the committed traces show both
+ * forms side by side -- so `= 1` would never hold and the gate would silence everything behind it.
+ * It is the same reading `carAvailable` uses for the leaderboard's rows.
+ *
+ * **What a sim that does not say gets is the caller's choice**, because the two callers want opposite
+ * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
+ * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
+ * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
+ * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
+ * flags already are.
+ */
+export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
+
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));
@@ -1177,16 +1246,92 @@ export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6))
 export const windDegrees = (): Expr => mul(isnull(raw('WindDir'), num(0)), num(180 / Math.PI));
 /** The sim's own clock, as seconds of day. */
 export const simTimeOfDay = (): Expr => isnull(raw('SessionTimeOfDay'), num(0));
-/** The wall clock, as SimHub's own date property. */
-export const localClock = (): Expr => fmt(prop('DataCorePlugin.CurrentDateTime'), 'HH:mm');
-/** The sim's clock as `HH:mm`. */
-export const simClock = (): Expr =>
-  concat(fmt(truncate(div(simTimeOfDay(), num(3600))), '00'), str(':'), fmt(truncate(div(mod(simTimeOfDay(), num(3600)), num(60))), '00'));
+
+/** Whether the rig writes its clocks to twelve hours, which is `ClockFormat`. #324. */
+export const twelveHour = (): Expr => setting.clockFormatIs('12h');
+
+/** The two words a twelve-hour clock follows its digits with, in the case they are drawn in. */
+export const MERIDIEMS = ['AM', 'PM'] as const;
+
+/**
+ * Whichever of {@link MERIDIEMS} is wider in `face`, which is what a box for the word is measured by.
+ *
+ * Measured rather than chosen, because the answer is the face's: the two share an `M` and differ
+ * by an `A` against a `P`, and which of those is wider is a fact of the font a label and a value
+ * do not have to agree on.
+ */
+export const meridiemWidest = (face: MeasuredFace): string =>
+  MERIDIEMS.reduce((a, b) => (measureText(face, b, 100) > measureText(face, a, 100) ? b : a));
+
+/**
+ * A clock of the day as a surface draws it: the digits, the word after them, and how wide the
+ * digits really are. #324.
+ *
+ * `text` is `14:32` on a twenty-four-hour clock and `2:32` on a twelve-hour one -- `HH:mm` against
+ * `h:mm`, the twelve-hour hour carrying no leading zero because that is how it is read -- and either
+ * fits {@link CHARS.timeOfDay}. `meridiem` is `AM` or `PM` whatever the setting, and a surface draws
+ * it only while {@link twelveHour} holds: a word beside the value rather than part of it, because
+ * `M` is one of the glyphs rule 19 keeps out of a cell. `drawn` is where a word after the digits
+ * goes, since a twelve-hour hour is one digit or two and `9:05` placed as if it were `12:05` would
+ * stand its `PM` a cell off the figure -- the fault #387 removed from every other follower.
+ */
+export interface TimeOfDay {
+  text: Expr;
+  meridiem: Expr;
+  drawn: DrawnFigure;
+}
+
+/** The hours `from` to `to` as `HH` and `hh` write them, as the literals `in` compares against. */
+const writtenHours = (from: number, to: number): Expr[] => Array.from({ length: to - from + 1 }, (_, i) => str(String(from + i).padStart(2, '0')));
+
+/** How wide a clock's digits are: `14:32` always, and `12:05` or `9:05` on a twelve-hour clock. */
+const timeOfDayDrawn = (twoDigitHour: Expr): DrawnFigure =>
+  drawnEither(twelveHour(), drawnEither(twoDigitHour, drawnText('12:00'), drawnText('9:00')), drawnText('00:00'));
+
+/**
+ * The wall clock, from SimHub's own date property.
+ *
+ * The hour is asked of the formatted text rather than of a number, there being no function that
+ * takes a number out of a date: `HH` for the afternoon and `hh` for a two-digit twelve-hour hour,
+ * each matched against its written hours by `in`, which compares two strings as strings. SimHub sets
+ * its culture to en-US at startup (`SimHubWPF.exe`, decompiled from 9.12.6), so the separator a
+ * format writes is always the colon; `tt` would name the meridiem as well, and is not used, because
+ * a literal is a word the fit tests can read and a culture's designator is not.
+ */
+export const localClock = (): TimeOfDay => {
+  const now = prop('DataCorePlugin.CurrentDateTime');
+  return {
+    text: iff(twelveHour(), fmt(now, 'h:mm'), fmt(now, 'HH:mm')),
+    meridiem: iff(isIn(fmt(now, 'HH'), ...writtenHours(12, 23)), str('PM'), str('AM')),
+    drawn: timeOfDayDrawn(isIn(fmt(now, 'hh'), ...writtenHours(10, 12))),
+  };
+};
+
+/**
+ * The sim's clock, from its seconds of day.
+ *
+ * Arithmetic rather than a format, the time of day being a number of seconds: the hour is taken
+ * modulo 24, so a session clock that reaches midnight reads `00:00` rather than `24:00`, and the
+ * twelve-hour hour is that hour moved onto 1 to 12, midnight and noon both reading 12.
+ */
+export const simClock = (): TimeOfDay => {
+  const seconds = simTimeOfDay();
+  const hour = mod(truncate(div(seconds, num(3600))), num(24));
+  const hour12 = add(mod(add(hour, num(11)), num(12)), num(1));
+  const minutes = fmt(truncate(div(mod(seconds, num(3600)), num(60))), '00');
+  return {
+    text: iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)),
+    meridiem: iff(ge(hour, num(12)), str('PM'), str('AM')),
+    drawn: timeOfDayDrawn(ge(hour12, num(10))),
+  };
+};
 
 /** Incidents taken, which iRacing publishes raw and other sims do not publish at all. */
 export const incidents = (): Expr => raw('PlayerCarMyIncidentCount');
 /** The incident limit, a string in iRacing's session YAML ("unlimited" or a number). */
 export const incidentLimit = (): Expr => prop('DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit');
+/** The session has a limit to count incidents against: one is published and it is not "unlimited". */
+export const hasIncidentLimit = (): Expr => and(not(isNull(incidentLimit())), ne(incidentLimit(), str('unlimited')));
 
 // --- Tyres ------------------------------------------------------------------------------------
 

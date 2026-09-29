@@ -21,7 +21,7 @@ import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Ch
 import { label } from '../elements/label.ts';
 import { mark, type Mark, unmarked } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
-import { charsOfText, drawnFigure, type DrawnFigure } from '../second/drawn.ts';
+import { charsOfText, drawnFigure, drawnWithin, type DrawnFigure } from '../second/drawn.ts';
 import { rank, type RankMember } from '../second/rank.ts';
 import { TRACKED_VALUES } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
@@ -33,6 +33,7 @@ import {
   currentLap,
   incidents,
   localClock,
+  meridiemWidest,
   player,
   positionDigits,
   positionDrawn,
@@ -40,12 +41,14 @@ import {
   sessionClock,
   simClock,
   totalLaps,
+  twelveHour,
   untimedMark,
   roadTemperature,
+  type TimeOfDay,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { add, fmt, isnull, num, str, iff, eq, concat, driver, playerPosition } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, concat, driver, playerPosition } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -85,6 +88,19 @@ interface BarFieldSpec {
   /** A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. */
   denominator?: { sample: string; bind: string; chars: Chars };
   /**
+   * A word after the value, drawn only while `when` holds: the `AM` or `PM` of a clock the rig writes
+   * to twelve hours (#324). It is set as the denominator is -- after a gap, at the denominator's size
+   * and in its dimmer ink -- but proportionally, because `M` is one of the glyphs rule 19 keeps out
+   * of a cell.
+   *
+   * The field is measured with it whatever the setting, the box being cut at build time and the
+   * setting read at runtime, so a box never holds the shorter clock and clips the longer. What moves
+   * with the setting is the value: a field of the right end draws its digits against the padding
+   * while there is no word, and one word in from it while there is. A field of the left end draws its
+   * digits from its own edge either way and places the word after them by {@link BarFieldSpec.drawn}.
+   */
+  suffix?: { sample: string; bind: string; widest: string; when: string };
+  /**
    * How wide the value really draws, for placing the denominator after the figure rather than after
    * the cells the figure is cut from. A field of the left end is drawn from its own edge, so lap 4
    * in a two-digit budget carried `/ 32` a whole cell further out than lap 16 did; a field of the
@@ -93,6 +109,23 @@ interface BarFieldSpec {
    */
   drawn?: DrawnFigure;
 }
+
+/** The face the bar's followers are set in, which is the value's own. */
+const FOLLOWER_FACE = 'BarlowCondensedSemiBold';
+
+/**
+ * One of the two clocks of the day: its digits in {@link CHARS.timeOfDay} and its meridiem after
+ * them, which is what makes the field as wide as `2:32 PM` rather than as `14:32`. #324.
+ */
+const timeOfDayField = (id: string, label: string, sample: string, clock: TimeOfDay): BarFieldSpec => ({
+  id,
+  label,
+  sample,
+  bind: clock.text,
+  chars: CHARS.timeOfDay,
+  drawn: clock.drawn,
+  suffix: { sample: 'PM', bind: clock.meridiem, widest: meridiemWidest(FOLLOWER_FACE), when: twelveHour() },
+});
 
 /**
  * The widest class and position the bar promises to draw: a four-character class name and a
@@ -114,8 +147,8 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
   },
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
-  { id: 'clock', label: 'Clock', sample: '14:32', bind: localClock(), chars: CHARS.clock },
-  { id: 'simulatedTime', label: 'Real time', sample: '19:26', bind: simClock(), chars: CHARS.clock },
+  timeOfDayField('clock', 'Clock', '14:32', localClock()),
+  timeOfDayField('simulatedTime', 'Real time', '19:26', simClock()),
   // The two position cells answer two questions, and cannot contradict each other on one face.
   //
   // `position` is the place the rig counts, which is `PositionMode`: in class by default, over the
@@ -254,10 +287,20 @@ const valueWidth = (spec: BarFieldSpec, fs: number): number =>
 const denominatorWidth = (spec: BarFieldSpec, fs: number): number =>
   spec.denominator ? monoWidth(cells('SemiBold', fs), spec.denominator.chars) : 0;
 
-/** Width a bar end field takes: its value, its denominator, and the label above them. */
+/** Width a field's suffix takes, measured by the widest word it can draw, and nothing for a field that has none. */
+const suffixWidth = (spec: BarFieldSpec, fs: number): number => (spec.suffix ? Math.ceil(measureText(FOLLOWER_FACE, spec.suffix.widest, fs)) : 0);
+
+/** The room after a field's value: its denominator or its suffix and the gap in front of it. */
+function followerRoom(spec: BarFieldSpec, fs: number): number {
+  if (spec.denominator && spec.suffix) throw new Error(`bar field ${spec.id}: a denominator and a suffix both want the place after the value`);
+  if (spec.denominator) return DENOMINATOR_GAP + denominatorWidth(spec, fs);
+  if (spec.suffix) return DENOMINATOR_GAP + suffixWidth(spec, fs);
+  return 0;
+}
+
+/** Width a bar end field takes: its value, what follows it, and the label above them. */
 function fieldWidth(spec: BarFieldSpec, scale: BarScale): number {
-  const denominator = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, scale.denominatorSize) : 0;
-  return Math.ceil(Math.max(valueWidth(spec, scale.valueSize) + denominator, labelWidth(spec.label)));
+  return Math.ceil(Math.max(valueWidth(spec, scale.valueSize) + followerRoom(spec, scale.denominatorSize), labelWidth(spec.label)));
 }
 
 export interface BarOptions {
@@ -323,18 +366,48 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
       // the denominator against the padding and the value one gap in front of it.
       const value = valueWidth(spec, valueSize) + boxSlack(valueSize);
       const denominator = denominatorWidth(spec, denominatorSize) + boxSlack(denominatorSize);
-      const after = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, denominatorSize) : 0;
+      const after = followerRoom(spec, denominatorSize);
       const valueX = align === 'left' ? x : x + widest - after - value;
+      // A suffix is there only while its setting says so, and a right-hand value is drawn against
+      // the padding while it is not: its design-time place is the one without the word, which is
+      // what every rig draws until the setting is changed.
+      const withoutSuffix = align === 'right' && spec.suffix ? x + widest - value : undefined;
       items.push(
         withMoreBindings(
-          numeral(`${name}.value`, spec.sample, valueX, valueTop, valueSize, spec.chars, {
+          numeral(`${name}.value`, spec.sample, withoutSuffix ?? valueX, valueTop, valueSize, spec.chars, {
             width: value,
             hAlign: align,
             ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
           }),
-          { Visible: unmarked(spec.mark, visible), Text: spec.bind },
+          {
+            Visible: unmarked(spec.mark, visible),
+            Text: spec.bind,
+            Left: withoutSuffix === undefined || !spec.suffix ? undefined : iff(spec.suffix.when, num(valueX), num(withoutSuffix)),
+          },
         ),
       );
+      if (spec.suffix) {
+        // After the figure rather than after the cells it is cut from, as a denominator is: a
+        // twelve-hour hour is one digit or two, and `9:05` is a cell shorter than `12:05`. A right-hand
+        // one sits against the padding, where the right-aligned value leaves it one gap clear.
+        const mono = cells('SemiBold', valueSize);
+        if (spec.drawn === undefined) throw new Error(`bar field ${spec.id}: a suffix needs the width its value really draws`);
+        const box = suffixWidth(spec, denominatorSize) + boxSlack(denominatorSize);
+        const sx = align === 'left' ? x + monoWidth(mono, charsOfText(spec.sample, mono)) + DENOMINATOR_GAP : x + widest - box;
+        const leftBind = align === 'left' ? add(num(x), drawnWithin(`bar field ${spec.id}`, spec.drawn, spec.chars, mono), num(DENOMINATOR_GAP)) : undefined;
+        items.push(
+          withMoreBindings(
+            numeral(`${name}.unit`, spec.suffix.sample, sx, denominatorTop, denominatorSize, charsOfText(spec.suffix.sample, mono), {
+              proportional: true,
+              widest: spec.suffix.widest,
+              color: ds.color.text.secondary,
+              width: box,
+              hAlign: align,
+            }),
+            { Visible: and(visible, spec.suffix.when), Text: spec.suffix.bind, Left: leftBind },
+          ),
+        );
+      }
       // The mark shares the value's box and alignment, so a right-hand slot draws it against the
       // padding where the clock's last digit was, and the field is the width it always was.
       if (spec.mark) items.push(mark(`${name}.mark`, spec.mark, valueX, valueTop, valueSize, visible, { width: value, hAlign: align }));

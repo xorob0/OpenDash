@@ -5,14 +5,17 @@
  * Band D used to draw the six flags SimHub normalises and the 8x8 box drew all fifteen conditions
  * of `FLAG_CATALOGUE`, so a red flag, a disqualification, a furled black, a meatball, a full-course
  * caution, a waved yellow, the debris flag and the start gantry were on the box and invisible on
- * the dash. The band reads the catalogue now. What is asserted here is what that costs: that the
- * fifteen still exclude one another exactly as the box's do, that each takes one of the three
- * shapes and no fourth, and that every one of them is opaque over the whole band, since a flag
+ * the dash. The band reads the catalogue now, and since #109 the catalogue is twenty: the fifteen
+ * flags and five car alerts, ranked in one list. What is asserted here is what that costs: that the
+ * twenty still exclude one another, the flags exactly as the box's do, that each takes one of the
+ * three shapes and no fourth, and that every one of them is opaque over the whole band, since a flag
  * takes band D over precisely so that the page underneath cannot be read.
  *
  * Nothing in the repository evaluates a binding, so `visible()` below carries the same small
  * boolean evaluator `flagBox.test.ts` does, for the subset of NCalc these conditions are built
- * from. It is what makes the several-conditions-at-once table possible at all.
+ * from, and stands a car alert's whole condition in for one truth value, as it does a bit. What each
+ * of those conditions says is held in `alertCatalogue.test.ts`; here it is only raised or not. It is
+ * what makes the several-conditions-at-once table possible at all.
  */
 import { describe, expect, test } from 'bun:test';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
@@ -20,7 +23,7 @@ import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
 import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
 import { contains, rect } from '../src/design/geometry.ts';
-import { flagBit, FLAG_CATALOGUE, type SessionFlagBit } from '../src/flags.ts';
+import { ALERT_CATALOGUE, flagBit, isFlag, type SessionFlagBit } from '../src/flags.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -44,14 +47,22 @@ const layerOf = (id: string, frame: Rect = WIDE, style: AlertBandStyle = ALERT_B
 const rects = (item: Item): RectangleItem[] => [...walkItems([item])].filter((i): i is RectangleItem => i.kind === 'rect');
 const texts = (item: Item): TextItem[] => [...walkItems([item])].filter((i): i is TextItem => i.kind === 'text');
 
+/** A bit iRacing sets, or the id of a car alert whose whole condition holds. */
+type Raised = SessionFlagBit | 'ignition' | 'engine' | 'incident' | 'pushToPass' | 'headlightFlash';
+
 /**
- * Evaluates one band's `Visible` with the named bits set and the named normalised properties at 1.
- * Handles exactly what flags.ts emits for the band: parenthesised `and`, `or`, `!`, and
- * `isnull([prop], 0) = 1`. Anything else throws rather than guessing.
+ * Evaluates one band's `Visible` with the named bits set, the named car alerts raised and the named
+ * normalised properties at 1. Handles exactly what flags.ts emits for the band: parenthesised `and`,
+ * `or`, `!`, `isnull([prop], 0) = 1` and a car alert's `when`, which it replaces whole. Anything else
+ * throws rather than guessing.
  */
-function visible(layer: LayerItem, set: readonly SessionFlagBit[], normalised: readonly string[] = []): boolean {
+function visible(layer: LayerItem, set: readonly Raised[], normalised: readonly string[] = []): boolean {
   let s = String(layer.bindings?.Visible?.formula ?? '');
-  for (const condition of FLAG_CATALOGUE) {
+  // The alerts first, whole: their conditions are the only text here that is not a bit read.
+  for (const condition of ALERT_CATALOGUE) {
+    if (!isFlag(condition)) s = s.split(condition.when).join(set.includes(condition.id as Raised) ? '1 = 1' : '0 = 1');
+  }
+  for (const condition of ALERT_CATALOGUE.filter(isFlag)) {
     for (const bit of condition.bits) s = s.split(`isnull(${flagBit(bit)}, 0)`).join(set.includes(bit) ? '1' : '0');
     if (condition.limiter) s = s.split(`isnull([DataCorePlugin.GameData.${condition.limiter}], 0)`).join(normalised.includes(condition.limiter) ? '1' : '0');
   }
@@ -60,8 +71,8 @@ function visible(layer: LayerItem, set: readonly SessionFlagBit[], normalised: r
   return Boolean(new Function(`return (${s});`)());
 }
 
-/** Which band draws with these bits raised, or undefined when none does. */
-function shown(set: readonly SessionFlagBit[], normalised: readonly string[] = []): string | undefined {
+/** Which band draws with these raised, or undefined when none does. */
+function shown(set: readonly Raised[], normalised: readonly string[] = []): string | undefined {
   const drawn = layers().filter((l) => visible(l, set, normalised));
   // The assertion that matters: never two. One flag at a time is a property of the ranking rather
   // than of who draws last, because a band covers the page under it whichever order it is in.
@@ -74,15 +85,15 @@ function shown(set: readonly SessionFlagBit[], normalised: readonly string[] = [
 
 describe('the band is the catalogue', () => {
   test('one layer per condition, in the catalogue’s order', () => {
-    expect(layers().map((l) => l.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
+    expect(layers().map((l) => l.name)).toEqual(ALERT_CATALOGUE.map((c) => `flag.${c.id}`));
   });
 
   test('three shapes and no fourth', () => {
-    expect(new Set(FLAG_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer']));
+    expect(new Set(ALERT_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer']));
   });
 
   test('every band names itself, except the chequer, which has no name to write', () => {
-    for (const condition of FLAG_CATALOGUE) {
+    for (const condition of ALERT_CATALOGUE) {
       const names = texts(layerOf(condition.id)).map((t) => t.text);
       if (condition.band.shape === 'chequer') {
         expect({ id: condition.id, names }).toEqual({ id: condition.id, names: [] });
@@ -124,11 +135,41 @@ describe('the band is the catalogue', () => {
     expect(runs[2]!.bindings?.Text?.formula).toContain(carBehindPositionClass());
   });
 
-  test('the nano writes no name at all, at any of the fifteen', () => {
-    for (const condition of FLAG_CATALOGUE) {
-      const nano = layerOf(condition.id, rect(0, 274, 800, 12), ALERT_BAND_STYLES.nano);
-      expect({ id: condition.id, names: texts(nano).length }).toEqual({ id: condition.id, names: 0 });
+  test('the nano writes no name at all, on any condition it draws', () => {
+    const strip = rect(0, 274, 800, 12);
+    for (const condition of ALERT_CATALOGUE) {
+      const nano = layers(strip, ALERT_BAND_STYLES.nano).find((l) => l.name === `flag.${condition.id}`);
+      if (nano) expect({ id: condition.id, names: texts(nano).length }).toEqual({ id: condition.id, names: 0 });
     }
+  });
+
+  test('a neutral alert is its name, so where no name is written it draws nothing at all', () => {
+    // Push to pass and the headlight flash are white, and white without a word is the white flag
+    // filled and the black family outlined. The nano writes no word, so they have no layer there;
+    // every other condition keeps its colour, which is what the nano's strip is.
+    const nano = layers(rect(0, 274, 800, 12), ALERT_BAND_STYLES.nano).map((l) => l.name.slice('flag.'.length));
+    expect(nano).toEqual(ALERT_CATALOGUE.map((c) => c.id).filter((id) => id !== 'pushToPass' && id !== 'headlightFlash'));
+    // And the colour they would have drawn is the one that makes it necessary.
+    expect(ds.purpose.alert.p2p).toBe(ds.purpose.flag.white);
+  });
+
+  test('the incident writes its count against its limit while it has the whole band', () => {
+    // The one band with a number to say. The run is bound, and declares the widest string it can
+    // draw, since WPF clips whatever does not fit and a bound run measured on its sample is a run
+    // measured on the wrong string. It opens with the label the corner blocks keep.
+    const runs = texts(layerOf('incident'));
+    expect(runs.map((r) => r.name)).toEqual(['flag.incident.label']);
+    const run = runs[0]!;
+    expect(run.text).toBe('INCIDENT · 4x / 17');
+    expect(run.widest).toBe('INCIDENT · 999x / 999');
+    const bind = String(run.bindings?.Text?.formula ?? '');
+    expect(bind).toContain('[DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount]');
+    expect(bind).toContain('WeekendOptions.IncidentLimit');
+    // A session with no limit writes the count alone rather than "/ unlimited".
+    expect(bind).toContain("'unlimited'");
+    // Outlined in the incident's amber, because filled it would be the meatball's band.
+    expect(ds.purpose.alert.incident).toBe(ds.purpose.flag.orange);
+    expect(run.textColor).toBe(ds.purpose.alert.incident);
   });
 });
 
@@ -138,7 +179,7 @@ describe('every shape is opaque over the whole band', () => {
   // phase a flashing one is in, it has to leave nothing of the page showing.
   for (const frame of [WIDE, NARROW]) {
     test(`at ${frame.width} x ${frame.height} each band grounds itself and stays inside band D`, () => {
-      for (const condition of FLAG_CATALOGUE) {
+      for (const condition of ALERT_CATALOGUE) {
         const layer = layerOf(condition.id, frame);
         const ground = rects(layer)[0];
         if (!ground) throw new Error(`${condition.id} draws no ground`);
@@ -156,7 +197,7 @@ describe('every shape is opaque over the whole band', () => {
   test('an outlined band grounds itself in surface.base and wears its colour on the border and the name', () => {
     // It is the generalisation of what the black flag alone used to be: purpose.flag.black is
     // #F5F7FA, the ink rather than the ground, so a band filled with it would be the white flag.
-    for (const condition of FLAG_CATALOGUE) {
+    for (const condition of ALERT_CATALOGUE) {
       const spec = condition.band;
       if (spec.shape !== 'outlined') continue;
       const layer = layerOf(condition.id);
@@ -169,11 +210,21 @@ describe('every shape is opaque over the whole band', () => {
       });
       expect({ id: condition.id, ink: texts(layer)[0]?.textColor }).toEqual({ id: condition.id, ink: colour });
     }
-    expect(FLAG_CATALOGUE.filter((c) => c.band.shape === 'outlined').map((c) => c.id)).toEqual(['disqualify', 'furled', 'black', 'startSet', 'startReady']);
+    expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'outlined').map((c) => c.id)).toEqual([
+      'ignition',
+      'engine',
+      'disqualify',
+      'furled',
+      'black',
+      'incident',
+      'startSet',
+      'startReady',
+      'headlightFlash',
+    ]);
   });
 
   test('a filled band wears its colour on the fill and the border and writes its name in onFlag', () => {
-    for (const condition of FLAG_CATALOGUE) {
+    for (const condition of ALERT_CATALOGUE) {
       const spec = condition.band;
       if (spec.shape !== 'filled') continue;
       const layer = layerOf(condition.id);
@@ -194,7 +245,7 @@ describe('every shape is opaque over the whole band', () => {
     expect(flashing.map((i) => i.name)).toEqual(['flag.yellowWaving.flash']);
     expect(flashing[0]?.blink).toEqual({ enabled: true, delayMs: ALERT_FLASH_MS });
     expect((flashing[0] as RectangleItem).backgroundColor).toBe(ds.color.surface.base);
-    for (const condition of FLAG_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
+    for (const condition of ALERT_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
       const blinking = [...walkItems([layerOf(condition.id)])].filter((i) => i.blink?.enabled);
       expect({ id: condition.id, blinking: blinking.map((i) => i.name) }).toEqual({ id: condition.id, blinking: [] });
     }
@@ -206,7 +257,7 @@ describe('several conditions raised at once', () => {
   // cautionWaving, and the last lap of a race under a black flag is two at once. The band draws
   // one, so the only question that matters is which -- and it has to be the same answer the box
   // gives, or a driver with both in front of them is told two different things.
-  const cases: { name: string; bits: SessionFlagBit[]; expect: string | undefined }[] = [
+  const cases: { name: string; bits: Raised[]; expect: string | undefined }[] = [
     { name: 'nothing out', bits: [], expect: undefined },
     { name: 'a local yellow', bits: ['yellow'], expect: 'yellow' },
     { name: 'a waved yellow also sets yellow', bits: ['yellow', 'yellowWaving'], expect: 'yellowWaving' },
@@ -220,13 +271,40 @@ describe('several conditions raised at once', () => {
     { name: 'a yellow thrown at a chequered finish', bits: ['checkered', 'yellow'], expect: 'yellow' },
     { name: 'the start gantry', bits: ['startReady'], expect: 'startReady' },
     { name: 'set outranks ready, because it is later', bits: ['startReady', 'startSet'], expect: 'startSet' },
+    // The car alerts, ranked in the same list. A car that cannot move outranks every flag, which is
+    // the canvas's order: nothing else on the band is actionable until the engine is running.
+    { name: 'a stall under a red flag', bits: ['engine', 'red'], expect: 'engine' },
+    { name: 'the ignition off names the switch rather than the stall it causes', bits: ['ignition', 'engine', 'yellow'], expect: 'ignition' },
+    { name: 'an incident under a yellow waits for the yellow', bits: ['incident', 'yellow'], expect: 'yellow' },
+    { name: 'an incident under a caution waits for it too', bits: ['incident', 'yellow', 'caution', 'cautionWaving'], expect: 'caution' },
+    { name: 'an incident under debris waits for it', bits: ['incident', 'debris'], expect: 'debris' },
+    { name: 'an incident is told over a blue flag', bits: ['incident', 'blue'], expect: 'incident' },
+    { name: 'an incident on the last lap', bits: ['incident', 'white'], expect: 'incident' },
+    { name: 'a meatball after the contact that earned it', bits: ['incident', 'repair'], expect: 'meatball' },
+    { name: 'push to pass on the last lap', bits: ['pushToPass', 'white'], expect: 'white' },
+    { name: 'push to pass under a chequered finish', bits: ['pushToPass', 'checkered'], expect: 'chequered' },
+    { name: 'push to pass alone', bits: ['pushToPass'], expect: 'pushToPass' },
+    { name: 'a flash while pushing to pass', bits: ['headlightFlash', 'pushToPass'], expect: 'pushToPass' },
+    { name: 'a flash while being lapped', bits: ['headlightFlash', 'blue'], expect: 'blue' },
+    { name: 'a flash alone', bits: ['headlightFlash'], expect: 'headlightFlash' },
+    { name: 'every car alert at once', bits: ['ignition', 'engine', 'incident', 'pushToPass', 'headlightFlash'], expect: 'ignition' },
   ];
   for (const c of cases) test(c.name, () => expect(shown(c.bits)).toBe(c.expect));
 
-  test('exactly one band is ever drawn, whichever bits are set', () => {
-    // Every pair in the catalogue, which is the case a hand-written list of examples misses.
-    const bits = FLAG_CATALOGUE.flatMap((c) => c.bits);
-    for (const a of bits) for (const b of bits) expect(() => shown([a, b])).not.toThrow();
+  test('exactly one band is ever drawn, whichever conditions are raised', () => {
+    // Every pair in the catalogue, which is the case a hand-written list of examples misses, and
+    // the winner of every pair is the one the catalogue ranks first.
+    const raisers: Raised[] = ALERT_CATALOGUE.flatMap((c): Raised[] => (isFlag(c) ? [...c.bits] : [c.id as Raised]));
+    for (const a of raisers) for (const b of raisers) expect(() => shown([a, b])).not.toThrow();
+    const alone = (r: Raised): string | undefined => shown([r]);
+    const rank = (id: string | undefined): number => ALERT_CATALOGUE.findIndex((c) => c.id === id);
+    for (const a of raisers) {
+      for (const b of raisers) {
+        const [ra, rb] = [alone(a), alone(b)];
+        if (ra === undefined || rb === undefined) continue;
+        expect({ a, b, shown: shown([a, b]) }).toEqual({ a, b, shown: rank(ra) <= rank(rb) ? ra : rb });
+      }
+    }
   });
 
   test('the green is the flag SimHub limits, so band D is not green for a whole race', () => {
