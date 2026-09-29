@@ -80,23 +80,18 @@ namespace OpenDashPlugin
         ///
         /// A shape this build did not embed has no row at all, which is the honest answer: a row for a
         /// profile that is not there could only offer a press that does nothing.
+        ///
+        /// The rows' names come from <see cref="EmbeddedProfileNames"/>, read once for the plugin's lifetime,
+        /// and only the rig's own strips' profiles are opened for the census: this unpacked all 122 on every
+        /// build, and a build is now also a resize or a return to the panel.
         /// </remarks>
         private IList<UIElement> BuildStripRows(Assembly assembly, out bool unavailable)
         {
-            var log = new SimHubInstallLog();
-            var json = new Dictionary<string, string>(StringComparer.Ordinal);
-            var profiles = new List<LightProfile>();
-            foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
-            {
-                var id = FlagBoxProfile.ShapeIdOf(resource);
-                if (id == null || json.ContainsKey(id)) continue;
-                var text = FlagBoxProfile.ResourceText(assembly, resource, log);
-                json[id] = text;
-                profiles.Add(new LightProfile(id, FlagBoxProfile.ProfileNameOf(text)));
-            }
+            var profiles = EmbeddedProfileNames(assembly).Select(pair => new LightProfile(pair.Key, pair.Value)).ToList();
+            Func<IDictionary<string, string>> rigJson = () => EmbeddedJsonFor(Settings.LedBarList().Where(bar => bar != null).Select(bar => bar.ProfileShapeId));
 
             bool reachable;
-            var bars = BarCensus(json, out reachable);
+            var bars = BarCensus(rigJson(), out reachable);
             unavailable = !reachable;
 
             var drawn = new List<UIElement>();
@@ -113,7 +108,7 @@ namespace OpenDashPlugin
                     row.Caption,
                     shapeIds.Count,
                     PanelLightRows.RowPlan(shapeIds, bars, reachable),
-                    () => UpdateBars(shapeIds, json)));
+                    () => UpdateBars(shapeIds, rigJson())));
             }
             return drawn;
         }

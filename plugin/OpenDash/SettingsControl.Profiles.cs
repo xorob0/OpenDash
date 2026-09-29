@@ -13,6 +13,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -156,6 +157,36 @@ namespace OpenDashPlugin
                 if (id != null && seen.Add(id)) ids.Add(id);
             }
             return ids;
+        }
+
+        /// <summary>Every embedded strip profile's name, by shape id in resource order, once read.</summary>
+        private static List<KeyValuePair<string, string>> embeddedNames;
+
+        /// <summary>
+        /// The name of every strip profile this build embedded, by shape id, in the order the resources are:
+        /// what the Updates page's census rows are called.
+        /// </summary>
+        /// <remarks>
+        /// A profile's name is inside its JSON, so each is opened once, for the plugin's lifetime, and only
+        /// its name is kept: <see cref="EmbeddedJsonFor"/> would pin all 44 million characters for as long.
+        /// </remarks>
+        private static IList<KeyValuePair<string, string>> EmbeddedProfileNames(Assembly assembly)
+        {
+            lock (embeddedJson)
+            {
+                if (embeddedNames != null) return embeddedNames;
+                var names = new List<KeyValuePair<string, string>>();
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                var log = new SimHubInstallLog();
+                foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
+                {
+                    var id = FlagBoxProfile.ShapeIdOf(resource);
+                    if (id == null || !seen.Add(id)) continue;
+                    names.Add(new KeyValuePair<string, string>(id, FlagBoxProfile.ProfileNameOf(FlagBoxProfile.ResourceText(assembly, resource, log))));
+                }
+                embeddedNames = names;
+                return names;
+            }
         }
 
         /// <summary>The profiles already opened, by shape id: a resource cannot change while the plugin runs.</summary>
