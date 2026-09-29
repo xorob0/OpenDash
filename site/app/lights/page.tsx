@@ -111,10 +111,10 @@ export default function Lights() {
 
       <Section
         id="tab"
-        title="The Lights tab"
-        lede="The flag box and up to four matrix panels, a low fuel warning in laps, a strip per device with its centre display and rev style, the car tables, and brightness and night mode for every light."
+        title="In the plugin"
+        lede="The LEDs page holds a group per strip, with its centre display and the car’s own rev lights, and the car tables. The Matrix page holds the flag box and up to four matrix panels. Settings holds the low fuel warning in laps, and brightness and night mode for every light."
       >
-        <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub" width={panel?.width ?? 1200} height={panel?.height ?? 1790} caption="The Lights tab" />
+        <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub, from before the panel became pages" width={panel?.width ?? 1200} height={panel?.height ?? 1790} caption="The Lights tab, before the LEDs and Matrix pages replaced it. A new capture comes with the next screenshot pass." />
         <p className={`prose ${styles.more}`}>
           <Link href={INSTALL.href} className="link">
             How to install the plugin

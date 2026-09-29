@@ -80,10 +80,9 @@ Close SimHub, unzip the archive and copy `OpenDash.dll` into SimHub's install fo
 holding `SimHubWPF.exe`, rather than into a subfolder of it. Unblock the file, then start SimHub
 and, in the prompt it shows, switch OpenDash on and then "Show in left main menu", which appears
 once the first switch is on, before pressing Ok. An "OpenDash" page appears in the left menu; on
-its Rig tab, add the
-screen your rig has, and the plugin writes that dashboard into SimHub. `OpenDash 850x480` is the
-base size and the one to take if nothing matches your display exactly; `OpenDash 1280x480` is the
-large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
+its Screens page, add the screen your rig has, and the plugin writes that dashboard into SimHub.
+`OpenDash 850x480` is the base size and the one to take if nothing matches your display exactly;
+`OpenDash 1280x480` is the large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
 when it starts. The full procedure, the table of sizes and the troubleshooting list are in
 [plugin/INSTALL.md](plugin/INSTALL.md).
 
