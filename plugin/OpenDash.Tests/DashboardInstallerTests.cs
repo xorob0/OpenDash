@@ -1,9 +1,10 @@
 // DashboardInstallerTests.cs: the installer against a temporary SimHub root and synthetic packages: every embedded
 // package is installed, only the ones that need it unless forced, the worst status wins, a broken package does not stop
-// the others, a second screen of a size is kept current and held back on the same terms as the first, a leftover folder
-// outside the rig is asked about by nothing, the panel's summary text, and the embedded resource naming (spaces in a
-// file name survive). Also the pure InstalledVersionFrom: an absent folder is not installed, a folder without a usable
-// sidecar is reinstalled.
+// the others, a second screen of a size is kept current and held back on the same terms as the first, a stock folder the
+// settings spell in another case is written as its package spells it, a card face is written whether it is the first of
+// its package or a second, with nothing rewritten, a leftover folder outside the rig is asked about by nothing, the
+// panel's summary text, and the embedded resource naming (spaces in a file name survive). Also the pure
+// InstalledVersionFrom: an absent folder is not installed, a folder without a usable sidecar is reinstalled.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -276,6 +277,309 @@ namespace OpenDashPlugin.Tests
             var gone = Stock("OpenDash Gone", 640, 480, "Gone");
             gone.Namespace = "Gone";
             Assert.Contains("ships no package", installer.Write(gone).Error);
+        }
+
+        // A stock folder the settings still spell as they did before #374 (#467)
+
+        private const string RoundName = "OpenDashPlugin.Resources.OpenDash 480 round.simhubdash";
+        private const string RoundFolder = "OpenDash 480 round";
+
+        private static MemoryPackageSource FaceAndRound(string version)
+        {
+            return new MemoryPackageSource()
+                .Add(FaceName, SyntheticPackage.Instanceable(FaceFolder, "Face850x480", version))
+                .Add(RoundName, SyntheticPackage.Zip(RoundFolder, version));
+        }
+
+        /// <summary>The folders under DashTemplates as the filesystem spells them, which a lookup by name cannot tell
+        /// where the filesystem ignores case.</summary>
+        private string[] SpelledFolders()
+        {
+            return Directory.GetDirectories(Path.Combine(root, PackageExtractor.DashTemplates))
+                .Select(Path.GetFileName)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private bool HasDashboardSpelled(string folder)
+        {
+            return Directory.GetFiles(PackageExtractor.InstalledFolder(root, folder))
+                .Select(Path.GetFileName)
+                .Contains(folder + PackageExtractor.DashExtension, StringComparer.Ordinal);
+        }
+
+        /// <summary>
+        /// The ticket's rig: settings written before #374 spell the stock folders "openDash", while the packages, the
+        /// folders on disk and the dashboard SimHub reopens spell them "OpenDash". An update start writes each folder as
+        /// its package spells it and corrects the settings, and neither a plain restart nor a reinstall moves it after.
+        /// </summary>
+        /// <remarks>
+        /// Measured on the VM before this: since #455 every update start wrote a stock folder under the settings'
+        /// spelling, and SimHub, which matches the dashboard it reopens against the folder name with regard to case,
+        /// did not reopen it at the restart that followed. The rig is built the way such a rig came to be, by the
+        /// migration of ADR 0017 reading the folders off a record written before #374. The round face is here because
+        /// its package has no namespace to rewrite: while a card face's namespace was spelled from its folder, a folder
+        /// corrected under it made it read as a copy, and its package was refused (#474).
+        /// </remarks>
+        [Fact]
+        public void A_start_over_settings_that_spell_the_stock_folder_the_old_way_writes_it_as_its_package_does()
+        {
+            PackageExtractor.Install(SyntheticPackage.Instanceable(FaceFolder, "Face850x480", "0.3.0-rc.7"), root, null);
+            PackageExtractor.Install(SyntheticPackage.Zip(RoundFolder, "0.3.0-rc.7"), root, null);
+            var settings = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "openDash 850x480", FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, FaceFolder)) },
+                    { "openDash 480 round", FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, RoundFolder)) },
+                },
+            };
+            settings.Normalise();
+            var wheel = settings.RigScreens().Single(screen => screen.IsFace);
+            var round = settings.RigScreens().Single(screen => !screen.IsFace);
+            Assert.Equal("openDash 850x480", wheel.Folder);
+            Assert.Equal("openDash 480 round", round.Folder);
+            Assert.Equal("SlotsopenDash480Round", round.Namespace);
+
+            var record = new SettingsFolderRecord(() => settings);
+            var update = new DashboardInstaller(root, null, FaceAndRound("0.3.0-rc.8"), record) { Rig = () => settings.RigScreens() };
+            update.EnsureInstalled(false);
+
+            Assert.All(update.Packages, entry => Assert.Null(entry.Error));
+            Assert.All(update.Packages, entry => Assert.True(entry.Extracted));
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+            Assert.True(HasDashboardSpelled(FaceFolder));
+            Assert.True(HasDashboardSpelled(RoundFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, FaceFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, RoundFolder));
+
+            // The settings are corrected, the round face keeps the namespace the migration gave it, since a folder
+            // spelled anew moves no namespace, and the record is kept under the spelling that was written, so nothing
+            // reads the old one again.
+            Assert.Equal(FaceFolder, wheel.Folder);
+            Assert.Equal(RoundFolder, round.Folder);
+            Assert.Equal("SlotsopenDash480Round", round.Namespace);
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, settings.FolderFingerprints.Keys.OrderBy(key => key, StringComparer.Ordinal));
+            Assert.Equal(FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, FaceFolder)), record.Get(FaceFolder));
+
+            // A plain restart finds nothing to do and nothing edited.
+            var restart = new DashboardInstaller(root, null, FaceAndRound("0.3.0-rc.8"), record) { Rig = () => settings.RigScreens() };
+            restart.EnsureInstalled(false);
+            Assert.All(restart.Packages, entry => Assert.False(entry.Extracted || entry.Edited));
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+
+            // Nor does a reinstall, or a press on the Rig tab, spell it otherwise.
+            restart.EnsureInstalled(true);
+            Assert.All(restart.Packages, entry => Assert.True(entry.Extracted && !entry.HeldBack));
+            Assert.Equal(FaceFolder, restart.Write(wheel).Folder);
+            Assert.Equal(new[] { RoundFolder, FaceFolder }, SpelledFolders());
+            Assert.True(HasDashboardSpelled(FaceFolder));
+        }
+
+        // A card face, whose package carries no namespace of its own (#474)
+
+        private const string LargeRoundName = "OpenDashPlugin.Resources.OpenDash 800 round.simhubdash";
+        private const string LargeRoundFolder = "OpenDash 800 round";
+        private const string SecondRoundFolder = "OpenDash Round (2)";
+
+        /// <summary>The two card faces a release carries, the round ones, sized in their sidecars as the build writes them.</summary>
+        private static MemoryPackageSource Rounds(string version)
+        {
+            return new MemoryPackageSource()
+                .Add(RoundName, SyntheticPackage.CardFace(RoundFolder, 480, 480, version))
+                .Add(LargeRoundName, SyntheticPackage.CardFace(LargeRoundFolder, 800, 800, version));
+        }
+
+        private DashboardInstaller OverSettings(IPackageSource packages, OpenDashSettings settings)
+        {
+            return new DashboardInstaller(root, null, packages, new SettingsFolderRecord(() => settings)) { Rig = () => settings.RigScreens() };
+        }
+
+        /// <summary>
+        /// The ticket's own presses: on a fresh rig, "Card face", "480 round" added from the Rig tab, and then the same
+        /// again. The first is written as its package's stock screen and the second as a copy in a folder of its own,
+        /// and a start afterwards finds both current.
+        /// </summary>
+        /// <remarks>
+        /// Measured on the VM before this: the first press read "Added Round, but its dashboard could not be installed:
+        /// The package mentions OpenDash.SlotsOpenDash480Round nowhere", and Install it again said the same. NewScreen
+        /// gave the screen its namespace before its folder, a card face's stock namespace was spelled from its folder,
+        /// and the installer took the difference for a second screen whose copy had to be rewritten, in a package that
+        /// names no namespace at all. The presses are made the way the Rig tab makes them: AddScreen, which is
+        /// PackageCatalogue.NewScreen, from the entry the catalogue reads off the package, and then Write.
+        /// </remarks>
+        [Fact]
+        public void A_card_face_added_to_a_fresh_rig_is_written_and_so_is_a_second_one()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var entry = PackageCatalogue.From(packages).Single(package => package.Folder == RoundFolder);
+            Assert.Equal(Contract.KindSlots, entry.Kind);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.Empty(settings.RigScreens());
+            var installer = OverSettings(packages, settings);
+
+            var first = settings.AddScreen(entry, PanelAddScreen.DefaultName(entry));
+            var written = installer.Write(first);
+
+            Assert.Null(written.Error);
+            Assert.True(written.Written);
+            Assert.Equal("Round", first.Name);
+            Assert.Equal(RoundFolder, first.Folder);
+            Assert.Equal("Slots480x480", first.Namespace);
+            Assert.True(first.IsStock);
+            Assert.True(HasDashboardSpelled(RoundFolder));
+            Assert.Equal("0.3.0-rc.8", PackageExtractor.ReadInstalledVersion(root, RoundFolder));
+            Assert.Contains("\"Title\":\"Round\"", File.ReadAllText(PackageExtractor.InstalledSidecar(root, RoundFolder)));
+
+            var second = settings.AddScreen(entry, PanelAddScreen.DefaultName(entry));
+            var again = installer.Write(second);
+
+            Assert.Null(again.Error);
+            Assert.True(again.Written);
+            Assert.Equal("Round (2)", second.Name);
+            Assert.Equal(SecondRoundFolder, second.Folder);
+            Assert.NotEqual(first.Namespace, second.Namespace);
+            Assert.True(HasDashboardSpelled(SecondRoundFolder));
+            Assert.Contains("\"Title\":\"Round (2)\"", File.ReadAllText(PackageExtractor.InstalledSidecar(root, SecondRoundFolder)));
+            // The copy reads the slots every card face shares, as the first does, since the package held nothing to
+            // point elsewhere.
+            Assert.Equal(1, Occurrences(SecondRoundFolder, "OpenDash.Slot1"));
+            Assert.Equal(0, Occurrences(SecondRoundFolder, "OpenDash." + second.Namespace));
+
+            // A start afterwards writes nothing, finds nothing edited and reads the rig as up to date.
+            installer.EnsureInstalled(false);
+            Assert.All(installer.Packages, package => Assert.Null(package.Error));
+            Assert.All(installer.Packages, package => Assert.False(package.Extracted || package.Edited));
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+            settings.Normalise();
+            Assert.Equal(new[] { first, second }, settings.RigScreens());
+        }
+
+        /// <summary>
+        /// A card face resized on the Edit panel to the other round is written in a folder of its own, as a face resized
+        /// to another size is.
+        /// </summary>
+        /// <remarks>
+        /// The same comparison was reached from here: the screen kept its namespace, its stock namespace followed the new
+        /// size, and the copy was refused for want of anything to rewrite. The panel removes the old folder first, as
+        /// the Rig tab does before it asks the settings.
+        /// </remarks>
+        [Fact]
+        public void A_card_face_resized_to_the_other_round_is_written_in_a_folder_of_its_own()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var installer = OverSettings(packages, settings);
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            Assert.True(installer.Write(round).Written);
+
+            ScreenInstaller.Remove(round, root, null);
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            var written = installer.Write(round);
+
+            Assert.Null(written.Error);
+            Assert.True(written.Written);
+            Assert.Equal("OpenDash Round", round.Folder);
+            Assert.Equal("Slots480x480", round.Namespace);
+            Assert.Equal(800, round.Width);
+            Assert.True(HasDashboardSpelled("OpenDash Round"));
+            Assert.False(PackageExtractor.IsInstalled(root, LargeRoundFolder));
+        }
+
+        /// <summary>
+        /// A rig that met this before it was fixed holds the card face it could not write, and a second one if the
+        /// driver tried again. The next start writes both, Install it again works on either, and neither moves in the
+        /// settings.
+        /// </summary>
+        /// <remarks>
+        /// The Rig tab keeps a screen whose dashboard could not be written, so such a rig holds exactly what the failed
+        /// presses made: the first card face on the namespace its size spells and the package's folder, the second on a
+        /// namespace and a folder of its own, and nothing under DashTemplates for either.
+        /// </remarks>
+        [Fact]
+        public void A_card_face_a_rig_could_not_write_before_is_written_at_the_next_start()
+        {
+            var settings = new OpenDashSettings
+            {
+                Rig = new List<ScreenInstance>
+                {
+                    new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Namespace = "Slots480x480", Name = "Round", Folder = RoundFolder, Package = RoundName },
+                    new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Namespace = "Round2", Name = "Round (2)", Folder = SecondRoundFolder, Package = RoundName },
+                },
+            };
+            settings.Normalise();
+            var installer = OverSettings(Rounds("0.3.0-rc.8"), settings);
+            installer.Refresh();
+            Assert.Equal(InstallStatus.NotInstalled, installer.Status);
+
+            installer.EnsureInstalled(false);
+
+            Assert.All(installer.Packages, package => Assert.Null(package.Error));
+            Assert.True(installer.Packages.Single(package => package.FolderName == RoundFolder).Extracted);
+            Assert.True(installer.Packages.Single(package => package.FolderName == SecondRoundFolder).Extracted);
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+            Assert.True(HasDashboardSpelled(RoundFolder));
+            Assert.True(HasDashboardSpelled(SecondRoundFolder));
+            Assert.Equal(new[] { "Slots480x480", "Round2" }, settings.RigScreens().Select(screen => screen.Namespace));
+            Assert.Equal(new[] { RoundFolder, SecondRoundFolder }, settings.RigScreens().Select(screen => screen.Folder));
+            Assert.True(settings.RigScreens()[0].IsStock);
+
+            Assert.True(installer.Write(settings.RigScreens()[0]).Written);
+            Assert.True(installer.Write(settings.RigScreens()[1]).Written);
+        }
+
+        /// <summary>
+        /// A rig migrated from a settings file older than ADR 0017 keeps both round faces apart, and a round face added
+        /// to it is a second screen with a folder of its own rather than a second claim on the one it has.
+        /// </summary>
+        /// <remarks>
+        /// The migration reads a screen's size off its folder's name, and the round faces' names carry none, so it tells
+        /// them apart by their folders and gives each a namespace from its folder, once. The start then gives them their
+        /// sizes from their packages, and from there such a face's namespace is not the one its size spells, so only the
+        /// folder the rig already holds can say that the package is on it. Before this, the face added here was handed
+        /// "OpenDash 480 round" as well, and writing either would have overwritten the other.
+        /// </remarks>
+        [Fact]
+        public void A_round_face_added_to_a_rig_upgraded_with_one_is_a_second_screen()
+        {
+            PackageExtractor.Install(SyntheticPackage.CardFace(RoundFolder, 480, 480, "0.3.0-rc.8"), root, null);
+            PackageExtractor.Install(SyntheticPackage.CardFace(LargeRoundFolder, 800, 800, "0.3.0-rc.8"), root, null);
+            var settings = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { RoundFolder, FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, RoundFolder)) },
+                    { LargeRoundFolder, FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, LargeRoundFolder)) },
+                },
+            };
+            settings.Normalise();
+            Assert.Equal(new[] { "SlotsOpenDash480Round", "SlotsOpenDash800Round" }, settings.RigScreens().Select(screen => screen.Namespace));
+
+            // What OpenDash.RepairScreenSizes does at the start, which is compiled by neither check.
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            foreach (var screen in settings.RigScreens())
+            {
+                var package = catalogue.Single(entry => entry.Folder == screen.Folder);
+                screen.Width = package.Width;
+                screen.Height = package.Height;
+                screen.Package = package.Package;
+            }
+
+            var added = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            var installer = OverSettings(packages, settings);
+            var written = installer.Write(added);
+
+            Assert.Null(written.Error);
+            Assert.Equal("OpenDash Round", added.Folder);
+            Assert.Equal(3, settings.RigScreens().Select(screen => screen.Folder).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Assert.Equal(3, settings.RigScreens().Select(screen => screen.Namespace).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            installer.EnsureInstalled(false);
+            Assert.All(installer.Packages, package => Assert.Null(package.Error));
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
         }
 
         // A folder outside the rig, which a run reads and never writes (#468)
