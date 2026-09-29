@@ -88,6 +88,18 @@
     <EmbeddedResource Include="Resources/*.ledsprofile" />
   </ItemGroup>
 
+  <!-- The flag box's glyphs as the build drew them, which the settings panel paints its Rig tiles and its
+       matrix preview from (PanelGlyphSheet.cs). Build output of packages/dash, written to
+       build/flag-box-glyphs.json and copied here by scripts/package.sh locally and, in ci.yml and
+       release.yml, by the opendash-dash artifact the plugin job downloads into Resources/; the same route
+       the profiles take, so both workflows' upload lists have to name it. Allowed to be absent for the
+       reason the profiles are: the plugin loads without it, and the panel draws its tiles without glyphs
+       rather than failing to open. PanelGlyphSheetTests fails on CI when it is missing, so a release does
+       not ship bare tiles silently. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/flag-box-glyphs.json" LogicalName="OpenDash.FlagBoxGlyphs.json" Condition="Exists('Resources/flag-box-glyphs.json')" />
+  </ItemGroup>
+
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).
        They come from the dash build rather than from fonts/ directly: the condensed ones are renamed on the
        way out of it, because WPF folds a family whose name carries a width word into the unadorned one and

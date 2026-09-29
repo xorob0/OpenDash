@@ -69,6 +69,21 @@ namespace OpenDashPlugin
             Unclaimed = false;
         }
 
+        /// <summary>
+        /// Where this screen's tile sits on the Rig page's canvas, in the canvas's own units, or null
+        /// where the driver has not placed it.
+        /// </summary>
+        /// <remarks>
+        /// The Rig page draws every screen, strip and matrix as a tile the driver drags into the shape
+        /// of their rig, because "zone C" means nothing until you can see where the screen is (#503).
+        /// It is the panel's to read and write and no dashboard reads it, so it is not a property. Null
+        /// is a tile the page lays out itself, which is every screen until somebody drags it, and a
+        /// negative position, which the canvas cannot draw, is read the same way.
+        /// </remarks>
+        public int? LayoutX { get; set; }
+
+        public int? LayoutY { get; set; }
+
         /// <summary>The zones, the bar and the glance. Null on a screen that is not a face.</summary>
         public FaceSettings Face { get; set; }
 
@@ -388,6 +403,8 @@ namespace OpenDashPlugin
             if (Array.IndexOf(Contract.ScreenKinds, Kind) < 0) Kind = Contract.KindFace;
             if (string.IsNullOrEmpty(Namespace)) Namespace = StockNamespace;
             if (string.IsNullOrEmpty(Name)) Name = SizeLabel;
+            if (LayoutX < 0) LayoutX = null;
+            if (LayoutY < 0) LayoutY = null;
 
             if (IsFace)
             {
@@ -604,6 +621,8 @@ namespace OpenDashPlugin
                 Folder = Folder,
                 Package = Package,
                 Unclaimed = Unclaimed,
+                LayoutX = LayoutX,
+                LayoutY = LayoutY,
                 Face = Face == null ? null : Face.Clone(),
                 FlagFormat = FlagFormat,
                 LapReview = LapReview,
