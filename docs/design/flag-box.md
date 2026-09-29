@@ -37,11 +37,11 @@ the band itself.
 | 2 | Disqualified | `disqualify` | yes | 4 | A cross, blinking. The one flag that ends the race whether the driver reacts or not. | Outlined `purpose.flag.black`, "DISQUALIFIED". |
 | 3 | Black | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK". |
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK". |
-| 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
+| 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | A disc of `purpose.flag.orange` in the middle of the near-black ground, two thirds of its shorter side, with no border and no name. |
 | 6 | Full course yellow | `caution`, `cautionWaving` | yes | 7 | SC written in black on a yellow panel, blinking. The letters are all that tell it from a yellow being waved. | Filled `purpose.alert.safetyCar`, "FULL COURSE YELLOW", or "FCY" where that does not fit. |
 | 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW", steady. |
-| 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
+| 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Striped: `purpose.flag.debris` under vertical stripes of `purpose.flag.debris.stripe`, "DEBRIS" on a plate of the yellow. |
 | 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE", or "BLUE · P4 GT3" as `BlueFlagDetail` asks, in a corner block as on the whole band. |
 | 11 | White | `white` | no | 16 | Solid white. In iRacing this is the last lap. | Filled white, "WHITE · LAST LAP". |
 | 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN", on `Flag_Green` rather than on the bit. |
@@ -90,7 +90,7 @@ name everywhere a word is written, since it fits every band and every corner blo
 that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no word at
 all, FCY included. The full-screen block is the surface where the room decides, and the author ruled
 on it "long wherever legible". The block sets one size for its names, the sheets' share of its
-height unless the widest of its one-word names, which is MEATBALL, needs less, and FCY is what the
+height unless the widest of its one-word names, which is INCIDENT, needs less, and FCY is what the
 caution brings to that measure, so that the long form never shrinks the others. FULL COURSE YELLOW
 then gets a size of its own, the largest whole-pixel size, no larger than the one size, at which it
 fits across the block less its padding, and the block writes it at that size wherever it is at least
@@ -98,7 +98,7 @@ half the one size, and FCY at the one size otherwise. That is the whole name on 
 screen, the pit wall and the companion included, and FCY on the three portrait ones only, namely the
 600 × 686 face, the portrait companion and the portrait pit wall, where the whole name would be under
 half the size of the others. The form thus follows the block's proportions rather than its size:
-wherever MEATBALL sets the one size, the whole name, being 2.1 times as wide, comes to 0.477 of it
+wherever INCIDENT sets the one size, the whole name, being 2.35 times as wide, comes to 0.425 of it
 whatever the block, which is why the portrait pit wall writes FCY although FULL COURSE YELLOW would
 be 129 px there, whereas wherever the height sets it, the whole name is written on a block whose
 width less its padding is about 1.75 times its height or more. Moreover, the form does not depend on
@@ -111,8 +111,8 @@ and PagesAndAlerts draws "Red flag" (3 · RedFlag), "Black flag · furled" (5 ·
 flag" (6 · BlackFlag), "Yellow flag" (11 · YellowFlag), "Blue flag · GT3 behind" (20 · BlueFlag) and
 "Green flag" (21 · GreenFlag). Band D and its corner blocks write RED, BLACK, YELLOW, BLUE and GREEN
 instead, as the pit wall's band does, and the blue flag's detail reads BLUE · P4 GT3. The names that
-never carried the word, WHITE · LAST LAP, GREEN · SET, GREEN · READY, DISQUALIFIED, MEATBALL, DEBRIS
-and the full course yellow's two forms among them, do not move, and nor do the rows of the LED
+never carried the word, WHITE · LAST LAP, GREEN · SET, GREEN · READY, DISQUALIFIED, DEBRIS and the
+full course yellow's two forms among them, do not move, and nor do the rows of the LED
 profile, which name lamps in the plugin's Lights settings rather than anything a dash draws. The
 canvas therefore owes the rename, or the author owes its reversal.
 
@@ -147,13 +147,37 @@ band writes wherever it fits, the blue flag's detail included since #497, and th
 against its limit is the one run it leaves to the takeover. The box has no equivalent: a picture on
 64 pixels has nothing to settle into and nothing underneath it to give back.
 
-**The debris flag's danger stripes are not drawn on the band.** The canvas gives the alert
-catalogue two patterns, the chequer and the stripes, and the band draws the first. A debris flag is
-a yellow band named "DEBRIS", which says it wherever there is width for a name: the whole band on
-every face while the flag has it, and the corner block it settles into on the four faces wide enough
-to draw one. It reads as a plain yellow on the nano, which writes none, and, since #380, in the
-sixteen pixels a settled flag keeps at the ends of a band with no corner block. The second pattern is
-a piece of work of its own.
+**The debris flag's danger stripes are drawn on the band, vertically, where the canvas draws them
+at 135 degrees.** The canvas gives the alert catalogue two patterns, the chequer and the stripes, and
+until #498 the band drew only the first: a debris flag was a yellow band named "DEBRIS", which said
+it wherever there was width for a name and was the yellow flag wherever there was not, on the nano
+and in the sixteen pixels a settled flag keeps at the ends of a band with no corner block. It is now
+the yellow under red stripes on every band, the corner blocks, the nano and the full-screen block,
+with the name on a plate of the yellow where a name is written, and the LED strip's lamp alternates
+the two colours where it used to blink the yellow alone. The stripes are vertical because that is how
+the real flag is made and because a diagonal is a rotated rectangle clipped to the band, which
+nothing in the format notes establishes; the box keeps its diagonals, which are pixels. The canvas
+owes that change, and [zones.md §10](zones.md#10-where-the-canvas-contradicts-itself) records it.
+
+**The meatball is a black box with an orange disc in the middle and no name, where the canvas fills
+the band orange.** The flag is black with an orange disc, which is what the box draws. A band filled
+with `purpose.flag.orange`, which is the caution amber, was neither of the flag's colours, and where
+no name is written it was a band of amber rather than a black flag. #498 first drew it in the black
+family's outlined form in the orange, a border and a name, and the author then ruled that the
+meatball is a black box with an orange disc in the middle and no text. Band D, its corner blocks,
+the nano's strip, the companion's and the pit wall's bands, and the full-screen block on the face,
+the companion and the pit wall therefore draw the opaque `surface.base` ground with no border, and a
+disc of the orange in its middle whose diameter is two thirds of the rectangle's shorter side: that
+is the flag's own proportion, Appendix H drawing a disc 40 cm across on a flag 60 cm high, and the
+shorter side is what keeps the disc inside a settled block sixteen pixels wide and a full-screen
+block taller than it is wide. The disc is a fifth shape, outside the canvas's rule of bands,
+outlined bands and two patterns, and it is drawn with SimHub's ellipse, which the round faces' rings
+already use. Since the meatball no longer has a name, the full-screen block's one name size is
+measured over the other conditions, whose widest is INCIDENT rather than MEATBALL, and the names
+grow where the width binds, which is the portrait face's 143 px becoming 160. The canvas owes that
+change, and [zones.md §10](zones.md#10-where-the-canvas-contradicts-itself) records it. The LED
+strip keeps the meatball on the black flag's lamp, for the reason `leds/effects.ts` gives: its
+orange on a lamp of its own would be the temperature warning's amber.
 
 **The band has no critical-flags switch.** Sixty-four pixels are the only thing a driver with a box
 has, which is what the switch is for; a driver who wants band D quieter turns the flag format off.
@@ -172,7 +196,7 @@ for the matrix; it is not answered by drawing one.
 |---|---|---|---|---|
 | 1 | Ignition off | `GameData.EngineIgnitionOn` at 0, out of the pit lane | 2 | Outlined `purpose.alert.power`, "IGNITION OFF". |
 | 2 | Engine off | `GameData.EngineStarted` at 0, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
-| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Outlined `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
+| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Filled `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
 | 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
 | 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
 
@@ -209,15 +233,19 @@ session, and say nothing. The same laziness means an incident taken while someth
 band is told when that clears, rather than lost behind it.
 
 **Two colours had to be read against the flags.** `purpose.alert.incident` is the caution amber,
-`#FFB300`, which is the meatball's `purpose.flag.orange`; filled, the two would be one band on the
-nano, and the driver who has just hit something is the driver a meatball is likeliest to be for, so
-the incident is outlined where the canvas fills it. `purpose.alert.p2p` is `color.neutral.primary`,
-which is white: filled it is the white flag and outlined it is the black family's `#F5F7FA`. No fourth
-shape exists to give them, so push to pass and the flash are drawn only where their name is written.
-The nano's strip writes none and has no layer for them; a corner block too narrow for the word draws
-nothing rather than a white sliver; and the full-screen block does not take the body for them at all,
-since what the driver's own hand has just done is not worth the gear for the length of a push to
-pass. Both departures want the author's arbitration in `design/`.
+`#FFB300`, which is the meatball's `purpose.flag.orange`, and the driver who has just hit something
+is the driver a meatball is likeliest to be for, so wherever no name is written the two have to
+differ in shape. While the meatball was a filled band the incident was outlined, where the canvas
+fills it. Since #498 the meatball is its orange disc on the near-black, so the incident is filled
+again as the canvas draws it, and `alertBand.test.ts` holds the two apart on the nano and in a
+sixteen-pixel block. `purpose.alert.p2p` is `color.neutral.primary`, which is white: filled it is
+the white flag and outlined it is the black family's `#F5F7FA`. The two patterns are the chequer's
+and the debris flag's and the disc is the meatball's, so no shape is left to give them, and push to
+pass and the flash are drawn only where their name is written. The nano's strip writes none and has
+no layer for them; a corner block too narrow for the word draws nothing rather than a white sliver;
+and the full-screen block does not take the body for them at all, since what the driver's own hand
+has just done is not worth the gear for the length of a push to pass. That departure wants the
+author's arbitration in `design/`.
 
 ### The four decisions sixty-four pixels forced
 
