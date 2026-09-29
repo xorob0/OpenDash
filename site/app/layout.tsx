@@ -6,7 +6,7 @@ import { Footer } from '../components/Footer';
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from '../lib/site';
 
 const TITLE = `${SITE_NAME}: free SimHub dashboards for iRacing`;
-const DESCRIPTION = '14 SimHub dashboards, 21 pages and 63 LED profiles for iRacing on Windows. Free, forever, under MIT. Generated from source.';
+const DESCRIPTION = '14 SimHub dashboards, 21 pages and 122 LED profiles for iRacing on Windows. Free, forever, under MIT. Generated from source.';
 
 export const metadata: Metadata = {
   // With NEXT_PUBLIC_SITE_URL unset there is no absolute origin to build on, and Next falls back

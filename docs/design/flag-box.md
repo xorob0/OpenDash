@@ -442,8 +442,15 @@ image is personalisation, which ADR 0011 owes an answer before anything here bui
 
 They are named `Lights*` rather than `FlagBox*` on purpose. A driver who owns a flag box probably
 owns other lights, and "how bright are my lights, and is it night" is one answer for a rig rather
-than one per device; a second profile would read these same three. A property name is a public
-interface under ADR 0003, so the alternative is renaming one later.
+than one per device. A property name is a public interface under ADR 0003, so the alternative is
+renaming one later.
+
+Every strip reads the same three, and since #503 one more: `OpenDash.LedBrightness`, a bar's own
+brightness in percent, which the plugin publishes under the bar's namespace and leaves null for a bar
+that follows the rig. A strip with none is drawn at exactly what the box is drawn at, night
+brightness included, so the two cannot drift apart. A strip with one is drawn at it, and at night at
+the lower of it and `LightsNightBrightness`: night mode dims a strip turned up for daylight and never
+brightens one turned down. The box has no brightness of its own.
 
 Sixty-four LEDs at full output beside a wheel in a dark room is genuinely too bright, and no
 amount of good colour choice fixes it. `purpose.*` decides hue; brightness decides how much of it

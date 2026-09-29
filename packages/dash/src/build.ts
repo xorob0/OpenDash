@@ -39,7 +39,7 @@ import {
   stableGuid,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
-import { buildFlagBoxProfile, contactSheet, FLAG_BOX_PROFILE_NAME } from './leds/index.ts';
+import { buildFlagBoxProfile, contactSheet, FLAG_BOX_PROFILE_NAME, glyphSheetJson } from './leds/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { ALL_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from './leds/rpmStrip.ts';
@@ -70,6 +70,12 @@ export const FLAG_BOX_FILE = `${FLAG_BOX_PROFILE_NAME}${PROFILE_EXTENSION}`;
  * the chequered flag; nothing else in a generated profile is reviewable by looking at it.
  */
 export const FLAG_BOX_SHEET_FILE = 'flag-box.svg';
+/**
+ * The same glyphs as data, which the plugin embeds to draw the box's preview and the rig page's
+ * tiles from the pictures the profile is built from (#503). Beside the SVG and, like it, not in the
+ * manifest: it is not something SimHub installs, and scripts/package.sh copies it by name.
+ */
+export const FLAG_BOX_GLYPHS_FILE = 'flag-box-glyphs.json';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -515,6 +521,10 @@ export function build(opts: BuildOptions = {}): BuildResult {
   writeFileSync(sheetPath, contactSheet(), 'utf8');
   log(`wrote ${relative(sheetPath)}`);
 
+  const glyphsPath = path.join(out, FLAG_BOX_GLYPHS_FILE);
+  writeFileSync(glyphsPath, glyphSheetJson(), 'utf8');
+  log(`wrote ${relative(glyphsPath)}`);
+
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);
@@ -540,8 +550,8 @@ export function build(opts: BuildOptions = {}): BuildResult {
  * leave nothing at all behind when it threw half way through, and a failed build should cost the last
  * good one. So the sweep runs at the end, when the manifest is the settled list of what this build
  * produces, and removes only the two kinds of file the manifest names: a package and a light profile.
- * Anything else in the directory -- `fonts/`, an unpacked package folder, whatever somebody left there
- * -- is left where it is.
+ * Anything else in the directory -- `fonts/`, an unpacked package folder, the sheet and the glyphs
+ * the build writes beside the profile, whatever somebody left there -- is left where it is.
  *
  * The reason this exists is a shape that was renamed. `OpenDash 3/9/3 Fanalab` became
  * `OpenDash 3/9/3 Fanatec`, the build wrote the new file, and the old one sat in `build/` until

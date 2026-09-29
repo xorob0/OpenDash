@@ -38,7 +38,7 @@ import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
-import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
+import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { CHIP_WIDEST } from '../second/chip.ts';
@@ -60,11 +60,17 @@ const { game, eq, and, changed, num, concat, iff, str } = ncalc;
 export const FLAG_PRIORITY: readonly FaceFlag[] = FACE_FLAG_PRIORITY;
 export type FlagProperty = FaceFlag;
 
-/** `[Flag_X] = 1` and every higher-priority flag `= 0`. */
+/**
+ * `[Flag_X] = 1` and every higher-priority flag `= 0`, where a flag may show at all.
+ *
+ * The ring reads SimHub's six rather than the catalogue's reading, so it asks `flagsAllowedHere`
+ * itself: a ring that kept its colour in the pit lane after band D had gone quiet would be two
+ * answers to the one switch. #503.
+ */
 export function flagVisible(flag: FlagProperty): Expr {
   const index = FLAG_PRIORITY.indexOf(flag);
   const higher = FLAG_PRIORITY.slice(0, index).map((f) => eq(game(f), num(0)));
-  return and(...higher, eq(game(flag), num(1)));
+  return and(flagsAllowedHere(), ...higher, eq(game(flag), num(1)));
 }
 
 /** The shape the condition asks for, drawn over `frame`, with the name as a style asks for it. */

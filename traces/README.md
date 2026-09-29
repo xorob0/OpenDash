@@ -133,6 +133,15 @@ at a constant 1 and an `EngineWarnings` that never carries the stalled bit, 8. T
 because the VM was held by another session when they were needed; the next recording of each
 scenario replaces them with what SimHub says.
 
+#503 added seventeen to each, and all of them are what a re-record will write. Sixteen are
+`OpenDash.Face<size>Zone{B,C}Position`, where the page a zone is showing sits in its cycle, which the
+plugin publishes because the panel lets a driver arrange a zone's pages and an expression cannot read
+an ordered list. They are null wherever the recording's page is null, which is every face but the
+850x480, and 1 and 15 on the 850x480, which is where pages 0 and 14 sit in a zone whose mask is
+full and whose order is the catalogue's -- the plugin's answer for a zone nobody has arranged. The
+seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened publishes.
+The next `bun run record` reads all of them from the plugin and drops the entries.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be

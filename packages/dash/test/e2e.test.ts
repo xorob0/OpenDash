@@ -13,6 +13,7 @@ import {
   BuildError,
   DEFAULT_OUT_DIR,
   FLAG_BOX_FILE,
+  FLAG_BOX_GLYPHS_FILE,
   FLAG_BOX_SHEET_FILE,
   main,
   MANIFEST_FILE,
@@ -194,7 +195,7 @@ describe('widget build on disk', () => {
     }
     expect(listFiles(join(widget.out, REFERENCE_CARD_FACE))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
     // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
     // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
     expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual([...fontsForPanel().map((f) => basename(f)), FONT_LICENCE.name].sort());
@@ -365,7 +366,7 @@ describe('widget build on disk', () => {
   });
 
   test('the build log names every file written', () => {
-    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, MANIFEST_FILE];
+    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, FLAG_BOX_GLYPHS_FILE, MANIFEST_FILE];
     for (const rel of files) expect({ rel, logged: log.some((line) => line.startsWith('wrote ') && line.includes(rel)) }).toEqual({ rel, logged: true });
     // Every warning but one: a package nobody has photographed says so on every build, and the
     // machine that can take the picture is the VM, which ADR 0008 is the record of not requiring.
@@ -550,7 +551,7 @@ describe('LED profiles on disk', () => {
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
     expect(lit.stripProfiles.map((p) => p.shape!.id)).toEqual(ALL_SHAPES.map((s) => s.id));
     expect(readdirSync(lit.out).sort()).toEqual(
-      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort(),
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort(),
     );
     // A profile is not a dashboard: no folder, no .djson, no zip.
     expect(readdirSync(lit.out).filter((f) => f.endsWith('.simhubdash'))).toEqual([]);
@@ -621,7 +622,7 @@ describe('second screens on disk', () => {
     expect(readdirSync(second.out).sort()).toEqual(
       // The profile is written by every build, not only the one that builds the faces: it is not
       // tied to a package and there is nothing to select it out of.
-      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, FLAG_BOX_GLYPHS_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
     );
   });
 
@@ -967,6 +968,16 @@ describe('what a released plugin embeds', () => {
     // release, which is the shape of the bug this replaced.
     const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');
     expect(script).toContain('cp build/*.simhubdash plugin/OpenDash/Resources/');
+    // The glyph sheet as well: the csproj embeds it only where it exists, so a plugin packaged
+    // without it builds, ships and draws the flag box previews bare, and nothing else goes red.
+    expect(script).toContain('cp build/flag-box-glyphs.json plugin/OpenDash/Resources/');
+    // CI and a release never run this script, so each carries the sheet in the dash artefact and
+    // refuses a plugin job that did not receive it.
+    for (const name of ['ci.yml', 'release.yml']) {
+      const workflow = readFileSync(join(import.meta.dir, '..', '..', '..', '.github', 'workflows', name), 'utf8');
+      expect([name, /^\s+build\/flag-box-glyphs\.json$/m.test(workflow)]).toEqual([name, true]);
+      expect([name, workflow.includes('test -s plugin/OpenDash/Resources/flag-box-glyphs.json')]).toEqual([name, true]);
+    }
     expect(script).not.toMatch(/^\s*case .*OpenDash slots/m);
   });
 });
@@ -1003,7 +1014,7 @@ describe('what a release publishes', () => {
   });
 
   test('the LED profiles go into the released assembly gzipped, as they do in a local build', () => {
-    // Plain, they are some twenty megabytes of the DLL; scripts/package.sh has always gzipped them,
+    // Plain, they are some forty-four megabytes of the DLL; scripts/package.sh has always gzipped them,
     // and the release job has to agree now that its zip is the only file published.
     expect(workflow).toMatch(/gzip -9 -c "\$profile" > "\$profile\.gz"/);
     const local = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');

@@ -24,6 +24,14 @@ import {
   RETIRED_LED_CENTRE,
   LED_RPM_STYLES,
   LED_RPM_STYLE_SETTING,
+  LED_BRIGHTNESS_SETTING,
+  LED_EFFECTS,
+  DEFAULT_LED_EFFECT,
+  LED_EFFECT_FLAG_PREFIX,
+  ledEffectSettingName,
+  ledEffectSettingNames,
+  RETIRED_LED_RPM_STYLES,
+  zonePositionSettingName,
   flagBox,
   flagBoxProperties,
   FLAG_BOX_LOW_FUEL_LAPS_SETTING,
@@ -53,6 +61,7 @@ import {
   DELTA_PRECISION_SETTING,
   DELTA_PRECISIONS,
   DELTA_REFERENCES,
+  FLAGS_IN_PIT_LANE_SETTING,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -103,16 +112,18 @@ describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
-    // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format,
-    // the lap review and what this face carries at the top.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 4;
+    // 850 face beside it are configured apart instead of sharing one set of zones. Five per zone --
+    // page, mask, start and the class filter, and since #503 the position the plugin says the page
+    // showing has in the zone's own order -- plus the bar's ends, the glance, the flag format, the
+    // lap review and what this face carries at the top.
+    const perFace = FACE_ZONE_LETTERS.length * 5 + BAR_SLOTS.length + 4;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
     // global and thirteen per matrix, the way every face carries its own group; the strips are the three
     // that decide what a strip shows, then the mirror -- its fit, the gate that says there is a bar
-    // to draw, and one packed run per length a centre can be -- and the switch that hands a car
-    // alongside the whole strip. It was nine and six until the
+    // to draw, and one packed run per length a centre can be -- the switch that hands a car
+    // alongside the whole strip, and since #503 a strip's own brightness and the fifteen switches
+    // that turn one effect off. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
     // Six of the thirteen globals are settings; the other seven are the car's own bar, computed by the
@@ -132,14 +143,32 @@ describe('settings', () => {
       // Appended after the runs rather than beside the three it belongs with, for the reason every
       // other addition is appended: both halves of the contract pin this list in order.
       'OpenDash.LedSpotterWhole',
+      // And a strip's own brightness and one switch per effect a driver would name, appended after
+      // it for the same reason. #503.
+      'OpenDash.LedBrightness',
+      'OpenDash.LedEffectTc',
+      'OpenDash.LedEffectAbs',
+      'OpenDash.LedEffectDrs',
+      'OpenDash.LedEffectPushToPass',
+      'OpenDash.LedEffectLowFuel',
+      'OpenDash.LedEffectTemperature',
+      'OpenDash.LedEffectOilPressure',
+      'OpenDash.LedEffectFlags',
+      'OpenDash.LedEffectSpotterLeft',
+      'OpenDash.LedEffectSpotterRight',
+      'OpenDash.LedEffectPitLane',
+      'OpenDash.LedEffectPitLimiter',
+      'OpenDash.LedEffectPitSpeeding',
+      'OpenDash.LedEffectTurnLeft',
+      'OpenDash.LedEffectTurnRight',
     ]);
-    // The lone 9 is RevBar, the blue flag detail, the two that decide how a driver is named, the
-    // idle screen's two, the class best, the clock format and the delta's precision, which every
-    // screen shares with the four modes and the twelve slots.
+    // The lone 10 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two, the class best, the clock format, the delta's precision and whether a flag
+    // shows in the pit lane, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        9 +
+        10 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -180,8 +209,11 @@ describe('settings', () => {
     // idle screen could say that a newer release exists, and which (#83), and 347 before the
     // plugin had to publish the class best, which SimHub keeps and never publishes, and 348 before a
     // driver could say whether a clock reads 14:32 or 2:32 PM (#324), and 349 before the live delta
-    // could be drawn to thousandths as well as hundredths (#322).
-    expect(props).toHaveLength(350);
+    // could be drawn to thousandths as well as hundredths (#322). And 350 before the settings panel
+    // was rebuilt around the rig (#503), which asked for whether a flag shows in the pit lane, a
+    // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
+    // effect switches for a strip.
+    expect(props).toHaveLength(399);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -210,6 +242,9 @@ describe('settings', () => {
     // And the delta's precision after it, chosen rather than published and shared because a delta
     // read to the thousandth on the rim and to the hundredth on the pit wall is two answers. #322.
     expect(props[12 + SLOT_MAX]).toBe('OpenDash.DeltaPrecision');
+    // And whether a flag shows in the pit lane after it, shared because every screen that draws a
+    // flag asks it and a screen may not read what another owns. #503.
+    expect(props[13 + SLOT_MAX]).toBe('OpenDash.FlagsInPitLane');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -311,6 +346,7 @@ describe('settings', () => {
         CLASS_BEST_LAP,
         CLOCK_FORMAT_SETTING,
         DELTA_PRECISION_SETTING,
+        FLAGS_IN_PIT_LANE_SETTING,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -376,6 +412,58 @@ describe('settings', () => {
     // Two fallbacks, as the rev bar has: the deprecated alias first, so that a profile beside an
     // rc.2 plugin reads the threshold that user set, and the default behind it.
     expect(flagBox.lowFuelLaps()).toBe('isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))');
+  });
+
+  test('the settings #503 adds read their defaults without the plugin', () => {
+    // A flag shows in the pit lane unless somebody has said otherwise, which is what every surface
+    // drew before the choice existed.
+    expect(DEFAULTS.FlagsInPitLane).toBe(true);
+    expect(setting.flagsInPitLane()).toBe('isnull([OpenDash.FlagsInPitLane], true)');
+    // A strip with no brightness of its own is the rig's, literally: what the flag box draws, day and
+    // night. One with its own is never brighter than the night brightness at night.
+    expect(setting.ledBrightness()).toBe('isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))');
+    expect(setting.ledBrightnessInForce()).toBe(
+      `if(isnull([OpenDash.LedBrightness]), ${flagBox.brightness()}, if((isnull([OpenDash.LightsNightMode], false)) = (true), min(isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100)), isnull([OpenDash.LightsNightBrightness], 25)), isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))))`,
+    );
+    // Every effect is on until it is switched off, and every flag row answers to the one switch.
+    expect(setting.ledEffect('p2p')).toBe('isnull([OpenDash.LedEffectPushToPass], true)');
+    expect(setting.ledEffectOn('flag.debris')).toBe('(isnull([OpenDash.LedEffectFlags], true)) = (true)');
+    for (const { id } of LED_EFFECTS.filter((e) => e.id.startsWith('flag.'))) expect(ledEffectSettingName(id)).toBe('LedEffectFlags');
+    // A flag row nobody has listed yet is still the flags' switch, as the plugin's prefix rule has it;
+    // anything else unknown is a mistake.
+    expect(ledEffectSettingName('flag.red')).toBe('LedEffectFlags');
+    expect(() => ledEffectSettingName('flag.')).toThrow(RangeError);
+    expect(() => ledEffectSettingName('nope')).toThrow(RangeError);
+    // The table itself, literally and in the naming table's order: everything else here derives from
+    // it, so a transposition -- tc's switch silencing ABS -- would otherwise pass on both sides.
+    expect(LED_EFFECTS).toEqual([
+      { id: 'tc', setting: 'LedEffectTc' },
+      { id: 'abs', setting: 'LedEffectAbs' },
+      { id: 'drs', setting: 'LedEffectDrs' },
+      { id: 'p2p', setting: 'LedEffectPushToPass' },
+      { id: 'lowFuel', setting: 'LedEffectLowFuel' },
+      { id: 'temperature', setting: 'LedEffectTemperature' },
+      { id: 'oilPressure', setting: 'LedEffectOilPressure' },
+      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
+      { id: 'spotter.left', setting: 'LedEffectSpotterLeft' },
+      { id: 'spotter.right', setting: 'LedEffectSpotterRight' },
+      { id: 'pit.lane', setting: 'LedEffectPitLane' },
+      { id: 'pit.limiter', setting: 'LedEffectPitLimiter' },
+      { id: 'pit.speeding', setting: 'LedEffectPitSpeeding' },
+      { id: 'turn.left', setting: 'LedEffectTurnLeft' },
+      { id: 'turn.right', setting: 'LedEffectTurnRight' },
+    ]);
+    expect(ledEffectSettingNames()).toHaveLength(15);
+    // The retired styles are retired from the panel and not from the profile: the value set keeps
+    // all four, so a settings file of the previous vintage still matches a group.
+    expect(RETIRED_LED_RPM_STYLES).toEqual(['meetInMiddle', 'f1']);
+    for (const style of RETIRED_LED_RPM_STYLES) expect(LED_RPM_STYLES).toContain(style);
+    expect(LED_RPM_STYLES).toHaveLength(4);
+    // A zone's position is the plugin's, with the catalogue order behind it.
+    const face = FACE_SIZES[0]!;
+    expect(zonePositionSettingName(face, 'B')).toBe('Face1920x480ZoneBPosition');
+    expect(zone.position(face, 'B').startsWith('isnull([OpenDash.Face1920x480ZoneBPosition], (1) + ')).toBe(true);
+    expect(facePropertyNames(face).slice(-5)).toEqual(['Face1920x480RevBar', 'Face1920x480ZoneAPosition', 'Face1920x480ZoneBPosition', 'Face1920x480ZoneCPosition', 'Face1920x480ZoneDPosition']);
   });
 });
 
@@ -454,6 +542,9 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
+    // The style set is still named on the panel, which today builds a chooser over it; the switch the
+    // rebuilt Lights page offers instead is pinned by "the panel offers the car's own lights as a
+    // switch" below.
     expect(panel).toContain('Contract.LedRpmStyles');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
@@ -607,6 +698,44 @@ describe('plugin mirror', () => {
     expect(source).toContain(`DefaultPositionMode = "${DEFAULTS.PositionMode}";`);
     expect(source).toContain(`DefaultDeltaReference = "${DEFAULTS.DeltaReference}";`);
     expect(source).toContain(`DefaultSessionProgress = "${DEFAULTS.SessionProgress}";`);
+  });
+
+  /**
+   * What #503 asks of the plugin half, in a test of its own so that, while the two halves are apart,
+   * its red hides none of the older mirror assertions above.
+   */
+  test('Contract.cs and OpenDash.cs carry the #503 names', () => {
+    const source = pluginSource('Contract.cs');
+    // Whether a flag shows in the pit lane: shared, on by default, and attached, since band D, the
+    // companion, the pit wall, the flag box and every strip read it.
+    expect(source).toContain(`public const string ${FLAGS_IN_PIT_LANE_SETTING} = "${FLAGS_IN_PIT_LANE_SETTING}";`);
+    expect(source).toContain(`public const bool DefaultFlagsInPitLane = ${String(DEFAULTS.FlagsInPitLane)};`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${FLAGS_IN_PIT_LANE_SETTING},`);
+    // A strip's own brightness, and the two rev light styles the panel no longer offers, named so the
+    // plugin normalises a stored one to leftToRight rather than guessing.
+    expect(source).toContain(`public const string ${LED_BRIGHTNESS_SETTING} = "${LED_BRIGHTNESS_SETTING}";`);
+    expect(source).toContain(`RetiredLedRpmStyles = ${csArray(RETIRED_LED_RPM_STYLES)};`);
+    // The effect table, pair by pair and in order. ContractTests.cs checks a few rows and the order of
+    // the settings, which a transposition such as tc -> LedEffectAbs and abs -> LedEffectTc keeps; the
+    // plugin attaches each bar's switch by the effect's id through this table, so that transposition
+    // would have the panel's traction control switch turn off ABS on the strip. What is read is every
+    // ("id", "LedEffect...") pair in the file, in order, whatever declares it: a KeyValuePair, a tuple
+    // or a table the list is built from all spell a row the same way, so the check holds the table and
+    // not the layout of its C# declaration.
+    const pairs = [...source.matchAll(/\(\s*"([^"]*)"\s*,\s*"(LedEffect[A-Za-z]*)"\s*\)/g)].map((m) => ({ id: m[1], setting: m[2] }));
+    expect(pairs).toEqual(LED_EFFECTS.map(({ id, setting }) => ({ id, setting })));
+    // The rule for a flag row neither table lists, and the default of every switch.
+    expect(source).toContain(`public const string LedEffectFlagPrefix = "${LED_EFFECT_FLAG_PREFIX}";`);
+    expect(source).toContain(`public const bool DefaultLedEffect = ${String(DEFAULT_LED_EFFECT)};`);
+  });
+
+  /**
+   * The rebuilt Lights page (#503, per #369) offers one switch for the rev lights -- the car's own, or
+   * not -- where today's panel builds a chooser over {@link LED_RPM_STYLES}. Its own test, so that it
+   * can stay red until the page is rebuilt without hiding anything in "declares the strips".
+   */
+  test("the panel offers the car's own lights as a switch", () => {
+    expect(panelSource()).toContain('Contract.LedRpmStyleCar');
   });
 });
 

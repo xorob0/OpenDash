@@ -961,10 +961,17 @@ counter counts.
 
 The counter is drawn by the face rather than by the zone, for the same reason the letter is —
 zones B and C share one dashboard file where they are the same rectangle, and a screen in it cannot
-know whose mask is deciding its length. The arithmetic is in the expression, which is what
+know whose mask is deciding its length. The length is in the expression, which is what
 [ADR 0009](../decisions/0009-does-the-plugin-compute.md) settled: a popcount is
 `truncate(mask / 2^i) % 2` summed over the catalogue, and the mask is a property that already
 exists. Without the plugin, the mask reads as its default and the counter says "n / 21".
+
+**The position is the plugin's since #503.** The panel lets a driver arrange a zone's pages as well
+as tick them, so "this is the third of five" depends on an order, and an expression cannot read an
+ordered list. The plugin publishes it as `Face<size>Zone<X>Position`, counting from one, and the
+counter reads that. The catalogue-order count -- the popcount of the mask below the page showing,
+plus one -- stays behind it as the `isnull` fallback, which is the right answer for a zone nobody has
+arranged and for a face with no plugin at all. ADR 0009's exception for it is written there.
 
 ---
 

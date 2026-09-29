@@ -50,7 +50,7 @@ export default function Lights() {
             <h2 className="h3">Every strip, every wheel</h2>
             <p className="prose">
               Pick your strip by counting its LEDs: sides and centre. {STRIP_SHAPES.length} shapes are included, from a 3/9/3 rim to a 25-LED brow, and any
-              device SimHub drives can have one. A car without a table still gets the shift points iRacing publishes for it.
+              device SimHub drives can have one. Every shape on the grid can be wired from either end. A car without a table still gets the shift points iRacing publishes for it.
             </p>
           </div>
         </div>

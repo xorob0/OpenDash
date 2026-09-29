@@ -6,7 +6,7 @@
 # TypeScript, read by nineteen generated .ledsprofile files and attached by nothing, and both
 # suites stayed green. contract.test.ts checks the TypeScript against this file in order;
 # ContractTests.cs checks the C# against it as a set, because the two genuinely emit a face's
-# twenty-one names in different orders and that is older than this file.
+# twenty-eight names in different orders and that is older than this file.
 #
 # Regenerate after a deliberate change, and read the diff:
 #   bun -e "import {declaredProperties} from './packages/dash/src/contract.ts'; console.log(declaredProperties().join('\n'))"
@@ -36,6 +36,7 @@ OpenDash.UpdateVersion
 OpenDash.ClassBestLap
 OpenDash.ClockFormat
 OpenDash.DeltaPrecision
+OpenDash.FlagsInPitLane
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart
@@ -60,6 +61,10 @@ OpenDash.Face1920x480QuickGlance
 OpenDash.Face1920x480FlagFormat
 OpenDash.Face1920x480LapReview
 OpenDash.Face1920x480RevBar
+OpenDash.Face1920x480ZoneAPosition
+OpenDash.Face1920x480ZoneBPosition
+OpenDash.Face1920x480ZoneCPosition
+OpenDash.Face1920x480ZoneDPosition
 OpenDash.Face1280x480ZoneA
 OpenDash.Face1280x480ZoneAPages
 OpenDash.Face1280x480ZoneAStart
@@ -84,6 +89,10 @@ OpenDash.Face1280x480QuickGlance
 OpenDash.Face1280x480FlagFormat
 OpenDash.Face1280x480LapReview
 OpenDash.Face1280x480RevBar
+OpenDash.Face1280x480ZoneAPosition
+OpenDash.Face1280x480ZoneBPosition
+OpenDash.Face1280x480ZoneCPosition
+OpenDash.Face1280x480ZoneDPosition
 OpenDash.Face1280x400ZoneA
 OpenDash.Face1280x400ZoneAPages
 OpenDash.Face1280x400ZoneAStart
@@ -108,6 +117,10 @@ OpenDash.Face1280x400QuickGlance
 OpenDash.Face1280x400FlagFormat
 OpenDash.Face1280x400LapReview
 OpenDash.Face1280x400RevBar
+OpenDash.Face1280x400ZoneAPosition
+OpenDash.Face1280x400ZoneBPosition
+OpenDash.Face1280x400ZoneCPosition
+OpenDash.Face1280x400ZoneDPosition
 OpenDash.Face850x480ZoneA
 OpenDash.Face850x480ZoneAPages
 OpenDash.Face850x480ZoneAStart
@@ -132,6 +145,10 @@ OpenDash.Face850x480QuickGlance
 OpenDash.Face850x480FlagFormat
 OpenDash.Face850x480LapReview
 OpenDash.Face850x480RevBar
+OpenDash.Face850x480ZoneAPosition
+OpenDash.Face850x480ZoneBPosition
+OpenDash.Face850x480ZoneCPosition
+OpenDash.Face850x480ZoneDPosition
 OpenDash.Face800x480ZoneA
 OpenDash.Face800x480ZoneAPages
 OpenDash.Face800x480ZoneAStart
@@ -156,6 +173,10 @@ OpenDash.Face800x480QuickGlance
 OpenDash.Face800x480FlagFormat
 OpenDash.Face800x480LapReview
 OpenDash.Face800x480RevBar
+OpenDash.Face800x480ZoneAPosition
+OpenDash.Face800x480ZoneBPosition
+OpenDash.Face800x480ZoneCPosition
+OpenDash.Face800x480ZoneDPosition
 OpenDash.Face1280x720ZoneA
 OpenDash.Face1280x720ZoneAPages
 OpenDash.Face1280x720ZoneAStart
@@ -180,6 +201,10 @@ OpenDash.Face1280x720QuickGlance
 OpenDash.Face1280x720FlagFormat
 OpenDash.Face1280x720LapReview
 OpenDash.Face1280x720RevBar
+OpenDash.Face1280x720ZoneAPosition
+OpenDash.Face1280x720ZoneBPosition
+OpenDash.Face1280x720ZoneCPosition
+OpenDash.Face1280x720ZoneDPosition
 OpenDash.Face800x286ZoneA
 OpenDash.Face800x286ZoneAPages
 OpenDash.Face800x286ZoneAStart
@@ -204,6 +229,10 @@ OpenDash.Face800x286QuickGlance
 OpenDash.Face800x286FlagFormat
 OpenDash.Face800x286LapReview
 OpenDash.Face800x286RevBar
+OpenDash.Face800x286ZoneAPosition
+OpenDash.Face800x286ZoneBPosition
+OpenDash.Face800x286ZoneCPosition
+OpenDash.Face800x286ZoneDPosition
 OpenDash.Face600x686ZoneA
 OpenDash.Face600x686ZoneAPages
 OpenDash.Face600x686ZoneAStart
@@ -228,6 +257,10 @@ OpenDash.Face600x686QuickGlance
 OpenDash.Face600x686FlagFormat
 OpenDash.Face600x686LapReview
 OpenDash.Face600x686RevBar
+OpenDash.Face600x686ZoneAPosition
+OpenDash.Face600x686ZoneBPosition
+OpenDash.Face600x686ZoneCPosition
+OpenDash.Face600x686ZoneDPosition
 OpenDash.CompanionModule01
 OpenDash.CompanionModule02
 OpenDash.CompanionModule03
@@ -361,3 +394,19 @@ OpenDash.LedMirror23
 OpenDash.LedMirror24
 OpenDash.LedMirror25
 OpenDash.LedSpotterWhole
+OpenDash.LedBrightness
+OpenDash.LedEffectTc
+OpenDash.LedEffectAbs
+OpenDash.LedEffectDrs
+OpenDash.LedEffectPushToPass
+OpenDash.LedEffectLowFuel
+OpenDash.LedEffectTemperature
+OpenDash.LedEffectOilPressure
+OpenDash.LedEffectFlags
+OpenDash.LedEffectSpotterLeft
+OpenDash.LedEffectSpotterRight
+OpenDash.LedEffectPitLane
+OpenDash.LedEffectPitLimiter
+OpenDash.LedEffectPitSpeeding
+OpenDash.LedEffectTurnLeft
+OpenDash.LedEffectTurnRight

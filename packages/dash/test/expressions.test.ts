@@ -8,7 +8,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
-import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE } from '../src/flags.ts';
+import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE, flagsAllowedHere } from '../src/flags.ts';
 import { flagBox, setting } from '../src/contract.ts';
 import { flagBoxTree } from '../src/leds/profile.ts';
 import { ignitionIsOff, ignitionIsOn } from '../src/leds/gates.ts';
@@ -110,11 +110,14 @@ describe('card expressions', () => {
   // fuel module draw the same property behind a completed lap, so on the out lap the main face
   // named a figure that moves every frame while the second screen beside it drew its absence. The
   // absence is `--` here too: `-.-` was the one card writing a no-data glyph of its own.
-  test('fuel laps wait for the lap that says what one costs, then go red only under a lap', () => {
+  // And since #503 it is red under the rig's one low-fuel threshold rather than under a lap of its
+  // own, the threshold the strip, the box and the fuel module read.
+  test('fuel laps wait for the lap that says what one costs, then go red under the rig threshold', () => {
     const laps = 'isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)';
     const settled = values.fuelIsSettled();
+    const threshold = 'isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))';
     expect(formulaOf(textItem('fuelLaps', 'value'), 'Text')).toBe(`if(${settled}, format(${laps}, '0.0'), '${values.NO_VALUE}')`);
-    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(`if(${settled}, if((${laps}) < (1), '#FF2D46', '#F5F7FA'), '#33383F')`);
+    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(`if(${settled}, if((${laps}) < (${threshold}), '#FF2D46', '#F5F7FA'), '#33383F')`);
   });
 
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
@@ -555,18 +558,22 @@ describe('hero expressions', () => {
 
   test('flags are visible by priority', () => {
     // The ring and the pit wall header still read the six SimHub normalises, ranked in the
-    // catalogue's order: the chequer is last of them now, where it used to be second.
-    expect(flagVisible('Flag_Black')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (1))');
-    expect(flagVisible('Flag_Yellow')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))');
-    expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(6);
-    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(5);
+    // catalogue's order: the chequer is last of them now, where it used to be second. Each asks
+    // first whether a flag may show where the car is, which is the pit lane switch (#503).
+    const here = '(((isnull([OpenDash.FlagsInPitLane], true)) = (true)) or (!((isnull([DataCorePlugin.GameData.IsInPitLane], 0)) > (0))))';
+    expect(flagsAllowedHere()).toBe(here.slice(1, -1));
+    expect(flagVisible('Flag_Black')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (1))`);
+    expect(flagVisible('Flag_Yellow')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))`);
+    expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(7);
+    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(6);
   });
 
   test('band D ranks the whole catalogue off the bits, not the six summaries', () => {
     // One layer per condition, each gated on its own bits and on every higher condition being
-    // absent, read null-safely so that a sim publishing no SessionFlagsDetails leaves the band dark.
+    // absent, read null-safely so that a sim publishing no SessionFlagsDetails leaves the band dark,
+    // and each asking whether a flag may show where the car is (#503).
     const red = conditionVisible(flagCondition('red'), false, FLAG_CATALOGUE, bandRaised);
-    expect(red).toBe('(((isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred], 0)) = (1)))');
+    expect(red).toBe(`((${flagsAllowedHere()}) and (((isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred], 0)) = (1))))`);
     const yellow = conditionVisible(flagCondition('yellow'), false, FLAG_CATALOGUE, bandRaised);
     expect(yellow).toContain('SessionFlagsDetails.IsyellowWaving');
     expect(yellow).toContain('SessionFlagsDetails.Isred');

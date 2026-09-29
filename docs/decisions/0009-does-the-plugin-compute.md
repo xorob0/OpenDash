@@ -127,6 +127,15 @@ the current lap's time at this point of the track against the previous lap's tim
 so it needs the previous lap kept by distance, frame after frame, which is memory between frames and
 the second of the conditions below.
 
+### A position in a list the driver arranges
+
+Added 2026-09-29 for #503. One number moved to the plugin, and on this record's own terms. The panel
+lets a driver arrange the order of a zone's pages, and where the page showing sits in that order is a
+question about a list an expression cannot read, however long it is allowed to be. The plugin
+publishes it as `Face<size>Zone<X>Position`; the face reads it with the catalogue-order count as its
+`isnull` fallback, so a package with no plugin still counts, in the catalogue's order, which is the
+order it cycles in without one. The length of the cycle stays a popcount in the expression.
+
 ## What would reopen this
 
 An expression is not a good place for arithmetic that is long, shared between many items, or

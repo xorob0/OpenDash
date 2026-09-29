@@ -24,7 +24,7 @@ export default function Install() {
         title="Install the plugin"
         lede={
           <>
-            One file installs all 14 dashboards and 63 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
+            One file installs all 14 dashboards and 122 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
             <a href={SIMHUB_URL} className="link" rel="noopener">
               SimHub
             </a>{' '}
