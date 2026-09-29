@@ -840,6 +840,9 @@ describe('every generated profile', () => {
       for (const row of kids) {
         const at = `${shape.id} ${String(row.description)}`;
         expect({ at, threshold: row.blinkFormula?.expression.includes(box.raised) }).toMatchObject({ threshold: true });
+        // And the low-fuel switch silences it, as it does the lamp: one signal, one switch (#503).
+        expect({ at, switch: row.blinkFormula?.expression.includes(`(${setting.ledEffectOn('lowFuel')}) and (${box.raised})`) }).toMatchObject({ switch: true });
+        expect({ at, level: row.enabledFormula.expression.includes('LedEffectLowFuel') }).toMatchObject({ level: false });
         // The *height* is still FuelPercent, which is what a fuel bar is; only the threshold moved.
         expect({ at, height: row.enabledFormula.expression.includes('FuelPercent') }).toMatchObject({ height: true });
         expect({ at, fivePercent: row.blinkFormula?.expression.includes(ncalc.gt(ncalc.num(5), fuelPercent())) }).toMatchObject({ fivePercent: false });

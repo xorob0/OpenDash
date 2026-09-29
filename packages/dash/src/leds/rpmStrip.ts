@@ -261,10 +261,15 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
  * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
  * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
  * than darkness, because here the second colour is the fact being reported.
+ *
+ * And answerable to the same switch as that lamp, `LedEffectLowFuel`: a driver who turns "Low fuel"
+ * off on a strip is asking for the strip to stop saying so, and the centre saying it in the same red
+ * is the same signal. The switch takes the blink and nothing else; the bar still shows the level,
+ * which is what a fuel centre was chosen for. #503.
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
-  const low = tankIsLow();
+  const low = and(setting.ledEffectOn('lowFuel'), tankIsLow());
   return Array.from({ length: count }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `fuel ${String(k + 1).padStart(2, '0')}`,

@@ -537,6 +537,10 @@ export const LED_BRIGHTNESS_SETTING = 'LedBrightness';
  *
  * Written as one line per switch, in the order the plugin attaches them, and flattened below into
  * {@link LED_EFFECTS}, one entry per effect id.
+ *
+ * A switch governs a signal rather than a catalogue row where the two differ: `LedEffectLowFuel`
+ * silences the low-fuel lamp and the fuel centre's low-fuel blink alike (`fuelBar` in
+ * `leds/rpmStrip.ts`), and leaves the fuel centre's level drawn.
  */
 const LED_EFFECT_SWITCHES: Readonly<Record<string, readonly string[]>> = {
   LedEffectTc: ['tc'],
