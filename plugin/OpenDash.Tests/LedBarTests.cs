@@ -205,9 +205,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Rim", FlagBoxProfile.ProfileNameOf(mine));
             Assert.Contains("\"ProfileId\": \"" + LedBarProfile.IdFor("LedRim").ToString("D") + "\"", mine);
             // Every name a bar owns is moved wherever the profile reads it. The four a strip has always
-            // read are read by every profile; the brightness and the switches (#503) are read where the
-            // generator draws them, and a profile built before them reads none, which is no name left
-            // rig-wide either.
+            // read are all read by the 3-9-3 profile this rewrites, though not by every profile: a bare
+            // run has no ends and no LedSpotterWhole. The brightness and the switches (#503) are read
+            // where the generator draws them, and a profile built before them reads none, which is no
+            // name left rig-wide either.
             var always = new[] { Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole };
             foreach (var setting in LedBarProfile.BarSettings)
             {
@@ -217,14 +218,14 @@ namespace OpenDashPlugin.Tests
                     Assert.Contains("[OpenDash.LedRim" + setting + "]", mine);
                 }
             }
-            // What stays the rig's stays the rig's: the brightness, the low-fuel threshold and the car's
-            // own shift pattern are not a strip's business.
+            // What stays the rig's stays the rig's: the rig's fallback brightness and night mode, the
+            // low-fuel threshold and the car's own shift pattern are not a strip's business.
             foreach (var shared in new[] { "LightsBrightness", "LightsNightMode", "LightsLowFuelLaps", "LedMirrorReady" })
             {
                 if (!embedded.Contains("[OpenDash." + shared + "]")) continue;
                 Assert.Contains("[OpenDash." + shared + "]", mine);
             }
-            // And the file is otherwise what the build wrote: undoing the three names and dropping the
+            // And the file is otherwise what the build wrote: undoing the bar's own names and dropping the
             // two edited lines from both sides leaves two identical documents. A rewrite that touched
             // anything else -- a colour, a threshold, a container -- fails here.
             var undone = mine;
@@ -244,8 +245,6 @@ namespace OpenDashPlugin.Tests
                     && !line.TrimStart().StartsWith("\"ProfileId\":", StringComparison.Ordinal)));
         }
 
-        /// <summary>A name with a quote in it would end the JSON string early and hand SimHub a file it
-        /// cannot read at all.</summary>
         [Fact]
         public void A_bar_owns_its_brightness_and_a_switch_per_effect()
         {
@@ -428,6 +427,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("leftToRight", settings.BarRpmStyle("LedRim"));
         }
 
+        /// <summary>A name with a quote in it would end the JSON string early and hand SimHub a file it
+        /// cannot read at all.</summary>
         [Fact]
         public void A_name_is_escaped_into_the_profile()
         {

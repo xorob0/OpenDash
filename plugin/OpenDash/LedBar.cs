@@ -37,7 +37,11 @@ namespace OpenDashPlugin
         /// <summary>The user's name for it. It names the row here and the profile in SimHub's own list.</summary>
         public string Name { get; set; }
 
-        /// <summary>The generator's own shape id: "3-9-3", "brow-15", "4-14-4-reversed".</summary>
+        /// <summary>
+        /// The generator's id for the plain shape: "3-9-3", "0-18-0", "3-9-3-fanatec". Never a
+        /// `-reversed` twin once Normalise has run: which end the strip is wired from is
+        /// <see cref="Reversed"/>, and the profile it installs is <see cref="ProfileShapeId"/>.
+        /// </summary>
         public string Shape { get; set; }
 
         /// <summary>What the middle of the run shows. One of <see cref="Contract.LedCentres"/>.</summary>

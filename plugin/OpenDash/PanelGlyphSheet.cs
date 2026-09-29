@@ -34,7 +34,8 @@ namespace OpenDashPlugin
             Frames = frames;
         }
 
-        /// <summary>The generator's name for it, which is what the panel asks for: "yellow", "gear-3".</summary>
+        /// <summary>The generator's name for it, which is what the panel asks <see cref="PanelGlyphSheet"/> for,
+        /// spelled exactly as the build writes it: "yellow", "Pit speeding", "Spotter carLeft", "Gear 3 redline".</summary>
         public string Name { get; private set; }
 
         /// <summary>One of <see cref="PanelGlyphSheet.Kinds"/>.</summary>

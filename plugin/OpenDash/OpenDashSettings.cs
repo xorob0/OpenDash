@@ -277,9 +277,10 @@ namespace OpenDashPlugin
         /// shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
-        /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
-        /// The three OpenDash styles are the look only; the thresholds are the car's own whichever is
-        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
+        /// <summary>How the rev ladder fills a strip: "car", the car's whole bar from the fetched table
+        /// (ADR 0018), or "leftToRight", which takes the car's thresholds and only the look is OpenDash's
+        /// (ADR 0014). A file naming "meetInMiddle" or "f1", the looks #503 retired, is moved onto
+        /// "leftToRight" by Normalise.</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
         /// <summary>Whether a flag on a strip moves. Off holds every flag from the frame it would have
