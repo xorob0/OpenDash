@@ -66,36 +66,75 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Every strip profile this build embedded, by the id the generator wrote it under, the wirings and
-        /// the far-end twins included.
+        /// The id of every strip profile this build embedded, the wirings and the far-end twins included,
+        /// read off the resource names without opening one: what the Add LEDs sheet offers.
         /// </summary>
         /// <remarks>
         /// The census is what is embedded: a shape this build does not carry is not offered and cannot be
         /// added as a strip whose profile does not exist. The add form's two numbers leave the wirings out
-        /// (PanelLights.BarSides and BarCentres); this is the lookup a strip's profile is resolved through.
+        /// (PanelLights.BarSides and BarCentres); a strip's profile is then resolved through
+        /// <see cref="EmbeddedProfileOf"/>.
         /// </remarks>
-        private static IList<EmbeddedShape> EmbeddedShapes()
+        private static IList<string> EmbeddedShapeIds()
         {
-            var log = new SimHubInstallLog();
-            var assembly = typeof(OpenDash).Assembly;
-            var shapes = new List<EmbeddedShape>();
+            var ids = new List<string>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
+            foreach (var resource in FlagBoxProfile.StripResourceNames(typeof(OpenDash).Assembly))
             {
                 var id = FlagBoxProfile.ShapeIdOf(resource);
-                if (id == null || !seen.Add(id)) continue;
-                var text = FlagBoxProfile.ResourceText(assembly, resource, log);
-                if (text == null) continue;
-                shapes.Add(new EmbeddedShape(id, text));
+                if (id != null && seen.Add(id)) ids.Add(id);
             }
-            return shapes;
+            return ids;
+        }
+
+        /// <summary>The profiles already opened, by shape id: a resource cannot change while the plugin runs.</summary>
+        private static readonly Dictionary<string, string> embeddedJson = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The embedded profiles of these shape ids only, each decompressed once for the plugin's lifetime.
+        /// </summary>
+        /// <remarks>
+        /// What the attention census and a reinstall need is the rig's own strips' profiles, a handful at
+        /// most. Opening all of them -- 122 gzipped profiles, 44 million characters -- took about 70 ms and
+        /// 171 MB on every Go, which is every sidebar click, even on a rig with no strips.
+        /// </remarks>
+        private static IDictionary<string, string> EmbeddedJsonFor(IEnumerable<string> shapeIds)
+        {
+            var json = new Dictionary<string, string>(StringComparer.Ordinal);
+            var wanted = new HashSet<string>((shapeIds ?? Enumerable.Empty<string>()).Where(id => id != null), StringComparer.Ordinal);
+            if (wanted.Count == 0) return json;
+            lock (embeddedJson)
+            {
+                foreach (var id in wanted.ToList())
+                {
+                    string text;
+                    if (!embeddedJson.TryGetValue(id, out text)) continue;
+                    json[id] = text;
+                    wanted.Remove(id);
+                }
+                if (wanted.Count == 0) return json;
+                var assembly = typeof(OpenDash).Assembly;
+                var log = new SimHubInstallLog();
+                foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
+                {
+                    var id = FlagBoxProfile.ShapeIdOf(resource);
+                    if (id == null || !wanted.Remove(id)) continue;
+                    var text = FlagBoxProfile.ResourceText(assembly, resource, log);
+                    if (text == null) continue;
+                    embeddedJson[id] = text;
+                    json[id] = text;
+                    if (wanted.Count == 0) break;
+                }
+            }
+            return json;
         }
 
         /// <summary>The embedded profile a strip installs, by <see cref="LedBar.ProfileShapeId"/>, or null.</summary>
-        private static EmbeddedShape EmbeddedProfileOf(LedBar bar, IList<EmbeddedShape> shapes = null)
+        private static EmbeddedShape EmbeddedProfileOf(LedBar bar)
         {
-            if (bar == null) return null;
-            return (shapes ?? EmbeddedShapes()).FirstOrDefault(entry => string.Equals(entry.Id, bar.ProfileShapeId, StringComparison.Ordinal));
+            if (bar == null || bar.ProfileShapeId == null) return null;
+            string json;
+            return EmbeddedJsonFor(new[] { bar.ProfileShapeId }).TryGetValue(bar.ProfileShapeId, out json) ? new EmbeddedShape(bar.ProfileShapeId, json) : null;
         }
 
         /// <summary>
@@ -158,14 +197,6 @@ namespace OpenDashPlugin
                 census.Add(new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, description, devices)));
             }
             return census;
-        }
-
-        /// <summary>Every embedded strip profile by its shape id, which is what the census compares against.</summary>
-        private static IDictionary<string, string> EmbeddedJsonByShape()
-        {
-            var json = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var shape in EmbeddedShapes()) json[shape.Id] = shape.Json;
-            return json;
         }
 
         /// <summary>

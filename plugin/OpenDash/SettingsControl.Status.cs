@@ -34,7 +34,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private static readonly TimeSpan StartupGrace = TimeSpan.FromMinutes(2);
 
-        /// <summary>Asks SimHub again and keeps the answer. Cheap enough for every Go; never on the tick.</summary>
+        /// <summary>Asks SimHub again and keeps the answer. Run on every Go, so it opens only the profiles of the rig's own strips; never on the tick.</summary>
         private void RefreshAttention()
         {
             try
@@ -73,9 +73,11 @@ namespace OpenDashPlugin
                 });
             }
 
-            var embedded = EmbeddedJsonByShape();
-            bool reachable;
-            var census = BarCensus(embedded, out reachable);
+            // Only the rig's own strips' profiles, and no census at all without a strip: this runs on every Go.
+            var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
+            var reachable = false;
+            IList<KeyValuePair<LedBar, FlagBoxPlan>> census = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            if (bars.Count > 0) census = BarCensus(EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId)), out reachable);
             // One walk of SimHub's devices for every strip, rather than one each.
             IList<LedTarget> targets = new List<LedTarget>();
             if (census.Count > 0)

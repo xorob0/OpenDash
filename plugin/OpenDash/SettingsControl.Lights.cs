@@ -277,8 +277,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private void ShowAddLedBar()
         {
-            var shapes = EmbeddedShapes();
-            var census = shapes.Select(entry => entry.Id).ToList();
+            var census = EmbeddedShapeIds();
             // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
             // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
             // "3/9/3" among every other geometry and to know that is what their wheel is called.
@@ -385,7 +384,7 @@ namespace OpenDashPlugin
 
             var add = Ui.Button(PanelLights.AddBar, PanelButtonKind.Primary, PanelButtonSize.Large);
             add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device, shapes);
+            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device);
             var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
 
@@ -424,12 +423,12 @@ namespace OpenDashPlugin
             return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
         }
 
-        private void AddLedBar(string shape, string name, string device, IList<EmbeddedShape> shapes)
+        private void AddLedBar(string shape, string name, string device)
         {
             var bar = Settings.AddLedBar(shape, name, device);
             Save();
             Select(PanelPage.Leds, bar.Namespace);
-            var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, bar.ProfileShapeId, StringComparison.Ordinal));
+            var found = EmbeddedProfileOf(bar);
             var embedded = found == null ? null : found.Json;
             var ok = embedded != null;
             string note = null;
