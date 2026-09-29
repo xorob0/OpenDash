@@ -24,6 +24,7 @@ import {
   RETIRED_LED_CENTRE,
   LED_RPM_STYLES,
   LED_RPM_STYLE_SETTING,
+  LED_BRIGHTNESS_SETTING,
   LED_EFFECTS,
   ledEffectSettingName,
   ledEffectSettingNames,
@@ -515,7 +516,9 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
-    expect(panel).toContain('Contract.LedRpmStyles');
+    // One switch since #369, the car's own lights or not, rather than a chooser over the four styles:
+    // the panel names the car's style, and the two it no longer offers are normalised away (#503).
+    expect(panel).toContain('Contract.LedRpmStyleCar');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
     // a user is entitled to know whose numbers light their wheel (ADR 0018). The words moved into
@@ -654,6 +657,15 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultClockFormat = "${DEFAULTS.ClockFormat}";`);
     expect(panelSource()).toContain('Contract.ClockFormats');
     expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${CLOCK_FORMAT_SETTING},`);
+    // Whether a flag shows in the pit lane: shared, on by default, and attached, since band D, the
+    // companion, the pit wall, the flag box and every strip read it. #503.
+    expect(source).toContain(`public const string ${FLAGS_IN_PIT_LANE_SETTING} = "${FLAGS_IN_PIT_LANE_SETTING}";`);
+    expect(source).toContain(`public const bool DefaultFlagsInPitLane = ${String(DEFAULTS.FlagsInPitLane)};`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${FLAGS_IN_PIT_LANE_SETTING},`);
+    // A strip's own brightness, and the two rev light styles the panel no longer offers, named so the
+    // plugin normalises a stored one to leftToRight rather than guessing. #503.
+    expect(source).toContain(`public const string ${LED_BRIGHTNESS_SETTING} = "${LED_BRIGHTNESS_SETTING}";`);
+    expect(source).toContain(`RetiredLedRpmStyles = ${csArray(RETIRED_LED_RPM_STYLES)};`);
     // The delta's precision: shared, on the Data tab under the reference it qualifies, and attached. #322.
     expect(source).toContain(`public const string ${DELTA_PRECISION_SETTING} = "${DELTA_PRECISION_SETTING}";`);
     expect(source).toContain(`DeltaPrecisions = ${csArray(DELTA_PRECISIONS)};`);
