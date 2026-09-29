@@ -55,7 +55,10 @@ export default function Install() {
                 </>
               ),
             },
-            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.' },
+            {
+              title: 'Start SimHub and enable the plugin.',
+              body: 'Switch OpenDash on, then Show in left main menu, and press Ok. OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.',
+            },
             {
               title: 'Add your screens on the Rig tab, then restart SimHub.',
               body: 'The Rig starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
@@ -108,7 +111,7 @@ export default function Install() {
             <pre className="pre">Unblock-File &quot;C:\Program Files (x86)\SimHub\OpenDash.dll&quot;</pre>
           </li>
           <li>
-            <strong>The dashboard shows defaults although you changed them.</strong> The plugin is not enabled. Check Settings, Plugins.
+            <strong>The dashboard shows defaults although you changed them.</strong> The plugin is not enabled. Check its switch under Add/remove features, at the foot of SimHub’s left menu.
           </li>
           <li>
             <strong>Nothing on the display.</strong> Assign the dashboard in Dash Studio. The plugin installs; SimHub launches.
