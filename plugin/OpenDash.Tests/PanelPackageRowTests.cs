@@ -1,4 +1,4 @@
-// PanelPackageRowTests.cs: what a package row on the Install tab says, and what it counts.
+// PanelPackageRowTests.cs: what a package row on Updates says, and what it counts.
 //
 // The wording is pinned verbatim for the reason PanelCopyTests pins the rest of the panel's words: what a
 // user reads is the deliverable as much as what the panel does. The counting is pinned because it is the
@@ -28,6 +28,14 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A package the design names reads by that name; one it does not keeps its folder.</summary>
+        /// <summary>The caption over the rows sends somebody to the page that adds a screen, which is
+        /// Screens now that the tabs have gone (#503).</summary>
+        [Fact]
+        public void The_section_sends_somebody_to_Screens_to_add_one()
+        {
+            Assert.Equal("Add a screen on Screens to use one.", PanelPackageRow.SectionCaption);
+        }
+
         [Fact]
         public void The_row_names_the_package_and_captions_it_with_the_size()
         {

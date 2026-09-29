@@ -268,6 +268,8 @@ namespace OpenDashPlugin.Tests
             // button that puts it back.
             Assert.Contains("a copy is kept", PanelAddScreen.ReinstallEditedCaption);
             Assert.Contains("Put mine back", PanelAddScreen.ReinstallEditedCaption);
+            // Where "Put mine back" is now that the tabs have gone (#503).
+            Assert.EndsWith("\"Put mine back\" on Updates restores it.", PanelAddScreen.ReinstallEditedCaption);
         }
     }
 }

@@ -130,12 +130,11 @@ namespace OpenDashPlugin
         /// What the caption says instead once this screen's folder has been edited.
         /// </summary>
         /// <remarks>
-        /// The Install tab asks before it replaces authored work and keeps the copy under a name no
-        /// later install claims. A reinstall of one screen costs exactly the same thing, so it says the
-        /// same thing and keeps the copy the same way; "Put mine back" on the Install tab is what
-        /// restores it.
+        /// Updates asks before it replaces authored work and keeps the copy under a name no later
+        /// install claims. A reinstall of one screen costs exactly the same thing, so it says the same
+        /// thing and keeps the copy the same way; "Put mine back" on Updates is what restores it.
         /// </remarks>
-        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Install tab restores it.";
+        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on Updates restores it.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.

@@ -56,7 +56,7 @@ namespace OpenDashPlugin
                 rows.Add(BuildEmptyRig());
                 return Ui.VStack(0, Ui.Section("Your rig", rows.ToArray()));
             }
-            if (PanelRig.ShowsUnclaimedNote(rig)) rows.Add(BuildUnclaimedNote());
+            if (PanelScreens.ShowsUnclaimedNote(rig)) rows.Add(BuildUnclaimedNote());
 
             var screen = Selected;
             rows.Add(BuildScreenHeader(screen));
@@ -175,13 +175,13 @@ namespace OpenDashPlugin
         /// Older versions installed every package the plugin embeds, so a rig migrated from one of them
         /// holds a dozen cards for screens nobody owns. Nothing is deleted on their behalf (ADR 0017),
         /// so the panel says what to do instead, and the line goes when it stops being true rather than
-        /// when somebody dismisses it. PanelRig decides when that is.
+        /// when somebody dismisses it. PanelScreens decides when that is.
         /// </remarks>
         private FrameworkElement BuildUnclaimedNote()
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(PanelRig.UnclaimedNote);
+            var text = Ui.Caption(PanelScreens.UnclaimedNote);
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;

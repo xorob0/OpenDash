@@ -1,4 +1,4 @@
-// PanelRigTests.cs: when the Rig tab tells a driver to remove the dashboards they have no screen for.
+// PanelScreensTests.cs: when the Screens page tells a driver to remove the dashboards they have no screen for.
 //
 // The line is for a rig the migration made, and whether a screen is one of those is carried by the screen
 // rather than guessed from how many the rig holds (#478). What is held here is that fact through every path
@@ -11,7 +11,7 @@ using Xunit;
 
 namespace OpenDashPlugin.Tests
 {
-    public class PanelRigTests
+    public class PanelScreensTests
     {
         [Fact]
         public void A_rig_of_five_screens_added_on_the_rig_tab_is_never_told_to_remove_any()
@@ -29,11 +29,11 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
 
             Assert.Equal(5, settings.RigScreens().Count);
-            Assert.False(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
             // Nor once written and read back, which is where a sixth start would find it.
             var read = RoundTrip(settings);
             Assert.Equal(5, read.RigScreens().Count);
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         [Fact]
@@ -44,33 +44,33 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             Assert.Equal(4, settings.RigScreens().Count);
             Assert.All(settings.RigScreens(), screen => Assert.True(screen.Unclaimed));
-            Assert.True(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
 
             // It survives being written and read back, and the copy the panel works on.
             var read = RoundTrip(settings);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
             var copy = new OpenDashSettings();
             copy.CopyFrom(read);
-            Assert.True(PanelRig.ShowsUnclaimedNote(copy.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(copy.RigScreens()));
 
             // A screen the driver adds beside them answers for itself and for none of the others.
             var rim = read.AddScreen(Entry("OpenDash 1280x480", Contract.KindFace, 1280, 480), "Rim");
             read.Normalise();
             Assert.False(rim.Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Removing some of them is not the end of it while one is left that nobody has answered for.
             Assert.True(read.RemoveScreen("Face850x480"));
             Assert.True(read.RemoveScreen(Contract.PitWallPrefix));
             read.Normalise();
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
             read.ScreenByNamespace(Contract.CompanionPrefix).Keep();
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Keeping the last one is the moment the line stops being true, and it stays gone.
             read.ScreenByNamespace("Face1280x480").Keep();
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
-            Assert.False(PanelRig.ShowsUnclaimedNote(RoundTrip(read).RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(RoundTrip(read).RigScreens()));
         }
 
         [Fact]
@@ -80,9 +80,9 @@ namespace OpenDashPlugin.Tests
             // has a card they did not choose, and it is theirs to keep or remove.
             var settings = Upgraded("OpenDash 1280x480");
             settings.Normalise();
-            Assert.True(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
             Assert.True(settings.RemoveScreen("Face1280x480"));
-            Assert.False(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
         }
 
         [Fact]
@@ -100,14 +100,14 @@ namespace OpenDashPlugin.Tests
             Assert.True(read.ScreenByNamespace("Face1280x480").Unclaimed);
             Assert.True(read.ScreenByNamespace("Face850x480").Unclaimed);
             Assert.False(read.ScreenByNamespace(Contract.CompanionPrefix).Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Answered once, and from then on carried like any other: removing one leaves a folder on record
             // that no screen holds, and the other is still unanswered for all that.
             Assert.True(read.RemoveScreen("Face850x480"));
             read = RoundTrip(read);
             Assert.True(read.ScreenByNamespace("Face1280x480").Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         [Fact]
@@ -128,7 +128,7 @@ namespace OpenDashPlugin.Tests
                 new[] { "OpenDash 1280x480", "OpenDash 850x480", "OpenDash 800x480" },
                 Face("Face1280x480", "1280 × 480", 1280, "OpenDash 1280x480", null),
                 Face("Face850x480", "850 × 480", 850, "OpenDash 850x480", null));
-            Assert.False(PanelRig.ShowsUnclaimedNote(pruned.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(pruned.RigScreens()));
         }
 
         [Fact]
@@ -147,7 +147,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(5, read.RigScreens().Count);
             Assert.All(read.RigScreens(), screen => Assert.False(screen.Unclaimed));
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         private static string Package(string folder) => "OpenDashPlugin.Resources." + folder + ".simhubdash";

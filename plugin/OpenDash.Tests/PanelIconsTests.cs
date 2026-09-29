@@ -97,6 +97,49 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(PanelIcons.Plus, sheet, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// The rebuilt panel's own set (#503), pinned where it is.
+        /// </summary>
+        /// <remarks>
+        /// The sidebar's eight are the `d` strings Sidebar.dc.html draws; Warning and Restart are Home's
+        /// fix rows; Close, Search, the chevrons, the grip and the plus are the redesign's glyphs redrawn on
+        /// the twenty unit box, because a typed "✕" or "›" is exactly what the test below forbids. None is on
+        /// PluginComponents.dc.html, whose icon row stays eight, so this is a pin and not a join until the
+        /// artboards are copied to design/canvas/plugin/.
+        /// </remarks>
+        [Fact]
+        public void The_redesigns_icons_are_pinned_where_they_are()
+        {
+            Assert.Equal("M3 9l7-5.5L17 9v8H3z M8 17v-5h4v5", PanelIcons.Home);
+            Assert.Equal("M2.5 3.5h9v6h-9z M13.5 3.5h4v4h-4z M2.5 12.5h15v3h-15z", PanelIcons.Rig);
+            Assert.Equal("M2.5 4.5h15v9h-15z M7 17h6", PanelIcons.Screens);
+            Assert.Equal("M2.5 8.5h3v3h-3z M8.5 8.5h3v3h-3z M14.5 8.5h3v3h-3z", PanelIcons.Leds);
+            Assert.Equal("M3 3h4v4H3z M8 3h4v4H8z M13 3h4v4h-4z M3 8h4v4H3z M8 8h4v4H8z M13 8h4v4h-4z M3 13h4v4H3z M8 13h4v4H8z M13 13h4v4h-4z", PanelIcons.Matrix);
+            Assert.Equal("M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 7.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z", PanelIcons.Shortcuts);
+            Assert.Equal("M3 6h14 M3 14h14 M7 4v4 M13 12v4", PanelIcons.Settings);
+            Assert.Equal("M10 3v9M6 8.5l4 4 4-4M3.5 14v3h13v-3", PanelIcons.Updates);
+            Assert.Equal("M8.5 3a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M12.5 12.5l4.5 4.5", PanelIcons.Search);
+            Assert.Equal("M5 5l10 10M15 5L5 15", PanelIcons.Close);
+            Assert.Equal("M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 6v5 M10 13.5v.5", PanelIcons.Warning);
+            Assert.Equal("M15.5 6.5A6.5 6.5 0 1 0 16.5 11 M16 3v4h-4", PanelIcons.Restart);
+            Assert.Equal("M7.5 4.5v1 M12.5 4.5v1 M7.5 9.5v1 M12.5 9.5v1 M7.5 14.5v1 M12.5 14.5v1", PanelIcons.DragHandle);
+            Assert.Equal("M7.5 5l5 5-5 5", PanelIcons.ChevronRight);
+            Assert.Equal("M5 7.5l5 5 5-5", PanelIcons.ChevronDown);
+            Assert.Equal("M10 4v12M4 10h12", PanelIcons.Add);
+            Assert.Equal(20, PanelIcons.NavBox);
+            Assert.Equal(18, PanelIcons.NavSize);
+
+            var sheet = Sheet();
+            foreach (var path in RedesignPaths) Assert.DoesNotContain(path, sheet, StringComparison.Ordinal);
+        }
+
+        private static readonly string[] RedesignPaths =
+        {
+            PanelIcons.Home, PanelIcons.Rig, PanelIcons.Screens, PanelIcons.Leds, PanelIcons.Matrix, PanelIcons.Shortcuts,
+            PanelIcons.Settings, PanelIcons.Updates, PanelIcons.Search, PanelIcons.Close, PanelIcons.Warning, PanelIcons.Restart,
+            PanelIcons.DragHandle, PanelIcons.ChevronRight, PanelIcons.ChevronDown, PanelIcons.Add,
+        };
+
         /// <summary>The set is one hand: one box, one weight, and two sizes named by the sheet's own
         /// caption rather than chosen here.</summary>
         [Fact]
@@ -141,7 +184,8 @@ namespace OpenDashPlugin.Tests
                 PanelIcons.Install, PanelIcons.Refresh, PanelIcons.Chevron, PanelIcons.Check,
                 PanelIcons.Alert, PanelIcons.External, PanelIcons.Display, PanelIcons.Grid,
                 PanelIcons.Phone, PanelIcons.Plus,
-            };
+            }.Concat(RedesignPaths).ToArray();
+            Assert.Equal(26, paths.Length);
             Assert.Equal(paths.Length, paths.Distinct(StringComparer.Ordinal).Count());
         }
 

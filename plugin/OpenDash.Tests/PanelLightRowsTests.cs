@@ -274,9 +274,9 @@ namespace OpenDashPlugin.Tests
             // No strip of the shape in SimHub: a strip is added on the Lights tab, and the row has no
             // Install press to name, so it says where to go.
             var one = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of this shape is in SimHub. Add one on the Lights tab.", one);
+            Assert.Equal("No strip of this shape is in SimHub. Add one on the LEDs page.", one);
             var group = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of these shapes is in SimHub. Add one on the Lights tab.", group);
+            Assert.Equal("No strip of these shapes is in SimHub. Add one on the LEDs page.", group);
 
             // Current: the version it carries, and no warning, because there is no press to warn about.
             var current = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.3.0", EmbeddedVersion = "0.3.0" });

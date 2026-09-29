@@ -275,7 +275,7 @@ namespace OpenDashPlugin
 
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See the Install tab.";
+            return "Added " + name + ", but its profile could not be installed. See Updates.";
         }
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
@@ -393,7 +393,7 @@ namespace OpenDashPlugin
                 ? where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
                     + " SimHub's list carries its name rather than yours."
                 : where + ". \"" + profile + "\" is the profile that paints it, and SimHub has not got it:"
-                    + " install it from the Install tab.";
+                    + " install it at the top of the Matrix page.";
         }
 
         /// <summary>Whether <see cref="PanelAdded"/> is asking for something to be done before the panel
@@ -408,7 +408,7 @@ namespace OpenDashPlugin
         public static string BoxCaption(string profile)
         {
             return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below;"
-                + " install it from the Install tab.";
+                + " install it at the top of the Matrix page.";
         }
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since

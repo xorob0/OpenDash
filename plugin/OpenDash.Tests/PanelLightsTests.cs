@@ -97,31 +97,40 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OpenDash Flag box", installed);
             // The clause that answers the report: the list carries the profile's name, not the panel's.
             Assert.Contains("rather than yours", installed);
-            Assert.DoesNotContain("Install tab", installed);
+            Assert.DoesNotContain("Matrix page", installed);
 
+            // The tabs went with #503: the profile is installed from the Matrix page's own header.
             Assert.Equal(
                 "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below;"
-                    + " install it from the Install tab.",
+                    + " install it at the top of the Matrix page.",
                 PanelLights.BoxCaption("OpenDash Flag box"));
         }
 
         /// <summary>
-        /// A panel added on a rig where SimHub has no profile of ours is sent to the Install tab, and
-        /// every state that is not a profile in SimHub says the same thing.
+        /// A panel added on a rig where SimHub has no profile of ours is sent to the Matrix page's header,
+        /// and every state that is not a profile in SimHub says the same thing.
         /// </summary>
         /// <remarks>
         /// Outdated counts as installed: an old copy paints the box, so the driver is told to select it
-        /// rather than told SimHub has nothing. The Install tab's own row is what offers the update.
+        /// rather than told SimHub has nothing. The Matrix page's header is what offers the update.
         /// </remarks>
         [Theory]
         [InlineData(FlagBoxInstallState.NotInstalled)]
         [InlineData(FlagBoxInstallState.Unavailable)]
         [InlineData(FlagBoxInstallState.NotEmbedded)]
         [InlineData(FlagBoxInstallState.Failed)]
-        public void A_panel_added_without_the_profile_is_sent_to_the_Install_tab(FlagBoxInstallState state)
+        public void A_panel_added_without_the_profile_is_sent_to_the_Matrix_page(FlagBoxInstallState state)
         {
             Assert.True(PanelLights.PanelNeedsInstall(state));
-            Assert.Contains("Install tab", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+            Assert.Contains("install it at the top of the Matrix page.", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+        }
+
+        /// <summary>A strip whose profile could not be installed is sent to Updates, which lists what
+        /// OpenDash has written into SimHub; the tab it used to name is gone (#503).</summary>
+        [Fact]
+        public void A_strip_whose_profile_failed_is_sent_to_Updates()
+        {
+            Assert.Equal("Added Rim, but its profile could not be installed. See Updates.", PanelLights.BarAddFailed("Rim"));
         }
 
         [Theory]
