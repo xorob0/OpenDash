@@ -37,7 +37,7 @@ the band itself.
 | 2 | Disqualified | `disqualify` | yes | 4 | A cross, blinking. The one flag that ends the race whether the driver reacts or not. | Outlined `purpose.flag.black`, "DISQUALIFIED". |
 | 3 | Black furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
-| 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Outlined `purpose.flag.orange` on the near-black ground, "MEATBALL". |
+| 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | A disc of `purpose.flag.orange` in the middle of the near-black ground, two thirds of its shorter side, with no border and no name. |
 | 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | SC written in black on a yellow panel, blinking. The letters are all that tell it from a waved yellow. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
 | 7 | Waved yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "WAVED YELLOW", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
@@ -104,16 +104,25 @@ the real flag is made and because a diagonal is a rotated rectangle clipped to t
 nothing in the format notes establishes; the box keeps its diagonals, which are pixels. The canvas
 owes that change, and [zones.md §10](zones.md#10-where-the-canvas-contradicts-itself) records it.
 
-**The meatball is outlined in orange on the near-black ground, where the canvas fills the band
-orange.** The flag is black with an orange disc, which is what the box draws. A band filled with
-`purpose.flag.orange`, which is the caution amber, was neither of the flag's colours, and where no
-name is written it was a band of amber rather than a black flag. Since #498 the band, its corner
-blocks and the full-screen block draw it in the black family's outlined form in the orange: the
-`surface.base` ground, and the border and the name in the orange. No disc is drawn, a disc being a
-fifth shape. The canvas owes that change, and
-[zones.md §10](zones.md#10-where-the-canvas-contradicts-itself) records it. The LED strip keeps the
-meatball on the black flag's lamp, for the reason `leds/effects.ts` gives: its orange on a lamp of
-its own would be the temperature warning's amber.
+**The meatball is a black box with an orange disc in the middle and no name, where the canvas fills
+the band orange.** The flag is black with an orange disc, which is what the box draws. A band filled
+with `purpose.flag.orange`, which is the caution amber, was neither of the flag's colours, and where
+no name is written it was a band of amber rather than a black flag. #498 first drew it in the black
+family's outlined form in the orange, a border and a name, and the author then ruled that the
+meatball is a black box with an orange disc in the middle and no text. Band D, its corner blocks,
+the nano's strip, the companion's and the pit wall's bands, and the full-screen block on the face,
+the companion and the pit wall therefore draw the opaque `surface.base` ground with no border, and a
+disc of the orange in its middle whose diameter is two thirds of the rectangle's shorter side: that
+is the flag's own proportion, Appendix H drawing a disc 40 cm across on a flag 60 cm high, and the
+shorter side is what keeps the disc inside a settled block sixteen pixels wide and a full-screen
+block taller than it is wide. The disc is a fifth shape, outside the canvas's rule of bands,
+outlined bands and two patterns, and it is drawn with SimHub's ellipse, which the round faces' rings
+already use. Since the meatball no longer has a name, the full-screen block's one name size is
+measured over the other conditions, whose widest is INCIDENT rather than MEATBALL, and the names
+grow where the width binds, which is the portrait face's 143 px becoming 160. The canvas owes that
+change, and [zones.md §10](zones.md#10-where-the-canvas-contradicts-itself) records it. The LED
+strip keeps the meatball on the black flag's lamp, for the reason `leds/effects.ts` gives: its
+orange on a lamp of its own would be the temperature warning's amber.
 
 **The band has no critical-flags switch.** Sixty-four pixels are the only thing a driver with a box
 has, which is what the switch is for; a driver who wants band D quieter turns the flag format off.
@@ -172,16 +181,16 @@ band is told when that clears, rather than lost behind it.
 `#FFB300`, which is the meatball's `purpose.flag.orange`, and the driver who has just hit something
 is the driver a meatball is likeliest to be for, so wherever no name is written the two have to
 differ in shape. While the meatball was a filled band the incident was outlined, where the canvas
-fills it. Since #498 the meatball is the black flag's outline in its orange, so the incident is
-filled again as the canvas draws it, and `alertBand.test.ts` holds the two apart on the nano and in
-a sixteen-pixel block. `purpose.alert.p2p` is `color.neutral.primary`, which is white: filled it is
+fills it. Since #498 the meatball is its orange disc on the near-black, so the incident is filled
+again as the canvas draws it, and `alertBand.test.ts` holds the two apart on the nano and in a
+sixteen-pixel block. `purpose.alert.p2p` is `color.neutral.primary`, which is white: filled it is
 the white flag and outlined it is the black family's `#F5F7FA`. The two patterns are the chequer's
-and the debris flag's, so no shape is left to give them, and push to pass and the flash are drawn
-only where their name is written. The nano's strip writes none and has no layer for them; a corner
-block too narrow for the word draws nothing rather than a white sliver; and the full-screen block
-does not take the body for them at all, since what the driver's own hand has just done is not worth
-the gear for the length of a push to pass. That departure wants the author's arbitration in
-`design/`.
+and the debris flag's and the disc is the meatball's, so no shape is left to give them, and push to
+pass and the flash are drawn only where their name is written. The nano's strip writes none and has
+no layer for them; a corner block too narrow for the word draws nothing rather than a white sliver;
+and the full-screen block does not take the body for them at all, since what the driver's own hand
+has just done is not worth the gear for the length of a push to pass. That departure wants the
+author's arbitration in `design/`.
 
 ### The four decisions sixty-four pixels forced
 
