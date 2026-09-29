@@ -60,8 +60,13 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   qualifier of the LEDs page's #369 switch, "Car's own rev lights", so the car's tables read one way on
   both pages (voice.md settled "Car-specific" for a value in a chooser, which needed a head noun; a title
   has one); a page is named as "the Screens page" wherever copy sends a driver to one.
-- **Every other artboard string the build words differently**, so that nobody comparing the two changes
-  it back:
+- **Two groups carry two words each, as the artboards do**, and are left for the author to settle since
+  the canvas is theirs: the rig's night mode and brightness are "Lights" on Shortcuts (its rig group) and
+  "Lighting" on Settings (its section), and Updates says "Lights" for the LED profiles; low fuel, oil and
+  water are "Warnings" on Rig (its scenario group), "Alerts" on Settings and "Car warnings" on a Matrix
+  panel. voice.md's one-word-per-thing rule would pick one noun per group.
+- **Every artboard string the pages draw today and word differently**, so that nobody comparing the two
+  changes it back. The pages still to be rebuilt add their own rows as they land:
 
   | artboard | build | why |
   |---|---|---|
@@ -74,19 +79,34 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   | Rig: "Light the real hardware" | "Real hardware" | a greyed title is a noun phrase |
   | Rig: a face tile's band reads its content | the band is drawn empty at rest | "Band D" is the panel talking to itself |
   | Sidebar: the search's label "Search settings" | "Search" as its placeholder and name, "Searches every setting." on the rail | the artboard's placeholder is "Search"; the rail, which has no placeholder, says the rest in its tooltip |
+  | Screens: "Flags" | "Flag display" | voice.md settles the label |
+  | Screens: "Show the last lap after the line" | "Lap review" | a label is a noun phrase, not a sentence |
+  | Screens: the round block's cards | headed "Cards", the artboard's noun | never the settings model's "Slots" |
+  | LEDs: "Use the car's own rev lights" | "Car's own rev lights" | a switch names the thing (#369) |
+  | LEDs: "Centre shows" | "Centre display" | voice.md's own example |
+  | LEDs: "Flags animated" | "Flag animation" | a label is a noun phrase |
+  | LEDs: "Spotter uses the whole strip" | "Full-strip spotter" | voice.md's example of a switch labelled as a sentence |
+  | Matrix: "At rest" | "Idle display" | "at rest" is the panel talking to itself |
+  | Matrix: "Cars on" | "Mounting side" | decided |
+  | Matrix: "Slide in" | "Spotter bar animation" | a switch names the thing |
+  | Matrix: "Flash at redline" | "Redline flash" | a label is a noun phrase |
+  | Shortcuts: "A wheel button, a button box, a key or a touch. SimHub saves them." | "A wheel button, a button box or a key." | a touch is not bound here, and the panel does not describe mechanism |
+  | Shortcuts: "Previous page, zone in focus" | "Band D · previous page", one row per zone | the zone in focus is a concept the panel has nowhere else |
+  | Settings: "Delta against" | "Delta reference" | a label is a noun phrase, and it is pinned |
+  | Settings: "Delta decimals · 0.00 \| 0.000" | "Delta precision · Hundredths \| Thousandths" | the labels are words, with no digits |
+  | Settings: "Show team names" | "Team names" | a switch names the thing |
+  | Settings: "Next to a blue flag" | "Blue flag detail" | a noun phrase, not a prepositional fragment |
+  | Settings: the oil and water captions | "In SimHub's unit; 0 uses 120 °C (248 °F)." and 110 °C (230 °F) | the row says which unit to type, and names its own default |
+  | Updates: "Something wrong?" | "Support" | a heading is never a question |
 
-### Three tokens are owed
+### The geometry is not in the token file
 
-[#176](https://github.com/xorob0/OpenDash/issues/176) names `panel.tabs`, `control.tab` and
-`control.screenCard` as tokens. They are not in `design/tokens.json`, and that file is the author's
-rather than something a build writes into, so the tab bar and the screen card are composed from the
-tokens that do exist — `control.height`, `radius.sm`, `purpose.ui.*`, `color.surface.*`. Nothing
-invents a colour; every value in `Widgets.cs` is a `Theme` constant and `ThemeTests` still holds
-each one against the token it mirrors.
-
-What is not expressed as a token is the geometry: the tab height, the underline weight, and the
-card's width and height are literals in `Widgets.cs`. They belong in the token file when somebody
-adds them there, and this paragraph is the record that they are missing rather than forgotten.
+Every colour the panel draws is a `Theme` constant, and `ThemeTests` holds each one against the token it
+mirrors in `design/tokens.json`. The geometry is not tokens: the frame's numbers are `PanelShell`'s and
+the shared controls' are `PanelKit`'s, each read off the #503 artboards and pinned there by
+`PanelShellTests` and `PanelKitTests`. `design/tokens.json` is the author's rather than something a build
+writes into, so they belong in it when somebody adds them there, and this paragraph is the record that
+they are missing rather than forgotten.
 
 ## Before #503: the four tabs
 
@@ -95,6 +115,14 @@ reasoning under each row still holds and the page agents rebuild from it. It des
 drew before [#503](https://github.com/xorob0/OpenDash/issues/503), not what it draws: the tab bar is gone,
 and each tab's rows are on the pages [Where everything moved](#where-everything-moved) names. A tab here
 is that tab, not a page; each section is rewritten for its page as that page lands.
+
+### Three tokens were owed
+
+[#176](https://github.com/xorob0/OpenDash/issues/176) named `panel.tabs`, `control.tab` and
+`control.screenCard` as tokens. They never reached `design/tokens.json`, so the tab bar and the screen
+card were composed from the tokens that did exist, and their geometry -- the tab height, the underline
+weight, the card's width and height -- was literals in `Widgets.cs`. Both went with #503, the tab bar for
+the sidebar and the card for the kit's DeviceCard, and their geometry with them.
 
 ### The tab bar
 

@@ -195,7 +195,7 @@ page in SimHub's left menu. It does not render, does not read telemetry and does
 anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why, and the
 question of whether it should ever compute is open as #98.
 
-The Rig tab does now show the screen it is configuring, and that is not a reversal of the sentence
+The Screens page does now show the screen it is configuring, and that is not a reversal of the sentence
 above. The panel hosts SimHub's own renderer, handed the `.djson` under `DashTemplates` that the
 driver's screen loads, reading the properties the panel has just written; nothing about the picture
 is drawn by OpenDash. [ADR 0020](decisions/0020-the-panel-draws-what-it-configures.md) is the record,

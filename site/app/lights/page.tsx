@@ -2,13 +2,11 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Attribution } from '../../components/Attribution';
-import { Capture } from '../../components/Capture';
 import { LedStrip } from '../../components/LedStrip';
 import { FRAMES } from '../../lib/stripFrames';
 import { Priority } from '../../components/Priority';
 import { Section } from '../../components/Section';
 import { StripGrid } from '../../components/StripGrid';
-import { CAPTURES, panelFile } from '../../lib/captures';
 import { STRIP_SHAPES } from '../../lib/content.generated';
 import { INSTALL } from '../../lib/site';
 import styles from './page.module.css';
@@ -22,8 +20,6 @@ export const metadata: Metadata = {
 const EXAMPLES = [FRAMES.shift!, FRAMES.blue!, FRAMES.yellow!, FRAMES.spotter!, FRAMES.fuel!, FRAMES.abs!, FRAMES.limiter!];
 
 export default function Lights() {
-  const panel = CAPTURES.files[panelFile('lights')];
-
   return (
     <>
       <Section
@@ -112,9 +108,8 @@ export default function Lights() {
       <Section
         id="tab"
         title="In the plugin"
-        lede="The LEDs page holds a group per strip, with its centre display and the car’s own rev lights, and the car tables. The Matrix page holds the flag box and up to four matrix panels. Settings holds the low fuel warning in laps, and brightness and night mode for every light."
+        lede="The LEDs page holds a group per strip, with its centre display and the car’s own rev lights, and the car tables. The Matrix page holds the flag box and up to four matrix panels. The Settings page holds the low fuel warning in laps, and brightness and night mode for every light."
       >
-        <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub, from before the panel became pages" width={panel?.width ?? 1200} height={panel?.height ?? 1790} caption="The Lights tab, before the LEDs and Matrix pages replaced it. A new capture comes with the next screenshot pass." />
         <p className={`prose ${styles.more}`}>
           <Link href={INSTALL.href} className="link">
             How to install the plugin
