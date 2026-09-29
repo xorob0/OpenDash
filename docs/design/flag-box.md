@@ -185,7 +185,17 @@ at the band's rate, as the waved yellow does, because the condition moves; conse
 are the whole of the difference between the two, which is deliberate. They are SC, which is the
 author's choice for a panel eight columns wide, whatever the band calls the condition (#497).
 Whether strokes one unlit pixel wide survive a diffuser, which spreads the light of the pixels around
-them into the letter, has not been seen on a panel.
+them into the letter, has not been seen on a panel. The canvas's Flag box page still draws the caution
+as the two halves, captioned as the double yellow a marshal post flies, and owes a redrawn tile.
+
+The spotter's bar takes part of the word, since it is painted over any flag, [below](#the-spotter): a
+car on the left removes the S's left stroke, a car on the right reduces the C to a single unlit
+column, and cars on both sides leave neither letter readable. That is likeliest under the caution
+itself, when a double-file restart lines the field up two abreast. The picture still differs from a
+plain yellow, so the two conditions are not confused, but the word is lost for as long as the bar is
+lit, and no placement of the letters avoids it, because one bar two columns wide leaves six columns
+and two leave four, where the pair needs seven. Whether the bar should yield to the caution, or the damaged word be
+accepted while a car is alongside, is the author's decision and is not taken here.
 
 The rule this file used to state here, namely that the whole-track condition must never look like
 one corner's yellow, no longer holds on every surface. On the face the caution is a filled yellow band
@@ -251,7 +261,10 @@ blanked the warnings and the gear beneath it. It is now the last container of th
 that panel's own Spotter switch and on nothing else: no flag bit, no pit condition, and nothing
 below it excludes it in turn. Its frames light two columns of an edge and leave the rest of the
 panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
-it, so a standing yellow keeps columns three to six while the bar says which side. The consequence
+it, so a standing yellow keeps columns three to six while the bar says which side. A full-course
+caution does not come through whole, on the other hand, because SC runs to both edges and the bar
+takes the S or the C; [its own paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no
+placement avoids that and leaves the remedy to the author. The consequence
 worth stating is that on a rig with one box the gear now shows through the middle of the panel
 while a car is alongside, which is the behaviour this is for.
 

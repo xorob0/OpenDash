@@ -284,10 +284,15 @@ export const CHEQUERED_INVERSE: Grid = [
 
 /**
  * Full-course caution: SC cut out of the yellow, each letter three columns by six rows with a column
- * of yellow between them. The letters are unlit, which is how anything black is drawn on this box.
- * Seven columns of letter in eight leave one edge without a margin, and it is the C's: its open side
- * is the only side of either letter with no stroke on it, so the edge of the panel takes nothing the
- * letter is read by.
+ * of yellow between them. The letters are unlit pixels, which is the only black a lit panel can show;
+ * a black flag, having no lit field around it, is drawn in near-white instead. Seven columns of letter
+ * in eight leave one edge without a margin, and it is the C's: its open side is the only side of
+ * either letter with no stroke on it, so the edge of the panel takes nothing the letter is read by.
+ *
+ * The spotter's bar is painted over any flag, and a car alongside therefore takes the S or the C. No
+ * placement escapes it, since one bar two columns wide leaves six columns, two leave four, and the
+ * pair needs seven; docs/design/flag-box.md leaves whether the bar should yield to the caution to the
+ * author.
  */
 export const CAUTION: Grid = [
   'YYYYYYYY',
