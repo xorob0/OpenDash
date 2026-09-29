@@ -298,10 +298,10 @@ describe('several conditions raised at once', () => {
     // a car alert a flag would have outranked is told rather than held behind a flag nobody sees.
     { name: 'a blue flag in the pit lane, with flags off there', bits: ['silencedHere', 'blue'], expect: undefined },
     { name: 'an incident under a yellow in the pit lane, with flags off there', bits: ['silencedHere', 'incident', 'yellow'], expect: 'incident' },
-    // Not a stall in the lane: ENGINE_OFF is outOnCircuit, so band D never tells one there (the pit
-    // family does). The harness raises a car alert whatever its own gate, so what this proves is the
-    // ranking: a silenced red flag does not hold down a car alert it would have outranked.
-    { name: 'a car alert under a silenced red flag is not held down by it', bits: ['silencedHere', 'engine', 'red'], expect: 'engine' },
+    // A car alert red outranks, as it outranks every one but the ignition and the stall: without the
+    // silencing, 'red outranks everything' holds the incident down, so the incident being told is the
+    // silencing and nothing else. (A stall would prove nothing, since it outranks red regardless.)
+    { name: 'an incident under a silenced red flag is not held down by it', bits: ['silencedHere', 'incident', 'red'], expect: 'incident' },
     { name: 'push to pass under a white in the pit lane, with flags off there', bits: ['silencedHere', 'pushToPass', 'white'], expect: 'pushToPass' },
   ];
   for (const c of cases) test(c.name, () => expect(shown(c.bits)).toBe(c.expect));
