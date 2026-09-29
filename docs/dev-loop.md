@@ -85,7 +85,9 @@ from the window's top-left for the menu and a fraction of the screen width for t
 column, the window is **waited for** and then put where they expect it, every other window that
 could take a click is minimised, and the result is checked by asking Windows which dash windows
 exist. It retries once and then tells you to open it by hand, which is enough, since everything
-else will already be in place.
+else will already be in place. The exception is a SimHub that has exited under the clicks, which it
+checks for before giving that advice and names instead, pointing at SimHub's log, because in that
+case no coordinate was ever going to help.
 
 ## The flag box, which has no hardware
 

@@ -13,11 +13,12 @@
  * {@link EXPECTED_SCREEN} is now checked rather than assumed. Nothing else is trusted either:
  * `openDashboard` waits for SimHub's window to exist and to fill the screen before it measures
  * anything from it, asks Windows which dash windows exist afterwards, retries once, and fails with
- * what to do by hand rather than leaving the caller to wonder.
+ * what to do by hand, or with SimHub having exited when it has, rather than leaving the caller to
+ * wonder.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { onHost, powershell, psq, sleep, type Host, type RunResult } from './vm.ts';
+import { onHost, powershell, psq, simhubRunning, sleep, type Host, type RunResult } from './vm.ts';
 
 const WINVM_DIR = '/opt/winvm';
 const VENV_PYTHON = `${WINVM_DIR}/mcp/.venv/bin/python`;
@@ -534,17 +535,35 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     }
   }
 
-  return {
-    ok: false,
-    code: 1,
-    stdout: '',
-    stderr:
-      `could not open ${opts.name} after two attempts.\n` +
-      `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
-      `filters the list and presses Start, and the coordinates it uses were measured at ` +
-      `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
-      `Open it by hand once (Dash Studio, find ${opts.name}, Start, Windowed) and run this again; everything else will be in place.`,
-  };
+  // Asked here and not earlier: the maximise at the top of each attempt already names a SimHub that
+  // is gone, so the case left is one that died after its window was found, under the clicks.
+  return { ok: false, code: 1, stdout: '', stderr: openFailure(opts.name, simhubRunning(host)) };
+}
+
+/**
+ * What `openDashboard` reports when neither attempt opened anything, given whether SimHub was still
+ * running afterwards (null when that could not be read).
+ *
+ * The default advice is about the clicking, and on 2026-09-13 it cost an hour: SimHub had exited
+ * under the clicks, so no coordinate was ever going to help. The first line names the fault on its
+ * own because `bun run shots` keeps only the first line as the reason a capture is missing.
+ */
+export function openFailure(name: string, simhubRunning: boolean | null): string {
+  if (simhubRunning === false) {
+    return (
+      `could not open ${name}: SimHub exited while it was being clicked, so the coordinates are not what to look at.\n` +
+      `\`bun run vm logs 80\` shows how it ended. When this happened on 2026-09-13 the log held WatchDog ` +
+      `"Abnormal Inactivity" dumps and no exception, which is a guest too short of CPU or memory to keep SimHub up ` +
+      `rather than a fault in any package. Running this again restarts it.`
+    );
+  }
+  return (
+    `could not open ${name} after two attempts.\n` +
+    `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
+    `filters the list and presses Start, and the coordinates it uses were measured at ` +
+    `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
+    `Open it by hand once (Dash Studio, find ${name}, Start, Windowed) and run this again; everything else will be in place.`
+  );
 }
 
 /**
