@@ -5,16 +5,23 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
  * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
- * `truncate`, `in`, the comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as a
- * `Date` and formatted by the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and
- * `m`, in en-US's colon, which is the culture SimHub sets at startup. Anything else is an error
- * rather than a silent `undefined`: a test that evaluates half an expression proves nothing.
+ * `truncate`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the comparisons,
+ * `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and
+ * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
+ * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
+ * that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning
  * is the number it arrives at, and `signed` puts a `replace` and a sign flag in the way.
  */
 export type Props = Record<string, unknown>;
+
+/**
+ * The key `rootdashboardscreenname()` answers from: the name of the screen SimHub drew last. Not a
+ * name a `[Property]` read can reach, since the parentheses are outside what one is scanned for.
+ */
+export const ROOT_SCREEN = 'rootdashboardscreenname()';
 
 /** .NET's `0`, `0.0`, `00` and so on, with the leading `+` NCalc's third argument asks for. */
 const formatNumber = (value: number, pattern: string, addSign = false): string => {
@@ -85,6 +92,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
       return Math.round(value * scale) / scale;
     },
     truncate: Math.trunc,
+    rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));
 }

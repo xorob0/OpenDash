@@ -65,8 +65,8 @@ namespace OpenDashPlugin.Tests
             var settings = RigOfEveryKind();
             var expected = settings.RigScreens().SelectMany(s => Contract.ScreenActionNames(s.Kind, s.Namespace)).ToArray();
             Assert.Equal(expected, Record(settings).Select(r => r.Name).ToArray());
-            // And that list, spelled out, so a contract that grew a companion action would fail here too
-            // rather than being registered faithfully.
+            // And that list, spelled out, so a contract that grew an action would fail here too rather
+            // than being registered faithfully.
             Assert.Equal(new[]
             {
                 "Face1920x480CycleZoneA",
@@ -74,22 +74,26 @@ namespace OpenDashPlugin.Tests
                 "Face1920x480CycleZoneC",
                 "Face1920x480CycleZoneD",
                 "Face1920x480HoldQuickGlance",
+                "CompanionHoldQuickGlance",
                 "PitWallHoldQuickGlance",
             }, expected);
         }
 
         [Fact]
-        public void A_companion_registers_nothing_under_its_own_name()
+        public void A_companion_registers_its_glance_and_nothing_to_page_with()
         {
             var registered = Record(RigOfEveryKind());
-            Assert.DoesNotContain(registered, r => r.Name.StartsWith(Contract.CompanionPrefix, StringComparison.Ordinal));
+            Assert.Equal(new[] { "CompanionHoldQuickGlance" },
+                registered.Where(r => r.Name.StartsWith(Contract.CompanionPrefix, StringComparison.Ordinal)).Select(r => r.Name).ToArray());
+            // Paging is SimHub's NextScreen, so nothing that would be a second binding for it.
             Assert.DoesNotContain(registered, r => r.Name.EndsWith("NextModule", StringComparison.Ordinal));
 
-            // A rig of companions alone registers nothing at all: no dead row in Controls and events.
+            // Two companions, a glance each, under each one's own namespace, so a button glances one
+            // phone and not both.
             var companions = new OpenDashSettings { Rig = new List<ScreenInstance> { Screen(Contract.KindCompanion, 850, 480), Screen(Contract.KindCompanion, 480, 850) } };
             companions.Rig[1].Namespace = "Garage";
             companions.Normalise();
-            Assert.Empty(Record(companions));
+            Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" }, Record(companions).Select(r => r.Name).ToArray());
         }
 
         [Fact]
@@ -132,6 +136,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(9, settings.ScreenZone("PitWall", "TowerA"));
             registered["PitWallHoldQuickGlance"].Release();
             Assert.Equal(towerA, settings.ScreenZone("PitWall", "TowerA"));
+
+            // A companion's glance is a force: its module while held, and once released the way back,
+            // which lasts a moment and is timed exactly in SettingsTests. Either is "not the glance".
+            registered["CompanionHoldQuickGlance"].Press();
+            Assert.Equal(Contract.DefaultCompanionQuickGlance, settings.ScreenCompanionOpenOn("Companion"));
+            registered["CompanionHoldQuickGlance"].Release();
+            Assert.Contains(settings.ScreenCompanionOpenOn("Companion"), new[] { Contract.CompanionOpenOnBack, Contract.DefaultCompanionOpenOn });
         }
 
         [Fact]

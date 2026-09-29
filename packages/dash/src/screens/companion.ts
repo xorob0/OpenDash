@@ -10,8 +10,11 @@
  *
  * It used to be the plugin's choice: `OpenDash.CompanionPage` named the one module enabled, and a
  * `CompanionNextModule` action moved it. That left SimHub's ring one screen long, so a tap did
- * nothing, and the plugin registers no companion action now (#435). What survives of the plugin's
- * choice is the start module, forced for a few seconds after SimHub loads through `CompanionOpenOn`.
+ * nothing, and the plugin registers no paging action now (#435). What survives of the plugin's choice
+ * is forcing a module for a moment through `CompanionOpenOn` -- the start module for a few seconds
+ * after SimHub loads, and a held glance for as long as its button is down -- and, when a glance is
+ * released, going back to the module the driver was on. The plugin cannot name that module and the
+ * dashboard can, so the dashboard keeps it in variables of its own (`companionVariables`, #362).
  *
  * Every module screen is an in-game screen and nothing else, and the dashboard ends with one idle
  * screen (`idle.ts`). SimHub filters screens by role only when the roles differ between them, which
@@ -20,7 +23,7 @@
  * were identical and a companion at rest drew a module full of dashes; #763.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
-import { MODULE_CATALOGUE, MODULE_COUNT, secondScreen } from '../contract.ts';
+import { MODULE_CATALOGUE, MODULE_COUNT, companionVariables, secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
 import { withMoreBindings } from '../bind.ts';
 import { flagFull } from '../components/flagFull.ts';
@@ -107,19 +110,19 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     //
     // So SimHub owns the paging here and `CompanionPage` no longer drives it.
     //
-    // The second half of the expression is how the start module survives that. It is false on every
-    // ordinary frame -- so the rotation alone decides what exists and a tap pages it -- and true for
-    // the few seconds after SimHub loads during which the plugin names one module. One screen left
-    // standing is one SimHub selects, which is the same mechanism the old gate ran on, used once
-    // instead of every frame. The held glance needs it twice and cannot have it: coming back means
-    // naming the module the driver was on, and SimHub neither publishes that nor lets a plugin ask.
-    // #362.
+    // The second half of the expression is how the start module and the held glance survive that.
+    // It is idle on every ordinary frame -- so the rotation alone decides what exists and a tap pages
+    // it -- and names one module while the plugin forces one: the start module for a few seconds after
+    // SimHub loads, the glance module while its button is down, and for a moment after the release the
+    // module the driver was on, which the dashboard's own variables remember because SimHub tells the
+    // plugin nothing about it. One screen left standing is one SimHub selects, which is the same
+    // mechanism the old gate ran on, used for a moment instead of every frame. #362.
     enabledExpression: secondScreen.moduleLive(page),
     items,
   };
 }
 
-/** The companion dashboard: 21 screens, one per module, in page order, one of them enabled. */
+/** The companion dashboard: 21 screens, one per module, in page order, and the idle screen. */
 export function companionDashboard(size: CompanionSize, metadata: DashboardMetadata): Dashboard {
   return {
     // A companion is a phone or a tablet and the tap is how it is driven, so it asks for the simple
@@ -130,6 +133,9 @@ export function companionDashboard(size: CompanionSize, metadata: DashboardMetad
     width: size.width,
     height: size.height,
     backgroundColor: ds.color.surface.base,
+    // What the screens' gate reads: which module to force this frame, and the module to go back to
+    // when a glance is released.
+    variables: companionVariables(),
     screens: [
       ...Array.from({ length: MODULE_COUNT }, (_, i) => companionScreen(size, i + 1)),
       // Last, so the module screens keep the indices the plugin's rotation and every test count from.

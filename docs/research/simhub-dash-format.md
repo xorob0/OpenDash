@@ -234,6 +234,44 @@ SimHub's own samples say the same thing in JSON: `ControlCenter.djson` carries a
 `"InGameScreen": false, "IdleScreen": true, "PitScreen": false` and three racing screens with
 `"IdleScreen": false`, and `MobileDashWithRelativeTimings` is the same shape with one of each.
 
+#### A dashboard can remember which screen it was on (2026-09-29, #362)
+
+Decompiled from 9.12.6 for the companion's quick glance, which has to go back to a module SimHub
+chose and never told anybody about.
+
+- **One frame is three steps, in this order.** `EditorModel.UpdateData` runs
+  `UpdateVariables(Dashboard, …, beforeScreens: true)`, which evaluates the dashboard variables marked
+  `EvaluateBeforeScreenRoles`; then `CheckGameModeScreen`, which evaluates every screen's enabled
+  expression and chooses the screen; then `UpdateDataInternal`, which evaluates the other variables
+  and applies the chosen screen's bindings. Only a before-screen-roles variable reaches an enabled
+  expression on the frame it was computed. Frames run on SimHub's data loop
+  (`GraphicalDashPlugin.DataUpdated`), not at the display's refresh rate, so a phone streaming at ten
+  frames a second still has its screen chosen sixty times a second.
+- **Forcing one screen selects it.** With the current screen disabled, `FindModeScreen` tries the
+  screen the mode last remembered -- the same one, so also disabled -- and then takes the first
+  enabled screen carrying the role. When exactly one is enabled that is the one, and when the others
+  re-enable SimHub stays, because the current screen is enabled.
+- **`rootdashboardscreenname()` is the screen drawn last frame, when a variable asks.** It answers
+  from `ScreenNamesStack`, which `ApplyBindings` sets to the chosen screen's name while it applies the
+  items' bindings, in step three. A before-screen-roles variable in step one therefore reads the
+  previous frame's screen. The engine is per `EditorModel`, so two devices showing the same dashboard
+  each have their own answer.
+- **A variable reading itself reads its last value, and that is legal.** `[variable.X]` returns
+  `CurrentValue` from the dashboard's own `Variables` (`EditorModel.GetVariable`, case-insensitive);
+  nothing evaluates it at the point of reading. The "self referencing variable" exception is for a read
+  nested inside a read of the same variable, which evaluating an expression is not. So
+  `if(cond, [variable.X], value)` holds its value for as long as `cond` is true. Variables are
+  evaluated in list order, so one reads those above it as they are this frame.
+- **Nothing that reads a variable is cached across dashboards.** `ExpressionValue.HashCode` marks any
+  expression containing `variable.` (or `activescreenname`) as not cacheable, so every dashboard
+  evaluates its own. An expression with neither is shared through a global per-frame cache keyed by its
+  text.
+- **The JSON is the widget's shape, at the root.** `Dashboard.Variables` is its first declared member,
+  a `VariablesContainer` with `DashboardVariables`, written only when non-empty.
+
+The companion's three variables, and a frame-by-frame model of all of this, are in
+`packages/dash/src/contract.ts` (`companionVariables`) and `packages/dash/test/secondScreens.test.ts`.
+
 ### Node types observed
 
 | Type | Seen in | Purpose |

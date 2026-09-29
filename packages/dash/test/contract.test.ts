@@ -460,9 +460,11 @@ describe('plugin mirror', () => {
    * The companion's page is published and nothing reads it, and the pane says who does the paging.
    *
    * This used to pin the opposite: the page attached, and a start module and a held glance offered
-   * on the pane to move it. All three are gone, and the reason is that they were what stopped a tap
+   * on the pane to move it. All three went, because the page they moved was what stopped a tap
    * working -- SimHub's only touch gesture maps a tap to the previous or next screen, its navigation
    * walks the screens whose expression is true, and OpenDash enabled exactly one of the twenty-one.
+   * The start module and the glance came back as forces through `CompanionOpenOn` (#362); the page
+   * did not.
    *
    * The property is still attached because it has shipped and #170 is the rule that an rc user's
    * properties do not vanish without a release of warning. What has to be true now is that the pane
@@ -475,9 +477,10 @@ describe('plugin mirror', () => {
     // The start module writes its setting and forces it, which is what moves the screen now: the
     // page above is no longer read by the package.
     expect(panel).toContain('screen.CompanionStart = value;');
-    expect(panel).toContain('screen.OpenOnStartModule();');
-    // The glance does not, because coming back needs a module OpenDash cannot name. #362.
-    expect(panel).not.toContain('screen.CompanionQuickGlance = value');
+    expect(panel).toContain('screen.OpenOnStartModule(DateTime.UtcNow);');
+    // The glance writes its module and is bound beside it as a hold, since the release is the way back.
+    expect(panel).toContain('screen.CompanionQuickGlance = value;');
+    expect(panel).toContain('Ui.Caption(PanelCopy.CompanionGlance)');
     // And no binder offers an action the companion no longer registers.
     expect(panel).not.toContain('Contract.NextModuleActionFor(screen.Namespace)');
     // The sentence that replaced them names both ways a companion is paged, and where the button is

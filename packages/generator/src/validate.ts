@@ -456,6 +456,78 @@ const checkImages = (ctx: Context, dashboard: Dashboard, path: string): void => 
   }
 };
 
+/** The prefix NCalc gives a dashboard variable. SimHub matches it case-sensitively (`StartsWith("variable.")`). */
+const VARIABLE_PREFIX = 'variable.';
+
+/** A variable name `[variable.<name>]` can carry: the characters a property reference is scanned for. */
+const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Every `[variable.…]` an expression reads, the prefix as written kept, so a wrong case can be told apart. */
+const variableReads = (expression: string): string[] =>
+  referencedProperties(expression).filter((ref) => ref.toLowerCase().startsWith(VARIABLE_PREFIX));
+
+/**
+ * A dashboard's variables, and every read of one.
+ *
+ * The reads are the half that matters. A `[variable.X]` naming nothing the dashboard declares is not an
+ * error to SimHub: `EvaluateVariable` finds no variable and the read falls through to a property of that
+ * name, which does not exist, so it is null -- and a screen gated on it is off, silently, exactly like
+ * the misspelt function a screen's own check above is there for. The same goes for `[Variable.X]`,
+ * because the prefix is matched case-sensitively and a capital sends the read to a plugin called
+ * `Variable`.
+ */
+const checkVariables = (ctx: Context, dashboard: Dashboard, path: string): void => {
+  const { c } = ctx;
+  const variables = dashboard.variables ?? [];
+  if (!Array.isArray(variables)) {
+    c.error('variable/not-a-list', `${path}#variables`, 'variables must be a list');
+    return;
+  }
+  const declared = new Set<string>();
+  for (const variable of variables) {
+    const at = `${path}#variables.${variable?.name ?? '?'}`;
+    if (!variable || typeof variable.name !== 'string' || !VARIABLE_NAME.test(variable.name)) {
+      c.error('variable/name', at, `variable name ${JSON.stringify(variable?.name)} is not a letter or underscore followed by letters, digits and underscores`);
+      continue;
+    }
+    // Without regard to case, as SimHub looks them up.
+    const key = variable.name.toLowerCase();
+    if (declared.has(key)) c.error('name/duplicate', at, `variable name ${JSON.stringify(variable.name)} is used twice`);
+    declared.add(key);
+    if (typeof variable.expression !== 'string' || variable.expression.trim() === '') {
+      c.error('variable/empty-expression', at, 'a variable has no expression');
+      continue;
+    }
+    checkProperties(ctx, variable.expression, at);
+    checkFunctions(ctx, variable.expression, at);
+  }
+
+  const reads: { expression: string; at: string }[] = variables
+    .filter((v) => typeof v?.expression === 'string')
+    .map((v) => ({ expression: v.expression, at: `${path}#variables.${v.name}` }));
+  for (const screen of dashboard.screens ?? []) {
+    const spath = screenPath(ctx.pkg.folderName, dashboard.name, screen.name);
+    if (screen.enabledExpression) reads.push({ expression: screen.enabledExpression, at: `${spath}#enabledExpression` });
+    walkItems(screen.items ?? [], spath, (v) => {
+      for (const { binding, bpath } of bindingsOf(v.item)) {
+        for (const expression of formulaExpressions(binding)) {
+          if (typeof expression === 'string') reads.push({ expression, at: `${v.path}${bpath}` });
+        }
+      }
+    });
+  }
+  for (const { expression, at } of reads) {
+    for (const ref of variableReads(expression)) {
+      const name = ref.slice(VARIABLE_PREFIX.length);
+      if (!ref.startsWith(VARIABLE_PREFIX)) {
+        c.error('variable/prefix-case', at, `[${ref}] is not read as a variable: SimHub matches the prefix "${VARIABLE_PREFIX}" case-sensitively`);
+      } else if (!declared.has(name.toLowerCase())) {
+        c.error('variable/undeclared', at, `[${ref}] names no variable of ${dashboard.name}; SimHub reads it as nothing`);
+      }
+    }
+  }
+};
+
 const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
   const { c } = ctx;
   const path = dashboardPath(ctx.pkg.folderName, dashboard.name);
@@ -475,6 +547,7 @@ const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
     }
   }
   checkImages(ctx, dashboard, path);
+  checkVariables(ctx, dashboard, path);
   if (!Array.isArray(dashboard.screens) || dashboard.screens.length === 0) {
     c.error('dashboard/no-screens', path, 'dashboard has no screens');
     return;

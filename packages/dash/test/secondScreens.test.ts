@@ -19,7 +19,14 @@ import {
   secondScreenProperties,
 } from '../src/contract.ts';
 import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
-import { COMPANION_OPEN_ON_SETTING, PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
+import {
+  COMPANION_OPEN_ON_BACK,
+  COMPANION_OPEN_ON_SETTING,
+  COMPANION_VARIABLES,
+  DEFAULT_COMPANION_OPEN_ON,
+  PIT_WALL_PAGES,
+  type PitWallPageMeta,
+} from '../src/contract.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { IDLE_SCREEN_NAME } from '../src/idle.ts';
@@ -46,7 +53,7 @@ import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { bindingExpression, cellOverruns, drawableGlyphs, drawableLiterals } from './monoGlyphs.ts';
 import { drawingOf } from './moduleItems.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { ROOT_SCREEN, evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -237,16 +244,17 @@ describe('the companion', () => {
   });
 
   /**
-   * Every screen on its own module switch, and on the module the plugin is forcing where it forces one.
+   * Every screen on its own module switch, and on the module being forced where one is.
    *
    * It used to be the switch and *the page the plugin was showing*, evaluated every frame, so exactly
    * one of the twenty-one was ever enabled. That is what made a tap do nothing: SimHub's only touch
    * gesture maps a tap to the previous or next screen, and `SelectNextScreen` walks the screens whose
    * expression is true, so a list of one had nowhere to go.
    *
-   * The forcing half is false on every ordinary frame, so the rotation alone decides what exists and
-   * SimHub decides which is up. It goes true for the few seconds after SimHub loads, and one screen
-   * left standing is one SimHub selects -- which is how a companion still opens on a chosen module.
+   * The forcing half is idle on every ordinary frame, so the rotation alone decides what exists and
+   * SimHub decides which is up. It names one module for the few seconds after SimHub loads, while a
+   * glance is held and for a moment after it is released, and one screen left standing is one SimHub
+   * selects. What it names is the dashboard's own variable, which is where the plugin's force is read.
    */
   test('switches each screen on its own module, and leaves the paging to SimHub', () => {
     modules(main).forEach((screen, i) => {
@@ -254,14 +262,153 @@ describe('the companion', () => {
       expect(screen.enabledExpression).toContain(moduleSettingName(i + 1));
       // The page the plugin used to drive it with is not in it, which is the whole of the change.
       expect(screen.enabledExpression).not.toContain(`OpenDash.${COMPANION_PAGE_SETTING}`);
-      // And the force is, defaulting to -1 so that a package with no plugin forces nothing.
-      expect(screen.enabledExpression).toContain(`OpenDash.${COMPANION_OPEN_ON_SETTING}], -1)`);
+      // And the force is, defaulting to -1 so that a dashboard on its first frame forces nothing.
+      expect(screen.enabledExpression).toContain(`isnull([variable.${COMPANION_VARIABLES.force}], -1)`);
     });
+    // The plugin's force is read by the variables, with the -1 a package with no plugin reads.
+    expect(main.variables?.map((v) => v.name)).toEqual([COMPANION_VARIABLES.shown, COMPANION_VARIABLES.back, COMPANION_VARIABLES.force]);
+    expect(main.variables?.every((v) => v.beforeScreenRoles)).toBe(true);
+    expect(main.variables?.[2]!.expression).toContain(`isnull([OpenDash.${COMPANION_OPEN_ON_SETTING}], -1)`);
+    // And no name a second companion's rewrite would touch.
+    for (const v of main.variables ?? []) expect(v.name).not.toContain('Companion');
     // Energy, damage and track rivals default to off, which is a 0 in the expression.
     expect(main.screens[5]!.enabledExpression).toContain(', 0)');
     expect(main.screens[0]!.enabledExpression).toContain(', 1)');
     // And the dashboard asks SimHub for the tap, rather than leaving it to the display's setting.
     expect(main.metadata.touchMode).toBe('simple');
+  });
+
+  /**
+   * SimHub's own frame, reduced to the part that chooses a companion's screen, as `EditorModel` runs it
+   * in 9.12.6 (decompiled; docs/research/simhub-dash-format.md):
+   *
+   * 1. `UpdateVariables(beforeScreens: true)`: the variables so marked, in order, each reading the
+   *    others' values and its own from the last time it was evaluated.
+   * 2. `CheckGameModeScreen`: every screen's enabled expression, `> 0` meaning enabled, then
+   *    `FindModeScreen` for in-game: stay on the current screen while it is enabled, else the last
+   *    in-game screen it remembers if that is, else the first enabled in-game screen.
+   * 3. The items' bindings, which is when the engine is handed the chosen screen's name -- so
+   *    `rootdashboardscreenname()` in step 1 of the next frame answers with this frame's screen.
+   *
+   * A tap is `SelectNextScreen` between frames: the next of the enabled screens of the running role.
+   */
+  const simhub = (dashboard: Dashboard, props: Props, initial = dashboard.screens[0]!.name) => {
+    const values: Record<string, unknown> = {};
+    const enabled = new Set<string>();
+    let selected = initial;
+    let lastInGame: string | undefined;
+    let drawn: string | undefined;
+    const scope = (): Props => ({
+      ...props,
+      ...Object.fromEntries(Object.entries(values).map(([name, value]) => [`variable.${name}`, value])),
+      ...(drawn === undefined ? {} : { [ROOT_SCREEN]: drawn }),
+    });
+    const inGame = (): string[] => dashboard.screens.filter((s) => (s.inGame ?? true) && enabled.has(s.name)).map((s) => s.name);
+    return {
+      props,
+      frame(): string {
+        for (const v of dashboard.variables ?? []) if (v.beforeScreenRoles) values[v.name] = evalNcalc(v.expression, scope());
+        enabled.clear();
+        for (const s of dashboard.screens) if (!s.enabledExpression || Number(evalNcalc(s.enabledExpression, scope())) > 0) enabled.add(s.name);
+        const ring = inGame();
+        expect(ring.length).toBeGreaterThan(0);
+        if (!ring.includes(selected)) selected = lastInGame !== undefined && ring.includes(lastInGame) ? lastInGame : ring[0]!;
+        lastInGame = selected;
+        drawn = selected;
+        return selected;
+      },
+      tap(): void {
+        const ring = inGame();
+        selected = ring[(ring.indexOf(selected) + 1) % ring.length]!;
+      },
+      frames(count: number): string {
+        for (let i = 1; i < count; i++) this.frame();
+        return this.frame();
+      },
+    };
+  };
+
+  const idOf = (page: number): string => MODULE_CATALOGUE[page]!.id;
+  /** The track map, the plugin's default glance (Contract.DefaultCompanionQuickGlance), as a page. */
+  const TRACK = MODULE_CATALOGUE.findIndex((m) => m.id === 'track');
+  const openOn = `${PROPERTY_PREFIX}.${COMPANION_OPEN_ON_SETTING}`;
+
+  test('a held glance shows its module and the release goes back to the one the driver paged to', () => {
+    // Opens on module 5, forced for the plugin's first seconds.
+    const sim = simhub(main, { [openOn]: 4 });
+    expect(sim.frames(3)).toBe(idOf(4));
+    sim.props[openOn] = DEFAULT_COMPANION_OPEN_ON;
+    expect(sim.frames(3)).toBe(idOf(4));
+    // Two taps: module 6 is off by default, so 5 goes to 7 and then 8.
+    sim.tap();
+    expect(sim.frame()).toBe(idOf(6));
+    sim.tap();
+    expect(sim.frames(2)).toBe(idOf(7));
+
+    // Held: the track map, and a tap cannot leave it, since it is the only screen standing.
+    sim.props[openOn] = TRACK;
+    expect(sim.frames(3)).toBe('track');
+    sim.tap();
+    expect(sim.frames(2)).toBe('track');
+
+    // Released: back to module 8, which the plugin never knew about.
+    sim.props[openOn] = COMPANION_OPEN_ON_BACK;
+    expect(sim.frames(3)).toBe(idOf(7));
+    // And once the plugin lets go, SimHub stays there and the taps page from it again.
+    sim.props[openOn] = DEFAULT_COMPANION_OPEN_ON;
+    expect(sim.frames(3)).toBe(idOf(7));
+    sim.tap();
+    expect(sim.frame()).toBe(idOf(8));
+  });
+
+  test('a glance can show a module the rotation has off, and a second glance goes back to the same place', () => {
+    const sim = simhub(main, {}, idOf(2));
+    expect(sim.frames(2)).toBe(idOf(2));
+    // Energy, module 6, is off by default: a tap skips it and a glance still shows it.
+    sim.props[openOn] = 5;
+    expect(sim.frames(2)).toBe(idOf(5));
+    sim.props[openOn] = COMPANION_OPEN_ON_BACK;
+    expect(sim.frames(2)).toBe(idOf(2));
+    sim.props[openOn] = DEFAULT_COMPANION_OPEN_ON;
+    expect(sim.frames(2)).toBe(idOf(2));
+    // Glancing at the module already up changes nothing, on the press or on the release.
+    sim.props[openOn] = 2;
+    expect(sim.frames(2)).toBe(idOf(2));
+    sim.props[openOn] = COMPANION_OPEN_ON_BACK;
+    expect(sim.frames(2)).toBe(idOf(2));
+  });
+
+  test('a glance pressed while the start module is still forced goes back to the start module', () => {
+    const sim = simhub(main, { [openOn]: 4 });
+    expect(sim.frames(3)).toBe(idOf(4));
+    sim.props[openOn] = TRACK;
+    expect(sim.frames(2)).toBe('track');
+    sim.props[openOn] = COMPANION_OPEN_ON_BACK;
+    expect(sim.frames(2)).toBe(idOf(4));
+  });
+
+  test('a glance with nowhere known to go back to stays on the glance rather than blanking', () => {
+    // Pressed on the very first frame: nothing has been drawn, so there is no module to remember.
+    const sim = simhub(main, { [openOn]: TRACK });
+    expect(sim.frames(2)).toBe('track');
+    sim.props[openOn] = COMPANION_OPEN_ON_BACK;
+    expect(sim.frames(3)).toBe('track');
+    sim.props[openOn] = DEFAULT_COMPANION_OPEN_ON;
+    sim.tap();
+    expect(sim.frame()).toBe(idOf(13));
+  });
+
+  test('with no plugin the rotation alone decides, and a tap pages it', () => {
+    const sim = simhub(main, {});
+    expect(sim.frames(2)).toBe(idOf(0));
+    const seen = [sim.frame()];
+    for (let i = 0; i < MODULE_COUNT; i++) {
+      sim.tap();
+      seen.push(sim.frame());
+    }
+    // Eighteen of the twenty-one are on by default, and the ring comes back round to the first.
+    expect(new Set(seen).size).toBe(MODULE_COUNT - 3);
+    expect(seen).not.toContain(idOf(5));
   });
 
   test('every module is an in-game screen and the idle screen is the only idle one', () => {
@@ -474,6 +621,8 @@ describe('the contract', () => {
     for (const { pkg } of PACKAGES) {
       for (const dashboard of pkg.dashboards) {
         for (const screen of dashboard.screens) if (screen.enabledExpression) used.add(screen.enabledExpression);
+        // A companion reads its force in its own variables, which its screens then read.
+        for (const variable of dashboard.variables ?? []) used.add(variable.expression);
         for (const p of propertiesIn(dashboard)) used.add(p);
       }
     }
