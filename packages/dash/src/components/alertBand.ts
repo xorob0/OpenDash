@@ -113,7 +113,8 @@ export function filledBand(name: string, frame: Rect, style: AlertBandStyle, col
  * with it would be indistinguishable from the white flag at `#FFFFFF`, and two states a driver
  * cannot tell apart is a bug whoever chose the colours. The black family is therefore light on dark
  * where the others are dark on light, which is also what a black flag looks like, and the start
- * gantry's green takes the same form so that a gantry light is not read as a green flag.
+ * gantry's green takes the same form so that a gantry light is not read as a green flag. The
+ * meatball takes it in its orange, being a black flag with an orange disc on it.
  *
  * The ground is `surface.base` and never transparent: an outline with nothing behind it leaves band
  * D's page fully readable underneath the most serious thing the band can say.

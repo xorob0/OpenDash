@@ -314,6 +314,25 @@ describe('the full-screen name fits the block it is centred on', () => {
   });
 });
 
+describe('the full-screen meatball is a black flag with orange on it', () => {
+  test('on every face in both arrangements: the near-black ground, edged and named in its orange', () => {
+    // The block used to fill the body with the caution amber, which is neither colour of the flag.
+    // It takes the black family's outlined form in the orange instead, as the band does (#498).
+    for (const { face, arrangement, revBar } of ARRANGEMENTS) {
+      const [ground, name] = stateOf(groupOf(faceItems(arrangement, { revBar }), 'flagFull'), 'meatball').children;
+      if (ground?.kind !== 'rect' || name?.kind !== 'text') throw new Error(`${face.folder} draws the meatball as a ground and a name`);
+      expect({ face: face.folder, revBar, ground: ground.backgroundColor, edge: ground.border?.color, ink: name.textColor, text: name.text }).toEqual({
+        face: face.folder,
+        revBar,
+        ground: ds.color.surface.base,
+        edge: ds.purpose.flag.orange,
+        ink: ds.purpose.flag.orange,
+        text: 'MEATBALL',
+      });
+    }
+  });
+});
+
 describe('the full-screen format costs the gear', () => {
   for (const { face, arrangement, revBar } of ARRANGEMENTS) {
     test(`${face.folder}${revBar ? '' : ', rev bar off'} covers zone A opaquely while a flag is out`, () => {

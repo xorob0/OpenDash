@@ -595,7 +595,7 @@ describe('800 x 286 nano', () => {
       }
     }
     // A filled band with nothing to say at this size is one rectangle; a flashing one is two.
-    for (const id of ['red', 'meatball', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    for (const id of ['red', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
     expect(layerNamed(items, 'flag.yellowWaving').children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.flash']);
     // The outlined form, which the black family and the start gantry share.
     for (const id of ['black', 'disqualify', 'furled']) {
@@ -611,6 +611,12 @@ describe('800 x 286 nano', () => {
       if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
       expect({ id, colour: outlined.border?.color, ground: outlined.backgroundColor }).toEqual({ id, colour: '#00D96A', ground: '#0A0B0D' });
     }
+    // And the meatball, which is a black flag with an orange disc: the near-black ground, edged in
+    // its orange, rather than a band of the caution amber (#498).
+    const meatball = layerNamed(items, 'flag.meatball').children;
+    expect(meatball).toHaveLength(1);
+    if (meatball[0]?.kind !== 'rect') throw new Error('meatball band');
+    expect({ border: meatball[0].border, ground: meatball[0].backgroundColor }).toEqual({ border: { color: '#FFB300', top: 2, bottom: 2, left: 2, right: 2 }, ground: '#0A0B0D' });
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));

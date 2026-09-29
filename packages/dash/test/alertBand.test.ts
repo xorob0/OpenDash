@@ -220,6 +220,7 @@ describe('every shape is opaque over the whole band', () => {
       'disqualify',
       'furled',
       'black',
+      'meatball',
       'incident',
       'startSet',
       'startReady',

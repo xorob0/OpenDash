@@ -299,7 +299,8 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  * Outlined, where the canvas fills it. Its colour is `purpose.alert.incident`, which is the caution
  * amber `#FFB300`, and so is the meatball's `purpose.flag.orange`: filled, the two would be one band
  * on the nano, and a driver who has just hit something is the driver a meatball is most likely to be
- * for. Outlined in amber is a drawing nothing else in the catalogue makes.
+ * for. Since #498 the meatball is outlined in that amber as well, so where no name is written the
+ * incident and the meatball are one drawing again, the other way round.
  */
 const INCIDENT: CarAlert = {
   id: 'incident',
@@ -406,7 +407,10 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
   { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
   { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
-  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'filled', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
+  // The meatball is a black flag with an orange disc, so it takes the black family's outlined form in
+  // the orange: the near-black ground, and the edge and the name in `purpose.flag.orange`. The canvas
+  // fills the band orange, which is the caution amber and neither colour of the flag (#498).
+  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'outlined', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
   // Full-course caution: in iRacing this is the pace car being deployed, which is the closest
   // honest reading of a safety car. It outranks a local yellow because it is the whole track.
   {

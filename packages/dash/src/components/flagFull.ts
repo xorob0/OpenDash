@@ -185,7 +185,7 @@ const filledFull = (name: string, frame: Rect, colour: Hex, text: string, flash:
 
 /**
  * A block outlined and named in the alert's colour over the face's own ground, which is how the
- * black family and the start gantry are drawn.
+ * black family, the meatball in its orange, the start gantry and the two power alerts are drawn.
  *
  * `purpose.flag.black` is `#F5F7FA` and is the ink rather than the ground, so a block filled with it
  * would be the white flag. The border stays for the reason it does on the band: a dark block on a
