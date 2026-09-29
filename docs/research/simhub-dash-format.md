@@ -853,9 +853,9 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   double before it is formatted, by `* 1.0` and not `* 1`: NCalc parses `1` as an Int32, and a Single
   times an Int32 is still a Single, where a Single times the double `1.0` is a double.
   `lastLapDelta` does that.
-- The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`). That SimHub exposes
-  them under these names on a live iRacing session follows from how it passes raw telemetry through,
-  as the flag bits above do, and is not yet confirmed on the VM.
+- The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`), and SimHub exposes
+  them under these names: the traces recorded on the VM on 2026-09-29 carry the delta moving through
+  the lap, 0.3622 to -0.0246 across the race scenario, and `_OK` as `true`.
 - **A format's pattern is written as a literal, so a precision is an `if` around two formats.** The
   pattern `format(v, '0.00', true)` was verified with is a string literal, and `fmt` and `signed` in
   `packages/generator/src/ncalc.ts` quote whatever they are given: a pattern passed to them as an
