@@ -433,7 +433,7 @@ describe('the flag settles into the blocks at the ends of the band', () => {
  * this: the window is state, but it is SimHub's, kept and aged by SimHub, so a package installed
  * without the plugin evaluates the same window. What it watches is the *rank of the winning
  * condition* rather than any one condition's bits, and that distinction is the whole reason
- * `raisedRank` exists: a full-course caution clearing to the local yellow underneath it never moves
+ * `raisedRank` exists: a full course yellow clearing to the local yellow underneath it never moves
  * the yellow's bit, and the yellow is nonetheless a new thing to tell a driver.
  */
 describe('the window that decides which phase the band is in', () => {

@@ -231,7 +231,7 @@ describe('the two formats cannot both draw', () => {
       //
       // Both now rank them by the same expression. The block drew the six properties SimHub
       // normalises until the format read the catalogue, which meant that under a red flag or a
-      // full-course caution the band named the condition and the block, having no state for it,
+      // full course yellow the band named the condition and the block, having no state for it,
       // drew nothing at all: a driver who had chosen the format that cannot be missed saw the one
       // thing it was chosen for least. The same conditions on both sides, same order, same
       // `bandVisible` reading, so the two formats differ in the rectangle and in nothing else.

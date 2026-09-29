@@ -195,7 +195,7 @@ the lane rather than the list carrying one. The last two are the lane's half of 
 lane the same two readings are the alert catalogue's first two entries and draw on band D, so a car
 stalled on the circuit is told too, and the one condition is never drawn in both places. They are deliberately **not** ranked under the flag: the
 two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
-would blank the limiter band under a full-course caution, which is precisely when the pit lane is
+would blank the limiter band under a full course yellow, which is precisely when the pit lane is
 busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
 without one should not be told to use it.
 
