@@ -24,8 +24,9 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    description, off as well; switch that one on too, then press **Ok**. SimHub does not ask to
    restart, and none is needed.
 5. "OpenDash" now appears in SimHub's left menu. If the second switch was left off, it is instead a
-   tab of **Additional plugins**, an entry of the same menu, where it works in the same way. Open
-   it on the **Rig** tab, which starts empty:
+   tab of **Additional plugins**, an entry of the same menu, where it works in the same way; the
+   same two switches are also under **Add/remove features**, at the foot of that menu, where the
+   second can be switched on later. Open OpenDash on the **Rig** tab, which starts empty:
    the plugin writes no dashboard until you add a screen, so a first start puts nothing new in
    SimHub's dashboard list. Press **Add a screen**, choose the screen type and the size that
    matches the display from Sizes below, give it a name and press **Add screen**: the plugin writes
@@ -348,8 +349,8 @@ start; delete those copies with it, or the previous rig comes back. The fonts co
   overwrite somebody's work without being told twice. Press **Reinstall**, then **Replace
   anyway**, to replace it; a copy is kept either way.
 - The dashboard shows the default pages although you changed them: the dashboard reads the
-  settings through the plugin's properties, so the plugin has to be enabled; check SimHub's
-  Settings > Plugins page.
+  settings through the plugin's properties, so the plugin has to be enabled; check its switch
+  under **Add/remove features**, at the foot of SimHub's left menu.
 - A wheel button does nothing: check that you bound the action of the screen you are looking at.
   Each screen has its own, so `Face1920x480CycleZoneB` moves the 1920 face and not the 850 beside
   it.

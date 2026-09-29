@@ -111,7 +111,7 @@ export default function Install() {
             <pre className="pre">Unblock-File &quot;C:\Program Files (x86)\SimHub\OpenDash.dll&quot;</pre>
           </li>
           <li>
-            <strong>The dashboard shows defaults although you changed them.</strong> The plugin is not enabled. Check Settings, Plugins.
+            <strong>The dashboard shows defaults although you changed them.</strong> The plugin is not enabled. Check its switch under Add/remove features, at the foot of SimHub’s left menu.
           </li>
           <li>
             <strong>Nothing on the display.</strong> Assign the dashboard in Dash Studio. The plugin installs; SimHub launches.
