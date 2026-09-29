@@ -3,6 +3,9 @@
 // Apart from Widgets.cs for the reason PanelMetrics.cs is: the panel is WPF and the net8.0 test project
 // cannot compile it, so the words live where PanelCopyTests can pin them character for character, as
 // UpdateWordingTests pins the update sentences. Pure: no WPF types.
+//
+// Shared by every page, and not divided into per-page regions: a page adds the constants it needs and changes
+// only those its own page alone draws, never one another page reads (SettingsControl.cs's ownership table).
 using System;
 using System.Globalization;
 

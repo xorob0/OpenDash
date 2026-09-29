@@ -311,13 +311,31 @@ namespace OpenDashPlugin
         // InstallBar, InstallFlagBox, BarCensus, ReinstallBar and UpdateBars (SettingsControl.Profiles.cs);
         // BuildScreenPreview(screen, width).
         //
-        // Ownership: a page owns SettingsControl.<Page>*.cs -- Updates owns .Updates.cs, .Updates.Plugin.cs,
-        // .Updates.Packages.cs and .Updates.Lights.cs; Screens owns .Screens*.cs; LEDs owns .Lights.cs -- and
-        // its Panel<Page>.cs with that file's test. Every other SettingsControl*.cs, Widgets*.cs, PanelShell.cs,
-        // PanelSearch.cs, PanelSoon.cs and PanelBindings.cs are the shell's. All pages share one partial class,
-        // so every member a page adds for itself is private and carries its page's name as a prefix
-        // (ScreensTile, LedsDeviceList, MatrixIdleRow), or lives in a private nested class named for the page;
-        // two agents writing the same unprefixed helper would only meet at the merge.
+        // Ownership, file by file (each Panel*.cs with its own test, PanelFooTests.cs):
+        //   Home       SettingsControl.Home.cs; PanelHome.cs
+        //   Rig        SettingsControl.Rig.cs; PanelRigMap.cs
+        //   Screens    SettingsControl.Screens*.cs (.Screens, .Screens.Face, .Screens.Round,
+        //              .Screens.PitWall, .Screens.Companion); PanelScreens.cs, PanelAddScreen.cs,
+        //              PanelFacePlan.cs, PanelPitWallPlan.cs, PanelReorder.cs
+        //   LEDs       SettingsControl.Lights.cs; PanelLeds.cs
+        //   Matrix     SettingsControl.Matrix.cs; PanelMatrix.cs
+        //   Shortcuts  SettingsControl.Shortcuts.cs; PanelShortcuts.cs
+        //   Settings   SettingsControl.Settings.cs; PanelSettings.cs, PanelDataTab.cs
+        //   Updates    SettingsControl.Updates*.cs (.Updates, .Updates.Plugin, .Updates.Packages,
+        //              .Updates.Lights); PanelUpdates.cs, PanelPackageRow.cs, PanelLightRows.cs,
+        //              PanelConfirmation.cs
+        //   shared     PanelCopy.cs and PanelLights.cs hold words several pages draw. Neither has per-page
+        //              regions: a page adds the constants it needs and changes only constants its own page
+        //              alone draws, never one another page reads.
+        //   shell      everything else: SettingsControl.cs and its other partials (.Sidebar, .Sheet, .Status,
+        //              .Live, .Messages, .Preview, .Bindings, .Profiles), Widgets*.cs, Segmented.cs,
+        //              PanelShell.cs, PanelKit.cs, PanelNav.cs, PanelAttention.cs, PanelSearch.cs,
+        //              PanelSoon.cs, PanelBindings.cs, PanelEmulation.cs and the rest of Panel*.cs.
+        // A page's greyed rows and its search-label exemptions are its own: SoonDrawn and
+        // SearchDrawnOtherwise in its Panel<Page>.cs. All pages share one partial class, so every member a
+        // page adds for itself is private and carries its page's name as a prefix (ScreensTile,
+        // LedsDeviceList, MatrixIdleRow), or lives in a private nested class named for the page; two agents
+        // writing the same unprefixed helper would only meet at the merge.
 
         /// <summary>
         /// Goes to a page, and to a row on it when the route names one.
