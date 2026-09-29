@@ -126,6 +126,10 @@ namespace OpenDashPlugin
         /// and the sim's time of day follow it. #324.</summary>
         public string ClockFormat { get; set; } = Contract.DefaultClockFormat;
 
+        /// <summary>Whether a flag shows while the car is in the pit lane. Shared, because a driver who
+        /// wants quiet on the way down the lane wants it of every surface. #503.</summary>
+        public bool FlagsInPitLane { get; set; } = Contract.DefaultFlagsInPitLane;
+
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
@@ -252,6 +256,22 @@ namespace OpenDashPlugin
 
         public int[] FlagBoxMatrixWaterTemp { get; set; } = Contract.DefaultFlagBoxTemps();
 
+        /// <summary>
+        /// The oil temperature the rig warns at, for every panel at once; zero is the profile's own
+        /// default for the driver's unit. Null only in a file written before it was the rig's.
+        /// </summary>
+        /// <remarks>
+        /// A threshold is a fact about the car, not about which corner of the rig a box is in, so the
+        /// Settings page asks it once (#503). The four per-panel arrays stay, because they are what the
+        /// published FlagBoxMatrix&lt;N&gt;OilTemp names read and an LED profile of any vintage reads
+        /// them; NormaliseLights and <see cref="SetLightsOilTemp"/> keep all four equal to this. A file
+        /// written before this existed takes matrix 1's value, which is the one a single box had.
+        /// </remarks>
+        public int? LightsOilTemp { get; set; }
+
+        /// <summary>The water temperature the rig warns at; the same shape as <see cref="LightsOilTemp"/>.</summary>
+        public int? LightsWaterTemp { get; set; }
+
         /// <summary>What the middle of an RGB strip shows: "rpm", "brake", "throttleBrake" or "fuel".
         /// One value for the rig and not an array, because OpenDash generates one profile per strip
         /// shape rather than per device and every shape reads this one name.</summary>
@@ -344,7 +364,7 @@ namespace OpenDashPlugin
         {
             var bar = LedBarByNamespace(ns);
             var value = bar == null ? LedRpmStyle : bar.RpmStyle;
-            return Contract.NormaliseChoice(value, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            return Contract.NormaliseLedRpmStyle(value);
         }
 
         /// <summary>
@@ -532,8 +552,10 @@ namespace OpenDashPlugin
             FlagBoxMatrixGearBlink[i] = Contract.DefaultFlagBoxGearBlink;
             FlagBoxMatrixGearBands[i] = Contract.DefaultFlagBoxGearBands;
             FlagBoxMatrixGearCarLadder[i] = Contract.DefaultFlagBoxGearCarLadder;
-            FlagBoxMatrixOilTemp[i] = 0;
-            FlagBoxMatrixWaterTemp[i] = 0;
+            // The rig's thresholds, which every panel shares: a panel added after they were set warns at
+            // the same temperature as the ones already there.
+            FlagBoxMatrixOilTemp[i] = LightsOilTemp ?? 0;
+            FlagBoxMatrixWaterTemp[i] = LightsWaterTemp ?? 0;
             return slot;
         }
 
@@ -626,6 +648,9 @@ namespace OpenDashPlugin
             // After that, because a file may carry the gear switch under either spelling and the
             // collapse has to read whichever one it ended up in.
             CollapseFlagBoxGearIntoRest();
+            // After the old scalars have been emptied into the arrays, because a file that predates the
+            // rig-wide thresholds takes matrix 1's, and that may be where a legacy scalar just went.
+            NormaliseLightsTemps();
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
             NormaliseMatrixPanels();
@@ -634,8 +659,78 @@ namespace OpenDashPlugin
             // both through isnull() with its own default, so an unrecognised spelling has to become a
             // legal one here rather than reaching the strip as itself.
             LedCentre = Contract.NormaliseLedCentre(LedCentre);
-            LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            LedRpmStyle = Contract.NormaliseLedRpmStyle(LedRpmStyle);
             LedMirrorFit = Contract.NormaliseChoice(LedMirrorFit, Contract.LedMirrorFits, Contract.DefaultLedMirrorFit);
+        }
+
+        /// <summary>
+        /// The rig's two thresholds, taken from matrix 1 when a file predates them, and written into
+        /// every panel's entry so that what is published per panel is the rig's answer.
+        /// </summary>
+        private void NormaliseLightsTemps()
+        {
+            if (!LightsOilTemp.HasValue) LightsOilTemp = FlagBoxMatrixOilTemp[0];
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = FlagBoxMatrixWaterTemp[0];
+            if (LightsOilTemp.Value < 0) LightsOilTemp = 0;
+            if (LightsWaterTemp.Value < 0) LightsWaterTemp = 0;
+            FillTemps();
+        }
+
+        private void FillTemps()
+        {
+            if (FlagBoxMatrixOilTemp == null || FlagBoxMatrixOilTemp.Length != Contract.FlagBoxMatrices.Count) FlagBoxMatrixOilTemp = Contract.DefaultFlagBoxTemps();
+            if (FlagBoxMatrixWaterTemp == null || FlagBoxMatrixWaterTemp.Length != Contract.FlagBoxMatrices.Count) FlagBoxMatrixWaterTemp = Contract.DefaultFlagBoxTemps();
+            for (var i = 0; i < Contract.FlagBoxMatrices.Count; i++)
+            {
+                FlagBoxMatrixOilTemp[i] = LightsOilTemp ?? 0;
+                FlagBoxMatrixWaterTemp[i] = LightsWaterTemp ?? 0;
+            }
+        }
+
+        /// <summary>Sets the oil temperature the rig warns at, on every panel. Zero, or anything below
+        /// it, is the profile's own default for the driver's unit.</summary>
+        public void SetLightsOilTemp(int value)
+        {
+            LightsOilTemp = value < 0 ? 0 : value;
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, 1, 0);
+            FillTemps();
+        }
+
+        /// <summary>Sets the water temperature the rig warns at, on every panel.</summary>
+        public void SetLightsWaterTemp(int value)
+        {
+            LightsWaterTemp = value < 0 ? 0 : value;
+            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, 1, 0);
+            FillTemps();
+        }
+
+        /// <summary>Night mode on or off, from a wheel button or the sidebar. Returns the new state.</summary>
+        public bool ToggleNightMode()
+        {
+            LightsNightMode = !LightsNightMode;
+            return LightsNightMode;
+        }
+
+        /// <summary>
+        /// Moves the brightness in force by a number of steps, and returns where it landed.
+        /// </summary>
+        /// <remarks>
+        /// The night brightness while night mode is on and the day one otherwise, because a driver
+        /// pressing "dimmer" in a dark room means the lights they are looking at. Clamped to
+        /// <see cref="Contract.BrightnessStepFloor"/> and 100: a button never takes the lights out, and
+        /// a brightness already set below the floor on the panel is left where it is rather than raised
+        /// by a press meant to lower it. #503.
+        /// </remarks>
+        public int StepBrightness(int steps)
+        {
+            var current = LightsNightMode ? LightsNightBrightness : LightsBrightness;
+            var floor = Math.Min(current, Contract.BrightnessStepFloor);
+            var next = current + steps * Contract.BrightnessStep;
+            if (next < floor) next = floor;
+            if (next > 100) next = 100;
+            if (LightsNightMode) LightsNightBrightness = next;
+            else LightsBrightness = next;
+            return next;
         }
 
         /// <summary>
@@ -1382,6 +1477,45 @@ namespace OpenDashPlugin
             foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
         }
 
+        /// <summary>
+        /// Adds a copy of a screen and returns it, under a name, a namespace and a folder nothing else
+        /// on the rig holds. The caller installs it.
+        /// </summary>
+        /// <remarks>
+        /// Everything the driver set on the source comes with it -- the zones, their orders, the bar,
+        /// the glance, the flag format, a pit wall's pages, a companion's rotation -- because that is
+        /// what "duplicate" is for: a second screen set up like the first, to be changed from there.
+        /// What does not come is what makes it a different screen: its namespace, which its properties
+        /// carry, and its folder, which its dashboard lives in; and its place on the Rig page, which is
+        /// the driver's to choose. A face opens on its start pages, as every face does on a start.
+        /// Null when the rig has no screen of that namespace. #503.
+        /// </remarks>
+        public ScreenInstance DuplicateScreen(string ns, string name = null)
+        {
+            var source = ScreenByNamespace(ns);
+            if (source == null) return null;
+            var taken = new List<string>();
+            var names = new List<string>();
+            var folders = new List<string>();
+            foreach (var screen in Rig)
+            {
+                if (screen == null) continue;
+                taken.Add(screen.Namespace);
+                names.Add(screen.Name);
+                if (screen.Folder != null) folders.Add(screen.Folder);
+            }
+            var copy = source.Copy();
+            var wanted = string.IsNullOrWhiteSpace(name) ? source.Name : name.Trim();
+            copy.Name = PackageCatalogue.UniqueName(wanted, names);
+            copy.Namespace = PackageCatalogue.UniqueNamespace(copy.Name, new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase));
+            copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, source.Folder);
+            copy.Unclaimed = false;
+            copy.Normalise();
+            if (copy.Face != null) copy.Face.OpenOnStartPages();
+            Rig.Add(copy);
+            return copy;
+        }
+
         /// <summary>Adds a screen and returns it, giving it a namespace and a folder nothing else holds.</summary>
         public ScreenInstance AddScreen(PackageEntry entry, string name)
         {
@@ -1753,6 +1887,7 @@ namespace OpenDashPlugin
             DriverNameFormat = other.DriverNameFormat;
             DriverNameTeam = other.DriverNameTeam;
             ClockFormat = other.ClockFormat;
+            FlagsInPitLane = other.FlagsInPitLane;
             Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();
@@ -1771,6 +1906,8 @@ namespace OpenDashPlugin
             FlagBoxSpotterAnimation = other.FlagBoxSpotterAnimation;
             FlagBoxOilTemp = other.FlagBoxOilTemp;
             FlagBoxWaterTemp = other.FlagBoxWaterTemp;
+            LightsOilTemp = other.LightsOilTemp;
+            LightsWaterTemp = other.LightsWaterTemp;
             FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();
             FlagBoxMatrixGear = other.FlagBoxMatrixGear == null ? null : (bool[])other.FlagBoxMatrixGear.Clone();
             FlagBoxMatrixGearBlink = other.FlagBoxMatrixGearBlink == null ? null : (bool[])other.FlagBoxMatrixGearBlink.Clone();

@@ -32,6 +32,16 @@ namespace OpenDashPlugin.Tests
             // Twenty-four hours, which is what every clock drew before the setting existed. #324.
             Assert.Equal("24h", settings.ClockFormat);
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
+            // A flag shows in the pit lane, which is what every surface drew before it was a choice. #503.
+            Assert.True(settings.FlagsInPitLane);
+            // The rig's thresholds are unanswered until Normalise reads them off matrix 1, and a new
+            // install's matrix 1 has none, so they come back as zero: the profile's own default.
+            Assert.Null(settings.LightsOilTemp);
+            Assert.Null(settings.LightsWaterTemp);
+            settings.Normalise();
+            Assert.Equal(0, settings.LightsOilTemp);
+            Assert.Equal(0, settings.LightsWaterTemp);
+            Assert.True(settings.FlagsInPitLane);
         }
 
         /// <summary>
@@ -1100,10 +1110,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
 
             // Canonical casing, the way every other choice is normalised.
-            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "MEETINMIDDLE" };
+            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "LEFTTORIGHT" };
             typed.Normalise();
             Assert.Equal("throttleBrake", typed.LedCentre);
-            Assert.Equal("meetInMiddle", typed.LedRpmStyle);
+            Assert.Equal("leftToRight", typed.LedRpmStyle);
+
+            // And the two retired looks, whatever their casing, fill left to right: the set still holds
+            // them so the file stays legal, and the value moves on. #369, #503.
+            var retired = new OpenDashSettings { LedRpmStyle = "MEETINMIDDLE" };
+            retired.Normalise();
+            Assert.Equal("leftToRight", retired.LedRpmStyle);
         }
 
         [Fact]
@@ -1146,8 +1162,9 @@ namespace OpenDashPlugin.Tests
                 LightsNightMode = true,
                 FlagBoxLowFuelLaps = 5,
                 LedCentre = "fuel",
-                LedRpmStyle = "f1",
+                LedRpmStyle = "leftToRight",
                 LedFlagAnimation = false,
+                FlagsInPitLane = false,
             };
             source.Normalise();
             source.SetMatrixRest(2, "gear");
@@ -1156,8 +1173,9 @@ namespace OpenDashPlugin.Tests
             // The four that moved under the matrix are set per panel, so the copy has to carry the
             // arrays rather than four scalars.
             source.FlagBoxMatrixCriticalOnly[0] = true;
-            source.FlagBoxMatrixOilTemp[0] = 130;
-            source.FlagBoxMatrixWaterTemp[0] = 115;
+            // The two thresholds are the rig's since #503, and reach every panel's entry.
+            source.SetLightsOilTemp(130);
+            source.SetLightsWaterTemp(115);
 
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
@@ -1172,11 +1190,15 @@ namespace OpenDashPlugin.Tests
             Assert.False(copy.MatrixGear(4));
             Assert.Equal(130, copy.MatrixOilTemp(1));
             Assert.Equal(115, copy.MatrixWaterTemp(1));
+            Assert.Equal(130, copy.LightsOilTemp);
+            Assert.Equal(115, copy.LightsWaterTemp);
+            Assert.Equal(130, copy.MatrixOilTemp(4));
+            Assert.False(copy.FlagsInPitLane);
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
             Assert.Equal("fuel", copy.LedCentre);
-            Assert.Equal("f1", copy.LedRpmStyle);
+            Assert.Equal("leftToRight", copy.LedRpmStyle);
             Assert.False(copy.LedFlagAnimation);
 
             // A clone, not the same array: editing one settings object must not edit the other.
@@ -1262,6 +1284,83 @@ namespace OpenDashPlugin.Tests
             Assert.Null(settings.FlagBoxGear);
             Assert.Null(settings.FlagBoxOilTemp);
             Assert.Null(settings.FlagBoxWaterTemp);
+        }
+
+        [Fact]
+        public void The_temperature_thresholds_are_the_rigs_and_reach_every_panel()
+        {
+            // A file written before the thresholds were the rig's: matrix 1's value is the one a single
+            // box had, so it becomes the rig's and reaches all four panels. #503.
+            var json = "{\"FlagBoxMatrixOilTemp\":[125,0,0,0],\"FlagBoxMatrixWaterTemp\":[108,0,0,0]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            Assert.Null(settings.LightsOilTemp);
+            settings.Normalise();
+            Assert.Equal(125, settings.LightsOilTemp);
+            Assert.Equal(108, settings.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(125, settings.MatrixOilTemp(matrix));
+                Assert.Equal(108, settings.MatrixWaterTemp(matrix));
+            }
+
+            // Panels that disagreed collapse to matrix 1's: one answer for the rig, and the first box's
+            // is the one most rigs had.
+            var differing = JsonSerializer.Deserialize<OpenDashSettings>("{\"FlagBoxMatrixOilTemp\":[0,130,140,150]}");
+            differing.Normalise();
+            Assert.Equal(0, differing.LightsOilTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(0, differing.MatrixOilTemp(matrix));
+
+            // Once the rig has an answer, a hand-edited panel entry is put back to it on the next load.
+            settings.FlagBoxMatrixOilTemp[2] = 90;
+            settings.Normalise();
+            Assert.Equal(125, settings.MatrixOilTemp(3));
+
+            // The setters refill every panel, and a negative is the unit's own default rather than a number.
+            settings.SetLightsOilTemp(250);
+            settings.SetLightsWaterTemp(230);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(250, settings.MatrixOilTemp(matrix));
+                Assert.Equal(230, settings.MatrixWaterTemp(matrix));
+            }
+            settings.SetLightsOilTemp(-3);
+            Assert.Equal(0, settings.LightsOilTemp);
+            Assert.Equal(0, settings.MatrixOilTemp(4));
+
+            // A panel added afterwards warns at the rig's temperature too.
+            var rig = new OpenDashSettings();
+            rig.Normalise();
+            rig.SetLightsWaterTemp(115);
+            var slot = rig.AddMatrixPanel("Top");
+            Assert.Equal(115, rig.MatrixWaterTemp(slot));
+        }
+
+        [Fact]
+        public void A_button_toggles_night_mode_and_steps_the_brightness_in_force()
+        {
+            var settings = new OpenDashSettings { LightsBrightness = 60, LightsNightBrightness = 25 };
+            settings.Normalise();
+            Assert.Equal(70, settings.StepBrightness(1));
+            Assert.Equal(70, settings.LightsBrightness);
+            Assert.Equal(50, settings.StepBrightness(-2));
+            // The ceiling, and the floor: a button never takes the lights out.
+            settings.LightsBrightness = 95;
+            Assert.Equal(100, settings.StepBrightness(1));
+            settings.LightsBrightness = 15;
+            Assert.Equal(Contract.BrightnessStepFloor, settings.StepBrightness(-1));
+            Assert.Equal(Contract.BrightnessStepFloor, settings.StepBrightness(-1));
+            // A brightness set below the floor on the panel is left alone by "dimmer", not raised.
+            settings.LightsBrightness = 5;
+            Assert.Equal(5, settings.StepBrightness(-1));
+
+            // Night mode moves the night brightness and leaves the day one where it was.
+            Assert.True(settings.ToggleNightMode());
+            Assert.True(settings.LightsNightMode);
+            Assert.Equal(35, settings.StepBrightness(1));
+            Assert.Equal(35, settings.LightsNightBrightness);
+            Assert.Equal(5, settings.LightsBrightness);
+            Assert.False(settings.ToggleNightMode());
+            Assert.False(settings.LightsNightMode);
         }
 
         [Fact]
@@ -1415,6 +1514,87 @@ namespace OpenDashPlugin.Tests
         }
 
         // --- ADR 0017: a screen is an instance -------------------------------------------------
+
+        [Fact]
+        public void A_duplicate_is_the_same_screen_under_a_name_a_namespace_and_a_folder_of_its_own()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var main = settings.AddScreen(entry, "Main dash");
+            main.Face.SetStart("B", 3);
+            main.Face.SetPageEnabled("C", 2, false);
+            main.Face.SetClassOnly("C", true);
+            main.Face.SetBarField("Left1", 4);
+            main.FlagFormat = "full";
+            main.LapReview = "race";
+            main.Face.Cycle("B");
+
+            var copy = settings.DuplicateScreen(main.Namespace);
+            Assert.NotNull(copy);
+            Assert.Contains(copy, settings.RigScreens());
+            Assert.Equal(2, settings.RigScreens().Count);
+            // A different screen: its own card, its own properties, its own dashboard folder.
+            Assert.Equal("Main dash (2)", copy.Name);
+            Assert.Equal("MainDash2", copy.Namespace);
+            Assert.Equal("OpenDash Main dash (2)", copy.Folder);
+            Assert.NotEqual(main.Folder, copy.Folder);
+            Assert.False(copy.Unclaimed);
+            Assert.Equal(main.Kind, copy.Kind);
+            Assert.Equal(main.Width, copy.Width);
+            Assert.Equal(main.Package, copy.Package);
+            // Set up like the source.
+            Assert.Equal(3, copy.Face.Start("B"));
+            Assert.Equal(main.Face.Masks, copy.Face.Masks);
+            Assert.True(copy.Face.IsClassOnly("C"));
+            Assert.Equal(4, copy.Face.BarField("Left1"));
+            Assert.Equal("full", copy.FlagFormat);
+            Assert.Equal("race", copy.LapReview);
+            // And open on its start pages, as a face does when it starts, whatever the source is showing.
+            Assert.Equal(copy.Face.Starts, copy.Face.Zones);
+            // Apart, not shared: changing one leaves the other alone.
+            copy.Face.SetStart("B", 5);
+            Assert.Equal(3, main.Face.Start("B"));
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(names.Count, names.Distinct().Count());
+            Assert.Contains("MainDash2ZoneB", names);
+
+            // A name asked for is used, and made unique if it has to be.
+            var named = settings.DuplicateScreen(main.Namespace, "  Rim ");
+            Assert.Equal("Rim", named.Name);
+            Assert.Equal("Rim", named.Namespace);
+            Assert.Equal("Main dash (3)", settings.DuplicateScreen(copy.Namespace, "Main dash").Name);
+            // Nothing to duplicate is nothing added.
+            var before = settings.RigScreens().Count;
+            Assert.Null(settings.DuplicateScreen("Gone"));
+            Assert.Equal(before, settings.RigScreens().Count);
+        }
+
+        [Fact]
+        public void A_duplicated_pit_wall_prefixes_every_name_with_its_own_namespace()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Rig[0].Name = "Pit wall";
+            settings.Rig[0].Folder = "OpenDash Pit wall";
+            settings.Normalise();
+            settings.Rig[0].SetZonePage("TowerA", 9);
+            settings.Rig[0].WebViewUrl = "https://example.com/";
+
+            var copy = settings.DuplicateScreen(Contract.PitWallPrefix);
+            Assert.Equal(Contract.KindPitWall, copy.Kind);
+            Assert.Equal("PitWall2", copy.Namespace);
+            Assert.False(copy.IsStock);
+            Assert.Equal(9, copy.ZonePage("TowerA"));
+            Assert.Equal("https://example.com/", copy.WebViewUrl);
+            // The stock pit wall's web view name carries no prefix; the copy's cannot, or the two would
+            // read one address.
+            Assert.All(copy.PropertyNames(), name => Assert.StartsWith(copy.Namespace, name, StringComparison.Ordinal));
+            Assert.Contains("PitWall2WebViewUrl", copy.PropertyNames());
+            Assert.Contains("PitWall2HoldQuickGlance", copy.ActionNames());
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(names.Count, names.Distinct().Count());
+        }
 
         [Fact]
         public void Two_faces_of_one_size_are_configured_apart()
