@@ -23,7 +23,7 @@ import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
 import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
 import { contains, rect } from '../src/design/geometry.ts';
-import { ALERT_CATALOGUE, flagBit, isFlag, type SessionFlagBit } from '../src/flags.ts';
+import { ALERT_CATALOGUE, flagBit, flagsAllowedHere, isFlag, type SessionFlagBit } from '../src/flags.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -47,17 +47,23 @@ const layerOf = (id: string, frame: Rect = WIDE, style: AlertBandStyle = ALERT_B
 const rects = (item: Item): RectangleItem[] => [...walkItems([item])].filter((i): i is RectangleItem => i.kind === 'rect');
 const texts = (item: Item): TextItem[] => [...walkItems([item])].filter((i): i is TextItem => i.kind === 'text');
 
-/** A bit iRacing sets, or the id of a car alert whose whole condition holds. */
-type Raised = SessionFlagBit | 'ignition' | 'engine' | 'incident' | 'pushToPass' | 'headlightFlash';
+/**
+ * A bit iRacing sets, or the id of a car alert whose whole condition holds, or `silencedHere`: the
+ * car in the pit lane with `FlagsInPitLane` switched off, which is the one place a flag may not show
+ * (#503). What that gate reads is held in `flagBox.test.ts`; here it is one truth value, as a car
+ * alert is.
+ */
+type Raised = SessionFlagBit | 'ignition' | 'engine' | 'incident' | 'pushToPass' | 'headlightFlash' | 'silencedHere';
 
 /**
  * Evaluates one band's `Visible` with the named bits set, the named car alerts raised and the named
  * normalised properties at 1. Handles exactly what flags.ts emits for the band: parenthesised `and`,
- * `or`, `!`, `isnull([prop], 0) = 1` and a car alert's `when`, which it replaces whole. Anything else
- * throws rather than guessing.
+ * `or`, `!`, `isnull([prop], 0) = 1`, a car alert's `when` and the pit lane gate, the last two of
+ * which it replaces whole. Anything else throws rather than guessing.
  */
 function visible(layer: LayerItem, set: readonly Raised[], normalised: readonly string[] = []): boolean {
   let s = String(layer.bindings?.Visible?.formula ?? '');
+  s = s.split(flagsAllowedHere()).join(set.includes('silencedHere') ? '0 = 1' : '1 = 1');
   // The alerts first, whole: their conditions are the only text here that is not a bit read.
   for (const condition of ALERT_CATALOGUE) {
     if (!isFlag(condition)) s = s.split(condition.when).join(set.includes(condition.id as Raised) ? '1 = 1' : '0 = 1');
@@ -288,6 +294,12 @@ describe('several conditions raised at once', () => {
     { name: 'a flash while being lapped', bits: ['headlightFlash', 'blue'], expect: 'blue' },
     { name: 'a flash alone', bits: ['headlightFlash'], expect: 'headlightFlash' },
     { name: 'every car alert at once', bits: ['ignition', 'engine', 'incident', 'pushToPass', 'headlightFlash'], expect: 'ignition' },
+    // The pit lane with the flags switched off there (#503): the flags go, the car alerts stay, and
+    // a car alert a flag would have outranked is told rather than held behind a flag nobody sees.
+    { name: 'a blue flag in the pit lane, with flags off there', bits: ['silencedHere', 'blue'], expect: undefined },
+    { name: 'an incident under a yellow in the pit lane, with flags off there', bits: ['silencedHere', 'incident', 'yellow'], expect: 'incident' },
+    { name: 'a stall in the pit lane is still told, with flags off there', bits: ['silencedHere', 'engine', 'red'], expect: 'engine' },
+    { name: 'push to pass under a white in the pit lane, with flags off there', bits: ['silencedHere', 'pushToPass', 'white'], expect: 'pushToPass' },
   ];
   for (const c of cases) test(c.name, () => expect(shown(c.bits)).toBe(c.expect));
 

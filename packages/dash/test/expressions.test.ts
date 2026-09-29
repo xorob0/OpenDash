@@ -8,7 +8,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
-import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE } from '../src/flags.ts';
+import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE, flagsAllowedHere } from '../src/flags.ts';
 import { flagBox, setting } from '../src/contract.ts';
 import { flagBoxTree } from '../src/leds/profile.ts';
 import { ignitionIsOff, ignitionIsOn } from '../src/leds/gates.ts';
@@ -555,18 +555,22 @@ describe('hero expressions', () => {
 
   test('flags are visible by priority', () => {
     // The ring and the pit wall header still read the six SimHub normalises, ranked in the
-    // catalogue's order: the chequer is last of them now, where it used to be second.
-    expect(flagVisible('Flag_Black')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (1))');
-    expect(flagVisible('Flag_Yellow')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))');
-    expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(6);
-    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(5);
+    // catalogue's order: the chequer is last of them now, where it used to be second. Each asks
+    // first whether a flag may show where the car is, which is the pit lane switch (#503).
+    const here = '(((isnull([OpenDash.FlagsInPitLane], true)) = (true)) or (!((isnull([DataCorePlugin.GameData.IsInPitLane], 0)) > (0))))';
+    expect(flagsAllowedHere()).toBe(here.slice(1, -1));
+    expect(flagVisible('Flag_Black')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (1))`);
+    expect(flagVisible('Flag_Yellow')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))`);
+    expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(7);
+    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(6);
   });
 
   test('band D ranks the whole catalogue off the bits, not the six summaries', () => {
     // One layer per condition, each gated on its own bits and on every higher condition being
-    // absent, read null-safely so that a sim publishing no SessionFlagsDetails leaves the band dark.
+    // absent, read null-safely so that a sim publishing no SessionFlagsDetails leaves the band dark,
+    // and each asking whether a flag may show where the car is (#503).
     const red = conditionVisible(flagCondition('red'), false, FLAG_CATALOGUE, bandRaised);
-    expect(red).toBe('(((isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred], 0)) = (1)))');
+    expect(red).toBe(`((${flagsAllowedHere()}) and (((isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred], 0)) = (1))))`);
     const yellow = conditionVisible(flagCondition('yellow'), false, FLAG_CATALOGUE, bandRaised);
     expect(yellow).toContain('SessionFlagsDetails.IsyellowWaving');
     expect(yellow).toContain('SessionFlagsDetails.Isred');
