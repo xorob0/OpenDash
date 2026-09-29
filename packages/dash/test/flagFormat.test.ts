@@ -18,6 +18,7 @@
 import { describe, expect, test } from 'bun:test';
 import { composePackages } from '../src/build.ts';
 import { zone as zoneSetting } from '../src/contract.ts';
+import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
 import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize } from '../src/components/flagFull.ts';
 import { flagTakingBand } from '../src/components/flagStrip.ts';
 import { ALERT_CATALOGUE, bandVisible, isFlag } from '../src/flags.ts';
@@ -45,7 +46,8 @@ const BLOCK_STATES: readonly string[] = STATES.filter((id) => !NEUTRAL.has(id));
 /**
  * What each condition reads as on the block, pinned here rather than derived, because the table in
  * the component is the answer to "what does a driver see" and a silent edit of it is a change to
- * the face. The chequer is absent: it is the board and carries no name.
+ * the face. The chequer and the meatball are absent: each is its own flag, the board and the disc,
+ * and carries no name.
  */
 const BLOCK_NAME: Record<string, string> = {
   ignition: 'IGNITION',
@@ -54,7 +56,6 @@ const BLOCK_NAME: Record<string, string> = {
   disqualify: 'DSQ',
   furled: 'FURLED',
   black: 'BLACK',
-  meatball: 'MEATBALL',
   caution: 'SAFETY',
   yellowWaving: 'YELLOW',
   yellow: 'YELLOW',
@@ -297,37 +298,58 @@ describe('the full-screen name fits the block it is centred on', () => {
   test('and the catalogue costs the type on one face only, which is what the short names buy', () => {
     // The size is the widest name divided into the block, so the whole cost of drawing eighteen
     // conditions rather than six is the difference between the widest of each set. Shortened to the
-    // sheets' one word, that is MEATBALL against YELLOW, and it is only binding where the block is
+    // sheets' one word, that is INCIDENT against YELLOW, and it is only binding where the block is
     // narrow against its height: every landscape face still lands on the fraction the sheets quote,
-    // and the portrait one drops from 183 px to 143. The band's own labels would have made it 69,
-    // which is why the block does not simply write them. The three car alerts it gained with #109,
-    // IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so cost nothing.
+    // and the portrait one drops from 183 px to 160. The band's own labels would have made it 69,
+    // which is why the block does not simply write them. The widest was MEATBALL, which set the
+    // portrait face at 143, until the author ruled on #498 that the meatball is a disc with no name;
+    // of the three car alerts the block gained with #109, INCIDENT is now the one that costs anything.
     const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
-    expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
+    expect(widest(FLAG_FULL_NAMES)).toBe('INCIDENT');
     expect(FLAG_FULL_NAMES).toEqual([...new Set(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);
     const unchanged = ZONE_FACES.filter((f) => f.folder !== 'OpenDash 600x686');
     for (const face of unchanged) {
       const block = bodyRect(face);
       expect({ face: face.folder, size: flagFullNameSize(block) }).toEqual({ face: face.folder, size: Math.floor(FLAG_FULL_NAME_RATIO * block.height) });
     }
-    expect(flagFullNameSize(bodyRect(ZONE_FACES.find((f) => f.folder === 'OpenDash 600x686')!))).toBe(143);
+    expect(flagFullNameSize(bodyRect(ZONE_FACES.find((f) => f.folder === 'OpenDash 600x686')!))).toBe(160);
   });
 });
 
-describe('the full-screen meatball is a black flag with orange on it', () => {
-  test('on every face in both arrangements: the near-black ground, edged and named in its orange', () => {
+describe('the full-screen meatball is a black flag with an orange disc on it', () => {
+  test('on every face in both arrangements: the near-black block, its orange disc in the middle, and no name', () => {
     // The block used to fill the body with the caution amber, which is neither colour of the flag.
-    // It takes the black family's outlined form in the orange instead, as the band does (#498).
+    // It is the flag instead, a black box with an orange disc in the middle and no text, which is the
+    // author's ruling on #498; the disc is two thirds of the block's shorter side, as on the band.
     for (const { face, arrangement, revBar } of ARRANGEMENTS) {
-      const [ground, name] = stateOf(groupOf(faceItems(arrangement, { revBar }), 'flagFull'), 'meatball').children;
-      if (ground?.kind !== 'rect' || name?.kind !== 'text') throw new Error(`${face.folder} draws the meatball as a ground and a name`);
-      expect({ face: face.folder, revBar, ground: ground.backgroundColor, edge: ground.border?.color, ink: name.textColor, text: name.text }).toEqual({
+      const block = bodyRect(arrangement);
+      const children = stateOf(groupOf(faceItems(arrangement, { revBar }), 'flagFull'), 'meatball').children;
+      const [ground, disc] = children;
+      if (children.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${face.folder} draws the meatball as a ground and a disc`);
+      const side = Math.min(block.width, block.height);
+      const centre = { x: disc.rect.left + disc.rect.width / 2, y: disc.rect.top + disc.rect.height / 2 };
+      expect({
         face: face.folder,
         revBar,
-        ground: ds.color.surface.base,
-        edge: ds.purpose.flag.orange,
-        ink: ds.purpose.flag.orange,
-        text: 'MEATBALL',
+        ground: ground.rect,
+        fill: ground.backgroundColor,
+        border: ground.border,
+        disc: disc.fillColor,
+        round: disc.rect.width === disc.rect.height,
+        size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * side) <= 1,
+        inside: contains(block, disc.rect),
+        centred: Math.abs(centre.x - (block.left + block.width / 2)) <= 0.5 && Math.abs(centre.y - (block.top + block.height / 2)) <= 0.5,
+      }).toEqual({
+        face: face.folder,
+        revBar,
+        ground: block,
+        fill: ds.color.surface.base,
+        border: undefined,
+        disc: ds.purpose.flag.orange,
+        round: true,
+        size: true,
+        inside: true,
+        centred: true,
       });
     }
   });

@@ -1,10 +1,10 @@
 /**
- * alertBand: the shapes a band on the face is allowed to take, and there are four of them.
+ * alertBand: the shapes a band on the face is allowed to take, and there are five of them.
  *
  * The canvas states the rule for the whole alert catalogue — "the only shapes are bands, outlined
  * bands and two patterns; nothing else on the face is allowed to compete with them" — and this file
- * is all four. A filled bar, a bar outlined in the alert's colour, the chequer, and the debris flag's
- * red stripes over its yellow.
+ * is all four of those and one more. A filled bar, a bar outlined in the alert's colour, the chequer,
+ * the debris flag's red stripes over its yellow, and the meatball's orange disc on the near-black.
  *
  * The stripes were the one shape left out, on the grounds that the name carries the difference, and
  * #498 reversed that: the name is written only where there is width for it, so on the nano's strip,
@@ -13,22 +13,27 @@
  * is how the real flag is made and needs nothing SimHub is not known to draw: a diagonal stripe is a
  * rotated rectangle clipped to the band, and docs/research/simhub-dash-format.md establishes neither.
  *
+ * The disc is the one shape the canvas's rule does not have, and it is the author's ruling on #498
+ * rather than a reading of the canvas: the meatball is a black box with an orange disc in the middle
+ * and no text. It is drawn with SimHub's own ellipse, which the round faces' rings already use, so it
+ * needs nothing more of the format than the stripes do.
+ *
  * Which condition takes which shape is not decided here: `AlertBandSpec` in flags.ts carries it
  * beside the condition, and `flagStrip.ts` joins the two. A shape is therefore a function of a
  * rectangle, a colour and a name, and knows nothing about flags.
  *
  * Every shape is opaque over the whole rectangle. A flag takes band D over precisely so that the
  * page underneath cannot be read, so an outlined band lays `surface.base` under its border rather
- * than leaving the ground transparent, and a flashing band alternates two opaque things rather than
- * blinking itself away.
+ * than leaving the ground transparent, the disc lays it under the disc, and a flashing band
+ * alternates two opaque things rather than blinking itself away.
  */
-import type { FontWeight, Hex, Item, Rect, RectangleItem, TextItem } from '../generator.ts';
+import type { EllipseItem, FontWeight, Hex, Item, Rect, RectangleItem, TextItem } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
-import { ds } from '../tokens.ts';
+import { ds, TRANSPARENT } from '../tokens.ts';
 
 /**
  * The band's border, which every artboard draws on every state as `border: 3px solid`, counted
@@ -113,8 +118,7 @@ export function filledBand(name: string, frame: Rect, style: AlertBandStyle, col
  * with it would be indistinguishable from the white flag at `#FFFFFF`, and two states a driver
  * cannot tell apart is a bug whoever chose the colours. The black family is therefore light on dark
  * where the others are dark on light, which is also what a black flag looks like, and the start
- * gantry's green takes the same form so that a gantry light is not read as a green flag. The
- * meatball takes it in its orange, being a black flag with an orange disc on it.
+ * gantry's green takes the same form so that a gantry light is not read as a green flag.
  *
  * The ground is `surface.base` and never transparent: an outline with nothing behind it leaves band
  * D's page fully readable underneath the most serious thing the band can say.
@@ -207,4 +211,56 @@ export function stripedBand(name: string, frame: Rect, style: AlertBandStyle, co
       ]
     : [];
   return [band(`${name}.band`, frame, colour), ...stripes(name, frame, frame.height / 2, stripe), ...named];
+}
+
+/**
+ * The meatball's disc as a fraction of the shorter side of the rectangle it is drawn in: two thirds,
+ * which is the flag's own proportion, FIA Appendix H drawing it as a disc 40 cm across on a flag 60 cm
+ * by 80.
+ *
+ * The shorter side rather than the height, because not every rectangle a flag is drawn in is wider
+ * than it is high. A settled block on a face with no corner block is sixteen pixels wide and sixty
+ * high, where two thirds of the height is a disc of forty, and a full-screen block can be taller than
+ * it is wide. On every band the shorter side is the height, so the rule is the flag's proportion
+ * there and the box's own limit elsewhere. The 8x8 box fills its panel with the disc instead, since
+ * sixty-four pixels have none to spend on the black around it.
+ */
+export const ALERT_DISC_RATIO = 2 / 3;
+
+/**
+ * The disc, centred on the frame and as near two thirds of its shorter side as whole pixels allow.
+ *
+ * The margin is rounded rather than the diameter, so that the disc sits the same number of pixels
+ * from both of the frame's nearer edges rather than half a pixel nearer one of them: sixty pixels of
+ * band give a disc of forty with ten above and ten below, and the nano's twelve a disc of eight with
+ * two either side. It has no stroke, and its `BackgroundColor` is transparent, since on an ellipse
+ * that is the square behind it rather than its fill.
+ */
+export function alertDisc(name: string, frame: Rect, colour: Hex): EllipseItem {
+  const side = Math.min(frame.width, frame.height);
+  const diameter = side - 2 * Math.round(((1 - ALERT_DISC_RATIO) * side) / 2);
+  return {
+    kind: 'ellipse',
+    name,
+    rect: rect(Math.floor(frame.left + (frame.width - diameter) / 2), Math.floor(frame.top + (frame.height - diameter) / 2), diameter, diameter),
+    fillColor: colour,
+    strokeColor: TRANSPARENT,
+    strokeThickness: 0,
+    backgroundColor: TRANSPARENT,
+  };
+}
+
+/**
+ * The meatball: the face's own near-black over the whole rectangle, its orange disc in the middle,
+ * and nothing else, which is the black box with an orange disc in it and no text that the author
+ * ruled on #498.
+ *
+ * The ground is `surface.base` and opaque for the reason an outlined band's is, that the page under a
+ * flag is not to be read. It carries no border and no name: the flag has neither, and nor does the
+ * chequer, the other shape that is its own flag. The same drawing serves every rectangle, the
+ * band, a corner block, the nano's strip and the full-screen block, because the disc is sized from
+ * the rectangle and there is no name whose size would have to be measured against it.
+ */
+export function discBand(name: string, frame: Rect, colour: Hex): Item[] {
+  return [band(`${name}.band`, frame, ds.color.surface.base), alertDisc(`${name}.disc`, frame, colour)];
 }

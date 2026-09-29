@@ -103,17 +103,24 @@ export const safeBitSet: BitTest = (bit) => eq(isnull(flagBit(bit), num(0)), num
 export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_Blue' | 'Flag_White' | 'Flag_Green';
 
 /**
- * How a band draws the condition: four shapes and no fifth, which is the canvas's own rule for the
- * alert catalogue, bands, outlined bands and two patterns. A filled bar carries its label in
- * `purpose.flag.onFlag`; an outlined bar is an opaque `surface.base` ground with a 3 px border and its
- * label both in the alert's colour, which is how a near-black flag is drawn on a near-black face; the
- * chequer is the board, and it is the one condition with no name to write on it; and the stripes are
- * the debris flag's, `stripe` over `colour`, with the label on a plate of `colour`.
+ * How a band draws the condition: five shapes and no sixth, which are the canvas's own four for the
+ * alert catalogue, bands, outlined bands and two patterns, and the meatball's disc. A filled bar
+ * carries its label in `purpose.flag.onFlag`; an outlined bar is an opaque `surface.base` ground with
+ * a 3 px border and its label both in the alert's colour, which is how a near-black flag is drawn on a
+ * near-black face; the chequer is the board, and it is one of the two conditions with no name to write
+ * on it; the stripes are the debris flag's, `stripe` over `colour`, with the label on a plate of
+ * `colour`; and the disc is an opaque `surface.base` ground with a disc of `colour` in its middle, and
+ * is the other condition that writes no name.
  *
  * The fourth exists because a name is written only where there is width for one. Drawn as a filled
  * yellow named DEBRIS, the debris flag was the yellow flag on the nano, in a settled corner too
  * narrow for the word and on the LED strip, which is to say wherever a driver was reading colour
  * rather than words; #498 draws the pattern the flag is made of instead.
+ *
+ * The fifth is outside the canvas's rule and is the author's ruling on #498: the meatball is a black
+ * box with an orange disc in the middle and no text, which is the flag itself, as the chequer is. It
+ * carries no label for the reason the chequer carries none, the drawing being the whole of what it
+ * says, and the type refuses one rather than leaving a name that nothing would write.
  *
  * It lives beside the condition rather than in the component for the reason `motion` does: a
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
@@ -123,7 +130,8 @@ export type AlertBandSpec =
   | { shape: 'filled'; colour: Hex; label: string; flash?: true; run?: BandRun }
   | { shape: 'outlined'; colour: Hex; label: string; run?: BandRun }
   | { shape: 'chequer' }
-  | { shape: 'striped'; colour: Hex; stripe: Hex; label: string };
+  | { shape: 'striped'; colour: Hex; stripe: Hex; label: string }
+  | { shape: 'disc'; colour: Hex };
 
 /**
  * What the whole band writes in place of its label, for the one condition with a number to say: the
@@ -298,11 +306,12 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  *
  * Filled, as the canvas draws it. Its colour is `purpose.alert.incident`, which is the caution amber
  * `#FFB300`, and so is the meatball's `purpose.flag.orange`, so the two can only be told apart by
- * shape where no name is written, which is the nano and a settled block too narrow for the word; and
- * a driver who has just hit something is the driver a meatball is most likely to be for. While the
- * meatball was a filled band the incident was outlined for that reason. #498 outlined the meatball,
- * which is a black flag with an orange disc, so the incident takes the canvas's fill back and the pair
- * stays apart: a band of amber is the incident, and an amber edge on the near-black is the meatball.
+ * shape wherever the incident writes no name, which is the nano and a settled block too narrow for
+ * the word; and a driver who has just hit something is the driver a meatball is most likely to be
+ * for. While the meatball was a filled band the incident was outlined for that reason. Since #498 the
+ * meatball is drawn as the flag is, a black box with an orange disc in its middle and no name, so the
+ * incident takes the canvas's fill back and the pair stays apart at every size: a band of amber is
+ * the incident, and a disc of it on the near-black is the meatball.
  */
 const INCIDENT: CarAlert = {
   id: 'incident',
@@ -409,10 +418,10 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
   { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
   { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
-  // The meatball is a black flag with an orange disc, so it takes the black family's outlined form in
-  // the orange: the near-black ground, and the edge and the name in `purpose.flag.orange`. The canvas
-  // fills the band orange, which is the caution amber and neither colour of the flag (#498).
-  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'outlined', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
+  // The meatball is a black flag with an orange disc, and is drawn as one: the near-black ground, a
+  // disc of `purpose.flag.orange` in its middle, and no name, as the author ruled on #498. The canvas
+  // fills the band orange, which is the caution amber and neither colour of the flag.
+  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'disc', colour: ds.purpose.flag.orange } },
   // Full-course caution: in iRacing this is the pace car being deployed, which is the closest
   // honest reading of a safety car. It outranks a local yellow because it is the whole track.
   {

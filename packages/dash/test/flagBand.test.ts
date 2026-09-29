@@ -17,6 +17,7 @@
  * blinking the whole layer away.
  */
 import { describe, expect, test } from 'bun:test';
+import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
 import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
@@ -375,7 +376,7 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // A name too wide for the block is not shrunk and not clipped: it is not written, and the
       // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
       // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
-      // corner blocks hold every one of the nineteen names.
+      // corner blocks hold every one of the eighteen names, the chequer and the meatball having none.
       for (const condition of ALERT_CATALOGUE) {
         const settled = cornerLayers(face).get(condition.id);
         if (!settled) continue;
@@ -386,7 +387,7 @@ describe('the flag settles into the blocks at the ends of the band', () => {
           expect({ item: name.name, drawn, box: name.rect.width, fits: drawn < name.rect.width }).toMatchObject({ fits: true });
         }
         const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
-        const text = condition.band.shape === 'chequer' ? undefined : condition.band.label;
+        const text = condition.band.shape === 'chequer' || condition.band.shape === 'disc' ? undefined : condition.band.label;
         const expected = text !== undefined && measureText('BarlowBold', text, ds.size.label) < room ? 2 : 0;
         expect({ face: face.folder, id: condition.id, names: names.length }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
@@ -416,6 +417,29 @@ describe('the flag settles into the blocks at the ends of the band', () => {
             clearOfTheEnds: stripe.rect.left > blocks[end].left && stripe.rect.left + stripe.rect.width < blocks[end].left + blocks[end].width,
           }).toEqual({ stripe: stripe.name, fullHeight: true, clearOfTheEnds: true });
         }
+      }
+    });
+
+    test(`${face.folder} draws the meatball in both blocks as its disc on the near-black, with no name`, () => {
+      // A black box with an orange disc in the middle and no text, which is the author's ruling on
+      // #498, in a settled block as on the whole band. The disc is two thirds of the block's shorter
+      // side, which on the faces with no corner block is the sixteen or twelve pixels of its width.
+      const layer = cornerLayerOf(face, 'meatball');
+      for (const end of ['left', 'right'] as const) {
+        const parts = layer.children.filter((c) => c.name.startsWith(`flagCorner.meatball.${end}.`));
+        const [ground, disc] = parts;
+        if (parts.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${face.folder} draws the ${end} meatball as a ground and a disc`);
+        const block = blocks[end];
+        expect({
+          face: face.folder,
+          end,
+          ground: ground.rect,
+          fill: ground.backgroundColor,
+          border: ground.border,
+          disc: disc.fillColor,
+          inside: contains(block, disc.rect),
+          size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * Math.min(block.width, block.height)) <= 1,
+        }).toEqual({ face: face.folder, end, ground: block, fill: ds.color.surface.base, border: undefined, disc: ds.purpose.flag.orange, inside: true, size: true });
       }
     });
 

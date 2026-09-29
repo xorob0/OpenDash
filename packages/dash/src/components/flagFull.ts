@@ -18,10 +18,13 @@
  * named the condition and the block, having no state for it, drew nothing at all: the driver who had
  * asked for the flag that cannot be missed saw the least of it.
  *
- * The four shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
- * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, the
- * chequer as a board with no name, and the debris flag's stripes with its name on a plate of its
- * yellow. Three things differ at this scale and are why the block is not a style of the band. The
+ * The five shapes are `alertBand`'s, and four of them are drawn here rather than called: a filled
+ * block named in `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque
+ * ground, the chequer as a board with no name, and the debris flag's stripes with its name on a plate
+ * of its yellow. The fifth, the meatball's disc on the near-black, is called, because nothing about it
+ * differs at this scale: it has no name and no flash, and its disc is already a fraction of the
+ * rectangle's shorter side, which is the rule a block taller than it is wide needs. Three things
+ * differ at this scale for the other four and are why the block is not a style of the band. The
  * flash covers the whole frame rather than an inset one, since a block that is the face has no 3 px
  * edge to keep through the dark phase; the type is measured down rather than set, because a name one
  * label row high is measured against sixty pixels and a name nearly half the face high is measured
@@ -41,7 +44,7 @@ import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 import { ALERT_CATALOGUE, bandVisible, type AlertCondition } from '../flags.ts';
-import { namePlate, nearestOdd, stripes } from './alertBand.ts';
+import { discBand, namePlate, nearestOdd, stripes } from './alertBand.ts';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
 /**
@@ -65,9 +68,11 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * width. One size serves every state, that size is the widest name divided into the block, and the
  * band writes "BLACK FLAG · FURLED": taking the labels as they are would set every name on the
  * portrait face at 69 px where the sheets draw 244, which is neither the block the sheets drew nor a
- * word worth the body. Cut, the widest is MEATBALL, and the only face that pays anything at all for
- * the nine conditions the block did not use to have is the portrait one, at 143 px against the 183
- * the five sheet names allowed.
+ * word worth the body. Cut, the widest is INCIDENT, and the only face that pays anything at all for
+ * the conditions the block did not use to have is the portrait one, at 160 px against the 183 the
+ * five sheet names allowed. It was MEATBALL, at 143 px, until the author ruled on #498 that the
+ * meatball is a disc with no name, which is why the table has no entry for it, as it has none for
+ * the chequer.
  *
  * The standing and the waved yellow read the same word and are told apart by the flash, which is
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
@@ -88,7 +93,6 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
   disqualify: 'DSQ',
   furled: 'FURLED',
   black: 'BLACK',
-  meatball: 'MEATBALL',
   caution: 'SAFETY',
   yellowWaving: 'YELLOW',
   yellow: 'YELLOW',
@@ -121,8 +125,8 @@ const onTheBlock = (condition: AlertCondition): boolean => !('neutral' in condit
 /** The conditions the block draws, in the catalogue's order. */
 const BLOCK_CONDITIONS: readonly AlertCondition[] = ALERT_CATALOGUE.filter(onTheBlock);
 
-/** Whether the condition carries a name at all. The chequer is the one that does not. */
-const named = (condition: AlertCondition): boolean => condition.band.shape !== 'chequer';
+/** Whether the condition carries a name at all. The chequer and the meatball are the two that do not. */
+const named = (condition: AlertCondition): boolean => condition.band.shape !== 'chequer' && condition.band.shape !== 'disc';
 
 /** Every name the format can draw, once each, which is what the one size is measured against. */
 export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.filter(named).map(blockName))];
@@ -185,7 +189,7 @@ const filledFull = (name: string, frame: Rect, colour: Hex, text: string, flash:
 
 /**
  * A block outlined and named in the alert's colour over the face's own ground, which is how the
- * black family, the meatball in its orange, the start gantry and the two power alerts are drawn.
+ * black family, the start gantry and the two power alerts are drawn.
  *
  * `purpose.flag.black` is `#F5F7FA` and is the ink rather than the ground, so a block filled with it
  * would be the white flag. The border stays for the reason it does on the band: a dark block on a
@@ -271,6 +275,8 @@ const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[
       return chequeredFull(name, frame);
     case 'striped':
       return stripedFull(name, frame, spec.colour, spec.stripe, blockName(condition));
+    case 'disc':
+      return discBand(name, frame, spec.colour);
   }
 };
 

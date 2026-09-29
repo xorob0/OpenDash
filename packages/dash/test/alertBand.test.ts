@@ -1,5 +1,5 @@
 /**
- * The alert band: the four shapes it is allowed to take, and the promise that only one of them is
+ * The alert band: the five shapes it is allowed to take, and the promise that only one of them is
  * ever drawn.
  *
  * Band D used to draw the six flags SimHub normalises and the 8x8 box drew all fifteen conditions
@@ -8,7 +8,7 @@
  * the dash. The band reads the catalogue now, and since #109 the catalogue is twenty: the fifteen
  * flags and five car alerts, ranked in one list. What is asserted here is what that costs: that the
  * twenty still exclude one another, the flags exactly as the box's do, that each takes one of the
- * four shapes and no fifth, and that every one of them is opaque over the whole band, since a flag
+ * five shapes and no sixth, and that every one of them is opaque over the whole band, since a flag
  * takes band D over precisely so that the page underneath cannot be read.
  *
  * Nothing in the repository evaluates a binding, so `visible()` below carries the same small
@@ -18,15 +18,15 @@
  * what makes the several-conditions-at-once table possible at all.
  */
 import { describe, expect, test } from 'bun:test';
-import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
+import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_DISC_RATIO, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
 import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
 import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
 import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { ALERT_CATALOGUE, flagBit, isFlag, type SessionFlagBit } from '../src/flags.ts';
-import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
-import { ds } from '../src/tokens.ts';
+import type { EllipseItem, Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
+import { ds, TRANSPARENT } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 
 /** Band D at its widest and at the narrowest the packages draw, which is the portrait face's 600. */
@@ -89,17 +89,19 @@ describe('the band is the catalogue', () => {
     expect(layers().map((l) => l.name)).toEqual(ALERT_CATALOGUE.map((c) => `flag.${c.id}`));
   });
 
-  test('four shapes and no fifth, the canvas’s bands, outlined bands and two patterns', () => {
-    expect(new Set(ALERT_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer', 'striped']));
+  test('five shapes and no sixth, the canvas’s bands, outlined bands and two patterns, and the meatball’s disc', () => {
+    expect(new Set(ALERT_CATALOGUE.map((c) => c.band.shape))).toEqual(new Set(['filled', 'outlined', 'chequer', 'striped', 'disc']));
     // Each pattern is one flag's: the board is the chequer's and the stripes are the debris flag's.
     expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'chequer').map((c) => c.id)).toEqual(['chequered']);
     expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'striped').map((c) => c.id)).toEqual(['debris']);
+    // And the disc is the meatball's alone, which is the author's ruling on #498 rather than the canvas's.
+    expect(ALERT_CATALOGUE.filter((c) => c.band.shape === 'disc').map((c) => c.id)).toEqual(['meatball']);
   });
 
-  test('every band names itself, except the chequer, which has no name to write', () => {
+  test('every band names itself, except the chequer and the meatball, which are their own flags and have no name to write', () => {
     for (const condition of ALERT_CATALOGUE) {
       const names = texts(layerOf(condition.id)).map((t) => t.text);
-      if (condition.band.shape === 'chequer') {
+      if (condition.band.shape === 'chequer' || condition.band.shape === 'disc') {
         expect({ id: condition.id, names }).toEqual({ id: condition.id, names: [] });
         continue;
       }
@@ -172,8 +174,8 @@ describe('the band is the catalogue', () => {
     // A session with no limit writes the count alone rather than "/ unlimited".
     expect(bind).toContain("'unlimited'");
     // Filled in the incident's amber, as the canvas draws it, and so written in onFlag. The amber is
-    // the meatball's orange as well, which is why the meatball's outline and the incident's fill have
-    // to stay two shapes; the test below holds them apart where no name is written.
+    // the meatball's orange as well, which is why the meatball's disc and the incident's fill have to
+    // stay two shapes; the test below holds them apart where no name is written.
     expect(ds.purpose.alert.incident).toBe(ds.purpose.flag.orange);
     expect(run.textColor).toBe(ds.purpose.flag.onFlag);
   });
@@ -222,7 +224,6 @@ describe('every shape is opaque over the whole band', () => {
       'disqualify',
       'furled',
       'black',
-      'meatball',
       'startSet',
       'startReady',
       'headlightFlash',
@@ -268,7 +269,7 @@ const drawing = (layer: LayerItem, frame: Rect): unknown[] =>
     .map((i) => ({
       kind: i.kind,
       at: { ...i.rect, left: i.rect.left - frame.left, top: i.rect.top - frame.top },
-      fill: i.kind === 'rect' ? i.backgroundColor : undefined,
+      fill: i.kind === 'rect' ? i.backgroundColor : i.kind === 'ellipse' ? i.fillColor : undefined,
       border: i.kind === 'rect' ? i.border : undefined,
       ink: i.kind === 'text' ? i.textColor : undefined,
       blink: i.blink,
@@ -340,11 +341,58 @@ describe('the debris flag is its yellow and red wherever it is drawn', () => {
 });
 
 /**
+ * The meatball is a black box with an orange disc in the middle and no text, which is the author's
+ * ruling on #498, on every rectangle a band is drawn in: the whole band, the nano's and the
+ * companion's strips, and the sixteen or twelve pixels a settled flag keeps on a face with no corner
+ * block, where the shorter side is the width and the disc is sized by it. The corner blocks are held
+ * in flagBand.test.ts and the full-screen block in flagFormat.test.ts.
+ */
+describe('the meatball is its orange disc on the near-black, and nothing else', () => {
+  const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };
+  const FRAMES: { where: string; frame: Rect; style: AlertBandStyle }[] = [
+    { where: 'the widest band', frame: WIDE, style: ALERT_BAND_STYLES.standard },
+    { where: 'the portrait band', frame: NARROW, style: ALERT_BAND_STYLES.standard },
+    { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+  ];
+
+  for (const { where, frame, style } of FRAMES) {
+    test(`${where}: the ground over the whole frame, the disc in its middle, and no border and no name`, () => {
+      const layer = layerOf('meatball', frame, style);
+      expect({ where, kinds: layer.children.map((c) => c.kind), names: texts(layer).length }).toEqual({ where, kinds: ['rect', 'ellipse'], names: 0 });
+      const [ground, disc] = layer.children as [RectangleItem, EllipseItem];
+      expect({ where, rect: ground.rect, fill: ground.backgroundColor, border: ground.border }).toEqual({ where, rect: frame, fill: ds.color.surface.base, border: undefined });
+      // Filled in the orange with no stroke, over a transparent square: on an ellipse the background is
+      // the square behind it, which would otherwise be the box it is drawn in.
+      expect({ where, fill: disc.fillColor, stroke: disc.strokeThickness, behind: disc.backgroundColor }).toEqual({ where, fill: ds.purpose.flag.orange, stroke: 0, behind: TRANSPARENT });
+      // Round, inside the frame, and within a pixel of two thirds of the frame's shorter side.
+      const side = Math.min(frame.width, frame.height);
+      const diameter = disc.rect.width;
+      expect({ where, round: disc.rect.height === diameter, inside: contains(frame, disc.rect), size: Math.abs(diameter - ALERT_DISC_RATIO * side) <= 1 }).toEqual({
+        where,
+        round: true,
+        inside: true,
+        size: true,
+      });
+      // Centred: exactly on the shorter side, whose margin is what is rounded, and within a pixel on the
+      // longer, where the difference between the side and the disc can be odd.
+      const across = [disc.rect.left - frame.left, frame.left + frame.width - (disc.rect.left + diameter)];
+      const down = [disc.rect.top - frame.top, frame.top + frame.height - (disc.rect.top + diameter)];
+      const [short, long] = frame.width <= frame.height ? [across, down] : [down, across];
+      expect({ where, short: short[0] === short[1], long: Math.abs(long[0]! - long[1]!) <= 1 }).toEqual({ where, short: true, long: true });
+    });
+  }
+});
+
+/**
  * The meatball and the incident are one amber, `purpose.flag.orange` and `purpose.alert.incident`
  * both being `#FFB300`, and a driver who has just hit something is the driver a meatball is likeliest
- * to be for. Where a name is written the name tells them apart; where none is, only the shape can, so
- * the meatball is the black flag's outline in its orange and the incident is the canvas's filled band
- * (#498). Were both outlined, or both filled, the nano would draw one band for the two.
+ * to be for. The meatball writes no name at all and the incident writes one only where there is width
+ * for it, so the shape is what tells them apart: the meatball is its disc on the near-black and the
+ * incident is the canvas's filled band (#498). Were both filled, the nano would draw one band for the
+ * two.
  */
 describe('the meatball and the incident are two drawings where no name is written', () => {
   const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };

@@ -589,7 +589,8 @@ describe('800 x 286 nano', () => {
     expect(flags.map((f) => f.name)).toEqual(ALERT_CATALOGUE.filter((c) => !('neutral' in c && c.neutral)).map((c) => `flag.${c.id}`));
     for (const f of flags) {
       for (const child of walkItems(f.children)) {
-        expect(child.kind).toBe('rect');
+        // Rectangles, and the meatball's disc, which is the one ellipse a flag strip draws.
+        expect({ name: child.name, kind: child.kind }).toEqual({ name: child.name, kind: child.name === 'flag.meatball.disc' ? 'ellipse' : 'rect' });
         expect(child.name.endsWith('.label')).toBe(false);
         if (hasRect(child)) expect(contains(rect(0, 274, 800, 12), child.rect)).toBe(true);
       }
@@ -611,12 +612,13 @@ describe('800 x 286 nano', () => {
       if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
       expect({ id, colour: outlined.border?.color, ground: outlined.backgroundColor }).toEqual({ id, colour: '#00D96A', ground: '#0A0B0D' });
     }
-    // And the meatball, which is a black flag with an orange disc: the near-black ground, edged in
-    // its orange, rather than a band of the caution amber (#498).
-    const meatball = layerNamed(items, 'flag.meatball').children;
-    expect(meatball).toHaveLength(1);
-    if (meatball[0]?.kind !== 'rect') throw new Error('meatball band');
-    expect({ border: meatball[0].border, ground: meatball[0].backgroundColor }).toEqual({ border: { color: '#FFB300', top: 2, bottom: 2, left: 2, right: 2 }, ground: '#0A0B0D' });
+    // And the meatball, which is a black flag with an orange disc and is drawn as one: the near-black
+    // ground with no border, and a disc of its orange in the middle, two thirds of the strip's twelve
+    // pixels, rather than a band of the caution amber (#498).
+    const [meatballGround, meatballDisc, ...meatballRest] = layerNamed(items, 'flag.meatball').children;
+    if (meatballGround?.kind !== 'rect' || meatballDisc?.kind !== 'ellipse') throw new Error('meatball ground and disc');
+    expect({ rest: meatballRest, ground: meatballGround.backgroundColor, border: meatballGround.border, rect: meatballGround.rect }).toEqual({ rest: [], ground: '#0A0B0D', border: undefined, rect: rect(0, 274, 800, 12) });
+    expect({ fill: meatballDisc.fillColor, stroke: meatballDisc.strokeThickness, rect: meatballDisc.rect }).toEqual({ fill: '#FFB300', stroke: 0, rect: rect(396, 276, 8, 8) });
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
@@ -647,7 +649,7 @@ describe('800 x 286 nano', () => {
     // run a condition writes in its place while it has the band, which opens with the label.
     for (const condition of ALERT_CATALOGUE) {
       const spec = condition.band;
-      if (spec.shape === 'chequer') continue;
+      if (spec.shape === 'chequer' || spec.shape === 'disc') continue;
       const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
       if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
       expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: ('run' in spec ? spec.run?.sample : undefined) ?? spec.label });

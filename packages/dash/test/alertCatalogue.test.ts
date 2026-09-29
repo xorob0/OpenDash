@@ -190,7 +190,7 @@ describe('the incident, an event and not a state', () => {
 
   test('writes the running count, and the limit only where the session has one', () => {
     const spec = carAlert('incident').band;
-    if (spec.shape === 'chequer' || spec.shape === 'striped' || !spec.run) throw new Error('the incident writes a run');
+    if (spec.shape === 'chequer' || spec.shape === 'striped' || spec.shape === 'disc' || !spec.run) throw new Error('the incident writes a run');
     const text = (limit: unknown): unknown => evalNcalc(spec.run!.bind, { ...taken, [LIMIT]: limit });
     expect(text('17')).toBe('INCIDENT · 4x / 17');
     expect(text('unlimited')).toBe('INCIDENT · 4x');
