@@ -666,9 +666,22 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string LedBrightness = "LedBrightness";
 
-        // Declared before LedEffects, which is a view of it: static fields initialise in the order
-        // they are written.
-        private static readonly KeyValuePair<string, string>[] LedEffectTable =
+        /// <summary>
+        /// One switch per thing a strip can draw, in the order the panel lists them and the contract
+        /// declares them: the effect id the generator gives it, and the setting it is read through.
+        /// </summary>
+        /// <remarks>
+        /// Every flag row is one switch, LedEffectFlags, because a driver turns "flags on this strip"
+        /// off and not the debris flag alone. PushToPass is spelled out because a name here may carry
+        /// neither a 1 nor a 2, which is the rule that keeps a strip's own names apart from the mirror's
+        /// numbered runs. Mirrors setting.ledEffectOn() in contract.ts, and contract.test.ts reads this
+        /// literal pair by pair, so it stays an array literal assigned here. #370, #503.
+        ///
+        /// The lookups below walk it with a for over Count and the indexer: a bar's effect getters ask
+        /// them on every LED frame, and a foreach over the interface would allocate an enumerator each
+        /// time where the indexer allocates nothing.
+        /// </remarks>
+        public static readonly IReadOnlyList<KeyValuePair<string, string>> LedEffects = new[]
         {
             new KeyValuePair<string, string>("tc", "LedEffectTc"),
             new KeyValuePair<string, string>("abs", "LedEffectAbs"),
@@ -693,22 +706,6 @@ namespace OpenDashPlugin
             new KeyValuePair<string, string>("turn.left", "LedEffectTurnLeft"),
             new KeyValuePair<string, string>("turn.right", "LedEffectTurnRight"),
         };
-
-        /// <summary>
-        /// One switch per thing a strip can draw, in the order the panel lists them and the contract
-        /// declares them: the effect id the generator gives it, and the setting it is read through.
-        /// </summary>
-        /// <remarks>
-        /// Every flag row is one switch, LedEffectFlags, because a driver turns "flags on this strip"
-        /// off and not the debris flag alone. PushToPass is spelled out because a name here may carry
-        /// neither a 1 nor a 2, which is the rule that keeps a strip's own names apart from the mirror's
-        /// numbered runs. Mirrors setting.ledEffectOn() in contract.ts. #370, #503.
-        ///
-        /// A read-only view of <see cref="LedEffectTable"/>, which is what the lookups below walk: a bar's
-        /// effect getters ask them on every LED frame, and a foreach over the interface allocates an
-        /// enumerator each time where a for over the array allocates nothing.
-        /// </remarks>
-        public static readonly IReadOnlyList<KeyValuePair<string, string>> LedEffects = Array.AsReadOnly(LedEffectTable);
 
         /// <summary>The setting every flag row is switched by.</summary>
         public const string LedEffectFlags = "LedEffectFlags";
@@ -750,9 +747,10 @@ namespace OpenDashPlugin
         private static string LedEffectSettingOrNull(string effectId)
         {
             if (effectId == null) return null;
-            for (var i = 0; i < LedEffectTable.Length; i++)
+            for (var i = 0; i < LedEffects.Count; i++)
             {
-                if (string.Equals(LedEffectTable[i].Key, effectId, StringComparison.Ordinal)) return LedEffectTable[i].Value;
+                var effect = LedEffects[i];
+                if (string.Equals(effect.Key, effectId, StringComparison.Ordinal)) return effect.Value;
             }
             if (effectId.StartsWith(LedEffectFlagPrefix, StringComparison.Ordinal) && effectId.Length > LedEffectFlagPrefix.Length)
             {
@@ -765,9 +763,10 @@ namespace OpenDashPlugin
         /// read under: `flag.black` for the flags.</summary>
         public static string LedEffectPrimaryId(string setting)
         {
-            for (var i = 0; i < LedEffectTable.Length; i++)
+            for (var i = 0; i < LedEffects.Count; i++)
             {
-                if (string.Equals(LedEffectTable[i].Value, setting, StringComparison.Ordinal)) return LedEffectTable[i].Key;
+                var effect = LedEffects[i];
+                if (string.Equals(effect.Value, setting, StringComparison.Ordinal)) return effect.Key;
             }
             throw new ArgumentOutOfRangeException("setting", setting, "no strip effect is read through that setting");
         }
