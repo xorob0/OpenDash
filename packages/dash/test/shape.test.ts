@@ -453,47 +453,67 @@ describe("lap times' grid drawing", () => {
 });
 
 /**
- * Lap times at `tall` promotes its times (#330).
+ * A tall face promotes a page's lead rank (#330).
  *
- * The catalogue draws the three times at 88 over a 34 px rank at `tall`, where it draws 46 over 34
- * at every other shape. Growing cannot reach that, since rule 20 grows every size by one factor and
- * keeps 46 over 34 however far it goes; what the drawing does is rule 17's other lever, a tall box
- * promoting the lead a size. So the times take the next name up the ramp and the rank under them
- * stays, and then the page grows into its box.
+ * The catalogue draws lap times at 88 over a 34 px rank at `tall` where it draws 46 over 34 at every
+ * other shape, and session and stint at 76 over 34 where it draws 34 over 34. Growing cannot reach
+ * that, since rule 20 grows every size by one factor and keeps whatever ratio the page started from;
+ * what the drawing does is rule 17's other lever, a tall box promoting the lead a size. So the lead
+ * rank takes the next name up the ramp and the rank under it stays, and then the page grows into its
+ * box. `leadRankSize` is the lever and these are the three pages that take it.
  */
-describe("lap times' tall drawing", () => {
-  const lapTimes = MODULES.find((m) => m.id === 'lapTimes')!;
-  const sizesAt = (body: Rect, density: Density): { times: number[]; rest: number[] } => {
-    const values = [...walkItems(lapTimes.build({ frame: body, density, prefix: 'b.' }))].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+describe('a tall face promotes the lead rank', () => {
+  const PROMOTED = [
+    { page: 'lapTimes', lead: ['last', 'sessionBest', 'yourBest'], next: ['laps', 'estimated', 'delta'] },
+    { page: 'session', lead: ['type', 'position', 'class'], next: ['lap', 'timeLeft', 'lapsLeft'] },
+    { page: 'stint', lead: ['lap', 'fuelTime', 'stintTime'], next: ['stintLaps', 'completed', 'stops'] },
+  ] as const;
+  const sizesAt = (page: string, lead: readonly string[], next: readonly string[], body: Rect, density: Density): { lead: number[]; next: number[] } => {
+    const module = MODULES.find((m) => m.id === page)!;
+    const values = [...walkItems(module.build({ frame: body, density, prefix: 'b.' }))].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
     const size = (id: string): number => values.find((i) => i.name === `b.${id}.value`)?.fontSize ?? 0;
-    return { times: ['last', 'sessionBest', 'yourBest'].map(size), rest: ['laps', 'estimated', 'delta'].map(size).filter((fs) => fs > 0) };
+    return { lead: lead.map(size).filter((fs) => fs > 0), next: next.map(size).filter((fs) => fs > 0) };
   };
 
-  test('is found at every tall body a face produces', () => {
+  test('is measured at every tall body a face produces', () => {
     // The 1280 x 720 face in both arrangements, and the catalogue's own 360 x 470.
     expect(faceBodiesOf('tall').length).toBeGreaterThan(2);
   });
 
-  test('draws the three times a ramp size above the rank under them', () => {
-    for (const { at, body, density } of faceBodiesOf('tall')) {
-      const { times, rest } = sizesAt(body, density);
-      const d = densityOf(density);
-      expect({ at, oneSize: new Set(times).size, drew: rest.length }).toEqual({ at, oneSize: 1, drew: 3 });
-      // The ratio of the promoted drawing, `hero` over `mid`, rather than the `big` over `mid` every
-      // other shape draws: 64 over 34 in a zone, which is 1.88 where the catalogue's 88 over 46 is 1.91.
-      const ratio = times[0]! / rest[0]!;
-      expect({ at, ratio: Math.abs(ratio - d.hero / d.mid) < 0.04 }).toEqual({ at, ratio: true });
-      // And grown into the box on top of that: past the promoted size, which is the ramp's top.
-      expect({ at, grew: times[0]! > d.hero }).toEqual({ at, grew: true });
-    }
-  });
+  for (const { page, lead, next } of PROMOTED) {
+    test(`${page} draws its lead rank a ramp size above the rank under it`, () => {
+      for (const { at, body, density } of faceBodiesOf('tall')) {
+        const sizes = sizesAt(page, lead, next, body, density);
+        const d = densityOf(density);
+        expect({ at, oneSize: new Set(sizes.lead).size, drew: sizes.lead.length > 0 && sizes.next.length > 0 }).toEqual({ at, oneSize: 1, drew: true });
+        // The ratio of the promoted drawing, `hero` over `mid`, rather than the `big` over `mid` every
+        // other shape draws: 64 over 34 in a zone, 1.88, where the catalogue's lap times are 1.91.
+        const ratio = sizes.lead[0]! / sizes.next[0]!;
+        expect({ at, ratio: Math.abs(ratio - d.hero / d.mid) < 0.04 }).toEqual({ at, ratio: true });
+        // Never under the promoted size, and grown past it in every box a face really produces. The
+        // catalogue's own 360 x 470 is left out of the second: the stint's promoted rank meets its
+        // height at 64 there, having shed the average lap its table sheds first.
+        expect({ at, promoted: sizes.lead[0]! >= d.hero }).toEqual({ at, promoted: true });
+        if (at !== 'catalogue') expect({ at, grew: sizes.lead[0]! > d.hero }).toEqual({ at, grew: true });
+      }
+    });
 
-  test('and a grid box, whose height is not tall, draws the times at the size every other shape does', () => {
-    for (const { at, body, density } of faceBodiesOf('grid')) {
-      const { times, rest } = sizesAt(body, density);
-      if (rest.length === 0) continue;
-      const d = densityOf(density);
-      expect({ at, ratio: Math.abs(times[0]! / rest[0]! - d.big / d.mid) < 0.04 }).toEqual({ at, ratio: true });
+    test(`and a ${page} in a grid box, whose height is not tall, keeps the ratio every other shape draws`, () => {
+      for (const { at, body, density } of faceBodiesOf('grid')) {
+        const sizes = sizesAt(page, lead, next, body, density);
+        if (sizes.lead.length === 0 || sizes.next.length === 0) continue;
+        const d = densityOf(density);
+        expect({ at, ratio: Math.abs(sizes.lead[0]! / sizes.next[0]! - d.big / d.mid) < 0.04 }).toEqual({ at, ratio: true });
+      }
+    });
+  }
+
+  test('and the companion does not, being drawn on an artboard of its own', () => {
+    // The portrait companion is a tall box, and its session and stint keep `big` over `mid`.
+    for (const { page, lead, next } of PROMOTED.filter((p) => p.page !== 'lapTimes')) {
+      const d = densityOf('companion');
+      const sizes = sizesAt(page, lead, next, rect(24, 16, 432, 726), 'companion');
+      expect({ page, ratio: Math.abs(sizes.lead[0]! / sizes.next[0]! - d.big / d.mid) < 0.04 }).toEqual({ page, ratio: true });
     }
   });
 });
