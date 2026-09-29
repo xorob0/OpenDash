@@ -67,8 +67,9 @@ namespace OpenDashPlugin.Tests
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
-            // the URL, the pit wall's class filter, its flag format, and the flag box.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+            // the URL, the pit wall's class filter, its flag format, and the flag box. And, since #503,
+            // whether a flag shows in the pit lane, and where each zone's page sits in its own order.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             // Eight global flag box names and thirteen per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
@@ -82,7 +83,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -113,8 +114,11 @@ namespace OpenDashPlugin.Tests
             // release exists, and which (#83), and 347 before the plugin had to publish the class best,
             // which SimHub keeps and never publishes, and 348 before a driver could say whether a clock
             // reads 14:32 or 2:32 PM (#324), and 349 before the live delta could be drawn to thousandths
-            // as well as hundredths (#322).
-            Assert.Equal(350, names.Count);
+            // as well as hundredths (#322), and 350 before the settings panel was rebuilt one page per
+            // thing on the rig (#503): whether a flag shows in the pit lane, where each of a face's four
+            // zones sits in the order its driver chose, which is thirty-two names over the eight faces,
+            // and a strip's own brightness and its fifteen switches, one per thing it can draw.
+            Assert.Equal(399, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -157,6 +161,11 @@ namespace OpenDashPlugin.Tests
             // delta read to the thousandth on the rim and to the hundredth on the pit wall is two
             // answers to one question. #322.
             Assert.Equal("DeltaPrecision", names[24]);
+            // And whether a flag shows in the pit lane, appended after it and shared because a driver who
+            // wants quiet on the way down the lane wants it of every surface. #503.
+            Assert.Equal("FlagsInPitLane", names[25]);
+            Assert.Equal(26, Contract.SharedPropertyNames().Count());
+            Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
             // literal: the shared group is appended to, and the four indices below were 18, 22, 26 and 30
@@ -171,6 +180,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(p + "QuickGlance", names[face + 20]);
             Assert.Equal(p + "FlagFormat", names[face + 21]);
             Assert.Equal(p + "LapReview", names[face + 22]);
+            Assert.Equal(p + "RevBar", names[face + 23]);
+            // And where each zone's page sits in the order it cycles in, appended after the rev bar. #503.
+            Assert.Equal(new[] { p + "ZoneAPosition", p + "ZoneBPosition", p + "ZoneCPosition", p + "ZoneDPosition" }, names.Skip(face + 24).Take(4));
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -509,7 +521,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" },
                 Contract.LedPropertyNames().Take(5));
-            Assert.Equal(Contract.LedSpotterWhole, Contract.PropertyNames().Last());
+            // The strips' group ends with its switches, the last of them the right indicator, and the
+            // full-strip spotter sits where it was appended, immediately after the last mirror run. #503.
+            Assert.Equal("LedEffectTurnRight", Contract.PropertyNames().Last());
+            var leds = Contract.LedPropertyNames().ToList();
+            var lastRun = leds.IndexOf(Contract.LedMirrorRun(Contract.MirrorRunLengths.Last()));
+            Assert.Equal(Contract.LedSpotterWhole, leds[lastRun + 1]);
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -573,6 +590,15 @@ namespace OpenDashPlugin.Tests
             // Appended after the runs rather than beside the three it belongs with, for the reason every
             // other addition is appended: both halves of the contract pin this list in order.
             expected.Add(Contract.LedSpotterWhole);
+            // And a strip's own brightness and a switch per thing it can draw, appended again. #503.
+            expected.Add("LedBrightness");
+            expected.AddRange(new[]
+            {
+                "LedEffectTc", "LedEffectAbs", "LedEffectDrs", "LedEffectPushToPass", "LedEffectLowFuel",
+                "LedEffectTemperature", "LedEffectOilPressure", "LedEffectFlags", "LedEffectSpotterLeft",
+                "LedEffectSpotterRight", "LedEffectPitLane", "LedEffectPitLimiter", "LedEffectPitSpeeding",
+                "LedEffectTurnLeft", "LedEffectTurnRight",
+            });
             Assert.Equal(expected, Contract.LedPropertyNames());
             foreach (var name in expected) Assert.Contains(name, Contract.LightsPropertyNames());
             // On: movement is what a flag is read by at the edge of vision, and off is the driver
@@ -662,9 +688,10 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Twenty-four each: four zones times page, mask, start and class filter, four bar fields,
-            // the glance, the flag format, the lap review and what this face carries at the top.
-            Assert.Equal(24, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-eight each: four zones times page, mask, start and class filter, four bar fields,
+            // the glance, the flag format, the lap review, what this face carries at the top, and where
+            // each zone's page sits in its own order.
+            Assert.Equal(28, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]
@@ -733,7 +760,20 @@ namespace OpenDashPlugin.Tests
         public void Every_action_names_the_face_it_moves()
         {
             var actions = new List<string>(Contract.ActionNames());
-            Assert.Equal(Contract.FaceSizes.Count * 5, actions.Count);
+            // Nine each: a zone's button forwards and back, four of each, and the glance. #503.
+            Assert.Equal(Contract.FaceSizes.Count * 9, actions.Count);
+            Assert.Contains("Face1920x480CycleZoneABack", actions);
+            Assert.Equal(
+                new[]
+                {
+                    "Face850x480CycleZoneA", "Face850x480CycleZoneB", "Face850x480CycleZoneC", "Face850x480CycleZoneD",
+                    "Face850x480HoldQuickGlance",
+                    "Face850x480CycleZoneABack", "Face850x480CycleZoneBBack", "Face850x480CycleZoneCBack", "Face850x480CycleZoneDBack",
+                },
+                Contract.FaceActionNames("Face850x480"));
+            // The rig's own three, which move no screen and so carry no prefix.
+            Assert.Equal(new[] { "ToggleNightMode", "BrightnessUp", "BrightnessDown" }, Contract.RigActionNames());
+            Assert.Empty(Contract.RigActionNames().Intersect(actions));
             Assert.Equal(actions.Count, new HashSet<string>(actions, StringComparer.Ordinal).Count);
             Assert.Contains("Face1920x480CycleZoneA", actions);
             Assert.Contains("Face600x686HoldQuickGlance", actions);
@@ -766,6 +806,110 @@ namespace OpenDashPlugin.Tests
             // Lap times and the track map, counted from zero, so the track map is module 13 at page 12.
             Assert.Equal("lapTimes", Modules.ByNumber(Contract.DefaultCompanionStart + 1).Id);
             Assert.Equal("track", Modules.ByNumber(Contract.DefaultCompanionQuickGlance + 1).Id);
+        }
+
+        [Fact]
+        public void The_strip_switches_are_the_fifteen_effect_settings_in_order()
+        {
+            // The names a strip profile reads its switches through are exactly the contract's list, in
+            // its order, so a switch added to one and not the other fails here. #370, #503.
+            var switches = Contract.LedPropertyNames().SkipWhile(n => n != Contract.LedBrightness).Skip(1).ToList();
+            Assert.Equal(15, switches.Count);
+            Assert.Equal(Contract.LedEffectSettings(), switches);
+            // Every flag row is one switch, whatever the row: a driver turns flags off on a strip, not
+            // the debris flag alone.
+            foreach (var id in Contract.LedEffectIds().Where(id => id.StartsWith("flag.", StringComparison.Ordinal)))
+            {
+                Assert.Equal("LedEffectFlags", Contract.LedEffectSetting(id));
+            }
+            Assert.Equal("LedEffectFlags", Contract.LedEffectSetting("flag.meatball"));
+            Assert.Equal("LedEffectPushToPass", Contract.LedEffectSetting("p2p"));
+            Assert.Equal("LedEffectSpotterLeft", Contract.LedEffectSetting("spotter.left"));
+            Assert.Equal("LedEffectPitSpeeding", Contract.LedEffectSetting("pit.speeding"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.LedEffectSetting("sparkles"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.LedEffectSetting("flag."));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.LedEffectSetting(null));
+            Assert.False(Contract.IsLedEffect("sparkles"));
+            Assert.True(Contract.IsLedEffect("turn.right"));
+            // Every setting is answered by the first id that names it, which is the one a switch is
+            // stored under.
+            foreach (var setting in Contract.LedEffectSettings())
+            {
+                Assert.Equal(setting, Contract.LedEffectSetting(Contract.LedEffectPrimaryId(setting)));
+            }
+            Assert.Equal("flag.black", Contract.LedEffectPrimaryId("LedEffectFlags"));
+            Assert.True(Contract.DefaultLedEffect);
+        }
+
+        [Fact]
+        public void The_retired_rev_looks_become_left_to_right()
+        {
+            // The set keeps four values, so a file naming a retired one is still legal; what moves is
+            // the value, onto the one look a strip off the car's bar draws now (#369, #503).
+            Assert.Equal(4, Contract.LedRpmStyles.Length);
+            Assert.Equal(new[] { "meetInMiddle", "f1" }, Contract.RetiredLedRpmStyles);
+            Assert.Equal("leftToRight", Contract.NormaliseLedRpmStyle("f1"));
+            Assert.Equal("leftToRight", Contract.NormaliseLedRpmStyle(" MeetInMiddle "));
+            Assert.Equal("leftToRight", Contract.NormaliseLedRpmStyle("leftToRight"));
+            Assert.Equal("car", Contract.NormaliseLedRpmStyle("car"));
+            Assert.Equal("car", Contract.NormaliseLedRpmStyle(null));
+            Assert.Equal("car", Contract.NormaliseLedRpmStyle("sparkles"));
+            Assert.Equal("car", Contract.LedRpmStyleCar);
+            Assert.Equal("leftToRight", Contract.LedRpmStyleLeftToRight);
+        }
+
+        [Fact]
+        public void An_order_is_repaired_rather_than_refused()
+        {
+            Assert.Equal(new[] { 0, 1, 2, 3 }, Contract.NormaliseOrder(null, 4));
+            Assert.Equal(new[] { 2, 0, 1, 3 }, Contract.NormaliseOrder(new[] { 2, 0 }, 4));
+            Assert.Equal(new[] { 3, 1, 0, 2 }, Contract.NormaliseOrder(new[] { 3, 1, 3, 9, -1, 0 }, 4));
+            Assert.Empty(Contract.NormaliseOrder(new[] { 1 }, 0));
+            var orders = Contract.DefaultFaceZoneOrders();
+            Assert.Equal(Contract.FaceZoneLetters.Length, orders.Length);
+            for (var i = 0; i < orders.Length; i++) Assert.Equal(Enumerable.Range(0, Contract.FaceZonePageCounts[i]), orders[i]);
+        }
+
+        [Fact]
+        public void The_catalogue_order_lands_where_FirstEnabledFrom_always_did()
+        {
+            // The identity order is the one every zone had before a driver could choose one, so a zone
+            // nobody reorders has to land exactly where it always landed.
+            const int n = 8;
+            var identity = Contract.NormaliseOrder(null, n);
+            for (var page = -2; page <= n + 1; page++)
+            {
+                for (var mask = 0; mask < 1 << n; mask++)
+                {
+                    Assert.Equal(Contract.FirstEnabledFrom(page, mask, n), Contract.FirstEnabledInOrder(page, mask, identity));
+                }
+            }
+        }
+
+        [Fact]
+        public void A_zone_steps_forward_and_back_through_its_own_order()
+        {
+            var order = new[] { 3, 0, 2, 1 };
+            const int all = 0xF;
+            Assert.Equal(0, Contract.FirstEnabledAfter(3, all, order));
+            Assert.Equal(3, Contract.FirstEnabledAfter(1, all, order));
+            Assert.Equal(1, Contract.LastEnabledBefore(3, all, order));
+            Assert.Equal(3, Contract.LastEnabledBefore(0, all, order));
+            // Past what is turned off, in both directions.
+            var noZero = all & ~1;
+            Assert.Equal(2, Contract.FirstEnabledAfter(3, noZero, order));
+            Assert.Equal(3, Contract.LastEnabledBefore(2, noZero, order));
+            Assert.Equal(2, Contract.FirstEnabledInOrder(0, noZero, order));
+            // One page on is a zone that stays where it is, both ways.
+            Assert.Equal(2, Contract.FirstEnabledAfter(2, 1 << 2, order));
+            Assert.Equal(2, Contract.LastEnabledBefore(2, 1 << 2, order));
+            // Nothing on is a page left alone.
+            Assert.Equal(1, Contract.FirstEnabledInOrder(1, 0, order));
+            Assert.Equal(1, Contract.FirstEnabledAfter(1, 0, order));
+            Assert.Equal(1, Contract.LastEnabledBefore(1, 0, order));
+            // A page the order does not hold steps to its head forwards and its tail backwards.
+            Assert.Equal(3, Contract.FirstEnabledAfter(7, all, order));
+            Assert.Equal(1, Contract.LastEnabledBefore(7, all, order));
         }
 
         [Fact]

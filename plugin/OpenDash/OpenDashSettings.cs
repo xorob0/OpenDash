@@ -1367,6 +1367,15 @@ namespace OpenDashPlugin
             return screen.Face.Cycle(letter);
         }
 
+        /// <summary>Moves one zone of one screen back a page, and returns the page it landed on. A screen
+        /// the rig no longer holds is left alone, for the reason <see cref="CycleScreenZone"/> gives.</summary>
+        public int CycleScreenZoneBack(string ns, string letter)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null || screen.Face == null) return ScreenFace(ns).Zone(letter);
+            return screen.Face.CycleBack(letter);
+        }
+
         /// <summary>Every zone of every face back on the page it opens on, which is what Init does.</summary>
         public void OpenRigOnStartPages()
         {

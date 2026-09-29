@@ -215,6 +215,21 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Moves a zone back to its previous enabled page and returns it: the partner of <see
+        /// cref="Cycle"/>, for a driver who pressed once too often. A zone with one page enabled stays
+        /// where it is, as it does going forward.
+        /// </summary>
+        public int CycleBack(string letter)
+        {
+            var index = ZoneIndex(letter);
+            EnsureArrays();
+            var count = Contract.FaceZonePageCounts[index];
+            var previous = Contract.LastEnabledBefore(Zone(letter), Mask(letter), Contract.NormaliseOrder(null, count));
+            Zones[index] = previous;
+            return previous;
+        }
+
+        /// <summary>
         /// Shows the glance page in its zone, remembering what was there.
         ///
         /// The page does not have to be one the mask enables. A glance is an explicit thing a driver

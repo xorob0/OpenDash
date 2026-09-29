@@ -74,6 +74,10 @@ namespace OpenDashPlugin.Tests
                 "Face1920x480CycleZoneC",
                 "Face1920x480CycleZoneD",
                 "Face1920x480HoldQuickGlance",
+                "Face1920x480CycleZoneABack",
+                "Face1920x480CycleZoneBBack",
+                "Face1920x480CycleZoneCBack",
+                "Face1920x480CycleZoneDBack",
                 "CompanionHoldQuickGlance",
                 "PitWallHoldQuickGlance",
             }, expected);

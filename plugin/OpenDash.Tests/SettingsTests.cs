@@ -1364,11 +1364,11 @@ namespace OpenDashPlugin.Tests
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
             // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
-            // best, the clock format and the delta's precision, which every screen shares, and one group
-            // per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+            // best, the clock format, the delta's precision and whether a flag shows in the pit lane,
+            // which every screen shares, and one group per screen the rig holds.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(25, shared);
+            Assert.Equal(26, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.
@@ -1888,12 +1888,15 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_five_actions_are_named_as_verbs()
+        public void The_nine_actions_are_named_as_verbs()
         {
-            // Five per face, because two faces on one rig have to cycle apart.
+            // Nine per face, because two faces on one rig have to cycle apart: the five that shipped, and
+            // a zone's way back after them (#503).
             var actions = Contract.ActionNames().ToArray();
             Assert.Equal(new[] { "Face1920x480CycleZoneA", "Face1920x480CycleZoneB", "Face1920x480CycleZoneC", "Face1920x480CycleZoneD", "Face1920x480HoldQuickGlance" }, actions.Take(5).ToArray());
-            Assert.Equal(Contract.FaceSizes.Count * 5, actions.Length);
+            Assert.Equal(new[] { "Face1920x480CycleZoneABack", "Face1920x480CycleZoneBBack", "Face1920x480CycleZoneCBack", "Face1920x480CycleZoneDBack" }, actions.Skip(5).Take(4).ToArray());
+            Assert.Equal(Contract.FaceSizes.Count * 9, actions.Length);
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.CycleZoneBackAction(Face, "E"));
             // The action and the property it reads must not share a name: one is what the glance is
             // set to, the other is the button that shows it.
             Assert.DoesNotContain(Contract.HoldQuickGlanceActionFor(Face), Contract.PropertyNames());

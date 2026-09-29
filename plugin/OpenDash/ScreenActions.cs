@@ -72,6 +72,14 @@ namespace OpenDashPlugin
                 release = null;
                 return;
             }
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                if (!string.Equals(name, Contract.CycleZoneBackAction(ns, letter), StringComparison.Ordinal)) continue;
+                var captured = letter;
+                press = () => settings().CycleScreenZoneBack(ns, captured);
+                release = null;
+                return;
+            }
             if (string.Equals(name, Contract.HoldQuickGlanceActionFor(ns), StringComparison.Ordinal))
             {
                 press = () => settings().BeginScreenGlance(ns);
