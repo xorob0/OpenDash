@@ -57,10 +57,11 @@ export const FLAG_FULL_NAME_RATIO = 0.447;
  *
  * The author's ruling on #497, "long wherever legible": FULL COURSE YELLOW is the condition's name,
  * so the block writes it at a size of its own wherever that size keeps it legible, and half the size
- * the other names are written at is the line the ruling draws. With it the form follows the width of
- * the screen rather than the height of its block, which the rule it replaced got nearly backwards:
- * that one wrote the whole name only where it fitted at the one size, so the pit wall and the
- * 1280 x 720 face wrote FCY, and the 800 x 286 face the whole name.
+ * the other names are written at is the line the ruling draws. With it the form follows the block's
+ * proportions rather than its size, the whole name on a block wide for its height and FCY on a tall
+ * one. The rule it replaced wrote the whole name only where it fitted at the one size, which drew that
+ * line so far towards the wide blocks that the pit wall and the 1280 x 720 face wrote FCY, and the
+ * 800 x 286 face, with the rev bar on, the whole name.
  */
 export const FLAG_FULL_LONG_NAME_MIN_RATIO = 0.5;
 

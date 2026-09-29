@@ -476,7 +476,8 @@ describe('the full course yellow is written whole wherever it stays legible', ()
     // The blocks that write FCY, pinned for the reason the table is: those on which FULL COURSE YELLOW
     // would be under half the size of the other names, which are the three portrait screens. The one
     // rule used to give nearly the reverse, FCY on the pit walls and the companions, whose blocks are
-    // tall and set a size the whole name could not fit across, and the whole name on 800 x 286.
+    // tall and set a size the whole name could not fit across, and the whole name on 800 x 286 with
+    // the rev bar on.
     expect(CAUTIONS.filter((c) => c.name.text !== CAUTION_LONG).map((c) => c.where)).toEqual([
       'OpenDash 600x686 600 x 546',
       'OpenDash 600x686 600 x 580',

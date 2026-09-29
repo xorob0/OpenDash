@@ -85,19 +85,24 @@ author owes its reversal. The 8x8 box is the one surface that writes something e
 the author's choice for a panel eight columns wide (#499), [below](#the-four-decisions-sixty-four-pixels-forced).
 
 **The name is as long as the room.** The band carries two forms of it, FULL COURSE YELLOW and FCY,
-and every surface that writes a name writes the longest that fits the room it has. On band D that is
-the whole name everywhere a word is written, since it fits every band and every corner block of the
-four faces that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no
-word at all, FCY included. The full-screen block is the surface where the room decides, and the
-author ruled on it "long wherever legible". The block sets one size for every name from the widest of
-its one-word names, which is MEATBALL, and FCY is what the caution brings to that measure, so that
-the long form never shrinks the others. FULL COURSE YELLOW then gets a size of its own, the largest
-whole-pixel size, no larger than the one size, at which it fits across the block less its padding,
-and the block writes it at that size wherever it is at least half the one size, and FCY at the one
-size otherwise. That is the whole name on every landscape screen, the pit wall and the companion
-included, and FCY on the three portrait ones only, namely the 600 × 686 face, the portrait companion
-and the portrait pit wall, where the whole name would be under half the size of the others. Moreover,
-the form does not depend on the rev bar, since both arrangements of every face write the same one.
+and band D and its corner blocks write the longest that fits the room they have. That is the whole
+name everywhere a word is written, since it fits every band and every corner block of the four faces
+that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no word at
+all, FCY included. The full-screen block is the surface where the room decides, and the author ruled
+on it "long wherever legible". The block sets one size for its names, the sheets' share of its
+height unless the widest of its one-word names, which is MEATBALL, needs less, and FCY is what the
+caution brings to that measure, so that the long form never shrinks the others. FULL COURSE YELLOW
+then gets a size of its own, the largest whole-pixel size, no larger than the one size, at which it
+fits across the block less its padding, and the block writes it at that size wherever it is at least
+half the one size, and FCY at the one size otherwise. That is the whole name on every landscape
+screen, the pit wall and the companion included, and FCY on the three portrait ones only, namely the
+600 × 686 face, the portrait companion and the portrait pit wall, where the whole name would be under
+half the size of the others. The form thus follows the block's proportions rather than its size:
+wherever MEATBALL sets the one size, the whole name, being 2.1 times as wide, comes to 0.477 of it
+whatever the block, which is why the portrait pit wall writes FCY although FULL COURSE YELLOW would
+be 129 px there, whereas wherever the height sets it, the whole name is written on a block whose
+width less its padding is about 1.75 times its height or more. Moreover, the form does not depend on
+the rev bar, since both arrangements of every face write the same one.
 `flagFormat.test.ts` derives the rule on every block the build draws and pins which of them write FCY.
 
 **No flag's name says FLAG** (#497), where the canvas writes the word on every face: the seven face

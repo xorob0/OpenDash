@@ -113,12 +113,15 @@ export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_B
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
  * cannot draw, and the type is what refuses it.
  *
- * A filled bar may carry a `short` form of its label, which is the name where the label does not fit.
- * Every surface that writes the name writes the longest of the two that fits the room it has, so the
- * name is as long as the room allows rather than as short as the smallest room. One condition has
- * one, the full course yellow, whose FULL COURSE YELLOW is FCY on a block too narrow for it, #497; the
- * others are short enough everywhere they are written, and a second form nobody reads would be a
- * second name to keep in step with the first.
+ * A filled bar may carry a `short` form of its label, which is the name where the label does not fit,
+ * or fits only too small to read. Band D and its corner blocks write the longest of the two that fits
+ * the room they have, so the name is as long as the room allows rather than as short as the smallest
+ * room; the full-screen block writes the label at a size of its own wherever that size is at least
+ * `FLAG_FULL_LONG_NAME_MIN_RATIO` of the one size its other names share, in `components/flagFull.ts`.
+ * One condition has one, the full course yellow, whose FULL COURSE YELLOW is FCY on a full-screen
+ * block where the whole name would be under half the size of the others, #497; the others are short
+ * enough everywhere they are written, and a second form nobody reads would be a second name to keep
+ * in step with the first.
  */
 export type AlertBandSpec =
   | { shape: 'filled'; colour: Hex; label: string; short?: string; flash?: true; run?: BandRun }
