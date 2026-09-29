@@ -591,8 +591,16 @@ export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: st
  * `flagsAllowedHere` every screen and the flag box ask. `blinkWhen` carries the same terms, so a
  * blink never outlives the light it belongs to.
  *
+ * One exception, settled at build time rather than by the switches. {@link lampConditions} drops an
+ * effect drawn exactly as a higher-ranked one on the same lamp, and on a side of one that is the turn
+ * indicators, drawn as the green flag is. There `LedEffectTurnLeft` and `LedEffectTurnRight` govern
+ * nothing, and with `LedEffectFlags` off the indicator does not show through, because it was never
+ * built into that lamp. iRacing publishes no indicator, so today it costs nothing a driver can see.
+ *
  * The switch is read through `OpenDash.LedEffect*`, a rig-wide name that the plugin rewrites to the
- * bar's own namespace when it installs the profile for a bar, as it does every `OpenDash.Led*` read.
+ * bar's own namespace when it installs the profile for a bar. The rewrite is the explicit list
+ * `LedBarProfile.BarSettings` in the plugin, not every `OpenDash.Led*` read: the fifteen switches are
+ * on it, and `LedMirrorReady` with the `LedMirror<n>` runs deliberately is not, being the car's.
  */
 const gated = (effect: LedEffect): LedEffect => {
   const allowed: Expr[] = [setting.ledEffectOn(effect.id), ...(effect.role === 'race' ? [flagsAllowedHere()] : [])];

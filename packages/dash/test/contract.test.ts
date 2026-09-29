@@ -426,7 +426,30 @@ describe('settings', () => {
     expect(setting.ledEffect('p2p')).toBe('isnull([OpenDash.LedEffectPushToPass], true)');
     expect(setting.ledEffectOn('flag.debris')).toBe('(isnull([OpenDash.LedEffectFlags], true)) = (true)');
     for (const { id } of LED_EFFECTS.filter((e) => e.id.startsWith('flag.'))) expect(ledEffectSettingName(id)).toBe('LedEffectFlags');
-    expect(() => ledEffectSettingName('flag.nope')).toThrow(RangeError);
+    // A flag row nobody has listed yet is still the flags' switch, as the plugin's prefix rule has it;
+    // anything else unknown is a mistake.
+    expect(ledEffectSettingName('flag.red')).toBe('LedEffectFlags');
+    expect(() => ledEffectSettingName('flag.')).toThrow(RangeError);
+    expect(() => ledEffectSettingName('nope')).toThrow(RangeError);
+    // The table itself, literally and in the naming table's order: everything else here derives from
+    // it, so a transposition -- tc's switch silencing ABS -- would otherwise pass on both sides.
+    expect(LED_EFFECTS).toEqual([
+      { id: 'tc', setting: 'LedEffectTc' },
+      { id: 'abs', setting: 'LedEffectAbs' },
+      { id: 'drs', setting: 'LedEffectDrs' },
+      { id: 'p2p', setting: 'LedEffectPushToPass' },
+      { id: 'lowFuel', setting: 'LedEffectLowFuel' },
+      { id: 'temperature', setting: 'LedEffectTemperature' },
+      { id: 'oilPressure', setting: 'LedEffectOilPressure' },
+      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
+      { id: 'spotter.left', setting: 'LedEffectSpotterLeft' },
+      { id: 'spotter.right', setting: 'LedEffectSpotterRight' },
+      { id: 'pit.lane', setting: 'LedEffectPitLane' },
+      { id: 'pit.limiter', setting: 'LedEffectPitLimiter' },
+      { id: 'pit.speeding', setting: 'LedEffectPitSpeeding' },
+      { id: 'turn.left', setting: 'LedEffectTurnLeft' },
+      { id: 'turn.right', setting: 'LedEffectTurnRight' },
+    ]);
     expect(ledEffectSettingNames()).toHaveLength(15);
     // The retired styles are retired from the panel and not from the profile: the value set keeps
     // all four, so a settings file of the previous vintage still matches a group.

@@ -567,11 +567,21 @@ export const DEFAULT_LED_EFFECT = true;
 /** The fifteen switches, once each, in the order {@link LED_EFFECTS} first names them. */
 export const ledEffectSettingNames = (): string[] => [...new Set(LED_EFFECTS.map((e) => e.setting))];
 
-/** `LedEffectFlags` for `flag.yellow`: the switch that governs an effect. Throws on an id it does not know. */
+const LED_EFFECT_FLAG_PREFIX = 'flag.';
+const LED_EFFECT_FLAGS_SETTING = 'LedEffectFlags';
+
+/**
+ * `LedEffectFlags` for `flag.yellow`: the switch that governs an effect.
+ *
+ * Any `flag.` id is the flags' switch, listed or not, which is the rule the plugin's
+ * `Contract.LedEffectSetting` applies: a flag row added to the effects is switched with the others
+ * on both sides without either table growing. Any other id it does not know throws.
+ */
 export function ledEffectSettingName(id: string): string {
   const found = LED_EFFECTS.find((e) => e.id === id);
-  if (found === undefined) throw new RangeError(`contract: no LED effect ${JSON.stringify(id)}`);
-  return found.setting;
+  if (found !== undefined) return found.setting;
+  if (id.startsWith(LED_EFFECT_FLAG_PREFIX) && id.length > LED_EFFECT_FLAG_PREFIX.length) return LED_EFFECT_FLAGS_SETTING;
+  throw new RangeError(`contract: no LED effect ${JSON.stringify(id)}`);
 }
 
 /**

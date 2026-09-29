@@ -978,7 +978,7 @@ describe('the effect switches (#370, #503)', () => {
     expect(offenders).toEqual([]);
   });
 
-  test('every effect in every profile answers to its switch, and every flag to the pit lane as well', () => {
+  test('every effect in every profile answers to its switch, and every flag to the pit lane as well, blink and all', () => {
     const byLabel = new Map(ALL_EFFECTS().map((e) => [e.label, e]));
     expect(byLabel.size).toBe(ALL_EFFECTS().length);
     const effectOf = (description: string) =>
@@ -995,6 +995,11 @@ describe('the effect switches (#370, #503)', () => {
         const at = { shape: shape.id, container: descriptionOf(c) };
         expect({ ...at, switch: formula.includes(`isnull([OpenDash.${ledEffectSettingName(effect.id)}], true)`) }).toEqual({ ...at, switch: true });
         if (effect.role === 'race') expect({ ...at, pitLane: formula.includes('[OpenDash.FlagsInPitLane]') }).toEqual({ ...at, pitLane: true });
+        // A blink carries the same terms, so it never outlives the light it belongs to.
+        const blink = c.kind === 'customStatus' ? c.blinkFormula?.expression : undefined;
+        if (blink === undefined) continue;
+        expect({ ...at, blinkSwitch: blink.includes(`isnull([OpenDash.${ledEffectSettingName(effect.id)}], true)`) }).toEqual({ ...at, blinkSwitch: true });
+        if (effect.role === 'race') expect({ ...at, blinkPitLane: blink.includes('[OpenDash.FlagsInPitLane]') }).toEqual({ ...at, blinkPitLane: true });
       }
     }
     // And every effect was found somewhere, so the loop above tested something for each of them.
