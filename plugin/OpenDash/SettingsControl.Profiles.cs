@@ -3,7 +3,8 @@
 //
 // Lifted out of the Install and Lights tabs so that the pages that need them share one copy: LEDs installs and
 // moves a strip, Matrix installs the flag box from its header, Updates lists what is in SimHub, and Home asks
-// what needs fixing (SettingsControl.Status.cs). The shell owns this file.
+// what needs fixing (SettingsControl.Status.cs). With them, what more than one page draws or presses: the
+// flag box's glyph sheet, writing a screen back, and the flag box's by-hand import. The shell owns this file.
 //
 // NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS, which is the consent half of ADR 0013. SafePlan and
 // BarCensus only ask SimHub what it already holds, and the profiles are read out of the assembly rather than
@@ -12,11 +13,81 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        // --- What more than one page draws or does -------------------------------------------------------
+        //
+        // Held here, in a shell file, rather than in the page that first needed it, so that the page agents
+        // rebuilding their files in parallel cannot rename or drop something another page calls.
+
+        /// <summary>The flag box's glyphs, read once, for every picture of a matrix: Matrix, Rig and Home.</summary>
+        private PanelGlyphSheet glyphSheet;
+
+        private PanelGlyphSheet GlyphSheet => glyphSheet ?? (glyphSheet = PanelGlyphSheet.Load(typeof(OpenDash).Assembly));
+
+        /// <summary>
+        /// Writes a screen's dashboard back into SimHub after its folder has gone, selects the screen on
+        /// Screens, redraws the page that is showing and says how it went: Home's fix and the Screens page's
+        /// fix box both press this.
+        /// </summary>
+        private void InstallScreenAgain(ScreenInstance screen)
+        {
+            var result = plugin.Installer.Write(screen);
+            Save(screen);
+            plugin.Installer.Refresh();
+            Select(PanelPage.Screens, screen.Namespace);
+            Redraw();
+            if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
+            Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+        }
+
+        private TextBlock flagBoxLine;
+        private System.Windows.Controls.TextBox flagBoxPath;
+
+        /// <summary>
+        /// The by-hand route for the flag box, only when the one-click one is not there at all: ADR 0013 keeps
+        /// the extracted file precisely so that there is something to import when the matrix driver cannot be
+        /// reached. Shared by Matrix, which draws it under the profile in its header, and Updates.
+        /// </summary>
+        private FrameworkElement BuildFlagBoxImportFallback(FlagBoxPlan plan)
+        {
+            OnDrop(() =>
+            {
+                flagBoxLine = null;
+                flagBoxPath = null;
+            });
+            flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
+            var copy = BuildSecondaryButton("Copy to SimHub's import folder", "Puts a copy in Documents\\SimHub.");
+            copy.Click += (sender, args) => CopyFlagBoxForImport();
+            var path = new TextBox
+            {
+                Width = 320,
+                IsReadOnly = true,
+                Text = plugin.FlagBox?.Path ?? string.Empty,
+                ToolTip = "Where OpenDash left the profile.",
+            };
+            Ui.Field(path, Theme.ControlHeightSm);
+            flagBoxPath = path;
+            var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, copy, path));
+            block.HorizontalAlignment = HorizontalAlignment.Left;
+            return block;
+        }
+
+        private void CopyFlagBoxForImport()
+        {
+            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
+            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
+            if (flagBoxLine == null) return;
+            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
+                ? "Could not copy the profile: " + copied.Message
+                : "Copied to " + copied?.Path + ". In SimHub, open your device's profiles and press Import.";
+        }
+
         /// <summary>Asks SimHub what it holds for the flag box, without touching it.</summary>
         private FlagBoxPlan SafePlan()
         {

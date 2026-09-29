@@ -192,7 +192,7 @@ namespace OpenDashPlugin
             {
                 var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
                 write.ToolTip = "Puts this screen's dashboard back into SimHub.";
-                write.Click += (sender, args) => WriteScreenAgain(screen);
+                write.Click += (sender, args) => InstallScreenAgain(screen);
                 var box = Ui.FixBox("This screen's dashboard is missing from SimHub", "Its settings are kept.", null, write);
                 box.Margin = new Thickness(0, 18, 0, 0);
                 return box;
@@ -202,18 +202,6 @@ namespace OpenDashPlugin
             var fix = Ui.FixBox(restart.Title, restart.Detail, null, null, PanelIcons.Restart);
             fix.Margin = new Thickness(0, 18, 0, 0);
             return fix;
-        }
-
-        /// <summary>Writes a screen's dashboard again after its folder has gone.</summary>
-        private void WriteScreenAgain(ScreenInstance screen)
-        {
-            var result = plugin.Installer.Write(screen);
-            Save(screen);
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, screen.Namespace);
-            Redraw();
-            if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
         }
 
         private FrameworkElement BuildScreenPane(ScreenInstance screen)

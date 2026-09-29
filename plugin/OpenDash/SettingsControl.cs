@@ -109,8 +109,11 @@ namespace OpenDashPlugin
             // the clock is the same, and nothing ticks behind a panel nobody is looking at.
             plugin.UpdateChecked += ShowUpdateAnswer;
             plugin.RigLightingPressed += ShowLightingChange;
+            PluginManager.InputMappingsChanged += MappingsChanged;
             Loaded += (sender, args) =>
             {
+                PluginManager.InputMappingsChanged -= MappingsChanged;
+                PluginManager.InputMappingsChanged += MappingsChanged;
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.UpdateChecked += ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
@@ -126,6 +129,7 @@ namespace OpenDashPlugin
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
+                PluginManager.InputMappingsChanged -= MappingsChanged;
                 StopClock();
                 // A page that is not on screen must not still be drawing a dashboard.
                 DropPreview();
@@ -247,6 +251,29 @@ namespace OpenDashPlugin
         }
 
         // --- The hooks a page reaches the shell through -------------------------------------------------
+        //
+        // Navigation: Go(route) and Go(page, anchor) leave the page; Open(page, id, anchor) goes with a card
+        // selected; Select and Selected hold a page's card for the session (Rig's is a PanelEmulation
+        // scenario id, which is how Settings' "Try" opens Rig on one); Redraw rebuilds the page in place after
+        // a change, keeping the scroll and clearing the lines; ShowLightingChange redraws the sidebar's switch
+        // and the page after night mode or a brightness changed, which the wheel's buttons do too.
+        // Lifetime: OnDrop(action) lets go of what one build holds, on every rebuild and on Go; OnLeave(action)
+        // undoes what the page started, on Go only; OnTick(action) is called every second while showing;
+        // OnUpdate(checking, answered) hears the update check. Layout: PageLayout, PageSection, ContentWidth
+        // (less the scroll bar), Narrow and TwoColumns, all read while building -- the shell rebuilds the page
+        // when any of them moves. Lines: Say. Sheets: ShowSheet(title, body, footer, closed), SheetFooter,
+        // CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
+        // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags);
+        // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
+        // ReinstallBar and UpdateBars (SettingsControl.Profiles.cs); BuildScreenPreview(screen, width).
+        //
+        // Ownership: a page owns SettingsControl.<Page>*.cs -- Updates owns .Updates.cs, .Updates.Plugin.cs,
+        // .Updates.Packages.cs and .Updates.Lights.cs; Screens owns .Screens*.cs; LEDs owns .Lights.cs -- and
+        // its Panel<Page>.cs with that file's test. Every other SettingsControl*.cs, Widgets*.cs, PanelShell.cs,
+        // PanelSearch.cs, PanelSoon.cs and PanelBindings.cs are the shell's. All pages share one partial class,
+        // so every member a page adds for itself is private and carries its page's name as a prefix
+        // (ScreensTile, LedsDeviceList, MatrixIdleRow), or lives in a private nested class named for the page;
+        // two agents writing the same unprefixed helper would only meet at the merge.
 
         /// <summary>
         /// Goes to a page, and to a row on it when the route names one.
@@ -269,6 +296,7 @@ namespace OpenDashPlugin
             ClearUpdateHandlers();
             RunLeaveActions();
             RunDropActions();
+            ForgetBindings();
             route = to ?? PanelRoute.Home;
             ApplyLayout();
             RefreshAttention();

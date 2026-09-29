@@ -60,14 +60,17 @@ namespace OpenDashPlugin
             foreach (var letter in PanelFacePlan.ZoneOrder(face))
             {
                 var zone = PanelFacePlan.ZoneLabel(letter);
-                rows.Add(Ui.Row(zone + " · next page", null,
-                    BuildBinder(Contract.CycleZoneAction(screen.Namespace, letter), screen.Name + " · zone " + letter)));
-                rows.Add(Ui.SettingRow(zone + " · previous page",
-                    BuildBinder(Contract.CycleZoneBackAction(screen.Namespace, letter), screen.Name + " · zone " + letter + " back"),
-                    null, Ui.NewTag()));
+                var next = Contract.CycleZoneAction(screen.Namespace, letter);
+                var back = Contract.CycleZoneBackAction(screen.Namespace, letter);
+                rows.Add(Ui.Anchor(Ui.Row(zone + " · next page", null,
+                    BuildBinder(next, screen.Name + " · zone " + letter)), PanelBindings.Anchor(next)));
+                rows.Add(Ui.Anchor(Ui.SettingRow(zone + " · previous page",
+                    BuildBinder(back, screen.Name + " · zone " + letter + " back"),
+                    null, Ui.NewTag()), PanelBindings.Anchor(back)));
             }
-            var glance = Ui.Row("Quick glance", null,
-                BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true));
+            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
+            var glance = Ui.Anchor(Ui.Row("Quick glance", null,
+                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             rows.Add(glance);
             var caption = Ui.Caption(PanelCopy.FaceGlance);
             caption.Margin = new Thickness(0, 0, 0, 8);
@@ -79,8 +82,9 @@ namespace OpenDashPlugin
         /// since nobody drives a pit wall.</summary>
         private FrameworkElement BuildPitWallShortcuts(ScreenInstance screen)
         {
-            var glance = Ui.Row("Quick glance", "A keyboard key works too.",
-                BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true));
+            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
+            var glance = Ui.Anchor(Ui.Row("Quick glance", "A keyboard key works too.",
+                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             var caption = Ui.Caption(PanelCopy.PitWallGlance);
             caption.Margin = new Thickness(0, 0, 0, 8);
             return Ui.VStack(0, glance, caption);
@@ -90,8 +94,9 @@ namespace OpenDashPlugin
         /// (PanelCopy.CompanionPaging, on the companion's own pane).</summary>
         private FrameworkElement BuildCompanionShortcuts(ScreenInstance screen)
         {
-            var glance = Ui.Row("Quick glance", null,
-                BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true));
+            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
+            var glance = Ui.Anchor(Ui.Row("Quick glance", null,
+                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
             var caption = Ui.Caption(PanelCopy.CompanionGlance);
             caption.Margin = new Thickness(0, 0, 0, 8);
             return Ui.VStack(0, glance, caption);
@@ -107,7 +112,7 @@ namespace OpenDashPlugin
                 var row = action == Contract.ToggleNightModeAction
                     ? Ui.Row(label, null, BuildBinder(action, label))
                     : Ui.SettingRow(label, BuildBinder(action, label), null, Ui.NewTag());
-                rows.Add(row);
+                rows.Add(Ui.Anchor(row, PanelBindings.Anchor(action)));
             }
             return PageSection(PanelShortcuts.RigGroupTitle, rows.ToArray());
         }

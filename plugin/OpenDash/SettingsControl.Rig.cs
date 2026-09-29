@@ -19,8 +19,18 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        /// <summary>The scenario the tiles are painted with, for the session.</summary>
-        private string rigScenario = PanelEmulation.Default;
+        /// <summary>
+        /// The scenario the tiles are painted with: the Rig page's selection, which is a PanelEmulation
+        /// scenario id, so another page opens Rig on one with Open(PanelPage.Rig, id) -- Settings' "Try".
+        /// </summary>
+        private string rigScenario
+        {
+            get
+            {
+                var id = Selected(PanelPage.Rig);
+                return id != null && PanelEmulation.Find(id) != null ? id : PanelEmulation.Default;
+            }
+        }
 
         private FrameworkElement BuildRigPage(PanelRoute to)
         {
@@ -28,8 +38,7 @@ namespace OpenDashPlugin
             {
                 Settings.LightsNightMode = on;
                 Save();
-                RefreshSidebar();
-                RebuildPage();
+                ShowLightingChange();
             });
             var hardware = Ui.Soon(Ui.HStack(10, Ui.Text("Real hardware", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), PanelSoon.Find("Real hardware"));
             var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text("Night mode", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
@@ -266,7 +275,7 @@ namespace OpenDashPlugin
                     var id = scenario.Id;
                     var chip = Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == rigScenario, () =>
                     {
-                        rigScenario = id;
+                        Select(PanelPage.Rig, id);
                         RebuildPage();
                     });
                     chip.Margin = new Thickness(0, 0, 6, 6);

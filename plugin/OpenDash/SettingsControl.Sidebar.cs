@@ -327,10 +327,11 @@ namespace OpenDashPlugin
             var screens = Settings.RigScreens().Count;
             var strips = Settings.LedBarList().Count;
             var matrices = Settings.MatrixPanels().Count();
+            var bound = BoundCount();
             for (var i = 0; i < PanelNav.Pages.Length; i++)
             {
                 var page = PanelNav.Pages[i];
-                var item = BuildNavItem(page, narrow, PanelNav.Count(page, screens, strips, matrices, BoundShortcuts()), PanelNav.Warns(page, issues), null);
+                var item = BuildNavItem(page, narrow, PanelNav.Count(page, screens, strips, matrices, bound), PanelNav.Warns(page, issues), null);
                 item.Margin = new Thickness(0, i == 0 ? 0 : PanelShell.NavItemGap, 0, 0);
                 list.Children.Add(item);
                 if (PanelNav.GapAfter(page))
@@ -346,19 +347,6 @@ namespace OpenDashPlugin
                 }
             }
             return list;
-        }
-
-        /// <summary>
-        /// How many of OpenDash's actions somebody has bound, or null when SimHub's bindings cannot be read.
-        /// </summary>
-        /// <remarks>
-        /// Null for now, which hides the count: the binding control is SimHub's ControlsEditor, and nothing
-        /// in the panel reads SimHub's mappings without drawing one. A count that is sometimes wrong would be
-        /// worse than none; the Shortcuts page is where reading them belongs.
-        /// </remarks>
-        private int? BoundShortcuts()
-        {
-            return null;
         }
 
         /// <summary>

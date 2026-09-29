@@ -27,7 +27,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
             // The glance's binding is on Shortcuts, with every other one; the page it shows is set here.
-            var chip = Ui.BindingChip(PanelShortcuts.Title, false, () => Go(PanelPage.Shortcuts, PanelShortcuts.AnchorScreens));
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             return Ui.VStack(0,
                 PageSection("Layout", BuildPitWallPicture()),
                 PageSection("Zones", Ui.VStack(0, BuildPitWallRows(screen))),

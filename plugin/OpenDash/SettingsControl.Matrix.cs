@@ -15,21 +15,8 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private TextBlock flagBoxLine;
-        private TextBox flagBoxPath;
-
-        /// <summary>The flag box's glyphs, read once, for the panels' previews.</summary>
-        private PanelGlyphSheet glyphSheet;
-
-        private PanelGlyphSheet GlyphSheet => glyphSheet ?? (glyphSheet = PanelGlyphSheet.Load(typeof(OpenDash).Assembly));
-
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
-            OnDrop(() =>
-            {
-                flagBoxLine = null;
-                flagBoxPath = null;
-            });
             var panels = Settings.MatrixPanels().ToList();
             var groups = new List<UIElement>();
             var caption = Ui.Caption(PanelLights.PanelsCaption);
@@ -93,41 +80,7 @@ namespace OpenDashPlugin
             };
             draw(plan);
             if (plan.State != FlagBoxInstallState.Unavailable) return row;
-            return Ui.VStack(12, row, BuildFlagBoxFallback(plan));
-        }
-
-        /// <summary>
-        /// The by-hand route for the flag box, only when the one-click one is not there at all: ADR 0013 keeps
-        /// the extracted file precisely so that there is something to import when the matrix driver cannot be
-        /// reached.
-        /// </summary>
-        private FrameworkElement BuildFlagBoxFallback(FlagBoxPlan plan)
-        {
-            flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
-            var copy = BuildSecondaryButton("Copy to SimHub's import folder", "Puts a copy in Documents\\SimHub.");
-            copy.Click += (sender, args) => CopyFlagBoxForImport();
-            var path = new TextBox
-            {
-                Width = 320,
-                IsReadOnly = true,
-                Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where OpenDash left the profile.",
-            };
-            Ui.Field(path, Theme.ControlHeightSm);
-            flagBoxPath = path;
-            var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, copy, path));
-            block.HorizontalAlignment = HorizontalAlignment.Left;
-            return block;
-        }
-
-        private void CopyFlagBoxForImport()
-        {
-            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
-            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
-            if (flagBoxLine == null) return;
-            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
-                ? "Could not copy the profile: " + copied.Message
-                : "Copied to " + copied?.Path + ". In SimHub, open your device's profiles and press Import.";
+            return Ui.VStack(12, row, BuildFlagBoxImportFallback(plan));
         }
 
         /// <summary>

@@ -92,7 +92,7 @@ namespace OpenDashPlugin
             var paging = Ui.Caption(PanelCopy.CompanionPaging, BodyWidth);
             paging.Margin = new Thickness(0, 0, 0, 12);
             // The glance's binding is on Shortcuts, with every other one; the module it shows is set here.
-            var chip = Ui.BindingChip(PanelShortcuts.Title, false, () => Go(PanelPage.Shortcuts, PanelShortcuts.AnchorScreens));
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             var section = PageSection("Module paging",
                 paging,
                 Ui.Anchor(Ui.Row("First module", "Shown when a session starts.", BuildModuleSelect(screen, Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>

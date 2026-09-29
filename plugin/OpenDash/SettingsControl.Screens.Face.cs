@@ -577,8 +577,7 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildFaceGlanceRow(ScreenInstance screen)
         {
-            var chip = Ui.BindingChip(PanelShortcuts.Title, false, () => Go(PanelPage.Shortcuts, PanelShortcuts.AnchorScreens));
-            if (chip is FrameworkElement) ((FrameworkElement)chip).ToolTip = "Bound on Shortcuts";
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             return Ui.Row("Quick glance", null, Ui.HStack(8, BuildGlanceSelect(screen), chip));
         }
 

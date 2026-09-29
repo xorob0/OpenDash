@@ -257,6 +257,15 @@ namespace OpenDashPlugin
         public int[] FlagBoxMatrixWaterTemp { get; set; } = Contract.DefaultFlagBoxTemps();
 
         /// <summary>
+        /// Where the Rig page's canvas draws each matrix slot's tile, as ScreenInstance.LayoutX and LayoutY
+        /// are for a screen: four slots, the panel's to read and write and never attached as properties.
+        /// Null, or a negative position, is a tile the page lays out itself.
+        /// </summary>
+        public int?[] MatrixLayoutX { get; set; } = new int?[4];
+
+        public int?[] MatrixLayoutY { get; set; } = new int?[4];
+
+        /// <summary>
         /// The oil temperature the rig warns at, for every panel at once; zero is the profile's own
         /// default for the driver's unit. Null only in a file written before it was the rig's.
         /// </summary>
@@ -640,6 +649,9 @@ namespace OpenDashPlugin
             FlagBoxPit[i] = false;
             FlagBoxSpotter[i] = false;
             FlagBoxWarnings[i] = false;
+            // The next panel in this slot is laid out afresh, not where the removed one was dragged.
+            if (MatrixLayoutX != null && i < MatrixLayoutX.Length) MatrixLayoutX[i] = null;
+            if (MatrixLayoutY != null && i < MatrixLayoutY.Length) MatrixLayoutY[i] = null;
         }
 
         public void RenameMatrixPanel(int matrix, string name)
@@ -712,6 +724,8 @@ namespace OpenDashPlugin
             FlagBoxMatrixGearCarLadder = Resize(FlagBoxMatrixGearCarLadder, Contract.EveryFlagBoxMatrix(Contract.DefaultFlagBoxGearCarLadder), v => true);
             FlagBoxMatrixOilTemp = Resize(FlagBoxMatrixOilTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
+            MatrixLayoutX = Resize(MatrixLayoutX, new int?[Contract.FlagBoxMatrices.Count], v => v >= 0);
+            MatrixLayoutY = Resize(MatrixLayoutY, new int?[Contract.FlagBoxMatrices.Count], v => v >= 0);
             // After the arrays are four long, so the migration has four slots to fill.
             MigrateFlagBoxToMatrices();
             // After that, because a file may carry the gear switch under either spelling and the
@@ -2070,6 +2084,8 @@ namespace OpenDashPlugin
             LedBars = other.LedBars == null ? null : other.LedBars.Select(bar => bar == null ? null : bar.Copy()).ToList();
             FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();
             FlagBoxMatrixWaterTemp = other.FlagBoxMatrixWaterTemp == null ? null : (int[])other.FlagBoxMatrixWaterTemp.Clone();
+            MatrixLayoutX = other.MatrixLayoutX == null ? null : (int?[])other.MatrixLayoutX.Clone();
+            MatrixLayoutY = other.MatrixLayoutY == null ? null : (int?[])other.MatrixLayoutY.Clone();
             FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();
             FlagBoxFlags = other.FlagBoxFlags == null ? null : (bool[])other.FlagBoxFlags.Clone();
             FlagBoxPit = other.FlagBoxPit == null ? null : (bool[])other.FlagBoxPit.Clone();

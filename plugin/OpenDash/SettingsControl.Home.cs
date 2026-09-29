@@ -126,7 +126,7 @@ namespace OpenDashPlugin
                     var screen = Settings.ScreenByNamespace(issue.Subject);
                     if (screen != null)
                     {
-                        WriteScreenAgain(screen);
+                        InstallScreenAgain(screen);
                         return;
                     }
                     break;
@@ -188,8 +188,7 @@ namespace OpenDashPlugin
             {
                 Settings.LightsNightMode = on;
                 Save();
-                RefreshSidebar();
-                RebuildPage();
+                ShowLightingChange();
             });
             night.HorizontalAlignment = HorizontalAlignment.Left;
             var rig = Ui.Button("Open Rig", PanelButtonKind.Outline, PanelButtonSize.Small);

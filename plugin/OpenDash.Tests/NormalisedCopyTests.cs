@@ -80,6 +80,13 @@ namespace OpenDashPlugin.Tests
                 array[0] += 1;
                 property.SetValue(target, array);
             }
+            else if (type == typeof(int?[]))
+            {
+                // A Rig canvas position per matrix slot, which Normalise keeps when it is not negative.
+                var array = value == null || ((int?[])value).Length == 0 ? new int?[1] : (int?[])((int?[])value).Clone();
+                array[0] = (array[0] ?? 0) + 40;
+                property.SetValue(target, array);
+            }
             else if (type == typeof(int[][]))
             {
                 // An order is a permutation, so swap two pages of the first one rather than adding.
@@ -200,6 +207,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("LedBar.EffectsOff", changed);
             Assert.Contains("ScreenInstance(face).LayoutX", changed);
             Assert.Contains("ScreenInstance(face).LayoutY", changed);
+            Assert.Contains("LedBar.LayoutX", changed);
+            Assert.Contains("LedBar.LayoutY", changed);
+            Assert.Contains("OpenDashSettings.MatrixLayoutX", changed);
+            Assert.Contains("OpenDashSettings.MatrixLayoutY", changed);
             Assert.Contains("FaceSettings.Orders", changed);
         }
 
