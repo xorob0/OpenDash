@@ -49,6 +49,9 @@ namespace OpenDashPlugin.Tests
             input.Screens.Add(Screen("Rim", installed: false));
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("Rim's dashboard is missing from SimHub", issue.Title);
+            // Only what the press does not say, and the words the Screens page's fix box says too.
+            Assert.Equal("Its settings are kept.", issue.Detail);
+            Assert.Equal(PanelAttention.MissingDetail, issue.Detail);
             Assert.Equal("Install it again", issue.ActionLabel);
             Assert.Equal(PanelIssueAction.Reinstall, issue.Action);
             Assert.Equal(PanelPage.Screens, issue.Page);
@@ -78,6 +81,7 @@ namespace OpenDashPlugin.Tests
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("Dash brow's profile is not selected", issue.Title);
             Assert.Equal("Installed, but not selected in SimHub.", issue.Detail);
+            Assert.Equal(PanelAttention.UnselectedDetail, issue.Detail);
             Assert.Equal(PanelIssueAction.CheckAgain, issue.Action);
             Assert.Equal("Check again", issue.ActionLabel);
             Assert.Equal(PanelPage.Leds, issue.Page);
@@ -118,6 +122,11 @@ namespace OpenDashPlugin.Tests
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("2 screens came with an older OpenDash", issue.Title);
             Assert.Equal("Keep or remove each one on the Screens page.", issue.Detail);
+            Assert.Equal("Open Screens", issue.ActionLabel);
+            Assert.Equal("1 screen came with an older OpenDash", PanelAttention.UnclaimedTitle(1));
+            // One noun and one pair of verbs for these screens on both pages.
+            Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
+            Assert.Contains("Keep or remove each", PanelScreens.UnclaimedNote);
         }
 
         [Fact]
@@ -127,11 +136,17 @@ namespace OpenDashPlugin.Tests
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Outdated, true));
             input.FlagBox = FlagBoxInstallState.Outdated;
             Assert.Equal(new[] { "Wheel rim's profile has an update" }, PanelAttention.Find(input).Select(i => i.Title));
-            // Its press is on Updates until the LEDs page's header has one.
-            Assert.Equal(PanelPage.Updates, PanelAttention.Find(input).Single().Page);
-            Assert.Equal(PanelUpdates.AnchorLights, PanelAttention.Find(input).Single().Anchor);
+            // Its press is on Updates until the LEDs page's header has one, and the Updates item wears the dot
+            // for it, which its badge does not say.
+            var outdated = PanelAttention.Find(input).Single();
+            Assert.Equal(PanelPage.Updates, outdated.Page);
+            Assert.Equal(PanelUpdates.AnchorLights, outdated.Anchor);
+            Assert.Equal("Update it to the version this OpenDash carries.", outdated.Detail);
+            Assert.Equal("Open Updates", outdated.ActionLabel);
+            Assert.True(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
             input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });
             Assert.Equal("OpenDash Flag box has an update", PanelAttention.Find(input).Last().Title);
+            Assert.Equal("Open Matrix", PanelAttention.Find(input).Last().ActionLabel);
         }
 
         [Fact]
@@ -140,7 +155,11 @@ namespace OpenDashPlugin.Tests
             var input = new AttentionInput { RestartPending = true, UpdateAvailable = true, OfferedVersion = "0.5.1" };
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("Restart SimHub to finish updating", issue.Title);
+            Assert.Equal("Until then you are running the old version.", issue.Detail);
+            Assert.Equal("Open Updates", issue.ActionLabel);
             Assert.Equal(PanelPage.Updates, issue.Page);
+            // The badge says it, so the Updates item wears no dot as well.
+            Assert.False(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
             input.RestartPending = false;
             Assert.Equal("OpenDash 0.5.1 is available", PanelAttention.Find(input).Single().Title);
             input.RestartPending = null;
@@ -164,6 +183,20 @@ namespace OpenDashPlugin.Tests
                 "screen-missing", "screen-restart", "strip-unselected", "matrix-dark", "screens-unclaimed",
                 "strip-outdated", "flagbox-outdated", "update-restart",
             }, ids);
+        }
+
+        [Fact]
+        public void A_page_asks_after_an_issue_by_its_rule_and_its_subject()
+        {
+            var input = new AttentionInput();
+            input.Screens.Add(Screen("Rim", written: true));
+            var issues = PanelAttention.Find(input);
+            Assert.Equal(PanelAttention.ScreenRestart + "Rim", issues.Single().Id);
+            Assert.True(PanelAttention.Has(issues, PanelAttention.ScreenRestart, "Rim"));
+            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenRestart, "Brow"));
+            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenMissing, "Rim"));
+            Assert.Same(issues.Single(), PanelAttention.Of(issues, PanelAttention.ScreenRestart, "Rim"));
+            Assert.Null(PanelAttention.Of(null, PanelAttention.ScreenRestart, "Rim"));
         }
 
         [Theory]

@@ -276,9 +276,16 @@ namespace OpenDashPlugin
         // when any of them moves, so anything a page has in flight (a download, a press it is waiting on) lives
         // in a field outside the build and the next build draws it from there. Lines: Say. Sheets: ShowSheet(title, body, footer, closed), SheetFooter,
         // CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
-        // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags);
+        // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
+        // and every binding named through PanelBindings.TriggerLabel); issues, the answer RefreshAttention keeps,
+        // asked through PanelAttention.Has and Of with its rule constants (ScreenRestart, StripUnselected and the
+        // rest), and ScreenFacts, StripFacts and MatrixFacts for each device's state -- whether a strip is
+        // Showing, a dashboard is waiting for a restart -- all read while building and never on the tick;
+        // CheckAgain, which asks SimHub again and redraws (SettingsControl.Status.cs); ProfileSelected;
+        // updateStatus and Check(manual), the update check's answer and asking it (SettingsControl.Live.cs);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
-        // ReinstallBar and UpdateBars (SettingsControl.Profiles.cs); BuildScreenPreview(screen, width).
+        // InstallBar, InstallFlagBox, BarCensus, ReinstallBar and UpdateBars (SettingsControl.Profiles.cs);
+        // BuildScreenPreview(screen, width).
         //
         // Ownership: a page owns SettingsControl.<Page>*.cs -- Updates owns .Updates.cs, .Updates.Plugin.cs,
         // .Updates.Packages.cs and .Updates.Lights.cs; Screens owns .Screens*.cs; LEDs owns .Lights.cs -- and

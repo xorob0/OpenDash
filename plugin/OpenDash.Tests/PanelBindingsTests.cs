@@ -6,13 +6,16 @@ namespace OpenDashPlugin.Tests
     public class PanelBindingsTests
     {
         [Theory]
-        [InlineData("JoystickPlugin.FANATEC_Wheel_Button_3", "FANATEC Wheel Button 3")]
-        [InlineData("KeyboardReaderPlugin.F5", "F5")]
-        [InlineData("  ControllerPlugin.Button__A  ", "Button A")]
+        // The artboards' one form, "{source} · {input}": Shortcuts.dc.html's "Keyboard · F9" and "CSL Elite · 9".
+        [InlineData("KeyboardReaderPlugin.F9", "Keyboard · F9")]
+        [InlineData("JoystickPlugin.CSL_Elite_B09", "CSL Elite · 9")]
+        [InlineData("JoystickPlugin.FANATEC_Wheel_Button_3", "FANATEC Wheel · 3")]
+        [InlineData("JoystickPlugin.Wheel_POV0Up", "Wheel · POV0Up")]
+        [InlineData("  ControllerPlugin.Button__A  ", "Controller · Button A")]
         [InlineData("NoPlugin", "NoPlugin")]
         [InlineData("", null)]
         [InlineData(null, null)]
-        public void A_trigger_is_named_by_its_input_without_the_plugin_that_reads_it(string trigger, string label)
+        public void A_trigger_is_named_by_what_reads_it_and_its_input(string trigger, string label)
         {
             Assert.Equal(label, PanelBindings.TriggerLabel(trigger));
         }
@@ -22,8 +25,8 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Null(PanelBindings.ChipText(new string[0]));
             Assert.Null(PanelBindings.ChipText(null));
-            Assert.Equal("F5", PanelBindings.ChipText(new[] { "KeyboardReaderPlugin.F5" }));
-            Assert.Equal("F5 +2", PanelBindings.ChipText(new[] { "KeyboardReaderPlugin.F5", "JoystickPlugin.B1", "JoystickPlugin.B2" }));
+            Assert.Equal("Keyboard · F5", PanelBindings.ChipText(new[] { "KeyboardReaderPlugin.F5" }));
+            Assert.Equal("Keyboard · F5 +2", PanelBindings.ChipText(new[] { "KeyboardReaderPlugin.F5", "JoystickPlugin.Rim_B1", "JoystickPlugin.Rim_B2" }));
         }
 
         [Fact]

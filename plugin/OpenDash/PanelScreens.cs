@@ -20,8 +20,16 @@ namespace OpenDashPlugin
         /// <summary>A rig with no screen, on this page's pill and on Home's card.</summary>
         public const string NoScreens = "No screens yet";
 
-        /// <summary>The line an upgrading user meets over the cards, and nobody else.</summary>
-        public const string UnclaimedNote = "Remove the dashboards you have no screen for.";
+        /// <summary>The line an upgrading user meets over the cards, and nobody else: the noun and the two
+        /// verbs Home's issue uses for the same screens (PanelAttention.UnclaimedDetail).</summary>
+        public const string UnclaimedNote = "Keep or remove each screen an older OpenDash made.";
+
+        /// <summary>A card's state: its dashboard is in SimHub, or it is gone.</summary>
+        public const string InSimHub = "In SimHub";
+        public const string Missing = "Missing";
+
+        /// <summary>The fix box under a screen whose dashboard is gone; its detail is PanelAttention.MissingDetail.</summary>
+        public const string MissingTitle = "This screen's dashboard is missing from SimHub";
 
         /// <summary>
         /// Whether the rig holds a screen the migration made that the driver has neither kept nor removed.

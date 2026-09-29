@@ -89,6 +89,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether the Updates item wears the amber dot: when Home has something to fix there that its badge
+        /// does not already say. The badge carries a waiting restart and a plugin offer; a strip profile's
+        /// update, which Home sends to Updates until the LEDs page has its own press, has only the dot.
+        /// </summary>
+        public static bool UpdatesWarns(IEnumerable<PanelIssue> issues)
+        {
+            return issues != null && issues.Any(issue => issue != null && issue.Page == PanelPage.Updates
+                && issue.Id != PanelAttention.UpdateRestart && issue.Id != PanelAttention.UpdateAvailable);
+        }
+
+        /// <summary>
         /// What the Updates item carries: "Restart" while an update is waiting for SimHub to close, the
         /// version on offer while there is one, and nothing otherwise.
         /// </summary>

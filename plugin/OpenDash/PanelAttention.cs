@@ -173,16 +173,16 @@ namespace OpenDashPlugin
             foreach (var screen in screens.Where(s => s.Installed == false))
             {
                 issues.Add(new PanelIssue(
-                    "screen-missing:" + screen.Namespace, PanelPage.Screens, screen.Namespace,
+                    ScreenMissing + screen.Namespace, PanelPage.Screens, screen.Namespace,
                     screen.Name + "'s dashboard is missing from SimHub",
-                    "Install it again to put it back. Its settings are kept.",
+                    MissingDetail,
                     null, InstallAgain, PanelIssueAction.Reinstall));
             }
 
             foreach (var screen in screens.Where(s => s.Installed != false && s.WrittenSinceStart == true))
             {
                 issues.Add(new PanelIssue(
-                    "screen-restart:" + screen.Namespace, PanelPage.Screens, screen.Namespace,
+                    ScreenRestart + screen.Namespace, PanelPage.Screens, screen.Namespace,
                     screen.Name + " is not in SimHub yet",
                     "Restart SimHub, then assign \"" + screen.Name + "\" to this display in Dash Studio.",
                     null, Open(screen.Name), PanelIssueAction.Navigate));
@@ -191,9 +191,9 @@ namespace OpenDashPlugin
             foreach (var strip in strips.Where(s => s.Selected == false && IsInstalled(s.Profile)))
             {
                 issues.Add(new PanelIssue(
-                    "strip-unselected:" + strip.Namespace, PanelPage.Leds, strip.Namespace,
+                    StripUnselected + strip.Namespace, PanelPage.Leds, strip.Namespace,
                     strip.Name + "'s profile is not selected",
-                    "Installed, but not selected in SimHub.",
+                    UnselectedDetail,
                     SelectSteps(strip.DeviceName, strip.Name), CheckAgain, PanelIssueAction.CheckAgain));
             }
 
@@ -201,7 +201,7 @@ namespace OpenDashPlugin
             {
                 var name = string.IsNullOrWhiteSpace(matrix.Name) ? "Matrix " + matrix.Slot : matrix.Name;
                 issues.Add(new PanelIssue(
-                    "matrix-dark:" + matrix.Slot, PanelPage.Matrix, matrix.Slot.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    MatrixDark + matrix.Slot, PanelPage.Matrix, matrix.Slot.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     name + " is dark",
                     "No matrix device in SimHub is set to matrix " + matrix.Slot + ".",
                     null, Open(name), PanelIssueAction.Navigate));
@@ -211,10 +211,10 @@ namespace OpenDashPlugin
             if (unclaimed > 0)
             {
                 issues.Add(new PanelIssue(
-                    "screens-unclaimed", PanelPage.Screens, null,
-                    (unclaimed == 1 ? "1 screen" : unclaimed + " screens") + " came with an older OpenDash",
+                    ScreensUnclaimed, PanelPage.Screens, null,
+                    UnclaimedTitle(unclaimed),
                     UnclaimedDetail,
-                    null, "Open Screens", PanelIssueAction.Navigate));
+                    null, Open(PanelScreens.Title), PanelIssueAction.Navigate));
             }
 
             foreach (var strip in strips.Where(s => s.Profile == FlagBoxInstallState.Outdated))
@@ -222,38 +222,40 @@ namespace OpenDashPlugin
                 // On Updates, which is where a strip profile's Update press is until the LEDs page's header
                 // carries one (ReinstallBar and UpdateBars are the shell's, for that header): an issue
                 // whose press lands where there is nothing to press is worse than one that sends the
-                // driver a page further.
+                // driver a page further. Meanwhile the Updates item wears the dot for it
+                // (PanelNav.UpdatesWarns), so the sidebar says where the press is. When the LEDs header
+                // has its press, this moves to PanelPage.Leds with the strip's namespace as its subject.
                 issues.Add(new PanelIssue(
-                    "strip-outdated:" + strip.Namespace, PanelPage.Updates, strip.Namespace,
+                    StripOutdated + strip.Namespace, PanelPage.Updates, strip.Namespace,
                     strip.Name + "'s profile has an update",
                     OutdatedDetail,
-                    null, "Open Updates", PanelIssueAction.Navigate, PanelUpdates.AnchorLights));
+                    null, Open(PanelUpdates.Title), PanelIssueAction.Navigate, PanelUpdates.AnchorLights));
             }
             if (matrices.Count > 0 && input.FlagBox == FlagBoxInstallState.Outdated)
             {
                 var name = string.IsNullOrWhiteSpace(input.FlagBoxName) ? FlagBoxProfile.ProfileName : input.FlagBoxName;
                 issues.Add(new PanelIssue(
-                    "flagbox-outdated", PanelPage.Matrix, null,
+                    FlagBoxOutdated, PanelPage.Matrix, null,
                     name + " has an update",
                     OutdatedDetail,
-                    null, "Open Matrix", PanelIssueAction.Navigate));
+                    null, Open(PanelMatrix.Title), PanelIssueAction.Navigate));
             }
 
             if (input.RestartPending == true)
             {
                 issues.Add(new PanelIssue(
-                    "update-restart", PanelPage.Updates, null,
+                    UpdateRestart, PanelPage.Updates, null,
                     "Restart SimHub to finish updating",
-                    "Until then you are running the old version.",
-                    null, "Open Updates", PanelIssueAction.Navigate));
+                    RestartDetail,
+                    null, Open(PanelUpdates.Title), PanelIssueAction.Navigate));
             }
             else if (input.UpdateAvailable == true && !string.IsNullOrWhiteSpace(input.OfferedVersion))
             {
                 issues.Add(new PanelIssue(
-                    "update-available", PanelPage.Updates, null,
+                    UpdateAvailable, PanelPage.Updates, null,
                     "OpenDash " + input.OfferedVersion.Trim() + " is available",
                     null,
-                    null, "Open Updates", PanelIssueAction.Navigate));
+                    null, Open(PanelUpdates.Title), PanelIssueAction.Navigate));
             }
 
             return issues;
@@ -266,12 +268,54 @@ namespace OpenDashPlugin
             return count == 1 ? "1 thing to fix" : count + " things to fix";
         }
 
+        // The ids' rules, each followed by what the issue is about where it has a subject. A page that asks
+        // whether an issue stands for its card reads these rather than typing the prefix again.
+        public const string ScreenMissing = "screen-missing:";
+        public const string ScreenRestart = "screen-restart:";
+        public const string StripUnselected = "strip-unselected:";
+        public const string MatrixDark = "matrix-dark:";
+        public const string ScreensUnclaimed = "screens-unclaimed";
+        public const string StripOutdated = "strip-outdated:";
+        public const string FlagBoxOutdated = "flagbox-outdated";
+        public const string UpdateRestart = "update-restart";
+        public const string UpdateAvailable = "update-available";
+
+        /// <summary>Whether the issues hold one of that rule about that subject: ("screen-restart:", "Rim").</summary>
+        public static bool Has(IEnumerable<PanelIssue> issues, string rule, string subject = null)
+        {
+            var id = rule + (subject ?? string.Empty);
+            return issues != null && issues.Any(issue => issue != null && string.Equals(issue.Id, id, StringComparison.Ordinal));
+        }
+
+        /// <summary>The one issue of that rule about that subject, or null.</summary>
+        public static PanelIssue Of(IEnumerable<PanelIssue> issues, string rule, string subject = null)
+        {
+            var id = rule + (subject ?? string.Empty);
+            return issues == null ? null : issues.FirstOrDefault(issue => issue != null && string.Equals(issue.Id, id, StringComparison.Ordinal));
+        }
+
         public const string InstallAgain = "Install it again";
         public const string CheckAgain = "Check again";
         public const string OutdatedDetail = "Update it to the version this OpenDash carries.";
 
-        /// <summary>What Home says under the screens an older OpenDash made, in the words the Screens page
-        /// uses for them: screens, each kept or removed there.</summary>
+        /// <summary>
+        /// Under a screen whose dashboard is gone, on Home and in the Screens page's fix box alike. Only what
+        /// the press beside it does not already say: its label is Install it again.
+        /// </summary>
+        public const string MissingDetail = "Its settings are kept.";
+
+        public const string UnselectedDetail = "Installed, but not selected in SimHub.";
+
+        public const string RestartDetail = "Until then you are running the old version.";
+
+        /// <summary>"1 screen came with an older OpenDash", "2 screens ...".</summary>
+        public static string UnclaimedTitle(int count)
+        {
+            return (count == 1 ? "1 screen" : count + " screens") + " came with an older OpenDash";
+        }
+
+        /// <summary>What Home says under the screens an older OpenDash made, in the noun and the verbs the
+        /// Screens page's note uses for them (PanelScreens.UnclaimedNote): screens, each kept or removed.</summary>
         public const string UnclaimedDetail = "Keep or remove each one on the Screens page.";
 
         public static string Open(string name) { return "Open " + name; }

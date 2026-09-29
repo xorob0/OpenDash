@@ -23,6 +23,11 @@ namespace OpenDashPlugin
         /// <summary>What needs fixing, as of the last Go or "Check again". Never null.</summary>
         private IList<PanelIssue> issues = new List<PanelIssue>();
 
+        /// <summary>The facts that answer was worked out from, kept so a page can say each device's state
+        /// without asking SimHub again: read them through ScreenFacts, StripFacts and MatrixFacts. Never
+        /// null; a fact nobody could read is null inside it.</summary>
+        private AttentionInput attentionFacts = new AttentionInput();
+
         /// <summary>
         /// How long after SimHub starts a folder may still be written and be read by SimHub itself.
         /// </summary>
@@ -39,13 +44,35 @@ namespace OpenDashPlugin
         {
             try
             {
-                issues = PanelAttention.Find(Attention());
+                attentionFacts = Attention();
+                issues = PanelAttention.Find(attentionFacts);
             }
             catch (Exception ex)
             {
                 Log.Warn("Working out what needs fixing failed: " + ex.Message);
+                attentionFacts = new AttentionInput();
                 issues = new List<PanelIssue>();
             }
+        }
+
+        /// <summary>What was last read about one screen -- Installed, WrittenSinceStart, Unclaimed -- or null
+        /// when the rig has no such screen. Read while building, never on the tick.</summary>
+        private AttentionScreen ScreenFacts(string ns)
+        {
+            return attentionFacts.Screens.FirstOrDefault(screen => screen != null && string.Equals(screen.Namespace, ns, StringComparison.Ordinal));
+        }
+
+        /// <summary>What was last read about one strip -- its profile's state in SimHub (Profile) and whether
+        /// its device has it selected (Selected), so a card can say Showing -- or null.</summary>
+        private AttentionStrip StripFacts(string ns)
+        {
+            return attentionFacts.Strips.FirstOrDefault(strip => strip != null && string.Equals(strip.Namespace, ns, StringComparison.Ordinal));
+        }
+
+        /// <summary>What was last read about one matrix slot, or null.</summary>
+        private AttentionMatrix MatrixFacts(int slot)
+        {
+            return attentionFacts.Matrices.FirstOrDefault(matrix => matrix != null && matrix.Slot == slot);
         }
 
         /// <summary>"Check again": asks again and draws the page again, installing nothing.</summary>

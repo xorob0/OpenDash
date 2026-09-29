@@ -560,7 +560,7 @@ namespace OpenDashPlugin
 
             var restart = PendingRestart();
             var badge = PanelNav.UpdatesBadge(restart, updateStatus.State == UpdateState.UpdateAvailable, updateStatus.LatestVersion);
-            var updates = BuildNavItem(PanelPage.Updates, narrow, null, false, badge);
+            var updates = BuildNavItem(PanelPage.Updates, narrow, null, PanelNav.UpdatesWarns(issues), badge);
             updates.Margin = new Thickness(0, PanelShell.UpdatesGap, 0, 0);
 
             var foot = new StackPanel { Orientation = Orientation.Vertical };

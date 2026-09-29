@@ -94,8 +94,8 @@ namespace OpenDashPlugin
             {
                 var captured = screen;
                 var installed = Installed(captured);
-                var restart = issues.Any(i => i.Id == "screen-restart:" + captured.Namespace);
-                var state = !installed ? "Missing" : restart ? PanelScreens.RestartToLoad : "In SimHub";
+                var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, captured.Namespace);
+                var state = !installed ? PanelScreens.Missing : restart ? PanelScreens.RestartToLoad : PanelScreens.InSimHub;
                 var stateHex = !installed ? Theme.StatusFailed : restart ? Theme.Caution : Theme.StatusUpToDate;
                 var thumb = Ui.Thumb(captured.IsSlots ? "round" : captured.Kind, captured.Width, captured.Height);
                 cards.Add(Ui.DeviceCard(
@@ -193,11 +193,11 @@ namespace OpenDashPlugin
                 var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
                 write.ToolTip = "Puts this screen's dashboard back into SimHub.";
                 write.Click += (sender, args) => InstallScreenAgain(screen);
-                var box = Ui.FixBox("This screen's dashboard is missing from SimHub", "Its settings are kept.", null, write);
+                var box = Ui.FixBox(PanelScreens.MissingTitle, PanelAttention.MissingDetail, null, write);
                 box.Margin = new Thickness(0, 18, 0, 0);
                 return box;
             }
-            var restart = issues.FirstOrDefault(i => i.Id == "screen-restart:" + screen.Namespace);
+            var restart = PanelAttention.Of(issues, PanelAttention.ScreenRestart, screen.Namespace);
             if (restart == null) return null;
             // The card above says this state as PanelScreens.RestartToLoad, so the fix box does too: one phrase
             // for one state. Home names the screen in its title, because Home lists every screen's.

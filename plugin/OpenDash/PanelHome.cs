@@ -18,7 +18,9 @@ namespace OpenDashPlugin
 
         public static readonly PanelSearch.Entry[] Search =
         {
-            new PanelSearch.Entry("Things to fix", PanelPage.Home, AnchorAttention, "attention", "problem", "warning"),
+            // By the page's name, which it draws over its headline: the headline itself is "Nothing to fix", "1
+            // thing to fix" or "3 things to fix" (PanelAttention.Headline), so no one label names it.
+            new PanelSearch.Entry(Title, PanelPage.Home, null, "things to fix", "nothing to fix", "attention", "problem", "warning"),
             new PanelSearch.Entry(RightNowTitle, PanelPage.Home, AnchorRightNow, "live", "showing"),
             new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness", "night mode"),
         };

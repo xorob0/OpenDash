@@ -16,6 +16,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Quick controls", PanelHome.QuickControlsTitle);
             Assert.Contains(PanelHome.Search, entry => entry.Label == PanelHome.RightNowTitle && entry.Route.Anchor == PanelHome.AnchorRightNow);
             Assert.Contains(PanelHome.Search, entry => entry.Label == PanelHome.QuickControlsTitle && entry.Route.Anchor == PanelHome.AnchorQuickControls);
+            // Home's headline changes with the count, so its entry is the page's own name, which it draws over it.
+            Assert.Contains(PanelHome.Search, entry => entry.Label == PanelHome.Title && entry.Route.Anchor == null && System.Array.IndexOf(entry.Keywords, "things to fix") >= 0);
+            Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == "Things to fix");
         }
     }
 }
