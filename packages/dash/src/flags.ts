@@ -139,10 +139,10 @@ export const bandNames = (spec: AlertBandSpec): readonly string[] => {
  * incident, with its count and the limit it is counted against.
  *
  * Only the band writes it, and only while the condition has the whole band. A corner block writes the
- * label, and the nano writes nothing, which is the rule the blue flag's detail already keeps: the
- * detail belongs to the seconds a condition has the band. `sample` is what DashStudio draws and
- * `widest` is the longest string the binding can produce, which is what `textFit.test.ts` measures
- * the band against and what `widest.test.ts` holds the binding to.
+ * label, and the nano writes nothing. The blue flag's detail is not held to that rule since #497: a
+ * corner block writes it wherever it fits. `sample` is what DashStudio draws and `widest` is the
+ * longest string the binding can produce, which is what `textFit.test.ts` measures the band against
+ * and what `widest.test.ts` holds the binding to.
  */
 export interface BandRun {
   sample: string;

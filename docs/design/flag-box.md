@@ -42,7 +42,7 @@ the band itself.
 | 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
-| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE". |
+| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE", or "BLUE · P4 GT3" as `BlueFlagDetail` asks, in a corner block as on the whole band. |
 | 11 | White | `white` | no | 16 | Solid white. In iRacing this is the last lap. | Filled white, "WHITE · LAST LAP". |
 | 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN", on `Flag_Green` rather than on the bit. |
 | 13 | Set | `startSet` | no | 22 | Two bars of the start gantry. | Outlined green, "GREEN · SET". |
@@ -142,8 +142,10 @@ flag keeps the *whole* band before it settles into the block at each end and giv
 `indicator.alert.durationMs` is the figure and SimHub's own `changed()` window is the clock, which
 [ADR 0009](decisions/0009-does-the-plugin-compute.md) admits precisely because the state is SimHub's
 rather than ours. The window watches the rank of the winning condition and not one condition's bits,
-so a caution clearing to the yellow under it takes the band again. The box has no equivalent: a
-picture on 64 pixels has nothing to settle into and nothing underneath it to give back.
+so a caution clearing to the yellow under it takes the band again. The block writes what the whole
+band writes wherever it fits, the blue flag's detail included since #497, and the incident's count
+against its limit is the one run it leaves to the takeover. The box has no equivalent: a picture on
+64 pixels has nothing to settle into and nothing underneath it to give back.
 
 **The debris flag's danger stripes are not drawn on the band.** The canvas gives the alert
 catalogue two patterns, the chequer and the stripes, and the band draws the first. A debris flag is

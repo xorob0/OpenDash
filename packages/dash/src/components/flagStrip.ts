@@ -124,9 +124,10 @@ export const BLUE_FLAG_ID = 'blue';
  * The canvas draws the detail as part of the sentence -- "Blue flag · GT3 behind" -- so what the
  * band writes is one centred string in all three cases, and a name pinned to the centre with a
  * detail hung off its end would be two boxes fighting over the same middle. Each run declares the
- * widest string it can draw, which is what `textFit.test.ts` measures against the band: the
- * longest is the label, a two-digit place and the widest chip, and a run that stopped fitting some
- * face's band would fail there rather than be clipped by WPF.
+ * widest string it can draw, which is what `textFit.test.ts` measures against the band and what a
+ * settled corner block is measured against before it writes the runs at all: the longest is the
+ * label, a two-digit place and the widest chip, and a run that stopped fitting some face's band
+ * would fail there rather than be clipped by WPF.
  *
  * The separator goes with the detail rather than before it, so a lap with nothing behind reads
  * `BLUE` and not `BLUE · `.
@@ -252,13 +253,19 @@ export interface FlagCornerBlocks {
   right: Rect;
 }
 
+/** Whether the blue flag's three runs fit `block`, each measured from its `widest` as a name is. */
+const blueDetailFits = (block: Rect, spec: AlertBandSpec): boolean =>
+  spec.shape === 'filled' && blueFlagRuns(spec.label).every((run) => nameFits(block, run.widest));
+
 /**
  * One end of the settled condition: its own shape, with its name where the block has room, and never
- * the run the whole band writes in place of the name.
+ * the incident's count, which the whole band writes in place of the name.
  *
  * The name is the longest of the condition's names that fits the block, by the same measure as the
  * whole band's. A name that does not fit is not shrunk and not clipped; it is simply not written, and
- * the block is colour alone, which is what the nano's twelve-pixel strip already is.
+ * the block is colour alone, which is what the nano's twelve-pixel strip already is. The blue flag
+ * writes its detail by that measure too, #497: the three runs the whole band draws where the widest of
+ * them fits the block, and BLUE where only the name does.
  *
  * All nineteen labels fit all four corner-block sizes, FULL COURSE YELLOW being the widest of them,
  * and none of the names fits the sixteen pixels of side padding, FCY included, so the answer comes out
@@ -270,6 +277,7 @@ export interface FlagCornerBlocks {
  */
 const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
   const spec = condition.band;
+  if (condition.id === BLUE_FLAG_ID && style.labels && blueDetailFits(block, spec)) return blueFlagParts(name, block, style, spec);
   const labels = style.labels && bandNames(spec).some((text) => nameFits(block, text));
   if (!labels && !drawnWithoutName(condition)) return [];
   return shapeParts(name, block, { ...style, labels }, spec);
@@ -283,11 +291,11 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
- * One thing the takeover has that this does not: the blue flag's detail. "BLUE · P99 LMP2" is
- * narrower than FULL COURSE YELLOW and so would fit every corner block there is, so it is left out by
- * choice rather than for want of room: #380 gives the settled flag its colour and its name, and the
- * car behind is news for the seconds the flag has the band. The blue block writes BLUE where that
- * fits. The incident's count is the same: the block writes INCIDENT.
+ * The blue flag keeps its detail, #497: the block writes it as the whole band does, under the same
+ * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 LMP2" is narrower than
+ * FULL COURSE YELLOW, so that is every corner block there is, and the sixteen pixels of the four faces
+ * without one write neither the detail nor BLUE. One thing the takeover has that this does not: the
+ * incident's count against its limit. The block writes INCIDENT.
  *
  * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has
  * no layer here at all rather than an empty one.

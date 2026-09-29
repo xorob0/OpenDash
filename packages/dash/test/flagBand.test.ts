@@ -378,7 +378,11 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // corner blocks hold every one of the nineteen names. Where a condition has two, which is the
       // full course yellow's FULL COURSE YELLOW and FCY, it writes the longest that fits the narrower
       // block, and writes it at both ends: one settled flag carrying two names, or a name at one end
-      // and none at the other, would read as two conditions rather than one.
+      // and none at the other, would read as two conditions rather than one. The blue flag's detail is
+      // held to the same rule, #497: where the widest of its three runs fits the narrower block, both
+      // ends write the three, and where it does not, the name.
+      const wholeBlue = labelsOf(layerOf(face, BLUE_FLAG_ID).children);
+      const detail = wholeBlue.map((run) => run.text);
       for (const condition of ALERT_CATALOGUE) {
         const settled = cornerLayers(face).get(condition.id);
         if (!settled) continue;
@@ -390,14 +394,25 @@ describe('the flag settles into the blocks at the ends of the band', () => {
         }
         const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
         const text = bandNames(condition.band).find((name) => measureText('BarlowBold', name, ds.size.label) < room);
-        const expected = text === undefined ? [] : [text, text];
+        const detailFits = condition.id === BLUE_FLAG_ID && wholeBlue.every((run) => measureText('BarlowBold', run.widest ?? run.text, ds.size.label) < room);
+        const expected = detailFits ? [...detail, ...detail] : text === undefined ? [] : [text, text];
         expect({ face: face.folder, id: condition.id, names: names.map((n) => n.text) }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
-      // And the blue block writes its own name and never the car behind, which belongs to the seconds
-      // the flag has the band.
-      expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE · GT3');
-      // The incident likewise: the block writes INCIDENT, unbound, and its count against the limit
-      // is the whole band's for the seconds it has it.
+      // And where the blue block writes the car behind, it writes it exactly as the whole band does: each
+      // end carries the band's three runs, each shown by the same BlueFlagDetail, bound to the same
+      // expression and measured from the same widest. That is every face with corner blocks, and none
+      // of the four whose sixteen pixels hold no word.
+      const asWritten = (runs: readonly TextItem[]) => runs.map(({ text, widest, bindings }) => ({ text, widest, bindings }));
+      const settledBlue = labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children);
+      expect({ face: face.folder, detail: settledBlue.some((l) => l.bindings?.Text !== undefined) }).toEqual({ face: face.folder, detail: face.bandCorners });
+      if (face.bandCorners) {
+        for (const end of ['left', 'right'] as const) {
+          const runs = settledBlue.filter((l) => l.name.startsWith(`flagCorner.${BLUE_FLAG_ID}.${end}.`));
+          expect({ face: face.folder, end, runs: asWritten(runs) }).toEqual({ face: face.folder, end, runs: asWritten(wholeBlue) });
+        }
+      }
+      // The incident is the other way: the block writes INCIDENT, unbound, and its count against the
+      // limit is the whole band's for the seconds it has it.
       for (const label of labelsOf(cornerLayerOf(face, 'incident').children)) {
         expect({ item: label.name, text: label.text, bound: label.bindings?.Text !== undefined }).toEqual({ item: label.name, text: 'INCIDENT', bound: false });
       }
