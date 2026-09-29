@@ -7,27 +7,30 @@
  * back after a restart, which was measured rather than assumed. So `bun run dev` drives the mouse,
  * over the same QEMU VNC that takes the screenshots.
  *
- * Coordinates are the fragile part and are treated as such. Everything anchored to the window's
- * top-left, which is the left menu, is a fixed pixel offset; everything in the centred content
- * column is a fraction of the screen width. Both were measured on the 3840 by 2160 guest, and
+ * Coordinates are the fragile part and are treated as such. They are measured from SimHub's client
+ * area rather than from the screen: everything anchored to its top-left, which is the left menu and
+ * every height, is a fixed pixel offset, and everything across the centred content column is a
+ * fraction of its width. Both were measured on the 3840 by 2160 guest, and
  * {@link EXPECTED_SCREEN} is now checked rather than assumed. Nothing else is trusted either:
  * `openDashboard` waits for SimHub's window to exist and to fill the screen before it measures
  * anything from it, asks Windows which dash windows exist afterwards, retries once, and fails with
- * what to do by hand rather than leaving the caller to wonder.
+ * what to do by hand, or with SimHub having exited when it has, rather than leaving the caller to
+ * wonder.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { onHost, powershell, psq, sleep, type Host, type RunResult } from './vm.ts';
+import { onHost, powershell, psq, simhubRunning, sleep, type Host, type RunResult } from './vm.ts';
 
 const WINVM_DIR = '/opt/winvm';
 const VENV_PYTHON = `${WINVM_DIR}/mcp/.venv/bin/python`;
 
-/** Where the left menu's entries sit, measured from the top-left of a maximised SimHub. */
+/** Where the left menu's entries sit, in pixels from the top-left of SimHub's client area. */
 const MENU = { x: 100, dashStudio: 248 } as const;
-/** Where things in the centred content column sit, as a fraction of the screen width. */
+/** Where things in the centred content column sit, as a fraction of SimHub's client area width. */
 const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
 /**
- * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest.
+ * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest from the top of
+ * SimHub's client area.
  *
  * `firstRow` is a point inside the first row's card, not its top: the card spans y=302..380 and 336
  * is the middle of it. `quickRunOffset` is measured from that same point, and it deliberately lands
@@ -139,7 +142,7 @@ export function type(host: Host, text: string): RunResult {
 export const press = (host: Host, ...keys: string[]): RunResult =>
   vnc(host, keys.map((k) => `client.keyPress(${JSON.stringify(k)})\ntime.sleep(0.05)`).join('\n'));
 
-/** The guest's display size, which the content-column coordinates are a fraction of. */
+/** The guest's display size, for the mode check; the clicks are measured from SimHub's window. */
 export function screenSize(host: Host): { width: number; height: number } | null {
   const r = onHost(
     host,
@@ -266,6 +269,10 @@ public class OpenDashWindows {
     return list;
   }
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+  /// <summary>The client area in screen coordinates, as left, top, width, height.</summary>
+  public static int[] Client(IntPtr h) { RECT c; GetClientRect(h, out c); var p = new POINT(); ClientToScreen(h, ref p); return new int[] { p.X, p.Y, c.Right, c.Bottom }; }
   public static void Move(IntPtr h, int x, int y) { SetWindowPos(h, IntPtr.Zero, x, y, 0, 0, 0x0001 | 0x0004 | 0x0010); }
   /// <summary>Places a window so that its CLIENT area is exactly cx by cy at (x, y).</summary>
   public static void Fit(IntPtr h, int x, int y, int cx, int cy) {
@@ -322,9 +329,10 @@ Start-Sleep -Milliseconds 900`,
 }
 
 /**
- * Waits for SimHub's main window and puts it where the coordinates below expect it: top-left,
- * filling the screen. Prints `rect x,y WxH` once it is there, and otherwise a line saying what it
- * waited for and never got, which the caller is expected to read.
+ * Waits for SimHub's main window and maximises it. Once it is there, prints `client x,y WxH`: the
+ * part of its client area that is on the screen, which is what every click is measured from,
+ * followed by the unclipped area in brackets. Otherwise it prints a line saying what it waited for
+ * and never got, which the caller is expected to read.
  *
  * **The waiting is the point of this function, and the lack of it was a bug.** `vm.ts`'s
  * `simhubStart` returns as soon as the process exists, which on this guest is about a second after
@@ -353,6 +361,11 @@ Start-Sleep -Milliseconds 900`,
  * on a window WPF has not finished laying out -- but only when the window is not zoomed afterwards.
  * The splash is zoomed and still the wrong shape, and forcing that one to the working area would
  * make it pass the test and hand the caller a splash to click on.
+ *
+ * The client area is clipped to the working area before it is reported. A maximised window hangs
+ * its resize border off every edge of the working area, and a WPF window that draws its own chrome
+ * can hang its client area off with it; clipped, a maximised SimHub reports the working area either
+ * way, which is where every coordinate in this file was measured from.
  */
 export function maximiseSimHub(host: Host, waitSeconds = 120): RunResult {
   return inDesktopScript(
@@ -396,7 +409,12 @@ while ($true) {
       $r = [OpenDashWindows]::Rect($found)
     }
     if (Covers $r) {
-      "rect {0},{1} {2}x{3}" -f $r[0], $r[1], $r[2], $r[3]
+      $client = [OpenDashWindows]::Client($found)
+      $left = [Math]::Max($client[0], $work.X)
+      $top = [Math]::Max($client[1], $work.Y)
+      $right = [Math]::Min($client[0] + $client[2], $work.X + $work.Width)
+      $bottom = [Math]::Min($client[1] + $client[3], $work.Y + $work.Height)
+      "client {0},{1} {2}x{3} (unclipped {4},{5} {6}x{7})" -f $left, $top, ($right - $left), ($bottom - $top), $client[0], $client[1], $client[2], $client[3]
       exit
     }
     $last = "SimHub's window is {0}x{1} at {2},{3}, which does not cover the {4}x{5} working area; still starting" -f $r[2], $r[3], $r[0], $r[1], $work.Width, $work.Height
@@ -453,6 +471,42 @@ export interface OpenOptions {
   filter?: string;
 }
 
+/** The part of SimHub's client area that is on the screen, in screen pixels. */
+export interface ClientArea {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** The client area `maximiseSimHub` reports, or null when what it printed is why there is none. */
+export function parseClientArea(report: string): ClientArea | null {
+  const match = /^client (-?\d+),(-?\d+) (\d+)x(\d+)/.exec(report.trim());
+  if (!match) return null;
+  const [left, top, width, height] = match.slice(1).map(Number) as [number, number, number, number];
+  return width > 0 && height > 0 ? { left, top, width, height } : null;
+}
+
+/**
+ * Where each of `openDashboard`'s clicks lands, given SimHub's client area and how far down its
+ * row is. Offsets are added to the area's top-left and fractions are of its width, so an area that
+ * does not begin at the screen's origin, as with a taskbar on the left or at the top, moves every
+ * click with it. Only the maximised width has been measured, so a fraction at any other width is a
+ * guess that `openDashboard` does not make: it refuses a window that is not maximised.
+ */
+export function aimAt(client: ClientArea, rowY: number) {
+  const across = (fraction: number) => Math.round(client.left + client.width * fraction);
+  const down = (pixels: number) => client.top + pixels;
+  const rowX = across(CONTENT.rowX);
+  return {
+    dashStudio: { x: client.left + MENU.x, y: down(MENU.dashStudio) },
+    trackLayoutOffer: { x: across(TRACK_LAYOUT_OFFER.x), y: down(TRACK_LAYOUT_OFFER.y) },
+    search: { x: across(CONTENT.searchX), y: down(LIST.firstRow - 123) },
+    row: { x: rowX, y: down(rowY) },
+    windowed: { x: rowX + 49, y: down(rowY + LIST.quickRunOffset) },
+  };
+}
+
 /**
  * Opens a dashboard in a window: Dash Studio, dismiss the track-layout offer, filter the list,
  * hover the row so its Start button appears, click it, then Windowed from the Quick run menu.
@@ -473,8 +527,6 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const wrongMode = screenModeProblem(size);
   if (wrongMode) return { ok: false, code: 1, stdout: '', stderr: wrongMode };
 
-  const searchX = Math.round(size.width * CONTENT.searchX);
-  const rowX = Math.round(size.width * CONTENT.rowX);
   const row = opts.index ?? 0;
 
   // Whether the "Last used" band is there cannot be read off the screen from here, so both places
@@ -483,11 +535,13 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const offsets = [0, LIST.lastUsedBand];
   for (const [attempt, bandOffset] of offsets.map((o, i) => [i + 1, o] as const)) {
     const rowY = LIST.firstRow + bandOffset + row * LIST.rowHeight;
-    // Read, not fired and forgotten. Every coordinate below is measured from a SimHub filling the
-    // screen, so if the window is not there yet there is nothing to click and no offset that helps:
-    // say so instead of spending the second attempt clicking the desktop at a different height.
+    // Read, not fired and forgotten. Every coordinate below is measured from SimHub's client area
+    // and was only ever measured with it filling the screen, so if the window is not there yet
+    // there is nothing to click and no offset that helps: say so instead of spending the second
+    // attempt clicking the desktop at a different height.
     const maximised = maximiseSimHub(host);
-    if (!maximised.stdout.startsWith('rect')) {
+    const client = parseClientArea(maximised.stdout);
+    if (!client) {
       return {
         ok: false,
         code: 1,
@@ -499,12 +553,13 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
           `that is merely slow looks the same as one that failed; \`bun run vm shot\` shows which.`,
       };
     }
+    const aim = aimAt(client, rowY);
     sleep(2);
-    click(host, MENU.x, MENU.dashStudio);
+    click(host, aim.dashStudio.x, aim.dashStudio.y);
     sleep(4);
-    click(host, Math.round(size.width * TRACK_LAYOUT_OFFER.x), TRACK_LAYOUT_OFFER.y);
+    click(host, aim.trackLayoutOffer.x, aim.trackLayoutOffer.y);
     sleep(2);
-    click(host, searchX, LIST.firstRow - 123);
+    click(host, aim.search.x, aim.search.y);
     sleep(1);
     // Emptied rather than selected. The box keeps what the last run typed, and a select-all that
     // lands while the box is not yet focused leaves that text in place, so the filter becomes the
@@ -517,9 +572,9 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     type(host, opts.filter ?? opts.name);
     sleep(3);
     // Hover, then press: the Start button is inside the row and appears only under the pointer.
-    click(host, rowX, rowY, HOVER_SECONDS);
+    click(host, aim.row.x, aim.row.y, HOVER_SECONDS);
     sleep(3);
-    click(host, rowX + 49, rowY + LIST.quickRunOffset, HOVER_SECONDS);
+    click(host, aim.windowed.x, aim.windowed.y, HOVER_SECONDS);
     sleep(14);
     const open = openDashboards(host);
     if (open.includes(opts.name)) {
@@ -534,17 +589,35 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     }
   }
 
-  return {
-    ok: false,
-    code: 1,
-    stdout: '',
-    stderr:
-      `could not open ${opts.name} after two attempts.\n` +
-      `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
-      `filters the list and presses Start, and the coordinates it uses were measured at ` +
-      `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
-      `Open it by hand once (Dash Studio, find ${opts.name}, Start, Windowed) and run this again; everything else will be in place.`,
-  };
+  // Asked here and not earlier: the maximise at the top of each attempt already names a SimHub that
+  // is gone, so the case left is one that died after its window was found, under the clicks.
+  return { ok: false, code: 1, stdout: '', stderr: openFailure(opts.name, simhubRunning(host)) };
+}
+
+/**
+ * What `openDashboard` reports when neither attempt opened anything, given whether SimHub was still
+ * running afterwards (null when that could not be read).
+ *
+ * The default advice is about the clicking, and on 2026-09-13 it cost an hour: SimHub had exited
+ * under the clicks, so no coordinate was ever going to help. The first line names the fault on its
+ * own because `bun run shots` keeps only the first line as the reason a capture is missing.
+ */
+export function openFailure(name: string, simhubRunning: boolean | null): string {
+  if (simhubRunning === false) {
+    return (
+      `could not open ${name}: SimHub exited while it was being clicked, so the coordinates are not what to look at.\n` +
+      `\`bun run vm logs 80\` shows how it ended. When this happened on 2026-09-13 the log held WatchDog ` +
+      `"Abnormal Inactivity" dumps and no exception, which is a guest too short of CPU or memory to keep SimHub up ` +
+      `rather than a fault in any package. Running this again restarts it.`
+    );
+  }
+  return (
+    `could not open ${name} after two attempts.\n` +
+    `Opening a dashboard is the one step SimHub offers no way to script, so this clicks Dash Studio, ` +
+    `filters the list and presses Start, and the coordinates it uses were measured at ` +
+    `${EXPECTED_SCREEN.width}x${EXPECTED_SCREEN.height} and 100% DPI, which the guest is in -- that was checked before anything was clicked. ` +
+    `Open it by hand once (Dash Studio, find ${name}, Start, Windowed) and run this again; everything else will be in place.`
+  );
 }
 
 /**
