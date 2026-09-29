@@ -46,6 +46,9 @@ const BLOCK_STATES: readonly string[] = STATES.filter((id) => !NEUTRAL.has(id));
  * What each condition reads as on the block, pinned here rather than derived, because the table in
  * the component is the answer to "what does a driver see" and a silent edit of it is a change to
  * the face. The chequer is absent: it is the board and carries no name.
+ *
+ * The full course yellow is pinned in its short form, which is the one the size is measured against;
+ * the block writes {@link CAUTION_LONG} instead where that fits, which {@link CAUTION_LONG_ON} pins.
  */
 const BLOCK_NAME: Record<string, string> = {
   ignition: 'IGNITION',
@@ -55,7 +58,7 @@ const BLOCK_NAME: Record<string, string> = {
   furled: 'FURLED',
   black: 'BLACK',
   meatball: 'MEATBALL',
-  caution: 'SAFETY',
+  caution: 'FCY',
   yellowWaving: 'YELLOW',
   yellow: 'YELLOW',
   debris: 'DEBRIS',
@@ -66,6 +69,24 @@ const BLOCK_NAME: Record<string, string> = {
   startSet: 'SET',
   startReady: 'READY',
 };
+
+/** The full course yellow's whole name, which the block writes where it fits at the one size, #497. */
+const CAUTION_LONG = 'FULL COURSE YELLOW';
+
+/**
+ * The arrangements whose block writes the whole name, pinned for the reason the table is. The name is
+ * as long as the room, and the room is the block's width at the size its height and the one-word names
+ * set: wide and low blocks hold it, whereas a tall block sets a size at which it no longer fits, which
+ * is why the 1280 x 720 face writes FCY where the 800 x 286 one writes the whole name.
+ */
+const CAUTION_LONG_ON: ReadonlySet<string> = new Set([
+  'OpenDash',
+  'OpenDash, rev bar off',
+  'OpenDash 1280x480',
+  'OpenDash 1280x400',
+  'OpenDash 1280x400, rev bar off',
+  'OpenDash 800x286',
+]);
 
 /** Every arrangement of every face: the one the sheets draw, and the one with the rev bar's room given back. */
 const ARRANGEMENTS: { face: ZoneLayout; arrangement: ZoneLayout; revBar: boolean }[] = ZONE_FACES.flatMap((face) => [
@@ -257,12 +278,19 @@ describe('the full-screen name fits the block it is centred on', () => {
         expect({ face: face.folder, name, size, width, room, fits: width <= room }).toMatchObject({ fits: true });
       }
 
+      // The full course yellow is written whole exactly where the whole name fits at the size the
+      // one-word names have set, and as FCY everywhere else: the long form never sets the size.
+      const where = `${face.folder}${revBar ? '' : ', rev bar off'}`;
+      const long = measureText('BarlowCondensedBold', CAUTION_LONG, size) <= room;
+      expect({ where, long }).toEqual({ where, long: CAUTION_LONG_ON.has(where) });
+      const written = (id: string): string => (id === 'caution' && CAUTION_LONG_ON.has(where) ? CAUTION_LONG : BLOCK_NAME[id]!);
+
       // As drawn: one name per state that carries one, in the block's own colours, and no wider than
       // the box SimHub hands WPF as MaxTextWidth.
       const full = groupOf(faceItems(arrangement, { revBar }), 'flagFull');
       const names = [...walkItems(full.children)].filter((i): i is TextItem => i.kind === 'text');
       expect(names.map((n) => n.name)).toEqual(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => `flagFull.${id}.name`));
-      expect(names.map((n) => n.text)).toEqual(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!));
+      expect(names.map((n) => n.text)).toEqual(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map(written));
       for (const item of names) {
         expect({ item: item.name, font: item.font, weight: item.fontWeight, size: item.fontSize }).toMatchObject({ font: ds.font.data, weight: 'Bold', size });
         const drawn = measureText('BarlowCondensedBold', item.text, item.fontSize);
@@ -301,7 +329,9 @@ describe('the full-screen name fits the block it is centred on', () => {
     // narrow against its height: every landscape face still lands on the fraction the sheets quote,
     // and the portrait one drops from 183 px to 143. The band's own labels would have made it 69,
     // which is why the block does not simply write them. The three car alerts it gained with #109,
-    // IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so cost nothing.
+    // IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so cost nothing, and so does
+    // the full course yellow of #497: the size is measured against FCY, and FULL COURSE YELLOW is
+    // written only where it fits at that size.
     const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
     expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
     expect(FLAG_FULL_NAMES).toEqual([...new Set(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);
@@ -334,6 +364,9 @@ describe('the full-screen format costs the gear', () => {
   }
 });
 
+/** Every package the build writes, composed once for the two walks below. */
+const BUILT = composePackages({ version: '0.0.0-test', log: () => {} }, true);
+
 /**
  * Every full-screen chequer the build draws, once per block: the faces in both arrangements, both
  * companions and both pit walls. A companion repeats its block on twenty-one screens, so a board is
@@ -341,7 +374,7 @@ describe('the full-screen format costs the gear', () => {
  */
 const CHEQUERS: { where: string; ground: RectangleItem; squares: RectangleItem[] }[] = (() => {
   const found = new Map<string, { where: string; ground: RectangleItem; squares: RectangleItem[] }>();
-  for (const { pkg } of composePackages({ version: '0.0.0-test', log: () => {} }, true)) {
+  for (const { pkg } of BUILT) {
     for (const item of pkg.dashboards.flatMap(itemsOf)) {
       if (item.kind !== 'layer' || !item.name.endsWith('flagFull.chequered')) continue;
       const [ground, ...squares] = item.children;
@@ -401,6 +434,49 @@ describe('the full-screen chequer is a board of whole checks', () => {
         cells.add(`${row},${column}`);
       }
       expect({ where, drawn: cells.size, squares: squares.length }).toEqual({ where, drawn: Math.floor((columns * rows) / 2), squares: Math.floor((columns * rows) / 2) });
+    });
+  }
+});
+
+/**
+ * Every full-screen full course yellow the build draws, once per block, keyed as the chequers are.
+ * The faces are pinned above arrangement by arrangement; this is the walk that reaches the companions
+ * and the pit walls too, which draw the same block through the same component.
+ */
+const CAUTIONS: { where: string; block: Rect; name: TextItem }[] = (() => {
+  const found = new Map<string, { where: string; block: Rect; name: TextItem }>();
+  for (const { pkg } of BUILT) {
+    for (const item of pkg.dashboards.flatMap(itemsOf)) {
+      if (item.kind !== 'layer' || !item.name.endsWith('flagFull.caution')) continue;
+      const ground = item.children[0];
+      const name = item.children.find((c): c is TextItem => c.kind === 'text');
+      if (ground?.kind !== 'rect' || name === undefined) throw new Error(`${item.name} is not a ground and a name`);
+      const where = `${pkg.folderName} ${ground.rect.width} x ${ground.rect.height}`;
+      if (!found.has(where)) found.set(where, { where, block: ground.rect, name });
+    }
+  }
+  return [...found.values()];
+})();
+
+describe('the full course yellow is as long as its block allows', () => {
+  test('which on the companions and the pit walls is FCY, their blocks being tall', () => {
+    // A companion's module and a pit wall's body are tall, so the one size is large and the whole
+    // name no longer fits across them: the pit wall's block is 1920 px wide and sets its names at 454.
+    const seconds = CAUTIONS.filter((c) => /Companion|Pit wall/.test(c.where));
+    expect(seconds.map((c) => ({ where: c.where, text: c.name.text }))).toEqual([
+      { where: 'OpenDash Companion 850 x 388', text: 'FCY' },
+      { where: 'OpenDash Companion portrait 480 x 758', text: 'FCY' },
+      { where: 'OpenDash Pit wall 1920 x 1016', text: 'FCY' },
+      { where: 'OpenDash Pit wall portrait 1080 x 1856', text: 'FCY' },
+    ]);
+  });
+
+  for (const { where, block, name } of CAUTIONS) {
+    test(`${where} writes the whole name exactly where it fits at the block's one size`, () => {
+      const room = block.width - 2 * FLAG_FULL_NAME_PAD;
+      expect({ where, size: name.fontSize }).toEqual({ where, size: flagFullNameSize(block) });
+      const long = measureText('BarlowCondensedBold', CAUTION_LONG, name.fontSize) <= room;
+      expect({ where, text: name.text }).toEqual({ where, text: long ? CAUTION_LONG : BLOCK_NAME.caution! });
     });
   }
 });

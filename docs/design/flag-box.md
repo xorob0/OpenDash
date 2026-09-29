@@ -38,7 +38,7 @@ the band itself.
 | 3 | Black furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
 | 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
 | 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
-| 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
+| 6 | Full course yellow | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "FULL COURSE YELLOW", or "FCY" where that does not fit. |
 | 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW FLAG", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
@@ -72,6 +72,29 @@ as the list's shape: a flag calling this car in outranks a condition of the trac
 strip draws it on the black family's lamp, its orange aliasing the caution amber, so it could not be
 ranked between the two yellows without a second lamp to put it on. It is the one rank the canvas
 and the code disagree about, and it wants the author's arbitration.
+
+### Where the names depart from the canvas
+
+**The whole-track caution is named Full course yellow, where the canvas calls it Safety car** (7 ·
+SafetyCar). It is iRacing's `caution` and `cautionWaving`, which is the pace car being deployed, and
+it had three names before #497 gave it one: SAFETY CAR on the band, SAFETY on the full-screen block,
+and "Full-course caution" on the LED row, on the site and in this table. The colour does not move,
+since `purpose.alert.safetyCar` resolves to the flag yellow, and the token keeps its name, `design/`
+being the author's rather than the code's to edit. The canvas therefore owes the rename, or the
+author owes its reversal.
+
+**The name is as long as the room.** The band carries two forms of it, FULL COURSE YELLOW and FCY,
+and every surface that writes a name writes the longest that fits the room it has. On band D that is
+the whole name everywhere a word is written, since it fits every band and every corner block of the
+four faces that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no
+word at all, FCY included. The full-screen block is the surface where the room decides. It sets one
+size for every name from the widest of its one-word names, which is MEATBALL, and FCY is what the
+caution brings to that measure, so that the long form never shrinks the others; the block then writes
+FULL COURSE YELLOW where the whole name fits across it at that size. That is the 1920 face and the
+1280 × 400 face in both arrangements, and the 1280 × 480 and 800 × 286 faces with the rev bar on.
+Every other block writes FCY, the companions and the pit walls included, because a tall block sets a
+large size and the whole name no longer fits across it, which is why the pit wall, the widest screen
+of all, reads FCY. `flagFormat.test.ts` pins which block writes which.
 
 ### What the band does that the box does not, and the reverse
 
@@ -178,7 +201,7 @@ a yellow flag and never a waved one, and it is the band's flash, like the box's 
 flag is being waved. Where the two are listed side by side, in the table above and on the site, they
 are told apart by that motion in the same way.
 
-**A full-course caution is banded.** The whole-track condition must never look like one corner's
+**A full course yellow is banded.** The whole-track condition must never look like one corner's
 yellow, and bands are legible at this size where a pace-car silhouette is not.
 
 **Blue moves.** A blue flag with a moving arrow says which way to look. A static blue square says
@@ -447,14 +470,14 @@ does not publish it, not that it was forgotten.
 | Wanted | Why not |
 |---|---|
 | **Engine off, ignition off, incident, push to pass, headlight flash** (canvas 1, 2, 15, 24 and 25), **on the box** | They are drawn on every band, [above](#what-band-d-draws-that-the-box-does-not), and not on the box. They are not flags, and the box's own answer to a car switched off is the dim standby mark under [When nobody is racing](#when-nobody-is-racing). The LED strips leave the flash out for their own reason, `DROPPED` in `leds/effects.ts`: a lamp spent on what the driver's hand just did is a lamp not spent on an aid. |
-| **Virtual safety car, with the delta to the reference speed** (canvas 8) | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing; there is no reference speed to be over or under. |
+| **Virtual safety car, with the delta to the reference speed** (canvas 8) | iRacing has no VSC. `caution` is a full course yellow with the pace car deployed, which is drawn, and is not the same thing; there is no reference speed to be over or under. |
 | **Double yellow** (canvas 9) | iRacing publishes one yellow, standing or waved. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
 | **Yellow per sector** (canvas 10) | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
 | **Stop and go, drive through, a penalty with its value** (canvas 12, 13 and 14) | None is published. iRacing tells a driver which penalty in the chat and flies the black flag, and the telemetry carries the flag and nothing of the text: no penalty type, no seconds. The black flag is drawn; which penalty it is, is not, and a band that said "DRIVE THROUGH" from a guess would be wrong the first time the penalty was a stop and go. |
 | **White for a slow car** (canvas 17) | iRacing's `white` is the last lap and nothing else. There is no slow-car white in the bitfield. |
 | **The size of an incident** | The canvas's "Incident · 4x" could be read as the incident just taken, and a band shows the running count instead. The increment is the count now less the count before the window opened, and nothing on a dashboard remembers the count before. |
 | **How many pushes to pass are left** | The canvas writes "Push to pass · 3 left". `PlayerP2P_Count` is published, and iRacing describes it as "count of usage (or remaining in Race)": one number meaning two things by session type, with no recording of a car that has push to pass to say which "3 left" would be. The band writes the name, and the number waits for that recording. |
-| **Safety car, as its own picture** | The closest honest reading of `caution`/`cautionWaving` *is* the pace car being deployed, and it is drawn as the full-course caution. A second glyph would be the same condition twice. |
+| **Safety car, as its own picture** | The closest honest reading of `caution`/`cautionWaving` *is* the pace car being deployed, and it is drawn as the full course yellow. A second glyph would be the same condition twice. |
 | **One lap to green, ten to go, five to go** | `oneLapToGreen`, `tenToGo` and `fiveToGo` are published, and they are session information rather than flags. The screen has the room to say them in words and the box does not; drawing a numeral here would compete with the gear. |
 | **Green held** | `greenHeld` is published and means the green is being withheld at a restart. It has no distinct picture that would not be mistaken for a green flag, which is the opposite of what it means. |
 | **Crossed, random waving** | `crossed` and `randomWaving` are published, and neither has a documented meaning in iRacing's own reference. Drawing something for a condition nobody can define is how a box starts lying. |

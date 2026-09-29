@@ -219,7 +219,7 @@ export const FLAG_ROWS: readonly FlagRow[] = [
   // lamp at the same 2 Hz, so the colour they are read by at the instant of a glance has to differ.
   {
     id: 'caution',
-    label: 'Full-course caution',
+    label: 'Full course yellow',
     conditions: ['caution'],
     color: ds.color.caution.primary,
     blinkColor: ds.purpose.flag.yellow,

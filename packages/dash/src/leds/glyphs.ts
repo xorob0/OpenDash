@@ -13,7 +13,7 @@
  *   - **Waving is blinking.** iRacing publishes `yellow` and `yellowWaving` separately and the two
  *     have to be told apart at a glance, which is a pattern question rather than a colour one. The
  *     rate is `indicator.flagBand.flashHz`, so the box pulses with the band on the face.
- *   - **A full-course caution is two flags, not one.** The whole-track condition is waved left and
+ *   - **A full course yellow is two flags, not one.** The whole-track condition is waved left and
  *     right in turn, so it never looks like a local yellow, which is the panel solid.
  *   - **Movement means act.** A flag that ends or interrupts the race moves; a flag that informs is
  *     held, which is why blue is a still panel although it is the flag a driver sees most often.
@@ -279,7 +279,7 @@ export const CHEQUERED_INVERSE: Grid = [
   'CC..CC..',
 ];
 
-/** Full-course caution, the first of the two flags: half a panel, so it is never a local yellow. */
+/** Full course yellow, the first of the two flags: half a panel, so it is never a local yellow. */
 export const CAUTION_LEFT: Grid = [
   'YYYY....',
   'YYYY....',
@@ -291,7 +291,7 @@ export const CAUTION_LEFT: Grid = [
   'YYYY....',
 ];
 
-/** Full-course caution, the second flag. Two waved in turn is how the whole track is called. */
+/** Full course yellow, the second flag. Two waved in turn is how the whole track is called. */
 export const CAUTION_RIGHT: Grid = [
   '....YYYY',
   '....YYYY',

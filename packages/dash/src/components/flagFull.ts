@@ -14,7 +14,7 @@
  * headlight flash, are ranked and not drawn: the block is the flag that cannot be missed, and what the
  * driver's own hand has just done is not worth the gear for the length of a push to pass.
  * `CarAlert.neutral` says why their colour cannot stand without a name either. When the format first landed it drew the six
- * properties SimHub normalises, which meant that under a red flag or a full-course caution the band
+ * properties SimHub normalises, which meant that under a red flag or a full course yellow the band
  * named the condition and the block, having no state for it, drew nothing at all: the driver who had
  * asked for the flag that cannot be missed saw the least of it.
  *
@@ -38,7 +38,7 @@ import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
-import { ALERT_CATALOGUE, bandVisible, type AlertCondition } from '../flags.ts';
+import { ALERT_CATALOGUE, bandNames, bandVisible, type AlertCondition } from '../flags.ts';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
 /**
@@ -70,11 +70,18 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
  * never has to distinguish two things a driver can see side by side.
  *
+ * The full course yellow is not in the table, because its band already carries the two forms the
+ * block wants: FCY, which is a word like the others and is what the one size is measured against, and
+ * FULL COURSE YELLOW, which the block writes instead wherever it fits at the size the others have set,
+ * #497. That is the blocks wide for their height, and on the rest the block writes FCY. The long
+ * form never sets the size, since that would take every name on the block down to make room for one
+ * condition's name, which is the bargain the blue flag's detail is refused below.
+ *
  * **The blue flag's detail does not reach the block, and that is this table's own rule rather than
  * an omission.** Band D can name the car a blue flag is being waved for, because `BlueFlagDetail`
  * asks it to and sixty pixels of 15 px label have the room. Here one size serves every state and
  * that size is the widest name divided into the block, so `BLUE · P24 LMP2` would not shrink the
- * blue alone: it would set RED, BLACK and SAFETY at a third of their height on every face, which is
+ * blue alone: it would set RED, BLACK and FCY at a third of their height on every face, which is
  * every condition on the block paying for one. A block is the flag that cannot be missed, and a class
  * code half the face high is not what makes it one.
  */
@@ -86,7 +93,6 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
   furled: 'FURLED',
   black: 'BLACK',
   meatball: 'MEATBALL',
-  caution: 'SAFETY',
   yellowWaving: 'YELLOW',
   yellow: 'YELLOW',
   debris: 'DEBRIS',
@@ -99,17 +105,20 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
 };
 
 /**
- * The name, or the failure to build the face at all.
+ * The names the block can write for the condition, longest first, or the failure to build the face
+ * at all: the band's own two where the band has a short form, and the table's one word otherwise.
  *
  * Every face calls this for every condition, so a condition that reaches the catalogue without a
  * name on the block fails `bun run build` rather than drawing an unnamed colour. That is the same
  * gate `AlertBandSpec` is for the band, expressed as a throw because a `FlagCondition`'s id is a
  * string and no type can be made to refuse it.
  */
-const blockName = (condition: AlertCondition): string => {
+const blockNames = (condition: AlertCondition): readonly string[] => {
+  const band = bandNames(condition.band);
+  if (band.length > 1) return band;
   const name = BLOCK_NAMES[condition.id];
   if (name === undefined) throw new RangeError(`${condition.id} has no name on the full-screen block`);
-  return name;
+  return [name];
 };
 
 /** Whether the block draws the condition at all: everything but the two neutral alerts. */
@@ -121,8 +130,12 @@ const BLOCK_CONDITIONS: readonly AlertCondition[] = ALERT_CATALOGUE.filter(onThe
 /** Whether the condition carries a name at all. The chequer is the one that does not. */
 const named = (condition: AlertCondition): boolean => condition.band.shape !== 'chequer';
 
-/** Every name the format can draw, once each, which is what the one size is measured against. */
-export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.filter(named).map(blockName))];
+/**
+ * The name every condition the format draws must be able to write, once each, which is what the one
+ * size is measured against: the shortest of its names, so that a longer form is taken where it fits
+ * rather than shrinking every name on the face to make room for it.
+ */
+export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.filter(named).map((condition) => blockNames(condition).at(-1)!))];
 
 /**
  * One size for every name on a face: the sheets' fraction of the block, shrunk until the widest
@@ -139,6 +152,19 @@ export function flagFullNameSize(frame: Rect): number {
   const widestEm = Math.max(...FLAG_FULL_NAMES.map((name) => measureText('BarlowCondensedBold', name, 1)));
   return Math.max(1, Math.min(Math.floor(FLAG_FULL_NAME_RATIO * frame.height), Math.floor(room / widestEm)));
 }
+
+/**
+ * The name the block writes for the condition: the longest of its names that fits the block less its
+ * padding at the one size, measured in the face it is drawn in. The shortest always does, since the
+ * size is measured against it, so the full course yellow is FULL COURSE YELLOW on a block wide enough
+ * and FCY on the others, and it is decided here, when the block's size is known, rather than bound.
+ */
+const blockName = (condition: AlertCondition, frame: Rect): string => {
+  const size = flagFullNameSize(frame);
+  const room = frame.width - 2 * FLAG_FULL_NAME_PAD;
+  const names = blockNames(condition);
+  return names.find((name) => measureText('BarlowCondensedBold', name, size) <= room) ?? names.at(-1)!;
+};
 
 /**
  * The name, centred on the block.
@@ -243,9 +269,9 @@ const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[
   const spec = condition.band;
   switch (spec.shape) {
     case 'filled':
-      return filledFull(name, frame, spec.colour, blockName(condition), spec.flash ?? false);
+      return filledFull(name, frame, spec.colour, blockName(condition, frame), spec.flash ?? false);
     case 'outlined':
-      return outlinedFull(name, frame, spec.colour, blockName(condition));
+      return outlinedFull(name, frame, spec.colour, blockName(condition, frame));
     case 'chequer':
       return chequeredFull(name, frame);
   }

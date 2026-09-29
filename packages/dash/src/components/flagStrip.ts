@@ -15,7 +15,7 @@
  * `Flag_*` properties, which is the whole of what this file is for. Those six are a lossy summary:
  * `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one band, and
  * `Flag_Black` is only the `black` bit, so a red flag, a disqualification, a furled black, a
- * meatball, a full-course caution, the debris flag and the start gantry were invisible on the face
+ * meatball, a full course yellow, the debris flag and the start gantry were invisible on the face
  * and visible on the 8x8 box. The face, the box and the pit wall header now rank one list, so the
  * three cannot disagree about which of two live conditions wins.
  *
@@ -38,7 +38,7 @@ import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
-import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
+import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { CHIP_WIDEST } from '../second/chip.ts';
@@ -67,13 +67,33 @@ export function flagVisible(flag: FlagProperty): Expr {
   return and(...higher, eq(game(flag), num(1)));
 }
 
+/**
+ * A name fits the rectangle it would be centred on, with the band's own border cleared at each end.
+ *
+ * Strictly, and measured in Bold, which is the face the name is drawn in: SimHub hands the box to
+ * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph.
+ */
+const nameFits = (frame: Rect, text: string): boolean =>
+  measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < frame.width;
+
+/**
+ * The name a band writes over `frame`: the longest of the condition's names that fits it. That is the
+ * label on every band the build draws, the full course yellow's included, whose FCY is for a band too
+ * narrow for FULL COURSE YELLOW, #497. Where none fits it is the shortest, and `textFit.test.ts` is
+ * what refuses that rather than WPF clipping it.
+ */
+const nameOver = (frame: Rect, spec: AlertBandSpec): string => {
+  const names = bandNames(spec);
+  return names.find((text) => nameFits(frame, text)) ?? names.at(-1)!;
+};
+
 /** The shape the condition asks for, drawn over `frame`, with the name as a style asks for it. */
 const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
   switch (spec.shape) {
     case 'filled':
-      return filledBand(name, frame, style, spec.colour, spec.label, spec.flash ?? false);
+      return filledBand(name, frame, style, spec.colour, nameOver(frame, spec), spec.flash ?? false);
     case 'outlined':
-      return outlinedBand(name, frame, style, spec.colour, spec.label);
+      return outlinedBand(name, frame, style, spec.colour, nameOver(frame, spec));
     case 'chequer':
       return chequerBand(name, frame);
   }
@@ -233,31 +253,24 @@ export interface FlagCornerBlocks {
 }
 
 /**
- * The flag's name fits the block it would be centred on, with the band's own border cleared at each
- * end.
- *
- * Strictly, and measured in Bold, which is the face the name is drawn in: SimHub hands the box to
- * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph. A name
- * that does not fit is not shrunk and not clipped; it is simply not written, and the block is colour
- * alone, which is what the nano's twelve-pixel strip already is.
- *
- * All nineteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
- * so the answer comes out per face rather than per condition: on the four faces with no corner block a
- * settled flag is a colour, and a colour is a family rather than a member -- the three blacks are one
- * outlined sliver and the debris flag is a yellow. zones.md §6 weighs that against holding the whole
- * band for the length of a caution, and §10 records what the canvas still owes those four faces. A
- * neutral alert is the exception that has no colour to fall back on, and draws nothing there.
- */
-const cornerNameFits = (block: Rect, text: string): boolean =>
-  measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;
-
-/**
  * One end of the settled condition: its own shape, with its name where the block has room, and never
  * the run the whole band writes in place of the name.
+ *
+ * The name is the longest of the condition's names that fits the block, by the same measure as the
+ * whole band's. A name that does not fit is not shrunk and not clipped; it is simply not written, and
+ * the block is colour alone, which is what the nano's twelve-pixel strip already is.
+ *
+ * All nineteen labels fit all four corner-block sizes, FULL COURSE YELLOW being the widest of them,
+ * and none of the names fits the sixteen pixels of side padding, FCY included, so the answer comes out
+ * per face rather than per condition: on the four faces with no corner block a settled flag is a
+ * colour, and a colour is a family rather than a member -- the three blacks are one outlined sliver
+ * and the debris flag is a yellow. zones.md §6 weighs that against holding the whole band for the
+ * length of a caution, and §10 records what the canvas still owes those four faces. A neutral alert is
+ * the exception that has no colour to fall back on, and draws nothing there.
  */
 const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
   const spec = condition.band;
-  const labels = style.labels && spec.shape !== 'chequer' && cornerNameFits(block, spec.label);
+  const labels = style.labels && bandNames(spec).some((text) => nameFits(block, text));
   if (!labels && !drawnWithoutName(condition)) return [];
   return shapeParts(name, block, { ...style, labels }, spec);
 };

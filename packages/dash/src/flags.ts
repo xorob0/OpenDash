@@ -112,11 +112,24 @@ export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_B
  * It lives beside the condition rather than in the component for the reason `motion` does: a
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
  * cannot draw, and the type is what refuses it.
+ *
+ * A filled bar may carry a `short` form of its label, which is the name where the label does not fit.
+ * Every surface that writes the name writes the longest of the two that fits the room it has, so the
+ * name is as long as the room allows rather than as short as the smallest room. One condition has
+ * one, the full course yellow, whose FULL COURSE YELLOW is FCY on a block too narrow for it, #497; the
+ * others are short enough everywhere they are written, and a second form nobody reads would be a
+ * second name to keep in step with the first.
  */
 export type AlertBandSpec =
-  | { shape: 'filled'; colour: Hex; label: string; flash?: true; run?: BandRun }
+  | { shape: 'filled'; colour: Hex; label: string; short?: string; flash?: true; run?: BandRun }
   | { shape: 'outlined'; colour: Hex; label: string; run?: BandRun }
   | { shape: 'chequer' };
+
+/** The names a band can write for the condition, longest first, and none for the chequer. */
+export const bandNames = (spec: AlertBandSpec): readonly string[] => {
+  if (spec.shape === 'chequer') return [];
+  return spec.shape === 'filled' && spec.short !== undefined ? [spec.label, spec.short] : [spec.label];
+};
 
 /**
  * What the whole band writes in place of its label, for the one condition with a number to say: the
@@ -400,15 +413,18 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
   { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
   { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'filled', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
-  // Full-course caution: in iRacing this is the pace car being deployed, which is the closest
-  // honest reading of a safety car. It outranks a local yellow because it is the whole track.
+  // The full course yellow: iRacing's caution of the whole track, which is the pace car being
+  // deployed. It outranks a local yellow because it is the whole track. The canvas names it Safety
+  // car (7 · SafetyCar), and the name here is the one decided in #497, which docs/design/flag-box.md
+  // records against the canvas. It is the one name with a short form, since FULL COURSE YELLOW is
+  // too long for the full-screen block on most faces at the size the other names set.
   {
     id: 'caution',
-    name: 'Full-course caution',
+    name: 'Full course yellow',
     critical: true,
     motion: 'moves',
     bits: ['caution', 'cautionWaving'],
-    band: { shape: 'filled', colour: ds.purpose.alert.safetyCar, label: 'SAFETY CAR' },
+    band: { shape: 'filled', colour: ds.purpose.alert.safetyCar, label: 'FULL COURSE YELLOW', short: 'FCY' },
   },
   // The flash is the waved yellow's and not the standing yellow's, which is the rule the box keeps
   // under "waving is blinking". Band D used to flash on SimHub's `Flag_Yellow`, which folds the two
@@ -556,7 +572,7 @@ export const bandVisible = (condition: AlertCondition): Expr => conditionVisible
  * It exists so that "the flag has just changed" can be asked once instead of twenty times, and so
  * that it is asked of the right thing. A layer's own `conditionVisible` answers whether *this*
  * condition is winning; a clock needs a value that moves when the *winner* moves, and the two are
- * not the same question. A full-course caution clearing to the local yellow underneath it never
+ * not the same question. A full course yellow clearing to the local yellow underneath it never
  * moves the yellow's own bit, yet what the driver is being told has changed, so the yellow is owed
  * its moment on the whole band exactly as a fresh flag is.
  *
