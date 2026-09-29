@@ -266,6 +266,16 @@ namespace OpenDashPlugin
             plugin.SaveSettings();
         }
 
+        /// <summary>
+        /// Saves something the driver did to one screen, which also keeps that screen: a migrated screen
+        /// somebody has set up is one they have (ScreenInstance.Keep).
+        /// </summary>
+        private void Save(ScreenInstance screen)
+        {
+            screen.Keep();
+            Save();
+        }
+
         // --- The controls every tab uses --------------------------------------------------------
 
         /// <summary>SimHub's own switch (SHToggleButton), so that it looks like every other toggle in SimHub.</summary>
