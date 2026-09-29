@@ -105,8 +105,9 @@ against, at a constant `false`. Neither is what a re-record will write: the emul
 delta moving through the lap and the flag true once a lap has been completed, which in most of
 these scenarios is from the first frame. The pair is what the emulator publishes before a lap has
 been completed, and together they draw the level delta the other two references draw when they
-have nothing to compare against. Every trace was recorded with `OpenDash.DeltaReference` at `session`, so no
-replay of them reads either column; the next `bun run record` picks both up and drops the entries.
+have nothing to compare against. Every trace was recorded with `OpenDash.DeltaReference` at
+`session`, so no replay of them reads either column; the next `bun run record` picks both up and
+drops the entries.
 
 It added a third, `OpenDash.DeltaPrecision` at a constant `hundredths`, and unlike the two above this
 one is what a re-record will write. It is a setting rather than telemetry, a plugin nobody has opened

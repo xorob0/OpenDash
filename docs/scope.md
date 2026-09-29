@@ -204,9 +204,9 @@ and it states how far the line moved and what would move it further.
 The settings are the shift lights, the position mode, the delta reference and the places the delta
 is drawn to, the session progress mode, the four zones of the face (the page each shows, which pages
 are enabled, and the page it opens on), the quick glance, the bar's four end fields, twelve card
-slots, twenty-one companion module switches, five pit wall zone assignments and a web view address. Because they are ordinary
-SimHub properties, another dashboard or an LED profile can read them, and a change reaches the
-running dashboard at once without restarting SimHub or reopening the dashboard.
+slots, twenty-one companion module switches, five pit wall zone assignments and a web view address.
+Because they are ordinary SimHub properties, another dashboard or an LED profile can read them, and
+a change reaches the running dashboard at once without restarting SimHub or reopening the dashboard.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are the twelve card slots. Of the faces the plugin installs
 the only readers are the two round ones: `OpenDash 480 round` reads the first two and

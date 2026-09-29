@@ -278,10 +278,10 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480ZoneAStart` the one it opens on, `Face1920x480BarLeft1` a bar field and
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
-`OpenDash.DeltaPrecision` (`hundredths` or `thousandths`), `OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12`,
-`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallPage`, the pit wall's zones
-named for their page and letter (`OpenDash.PitWallRaceA`, `PitWallTowerWide`, `PitWallTelemetryC`
-and the rest) and `OpenDash.WebViewUrl`.
+`OpenDash.DeltaPrecision`, `OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to
+`OpenDash.Slot12`, `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallPage`, the
+pit wall's zones named for their page and letter (`OpenDash.PitWallRaceA`, `PitWallTowerWide`,
+`PitWallTelemetryC` and the rest) and `OpenDash.WebViewUrl`.
 
 `OpenDash.Slot01` to `OpenDash.Slot12` are read by two of the dashboards the plugin installs:
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
