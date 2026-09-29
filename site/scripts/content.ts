@@ -298,7 +298,11 @@ export const PIT_WALL_PAGES = ${json(PIT_WALL_PAGES)} as const;
 /** The flags, ranked: the first one that is out takes the surface. */
 export const FLAGS: SiteFlag[] = ${json(flags(FLAG_CATALOGUE))};
 
-/** Every strip shape the build writes a profile for, as a geometry: each is wired from either end too. */
+/**
+ * Every strip shape the build writes a profile for, before its far-end twin: the grid's geometries and
+ * the legacy rows, two of which are wirings (4/14/4 reversed and the Fanatec 3/9/3). Every shape on
+ * the grid also has a far-end twin, which is not listed.
+ */
 export const STRIP_SHAPES: SiteStripShape[] = ${json(stripShapes(BASE_SHAPES, LEGACY_SHAPES))};
 
 /** The lamps of a side of 0 to 5 LEDs, outermost first, indexed by the side's length. */

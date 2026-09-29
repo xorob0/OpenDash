@@ -22,7 +22,7 @@ const manifest: Manifest | null = existsSync(manifestPath) ? (JSON.parse(readFil
 describe('the strip shapes', () => {
   const shapes = stripShapes(BASE_SHAPES, LEGACY_SHAPES);
 
-  test('are the sixty-two geometries the build writes, five of them legacy', () => {
+  test('are the sixty-two shapes the build writes before their twins, five of them legacy', () => {
     // The far-end twins #503 generates are not listed: each is a wiring, installed by a switch on the
     // bar, and the one far-end shape here is the 4/14/4 that shipped as a row of its own.
     expect(shapes).toHaveLength(62);

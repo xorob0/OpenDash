@@ -21,10 +21,10 @@ const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileNa
 
 describe('the profile file names', () => {
   test('are the grid, less what a legacy shape already spells, plus the legacy shapes, plus a far-end twin of each plain one', () => {
-    // The count is the product of the two ranges rather than a number typed here, so widening a range
-    // moves it and dropping a shape from the legacy list moves it the other way. What is pinned is
-    // the arithmetic: every side against every centre, the long bare runs after them, and the shapes
-    // that shipped before the grid and fall outside it.
+    // The count is the product of the two ranges, and what is pinned first is that arithmetic: every
+    // side against every centre, the long bare runs after them, and the shapes that shipped before the
+    // grid and fall outside it. The total of 121 is then pinned as well, on purpose, as the #503
+    // count: it is the number of profiles in the DLL, so widening a range fails here and says so.
     expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
     const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
     const shapes = [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];

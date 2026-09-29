@@ -1004,7 +1004,7 @@ describe('what a release publishes', () => {
   });
 
   test('the LED profiles go into the released assembly gzipped, as they do in a local build', () => {
-    // Plain, they are some twenty megabytes of the DLL; scripts/package.sh has always gzipped them,
+    // Plain, they are some forty-four megabytes of the DLL; scripts/package.sh has always gzipped them,
     // and the release job has to agree now that its zip is the only file published.
     expect(workflow).toMatch(/gzip -9 -c "\$profile" > "\$profile\.gz"/);
     const local = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');

@@ -216,7 +216,7 @@ export const LEGACY_SHAPES: readonly StripShape[] = [
  * shape would be profiles "no device on earth answers to". That was true while a profile was the
  * rig's: one strip, one profile, and a driver who picked a shape picked a wiring with it. Since the
  * bar model a profile is installed per bar, and which way a strip is wired is a switch on the bar
- * rather than a shape the driver goes looking for, so a twin is not an entry in a list somebody has
+ * rather than a shape the driver goes looking for: a twin is not an entry in a list somebody has
  * to read. What it costs is bytes, about half a megabyte gzipped across the release; what it buys is
  * that a strip whose data line enters at the far end works on any geometry, rather than on the one
  * that happened to be spelled.
@@ -248,8 +248,10 @@ export function withReversedTwins(shapes: readonly StripShape[]): StripShape[] {
 }
 
 /**
- * The shapes as geometries: the grid, less anything a legacy shape already spells, and the legacy
- * shapes. What a driver counts on their strip, before any question of which end it is fed from.
+ * The shapes before their generated twins: the grid's geometries, less anything a legacy shape
+ * already spells, and the legacy rows, two of which are wirings rather than geometries (4/14/4
+ * reversed and the Fanatec 3/9/3). What a driver counts on their strip, before
+ * {@link withReversedTwins} adds the far-end wiring of each plain one.
  *
  * The one collision today is 3/10/3. The grid would generate a plain one and the GridSim device is
  * the same geometry with two further runs of nine wired after it, and both want the id `3-10-3`. The
