@@ -20,16 +20,17 @@
  * this stint has taken; laps since the stop multiplied by the rolling average is an estimate
  * wearing a measurement's label, which is the same objection the window answers to.
  *
- * The three lead values are one size rather than a hero and two peers. A hero is the top of its
- * ramp, so a rank holding one can never grow, and this page is drawn in boxes from 249 x 158 to
- * 437 x 510; rule 20 fills those only if the rank has somewhere left to go.
+ * The three lead values are one size rather than a hero and two peers. On the companion and the
+ * pit wall a hero is the top of its ramp, so a rank holding one can never grow there, and this page
+ * is drawn in boxes from 249 x 158 to 437 x 510. On a tall face the three are promoted together
+ * instead, which is the catalogue's own `tall` drawing, 76 over a 34 px rank; see `leadRankSize`.
  */
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, average5, clock, lapOfTotal, player, settledFuelTimeLeft } from '../second/values.ts';
-import { defineModule, fieldsRow, fld } from './module.ts';
+import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, timespanToSeconds, game } = ncalc;
 
@@ -41,18 +42,19 @@ export const stint = defineModule('stint', (ctx) => {
   const stops = isnull(driver('pitcount', me), num(0));
   const lastStop = timespanToSeconds(isnull(driver('pitlastduration', me), num(0)));
   const completed = isnull(game('CompletedLaps'), num(0));
+  const lead = leadRankSize(ctx);
   return stack(
     ctx.frame,
     [
       fieldsRow(
         [
-          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: d.big }),
+          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: lead }),
           // Gated on a completed lap for the reason `fuelIsSettled` gives: before one, SimHub is
           // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
           // The gate is on the seconds, so an unsettled range reads `-:--:--` as the stint time
           // beside it does when it has nothing to count, rather than `--` in a row of clocks.
-          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
-          fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: d.big }),
+          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: lead }),
+          fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: lead }),
         ],
         ctx,
       ),
