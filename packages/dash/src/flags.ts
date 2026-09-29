@@ -423,7 +423,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   // deployed. It outranks a local yellow because it is the whole track. The canvas names it Safety
   // car (7 · SafetyCar), and the name here is the one decided in #497, which docs/design/flag-box.md
   // records against the canvas. It is the one name with a short form, since FULL COURSE YELLOW is
-  // too long for the full-screen block on most faces at the size the other names set.
+  // too long for the full-screen block on the portrait screens to stay legible there.
   {
     id: 'caution',
     name: 'Full course yellow',

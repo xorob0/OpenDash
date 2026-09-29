@@ -24,6 +24,7 @@ import { ALERT_CATALOGUE, bandVisible, isFlag } from '../src/flags.ts';
 import { ncalc } from '../src/generator.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
+import { LINE_SPACING } from '../src/design/metrics.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
@@ -48,7 +49,7 @@ const BLOCK_STATES: readonly string[] = STATES.filter((id) => !NEUTRAL.has(id));
  * the face. The chequer is absent: it is the board and carries no name.
  *
  * The full course yellow is pinned in its short form, which is the one the size is measured against;
- * the block writes {@link CAUTION_LONG} instead where that fits, which {@link CAUTION_LONG_ON} pins.
+ * the block writes {@link CAUTION_LONG} instead wherever {@link cautionOn} says it stays legible.
  */
 const BLOCK_NAME: Record<string, string> = {
   ignition: 'IGNITION',
@@ -70,23 +71,30 @@ const BLOCK_NAME: Record<string, string> = {
   startReady: 'READY',
 };
 
-/** The full course yellow's whole name, which the block writes where it fits at the one size, #497. */
+/** The full course yellow's whole name, which the block writes at a size of its own, #497. */
 const CAUTION_LONG = 'FULL COURSE YELLOW';
 
 /**
- * The arrangements whose block writes the whole name, pinned for the reason the table is. The name is
- * as long as the room, and the room is the block's width at the size its height and the one-word names
- * set: wide and low blocks hold it, whereas a tall block sets a size at which it no longer fits, which
- * is why the 1280 x 720 face writes FCY where the 800 x 286 one writes the whole name.
+ * What the block writes for the full course yellow, and its size, derived here from the author's
+ * ruling on #497, "long wherever legible", rather than read from the component: FULL COURSE YELLOW at
+ * the largest whole-pixel size, no larger than the one size, at which it fits the block less its
+ * padding in the face it is drawn in, wherever that size is half the one size or more, and FCY at the
+ * one size otherwise. The half is written out rather than imported, since it is the ruling itself.
  */
-const CAUTION_LONG_ON: ReadonlySet<string> = new Set([
-  'OpenDash',
-  'OpenDash, rev bar off',
-  'OpenDash 1280x480',
-  'OpenDash 1280x400',
-  'OpenDash 1280x400, rev bar off',
-  'OpenDash 800x286',
-]);
+const cautionOn = (block: Rect): { text: string; size: number } => {
+  const shared = flagFullNameSize(block);
+  const room = block.width - 2 * FLAG_FULL_NAME_PAD;
+  let own = shared;
+  while (own > 0 && measureText('BarlowCondensedBold', CAUTION_LONG, own) > room) own--;
+  return own >= shared / 2 ? { text: CAUTION_LONG, size: own } : { text: BLOCK_NAME.caution!, size: shared };
+};
+
+/**
+ * Where a name's line box has its middle: WPF draws it `LINE_SPACING` of its size tall from the top of
+ * its box, the box's pixel of slack aside, so a name centred on the block has that middle on the
+ * block's own, within the pixel the box's top is rounded to.
+ */
+const centredOn = (block: Rect, item: TextItem): boolean => Math.abs(item.rect.top + (LINE_SPACING * item.fontSize) / 2 - (block.top + block.height / 2)) <= 1;
 
 /** Every arrangement of every face: the one the sheets draw, and the one with the rev bar's room given back. */
 const ARRANGEMENTS: { face: ZoneLayout; arrangement: ZoneLayout; revBar: boolean }[] = ZONE_FACES.flatMap((face) => [
@@ -278,25 +286,27 @@ describe('the full-screen name fits the block it is centred on', () => {
         expect({ face: face.folder, name, size, width, room, fits: width <= room }).toMatchObject({ fits: true });
       }
 
-      // The full course yellow is written whole exactly where the whole name fits at the size the
-      // one-word names have set, and as FCY everywhere else: the long form never sets the size.
-      const where = `${face.folder}${revBar ? '' : ', rev bar off'}`;
-      const long = measureText('BarlowCondensedBold', CAUTION_LONG, size) <= room;
-      expect({ where, long }).toEqual({ where, long: CAUTION_LONG_ON.has(where) });
-      const written = (id: string): string => (id === 'caution' && CAUTION_LONG_ON.has(where) ? CAUTION_LONG : BLOCK_NAME[id]!);
+      // The full course yellow is the one name with a size of its own, and the long form never sets
+      // the one size: it is written as `cautionOn` derives, and every other name at the one size.
+      const caution = cautionOn(block);
+      const written = (id: string): string => (id === 'caution' ? caution.text : BLOCK_NAME[id]!);
+      const sized = (id: string): number => (id === 'caution' ? caution.size : size);
 
       // As drawn: one name per state that carries one, in the block's own colours, and no wider than
       // the box SimHub hands WPF as MaxTextWidth.
       const full = groupOf(faceItems(arrangement, { revBar }), 'flagFull');
       const names = [...walkItems(full.children)].filter((i): i is TextItem => i.kind === 'text');
-      expect(names.map((n) => n.name)).toEqual(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => `flagFull.${id}.name`));
-      expect(names.map((n) => n.text)).toEqual(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map(written));
-      for (const item of names) {
-        expect({ item: item.name, font: item.font, weight: item.fontWeight, size: item.fontSize }).toMatchObject({ font: ds.font.data, weight: 'Bold', size });
+      const ids = BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined);
+      expect(names.map((n) => n.name)).toEqual(ids.map((id) => `flagFull.${id}.name`));
+      expect(names.map((n) => n.text)).toEqual(ids.map(written));
+      for (const [i, item] of names.entries()) {
+        expect({ item: item.name, font: item.font, weight: item.fontWeight, size: item.fontSize }).toMatchObject({ font: ds.font.data, weight: 'Bold', size: sized(ids[i]!) });
         const drawn = measureText('BarlowCondensedBold', item.text, item.fontSize);
         expect({ item: item.name, drawn, box: item.rect.width, fits: drawn <= item.rect.width }).toMatchObject({ fits: true });
-        // Centred on the block: the box spans it, so the name sits on its middle rather than on its own.
+        // Centred on the block: the box spans it, so the name sits on its middle rather than on its
+        // own, and its line box, at whichever size it is written, has its middle on the block's.
         expect({ item: item.name, left: item.rect.left, right: right(item.rect) }).toMatchObject({ left: block.left, right: right(block) });
+        expect({ item: item.name, centred: centredOn(block, item) }).toMatchObject({ centred: true });
         expect(item.hAlign).toBe('center');
       }
       // The chequer carries none, as it carries none on the band: #0A0B0D ink on a board that is
@@ -331,7 +341,7 @@ describe('the full-screen name fits the block it is centred on', () => {
     // yellow, would have made it 84, which is why the block does not simply write them. The three car
     // alerts it gained with #109, IGNITION, ENGINE and INCIDENT, are all narrower than MEATBALL and so
     // cost nothing, and so does the full course yellow of #497: the size is measured against FCY, and
-    // FULL COURSE YELLOW is written only where it fits at that size.
+    // FULL COURSE YELLOW is written at a size of its own.
     const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
     expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
     expect(FLAG_FULL_NAMES).toEqual([...new Set(BLOCK_STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);
@@ -458,25 +468,41 @@ const CAUTIONS: { where: string; block: Rect; name: TextItem }[] = (() => {
   return [...found.values()];
 })();
 
-describe('the full course yellow is as long as its block allows', () => {
-  test('which on the companions and the pit walls is FCY, their blocks being tall', () => {
-    // A companion's module and a pit wall's body are tall, so the one size is large and the whole
-    // name no longer fits across them: the pit wall's block is 1920 px wide and sets its names at 454.
-    const seconds = CAUTIONS.filter((c) => /Companion|Pit wall/.test(c.where));
-    expect(seconds.map((c) => ({ where: c.where, text: c.name.text }))).toEqual([
-      { where: 'OpenDash Companion 850 x 388', text: 'FCY' },
-      { where: 'OpenDash Companion portrait 480 x 758', text: 'FCY' },
-      { where: 'OpenDash Pit wall 1920 x 1016', text: 'FCY' },
-      { where: 'OpenDash Pit wall portrait 1080 x 1856', text: 'FCY' },
+describe('the full course yellow is written whole wherever it stays legible', () => {
+  test('which is every block the build draws but the portrait screens', () => {
+    // Eight faces in two arrangements each, two companions and two pit walls, as for the chequer.
+    expect(CAUTIONS.map((c) => c.where)).toHaveLength(20);
+
+    // The blocks that write FCY, pinned for the reason the table is: those on which FULL COURSE YELLOW
+    // would be under half the size of the other names, which are the three portrait screens. The one
+    // rule used to give nearly the reverse, FCY on the pit walls and the companions, whose blocks are
+    // tall and set a size the whole name could not fit across, and the whole name on 800 x 286.
+    expect(CAUTIONS.filter((c) => c.name.text !== CAUTION_LONG).map((c) => c.where)).toEqual([
+      'OpenDash 600x686 600 x 546',
+      'OpenDash 600x686 600 x 580',
+      'OpenDash Companion portrait 480 x 758',
+      'OpenDash Pit wall portrait 1080 x 1856',
     ]);
+
+    // And turning the rev bar off, which gives the block more height, no longer renames the flag:
+    // both arrangements of every face write the same form, whichever it is.
+    const forms = new Map<string, Set<string>>();
+    for (const { where, name } of CAUTIONS) {
+      const screen = where.replace(/ \d+ x \d+$/, '');
+      forms.set(screen, (forms.get(screen) ?? new Set()).add(name.text));
+    }
+    for (const [screen, written] of forms) expect({ screen, written: [...written], one: written.size === 1 }).toMatchObject({ one: true });
   });
 
   for (const { where, block, name } of CAUTIONS) {
-    test(`${where} writes the whole name exactly where it fits at the block's one size`, () => {
+    test(`${where} writes the form, at the size, that the ruling gives its block`, () => {
+      expect({ where, text: name.text, size: name.fontSize }).toEqual({ where, ...cautionOn(block) });
+      // And its box holds it at that size: as wide as the block, which the name fits less its
+      // padding, and centred on it as every other name is.
+      const drawn = measureText('BarlowCondensedBold', name.text, name.fontSize);
       const room = block.width - 2 * FLAG_FULL_NAME_PAD;
-      expect({ where, size: name.fontSize }).toEqual({ where, size: flagFullNameSize(block) });
-      const long = measureText('BarlowCondensedBold', CAUTION_LONG, name.fontSize) <= room;
-      expect({ where, text: name.text }).toEqual({ where, text: long ? CAUTION_LONG : BLOCK_NAME.caution! });
+      expect({ where, drawn, room, fits: drawn <= room, box: name.rect.width }).toMatchObject({ fits: true, box: block.width });
+      expect({ where, centred: centredOn(block, name) }).toMatchObject({ centred: true });
     });
   }
 });

@@ -51,6 +51,19 @@ import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
  */
 export const FLAG_FULL_NAME_RATIO = 0.447;
 
+/**
+ * The least share of the one size at which the full course yellow's whole name is written, below
+ * which the block writes FCY at the one size instead.
+ *
+ * The author's ruling on #497, "long wherever legible": FULL COURSE YELLOW is the condition's name,
+ * so the block writes it at a size of its own wherever that size keeps it legible, and half the size
+ * the other names are written at is the line the ruling draws. With it the form follows the width of
+ * the screen rather than the height of its block, which the rule it replaced got nearly backwards:
+ * that one wrote the whole name only where it fitted at the one size, so the pit wall and the
+ * 1280 x 720 face wrote FCY, and the 800 x 286 face the whole name.
+ */
+export const FLAG_FULL_LONG_NAME_MIN_RATIO = 0.5;
+
 /** Room left either side of the name, which is what the sheets' size is measured down to fit. */
 export const FLAG_FULL_NAME_PAD = ds.space[6];
 
@@ -59,8 +72,8 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * five the FaceVariants sheets drew.
  *
  * A table rather than the band's own label, because the block's name is a fact about the block's
- * width. One size serves every state, that size is the widest name divided into the block, and the
- * band writes "WHITE · LAST LAP": taking the labels as they are, FCY for the full course yellow,
+ * width. One size serves every name here, that size is the widest name divided into the block, and
+ * the band writes "WHITE · LAST LAP": taking the labels as they are, FCY for the full course yellow,
  * would set every name on the portrait face at 84 px where the sheets draw 244, which is neither the
  * block the sheets drew nor a word worth the body. Cut, the widest is MEATBALL, and the only face
  * that pays anything at all for the nine conditions the block did not use to have is the portrait
@@ -77,16 +90,17 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  *
  * The full course yellow is not in the table, because its band already carries the two forms the
  * block wants: FCY, which is a word like the others and is what the one size is measured against, and
- * FULL COURSE YELLOW, which the block writes instead wherever it fits at the size the others have set,
- * #497. That is the blocks wide for their height, and on the rest the block writes FCY. The long
- * form never sets the size, since that would take every name on the block down to make room for one
+ * FULL COURSE YELLOW, which the block writes instead at a size of its own wherever that size is at
+ * least {@link FLAG_FULL_LONG_NAME_MIN_RATIO} of the one size, #497. That is the block of every
+ * landscape screen, and on the portrait ones, whose blocks are narrow, it writes FCY. The long form
+ * never sets the one size, since that would take every name on the block down to make room for one
  * condition's name, which is the bargain the blue flag's detail is refused below.
  *
  * **The blue flag's detail does not reach the block, and that is this table's own rule rather than
  * an omission.** Band D can name the car a blue flag is being waved for, because `BlueFlagDetail`
- * asks it to and sixty pixels of 15 px label have the room. Here one size serves every state and
- * that size is the widest name divided into the block, so `BLUE · P24 LMP2` would not shrink the
- * blue alone: it would set RED, BLACK and FCY at a third of their height on every face, which is
+ * asks it to and sixty pixels of 15 px label have the room. Here one size serves every name in the
+ * table and that size is the widest name divided into the block, so `BLUE · P24 LMP2` would not shrink
+ * the blue alone: it would set RED, BLACK and FCY at a third of their height on every face, which is
  * every condition on the block paying for one. A block is the flag that cannot be missed, and a class
  * code half the face high is not what makes it one.
  */
@@ -137,8 +151,8 @@ const named = (condition: AlertCondition): boolean => condition.band.shape !== '
 
 /**
  * The name every condition the format draws must be able to write, once each, which is what the one
- * size is measured against: the shortest of its names, so that a longer form is taken where it fits
- * rather than shrinking every name on the face to make room for it.
+ * size is measured against: the shortest of its names, so that a longer form is written at a size of
+ * its own rather than shrinking every name on the face to make room for it.
  */
 export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.filter(named).map((condition) => blockNames(condition).at(-1)!))];
 
@@ -151,6 +165,9 @@ export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.f
  * SimHub hands the box to WPF as `MaxTextWidth` and clips the rest without a word, so the size is
  * measured down rather than quoted. One size rather than one per state, because the sheets quote one
  * figure per face and a block whose type changed size between two flags would read as two formats.
+ * The full course yellow's whole name is the one exception, since the author ruled that it is worth
+ * a smaller type wherever that type stays legible, #497, and {@link FLAG_FULL_LONG_NAME_MIN_RATIO}
+ * says where that is.
  */
 export function flagFullNameSize(frame: Rect): number {
   const room = frame.width - 2 * FLAG_FULL_NAME_PAD;
@@ -158,28 +175,39 @@ export function flagFullNameSize(frame: Rect): number {
   return Math.max(1, Math.min(Math.floor(FLAG_FULL_NAME_RATIO * frame.height), Math.floor(room / widestEm)));
 }
 
+/** A name as the block writes it: the text, and the size it is set at. */
+interface WrittenName {
+  text: string;
+  size: number;
+}
+
 /**
- * The name the block writes for the condition: the longest of its names that fits the block less its
- * padding at the one size, measured in the face it is drawn in. The shortest always does, since the
- * size is measured against it, so the full course yellow is FULL COURSE YELLOW on a block wide enough
- * and FCY on the others, and it is decided here, when the block's size is known, rather than bound.
+ * The name the block writes for the condition, and its size, decided here, when the block's size is
+ * known, rather than bound.
+ *
+ * A condition with one name writes it at the one size. The full course yellow writes FULL COURSE
+ * YELLOW at the largest whole-pixel size, no larger than the one size, at which it fits the block less
+ * its padding, measured in the face it is drawn in, wherever that size is at least
+ * {@link FLAG_FULL_LONG_NAME_MIN_RATIO} of the one size, and FCY at the one size everywhere else,
+ * which always fits, since the one size is measured against it.
  */
-const blockName = (condition: AlertCondition, frame: Rect): string => {
+const blockName = (condition: AlertCondition, frame: Rect): WrittenName => {
   const size = flagFullNameSize(frame);
+  const [long, short] = blockNames(condition);
+  if (short === undefined) return { text: long!, size };
   const room = frame.width - 2 * FLAG_FULL_NAME_PAD;
-  const names = blockNames(condition);
-  return names.find((name) => measureText('BarlowCondensedBold', name, size) <= room) ?? names.at(-1)!;
+  const own = Math.min(size, Math.floor(room / measureText('BarlowCondensedBold', long!, 1)));
+  return own >= FLAG_FULL_LONG_NAME_MIN_RATIO * size ? { text: long!, size: own } : { text: short, size };
 };
 
 /**
- * The name, centred on the block.
+ * The name, centred on the block at its own size.
  *
  * `numeral` rather than `label`, because the sheets set it in Barlow Condensed Bold and `label`
  * fixes its family to Barlow; proportional rather than in cells, because a name is not a value and
  * nothing about it ticks.
  */
-function flagFullName(name: string, frame: Rect, text: string, color: Hex): Item {
-  const size = flagFullNameSize(frame);
+function flagFullName(name: string, frame: Rect, { text, size }: WrittenName, color: Hex): Item {
   return numeral(name, text, frame.left, frame.top + (frame.height - size) / 2, size, { digits: 0, specials: 0 }, {
     proportional: true,
     weight: 'Bold',
@@ -205,9 +233,9 @@ const flashFull = (name: string, frame: Rect): RectangleItem => ({
 });
 
 /** A block filled with the alert's colour, named on the fill, flashing where the condition flashes. */
-const filledFull = (name: string, frame: Rect, colour: Hex, text: string, flash: boolean): Item[] => [
+const filledFull = (name: string, frame: Rect, colour: Hex, written: WrittenName, flash: boolean): Item[] => [
   band(`${name}.band`, frame, colour),
-  flagFullName(`${name}.name`, frame, text, ds.purpose.flag.onFlag),
+  flagFullName(`${name}.name`, frame, written, ds.purpose.flag.onFlag),
   ...(flash ? [flashFull(`${name}.flash`, frame)] : []),
 ];
 
@@ -219,9 +247,9 @@ const filledFull = (name: string, frame: Rect, colour: Hex, text: string, flash:
  * would be the white flag. The border stays for the reason it does on the band: a dark block on a
  * dark dash needs an edge to read as a block rather than as the face going out.
  */
-const outlinedFull = (name: string, frame: Rect, colour: Hex, text: string): Item[] => [
+const outlinedFull = (name: string, frame: Rect, colour: Hex, written: WrittenName): Item[] => [
   band(`${name}.band`, frame, ds.color.surface.base, { border: { color: colour, width: BLACK_FLAG_BORDER } }),
-  flagFullName(`${name}.name`, frame, text, colour),
+  flagFullName(`${name}.name`, frame, written, colour),
 ];
 
 /**

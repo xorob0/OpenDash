@@ -88,14 +88,17 @@ the author's choice for a panel eight columns wide (#499), [below](#the-four-dec
 and every surface that writes a name writes the longest that fits the room it has. On band D that is
 the whole name everywhere a word is written, since it fits every band and every corner block of the
 four faces that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no
-word at all, FCY included. The full-screen block is the surface where the room decides. It sets one
-size for every name from the widest of its one-word names, which is MEATBALL, and FCY is what the
-caution brings to that measure, so that the long form never shrinks the others; the block then writes
-FULL COURSE YELLOW where the whole name fits across it at that size. That is the 1920 face and the
-1280 × 400 face in both arrangements, and the 1280 × 480 and 800 × 286 faces with the rev bar on.
-Every other block writes FCY, the companions and the pit walls included, because a tall block sets a
-large size and the whole name no longer fits across it, which is why the pit wall, the widest screen
-of all, reads FCY. `flagFormat.test.ts` pins which block writes which.
+word at all, FCY included. The full-screen block is the surface where the room decides, and the
+author ruled on it "long wherever legible". The block sets one size for every name from the widest of
+its one-word names, which is MEATBALL, and FCY is what the caution brings to that measure, so that
+the long form never shrinks the others. FULL COURSE YELLOW then gets a size of its own, the largest
+whole-pixel size, no larger than the one size, at which it fits across the block less its padding,
+and the block writes it at that size wherever it is at least half the one size, and FCY at the one
+size otherwise. That is the whole name on every landscape screen, the pit wall and the companion
+included, and FCY on the three portrait ones only, namely the 600 × 686 face, the portrait companion
+and the portrait pit wall, where the whole name would be under half the size of the others. Moreover,
+the form does not depend on the rev bar, since both arrangements of every face write the same one.
+`flagFormat.test.ts` derives the rule on every block the build draws and pins which of them write FCY.
 
 **No flag's name says FLAG** (#497), where the canvas writes the word on every face: the seven face
 artboards and DashComponents draw "Yellow flag", "Blue flag", "Green flag" and "Black flag" on band D,
