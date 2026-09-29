@@ -10,6 +10,11 @@
 // The one other value it reads is SimHub's own, not ours: the best lap of the player's class, which
 // SimHub works out every frame and never publishes. DataUpdate copies it out of the finished frame so
 // a dashboard need not look it up in the one being built; Contract.ClassBestLap says why.
+//
+// And it reads the names of things, for the settings panel alone: the game, the car, the track and the
+// session, which the Home page prints beside what each device is showing and the LEDs page uses to say
+// whether the car is one the tables have measured (#503). Copied out of the frame when one of them
+// changes and nothing is computed from them; no dashboard reads them, so they are not properties.
 using System;
 using System.Linq;
 using System.Reflection;
@@ -424,6 +429,15 @@ namespace OpenDashPlugin
                 var run = length;
                 this.AttachDelegate(Contract.LedMirrorRun(run), () => CarLights.Run(run));
             }
+            // The rig-wide names of what a bar owns, after the runs as the contract declares them. Each
+            // answers for a strip nobody added as a bar, which reads these through its own isnull():
+            // the whole strip rather than a lamp, as bright as the rig, and everything it can draw.
+            this.AttachDelegate(Contract.LedSpotterWhole, () => Contract.DefaultLedSpotterWhole);
+            this.AttachDelegate(Contract.LedBrightness, () => (int?)null);
+            foreach (var setting in Contract.LedEffectSettings())
+            {
+                this.AttachDelegate(setting, () => Contract.DefaultLedEffect);
+            }
             // One group per bar the rig holds, under that bar's own namespace, which is what lets two
             // strips be configured apart: the profile installed for a bar carries these names as
             // literals, rewritten from the rig-wide ones above by LedBarProfile. The namespace is
@@ -436,6 +450,14 @@ namespace OpenDashPlugin
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedSpotterWhole), () => Settings.BarSpotterWhole(ns));
+                // Its own brightness, null while it follows the rig's, and one switch per effect, read
+                // through the first effect id each switch answers for. #503.
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedBrightness), () => Settings.BarBrightness(ns));
+                foreach (var setting in Contract.LedEffectSettings())
+                {
+                    var effect = Contract.LedEffectPrimaryId(setting);
+                    this.AttachDelegate(LedBarProfile.Property(ns, setting), () => Settings.BarEffectEnabled(ns, effect));
+                }
             }
         }
 
@@ -450,6 +472,26 @@ namespace OpenDashPlugin
         /// either.
         /// </remarks>
         private volatile object classBestLap;
+
+        /// <summary>
+        /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
+        /// data thread only when one of them changed, and read on the interface thread as one reference.
+        /// </summary>
+        private volatile LiveStatus live = LiveStatus.None;
+
+        /// <summary>What the rig is doing right now, as the panel names it. Never null.</summary>
+        public LiveStatus Live => live;
+
+        /// <summary>Whether the car in the session is one the fetched tables have measured, which is what
+        /// the LEDs page says beside the car's own rev lights. False with no car or no tables.</summary>
+        public bool LiveCarHasTable
+        {
+            get
+            {
+                var carId = live.CarId;
+                return !string.IsNullOrEmpty(carId) && CarLights.For(carId) != null;
+            }
+        }
 
         /// <summary>
         /// One frame of the car's own bar. The only telemetry OpenDash reads, and the only thing it
@@ -470,6 +512,17 @@ namespace OpenDashPlugin
                 classBestLap = data != null && data.GameRunning && data.NewData != null
                     ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
                     : null;
+
+                // What the panel names, replaced only when something in it moved, so the interface
+                // thread is not handed a new object sixty times a second.
+                var frame = data == null ? LiveStatus.None : new LiveStatus(
+                    data.GameName,
+                    data.GameRunning,
+                    data.NewData == null ? null : data.NewData.CarId,
+                    data.NewData == null ? null : data.NewData.CarModel,
+                    data.NewData == null ? null : data.NewData.TrackName,
+                    data.NewData == null ? null : data.NewData.SessionTypeName);
+                if (frame != live) live = frame;
 
                 var telemetry = data == null ? null : data.NewData;
                 // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
@@ -618,6 +671,8 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.ClockFormat, () => Settings.ClockFormat);
             // And the delta's precision, a choice on the Data tab like the reference it qualifies. #322.
             this.AttachDelegate(Contract.DeltaPrecision, () => Settings.DeltaPrecision);
+            // And whether a flag shows in the pit lane, which every surface that draws a flag asks. #503.
+            this.AttachDelegate(Contract.FlagsInPitLane, () => Settings.FlagsInPitLane);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -644,6 +699,13 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
                     this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
                     this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));
+                    // Where each zone's page sits in the order its driver chose, which the zone's header
+                    // counts; an expression cannot sort, so the plugin says. #503.
+                    foreach (var letter in Contract.FaceZoneLetters)
+                    {
+                        var captured = letter;
+                        this.AttachDelegate(Contract.ZonePositionProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Position(captured));
+                    }
                 }
                 else if (s.IsCompanion)
                 {

@@ -842,6 +842,22 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_plugin_attaches_the_names_the_panel_rebuild_added()
+        {
+            // OpenDash.cs holds SimHub's PluginManager and cannot be compiled here, so this reads it: a
+            // name declared and never attached is a package stuck on its isnull() default, which is how
+            // LedCentre and LedRpmStyle shipped. #503.
+            var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
+            Assert.Contains("this.AttachDelegate(Contract.FlagsInPitLane, () => Settings.FlagsInPitLane);", source);
+            Assert.Contains("this.AttachDelegate(Contract.ZonePositionProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Position(captured));", source);
+            Assert.Contains("this.AttachDelegate(Contract.LedSpotterWhole,", source);
+            Assert.Contains("this.AttachDelegate(Contract.LedBrightness, () => (int?)null);", source);
+            Assert.Contains("foreach (var setting in Contract.LedEffectSettings())", source);
+            Assert.Contains("this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedBrightness), () => Settings.BarBrightness(ns));", source);
+            Assert.Contains("this.AttachDelegate(LedBarProfile.Property(ns, setting), () => Settings.BarEffectEnabled(ns, effect));", source);
+        }
+
+        [Fact]
         public void The_retired_rev_looks_become_left_to_right()
         {
             // The set keeps four values, so a file naming a retired one is still legal; what moves is
