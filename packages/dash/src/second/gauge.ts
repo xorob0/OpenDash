@@ -18,7 +18,7 @@ export interface LevelGaugeOptions {
   track?: Hex;
   /** Fill colour; text.primary by default. */
   fill?: Hex;
-  /** Live fill colour, e.g. fuel.low under a lap of fuel. */
+  /** Live fill colour, e.g. fuel.low under the rig's low-fuel threshold (`tankIsLow`). */
   fillBind?: Expr;
   min?: number;
   max?: number;

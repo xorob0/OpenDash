@@ -3,7 +3,7 @@
  * lighting profile from another.
  *
  * SimHub gives its RGB strips and its 8x8 matrix the same `.ledsprofile` extension, so a build drops
- * twenty files of two different kinds into one folder and the plugin embeds them side by side. Its
+ * a hundred and twenty-two files of two different kinds into one folder and the plugin embeds them side by side. Its
  * only discriminator is the file name: `FlagBoxProfile.SelectResource` takes the name it is looking
  * for and accepts nothing else, so a shape collects its own profile and the matrix driver is never
  * handed a ten-LED strip. That defence is only as good as the names being distinct, and the names

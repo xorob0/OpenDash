@@ -2021,7 +2021,11 @@ function defaultByUnit(byUnit: Record<string, number>): Expr {
   return iff(eq(unit, str('Fahrenheit')), num(byUnit.Fahrenheit ?? celsius), iff(eq(unit, str('Kelvin')), num(byUnit.Kelvin ?? celsius), num(celsius)));
 }
 
-/** Every property the flag box profile reads. */
+/**
+ * Every property of the lights' own that the flag box profile reads. It also reads the shared
+ * `OpenDash.FlagsInPitLane`, which is declared in the dash group rather than here, and which the
+ * plugin attaches whatever lights are installed; every strip reads it the same way.
+ */
 export function flagBoxProperties(): string[] {
   // Five, not nine. Critical flags only, the gear and the two temperature thresholds moved under
   // the matrix that owns them; what is left is the rig's brightness trio and the one low-fuel

@@ -170,7 +170,7 @@ export const CENTRE_LENGTHS: readonly number[] = [4, 5, 6, 7, 8, 9, 10, 11, 12];
  * A brow of twenty-five is one run of twenty-five and nothing at its ends, so it is 0/25/0 and needs
  * no idea of its own; the only reason these are a second range rather than a wider centre is that a
  * *wheel* with twenty-five LEDs in the middle and four at each end does not exist, and generating
- * the fifty-two shapes that would cover costs a release fifteen megabytes of files nobody can use.
+ * the fifty-two shapes that would cover costs every build and every plugin files nobody can use.
  */
 export const BARE_RUN_LENGTHS: readonly number[] = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
 
@@ -217,9 +217,13 @@ export const LEGACY_SHAPES: readonly StripShape[] = [
  * rig's: one strip, one profile, and a driver who picked a shape picked a wiring with it. Since the
  * bar model a profile is installed per bar, and which way a strip is wired is a switch on the bar
  * rather than a shape the driver goes looking for: a twin is not an entry in a list somebody has
- * to read. What it costs is bytes, about half a megabyte gzipped across the release; what it buys is
- * that a strip whose data line enters at the far end works on any geometry, rather than on the one
- * that happened to be spelled.
+ * to read. What it costs is bytes, about half a megabyte gzipped across the release, and work in the
+ * panel: the Install tab inflates every embedded strip profile each time it builds its rows, and the
+ * Lights tab does the same for every bar it looks up, so the twins double that from about 21 MB of
+ * JSON a call to 43 MB, each profile a string on net48's large object heap. Caching the texts once a
+ * session, or reading only the one resource a bar needs by name, is the plugin's follow-up. What it
+ * buys is that a strip whose data line enters at the far end works on any geometry, rather than on
+ * the one that happened to be spelled.
  *
  * A twin is made for a shape with no `positions` of its own and no `-reversed` or `-fanatec` suffix,
  * and not where a `-reversed` sibling is already spelled, which is the 4/14/4 that shipped as a row.

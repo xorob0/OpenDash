@@ -11,7 +11,7 @@
 //
 // WHICH of the embedded profiles this is about is decided by name, and that is the whole of the
 // discriminator. SimHub gives both of its lighting families the same ".ledsprofile" extension: the
-// RGB LED strips the build now emits nineteen of, and the 8x8 matrix the flag box is. So the
+// RGB LED strips the build now emits a hundred and twenty-one of, and the 8x8 matrix the flag box is. So the
 // extension says nothing about which driver a file belongs to, and "the first .ledsprofile in the
 // assembly" -- which is what this used to take -- became a ten-LED RPM strip the moment the strips
 // were embedded, and would have been handed to RGBMatrixDriver.Settings.AddProfile as the flag box.
