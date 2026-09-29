@@ -1320,6 +1320,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(112, removed.LightsWaterTemp);
             foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(130, removed.MatrixOilTemp(matrix));
 
+            // Nor when slot 1's panel left its box at 0, which is the profile's default and not an
+            // answer: a Left nobody touched beside a Right set to 130 and 112 is a rig that asked for
+            // 130 and 112 once, and the two are read apart. Zero only when no named panel set one.
+            var untouched = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[\"Left\",\"Right\",null,null],\"FlagBoxMatrixOilTemp\":[0,130,0,0],\"FlagBoxMatrixWaterTemp\":[105,112,0,0]}");
+            untouched.Normalise();
+            Assert.Equal(130, untouched.LightsOilTemp);
+            Assert.Equal(105, untouched.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(130, untouched.MatrixOilTemp(matrix));
+            var unset = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[\"Left\",null,null,null],\"FlagBoxMatrixOilTemp\":[0,150,0,0]}");
+            unset.Normalise();
+            Assert.Equal(0, unset.LightsOilTemp);
+
             // Once the rig has an answer, a hand-edited panel entry is put back to it on the next load.
             settings.FlagBoxMatrixOilTemp[2] = 90;
             settings.Normalise();

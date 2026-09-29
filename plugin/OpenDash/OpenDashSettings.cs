@@ -265,7 +265,9 @@ namespace OpenDashPlugin
         /// Settings page asks it once (#503). The four per-panel arrays stay, because they are what the
         /// published FlagBoxMatrix&lt;N&gt;OilTemp names read and an LED profile of any vintage reads
         /// them; NormaliseLights and <see cref="SetLightsOilTemp"/> keep all four equal to this. A file
-        /// written before this existed takes matrix 1's value, which is the one a single box had.
+        /// written before this existed takes the first named panel's value that is not zero, or zero
+        /// when every named panel left its box at the default; a file that names no panel takes matrix
+        /// 1's, which is the one a single box had. See NormaliseLightsTemps.
         /// </remarks>
         public int? LightsOilTemp { get; set; }
 
@@ -718,9 +720,9 @@ namespace OpenDashPlugin
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
             NormaliseMatrixPanels();
-            // After both of those: a file that predates the rig-wide thresholds takes the first panel's,
-            // which may be where a legacy scalar just went, and which panel is first is only known once
-            // the names are.
+            // After both of those: a file that predates the rig-wide thresholds takes a named panel's,
+            // which may be where a legacy scalar just went, and which panels are named is only known
+            // once the names are.
             NormaliseLightsTemps();
             NormaliseLedBars();
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
@@ -736,30 +738,41 @@ namespace OpenDashPlugin
         /// written into every panel's entry so that what is published per panel is the rig's answer.
         /// </summary>
         /// <remarks>
-        /// The first slot with a name rather than slot 1, because removing a panel leaves its thresholds
-        /// behind in the slot: a rig that added Left and Right and then removed Left still has Left's
-        /// numbers in slot 1, and they are not what the box on the rig warns at. A file with no names at
-        /// all is from before panels were instances, and there slot 1 was the one box.
+        /// The named slots rather than slot 1, because removing a panel leaves its thresholds behind in
+        /// the slot: a rig that added Left and Right and then removed Left still has Left's numbers in
+        /// slot 1, and they are not what the box on the rig warns at. A file with no names at all is from
+        /// before panels were instances, and there slot 1 was the one box.
+        ///
+        /// Among the named panels, the first that set a number rather than the first in order: zero is
+        /// "the profile's default", which a panel holds because nobody touched its box, so a Left at 0
+        /// beside a Right at 130 is a rig that asked for 130 once. Oil and water are chosen apart, for
+        /// the same reason. Zero only when no named panel set one.
         /// </remarks>
         private void NormaliseLightsTemps()
         {
-            var first = FirstPanelSlot();
-            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, first, 0);
-            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, first, 0);
+            if (!LightsOilTemp.HasValue) LightsOilTemp = LegacyTemp(FlagBoxMatrixOilTemp);
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = LegacyTemp(FlagBoxMatrixWaterTemp);
             if (LightsOilTemp.Value < 0) LightsOilTemp = 0;
             if (LightsWaterTemp.Value < 0) LightsWaterTemp = 0;
             FillTemps();
         }
 
-        /// <summary>The first slot holding a panel, or 1 when none does.</summary>
-        private int FirstPanelSlot()
+        /// <summary>A threshold for a file that predates the rig's: the first named panel's that is
+        /// not zero, or matrix 1's when no panel is named. See <see cref="NormaliseLightsTemps"/>.</summary>
+        private int LegacyTemp(int[] temps)
         {
-            if (FlagBoxMatrixName == null) return 1;
-            for (var i = 0; i < FlagBoxMatrixName.Length; i++)
+            var named = false;
+            if (FlagBoxMatrixName != null)
             {
-                if (FlagBoxMatrixName[i] != null) return i + 1;
+                for (var i = 0; i < FlagBoxMatrixName.Length; i++)
+                {
+                    if (FlagBoxMatrixName[i] == null) continue;
+                    named = true;
+                    var value = Pick(temps, i + 1, 0);
+                    if (value > 0) return value;
+                }
             }
-            return 1;
+            return named ? 0 : Pick(temps, 1, 0);
         }
 
         private void FillTemps()
@@ -778,7 +791,7 @@ namespace OpenDashPlugin
         public void SetLightsOilTemp(int value)
         {
             LightsOilTemp = value < 0 ? 0 : value;
-            if (!LightsWaterTemp.HasValue) LightsWaterTemp = Pick(FlagBoxMatrixWaterTemp, FirstPanelSlot(), 0);
+            if (!LightsWaterTemp.HasValue) LightsWaterTemp = LegacyTemp(FlagBoxMatrixWaterTemp);
             FillTemps();
         }
 
@@ -786,7 +799,7 @@ namespace OpenDashPlugin
         public void SetLightsWaterTemp(int value)
         {
             LightsWaterTemp = value < 0 ? 0 : value;
-            if (!LightsOilTemp.HasValue) LightsOilTemp = Pick(FlagBoxMatrixOilTemp, FirstPanelSlot(), 0);
+            if (!LightsOilTemp.HasValue) LightsOilTemp = LegacyTemp(FlagBoxMatrixOilTemp);
             FillTemps();
         }
 
