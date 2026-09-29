@@ -64,5 +64,24 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("$\"{(x ? \"a//b\" : \"c\")} //kept\"", code);
             Assert.Contains("@\"C:\\x \"\"//\"\" y\"", code);
         }
+
+        /// <summary>
+        /// A glance re-bound through SimHub's Change command is corrected too. Change edits the mapping in
+        /// place (trigger.PressType = pressType in 9.12.6) and the Triggers collection does not move, so the
+        /// correction watches each mapping's own PropertyChanged, and the model's for a replaced collection.
+        /// </summary>
+        [Fact]
+        public void A_glance_rebound_in_place_is_held_again()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
+            var start = code.IndexOf("private static void HoldWhilePressed(", StringComparison.Ordinal);
+            Assert.True(start >= 0, "HoldWhilePressed is in the shell");
+            var body = code.Substring(start, code.IndexOf("private static Button BuildLink(", start, StringComparison.Ordinal) - start);
+            Assert.Contains("mapping.PropertyChanged += pressTypeChanged;", body);
+            Assert.Contains("mapping.PropertyChanged -= pressTypeChanged;", body);
+            Assert.Contains("args.PropertyName == \"PressType\"", body);
+            Assert.Contains("watched.PropertyChanged += modelChanged;", body);
+            Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
+        }
     }
 }

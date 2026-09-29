@@ -850,7 +850,9 @@ namespace OpenDashPlugin
         /// obvious way gets a page that appears and vanishes in one frame.
         ///
         /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
-        /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
+        /// second-guessed. The dialog writes into Model.Triggers, and SimHub's Change command edits a mapping
+        /// already there in place (btnChange_Click in 9.12.6 sets trigger.PressType and leaves the collection
+        /// alone), so this watches the model, its collection, and every mapping in it.
         ///
         /// Decided in #435, and kept as a correction rather than turned into a warning: a warning would leave
         /// in place a binding that cannot hold anything, and there is no press type but `During` a driver
@@ -863,26 +865,61 @@ namespace OpenDashPlugin
             // SimHub's own Loaded handler replaces Model with a new ControlsEditorModel every time the editor
             // is shown (ControlsEditor_Loaded in 9.12.6), and the Add dialog writes into that new model's
             // Triggers. Watching only the first model missed every glance bound on the page, so the watch
-            // follows Model wherever it goes.
+            // follows Model wherever it goes, and Triggers when the model replaces it.
             ControlsEditorModel watched = null;
-            System.Collections.Specialized.NotifyCollectionChangedEventHandler changed = null;
-            Action<ControlsEditorModel> apply = model =>
+            System.Collections.ObjectModel.ObservableCollection<InputMapping> watchedTriggers = null;
+            var watchedMappings = new List<InputMapping>();
+            System.ComponentModel.PropertyChangedEventHandler pressTypeChanged = null;
+            System.ComponentModel.PropertyChangedEventHandler modelChanged = null;
+            System.Collections.Specialized.NotifyCollectionChangedEventHandler collectionChanged = null;
+
+            Action<InputMapping> hold = mapping =>
             {
-                if (model == null || model.Triggers == null) return;
-                foreach (var mapping in model.Triggers)
+                if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
+            };
+            // Every mapping in the collection is watched for its press type, and the watch moves with the
+            // collection: what left it is let go of, what joined it is watched and corrected.
+            Action rewatchMappings = () =>
+            {
+                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= pressTypeChanged;
+                watchedMappings.Clear();
+                if (watchedTriggers == null) return;
+                foreach (var mapping in watchedTriggers)
                 {
-                    if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
+                    if (mapping == null) continue;
+                    mapping.PropertyChanged += pressTypeChanged;
+                    watchedMappings.Add(mapping);
+                    hold(mapping);
                 }
             };
-            changed = (sender, args) => apply(watched);
+            Action rewatchTriggers = () =>
+            {
+                var triggers = watched == null ? null : watched.Triggers;
+                if (!ReferenceEquals(triggers, watchedTriggers))
+                {
+                    if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
+                    watchedTriggers = triggers;
+                    if (watchedTriggers != null) watchedTriggers.CollectionChanged += collectionChanged;
+                }
+                rewatchMappings();
+            };
+            pressTypeChanged = (sender, args) =>
+            {
+                if (args.PropertyName == null || args.PropertyName == "PressType") hold(sender as InputMapping);
+            };
+            collectionChanged = (sender, args) => rewatchMappings();
+            modelChanged = (sender, args) =>
+            {
+                if (args.PropertyName == null || args.PropertyName == "Triggers") rewatchTriggers();
+            };
             Action attach = () =>
             {
                 var model = editor.Model;
                 if (ReferenceEquals(model, watched)) return;
-                if (watched != null && watched.Triggers != null) watched.Triggers.CollectionChanged -= changed;
+                if (watched != null) watched.PropertyChanged -= modelChanged;
                 watched = model;
-                if (watched != null && watched.Triggers != null) watched.Triggers.CollectionChanged += changed;
-                apply(watched);
+                if (watched != null) watched.PropertyChanged += modelChanged;
+                rewatchTriggers();
             };
             editor.PropertyChanged += (sender, args) =>
             {
