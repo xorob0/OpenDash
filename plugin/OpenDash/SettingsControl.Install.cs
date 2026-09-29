@@ -19,7 +19,6 @@ namespace OpenDashPlugin
         private TextBlock dashboardTitle;
         private Border statusHost;
         private Button reinstallButton;
-        private TextBlock reinstallLabel;
         private TextBlock updateLine;
         private Button updateButton;
         private Button restoreButton;
@@ -31,9 +30,11 @@ namespace OpenDashPlugin
         /// <summary>Where an Update pressed on a remembered offer draws its progress, once the listing it asked
         /// for has answered. Null when no such press is waiting.</summary>
         private Border pendingApply;
-        private bool confirmingEdited;
         private bool applying;
-        private bool confirmingReinstall;
+
+        /// <summary>The question Update or Reinstall has put on the update line, if either has. It outlives the tab,
+        /// and does not need forgetting with the controls: a question counts only while its line shows it.</summary>
+        private readonly PanelConfirmation confirmation = new PanelConfirmation();
 
         /// <summary>The plugin's, not the panel's own: the check Init queued and the one this panel asks for are the
         /// same service, so the releases either found are the ones the Update button applies.</summary>
