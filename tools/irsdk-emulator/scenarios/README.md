@@ -18,7 +18,7 @@ capture from the next.
 | `pit` | In the stall with the limiter on and the service order set to four tyres, fuel and a tear-off. The car is stationary, so the rev sweep, the gear model, the lap timer and the fuel burn are all off. Three other cars are put in the pit lane so the table has PIT chips in it. |
 | `gallery` | The green lap arranged so every page has something to draw, for the website's captures: a longer session, two cars held at an exact gap for the radar, a pass through the pit lane so the stint counters start, the next stop's service order pinned, and the heading swept a full turn per lap so SimHub records a closed outline. Photograph it after two laps have gone by; `bun run shots` waits for them. |
 | `clip` | The gallery lap with the rev sweep run from 5000 to 9100 over three seconds, so a six-second clip catches two gear changes and the shift lights at the top of each sweep. `bun run clips` uses it. |
-| `quali` | A timed qualifying run in a car with no in-car TC or ABS, so the settings strip has to close over two cells that are simply not there, and the session counts time rather than laps. |
+| `quali` | A timed qualifying run in a car with no in-car TC or ABS, so the settings strip has to close over two cells that are simply not there, and the session counts time rather than laps. It selects the weekend's qualifying session, session 1 of `race-session.yaml`, so SimHub names it `Lone Qualify` and the pit wall header reads it; until #307 it was a timed race under a qualifying name. |
 
 ## The scenario that moves on purpose
 
@@ -104,7 +104,7 @@ the only scenario that drives states nothing on the screen shows, and
 
 `notc.json` is the same field in a car with no `dcTractionControl` or `dcABS` at all — SimHub then
 reports level 0 and the dashes have to show `--` rather than a zero — in a timed race rather than
-a lap-counted one. `quali.json` extends it.
+a lap-counted one. `quali.json` extends it and moves the telemetry to the qualifying session.
 
 ## Checking one
 

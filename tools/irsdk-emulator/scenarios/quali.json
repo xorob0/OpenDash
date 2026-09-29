@@ -1,15 +1,25 @@
 {
   // A timed qualifying run in a car with no in-car traction control or ABS: the assist cards show
-  // their no-data state and the session card counts time rather than laps.
+  // their no-data state, the session card counts time rather than laps, and SimHub names the session
+  // "Lone Qualify", so a surface that reads `SessionTypeName` sees a qualifying session.
+  //
+  // It selects session 1 of race-session.yaml, which is the weekend's qualifying and already fifteen
+  // minutes with unlimited laps, rather than dressing up the race as one: SimHub takes
+  // GameData.SessionTypeName from the session whose SessionNum matches the telemetry's, so until
+  // #307 this scenario was a timed race with a qualifying name and its trace read "Race". The field's
+  // standings are routed into that session, and the race after it holds none.
   "extends": "notc.json",
   "name": "Timed qualifying, car without TC or ABS controls",
   "yaml": {
-    "RaceSessionLaps": "unlimited",
-    "RaceSessionTime": "900.0000 sec",
     "TcSetting": "",
-    "AbsSetting": ""
+    "AbsSetting": "",
+    "QualifyResultsPositions": "\n{{ResultsPositions}}",
+    "QualifyResultsFastestLap": "\n{{ResultsFastestLap}}",
+    "RaceResultsPositions": "",
+    "RaceResultsFastestLap": "\n   - CarIdx: 255\n     FastestLap: 0\n     FastestTime: -1.0000"
   },
   "variables": [
+    {"name": "SessionNum", "value": 1},
     {"name": "SessionFlags", "value": "green", "pin": true},
     {"name": "SessionTimeTotal", "value": 900.0},
     {"name": "SessionTimeRemain", "value": 412.0},

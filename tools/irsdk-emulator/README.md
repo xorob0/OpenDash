@@ -158,7 +158,7 @@ Driver writes never touch pinned elements.
 | `fuelBurn` | `litersPerLap` 2.9, `maxLiters` 100, `kgPerLiter` 0.75, `minLiters` 0.5 | FuelLevel (refills at `minLiters`), FuelLevelPct, FuelUsePerHour |
 | `flagCycle` | `period` 8, `sequence` [none, yellow, blue, white, green, black, checkered], `base` (always OR'd), `var` | SessionFlags |
 | `pitLimiterToggle` | `period` 5, `bit` 0x10, `var` EngineWarnings | toggles the PitSpeedLimiter bit, dcPitSpeedLimiterToggle |
-| `field` | `cars` [{idx, class, pace, pct, lap, pit, last, best, bestLap}], `pace` 98, `jitter` 0.5, `resultsInterval` 5, `yamlIndent` 3, `pitCars` [idx...] | all CarIdx* arrays for the listed cars (lap, completed, pct, surface, pit road, position, class position, class, F2Time gap to leader, EstTime, last/best lap, gear/rpm), RaceLaps, SessionLapsRemain(Ex), PlayerCarPosition/ClassPosition; the player car follows `lapTimer`; renders `{{ResultsPositions}}` / `{{ResultsFastestLap}}` into the YAML |
+| `field` | `cars` [{idx, class, pace, pct, lap, pit, last, best, bestLap}], `pace` 98, `jitter` 0.5, `resultsInterval` 5, `yamlIndent` 3, `pitCars` [idx...] | all CarIdx* arrays for the listed cars (lap, completed, pct, surface, pit road, position, class position, class, F2Time gap to leader, EstTime, last/best lap, gear/rpm), RaceLaps, SessionLapsRemain(Ex), PlayerCarPosition/ClassPosition; the player car follows `lapTimer`; renders `{{ResultsPositions}}` / `{{ResultsFastestLap}}`, which the scenario routes into the running session |
 | `sine` | `var`, `index` 0, `min`, `max`, `period`, `phase` | any variable follows a sine |
 | `toggle` | `var`, `index` 0, `period` 2, `on` 1, `off` 0 | any variable toggles |
 | `clock` | – | explicit placement of the session clock |
@@ -183,8 +183,16 @@ give cars different paces if you want overtakes. Cars in `pitCars` (or `"pit": t
 ### Session YAML template
 
 `scenarios/race-session.yaml` is a real-looking iRacing session string (1-space indentation, `---`/`...` markers,
-`\n` line endings, ASCII). Placeholders: `{{RaceSessionLaps}}`, `{{RaceSessionTime}}`, `{{ResultsPositions}}`,
-`{{ResultsFastestLap}}`, `{{TcSetting}}`, `{{AbsSetting}}`. It contains everything SimHub reads:
+`\n` line endings, ASCII). Placeholders: `{{RaceSessionLaps}}`, `{{RaceSessionTime}}`, `{{RaceSessionType}}`,
+`{{QualifyResultsPositions}}` / `{{QualifyResultsFastestLap}}`, `{{RaceResultsPositions}}` / `{{RaceResultsFastestLap}}`,
+`{{TcSetting}}`, `{{AbsSetting}}` and the car's shift lights. It contains everything SimHub reads.
+
+A value may itself name a placeholder, and is expanded in turn. That is how the field driver's standings reach the
+session that is running: the driver renders `{{ResultsPositions}}` and `{{ResultsFastestLap}}`, and the scenario
+routes them into that session's pair, `"RaceResultsPositions": "\n{{ResultsPositions}}"` in `race.json` and the
+qualifying pair in `quali.json`, whose `SessionNum` is 1. SimHub reads the standings, the lap count and
+`SessionTypeName` off the session the telemetry's `SessionNum` points at, and `--selfcheck` checks that the
+standings are in that one.
 
 * `WeekendInfo`: TrackName, TrackID, TrackLength (`"7.00 km"`, SimHub parses the km suffix), TrackDisplayName,
   TrackConfigName, TrackPitSpeedLimit (`"60.00 kph"`), EventType, NumCarClasses, HeatRacing, WeekendOptions (NumStarters ...), TelemetryOptions

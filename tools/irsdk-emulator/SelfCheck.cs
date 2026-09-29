@@ -275,6 +275,14 @@ namespace IrsdkEmulator
             Check(!t.Dirty, "unchanged value keeps template clean");
             t.Set("a", "2");
             Check(t.Dirty && t.RenderIfChanged(out var r2) && r2.StartsWith("A: 2"), "changed value re-renders");
+            t.SetTemplate("A: {{a}}\n");
+            t.Set("a", "{{b}}");
+            t.Set("b", "routed");
+            Check(t.Render() == "A: routed\n", "a value naming a placeholder is expanded in turn");
+            t.Set("b", "{{a}}");
+            bool threw = false;
+            try { t.Render(); } catch (InvalidOperationException) { threw = true; }
+            Check(threw, "a cycle of placeholders is refused rather than rendered forever");
         }
 
         private static readonly string[] RequiredKeys =
@@ -291,6 +299,30 @@ namespace IrsdkEmulator
             "LFwearM", "RFwearM", "LRwearL", "LRwearM", "LRwearR", "RRwearM", "Yaw", "YawNorth", "Pitch", "Roll", "LapDist", "VelocityX", "VelocityY", "VelocityZ",
             "LatAccel", "LongAccel", "VertAccel", "SessionState", "PlayerCarClassPosition", "LapBestLap", "SessionLapsRemain", "SessionLapsRemainEx",
         };
+
+        /// <summary>
+        /// The session the telemetry's SessionNum points at is in the session string, and it is the one holding
+        /// the standings (#307).
+        /// </summary>
+        /// <remarks>
+        /// SimHub indexes Sessions[SessionNum] directly for the lap count and takes SessionTypeName from the same
+        /// session, so a SessionNum with no session behind it throws inside SimHub, and standings rendered into a
+        /// different session than the one running leave the leaderboard empty.
+        /// </remarks>
+        private static void CheckLiveSession(string yaml, int sessionNum, bool hasField)
+        {
+            string marker = " - SessionNum: " + sessionNum + "\n";
+            int start = yaml.IndexOf(marker, StringComparison.Ordinal);
+            Check(start >= 0, "SessionNum " + sessionNum + " names a session in the YAML");
+            if (start < 0) return;
+            int next = yaml.IndexOf(" - SessionNum: ", start + marker.Length, StringComparison.Ordinal);
+            int end = yaml.IndexOf("\n\n", start, StringComparison.Ordinal);
+            if (end < 0) end = yaml.Length;
+            if (next >= 0 && next < end) end = next;
+            string session = yaml.Substring(start, end - start);
+            if (hasField && yaml.Contains("- Position: "))
+                Check(session.Contains("- Position: "), "the standings are in session " + sessionNum + ", the one running");
+        }
 
         private static void CheckScenario(string path)
         {
@@ -316,6 +348,7 @@ namespace IrsdkEmulator
                     Check(yaml.Contains(key), "YAML contains " + key);
                 Check(!yaml.Contains("{{"), "no unresolved {{placeholders}} in YAML");
                 Check(yaml.IndexOf('\r') < 0, "YAML uses \\n line endings");
+                CheckLiveSession(yaml, (int)runner.Vars.Get("SessionNum"), runner.Vars.Has("CarIdxPosition"));
 
                 int missing = 0;
                 foreach (var k in RequiredKeys) if (!runner.Vars.Has(k)) { missing++; Console.WriteLine("  missing variable: " + k); }
