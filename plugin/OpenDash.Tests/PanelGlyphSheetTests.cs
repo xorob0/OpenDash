@@ -13,6 +13,12 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelGlyphSheetTests
     {
+        /// <summary>See PanelLightRowsTests: on CI the dash artifact has already been downloaded into
+        /// Resources/, so a sheet missing there is the build and the plugin having parted company.</summary>
+        private static bool OnCI =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
+
         private const string Y = "\"#FFD400\"";
         private const string K = "null";
 
@@ -121,7 +127,17 @@ namespace OpenDashPlugin.Tests
                     break;
                 }
             }
-            if (path == null) return; // the dash build has not written it in this checkout
+            if (path == null)
+            {
+                // Locally, the dash build has not written it in this checkout. On CI the dash artifact is
+                // in Resources/ before the tests run, and the csproj embeds the sheet only when it is
+                // there, so a missing sheet is a plugin shipping blank Rig tiles and nothing else says so.
+                Assert.False(
+                    OnCI,
+                    "no flag-box-glyphs.json in " + RepoPaths.BuildOutput() + " or " + RepoPaths.EmbeddedResources()
+                        + ". CI downloads the dash artifact into Resources/ before `dotnet test`, and the artifact has to carry the sheet.");
+                return;
+            }
 
             var sheet = PanelGlyphSheet.Parse(File.ReadAllText(path, Encoding.UTF8));
             Assert.True(sheet.Count > 20, "only " + sheet.Count + " glyphs in " + path);
