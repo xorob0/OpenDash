@@ -200,12 +200,14 @@ export const densityForBox = (box: { width: number; height: number }): Density =
   box.width < 320 || box.height < 220 ? 'compact' : 'zone';
 
 /**
- * The named sizes of a density, smallest first. This is the ramp, and it is the only ladder a
- * value is allowed to move along.
- *
- * Rule 20 is written against it: a rank grows until it meets an edge, and one of the three edges
- * is the next size up here. That ceiling is what separates filling a box from scaling into one --
- * a page that has spent its room is the same drawing one size larger, not a page stretched.
+ * True for the two densities a face's zones are drawn at, which are the two `densityForBox` chooses
+ * between. The companion draws at its own and the pit wall at `panel` and `wide`.
+ */
+export const isFace = (density: Density): boolean => density === 'zone' || density === 'compact';
+
+/**
+ * The named sizes of a density, smallest first. This is the ramp: the sizes a page is drawn at
+ * before rule 20 grows it, and on the companion and the pit wall the limit of that growth.
  */
 export const rampOf = (density: Density): readonly number[] => {
   const d = densityOf(density);
@@ -217,3 +219,31 @@ export function nextOnRamp(fs: number, density: Density): number {
   for (const size of rampOf(density)) if (size > fs) return size;
   return fs;
 }
+
+/**
+ * How far rule 20 takes a page on a face past the sizes it is drawn at: the canvas's own figure.
+ *
+ * Every `FaceVariants` sheet embeds the catalogue's drawing of each page, reflows it to that face's
+ * real zone and grows it "as one, hierarchy intact, until it meets the width, the height or a
+ * ceiling of ×2.2 (rule 20)", and chips the factor each page reached, from ×1.02 to ×2.2. A ratio
+ * rather than a size, so it is cited here rather than defined in the tokens, as pit view's ratio is.
+ */
+export const FACE_GROWTH = 2.2;
+
+/**
+ * The largest size rule 20 may grow a value drawn at `fs` to. **The rule's third edge.**
+ *
+ * It is two answers, because the canvas draws the two kinds of surface two ways. A face's zone is a
+ * rectangle the catalogue never drew -- it draws each page at four archetype sizes -- so the page is
+ * the catalogue's drawing taken to a box of another size, and the sheets take it up to ×2.2. The
+ * companion and the pit wall are drawn on artboards of their own screens, at the sizes they are
+ * built at, so a page there is already the drawing of its box and grows no further than the next
+ * name on its ramp: what is left to spend is the difference between the artboard's box and the
+ * build's, and not a factor of two.
+ *
+ * The ramp step was the answer on faces too until #330. It cost a page a factor of about 1.35 in
+ * every box, the smallest step of any ramp being 34 to 46, and a factor of exactly one where the
+ * lead was already at the top of its ramp, which is to say on the pages whose one number is the
+ * reason for the page. zones.md §2 has the argument.
+ */
+export const grownAtMost = (fs: number, density: Density): number => (isFace(density) ? fs * FACE_GROWTH : nextOnRamp(fs, density));

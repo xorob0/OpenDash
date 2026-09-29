@@ -27,7 +27,7 @@ import { MODULES, pageBuilder } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
-import { densityForBox, densityOf, nextOnRamp } from '../src/second/density.ts';
+import { densityForBox, densityOf, grownAtMost } from '../src/second/density.ts';
 import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
@@ -1123,7 +1123,8 @@ describe('the opponents name is the relative\'s', () => {
  * below it. Rule 20 reaches the page now, and what is held here is its three edges and where the rest
  * goes:
  *
- * - both cars' gaps are one size, never under the density's `big` and never past the next size up;
+ * - both cars' gaps are one size, never under the density's `big` and never past `grownAtMost`, which
+ *   is rule 20's third edge: ×2.2 on a face and the next size up the ramp elsewhere;
  * - where the gap stopped short of that size on a page that sheds nothing, the box stopped it: the
  *   height, which leaves the canvas's twelve either side of the rule, or the width, which leaves the
  *   gap row within a step of the right edge;
@@ -1146,7 +1147,7 @@ describe('the opponents blocks grow with their box', () => {
       const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
       const text = (name: string): TextItem => items.find((i): i is TextItem => i.kind === 'text' && i.name === name)!;
       const d = densityOf(box.density);
-      const ceiling = nextOnRamp(d.big, box.density);
+      const ceiling = Math.floor(grownAtMost(d.big, box.density));
       const [ahead, behind] = [text('ahead.gap.value'), text('behind.gap.value')];
       expect({ box: box.name, ahead: ahead.fontSize, behind: behind.fontSize }).toEqual({ box: box.name, ahead: behind.fontSize, behind: behind.fontSize });
       expect({ box: box.name, gap: ahead.fontSize, big: d.big, ceiling, onTheRamp: ahead.fontSize >= d.big && ahead.fontSize <= ceiling }).toMatchObject({ onTheRamp: true });

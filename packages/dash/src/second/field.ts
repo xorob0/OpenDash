@@ -20,7 +20,7 @@ import { mark, unmarked, type Mark } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
-import { densityOf, nextOnRamp, type Density, type DensitySpec } from './density.ts';
+import { densityOf, grownAtMost, type Density, type DensitySpec } from './density.ts';
 import { charsOfText, drawnWithin, textWidth, type DrawnWidth } from './drawn.ts';
 import { rank } from './rank.ts';
 
@@ -527,8 +527,9 @@ export const raggedness = (lines: readonly (readonly FieldSpec[])[]): number =>
   lines.length <= 1 ? 0 : Math.max(...lines.map((l) => l.length)) - Math.min(...lines.map((l) => l.length));
 
 /**
- * How far a set of fields may grow before the smallest step on the ramp would carry one of them
- * past the next named size. **Rule 20's third edge.**
+ * How far a set of fields may grow before one of them would pass `grownAtMost`. **Rule 20's third
+ * edge**, as a factor: ×2.2 on a face, and on the companion and the pit wall the smallest step
+ * the ramp takes from any of their sizes.
  *
  * The minimum over the fields rather than over the largest of them, because a rank grows by one
  * factor: letting the 46 px value reach 64 while the 34 px one beside it passed 46 would be two
@@ -539,7 +540,7 @@ export function growthCeiling(specs: readonly FieldSpec[], density: Density): nu
   for (const spec of specs) {
     const fs = spec.value.fs;
     if (fs <= 0) continue;
-    ceiling = Math.min(ceiling, nextOnRamp(fs, density) / fs);
+    ceiling = Math.min(ceiling, grownAtMost(fs, density) / fs);
   }
   return Number.isFinite(ceiling) ? Math.max(1, ceiling) : 1;
 }

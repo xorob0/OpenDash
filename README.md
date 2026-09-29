@@ -125,8 +125,9 @@ earns it the space: it carries what does not change during a lap, two fields at 
 car settings your sim publishes between them.
 
 A page is never scaled. It is laid out for the shape of the box it is given: it sheds its secondary
-rows before it shrinks its numerals, and it grows to fill a box it does not fill — until it meets
-the height, the width, or the next size up its own type ramp, whichever comes first. So a bigger
+rows before it shrinks its numerals, and it grows to fill a box it does not fill — every size on it
+by the same factor, until it meets the height, the width, or 2.2 times the size it was drawn at,
+whichever comes first. So a bigger
 screen shows more in each zone, and what it does show is drawn at a size that suits the room rather
 than at whatever size the smallest screen settled on.
 

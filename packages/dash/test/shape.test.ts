@@ -21,7 +21,7 @@ import {
   shapeOf,
   widthBandOf,
 } from '../src/second/shape.ts';
-import { densityForBox, densityOf, nextOnRamp, rampOf, type Density } from '../src/second/density.ts';
+import { FACE_GROWTH, densityForBox, densityOf, grownAtMost, nextOnRamp, rampOf, type Density } from '../src/second/density.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { fieldsRow } from '../src/modules/module.ts';
@@ -289,17 +289,51 @@ describe('a rank fills the box it is given', () => {
     }
   });
 
-  test('and never past the next size up its ramp', () => {
-    for (const density of ['compact', 'zone', 'companion'] as const) {
-      // A box far larger than any zone, so neither the height nor the width is what stops it.
-      const items = valuesOf(lapTimes().build({ frame: rect(0, 0, 4000, 4000), density, prefix: 'b.' }));
-      const lead = Math.max(...items.map((i) => i.fontSize));
+  /**
+   * The mechanism alone: a lead at the density's `big` over a rank at its `mid`, with no page's
+   * declaration or drawing in the way, in a box far larger than any zone so that neither the height
+   * nor the width is what stops it.
+   */
+  const unbounded = (density: Density): { lead: number; next: number } => {
+    const ctx = { frame: rect(0, 0, 4000, 4000), density, prefix: 'r.' };
+    const d = densityOf(density);
+    const at = (id: string, fs: number): FieldSpec => ({ name: `r.${id}`, id, label: id.toUpperCase(), value: { sample: '1:42.905', chars: { digits: 6, specials: 2 }, fs } });
+    const drawn = valuesOf(stack(ctx.frame, [fieldsRow([at('lead', d.big)], ctx), fieldsRow([at('next', d.mid)], ctx)], density));
+    const size = (id: string): number => drawn.find((i) => i.name === `r.${id}.value`)?.fontSize ?? 0;
+    return { lead: size('lead'), next: size('next') };
+  };
+
+  test('and never past its third edge, which is ×2.2 on a face and the next size up the ramp elsewhere', () => {
+    for (const density of ['compact', 'zone', 'companion', 'panel'] as const) {
+      const { lead } = unbounded(density);
       const big = densityOf(density).big;
-      // It grew, and it stopped at the ramp. Not *on* the next size: the ceiling is the smallest
-      // step in the stack, so lap times over a 34 px delta stop when the delta reaches 46 and the
-      // times are at 62 rather than 64. A rank grows by one factor or its sizes stop meaning what
-      // they meant.
-      expect({ density, grew: lead > big, past: lead > nextOnRamp(big, density) }).toEqual({ density, grew: true, past: false });
+      expect({ density, grew: lead > big, past: lead > grownAtMost(big, density) }).toEqual({ density, grew: true, past: false });
+    }
+  });
+
+  test("on a face the edge is the canvas's own factor, whatever the sizes on the page", () => {
+    // Every FaceVariants sheet grows the catalogue's drawing "until it meets the width, the height or
+    // a ceiling of ×2.2". The ramp step this replaced was the smallest step of any size in the stack:
+    // about 1.35 wherever a page mixed 46 and 34, and exactly 1 wherever the lead was at the top of
+    // its ramp, which froze the pages whose one number is the page (#330).
+    for (const density of ['compact', 'zone'] as const) {
+      const { lead, next } = unbounded(density);
+      const d = densityOf(density);
+      expect({ density, lead }).toEqual({ density, lead: Math.floor(d.big * FACE_GROWTH) });
+      // One factor for the stack, so the rank under the lead keeps its proportion to it.
+      expect({ density, ratio: Math.abs(next / lead - d.mid / d.big) < 0.01 }).toEqual({ density, ratio: true });
+    }
+  });
+
+  test('and on the companion and the pit wall it is the smallest step of the ramp, since their artboards are drawn at their own size', () => {
+    for (const density of ['companion', 'panel'] as const) {
+      const { lead } = unbounded(density);
+      const d = densityOf(density);
+      // Not *on* the next size: the ceiling is the smallest step in the stack, so a lead over a rank
+      // one step down stops when that rank reaches the lead's own size. A rank grows by one factor or
+      // its sizes stop meaning what they meant.
+      const step = Math.min(nextOnRamp(d.big, density) / d.big, nextOnRamp(d.mid, density) / d.mid);
+      expect({ density, lead }).toEqual({ density, lead: Math.floor(d.big * step) });
     }
   });
 
@@ -335,9 +369,9 @@ describe('a rank fills the box it is given', () => {
     // Taller than the density's own drawing needs, so there is room to spend.
     expect({ grew: lead(290) > big }).toEqual({ grew: true });
     expect({ grew: lead(328) > big }).toEqual({ grew: true });
-    // And never past the next name on the ramp, which is the edge that makes it filling rather
-    // than scaling. The gauge is still four pixels either way.
-    expect({ past: lead(328) > nextOnRamp(big, 'zone') }).toEqual({ past: false });
+    // And never past rule 20's third edge, which on a face is the canvas's ×2.2. The gauge is still
+    // four pixels either way.
+    expect({ past: lead(328) > grownAtMost(big, 'zone') }).toEqual({ past: false });
   });
 
   test('and a stack it cannot grow whole it does not grow at all', () => {
