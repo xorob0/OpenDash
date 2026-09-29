@@ -283,7 +283,7 @@ namespace OpenDashPlugin
             // edited in Dash Studio while the question is open is one the question did not name, and the second press
             // has to see it in order to ask again.
             plugin.Installer.Refresh();
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             var question = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
             var press = confirmation.Press(ReplacingAction.Update, edited, question, updateLine.Text);
             if (press == PressOutcome.Ask)
@@ -479,7 +479,7 @@ namespace OpenDashPlugin
 
             // From the disk at the press, for the reason ApplyUpdate reads it there.
             plugin.Installer.Refresh();
-            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            var edited = plugin.Installer.EditedFolders;
             var question = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
                 + ": " + string.Join(", ", edited)
                 + ". Reinstalling replaces your version. A copy is kept, and \"Put mine back\" restores it.";
@@ -497,12 +497,16 @@ namespace OpenDashPlugin
             {
                 // Every screen on the rig, a second one of a size included: the installer reads the rig and
                 // writes each folder with the screen's own name and namespace, so there is nothing to add after.
+                var writing = DateTime.UtcNow;
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
                 var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
                 var held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                // A font this press put into DashFonts is not drawn until SimHub restarts, so reopening, which is
+                // enough for everything else a reinstall writes, would leave that face missing.
+                var wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
                 updateLine.Text = held > 0
-                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them."
-                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
+                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them." + (wroteFonts ? " " + UpdateWording.RestartToSee : string.Empty)
+                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.ToSee(wroteFonts);
                 updateLine.Visibility = Visibility.Visible;
             }
             catch (Exception ex)

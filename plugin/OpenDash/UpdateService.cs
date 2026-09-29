@@ -55,6 +55,10 @@ namespace OpenDashPlugin
         /// <summary>Why the plugin could not be staged, when the dashboards went in and it did not.</summary>
         public string PluginReason { get; set; }
 
+        /// <summary>Whether the dashboards this run wrote brought a font into DashFonts, which the running SimHub
+        /// cannot draw until it restarts (<see cref="UpdateWording.RestartToSee"/>).</summary>
+        public bool FontsWritten { get; set; }
+
         /// <summary>What to tell the user afterwards, including the reopen sentence when anything changed.</summary>
         public string Line
         {
@@ -64,7 +68,7 @@ namespace OpenDashPlugin
                 {
                     var failure = "The update did not finish: " + (Reason ?? "no reason given") + ".";
                     // What did land still has to be said, or a person cannot tell what state they are in.
-                    return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.Reopen;
+                    return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.ToSee(FontsWritten);
                 }
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
                 if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced: you have edited all of them. ";
@@ -82,7 +86,7 @@ namespace OpenDashPlugin
                         : UpdateWording.RestartWithDashboards(FollowPlugin.Count, EditedFollowing.Count, ReplaceEditedOnRestart));
                 }
                 if (PluginReason != null) line += "OpenDash itself could not be updated (" + PluginReason + "). ";
-                return line + UpdateWording.Reopen;
+                return line + UpdateWording.ToSee(FontsWritten);
             }
         }
     }
@@ -247,6 +251,7 @@ namespace OpenDashPlugin
             // Everything is in hand before anything on disk is touched, so a download that fails half way through
             // leaves the machine as it was rather than half updated.
             var target = new DashboardInstaller(installer.SimHubRoot, log, downloaded, installer.Record);
+            var writing = DateTime.UtcNow;
             if (plan.IsEmpty) progress?.Invoke(1);
             else target.EnsureInstalled(force: true, replaceEdited: replaceEdited, progress: within => progress?.Invoke(0.5 + within * 0.5));
 
@@ -282,6 +287,7 @@ namespace OpenDashPlugin
                 Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
                 PluginStaged = pluginStaged,
                 PluginReason = staged == null || staged.Ok ? null : staged.Error,
+                FontsWritten = PackageExtractor.FacesWrittenSince(installer.SimHubRoot, writing) > 0,
             };
         }
 

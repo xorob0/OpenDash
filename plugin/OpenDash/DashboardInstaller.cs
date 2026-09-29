@@ -17,6 +17,15 @@ namespace OpenDashPlugin
 
         /// <summary>SimHub reloads DashFonts through FontHelper.RefreshFonts(). The class is internal in SimHub 9.12.6,
         /// so it is reached by reflection; when it is missing the fonts load at the next SimHub start.</summary>
+        /// <remarks>
+        /// It rebuilds SimHub's list of families and does not make a newly copied face drawable, which #441 measured
+        /// on the VM. WPF reads DashFonts through a DirectWrite font collection that the process builds the first
+        /// time it enumerates the folder and keeps, under the folder's URI, until it exits; RefreshFonts asks for
+        /// the same URI and is handed the same collection, so a face copied afterwards -- even a family SimHub has
+        /// never seen -- is not in it, and emptying WPF's own family cache and collecting the old objects changed
+        /// nothing. Only a new SimHub process draws such a face, which is why an install into a running one that
+        /// wrote a font says to restart (UpdateWording.RestartToSee).
+        /// </remarks>
         partial void RefreshSimHubFonts()
         {
             try

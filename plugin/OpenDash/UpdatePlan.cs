@@ -36,6 +36,11 @@ namespace OpenDashPlugin
         /// has, and adding a screen size somebody never asked for is the dashboard manager's business (#84), not
         /// an update's. The arithmetic is real rather than hypothetical: the build produces twenty-two packages and
         /// v0.1.0-rc.2 published fourteen, so both directions of mismatch already exist.
+        ///
+        /// Of those, only the rig's. A folder outside it is installed here and is nevertheless left as it is by every
+        /// run (ADR 0017), the start that follows an update included, so it is neither fetched nor counted among the
+        /// dashboards that follow the plugin: counted, it made the sentence after an update promise a leftover
+        /// folder that nothing then wrote, and carried a yes to replacing it across the restart (#468).
         /// </remarks>
         public static UpdatePlan For(IEnumerable<PackageStatus> installed, ReleaseInfo release)
         {
@@ -45,7 +50,7 @@ namespace OpenDashPlugin
             foreach (var package in installed)
             {
                 var folder = package?.FolderName;
-                if (string.IsNullOrEmpty(folder) || package.InstalledVersion == null) continue;
+                if (string.IsNullOrEmpty(folder) || package.InstalledVersion == null || package.OutsideRig) continue;
                 var asset = release.AssetFor(folder);
                 if (asset == null || string.IsNullOrWhiteSpace(asset.DownloadUrl)) missing.Add(folder);
                 else items.Add(new UpdateItem { FolderName = folder, Asset = asset });

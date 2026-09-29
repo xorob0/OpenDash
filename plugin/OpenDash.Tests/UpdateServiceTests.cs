@@ -279,6 +279,39 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Contains("Close and reopen the dashboard", outcome.Line);
             Assert.DoesNotContain("restart SimHub", outcome.Line);
+            Assert.False(outcome.FontsWritten);
+        }
+
+        /// <summary>
+        /// An update whose dashboard brings a face the rig does not have says to restart, because reopening does not
+        /// draw it.
+        /// </summary>
+        /// <remarks>
+        /// This is #441's run A in miniature: rc.6 installed with two faces, rc.7 adding openDashDisplay-Light.ttf,
+        /// written into a running SimHub. The face was copied and the dashboard reopened, and the wordmark still drew
+        /// in a heavier face, since SimHub reads DashFonts once per run. Saying "close and reopen" there was the
+        /// false half of the sentence.
+        /// </remarks>
+        [Fact]
+        public void An_update_that_brings_a_new_face_says_to_restart_rather_than_reopen()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("0.1.0", record, "OpenDash");
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] =
+                SyntheticPackage.Zip("OpenDash", "0.2.0", ("OpenDash/_SHFonts/openDashDisplay-Light.ttf", "font-light")).ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.True(outcome.Ok);
+            Assert.True(outcome.FontsWritten);
+            Assert.True(File.Exists(Path.Combine(root, PackageExtractor.DashFonts, "openDashDisplay-Light.ttf")));
+            Assert.EndsWith(UpdateWording.RestartToSee, outcome.Line);
+            Assert.DoesNotContain("reopen", outcome.Line);
         }
 
         /// <summary>
@@ -525,6 +558,51 @@ namespace OpenDashPlugin.Tests
             // And the yes to replacing it is carried across the restart for it as well.
             Assert.Equal(new[] { "OpenDash Rim (2)" }, outcome.EditedFollowing);
             Assert.True(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(UpdateWording.RestartWithDashboards(2, 1, true), outcome.Line);
+        }
+
+        /// <summary>
+        /// A leftover folder somebody edited, which no screen on the rig is written from, is asked about by nothing and
+        /// counted by nothing: the start that follows writes the rig's folders and leaves it as it is (#468).
+        /// </summary>
+        /// <remarks>
+        /// The plan was read from every entry the installer had, so the Companion left over from before ADR 0017 was
+        /// among the dashboards said to come with the plugin and among the edited ones a yes was carried across the
+        /// restart for: "3 dashboards, 2 of them yours" for a start that wrote two and replaced one.
+        /// </remarks>
+        [Fact]
+        public void A_leftover_folder_outside_the_rig_neither_follows_the_plugin_nor_is_asked_about()
+        {
+            const string package = "OpenDash 850x480.simhubdash";
+            var wheel = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Face850x480", Name = "Tim wheel", Folder = "OpenDash 850x480", Package = package };
+            var rim = new ScreenInstance { Kind = Contract.KindFace, Width = 850, Height = 480, Namespace = "Rim2", Name = "Rim (2)", Folder = "OpenDash Rim (2)", Package = package };
+            var source = new DownloadedPackageSource()
+                .Add(package, SyntheticPackage.Instanceable("OpenDash 850x480", "Face850x480", "0.1.0").ToArray())
+                .Add("OpenDash Companion.simhubdash", SyntheticPackage.Zip("OpenDash Companion", "0.1.0").ToArray());
+            var record = new MemoryFolderRecord();
+            // Written by a plugin from before ADR 0017, which wrote every package it carried.
+            new DashboardInstaller(root, null, source, record).EnsureInstalled(false);
+            var installer = new DashboardInstaller(root, null, source, record) { Rig = () => new[] { wheel, rim } };
+            installer.EnsureInstalled(false);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash Companion", "OpenDash Companion.djson"), "{\"mine\":true}");
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash Rim (2)", "OpenDash Rim (2).djson"), "{\"rim\":true}");
+            installer.Refresh();
+
+            // The question the Update button asks before it downloads anything.
+            Assert.Equal(new[] { "OpenDash Rim (2)" }, installer.EditedFolders);
+
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(outcome.Ok);
+            Assert.Equal(new[] { "OpenDash 850x480", "OpenDash Rim (2)" }, outcome.FollowPlugin);
+            Assert.Equal(new[] { "OpenDash Rim (2)" }, outcome.EditedFollowing);
+            Assert.Empty(outcome.NotCarried);
             Assert.Equal(UpdateWording.RestartWithDashboards(2, 1, true), outcome.Line);
         }
 
