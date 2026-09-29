@@ -19,6 +19,14 @@
     // literal so that a scenario can leave it blank, which is the one state #406's notice is for
     // and which no scenario could reach while every one of them named a session.
     "RaceSessionType": "Race",
+    // Which session the field driver's standings go to. The driver renders {{ResultsPositions}} and
+    // {{ResultsFastestLap}}; each session of the template carries placeholders of its own, and a
+    // scenario routes the standings into the one its SessionNum points at and leaves the others with
+    // none. Here that is the race, session 2 (#307).
+    "RaceResultsPositions": "\n{{ResultsPositions}}",
+    "RaceResultsFastestLap": "\n{{ResultsFastestLap}}",
+    "QualifyResultsPositions": "",
+    "QualifyResultsFastestLap": "\n   - CarIdx: 255\n     FastestLap: 0\n     FastestTime: -1.0000",
     "TcSetting": "3 (TC)",
     "AbsSetting": "2 (ABS)",
     // The car's own shift lights. Placeholders rather than literals since #301, so that a
