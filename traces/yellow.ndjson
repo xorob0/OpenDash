@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79199,6],"recorded":"2026-09-18","simHub":"unknown","asserted":["DataCorePlugin.GameRunning","DataCorePlugin.GameData.BestLapOpponentSameClassPosition","OpenDash.UpdateAvailable","OpenDash.UpdateVersion","DataCorePlugin.GameData.BestLapOpponent.BestLapTime","OpenDash.ClassBestLap"]}
+{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79199,6],"recorded":"2026-09-18","simHub":"unknown","asserted":["DataCorePlugin.GameRunning","DataCorePlugin.GameData.BestLapOpponentSameClassPosition","OpenDash.UpdateAvailable","OpenDash.UpdateVersion","DataCorePlugin.GameData.BestLapOpponent.BestLapTime","OpenDash.ClassBestLap","DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap","DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -89,6 +89,8 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.IsOnTrack","v":true}
 {"p":"DataCorePlugin.GameRawData.Telemetry.LFtempCM","v":52.2}
 {"p":"DataCorePlugin.GameRawData.Telemetry.LRtempCM","v":88.4}
+{"p":"DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap","v":0}
+{"p":"DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK","v":false}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PitSvFlags","v":0}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PitSvFuel","v":0}
 {"p":"DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount","v":0}

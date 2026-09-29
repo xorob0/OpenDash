@@ -239,7 +239,7 @@ These apply to every screen
   Position                             [ Overall | Class ]
   Overall, or within your class.
 
-  Delta reference                      [ Session best | All-time best ]
+  Delta reference           [ Session best | All-time best | Last lap ]
   Which lap the delta compares against.
 
   Session progress                     [ Auto | Laps | Time ]
@@ -268,6 +268,14 @@ does not offer.
 
 Naming a driver is here and not on a screen's pane because a name is read by a person, and the person
 does not change between the wheel and the pit wall ([#385](https://github.com/xorob0/OpenDash/issues/385)).
+
+**The delta reference has a third segment the canvas does not draw.** The Plugin artboard offers the
+session best and the all-time best; Last lap was added by
+[#322](https://github.com/xorob0/OpenDash/issues/322) and is iRacing's own live delta to the lap
+before this one, which SimHub does not publish. The label is the canvas's own name for that lap, the
+one the Last lap card and the Lap times page already draw, and the row's caption holds for all three,
+since each of them is a lap. Three values is still a segmented control by the component sheet's rule.
+`PanelDataTab.DeltaLabels` holds the words, with a test that counts them against the contract.
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it

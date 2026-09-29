@@ -29,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, deltaColour, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clutch, deltaColour, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
@@ -134,7 +134,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const value = referenceDelta();
   const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'vs session best', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
     labelBind: referenceLabel(),
-    labelWidest: 'vs all-time best',
+    labelWidest: REFERENCE_LABEL_WIDEST,
   });
   const deltaWidth = 160;
   // `Panels.dc.html`'s track, which the gauge's own overhangs then turn into 20 px graduations and

@@ -25,7 +25,7 @@ import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './mo
 import { archetypeOf } from './shedding.ts';
 import { stack, type StackRow } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, deltaColour, referenceDelta, referenceLabel, sectorDelta } from '../second/values.ts';
+import { CHARS, deltaColour, REFERENCE_LABEL_WIDEST, referenceDelta, referenceLabel, sectorDelta } from '../second/values.ts';
 
 const { signed } = ncalc;
 
@@ -49,9 +49,6 @@ const SECTOR_SAMPLES = ['−0.29', '−0.23', '+0.31'] as const;
 /** The separator between the scale and the sector deltas: one pixel of surface.raised. */
 const RULE_HEIGHT = 1;
 
-/** The longest caption the reference setting can produce, which is what its box is measured by. */
-const CAPTION_WIDEST = 'vs all-time best';
-
 export const delta = defineModule('delta', (ctx) => {
   const d = densityOf(ctx.density);
   const value = referenceDelta();
@@ -71,8 +68,8 @@ export const delta = defineModule('delta', (ctx) => {
     colorBind: deltaColour(value),
     drawn: drawnFigure({ value, digits: CHARS.delta.digits - 3, decimals: 2, signed: true }),
   };
-  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: CAPTION_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
-  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: CAPTION_WIDEST, labelBelow: true });
+  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: REFERENCE_LABEL_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
+  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: REFERENCE_LABEL_WIDEST, labelBelow: true });
   const captionBelow = ctx.density === 'compact' || fieldWidth(beside, ctx.density) > ctx.frame.width;
   // 34 px on both of the canvas's ramps, which is the small rank of the companion and the middle
   // one of a zone; a compact zone steps the pair down together.

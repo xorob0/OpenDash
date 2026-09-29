@@ -20,7 +20,11 @@ export const SLOT_MAX = 12;
 
 export type RevBarMode = 'shift' | 'rpm' | 'off';
 export type PositionMode = 'overall' | 'class';
-export type DeltaReference = 'session' | 'alltime';
+/**
+ * What the live delta is measured against. `lastlap` is iRacing's own delta to the lap before this
+ * one, which SimHub's lap tracker does not publish: see `lastLapDelta` in `second/values.ts`. #322.
+ */
+export type DeltaReference = 'session' | 'alltime' | 'lastlap';
 export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
  * What the middle of an RGB strip shows. It decides the middle alone: the sides of a strip are
@@ -175,7 +179,7 @@ export const UPDATE_VERSION_MAX_LENGTH = 12;
 export const UPDATE_VERSION_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-';
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
-export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
+export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime', 'lastlap'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
 export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
 export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['car', 'leftToRight', 'meetInMiddle', 'f1'];
@@ -451,6 +455,8 @@ export const setting = {
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
   deltaReference: (): Expr => isnull(prop(propertyName('DeltaReference')), str(DEFAULTS.DeltaReference)),
+  /** `isnull([OpenDash.DeltaReference], 'session') = 'lastlap'`: whether the delta is against the given reference. */
+  deltaReferenceIs: (reference: DeltaReference): Expr => eq(setting.deltaReference(), str(reference)),
   /** `isnull([OpenDash.SessionProgress], 'auto')` */
   sessionProgress: (): Expr => isnull(prop(propertyName('SessionProgress')), str(DEFAULTS.SessionProgress)),
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */

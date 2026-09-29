@@ -779,6 +779,27 @@ Established for #454 by decompiling `GameManagerBase`, `PluginManager` and `Data
   (`GameData.BestLapOpponent.BestLapTime`); `BestLapSameClassOpponent` is not initialised and has no
   property at all.
 
+### The live delta to the last lap is iRacing's, not SimHub's (2026-09-29, #322)
+
+Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
+
+- **SimHub publishes two live deltas and no third.** `SessionBestLiveDeltaSeconds` and
+  `AllTimeBestLiveDeltaSeconds` run through the lap. The `*LastLapDelta` properties beside them are
+  the finished lap's, written once at the line, and nothing compares the lap in progress with the one
+  before it. #322 was written believing otherwise.
+- **iRacing publishes it as raw telemetry**, and SimHub passes that through:
+  `[DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap]`. The second `l` in `Lastl` is
+  iRacing's own spelling and has to be kept; `LapDeltaToSessionLastLap` is a property nobody
+  publishes, and reading it draws the fallback without a word.
+- Beside it are `LapDeltaToSessionLastlLap_OK`, a boolean that is true once there is a last lap to
+  compare against, and `LapDeltaToSessionLastlLap_DD`, iRacing's rate of change of the delta, which
+  nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
+  `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
+  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+- The emulator writes all three (`tools/irsdk-emulator/Drivers.cs`, `SetDelta`). That SimHub exposes
+  them under these names on a live iRacing session follows from how it passes raw telemetry through,
+  as the flag bits above do, and is not yet confirmed on the VM.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

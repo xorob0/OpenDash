@@ -144,6 +144,9 @@ describe('card expressions', () => {
     const text = formulaOf(textItem('delta', 'value'), 'Text');
     expect(text).toContain("isnull([OpenDash.DeltaReference], 'session')");
     expect(text).toContain('[PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds]');
+    // The card reads the one reading the second screens draw, so the third reference reaches it too.
+    expect(text).toContain(values.referenceDelta());
+    expect(text).toContain('[DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap]');
     expect(text).toContain("'0.00', true)");
     expect(text).toContain("'-', '−'");
     const colour = formulaOf(textItem('delta', 'value'), 'TextColor');
@@ -151,7 +154,7 @@ describe('card expressions', () => {
     expect(colour).toContain("'#FF2D46'");
     // The deadband decides the text and the colour together, so a level delta cannot be drawn as
     // "+0.00" in the resting white: it is the bare "0.00" the canvas draws.
-    const deadband = 'if((abs(isnull(';
+    const deadband = `if((abs(${values.referenceDelta()})) <= (0.005), `;
     expect(text.startsWith(deadband)).toBe(true);
     expect(colour.startsWith(deadband)).toBe(true);
     expect(text).toContain("<= (0.005), '0.00'");
@@ -600,7 +603,10 @@ describe('module expressions', () => {
   });
 
   test('the lap times delta names the best it is against and is signed the same way', () => {
-    expect(moduleItem('lapTimes', 'delta.label').text).toBe('Delta to your best');
+    const label = moduleItem('lapTimes', 'delta.label');
+    expect(label.text).toBe('Delta to your best');
+    // "your best" is true of the session best and the all-time best, and not of the last lap (#322).
+    expect(formulaOf(label, 'Text')).toBe("if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), 'Delta to last lap', 'Delta to your best')");
     const value = moduleItem('lapTimes', 'delta.value');
     expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
     expect(value.text).toBe('\u22120.21');

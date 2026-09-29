@@ -257,7 +257,7 @@ nothing to save and no restart.
 | Rig tab, a pit wall's Zones | Wide zone | any of the six wide pages (Tower page only) |
 | Rig tab, a pit wall's Zones | Web view address | an http or https address, or empty |
 | Data tab | Position | Overall, Class |
-| Data tab | Delta reference | Session best, All-time best |
+| Data tab | Delta reference | Session best, All-time best, Last lap (iRacing's own delta to the lap before this one; level until a lap has been completed) |
 | Data tab | Session progress | Auto, Laps, Time |
 | Install tab, This plugin | Check for updates | on, off; asks GitHub once a day and sends nothing about you |
 | Install tab, This plugin | Reinstall | writes every dashboard on your rig again; your settings are kept |

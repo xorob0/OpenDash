@@ -80,6 +80,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DriverNameFormats.Length, PanelDataTab.DriverNameLabels.Length);
         }
 
+        /// <remarks>
+        /// The labels were an inline array in SettingsControl.Data.cs, where nothing could hold them to
+        /// the contract; the segmented control indexes them by value, so a third reference with two labels
+        /// throws while the tab is drawn rather than in a test. #322 moved them here to be counted.
+        /// </remarks>
+        [Fact]
+        public void The_delta_row_names_every_reference_the_contract_declares()
+        {
+            Assert.Equal("Delta reference", PanelDataTab.DeltaTitle);
+            // Still true of three references: each of them is a lap.
+            Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
+            Assert.Equal(new[] { "Session best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
+            Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
+            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels,", source);
+        }
+
         [Fact]
         public void The_team_row_says_what_happens_to_a_car_with_no_team()
         {

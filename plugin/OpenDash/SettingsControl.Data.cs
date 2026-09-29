@@ -22,7 +22,7 @@ namespace OpenDashPlugin
                 Settings.PositionMode = value;
                 Save();
             });
-            var delta = BuildSegmented(Contract.DeltaReferences, new[] { "Session best", "All-time best" }, Settings.DeltaReference, value =>
+            var delta = BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels, Settings.DeltaReference, value =>
             {
                 Settings.DeltaReference = value;
                 Save();

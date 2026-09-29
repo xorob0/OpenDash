@@ -1026,13 +1026,14 @@ Each name is written here without its prefix, for the shape. A screen owns its s
 attached is `Face1920x480ZoneA` and `Face1280x400ZoneBClassOnly`: the same decision, once per face.
 
 The four modes the slot model already had — `ShiftLights`, `PositionMode`, `DeltaReference`,
-`SessionProgress` — are unchanged, and `RevBar` joins them: what the top of the face carries,
-`shift`, `rpm` or `off`, with `off` drawing the second arrangement. It carries no face's prefix
-because it is not one face's, whatever the second arrangement is: the round faces' rev arc and the
-companion's speedo draw the same segments from the same setting, and a screen may not read a
-property another screen owns. `ShiftLights` is now its deprecated alias and stays attached for a
-release: an rc.2 user's properties do not vanish without warning (#170), and a package installed
-beside an older plugin falls back through it.
+`SessionProgress` — keep their names and their meaning, `DeltaReference` having since gained a
+third value, `lastlap` ([#322](https://github.com/xorob0/OpenDash/issues/322)), and `RevBar` joins
+them: what the top of the face carries, `shift`, `rpm` or `off`, with `off` drawing the second
+arrangement. It carries no face's prefix because it is not one face's, whatever the second
+arrangement is: the round faces' rev arc and the companion's speedo draw the same segments from the
+same setting, and a screen may not read a property another screen owns. `ShiftLights` is now its
+deprecated alias and stays attached for a release: an rc.2 user's properties do not vanish without
+warning (#170), and a package installed beside an older plugin falls back through it.
 
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
 installed without the plugin shows each zone's start page and simply cannot cycle. That is still a
@@ -1210,6 +1211,8 @@ a mistake in this document.
 | Band D's energy budgets | D2's **Energy** and **Refuel** are cut for three bare digit cells, `CHARS.temperature`, and `notAvailable` formats every reading on the page `0.0`, so a car that publishes 68 per cent draws `68.0`: four characters and a point in a box that holds three digits, which WPF clips. The estimate and the per-lap figure beside them are cut for `CHARS.consumption`, four cells and a point, and hold `100.0` exactly. **Widening those two to match is the answer and is not taken here**, because two fields gaining 23 px each changes what the rank sheds on the narrow bands and that is a page redraw rather than a placement fix. What is taken is that the `%` after each **stops at the budget**: a declaration wider than a field's own cells binds the mark outside the region the box was measured for, which `drawnWithin` now refuses at build time, so the mark sits at the end of the ink the driver can see rather than 25 px past it. |
 | Zone A's centred row | Zone A is the one place the build still draws a mark at the end of a budget, and the reason is that its rows are centred as a group: a speed is cut for `299` and the rpm for `123,456`, so `81 km/h` and `5,851 RPM` leave one and two empty cells inside the group, and pulling the mark in moves the ink off the column's middle by half of that. **The cells are kept**, because centring on the ink instead costs the portrait face something real: at 600 × 268 the row is fitted to the column and has two pixels of slack where it would need thirty-one, so A3 would have to drop its rpm or step its speed down a size. The canvas owes the ruling -- a row centred on what it draws, and a hero number that shifts as it gains a digit, or the hole beside a short reading. |
 | The bar's right-hand end | A field of the bar's left end is drawn from its own edge and its denominator now follows the figure, so lap 4 and lap 16 both read `/ 32` at the six pixels the artboards give. A field of the right end is laid from the padding inwards instead, the denominator flush against it and the value right aligned one gap in front, which is what the artboards draw and which keeps the gap constant as the figure changes. What stands between the two runs of ink there is twelve or thirteen pixels rather than six, being the narrow cell `/ 32` leaves unused in the four-digit-and-a-special budget `/ 100` needs. **The artboards' arrangement is kept**; closing the gap means either a budget the denominator fills or a denominator drawn from its own left edge, which leaves the padding short on a one-digit field size, and the canvas has decided neither. |
+| The last lap as the delta's reference | Every drawing of the delta on the canvas is against the session best, the build already offered the all-time best as a caption the canvas does not draw, and [#322](https://github.com/xorob0/OpenDash/issues/322) adds a third, the last lap, captioned **vs last lap**. It is iRacing's own live delta to the lap before this one, since SimHub's lap tracker publishes none. The word is not the lap review's *vs previous*, which the canvas does draw: that is a finished lap against the one before it, read once at the line, and a driver who sees both should not take them for one comparison. The caption is shorter than *vs all-time best*, which is still the widest the box is measured by, so nothing moves. |
+| Lap times' "Delta to your best" | The companion artboards and `CompanionModules` label the Lap times delta *Delta to your best*, the catalogue and the 1280 × 720 face *Delta to best*, and the build follows the first. Under the last-lap reference the words are false, since the value is then a delta to the last lap, so **the label is bound**: *Delta to last lap* under that reference and the canvas's words under the other two, the session best and the all-time best both being the driver's own. The bound label is narrower than the canvas's, which is what the field is still measured by. |
 
 ### Every variant the 1280 × 480 sheet lists
 

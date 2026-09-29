@@ -190,6 +190,14 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             Assert.Equal("alltime", settings.DeltaReference);
             Assert.Equal("auto", settings.SessionProgress);
+
+            var last = new OpenDashSettings { DeltaReference = "LASTLAP" };
+            last.Normalise();
+            Assert.Equal("lastlap", last.DeltaReference);
+
+            var junk = new OpenDashSettings { DeltaReference = "previous" };
+            junk.Normalise();
+            Assert.Equal("session", junk.DeltaReference);
         }
 
         [Fact]

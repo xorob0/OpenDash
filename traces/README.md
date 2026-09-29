@@ -98,6 +98,16 @@ session best as the empty placeholder rather than as a car nobody observed. Ever
 with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
 `bun run record` picks the property up by itself and drops the entry.
 
+#322 added two more, on the same argument and with the same caveat.
+`DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap` is iRacing's live delta to the
+last lap, at a constant 0, and `LapDeltaToSessionLastlLap_OK` is whether it has a lap to compare
+against, at a constant `false`. Neither is what a re-record will write: the emulator publishes the
+delta moving through the lap and the flag true once a lap has been completed, which in most of
+these scenarios is from the first frame. The pair is what the emulator publishes before a lap has
+been completed, and together they draw the level delta the other two references draw when they
+have nothing to compare against. Every trace was recorded with `OpenDash.DeltaReference` at `session`, so no
+replay of them reads either column; the next `bun run record` picks both up and drops the entries.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be

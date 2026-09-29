@@ -1333,11 +1333,51 @@ export const estimatedLap = (): Expr => prop('PersistantTrackerPlugin.EstimatedL
 export const sessionBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin.SessionBestLiveDeltaSeconds'), num(0));
 export const allTimeBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds'), num(0));
 
-/** The delta the screens show, per the plugin's DeltaReference. */
-export const referenceDelta = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), allTimeBestDelta(), sessionBestDelta());
+/** The raw telemetry field that carries iRacing's live delta to the last lap, spelt as iRacing spells it. */
+export const LAST_LAP_DELTA = 'LapDeltaToSessionLastlLap';
 
-/** The label that says which reference the delta is against. */
-export const referenceLabel = (): Expr => iff(eq(setting.deltaReference(), str('alltime')), str('vs all-time best'), str('vs session best'));
+/**
+ * The live delta to the lap before this one, which is iRacing's own reading and not SimHub's.
+ *
+ * SimHub's lap tracker publishes a live delta to the session best and to the all-time best and to
+ * nothing else; its `*LastLapDelta` properties are the finished lap's, written once at the line, and
+ * say nothing while the next lap runs. iRacing publishes the running comparison itself, as
+ * `LapDeltaToSessionLastlLap` (the second `l` is iRacing's), with `_OK` saying whether it has a lap
+ * to compare against. Reading it here is what ADR 0009 asks for: a published property read in the
+ * expression, where computing it would need the previous lap kept by distance, which is memory
+ * between frames.
+ *
+ * Gated on `_OK` and zero without it, which is what the other two references draw when they have no
+ * lap to compare against: SimHub publishes 0 there. The flag's fallback is the bare literal `false`
+ * and not the string, because a raw telemetry boolean arrives as `true` or `false` (see `inTheCar`
+ * in `components/changeNotification.ts`), so a sim that publishes neither field, or no telemetry at
+ * all, reads a level delta rather than an error.
+ */
+export const lastLapDelta = (): Expr => iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), isnull(raw(LAST_LAP_DELTA), num(0)), num(0));
+
+/**
+ * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
+ * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
+ * different laps. An unknown value reads the session best, which is the default.
+ */
+export const referenceDelta = (): Expr =>
+  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+
+/**
+ * The label that says which reference the delta is against.
+ *
+ * "vs last lap" rather than "vs previous": the lap review already uses "vs previous" for a finished
+ * lap against the one before it, which is a different comparison drawn at a different moment.
+ */
+export const referenceLabel = (): Expr =>
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str('vs session best')));
+
+/**
+ * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is
+ * measured by. Written once here, beside the binding, because the delta module and the pit wall
+ * both measure by it and a copy in each is how the two would come to disagree with the binding.
+ */
+export const REFERENCE_LABEL_WIDEST = 'vs all-time best';
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);
 export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTime`);

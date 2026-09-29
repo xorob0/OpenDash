@@ -242,9 +242,10 @@ be reviewed. See [ADR 0002](decisions/0002-djson-generated-from-source.md).
 
 **Computed telemetry of our own.** The plugin does not compute, and
 [ADR 0009](decisions/0009-does-the-plugin-compute.md) is why the refusal turned out to be cheap to
-keep: SimHub already publishes the fuel family and the delta family, and the rest of what the
-catalogue draws is arithmetic over properties that exist, done in the expression. A five-lap
-average is `PreviousLap_00` to `_04` and a division, not a state machine.
+keep: SimHub already publishes the fuel family and the delta family, iRacing publishes the one
+delta SimHub lacks, the live delta to the last lap, and the rest of what the catalogue draws is
+arithmetic over properties that exist, done in the expression. A five-lap average is
+`PreviousLap_00` to `_04` and a division, not a state machine.
 
 Two things fall outside that and are honestly labelled rather than quietly empty: virtual energy,
 which only Le Mans Ultimate publishes, and strength of field, which SimHub does not expose at all.

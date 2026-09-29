@@ -277,13 +277,16 @@ namespace OpenDashPlugin.Tests
         public void Value_sets_match_the_contract()
         {
             Assert.Equal(new[] { "overall", "class" }, Contract.PositionModes);
-            Assert.Equal(new[] { "session", "alltime" }, Contract.DeltaReferences);
+            Assert.Equal(new[] { "session", "alltime", "lastlap" }, Contract.DeltaReferences);
             Assert.Equal(new[] { "auto", "laps", "time" }, Contract.SessionProgressModes);
             Assert.Equal(new[] { "full", "initialSurname", "initialFirstName", "surnameFirst" }, Contract.DriverNameFormats);
             Assert.Equal("full", Contract.NormaliseChoice("Full", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
             Assert.Equal("full", Contract.NormaliseChoice("initials", Contract.DriverNameFormats, Contract.DefaultDriverNameFormat));
             Assert.Equal("alltime", Contract.NormaliseChoice("AllTime", Contract.DeltaReferences, "session"));
             Assert.Equal("session", Contract.NormaliseChoice("never", Contract.DeltaReferences, "session"));
+            Assert.Equal("lastlap", Contract.NormaliseChoice("LastLap", Contract.DeltaReferences, "session"));
+            // Spelt as one word like its sibling, so "last lap" as a person would write it is not a value.
+            Assert.Equal("session", Contract.NormaliseChoice("last lap", Contract.DeltaReferences, "session"));
         }
 
         /// <summary>The dash package's contract.ts is the other half of the contract. When it exists, its

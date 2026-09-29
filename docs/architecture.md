@@ -120,8 +120,15 @@ that read the property and fall back to the default when the plugin is absent:
 ```
 if(isnull([OpenDash.DeltaReference], 'session') = 'alltime',
    [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds],
-   [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])
+   if(isnull([OpenDash.DeltaReference], 'session') = 'lastlap',
+      [DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap],
+      [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]))
 ```
+
+That is abridged: the emitted binding also defaults each reading to zero where its property is
+absent and reads the last-lap delta only while iRacing's `LapDeltaToSessionLastlLap_OK` says it has
+a lap to compare against. `referenceDelta()` in `packages/dash/src/second/values.ts` is the whole of
+it.
 
 Slots use SimHub's widget mechanism, which is how the commercial packages do it, and the
 runtime screen switch was verified on SimHub 9.12.6 during the spike. The cards live
