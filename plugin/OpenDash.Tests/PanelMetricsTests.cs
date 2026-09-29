@@ -133,6 +133,49 @@ namespace OpenDashPlugin.Tests
                 "a button in a row is shorter than a button standing on its own");
         }
 
+        /// <summary>
+        /// A strip row that offers no Update holds an empty host where the button would go, and a package
+        /// row holds no host at all; both end their pill on the same edge (#469).
+        /// </summary>
+        [Fact]
+        public void A_row_whose_button_host_is_empty_is_as_wide_as_a_row_with_no_host()
+        {
+            const double pill = 112;
+            var empty = PanelMetrics.RowOffsets(new[] { pill, 0.0 }, PanelMetrics.RowRightGap);
+            var none = PanelMetrics.RowOffsets(new[] { pill }, PanelMetrics.RowRightGap);
+
+            Assert.Equal(pill, empty[empty.Length - 1]);
+            Assert.Equal(none[none.Length - 1], empty[empty.Length - 1]);
+        }
+
+        /// <summary>The margin HStack used to give put the pill at 0 and the button twenty past its end;
+        /// the rule has to leave that row where it was.</summary>
+        [Fact]
+        public void A_row_that_shows_its_button_keeps_the_gap_before_it()
+        {
+            const double pill = 112, button = 96;
+
+            Assert.Equal(
+                new[] { 0, pill + 20, pill + 20 + button },
+                PanelMetrics.RowOffsets(new[] { pill, button }, PanelMetrics.RowRightGap));
+        }
+
+        /// <summary>
+        /// The plugin section's row puts a status, two buttons that are collapsed until they are wanted,
+        /// and Reinstall side by side, and whichever are collapsed, one gap separates two that draw.
+        /// </summary>
+        [Fact]
+        public void A_child_that_draws_nothing_neither_carries_a_gap_nor_leaves_one()
+        {
+            // Both buttons collapsed: the status and Reinstall, one gap apart.
+            Assert.Equal(new[] { 0.0, 40, 40, 64, 124 }, PanelMetrics.RowOffsets(new[] { 40.0, 0, 0, 60 }, 24));
+            // Update offered: a gap either side of it, and none for the collapsed button before it.
+            Assert.Equal(new[] { 0.0, 40, 64, 138, 198 }, PanelMetrics.RowOffsets(new[] { 40.0, 0, 50, 60 }, 24));
+            // Nothing drawn ahead of the first child that draws does not push it along.
+            Assert.Equal(new[] { 0.0, 0, 30 }, PanelMetrics.RowOffsets(new[] { 0.0, 30 }, 8));
+            Assert.Equal(new[] { 0.0 }, PanelMetrics.RowOffsets(new double[0], 8));
+        }
+
         [Fact]
         public void A_status_is_a_six_pixel_dot_eight_from_its_label_in_a_pill_of_control_heightSm()
         {

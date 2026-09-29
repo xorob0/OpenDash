@@ -187,5 +187,35 @@ namespace OpenDashPlugin
             if (double.IsNaN(fraction) || fraction < 0) return 0;
             return fraction > 1 ? 1 : fraction;
         }
+
+        /// <summary>
+        /// Where each child of a row starts along it, given how wide each one is, with the row's whole
+        /// width as the last entry.
+        /// </summary>
+        /// <remarks>
+        /// A gap is owed between two children that both draw, and a child draws when it takes any width.
+        /// An empty host or a collapsed control takes none, so it neither carries a gap nor leaves one
+        /// behind it. Ui.HStack used to give every child but the last a right margin as it built the row,
+        /// which decided the gaps by what the row was handed rather than by what it draws: a strip row
+        /// that offers no Update holds an empty host where the button would go, and its pill ended twenty
+        /// pixels short of the pills above it (#469).
+        /// </remarks>
+        public static double[] RowOffsets(IList<double> widths, double gap)
+        {
+            var offsets = new double[widths.Count + 1];
+            var length = 0.0;
+            var drawnBefore = false;
+            for (var i = 0; i < widths.Count; i++)
+            {
+                var draws = widths[i] > 0;
+                if (draws && drawnBefore) length += gap;
+                offsets[i] = length;
+                if (!draws) continue;
+                length += widths[i];
+                drawnBefore = true;
+            }
+            offsets[widths.Count] = length;
+            return offsets;
+        }
     }
 }
