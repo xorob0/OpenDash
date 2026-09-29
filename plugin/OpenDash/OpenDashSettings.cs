@@ -1969,7 +1969,6 @@ namespace OpenDashPlugin
         /// <summary>Cards assigned to more than one slot, in card order.</summary>
         public IReadOnlyList<DuplicateAssignment> Duplicates() => DuplicateAssignment.Find(Slots);
 
-        /// <summary>Copies the values of another settings object; used by the panel to keep one instance alive.</summary>
         /// <summary>
         /// A normalised copy of these settings, for saving without repairing the live object.
         /// </summary>
@@ -1979,6 +1978,11 @@ namespace OpenDashPlugin
         /// glance is held on such a page: the brightness step would move the glanced zone under the
         /// driver's thumb. The copy is repaired and written, and the zone on screen stays where the
         /// glance put it until the release puts it back. #503.
+        ///
+        /// SimHub writes the whole object it is handed, so the copy has to carry every persisted
+        /// property, the plugin's own included: a copy without the update opt-out or the folder
+        /// fingerprints would put a file on disk that turns the checks back on and forgets which
+        /// dashboards the driver edited, for as long as nothing saves the live settings over it.
         /// </remarks>
         public OpenDashSettings NormalisedCopy()
         {
@@ -1988,6 +1992,8 @@ namespace OpenDashPlugin
             return copy;
         }
 
+        /// <summary>Copies every persisted value of another settings object, then normalises;
+        /// <see cref="NormalisedCopy"/> is built on it.</summary>
         public void CopyFrom(OpenDashSettings other)
         {
             if (other == null) return;
@@ -2059,6 +2065,18 @@ namespace OpenDashPlugin
             FaceZoneStarts = other.FaceZoneStarts == null ? null : (int[])other.FaceZoneStarts.Clone();
             BarFields = other.BarFields == null ? null : (int[])other.BarFields.Clone();
             QuickGlance = other.QuickGlance;
+            // The plugin's own fields, which no panel row writes and which were never carried until a
+            // rig press began saving a copy: the update opt-out and what it last heard (ADR 0012), the
+            // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work from
+            // OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
+            // case-sensitive one kept apart cannot collide in the copy and throw.
+            CheckForUpdates = other.CheckForUpdates;
+            LastUpdateCheckTicks = other.LastUpdateCheckTicks;
+            OfferedRelease = other.OfferedRelease;
+            ReplaceEditedFor = other.ReplaceEditedFor;
+            FolderFingerprints = other.FolderFingerprints == null
+                ? null
+                : new Dictionary<string, string>(other.FolderFingerprints, other.FolderFingerprints.Comparer);
             Normalise();
         }
     }

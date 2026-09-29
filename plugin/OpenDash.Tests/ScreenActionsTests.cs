@@ -223,6 +223,12 @@ namespace OpenDashPlugin.Tests
             var face = settings.ScreenOf("Face1920x480").Face;
             face.QuickGlance = Contract.QuickGlanceValue(2, 12);
             face.SetPageEnabled("C", 12, false);
+            // What only the plugin writes, which the save has to carry although no press touches it.
+            settings.CheckForUpdates = false;
+            settings.LastUpdateCheckTicks = 638000000000000000L;
+            settings.OfferedRelease = "0.4.0";
+            settings.ReplaceEditedFor = "0.4.0";
+            settings.FolderFingerprints["OpenDash 1920x480"] = "abc";
             OpenDashSettings saved = null;
             var registered = new Dictionary<string, Registered>(StringComparer.Ordinal);
             ScreenActions.Register(() => settings, (name, press, release) => registered[name] = new Registered { Name = name, Press = press, Release = release },
@@ -240,6 +246,13 @@ namespace OpenDashPlugin.Tests
             Assert.True(saved.LightsNightMode);
             Assert.Equal(settings.LightsBrightness, saved.LightsBrightness);
             Assert.NotEqual(12, saved.ScreenOf("Face1920x480").Face.Zones[2]);
+            // And everything else as it is: a save that dropped these would turn the update checks back
+            // on and forget which dashboards the driver edited, until the next full save.
+            Assert.False(saved.CheckForUpdates);
+            Assert.Equal(638000000000000000L, saved.LastUpdateCheckTicks);
+            Assert.Equal("0.4.0", saved.OfferedRelease);
+            Assert.Equal("0.4.0", saved.ReplaceEditedFor);
+            Assert.Equal("abc", saved.FolderFingerprints["OpenDash 1920x480"]);
             registered["Face1920x480HoldQuickGlance"].Release();
             Assert.Equal(before, face.Zones[2]);
         }
