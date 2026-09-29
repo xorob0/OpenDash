@@ -48,8 +48,12 @@
     {"at": 62, "log": "9/20 waved yellow: WAVED YELLOW, flashing", "set": {"SessionFlags": "yellow|yellowWaving"}},
     {"at": 69, "log": "10/20 yellow: YELLOW FLAG, steady", "set": {"SessionFlags": "yellow"}},
     {"at": 76, "log": "11/20 debris: DEBRIS", "set": {"SessionFlags": "debris"}},
-    // An event: three seconds after the count moves, and nothing afterwards.
-    {"at": 83, "log": "12/20 incident: INCIDENT · 2x / 17, outlined amber, for three seconds", "set": {"SessionFlags": 0, "PlayerCarMyIncidentCount": 2}},
+    // An event: three seconds after the count moves, and nothing afterwards. A second with nothing
+    // out comes first, because SimHub's window records a value the first time it is asked and answers
+    // false, and from 6 s to here something above the incident was always out, so nothing had asked
+    // it. Without the gap the first pass after `bun run dev` would record the incident and show nothing.
+    {"at": 83, "log": "nothing out for a second", "set": {"SessionFlags": 0}},
+    {"at": 84, "log": "12/20 incident: INCIDENT · 2x / 17, outlined amber, for three seconds", "set": {"PlayerCarMyIncidentCount": 2}},
     {"at": 90, "log": "13/20 blue: BLUE FLAG", "set": {"SessionFlags": "blue"}},
     {"at": 97, "log": "14/20 white: WHITE · LAST LAP", "set": {"SessionFlags": "white"}},
     // The band reads the green through SimHub's GreenLimiter, which reports it only shortly after
@@ -59,9 +63,11 @@
     {"at": 118, "log": "17/20 ready: GREEN · READY, outlined", "set": {"SessionFlags": "startReady"}},
     {"at": 125, "log": "18/20 chequered: the board", "set": {"SessionFlags": "checkered"}},
     {"at": 132, "log": "19/20 push to pass: PUSH TO PASS, filled white; nothing on the nano", "set": {"SessionFlags": 0, "CarIdxP2P_Status[12]": true}},
-    // A flash is a press and a release; the window holds three seconds after the release.
-    {"at": 139, "log": "20/20 headlight flash: FLASH, outlined white, for three seconds", "set": {"CarIdxP2P_Status[12]": false, "dcHeadlightFlash": true}},
-    {"at": 139.3, "set": {"dcHeadlightFlash": false}},
+    // A flash is a press and a release; the window holds three seconds after the release. The same
+    // quiet second first, for the same reason as the incident's.
+    {"at": 139, "log": "nothing out for a second", "set": {"CarIdxP2P_Status[12]": false}},
+    {"at": 140, "log": "20/20 headlight flash: FLASH, outlined white, for three seconds", "set": {"dcHeadlightFlash": true}},
+    {"at": 140.3, "set": {"dcHeadlightFlash": false}},
 
     // --- Several at once --------------------------------------------------------------------------
     {"at": 146, "log": "a stall under a red flag: ENGINE OFF, not RED FLAG", "set": {"EngineWarnings": 8, "SessionFlags": "red"}},

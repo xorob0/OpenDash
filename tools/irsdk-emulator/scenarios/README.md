@@ -106,7 +106,8 @@ the only scenario that drives states nothing on the screen shows, and
 band D, the companion's strip and the pit wall's band draw, in their rank, seven seconds each so
 that a condition is seen with the whole band and then settled into the block at each end of it. The
 five car alerts are driven through what SimHub reads them from -- `Voltage` to 0 for the ignition,
-the stalled bit of `EngineWarnings`, `PlayerCarMyIncidentCount`, `CarIdxP2P_Status` at the player's
+the stalled bit of `EngineWarnings`, from which SimHub computes `EngineStarted`,
+`PlayerCarMyIncidentCount`, `CarIdxP2P_Status` at the player's
 index and `dcHeadlightFlash` pressed and released -- and the session's incident limit is 17, through
 the `IncidentLimit` placeholder, so the incident is counted against one. After the walk come the
 cases the ranking is for, several conditions out at once, and then the two places nothing should

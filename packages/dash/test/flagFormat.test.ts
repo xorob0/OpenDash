@@ -238,9 +238,9 @@ describe('the two formats cannot both draw', () => {
         }
       }
       // Every flag is in every group: only a car alert that is the driver's own hand is ever left out.
-      for (const [group, states] of expected) {
+      for (const group of expected.keys()) {
         const flags = ALERT_CATALOGUE.filter(isFlag).map((c) => c.id);
-        expect({ group: group.name, missing: flags.filter((id) => !states.includes(id)) }).toEqual({ group: group.name, missing: [] });
+        expect({ group: group.name, missing: flags.filter((id) => !statesIn(group).includes(id)) }).toEqual({ group: group.name, missing: [] });
       }
     });
   }

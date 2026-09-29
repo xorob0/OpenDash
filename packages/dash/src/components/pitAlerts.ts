@@ -22,7 +22,7 @@
  *
  * **The ignition and the stall are shared with the alert catalogue, across the pit entry line.** In
  * the lane they are this family's, and out of it they are the catalogue's first two entries, drawn on
- * band D (`IGNITION_OFF` and `ENGINE_OFF` in flags.ts). Both read `ignitionOff` and `engineStalled`
+ * band D (`IGNITION_OFF` and `ENGINE_OFF` in flags.ts). Both read `ignitionOff` and `engineStopped`
  * from `second/values.ts` and split on the same `isInPitLane()`, so one condition is never drawn in
  * both places. The catalogue's half also asks whether anybody is in the car, since on the circuit
  * SimHub's reading of the ignition is off whenever nobody is.
@@ -43,7 +43,7 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { ALERT_BAND_BORDER } from './alertBand.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
-import { engineStalled, ignitionOff, isInPitLane } from '../second/values.ts';
+import { engineStopped, ignitionOff, isInPitLane } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 
@@ -80,14 +80,13 @@ export interface PitAlertSpec {
 /**
  * The pit family, highest priority first.
  *
- * The ignition sits above the stalled engine because it is the switch the driver can move, and
- * because iRacing may well raise both when a driver kills the engine in the box: where it does, the
- * chain shows the one that names what to do about it. That has not been checked against a running
- * sim, so the order is the safe reading rather than a measured one.
+ * The ignition sits above the stopped engine because it is the switch the driver can move, and
+ * because the two are raised together whenever it is off: SimHub's `EngineStarted` is 0 whenever its
+ * ignition is, so the chain shows the one that names what to do about it.
  */
 export const PIT_ALERTS: readonly PitAlertSpec[] = [
   { id: 'ignition', label: 'Ignition off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), ignitionOff()) },
-  { id: 'engine', label: 'Engine off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), engineStalled()) },
+  { id: 'engine', label: 'Engine off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), engineStopped()) },
   { id: 'engage', label: 'Engage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(isInPitLane(), not(limiterOn()), hasLimiter()) },
   { id: 'disengage', label: 'Disengage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(limiterOn(), not(isInPitLane())) },
   { id: 'limiter', label: 'Pit limiter', shape: 'filled', colour: ds.purpose.pitLimiter, when: and(limiterOn(), isInPitLane()), blinkMs: PIT_LIMITER_BLINK_MS },

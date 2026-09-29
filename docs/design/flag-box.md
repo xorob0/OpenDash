@@ -107,15 +107,16 @@ has, which is what the switch is for; a driver who wants band D quieter turns th
 
 The canvas's alert catalogue is one list of flags and car alerts together, and since #109 so is
 `ALERT_CATALOGUE` in `flags.ts`: twenty conditions, of which the fifteen above are the flags and
-`FLAG_CATALOGUE` is those fifteen, in the same order. Every band draws all twenty -- band D's
-takeover and its settled blocks, the full-screen block, the companion and the pit wall -- and the
-box and the LED strips draw the flags. Whether a matrix ever draws an incident count is a question
+`FLAG_CATALOGUE` is those fifteen, in the same order. Every band ranks all twenty -- band D's
+takeover and its settled blocks, the full-screen block, the companion and the pit wall -- and draws
+them all but where the two white ones would be drawn without their name, below; the box and the LED
+strips draw the flags. Whether a matrix ever draws an incident count is a question
 for the matrix; it is not answered by drawing one.
 
 | Rank | Condition | Source | Canvas | The band |
 |---|---|---|---|---|
 | 1 | Ignition off | `GameData.EngineIgnitionOn` at 0, out of the pit lane | 2 | Outlined `purpose.alert.power`, "IGNITION OFF". |
-| 2 | Engine off | Bit 8 of `EngineWarnings`, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
+| 2 | Engine off | `GameData.EngineStarted` at 0, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
 | 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Outlined `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
 | 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
 | 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
@@ -123,7 +124,18 @@ for the matrix; it is not answered by drawing one.
 **All five read whether anybody is in the car**, which is `inTheCar` in `second/values.ts`, iRacing's
 `IsOnTrack` and #312's one test of it. The ignition needs it most: SimHub's iRacing reader has no
 ignition of iRacing's to pass through and derives one from `Voltage`, so a driver standing in the
-garage is, to SimHub, a driver whose ignition is off.
+garage is, to SimHub, a driver whose ignition is off. They read it as "no" where a sim does not
+publish `IsOnTrack`, which makes them iRacing's as the flags are: elsewhere SimHub's ignition is its
+guess from the revs, `Rpms > 300`, and IGNITION OFF would sit over every flag whenever the engine
+idled. The change notification reads the same test as "yes" there, since a notification that fires
+in another sim costs nothing.
+
+**The stall is SimHub's reading and not iRacing's bit.** `EngineStarted` is the ignition on and the
+stalled bit of `EngineWarnings` clear, except that SimHub ignores the bit on an electric car, on one
+with no idle RPM and on one whose model name says Hybrid. That last is a guess about names, but
+somebody made it because a hybrid raises the bit while it runs, and ENGINE OFF ranks above a red
+flag: a false one on a GTP car would be the worst alarm the face could give. It needs a recording
+from a hybrid to settle.
 
 **The ignition and the stall belong to the pit family in the lane.** The limiter's rectangle already
 says "Ignition off" and "Engine off" there, and one condition drawn twice on one face would be two

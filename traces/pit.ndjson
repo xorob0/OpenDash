@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["DataCorePlugin.GameData.PushToPassActive","DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79502,6],"recorded":"2026-09-28","simHub":"9.12.6","asserted":["DataCorePlugin.GameData.PushToPassActive","DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash","DataCorePlugin.GameData.EngineStarted"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -25,6 +25,7 @@
 {"p":"DataCorePlugin.GameData.CurrentLapTime","t":"timespan","v":"00:00:36.1770000"}
 {"p":"DataCorePlugin.GameData.DRSAvailable","v":0}
 {"p":"DataCorePlugin.GameData.EngineIgnitionOn","v":1}
+{"p":"DataCorePlugin.GameData.EngineStarted","v":1}
 {"p":"DataCorePlugin.GameData.Flag_Black","v":0}
 {"p":"DataCorePlugin.GameData.Flag_Blue","v":0}
 {"p":"DataCorePlugin.GameData.Flag_Checkered","v":0}

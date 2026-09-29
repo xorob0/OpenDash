@@ -4,11 +4,12 @@
  * One list, because the face, the companion, the pit wall and the flag box rank the same conditions
  * and two lists would eventually disagree about which of two live conditions wins. It is
  * `ALERT_CATALOGUE`, twenty conditions: the fifteen flags iRacing raises and five conditions of the
- * car and of this car's session that it publishes without a flag. Every band draws all twenty --
- * the face's band D through `components/flagStrip.ts`, the full-screen block through
- * `components/flagFull.ts`, and the companion and the pit wall through the same two -- and the 8x8
- * box and the LED strips draw `FLAG_CATALOGUE`, which is the flag half of the same list in the same
- * order rather than a second list. Whether the lights ever draw the other five is a question for
+ * car and of this car's session that it publishes without a flag. Every band ranks all twenty -- the
+ * face's band D through `components/flagStrip.ts`, the full-screen block through
+ * `components/flagFull.ts`, and the companion and the pit wall through the same two -- and draws
+ * each of them wherever it can, which is everywhere but for the two neutral alerts `CarAlert.neutral`
+ * describes. The 8x8 box and the LED strips draw `FLAG_CATALOGUE`, which is the flag half of the same
+ * list in the same order rather than a second list. Whether the lights ever draw the other five is a question for
  * them; a picture of an incident count on sixty-four pixels is not an obvious one.
  *
  * **What is here is what iRacing publishes.** A drawn alert that never fires is worse than an
@@ -22,7 +23,8 @@
  * a disqualification are invisible through them. The other five each carry their own condition, and
  * each of those reads `inTheCar` from `second/values.ts`, #312's one test of whether anybody is
  * driving: SimHub reads iRacing's ignition as off whenever there is no voltage, which is whenever the
- * driver is in the garage, and an alert raised there is noise.
+ * driver is in the garage, and an alert raised there is noise. They read it as "no" in a sim that
+ * does not say, so the car alerts are iRacing's in the way the flags are.
  *
  * The catalogue carries no duration of its own, and *whether* a condition shows is exactly as long
  * as it holds: the canvas asks for a configurable three seconds per alert, and a flag that went dark
@@ -37,7 +39,7 @@
 import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
-import { engineStalled, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
+import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
 
@@ -178,7 +180,8 @@ export interface FlagCondition extends CatalogueEntry {
 /**
  * A condition of the car, or of this car's part in the session, that iRacing publishes without a
  * flag. The canvas ranks it in the same list as the flags and draws it in the same shapes, so every
- * band draws it the way it draws a flag; the lights do not, and `FLAG_CATALOGUE` leaves it out.
+ * band ranks it and draws it the way it draws a flag, the two neutral ones apart; the lights do not,
+ * and `FLAG_CATALOGUE` leaves it out.
  */
 export interface CarAlert extends CatalogueEntry {
   /**
@@ -214,6 +217,13 @@ export const isFlag = (condition: AlertCondition): condition is FlagCondition =>
 export const ALERT_EVENT_MS = ds.indicator.alert.durationMs;
 
 /**
+ * Somebody is in the car, as iRacing says it, and no if the sim says nothing: every car alert's
+ * first condition. `inTheCar` explains why this caller answers "no" where the change notification
+ * answers "yes".
+ */
+const driving = (): Expr => inTheCar(false);
+
+/**
  * Out on the circuit and in the car, which is where the two power alerts belong.
  *
  * In the lane the pit family says the same thing in the limiter's own rectangle
@@ -221,7 +231,7 @@ export const ALERT_EVENT_MS = ds.indicator.alert.durationMs;
  * would be two answers to one question. Out of the lane nothing drew either of them, and a car
  * stalled on the grass after a spin is exactly where a driver has to be told to press the starter.
  */
-const outOnCircuit = (condition: Expr): Expr => and(inTheCar(), not(isInPitLane()), condition);
+const outOnCircuit = (condition: Expr): Expr => and(driving(), not(isInPitLane()), condition);
 
 /**
  * The ignition is off, out on the circuit. It sits above the stalled engine for the reason the pit
@@ -239,11 +249,14 @@ const IGNITION_OFF: CarAlert = {
   band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'IGNITION OFF' },
 };
 
-/** The engine has stopped with the ignition on, out on the circuit: press the starter. */
+/**
+ * The engine has stopped with the ignition on, out on the circuit: press the starter. SimHub's
+ * `EngineStarted` rather than iRacing's stalled bit, for the hybrids `engineStopped` describes.
+ */
 const ENGINE_OFF: CarAlert = {
   id: 'engine',
   name: 'Engine off',
-  when: outOnCircuit(engineStalled()),
+  when: outOnCircuit(engineStopped()),
   band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'ENGINE OFF' },
 };
 
@@ -267,7 +280,9 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  * The same laziness decides what happens under a higher condition. A band ranks with `if()` and
  * `and`, so while a yellow has the band nothing asks this window at all; when the yellow clears it is
  * asked, finds the count moved, and opens then. An incident taken under a flag is told when the flag
- * has gone rather than lost behind it, which is the order the ranking asks for anyway.
+ * has gone rather than lost behind it, which is the order the ranking asks for anyway. The one that
+ * is lost is an incident taken before the window has been asked at all, which is a dashboard started
+ * under a caution, or with the flag format off, that sees its first incident before anything clears.
  *
  * What a driver is shown is the running count, which is what the canvas's "Incident · 4x" draws,
  * rather than the size of the incident just taken: that would need the count from before the window,
@@ -282,7 +297,7 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
 const INCIDENT: CarAlert = {
   id: 'incident',
   name: 'Incident',
-  when: and(changed(num(ALERT_EVENT_MS), incidentCount()), inTheCar(), gt(incidentCount(), num(0))),
+  when: and(changed(num(ALERT_EVENT_MS), incidentCount()), driving(), gt(incidentCount(), num(0))),
   band: {
     shape: 'outlined',
     colour: ds.purpose.alert.incident,
@@ -309,7 +324,7 @@ const PUSH_TO_PASS: CarAlert = {
   id: 'pushToPass',
   name: 'Push to pass',
   neutral: true,
-  when: and(inTheCar(), eq(isnull(game('PushToPassActive'), num(0)), num(1))),
+  when: and(driving(), eq(isnull(game('PushToPassActive'), num(0)), num(1))),
   band: { shape: 'filled', colour: ds.purpose.alert.p2p, label: 'PUSH TO PASS' },
 };
 
@@ -323,9 +338,11 @@ const PUSH_TO_PASS: CarAlert = {
  * momentary button, which is what docs/research/lights-review.md takes it for, and a toggle, which is
  * what iRacing's own description calls it -- since either moves the value when the driver flashes.
  *
- * Unlike an incident, a flash under anything above it is not told later. The control is back where it
- * was by the time the band is free, so the window, asked then, finds nothing moved, which is right: a
- * flash from ten seconds ago is not news.
+ * Unlike an incident, a flash under anything above it is not told later, on the reading the research
+ * gives it: a momentary button is back where it was by the time the band is free, so the window,
+ * asked then, finds nothing moved, which is right, since a flash from ten seconds ago is not news. Were
+ * it a toggle, an odd number of flashes under a blue flag would be told when the blue cleared. Which it
+ * is wants a recording from a car that has the control.
  *
  * The LED strips leave it out (`DROPPED` in `leds/effects.ts`): a lamp spent on what the driver's hand
  * just did is a lamp not spent on an aid. The band is not a lamp. This is the last condition of the
@@ -335,7 +352,7 @@ const HEADLIGHT_FLASH: CarAlert = {
   id: 'headlightFlash',
   name: 'Headlight flash',
   neutral: true,
-  when: and(changed(num(ALERT_EVENT_MS), raw('dcHeadlightFlash')), inTheCar(), not(isNull(raw('dcHeadlightFlash')))),
+  when: and(changed(num(ALERT_EVENT_MS), raw('dcHeadlightFlash')), driving(), not(isNull(raw('dcHeadlightFlash')))),
   band: { shape: 'outlined', colour: ds.purpose.alert.p2p, label: 'FLASH' },
 };
 

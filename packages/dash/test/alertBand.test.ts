@@ -135,7 +135,7 @@ describe('the band is the catalogue', () => {
     expect(runs[2]!.bindings?.Text?.formula).toContain(carBehindPositionClass());
   });
 
-  test('the nano writes no name at all, at any of the twenty', () => {
+  test('the nano writes no name at all, on any condition it draws', () => {
     const strip = rect(0, 274, 800, 12);
     for (const condition of ALERT_CATALOGUE) {
       const nano = layers(strip, ALERT_BAND_STYLES.nano).find((l) => l.name === `flag.${condition.id}`);

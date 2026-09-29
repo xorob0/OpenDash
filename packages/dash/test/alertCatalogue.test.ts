@@ -12,7 +12,7 @@ import { describe, expect, test } from 'bun:test';
 import { changeNotificationVisible } from '../src/components/changeNotification.ts';
 import { PIT_ALERTS } from '../src/components/pitAlerts.ts';
 import { ALERT_CATALOGUE, ALERT_EVENT_MS, alertCondition, FLAG_CATALOGUE, isFlag, type CarAlert } from '../src/flags.ts';
-import { engineStalled, ignitionOff, inTheCar, isInPitLane } from '../src/second/values.ts';
+import { engineStopped, ignitionOff, inTheCar, isInPitLane } from '../src/second/values.ts';
 import { TRACKED_VALUES } from '../src/second/tracked.ts';
 import { ncalc } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
@@ -43,7 +43,7 @@ const DRIVING: Props = {
   [`${T}.IsOnTrack`]: true,
   [`${G}.IsInPitLane`]: 0,
   [`${G}.EngineIgnitionOn`]: 1,
-  [`${T}.EngineWarnings`]: 0,
+  [`${G}.EngineStarted`]: 1,
   [`${T}.PlayerCarMyIncidentCount`]: 0,
   [`${G}.PushToPassActive`]: 0,
   [`${T}.dcHeadlightFlash`]: false,
@@ -104,21 +104,32 @@ describe('nothing is raised with nobody in the car', () => {
   // driver is standing in the garage, so every car alert reads #312's one test of being in the car.
   for (const alert of ALERT_CATALOGUE.filter((c): c is CarAlert => !isFlag(c))) {
     test(alert.id, () => {
-      expect(alert.when).toContain(inTheCar());
+      expect(alert.when).toContain(inTheCar(false));
       const everything: Props = {
         ...DRIVING,
         [`${G}.EngineIgnitionOn`]: 0,
-        [`${T}.EngineWarnings`]: 8,
+        [`${G}.EngineStarted`]: 0,
         [`${T}.PlayerCarMyIncidentCount`]: 4,
         [`${G}.PushToPassActive`]: 1,
         [`${T}.dcHeadlightFlash`]: true,
       };
       expect(raised(alert.id, { ...everything, ...IN_THE_GARAGE }, true)).toBe(false);
+      // Nor in a sim that publishes no IsOnTrack, where SimHub's ignition is a guess from the revs
+      // and would otherwise put IGNITION OFF over every flag at idle.
+      const { [`${T}.IsOnTrack`]: _unsaid, ...elsewhere } = everything;
+      expect(raised(alert.id, elsewhere, true)).toBe(false);
     });
   }
 
   test('and the test is the one the change notification reads, kept in one place', () => {
-    expect(changeNotificationVisible(TRACKED_VALUES[0]!.id)).toContain(inTheCar());
+    // One definition, asked two ways: a notification keeps showing in a sim that does not say, and a
+    // car alert, which outranks every flag, does not.
+    expect(inTheCar()).toBe(inTheCar(true));
+    expect(inTheCar(true)).not.toBe(inTheCar(false));
+    expect(changeNotificationVisible(TRACKED_VALUES[0]!.id)).toContain(inTheCar(true));
+    expect(evalNcalc(inTheCar(true), {})).toBe(true);
+    expect(evalNcalc(inTheCar(false), {})).toBe(false);
+    expect(evalNcalc(inTheCar(false), { [`${T}.IsOnTrack`]: true })).toBe(true);
   });
 });
 
@@ -127,18 +138,19 @@ describe('the ignition and the stalled engine, out on the circuit', () => {
     expect(raised('ignition', { ...DRIVING, [`${G}.EngineIgnitionOn`]: 0 })).toBe(true);
     expect(raised('ignition', DRIVING)).toBe(false);
     expect(raised('ignition', { ...DRIVING, [`${G}.EngineIgnitionOn`]: 0, ...IN_THE_LANE })).toBe(false);
-    // A sim that publishes no ignition is not a car switched off.
+    // Before any game has run there is no ignition to read, which is not a car switched off.
     expect(raised('ignition', { ...DRIVING, [`${G}.EngineIgnitionOn`]: null })).toBe(false);
   });
 
-  test('the stall is bit 8 of EngineWarnings, whatever else is set beside it', () => {
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: 8 })).toBe(true);
-    // 16 is the pit limiter and 24 is the two together: the stall is read out of the word, not off it.
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: 16 })).toBe(false);
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: 24 })).toBe(true);
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: 1 + 2 + 4 + 16 + 32 + 64 })).toBe(false);
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: 8, ...IN_THE_LANE })).toBe(false);
-    expect(raised('engine', { ...DRIVING, [`${T}.EngineWarnings`]: null })).toBe(false);
+  test('the stall is SimHub’s EngineStarted, which has already excused the hybrids', () => {
+    // Not iRacing's stalled bit: SimHub ignores it on hybrid and electric cars, and ENGINE OFF over a
+    // red flag on a car that is driving would be the worst false alarm the face could give.
+    expect(carAlert('engine').when).not.toContain('EngineWarnings');
+    expect(raised('engine', { ...DRIVING, [`${G}.EngineStarted`]: 0 })).toBe(true);
+    expect(raised('engine', DRIVING)).toBe(false);
+    expect(raised('engine', { ...DRIVING, [`${G}.EngineStarted`]: 0, ...IN_THE_LANE })).toBe(false);
+    // Before any game has run there is nothing to read, which is not an engine that has stopped.
+    expect(raised('engine', { ...DRIVING, [`${G}.EngineStarted`]: null })).toBe(false);
   });
 
   test('the pit family says the same two things in the lane, from the same two readings', () => {
@@ -146,9 +158,9 @@ describe('the ignition and the stalled engine, out on the circuit', () => {
     // the pit family's and the circuit is the catalogue's, and they read the same predicates.
     const pit = (id: string): string => PIT_ALERTS.find((a) => a.id === id)!.when;
     expect(pit('ignition')).toBe(ncalc.and(isInPitLane(), ignitionOff()));
-    expect(pit('engine')).toBe(ncalc.and(isInPitLane(), engineStalled()));
+    expect(pit('engine')).toBe(ncalc.and(isInPitLane(), engineStopped()));
     expect(carAlert('ignition').when).toContain(ignitionOff());
-    expect(carAlert('engine').when).toContain(engineStalled());
+    expect(carAlert('engine').when).toContain(engineStopped());
     expect(carAlert('ignition').when).toContain(ncalc.not(isInPitLane()));
     expect(carAlert('engine').when).toContain(ncalc.not(isInPitLane()));
     // And in the same order: the switch the driver can move first.

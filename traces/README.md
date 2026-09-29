@@ -98,14 +98,17 @@ session best as the empty placeholder rather than as a car nobody observed. Ever
 with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
 `bun run record` picks the property up by itself and drops the entry.
 
-Two more since #109, both `false` in all seven, and both because the alert catalogue reads them:
-`DataCorePlugin.GameData.PushToPassActive` and `DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash`.
-Neither is a guess about the value. SimHub's iRacing reader fills the first from `CarIdxP2P_Status`
-at the player's index and hands it through as a `bool?` rather than as 1 or 0, and the emulator
-publishes that array all `false`; the second is a raw telemetry boolean the emulator publishes as
-`false`, the same type and default as `dcPitSpeedLimiterToggle`, which every trace recorded as
-`false`. They are asserted because the VM was held by another session when they were needed; the
-next recording of each scenario replaces them with what SimHub says.
+Three more since #109, because the alert catalogue and the pit family read them, and none is a guess
+about the value. `DataCorePlugin.GameData.PushToPassActive` is `false` in all seven: SimHub's iRacing
+reader fills it from `CarIdxP2P_Status` at the player's index and hands it through as a `bool?` rather
+than as 1 or 0, and the emulator publishes that array all `false`.
+`DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash` is `false`: a raw telemetry boolean the
+emulator publishes as `false`, the same type and default as `dcPitSpeedLimiterToggle`, which every
+trace recorded as `false`. `DataCorePlugin.GameData.EngineStarted` is 1: the reader computes it from
+its own ignition and the stalled bit of `EngineWarnings`, and every trace recorded `EngineIgnitionOn`
+at a constant 1 and an `EngineWarnings` that never carries the stalled bit, 8. They are asserted
+because the VM was held by another session when they were needed; the next recording of each
+scenario replaces them with what SimHub says.
 
 ## Why a recording waits two minutes first
 

@@ -1097,23 +1097,32 @@ export const ignitionOn = (): Expr => game('EngineIgnitionOn');
  * SimHub's iRacing reader has no ignition of iRacing's to pass through, and derives one: it is on
  * while `Voltage` has been above zero within the last five frames (`IRacingManager` in the decompiled
  * 9.12.6 ICarsReader.dll). That is why anything drawing this on track also needs {@link inTheCar}: a
- * driver standing in the garage has no voltage, and so, to SimHub, an ignition switched off.
+ * driver standing in the garage has no voltage, and so, to SimHub, an ignition switched off. A reader
+ * that overrides nothing gets `GameManagerBase`'s guess instead, `Rpms > 300`, which is an engine at
+ * idle rather than a switch.
  *
- * The `isnull` default is 1 and that is the whole point of it: a sim that does not publish
- * `EngineIgnitionOn` would otherwise draw the alarm for ever.
+ * The property is a non-nullable `int` and is never absent while a game runs; the `isnull` default of
+ * 1 is for the frames before any game has, when there is no `NewData` to read it from.
  */
 export const ignitionOff = (): Expr => eq(isnull(ignitionOn(), num(1)), num(0));
 
 /**
- * The engine has stopped: bit 8 of iRacing's `EngineWarnings` word, `irsdk_EngineWarnings`'s
- * stalled bit, tested arithmetically because that is the only way NCalc can test a bit.
+ * The engine is not running: SimHub's `EngineStarted` at 0, which on iRacing is the ignition on and
+ * the stalled bit of `EngineWarnings` clear, held over five frames.
  *
- * Here rather than beside a drawing because two read it, the pit family in the lane and the alert
- * catalogue out of it, and the two have to agree about what an engine that has stopped is. SimHub's
- * own `EngineStarted` answers a nearby question and is not used: it folds the ignition in, and it
- * excuses a car whose model name says Hybrid, which is a guess about names rather than a reading.
+ * SimHub's reading rather than the bit, although the bit is iRacing's own, because of what SimHub
+ * leaves out. `IRacingManager` ignores the stalled bit on an electric car, on a car whose idle RPM
+ * is 0, and on one whose model name says Hybrid -- which is a guess about names, but a guess somebody
+ * made because a hybrid raises the bit while it runs. The alert catalogue ranks this above a red
+ * flag, and ENGINE OFF over a flag on a car that is driving is the worst false alarm the face could
+ * give, so the reading that has already been corrected for it is the one to take.
+ *
+ * It is also true with the ignition off, which is SimHub's own definition; the pit family and the
+ * catalogue both rank the ignition above it, so the one that names the switch is what shows. Here
+ * rather than beside a drawing because both read it and have to agree about what an engine that has
+ * stopped is.
  */
-export const engineStalled = (): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(8))), num(2)), num(0));
+export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)), num(0));
 
 /**
  * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
@@ -1131,10 +1140,14 @@ export const engineStalled = (): Expr => gt(mod(truncate(div(isnull(raw('EngineW
  * forms side by side -- so `= 1` would never hold and the gate would silence everything behind it.
  * It is the same reading `carAvailable` uses for the leaderboard's rows.
  *
- * The default is `true`, so a sim that publishes nothing leaves what it gates showing rather than
- * suppressing all of it.
+ * **What a sim that does not say gets is the caller's choice**, because the two callers want opposite
+ * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
+ * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
+ * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
+ * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
+ * flags already are.
  */
-export const inTheCar = (): Expr => isnull(raw('IsOnTrack'), 'true');
+export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
 
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));

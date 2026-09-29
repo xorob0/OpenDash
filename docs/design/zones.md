@@ -986,9 +986,9 @@ with its reason.
 **And five car alerts ranked in the same list, since #109.** The canvas's alert catalogue is flags
 and car alerts in one order, and so is the band: the ignition off and the engine stalled out on the
 circuit rank above the red flag, an incident with its count against the limit below the flags that
-mean slow down, and push to pass and the headlight flash below the chequer. They take the band, settle
-into its blocks and take the full-screen block exactly as a flag does, and every one of them reads
-whether anybody is in the car, which is `inTheCar` in `second/values.ts`. In the lane the ignition and
+mean slow down, and push to pass and the headlight flash below the chequer. They take the band and
+settle into its blocks as a flag does, and every one of them reads whether anybody is in the car,
+which is `inTheCar` in `second/values.ts`, and reads it as "no" in a sim that does not say. In the lane the ignition and
 the stall are the pit family's instead, below. The incident and the flash are events, held for the
 same three seconds after the value they watch moves. Push to pass and the flash are white, which is
 two flags' colour without their name, so they are drawn only where the name is: not on the nano, not
