@@ -392,14 +392,15 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Whether every zone holds an order of its whole catalogue, which is what the cycle
-        /// steps through; a hand-edited or partly read file is repaired before anything steps.</summary>
+        /// <summary>Whether every zone holds an order of its whole catalogue, every page once, which is
+        /// what the cycle steps through; a hand-edited or partly read file, or an order assigned with a
+        /// page twice, is repaired before anything steps. Allocates nothing.</summary>
         private bool OrdersAreWhole()
         {
             if (Orders == null || Orders.Length != Contract.FaceZoneLetters.Length) return false;
             for (var i = 0; i < Orders.Length; i++)
             {
-                if (Orders[i] == null || Orders[i].Length != Contract.FaceZonePageCounts[i]) return false;
+                if (!IsWholeOrder(Orders[i], Contract.FaceZonePageCounts[i])) return false;
             }
             return true;
         }

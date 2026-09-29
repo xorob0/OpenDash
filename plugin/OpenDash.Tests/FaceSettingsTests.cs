@@ -146,6 +146,19 @@ namespace OpenDashPlugin.Tests
             face.Orders[0] = new[] { 1 };
             face.OpenOnStartPages();
             Assert.Equal(4, face.Orders[0].Length);
+
+            // So is one of the right length that holds a page twice: [3, 3, 0, 2] would step 3, 3, 3
+            // and never reach page 1. Repaired, it is 3, 0, 2 and then 1, both ways.
+            face = Fresh();
+            for (var page = 0; page < Contract.FaceZonePageCounts[0]; page++) face.SetPageEnabled("A", page, true);
+            face.Orders[0] = new[] { 3, 3, 0, 2 };
+            face.Zones[0] = 3;
+            Assert.Equal(new[] { 0, 2, 1, 3 }, Enumerable.Range(0, 4).Select(_ => face.Cycle("A")).ToArray());
+            Assert.Equal(new[] { 3, 0, 2, 1 }, face.Orders[0]);
+
+            face.Orders[0] = new[] { 3, 3, 0, 2 };
+            face.Zones[0] = 3;
+            Assert.Equal(new[] { 1, 2, 0, 3 }, Enumerable.Range(0, 4).Select(_ => face.CycleBack("A")).ToArray());
         }
 
         [Fact]
