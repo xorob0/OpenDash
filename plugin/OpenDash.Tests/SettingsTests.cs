@@ -1529,8 +1529,14 @@ namespace OpenDashPlugin.Tests
             main.FlagFormat = "full";
             main.LapReview = "race";
             main.Face.Cycle("B");
+            main.LayoutX = 120;
+            main.LayoutY = 40;
 
             var copy = settings.DuplicateScreen(main.Namespace);
+            // Placed by the Rig page until the driver drags it, rather than on top of its source.
+            Assert.Null(copy.LayoutX);
+            Assert.Null(copy.LayoutY);
+            Assert.Equal(120, main.LayoutX);
             Assert.NotNull(copy);
             Assert.Contains(copy, settings.RigScreens());
             Assert.Equal(2, settings.RigScreens().Count);
@@ -1568,6 +1574,39 @@ namespace OpenDashPlugin.Tests
             var before = settings.RigScreens().Count;
             Assert.Null(settings.DuplicateScreen("Gone"));
             Assert.Equal(before, settings.RigScreens().Count);
+        }
+
+        [Fact]
+        public void A_screen_keeps_its_place_on_the_rig_canvas()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            // Unplaced until dragged, which is every screen of a file written before the Rig page.
+            Assert.Null(settings.Rig[0].LayoutX);
+            Assert.Null(settings.Rig[0].LayoutY);
+            settings.Rig[0].LayoutX = 300;
+            settings.Rig[0].LayoutY = 0;
+            settings.Rig[1].LayoutX = -20;
+            settings.Rig[1].LayoutY = 60;
+            settings.Normalise();
+            Assert.Equal(300, settings.Rig[0].LayoutX);
+            Assert.Equal(0, settings.Rig[0].LayoutY);
+            // A position the canvas cannot draw is a tile it lays out itself.
+            Assert.Null(settings.Rig[1].LayoutX);
+            Assert.Equal(60, settings.Rig[1].LayoutY);
+
+            // Carried by the panel's copy and by Json.NET, which is how SimHub keeps it.
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal(300, copy.Rig[0].LayoutX);
+            Assert.Equal(60, copy.Rig[1].LayoutY);
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.Equal(300, back.Rig[0].LayoutX);
+            Assert.Null(back.Rig[1].LayoutX);
+            // And it is the panel's, not a property: nothing the rig declares names it.
+            Assert.DoesNotContain(settings.DeclaredProperties(), name => name.Contains("Layout"));
         }
 
         [Fact]

@@ -1510,6 +1510,9 @@ namespace OpenDashPlugin
             copy.Namespace = PackageCatalogue.UniqueNamespace(copy.Name, new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase));
             copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, source.Folder);
             copy.Unclaimed = false;
+            // Laid out by the Rig page until the driver drags it: on top of the source is nowhere.
+            copy.LayoutX = null;
+            copy.LayoutY = null;
             copy.Normalise();
             if (copy.Face != null) copy.Face.OpenOnStartPages();
             Rig.Add(copy);
