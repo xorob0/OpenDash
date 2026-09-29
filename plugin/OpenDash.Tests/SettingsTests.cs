@@ -1651,7 +1651,7 @@ namespace OpenDashPlugin.Tests
             var before = settings.RigScreens().Count;
             Assert.Null(settings.DuplicateScreen("Gone", entry));
             Assert.Equal(before, settings.RigScreens().Count);
-            Assert.Throws<ArgumentNullException>(() => settings.DuplicateScreen(main.Namespace, null));
+            Assert.Throws<ArgumentNullException>(() => settings.DuplicateScreen(main.Namespace, (PackageEntry)null));
 
             // The package's stock folder goes with the stock namespace, so a copy never takes it, even
             // with the stock screen gone: a copy of the second screen at a size, named as the size, is
@@ -1669,6 +1669,44 @@ namespace OpenDashPlugin.Tests
             var again = rig.AddScreen(entry, "Rim");
             Assert.True(again.IsStock);
             Assert.Equal(entry.Folder, again.Folder);
+        }
+
+        [Fact]
+        public void A_screen_migrated_without_a_package_is_duplicated_from_the_package_the_installer_would_use()
+        {
+            // A rig upgraded from folders: the migration remembers no package on any screen, so a panel
+            // that looked the source's package up by its Package field alone would find nothing for
+            // most upgraded rigs. The catalogue overload finds it the way the installer does.
+            var settings = new OpenDashSettings();
+            settings.FolderFingerprints["OpenDash 1920x480"] = "abc";
+            settings.Normalise();
+            var face = settings.RigScreens().Single();
+            Assert.Null(face.Package);
+            var catalogue = new List<PackageEntry>
+            {
+                new PackageEntry { Package = "companion", Folder = "OpenDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 },
+                new PackageEntry { Package = "face", Folder = "OpenDash 1920x480", Kind = Contract.KindFace, Width = 1920, Height = 480 },
+            };
+            Assert.Same(catalogue[1], PackageCatalogue.EntryFor(catalogue, face));
+
+            var copy = settings.DuplicateScreen(face.Namespace, catalogue, "Rim");
+            Assert.NotNull(copy);
+            Assert.Equal("OpenDash Rim", copy.Folder);
+            // The copy remembers its package, which its source never did.
+            Assert.Equal("face", copy.Package);
+            Assert.Null(face.Package);
+
+            // A screen off its stock folder is found by its kind and size, as the installer finds it.
+            var again = settings.DuplicateScreen(copy.Namespace, catalogue);
+            Assert.Equal("face", again.Package);
+            copy.Package = null;
+            Assert.Same(catalogue[1], PackageCatalogue.EntryFor(catalogue, copy));
+
+            // No package that makes it is no copy, rather than a card the installer cannot write.
+            var before = settings.RigScreens().Count;
+            Assert.Null(settings.DuplicateScreen(face.Namespace, new List<PackageEntry>()));
+            Assert.Null(settings.DuplicateScreen(face.Namespace, (IEnumerable<PackageEntry>)null));
+            Assert.Equal(before, settings.RigScreens().Count);
         }
 
         [Fact]

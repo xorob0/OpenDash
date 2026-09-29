@@ -1589,11 +1589,30 @@ namespace OpenDashPlugin
         /// the driver's to choose. A face opens on its start pages, as every face does on a start.
         /// Null when the rig has no screen of that namespace. #503.
         ///
-        /// <paramref name="entry"/> is the package the source was made from, which the caller finds in
-        /// the catalogue by <see cref="ScreenInstance.Package"/>, and its folder is reserved as
+        /// The panel calls the overload that takes the catalogue, which finds the source's package as the
+        /// installer does. Most screens on an upgraded rig remember no package, so a lookup by
+        /// <see cref="ScreenInstance.Package"/> alone finds nothing for them.
+        /// </remarks>
+        public ScreenInstance DuplicateScreen(string ns, IEnumerable<PackageEntry> catalogue, string name = null)
+        {
+            var source = ScreenByNamespace(ns);
+            if (source == null) return null;
+            // No package makes it, so there is nothing to install a copy from: the Duplicate that adds a
+            // card the installer then cannot write is the worse answer.
+            var entry = PackageCatalogue.EntryFor(catalogue, source);
+            return entry == null ? null : DuplicateScreen(ns, entry, name);
+        }
+
+        /// <summary>
+        /// Adds a copy of a screen made from a package already found; see the overload that finds it.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="entry"/> is the package the source is written from, found by
+        /// <see cref="PackageCatalogue.EntryFor"/>, and its folder is reserved as
         /// <see cref="PackageCatalogue.NewScreen"/> reserves it: the copy never takes its package's stock
         /// folder, even with the stock screen removed, since the stock folder goes with the stock
-        /// namespace and only the first screen at a size holds those.
+        /// namespace and only the first screen at a size holds those. The copy remembers the package,
+        /// which a source migrated from folders did not.
         /// </remarks>
         public ScreenInstance DuplicateScreen(string ns, PackageEntry entry, string name = null)
         {
@@ -1615,6 +1634,7 @@ namespace OpenDashPlugin
             copy.Name = PackageCatalogue.UniqueName(wanted, names);
             copy.Namespace = PackageCatalogue.UniqueNamespace(copy.Name, new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase));
             copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, entry.Folder);
+            copy.Package = entry.Package;
             copy.Unclaimed = false;
             // Laid out by the Rig page until the driver drags it: on top of the source is nowhere.
             copy.LayoutX = null;
