@@ -1552,8 +1552,17 @@ export const REFERENCE_LABEL_WIDEST = 'vs all-time best';
 const inThousandths = (): Expr => setting.deltaPrecisionIs('thousandths');
 
 /**
+ * Whether this reading is drawn to three places: thousandths chosen, and a figure short enough to hold
+ * them. A delta of 100 s or more (a long stop, or the lap after one against the last lap) would need a
+ * seventh cell at three places, so it is drawn to hundredths, which `+100.00` fits. The edge is the
+ * half under which .NET still rounds to two whole digits: 99.9995 to three places is `100.000`.
+ */
+const drawnToThousandths = (seconds: Expr): Expr => and(inThousandths(), lt(abs(seconds), num(99.9995)));
+
+/**
  * The live delta to the reference as it is drawn: signed, with a true minus, to the places the
- * precision setting asks for.
+ * precision setting asks for, except that a delta of 100 s or more is drawn to hundredths at either
+ * setting, since three places would take it past the box ({@link drawnToThousandths}).
  *
  * One helper for the five surfaces that draw it -- card 3, the delta page, Lap times, the lap pop-up
  * and the pit wall's Lap delta panel -- so that no two of them can draw one reading to different
@@ -1565,14 +1574,15 @@ const inThousandths = (): Expr => setting.deltaPrecisionIs('thousandths');
  * emitted as the text of that expression; `format` has never been verified with anything but a
  * literal pattern either. #322.
  */
-export const referenceDeltaText = (seconds: Expr): Expr => iff(inThousandths(), signed(seconds, '0.000'), signed(seconds, '0.00'));
+export const referenceDeltaText = (seconds: Expr): Expr => iff(drawnToThousandths(seconds), signed(seconds, '0.000'), signed(seconds, '0.00'));
 
 /**
  * The longest reading {@link referenceDeltaText} is budgeted for, which is what every box that draws
  * it declares as its `widest`: two whole digits and three places, the true minus taking a digit
- * cell. The samples stay the canvas's `−0.21`, which is the short end of the range; this is what the
- * fit tests measure instead, since a monospaced box is measured by what it declares rather than by
- * its budget.
+ * cell. The same six cells hold three whole digits and two places, which is how a delta of 100 s or
+ * more is drawn, so every reading under 1000 s fits. The samples stay the canvas's `−0.21`, which is
+ * the short end of the range; this is what the fit tests measure instead, since a monospaced box is
+ * measured by what it declares rather than by its budget.
  */
 export const REFERENCE_DELTA_WIDEST = `${MINUS}12.345`;
 
@@ -1617,11 +1627,13 @@ export const referenceDeltaColour = (seconds: Expr): Expr =>
  * The whole digits are counted per precision rather than written as two, because the six cells hold
  * three whole digits at hundredths: a long stop in the pits can take the delta past a hundred
  * seconds, `+100.00` fits the box, and a caption placed for two digits would sit on its last one.
+ * A delta that long is drawn to hundredths at either setting, so the caption asks the same question
+ * of the reading that {@link referenceDeltaText} does.
  */
 export const referenceDeltaDrawn = (seconds: Expr): DrawnFigure => {
   const figure = (decimals: number): DrawnFigure =>
     drawnFigure({ value: seconds, digits: CHARS.referenceDelta.digits - 1 - decimals, decimals, signed: true });
-  return drawnEither(inThousandths(), figure(3), figure(2));
+  return drawnEither(drawnToThousandths(seconds), figure(3), figure(2));
 };
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);

@@ -207,11 +207,14 @@ a build input. It is a runtime setting anyway, on the terms the border thickness
 
 The binding chooses between two literal patterns, `format(v, '0.000', true)` and
 `format(v, '0.00', true)`, rather than binding the pattern: `format` has only ever been verified with
-a literal one, and the generator writes the pattern as a literal. And every box that draws the delta is cut for the longer of the two, the sign, two
-whole digits and three places, whichever the driver picks. So the box is still a literal the build
-measured, and what the fit tests measure it by is `−12.345`, declared as the item's `widest`, rather
-than a hope about what the expression returns. The character budget stays build-time, as the table
-says: the setting picks a format and never a budget.
+a literal one, and the generator writes the pattern as a literal. And every box that draws the delta
+is cut for the longer of the two, the sign, two whole digits and three places, whichever the driver
+picks. A delta of 100 s or more, which a long stop in the pits can make, is drawn to hundredths at
+either setting, so the same six cells hold its three whole digits and every reading under 1000 s
+fits. So the box is still a literal the build measured, and what the fit tests measure it by is
+`−12.345`, declared as the item's `widest`, rather than a hope about what the expression returns.
+The character budget stays build-time, as the table says: the setting picks a format and never a
+budget.
 
 The price is paid by the driver who never touches it. A two-place delta sits in a box with an empty
 cell at its end, which is invisible where the figure is left aligned and is not where the box is

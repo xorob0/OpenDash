@@ -603,9 +603,10 @@ describe('module expressions', () => {
 
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
     const value = moduleItem('delta', 'delta.value');
-    // To thousandths or to hundredths, and the minus is replaced in both.
+    // To thousandths or to hundredths, hundredths at either setting from a hundred seconds on, and the
+    // minus is replaced in both.
     expect(formulaOf(value, 'Text')).toMatch(
-      /^if\(\(isnull\(\[OpenDash\.DeltaPrecision\], 'hundredths'\)\) = \('thousandths'\), replace\(format\(.*, '0\.000', true\), '-', '\u2212'\), replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)\)$/,
+      /^if\(\(\(isnull\(\[OpenDash\.DeltaPrecision\], 'hundredths'\)\) = \('thousandths'\)\) and \(\(abs\(.*\)\) < \(99\.9995\)\), replace\(format\(.*, '0\.000', true\), '-', '\u2212'\), replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)\)$/,
     );
     expect(value.text).toBe('\u22120.21');
     expect(moduleItem('delta', 'scale.0').text).toBe('\u22122.0');

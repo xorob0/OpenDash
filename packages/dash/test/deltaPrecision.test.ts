@@ -113,12 +113,18 @@ const drawn = (s: Site, props: Props): { text: string; colour: unknown } => {
 const placesOf = (precision: string | undefined): number => (precision === 'thousandths' ? 3 : 2);
 
 /**
+ * The places a reading is drawn to: the precision's, except that a delta of 100 s or more is drawn to
+ * two, since a third place would take it past the six cells.
+ */
+const placesDrawn = (places: number, seconds: number): number => (places === 3 && Math.abs(seconds) >= 99.9995 ? 2 : places);
+
+/**
  * The figure a reading draws, written independently of the binding: a true minus, a plus for anything
  * not negative, and the card's bare zero inside the band, which is half a unit of the last place.
  */
 const figure = (seconds: number, places: number, bareAtRest: boolean): string => {
   if (bareAtRest && Math.abs(seconds) < 0.5 * 10 ** -places) return `0.${'0'.repeat(places)}`;
-  return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(places)}`;
+  return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(placesDrawn(places, seconds))}`;
 };
 
 /** The colour a figure should carry, read off the figure itself: level, faster or slower. */
@@ -149,11 +155,12 @@ const frame = (reference: string | undefined, precision: string | undefined, rea
 const asRead = (reference: string | undefined, reading: number): number => (reference === 'lastlap' ? Math.fround(reading) : reading);
 
 /**
- * The readings, from level to the longest the budget is cut for, and both sides of both edges of the
- * band: 0.0005 is the edge at thousandths and 0.005 at hundredths, and the readings just inside each
- * are the ones a band on the wrong side of its edge would colour wrongly.
+ * The readings, from level to past the longest the budget is cut for, and both sides of both edges of
+ * the band: 0.0005 is the edge at thousandths and 0.005 at hundredths, and the readings just inside
+ * each are the ones a band on the wrong side of its edge would colour wrongly. 99.9994 is the last
+ * reading drawn to three places, and 123.456 is a long stop's, drawn to two at either precision.
  */
-const MAGNITUDES = [0, 0.0004, 0.00049, 0.0005, 0.004, 0.0049, 0.005, 0.21, 0.214, 1.2345, 9.9995, 9.9996, 12.345, 99.999] as const;
+const MAGNITUDES = [0, 0.0004, 0.00049, 0.0005, 0.004, 0.0049, 0.005, 0.21, 0.214, 1.2345, 9.9995, 9.9996, 12.345, 99.999, 99.9994, 123.456] as const;
 const READINGS: readonly number[] = [...new Set(MAGNITUDES.flatMap((m) => [m, -m]))];
 
 const REFERENCES: readonly (string | undefined)[] = [undefined, ...DELTA_REFERENCES, 'previous'];
@@ -214,6 +221,17 @@ describe('the delta precision (#322)', () => {
     expect(at(card, 'thousandths', -0.004)).toEqual({ text: '−0.004', colour: ds.purpose.delta.faster });
   });
 
+  test('a delta of a hundred seconds or more is drawn to hundredths at either precision', () => {
+    // A long stop takes the delta there, and a third place would need a seventh cell: `+100.000`.
+    for (const s of SITES) {
+      const at = (reading: number) => drawn(s, frame('session', 'thousandths', reading)).text;
+      expect({ site: s.name, text: at(99.9994) }).toEqual({ site: s.name, text: '+99.999' });
+      expect({ site: s.name, text: at(99.9995) }).toEqual({ site: s.name, text: '+100.00' });
+      expect({ site: s.name, text: at(-123.456) }).toEqual({ site: s.name, text: '−123.46' });
+      expect({ site: s.name, text: at(999.99) }).toEqual({ site: s.name, text: '+999.99' });
+    }
+  });
+
   test('with no lap to compare against, every surface is level at either precision', () => {
     for (const s of SITES) {
       for (const precision of DELTA_PRECISIONS) {
@@ -240,6 +258,9 @@ describe('the delta precision (#322)', () => {
   test('every reading any surface can draw fits its widest in its own cells, and the widest fits the box', () => {
     // The .NET roundings the evaluator does not make: a half in decimal that is under a half in binary.
     const dotnet = ['+12.35', '−12.35', '+10.000', '−10.000', '+100.00', '−100.00'];
+    // And the longest a long stop draws, which is to two places at either precision: every reading
+    // under 1000 s fits.
+    const longest = ['+100.00', '−123.46', '+999.99', '−999.99'];
     for (const s of SITES) {
       const mono = s.item.monospace;
       if (mono === undefined) throw new Error(`${s.name} is not monospaced`);
@@ -248,7 +269,7 @@ describe('the delta precision (#322)', () => {
       // strict one on every face that ships.
       const room = textWidth(REFERENCE_DELTA_WIDEST, mono);
       expect({ site: s.name, fits: room <= s.item.rect.width }).toEqual({ site: s.name, fits: true });
-      const drawnTexts = new Set(dotnet);
+      const drawnTexts = new Set([...dotnet, ...longest]);
       for (const precision of PRECISIONS) for (const reading of READINGS) drawnTexts.add(drawn(s, frame('session', precision, reading)).text);
       for (const text of drawnTexts) {
         expect({ site: s.name, text, fits: textWidth(text, mono) <= room }).toEqual({ site: s.name, text, fits: true });
@@ -271,7 +292,10 @@ describe('the delta precision (#322)', () => {
           // by `format`, and at a half the two can round opposite ways, in the evaluator and on the
           // dash alike; where that carries a digit, as 9.9995 does to `10.000`, the caption would sit a
           // cell off for as long as the delta read exactly that, which is a frame at most.
-          const half = (reading: number): boolean => Math.abs(((Math.abs(asRead(reference, reading)) * 10 ** placesOf(precision)) % 1) - 0.5) < 1e-6;
+          const half = (reading: number): boolean => {
+            const seconds = Math.abs(asRead(reference, reading));
+            return Math.abs(((seconds * 10 ** placesDrawn(placesOf(precision), seconds)) % 1) - 0.5) < 1e-6;
+          };
           for (const reading of READINGS.filter((r) => !half(r))) {
             const props = frame(reference, precision, reading);
             const figureText = String(evalNcalc(textOf(value), props));
