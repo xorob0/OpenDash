@@ -6,7 +6,7 @@
 # TypeScript, read by nineteen generated .ledsprofile files and attached by nothing, and both
 # suites stayed green. contract.test.ts checks the TypeScript against this file in order;
 # ContractTests.cs checks the C# against it as a set, because the two genuinely emit a face's
-# twenty-one names in different orders and that is older than this file.
+# twenty-eight names in different orders and that is older than this file.
 #
 # Regenerate after a deliberate change, and read the diff:
 #   bun -e "import {declaredProperties} from './packages/dash/src/contract.ts'; console.log(declaredProperties().join('\n'))"

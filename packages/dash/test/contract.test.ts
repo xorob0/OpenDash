@@ -110,7 +110,7 @@ describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
-    // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
+    // 850 face beside it are configured apart instead of sharing one set of zones. Five per zone --
     // page, mask, start and the class filter, and since #503 the position the plugin says the page
     // showing has in the zone's own order -- plus the bar's ends, the glance, the flag format, the
     // lap review and what this face carries at the top.
@@ -119,8 +119,9 @@ describe('settings', () => {
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
     // global and thirteen per matrix, the way every face carries its own group; the strips are the three
     // that decide what a strip shows, then the mirror -- its fit, the gate that says there is a bar
-    // to draw, and one packed run per length a centre can be -- and the switch that hands a car
-    // alongside the whole strip. It was nine and six until the
+    // to draw, and one packed run per length a centre can be -- the switch that hands a car
+    // alongside the whole strip, and since #503 a strip's own brightness and the fifteen switches
+    // that turn one effect off. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
     // Six of the thirteen globals are settings; the other seven are the car's own bar, computed by the
@@ -539,9 +540,10 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
-    // One switch since #369, the car's own lights or not, rather than a chooser over the four styles:
-    // the panel names the car's style, and the two it no longer offers are normalised away (#503).
-    expect(panel).toContain('Contract.LedRpmStyleCar');
+    // The panel today still builds a chooser over the style set. The rebuilt Lights page (#503, per
+    // #369) offers one switch instead, the car's own lights or not, and whoever rebuilds it moves
+    // this pin to `Contract.LedRpmStyleCar` in the same change.
+    expect(panel).toContain('Contract.LedRpmStyles');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
     // a user is entitled to know whose numbers light their wheel (ADR 0018). The words moved into

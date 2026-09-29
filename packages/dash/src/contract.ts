@@ -53,10 +53,10 @@ export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
  * because OpenDash's opinion is that the car is right. A car with no table, or a rig with no
  * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
  *
- * **Two of the four are retired from the panel, not from the profile.** Since #369 the panel offers
- * one switch -- the car's own lights, or not -- and "not" is `leftToRight`. `meetInMiddle` and `f1`
- * are {@link RETIRED_LED_RPM_STYLES}, and the plugin normalises a stored one to `leftToRight` rather
- * than leave a strip on a style nobody can choose again. The profile keeps their conditional groups
+ * **Two of the four are retired from the panel, not from the profile.** The rebuilt panel (#503, per
+ * #369) offers one switch -- the car's own lights, or not -- and "not" is `leftToRight`.
+ * `meetInMiddle` and `f1` are {@link RETIRED_LED_RPM_STYLES}, and the plugin normalises a stored one
+ * to `leftToRight` rather than leave a strip on a style nobody can choose again. The profile keeps their conditional groups
  * all the same, so that a file of the previous vintage, installed beside a settings file that still
  * says `f1`, still lights rather than matching no group and going dark; {@link LED_RPM_STYLES}
  * therefore stays four.
@@ -229,10 +229,10 @@ export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
  * It silences the flags and nothing else: a car alert is about the car and is as true in the lane as
  * on the track, and the pit family on a strip is *about* the lane.
  *
- * Rig-wide, and shared rather than the lights': band D, the full-screen flag, the round faces' ring,
- * the companion, the pit wall, the flag box and every strip ask it, and a screen may not read a
- * property another screen owns. `flagsAllowedHere` in `flags.ts` is the one place it meets the pit
- * lane itself, since this file reads no telemetry.
+ * Rig-wide, and shared rather than the lights', because every surface that draws a flag asks it --
+ * band D, the full-screen flag, the round faces' ring, the companion, the pit wall, the flag box and
+ * every strip -- so it is a setting of the rig's and not of any one of them. `flagsAllowedHere` in
+ * `flags.ts` is the one place it meets the pit lane itself, since this file reads no telemetry.
  */
 export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
 
@@ -270,7 +270,7 @@ export const MIRROR_COLOR_WIDTH = 9;
 export const RETIRED_LED_CENTRE = 'rpmOnly';
 
 /**
- * The two rev light styles the panel no longer offers, retired into `leftToRight`. #369, #503.
+ * The two rev light styles the rebuilt panel no longer offers, retired into `leftToRight`. #369, #503.
  *
  * Named for the reason {@link RETIRED_LED_CENTRE} is: the plugin migrates a stored one rather than
  * guessing. Unlike the retired centre they are still values of {@link LedRpmStyle} and still groups
