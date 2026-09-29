@@ -171,9 +171,11 @@ describe('the band is the catalogue', () => {
     expect(bind).toContain('WeekendOptions.IncidentLimit');
     // A session with no limit writes the count alone rather than "/ unlimited".
     expect(bind).toContain("'unlimited'");
-    // Outlined in the incident's amber, because filled it would be the meatball's band.
+    // Filled in the incident's amber, as the canvas draws it, and so written in onFlag. The amber is
+    // the meatball's orange as well, which is why the meatball's outline and the incident's fill have
+    // to stay two shapes; the test below holds them apart where no name is written.
     expect(ds.purpose.alert.incident).toBe(ds.purpose.flag.orange);
-    expect(run.textColor).toBe(ds.purpose.alert.incident);
+    expect(run.textColor).toBe(ds.purpose.flag.onFlag);
   });
 });
 
@@ -221,7 +223,6 @@ describe('every shape is opaque over the whole band', () => {
       'furled',
       'black',
       'meatball',
-      'incident',
       'startSet',
       'startReady',
       'headlightFlash',
@@ -336,6 +337,28 @@ describe('the debris flag is its yellow and red wherever it is drawn', () => {
       expect({ where, drawn: drawing(layerOf('debris', frame, style), frame) }).not.toEqual({ where, drawn: drawing(layerOf('yellow', frame, style), frame) });
     }
   });
+});
+
+/**
+ * The meatball and the incident are one amber, `purpose.flag.orange` and `purpose.alert.incident`
+ * both being `#FFB300`, and a driver who has just hit something is the driver a meatball is likeliest
+ * to be for. Where a name is written the name tells them apart; where none is, only the shape can, so
+ * the meatball is the black flag's outline in its orange and the incident is the canvas's filled band
+ * (#498). Were both outlined, or both filled, the nano would draw one band for the two.
+ */
+describe('the meatball and the incident are two drawings where no name is written', () => {
+  const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };
+  for (const { where, frame, style } of [
+    { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
+    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+  ]) {
+    test(where, () => {
+      expect(ds.purpose.alert.incident).toBe(ds.purpose.flag.orange);
+      expect({ where, drawn: drawing(layerOf('meatball', frame, style), frame) }).not.toEqual({ where, drawn: drawing(layerOf('incident', frame, style), frame) });
+    });
+  }
 });
 
 describe('several conditions raised at once', () => {

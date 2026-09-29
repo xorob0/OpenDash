@@ -296,18 +296,20 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  * and nothing on a dashboard remembers it. The limit follows where the session has one, which is the
  * pit wall header's reading of the same two properties.
  *
- * Outlined, where the canvas fills it. Its colour is `purpose.alert.incident`, which is the caution
- * amber `#FFB300`, and so is the meatball's `purpose.flag.orange`: filled, the two would be one band
- * on the nano, and a driver who has just hit something is the driver a meatball is most likely to be
- * for. Since #498 the meatball is outlined in that amber as well, so where no name is written the
- * incident and the meatball are one drawing again, the other way round.
+ * Filled, as the canvas draws it. Its colour is `purpose.alert.incident`, which is the caution amber
+ * `#FFB300`, and so is the meatball's `purpose.flag.orange`, so the two can only be told apart by
+ * shape where no name is written, which is the nano and a settled block too narrow for the word; and
+ * a driver who has just hit something is the driver a meatball is most likely to be for. While the
+ * meatball was a filled band the incident was outlined for that reason. #498 outlined the meatball,
+ * which is a black flag with an orange disc, so the incident takes the canvas's fill back and the pair
+ * stays apart: a band of amber is the incident, and an amber edge on the near-black is the meatball.
  */
 const INCIDENT: CarAlert = {
   id: 'incident',
   name: 'Incident',
   when: and(changed(num(ALERT_EVENT_MS), incidentCount()), driving(), gt(incidentCount(), num(0))),
   band: {
-    shape: 'outlined',
+    shape: 'filled',
     colour: ds.purpose.alert.incident,
     label: 'INCIDENT',
     run: {

@@ -132,7 +132,7 @@ for the matrix; it is not answered by drawing one.
 |---|---|---|---|---|
 | 1 | Ignition off | `GameData.EngineIgnitionOn` at 0, out of the pit lane | 2 | Outlined `purpose.alert.power`, "IGNITION OFF". |
 | 2 | Engine off | `GameData.EngineStarted` at 0, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
-| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Outlined `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
+| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Filled `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
 | 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
 | 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
 
@@ -169,17 +169,19 @@ session, and say nothing. The same laziness means an incident taken while someth
 band is told when that clears, rather than lost behind it.
 
 **Two colours had to be read against the flags.** `purpose.alert.incident` is the caution amber,
-`#FFB300`, which is the meatball's `purpose.flag.orange`; filled, the two would be one band on the
-nano, and the driver who has just hit something is the driver a meatball is likeliest to be for, so
-the incident is outlined where the canvas fills it. Since #498 the meatball is outlined in that
-orange as well, which makes the two one drawing again wherever no name is written. `purpose.alert.p2p` is `color.neutral.primary`,
-which is white: filled it is the white flag and outlined it is the black family's `#F5F7FA`. The
-two patterns are the chequer's and the debris flag's, so no shape is left to give them, and push to
-pass and the flash are drawn only where their name is written.
-The nano's strip writes none and has no layer for them; a corner block too narrow for the word draws
-nothing rather than a white sliver; and the full-screen block does not take the body for them at all,
-since what the driver's own hand has just done is not worth the gear for the length of a push to
-pass. Both departures want the author's arbitration in `design/`.
+`#FFB300`, which is the meatball's `purpose.flag.orange`, and the driver who has just hit something
+is the driver a meatball is likeliest to be for, so wherever no name is written the two have to
+differ in shape. While the meatball was a filled band the incident was outlined, where the canvas
+fills it. Since #498 the meatball is the black flag's outline in its orange, so the incident is
+filled again as the canvas draws it, and `alertBand.test.ts` holds the two apart on the nano and in
+a sixteen-pixel block. `purpose.alert.p2p` is `color.neutral.primary`, which is white: filled it is
+the white flag and outlined it is the black family's `#F5F7FA`. The two patterns are the chequer's
+and the debris flag's, so no shape is left to give them, and push to pass and the flash are drawn
+only where their name is written. The nano's strip writes none and has no layer for them; a corner
+block too narrow for the word draws nothing rather than a white sliver; and the full-screen block
+does not take the body for them at all, since what the driver's own hand has just done is not worth
+the gear for the length of a push to pass. That departure wants the author's arbitration in
+`design/`.
 
 ### The four decisions sixty-four pixels forced
 
