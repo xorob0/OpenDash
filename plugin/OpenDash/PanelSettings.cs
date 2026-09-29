@@ -15,6 +15,8 @@ namespace OpenDashPlugin
         public const string LightingTitle = "Lighting";
 
         public const string FlagsInPitLaneTitle = "Flags in the pit lane";
+        public const string LowFuelTitle = "Low fuel";
+        public const string LowFuelCaption = "Laps of fuel left.";
         public const string OilTempTitle = "Oil temperature";
         public const string WaterTempTitle = "Water temperature";
 
@@ -44,6 +46,7 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(PanelDataTab.ClockTitle, PanelPage.Settings, AnchorRaceData, "24h", "12h", "time of day"),
             new PanelSearch.Entry(PanelDataTab.BlueFlagTitle, PanelPage.Settings, AnchorFlags, "blue flag"),
             new PanelSearch.Entry(FlagsInPitLaneTitle, PanelPage.Settings, AnchorFlags, "pit", "band d"),
+            new PanelSearch.Entry(LowFuelTitle, PanelPage.Settings, AnchorAlerts, "warning", "laps", "fuel"),
             new PanelSearch.Entry(OilTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "hot"),
             new PanelSearch.Entry(WaterTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "coolant", "hot"),
             new PanelSearch.Entry(BrightnessTitle, PanelPage.Settings, AnchorLighting, "lights", "leds", "dim"),

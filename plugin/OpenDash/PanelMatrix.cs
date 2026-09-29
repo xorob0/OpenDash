@@ -11,7 +11,6 @@ namespace OpenDashPlugin
 
         public const string AnchorProfile = "matrix.profile";
         public const string AnchorPanels = "matrix.panels";
-        public const string AnchorLowFuel = "matrix.low-fuel";
         public const string AnchorSpotterAnimation = "matrix.spotter-animation";
 
         public static readonly PanelSearch.Entry[] Search =
@@ -19,7 +18,6 @@ namespace OpenDashPlugin
             new PanelSearch.Entry("Flag box profile", PanelPage.Matrix, AnchorProfile, "install", "matrix profile", "8x8"),
             new PanelSearch.Entry(PanelLights.PanelsTitle, PanelPage.Matrix, AnchorPanels, "8x8", "flag box", "pillar"),
             new PanelSearch.Entry(PanelLights.AddPanel, PanelPage.Matrix, AnchorPanels, "new", "8x8"),
-            new PanelSearch.Entry("Low fuel warning", PanelPage.Matrix, AnchorLowFuel, "laps", "fuel"),
             new PanelSearch.Entry("Spotter bar animation", PanelPage.Matrix, AnchorSpotterAnimation, "slide in"),
             new PanelSearch.Entry("Idle display", PanelPage.Matrix, AnchorPanels, "at rest", "gear", "dark"),
             new PanelSearch.Entry("Mounting side", PanelPage.Matrix, AnchorPanels, "left", "right", "both"),

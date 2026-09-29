@@ -1,10 +1,9 @@
-// SettingsControl.Install.Plugin.cs: the "This plugin" section of the Install tab -- the version on disk,
+// SettingsControl.Updates.Plugin.cs: the "This plugin" section of the Updates page -- the version on disk,
 // the status pill, the reinstall, the daily update check and what applying one does.
 //
-// Lifted out of SettingsControl.Install.cs so that the three sections of the tab are a file each and can be
-// worked on without sharing one. The controls it writes into are declared in SettingsControl.Install.cs,
-// because SettingsControl.ForgetTabControls drops them when the tab is left and that list answers for the
-// whole partial class.
+// The controls it writes into are declared in SettingsControl.Updates.cs, which drops them when the page is
+// left. Asking for a check and taking its answer are the shell's (SettingsControl.Live.cs), since the
+// sidebar's badge reads the answer on every page; this section draws it.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -52,7 +51,7 @@ namespace OpenDashPlugin
             restoreButton = BuildRestoreButton();
             var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
 
-            var section = Ui.Section("This plugin", Ui.Row(text, right), BuildCheckRow());
+            var section = PageSection(PanelUpdates.PluginTitle, Ui.Row(text, right), Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck));
             RefreshStatus();
             RefreshUpdateLine();
             RefreshRestoreButton();
@@ -77,7 +76,7 @@ namespace OpenDashPlugin
             checkButton.Click += (sender, args) => Check(manual: true);
 
             var right = Ui.HStack(24, checkButton, toggle);
-            return Ui.Row(Ui.VStack(4, Ui.Body("Check for updates"), Ui.Caption(UpdateWording.CheckCaption)), right);
+            return Ui.Row("Check for updates", UpdateWording.CheckCaption, right);
         }
 
         private Button BuildUpdateButton(Border progressHost)
@@ -191,64 +190,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Asks, off the UI thread, and shows whatever came back when it does.
-        /// </summary>
-        /// <remarks>
-        /// The plugin does the asking (OpenDash.StartUpdateCheck), because Init asks too and the idle screen's
-        /// mark reads the same answer; the panel only says "Checking for updates…" when an answer is actually
-        /// coming, and draws it in <see cref="ShowUpdateAnswer"/>. Nothing here blocks: a socket that never
-        /// answers would otherwise freeze the settings page.
-        /// </remarks>
-        /// <returns>Whether an answer is coming.</returns>
-        private bool Check(bool manual)
-        {
-            if (!Settings.CheckForUpdates && !manual) return false;
-            // Whether a request will be made is decided before saying so, because saying "Checking for updates…"
-            // and then not checking left the panel on that sentence for as long as it was open, and hid an offer
-            // it had already found.
-            if (!plugin.StartUpdateCheck(manual)) return false;
-
-            askedManually |= manual;
-            if (checkButton != null) checkButton.IsEnabled = false;
-            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.RigVersion, Manual = manual };
-            RefreshUpdateLine();
-            return true;
-        }
-
-        /// <summary>
-        /// Draws a check's answer, which arrives on the interface thread and may land after the tab it was asked
-        /// from has gone, so every control it writes to is checked first.
-        /// </summary>
-        private void ShowUpdateAnswer(UpdateStatus answer)
-        {
-            var manual = askedManually;
-            askedManually = false;
-            // The check Init queued can land while an update is installing, and the line and the buttons are
-            // the install's until it finishes; what it says about the rig afterwards is its own to decide.
-            if (applying) return;
-            if (answer == null)
-            {
-                // The service declined after all. Whatever was showing before is still the truth.
-                if (updateStatus.State == UpdateState.Checking)
-                {
-                    updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.RigVersion };
-                }
-            }
-            else
-            {
-                // A press answered by the check Init had already started is still a press, and a person who
-                // pressed is owed "you have the newest release" where a background check says nothing.
-                updateStatus = manual && !answer.Manual ? answer.AsManual() : answer;
-            }
-            if (checkButton != null) checkButton.IsEnabled = true;
-            RefreshUpdateLine();
-            // An Update pressed on the remembered offer, now that the listing it needed has come back.
-            var host = pendingApply;
-            pendingApply = null;
-            if (host != null && updateStatus.State == UpdateState.UpdateAvailable && updateButton != null) ApplyUpdate(host);
-        }
-
-        /// <summary>
         /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
         /// </summary>
         private void ApplyUpdate(Border progressHost)
@@ -298,9 +239,9 @@ namespace OpenDashPlugin
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
             applying = true;
-            updateButton.IsEnabled = false;
-            reinstallButton.IsEnabled = false;
-            checkButton.IsEnabled = false;
+            if (updateButton != null) updateButton.IsEnabled = false;
+            if (reinstallButton != null) reinstallButton.IsEnabled = false;
+            if (checkButton != null) checkButton.IsEnabled = false;
             updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
             updateLine.Visibility = Visibility.Visible;
             progressHost.Child = Ui.Progress(0);
@@ -362,6 +303,9 @@ namespace OpenDashPlugin
                     // download, because until the assembly is staged there is nothing for a restart to
                     // put in place, and asked at all because the sentence above it was not enough: see
                     // UpdateWording.RestartTitle.
+                    // The sidebar's badge and Home read the same answer.
+                    RefreshAttention();
+                    RefreshSidebar();
                     if (outcome.PluginStaged) OfferRestart(release.Version);
                 });
             }, new SimHubInstallLog(), mustFinish: true);

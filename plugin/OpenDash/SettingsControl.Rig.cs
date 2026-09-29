@@ -1,706 +1,282 @@
-// SettingsControl.Rig.cs: the Rig tab -- the row of screen cards, and the pane of whichever one is
-// selected.
+// SettingsControl.Rig.cs: the Rig page -- every screen, strip and matrix as a tile on a dotted ground, and a
+// row of chips that paints a flag, a car alongside, the pit lane, a warning or the revs on every tile at once.
 //
-// A screen is the unit (ADR 0017). A face is configured on a picture of itself, because "zone C" means
-// nothing until you see where zone C is; a pit wall gets a picture of its three pages for the same
-// reason; a companion gets its rotation. The wheel buttons are on the screen they cycle, which is what
-// lets a second face sit still while the one in front of the driver cycles.
+// "Zone C" and "matrix 2" mean nothing until you see where they are, and the only way to check a flag used to
+// be to own the hardware and wait for one (#503). The #503 foundation draws the tiles where PanelRigMap lays
+// them out and paints them from PanelEmulation, which reads the flag box's own glyphs; the Rig page agent owns
+// this file and adds dragging the tiles into the shape of the rig and keeping where they were put. Nothing here
+// lights the real hardware: that is #506, greyed in the header.
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        /// <summary>The namespace of the screen whose pane is showing. Null means the first one.</summary>
-        private string selected;
+        /// <summary>The scenario the tiles are painted with, for the session.</summary>
+        private string rigScenario = PanelEmulation.Default;
 
-        private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
-        private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
-        private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
-        private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
-        private TextBlock faceWarningText;
-        private FrameworkElement faceWarningRow;
-
-        /// <summary>The screen the pane belongs to, or null when the rig is empty.</summary>
-        private ScreenInstance Selected
+        private FrameworkElement BuildRigPage(PanelRoute to)
         {
-            get
+            var night = Ui.Switch(Settings.LightsNightMode, on =>
             {
-                var rig = Settings.RigScreens();
-                if (rig.Count == 0) return null;
-                var chosen = Settings.ScreenByNamespace(selected);
-                return chosen ?? rig[0];
-            }
-        }
+                Settings.LightsNightMode = on;
+                Save();
+                RefreshSidebar();
+                RebuildPage();
+            });
+            var hardware = Ui.Soon(Ui.HStack(10, Ui.Text("Real hardware", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), PanelSoon.Find("Real hardware"));
+            var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text("Night mode", Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
 
-        /// <summary>The size an icon is drawn at when it stands beside a line of prose rather than inside a
-        /// control, which is the second of the two sizes control.icon describes.</summary>
-        // TODO: read this from Theme once design/tokens.json carries the standing-alone size as a token of
-        // its own; control.icon mirrors the 16 and says the 20 in its description only.
-        private const double IconAlone = 20;
-
-        private FrameworkElement BuildRigTab()
-        {
-            var rig = Settings.RigScreens();
-            var rows = new List<UIElement> { BuildCardRow(rig) };
-            if (rig.Count == 0)
-            {
-                rows.Add(BuildEmptyRig());
-                return Ui.VStack(0, Ui.Section("Your rig", rows.ToArray()));
-            }
-            if (PanelScreens.ShowsUnclaimedNote(rig)) rows.Add(BuildUnclaimedNote());
-
-            var screen = Selected;
-            rows.Add(BuildScreenHeader(screen));
-            // The screen itself, between the name of the thing and the controls that change it. Null
-            // when its package is not installed, which the pane below says in its own words.
-            var preview = BuildScreenPreview(screen);
-            if (preview != null) rows.Add(preview);
-            // The pane takes a section of its own rather than a place inside "Your rig". Ui.Section nests
-            // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
-            // section of its own in the wheel buttons, and a heading that sits one level deeper than the
-            // heading beneath it reads as a mistake.
-            // A pit wall brings its own two headings, "Layout" over the picture and "Zones" over the
-            // rows, because one wrapper here could only ever carry one of them and the canvas draws
-            // both. Every other kind takes a single heading from here.
-            var pane = BuildScreenPane(screen);
-            return Ui.VStack(0,
-                Ui.Section("Your rig", rows.ToArray()),
-                screen.IsPitWall ? pane : Ui.Section(PaneTitle(screen), pane));
-        }
-
-        /// <summary>
-        /// The heading over the selected screen's pane, which names what the pane is a list of.
-        /// </summary>
-        /// <remarks>
-        /// A pit wall is not here: it carries its own two headings, so this is never asked for one. Slots
-        /// is the kind the canvas never drew, and it leaves with #146, so it borrows the shape of the
-        /// face's heading rather than being given a design of its own.
-        /// </remarks>
-        private static string PaneTitle(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return "Modules";
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "Slots";
-            return "Zones";
-        }
-
-        /// <summary>The cards, wrapped, and the add card after them.</summary>
-        private FrameworkElement BuildCardRow(IReadOnlyList<ScreenInstance> rig)
-        {
-            var wrap = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Left };
-            var current = Selected;
-            foreach (var screen in rig)
-            {
-                var captured = screen;
-                var missing = !Installed(captured);
-                var card = Ui.Card(
-                    captured.Name,
-                    // A screen whose package is gone has no size to show, and "0 × 0" is worse than
-                    // the folder it lives in.
-                    captured.Width > 0 ? captured.SizeLabel : (captured.Folder ?? string.Empty),
-                    // The kind itself rather than a word for it: the card draws the icon the canvas gives
-                    // it, and writes the word only for the kind that has none.
-                    captured.Kind,
-                    current != null && ReferenceEquals(current, captured),
-                    missing ? Theme.StatusFailed : null,
-                    () =>
-                    {
-                        selected = captured.Namespace;
-                        Redraw();
-                    });
-                // The card holds a minimum width rather than a fixed one, so a long name widens it rather
-                // than being cut short. Rename accepts a name of any length, though, and a card wider than
-                // the row it wraps inside is arranged past the panel's edge instead of wrapping; the row is
-                // therefore the ceiling, and a name that reaches it ellipsises, which is what the card's
-                // trimming is there for.
-                card.MaxWidth = BodyWidth;
-                wrap.Children.Add(card);
-            }
-            wrap.Children.Add(Ui.AddCard(ShowAddScreen));
-            return wrap;
-        }
-
-        /// <summary>The kind as a word, for the fact line under the screen's name. The card draws an icon
-        /// instead, so this is the one place the kind is still spelled out.</summary>
-        private static string KindLabel(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return "Companion";
-            if (screen.IsPitWall) return "Pit wall";
-            return string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : "Face";
-        }
-
-        private bool Installed(ScreenInstance screen)
-        {
-            try
-            {
-                return screen.Folder != null && PackageExtractor.IsInstalled(plugin.Installer.SimHubRoot, screen.Folder);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not tell whether " + screen.Folder + " is installed: " + ex.Message);
-                return true;
-            }
-        }
-
-        /// <summary>
-        /// The first run, which is the empty state of the thing itself rather than a wizard in front of it.
-        /// </summary>
-        /// <remarks>
-        /// #85's design, and the reason it is one fewer surface to build: nothing has to be dismissed,
-        /// because the empty state stops appearing exactly when it stops being true.
-        /// </remarks>
-        private FrameworkElement BuildEmptyRig()
-        {
-            var pill = Ui.StatusPill(Theme.TextDim, "No screens yet", Theme.TextLabel);
-            // The pill states the rig is empty, so the sentence under it no longer says so as well: it
-            // is the explanation of what adding a screen does, not a second announcement.
-            var text = Ui.Caption(PanelCopy.EmptyRig);
-            var stack = Ui.VStack(4, pill, text);
-            stack.Margin = new Thickness(0, 4, 0, 0);
+            var title = Ui.HStack(12, Ui.PageTitle(PanelRigMap.Title), Ui.NewTag());
+            var head = Ui.Row(title, actions);
+            var stack = new StackPanel { Orientation = Orientation.Vertical };
+            stack.Children.Add(head);
+            var canvas = Ui.Anchor(BuildRigCanvas(), PanelRigMap.AnchorCanvas);
+            canvas.Margin = new Thickness(0, 18, 0, 0);
+            stack.Children.Add(canvas);
+            var chips = Ui.Anchor(BuildScenarioChips(), PanelRigMap.AnchorScenarios);
+            chips.Margin = new Thickness(0, 18, 0, 0);
+            stack.Children.Add(chips);
             return stack;
         }
 
-        /// <summary>
-        /// The line an upgrading user meets, and only them.
-        /// </summary>
-        /// <remarks>
-        /// Older versions installed every package the plugin embeds, so a rig migrated from one of them
-        /// holds a dozen cards for screens nobody owns. Nothing is deleted on their behalf (ADR 0017),
-        /// so the panel says what to do instead, and the line goes when it stops being true rather than
-        /// when somebody dismisses it. PanelScreens decides when that is.
-        /// </remarks>
-        private FrameworkElement BuildUnclaimedNote()
+        /// <summary>The dotted ground and every tile on it, where PanelRigMap puts a tile nobody has moved.</summary>
+        private FrameworkElement BuildRigCanvas()
         {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(PanelScreens.UnclaimedNote);
-            var row = Ui.HStack(10, icon, text);
-            row.Margin = new Thickness(0, 4, 0, 4);
-            return row;
-        }
-
-        /// <summary>The name, the facts under it, and the two buttons that act on the screen itself.</summary>
-        private FrameworkElement BuildScreenHeader(ScreenInstance screen)
-        {
-            var title = Ui.Text(screen.Name, Theme.SizeTitle, FontWeights.SemiBold, Theme.TextPrimary);
-            var facts = Ui.Label(ScreenFacts(screen));
-            // The folder and the namespace, quieter than the two facts above them because the canvas draws
-            // neither. The namespace is here because ADR 0017 freezes it at creation and a rename does not
-            // move it, so a screen called "Rim" whose properties say MainDash has to be able to say so
-            // rather than leave it to be discovered.
-            var origin = Ui.Caption((screen.Folder ?? "not installed") + " · properties OpenDash." + screen.Namespace + "*");
-            var text = Ui.VStack(4, title, facts, origin);
-            text.HorizontalAlignment = HorizontalAlignment.Left;
-
-            // One link and not three. Renaming, resizing and writing the dashboard again are the same
-            // errand -- a screen that is not the one the driver meant -- and splitting them left the
-            // third with nowhere to live at all, so a rig whose dashboards had been overwritten had no
-            // press that put them back.
-            var edit = Ui.LinkButton("Edit");
-            edit.ToolTip = "Change this screen's name or size, or install its dashboard again.";
-            edit.Click += (sender, args) => ShowEdit(screen);
-            // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
-            // action from being an accident is the confirmation behind it rather than its own weight.
-            var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
-            remove.ToolTip = "Removes this screen, its settings and its dashboard.";
-            remove.Click += (sender, args) => ShowRemove(screen);
-
-            var actions = Ui.HStack(12, edit, remove);
-            var rows = new List<UIElement> { Ui.Row(text, actions) };
-            if (!Installed(screen)) rows.Add(BuildMissingFolder(screen));
-            var stack = Ui.VStack(10, rows.ToArray());
-            stack.Margin = new Thickness(0, 8, 0, PanelMetrics.SectionGap);
-            // The rule closes the header rather than opening the pane: the pane's own section draws its
-            // own, and the two say different things about what they separate.
+            var width = Math.Max(320, ContentWidth);
+            var canvas = new Canvas { Height = PanelRigMap.CanvasHeight, ClipToBounds = true };
+            var tiles = PanelRigMap.AutoLayout(RigTiles(), width);
+            foreach (var tile in tiles)
+            {
+                var drawn = BuildRigTile(tile);
+                Canvas.SetLeft(drawn, tile.X);
+                Canvas.SetTop(drawn, tile.Y);
+                canvas.Children.Add(drawn);
+            }
+            var hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
+            Canvas.SetLeft(hint, 14);
+            Canvas.SetBottom(hint, 12);
+            canvas.Children.Add(hint);
+            if (tiles.Count == 0)
+            {
+                var empty = Ui.Caption("Add a screen, a strip or a matrix and it appears here.");
+                Canvas.SetLeft(empty, 24);
+                Canvas.SetTop(empty, 24);
+                canvas.Children.Add(empty);
+            }
             return new Border
             {
+                Height = PanelRigMap.CanvasHeight,
+                Background = Ui.Brush(Theme.SurfaceInset),
                 BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
-                Child = stack,
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Child = new Border { Background = Ui.DotGrid(), Child = canvas },
             };
         }
 
-        /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
-        /// through Ui.Label, which draws them as written, so the kind leads in sentence case.</summary>
-        private static string ScreenFacts(ScreenInstance screen)
+        /// <summary>Every device on the rig as a tile, at the size its picture is drawn.</summary>
+        private IList<RigTile> RigTiles()
         {
-            return KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty);
-        }
-
-        /// <summary>
-        /// A screen whose folder has gone: marked, and offered back rather than dropped.
-        /// </summary>
-        /// <remarks>
-        /// Removing the card would destroy the zone setup behind it and hide the thing that needs
-        /// fixing, which is the reasoning #176 already applies to a failed install.
-        /// </remarks>
-        private FrameworkElement BuildMissingFolder(ScreenInstance screen)
-        {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption("This screen's dashboard is missing from SimHub.");
-            var write = BuildSecondaryButton("Install it again", "Puts this screen's dashboard back into SimHub.");
-            write.Click += (sender, args) =>
+            var tiles = new List<RigTile>();
+            foreach (var screen in Settings.RigScreens())
             {
-                var result = plugin.Installer.Write(screen);
-                Save(screen);
-                plugin.Installer.Refresh();
-                Redraw();
-                if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-            };
-            return Ui.Row(Ui.HStack(10, icon, text), write);
-        }
-
-        private FrameworkElement BuildScreenPane(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return BuildCompanionPane(screen);
-            if (screen.IsPitWall) return BuildPitWallPane(screen);
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return BuildSlotsPane(screen);
-            return BuildFacePane(screen);
-        }
-
-        // --- Adding, editing and removing --------------------------------------------------------
-
-        /// <summary>
-        /// The add panel, in place rather than in a dialog.
-        /// </summary>
-        /// <remarks>
-        /// A modal in a settings page is worse than a panel that appears where the card was, which is
-        /// the same reasoning the update button's two-click confirmation already follows.
-        /// </remarks>
-        private void ShowAddScreen()
-        {
-            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var types = PanelAddScreen.Types(catalogue);
-            if (types.Count == 0)
-            {
-                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                    Ui.Caption("This build ships no dashboards."),
-                    BackRow()));
-                return;
-            }
-
-            // The three answers, held here and read by whichever control last wrote one. The name is the
-            // only one the driver types, so it is the only one that has to remember whether they have.
-            var type = types[0];
-            PackageEntry entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
-            var typed = false;
-
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-            name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
-
-            var sizeHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Left };
-            var note = Ui.Caption(string.Empty);
-
-            Action fillName = () =>
-            {
-                // Only while the driver has not typed one of their own: a default that overwrites what
-                // somebody has just written is worse than no default at all.
-                if (typed) return;
-                name.Text = PackageCatalogue.UniqueName(PanelAddScreen.DefaultName(entry), Settings.RigScreens().Select(s => s.Name));
-            };
-            Action refreshNote = () =>
-            {
-                var second = Settings.RigScreens().Any(s => string.Equals(s.Namespace, StockNamespaceOf(entry), StringComparison.Ordinal));
-                note.Text = PanelAddScreen.Note(entry, second);
-            };
-            Action<PackageEntry> choose = chosen =>
-            {
-                entry = chosen;
-                fillName();
-                refreshNote();
-            };
-            Action showSize = () =>
-            {
-                var offered = PanelAddScreen.Offered(type);
-                entry = offered[PanelAddScreen.PreferredIndex(type)];
-                var question = PanelAddScreen.Question(type);
-                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, PanelAddScreen.PreferredIndex(type), choose);
-                fillName();
-                refreshNote();
-            };
-
-            // What the chosen kind is, under the control that chose it: two words on a button cannot say
-            // what a companion is, and a driver adding their first screen has nowhere else to find out.
-            var typeCaption = Ui.Caption(type.Caption);
-
-            var typeRow = Ui.Row(
-                PanelAddScreen.TypeTitle,
-                PanelAddScreen.TypeCaption,
-                BuildSegmented(
-                    types.Select(t => t.Kind).ToArray(),
-                    types.Select(t => t.Label).ToArray(),
-                    type.Kind,
-                    kind =>
-                    {
-                        type = types.First(t => string.Equals(t.Kind, kind, StringComparison.Ordinal));
-                        typeCaption.Text = type.Caption;
-                        showSize();
-                    }));
-            typeRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            showSize();
-
-            var add = Ui.OutlineButton(PanelAddScreen.AddButton, PanelMetrics.RowButtonHeight);
-            add.MinWidth = ButtonMinWidth;
-            add.ToolTip = "Creates the screen and installs its dashboard.";
-            add.Click += (sender, args) => AddScreen(entry, name.Text);
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Goes back without adding anything.";
-            cancel.Click += (sender, args) => Redraw();
-
-            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                typeRow,
-                typeCaption,
-                sizeHost,
-                nameRow,
-                note,
-                Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
-        }
-
-        /// <summary>The size or the orientation control, in the row the question calls for.</summary>
-        private FrameworkElement BuildSizeRow(ScreenType type, IReadOnlyList<PackageEntry> offered, SizeQuestion question, int selected, Action<PackageEntry> chose)
-        {
-            var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
-            var labels = offered.Select((e, i) => PanelAddScreen.SizeLabel(type, e, i)).ToArray();
-            Action<string> changed = value =>
-            {
-                int index;
-                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
-                if (index < 0 || index >= offered.Count) return;
-                chose(offered[index]);
-            };
-            // Two answers are a pair of buttons; eight are a list. The orientation question is always the
-            // pair, which is what makes it read as "which way round" rather than as a resolution.
-            var opens = values[selected < 0 || selected >= values.Length ? 0 : selected];
-            var control = question == SizeQuestion.Orientation || offered.Count <= 3
-                ? (FrameworkElement)BuildSegmented(values, labels, opens, changed)
-                : BuildChoice(values, labels, opens, 280, changed);
-            var row = question == SizeQuestion.Orientation
-                ? Ui.Row(PanelAddScreen.OrientationTitle, PanelAddScreen.OrientationCaption, control)
-                : Ui.Row(PanelAddScreen.SizeTitle, PanelAddScreen.SizeCaption, control);
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
-            return row;
-        }
-
-        /// <summary>
-        /// The one panel for a screen that is already on the rig: its name, its size, and its dashboard.
-        /// </summary>
-        /// <remarks>
-        /// Three corrections that used to be two panels and one missing button. A driver who picked the
-        /// wrong size had to remove the screen and add another, which threw away their zones and left
-        /// every wheel button bound to it pointing at nothing; a driver whose dashboard had been
-        /// overwritten -- which is what an update of the stock folder does -- had no press at all that
-        /// wrote it again, only the Install tab's Reinstall, which does the whole rig.
-        ///
-        /// The namespace is frozen at creation (ADR 0017) and none of the three moves it, so the
-        /// settings and the bindings survive all of them and only the folder in DashTemplates is written.
-        /// </remarks>
-        private void ShowEdit(ScreenInstance screen)
-        {
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = screen.Name,
-            };
-
-            // The size question is asked only where this build has another size to offer, which is the
-            // same rule the add panel follows; a kind that ships one package draws no row at all rather
-            // than a control with one answer in it.
-            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
-            var question = type == null ? SizeQuestion.None : PanelAddScreen.Question(type);
-            FrameworkElement sizeRow = null;
-            PackageEntry chosen = null;
-            if (question != SizeQuestion.None)
-            {
-                var offered = PanelAddScreen.Offered(type);
-                var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
-                chosen = current;
-                // Opened on the size the screen already is, so the control says what it is before it is
-                // used to say what it should be.
-                var opensOn = 0;
-                for (var i = 0; i < offered.Count; i++)
+                if (screen.IsCompanion) tiles.Add(new RigTile(RigTileKind.Companion, screen.Namespace, screen.Name, 0, 0, PanelRigMap.CompanionWidth, PanelRigMap.CompanionHeight));
+                else if (screen.IsPitWall) tiles.Add(new RigTile(RigTileKind.PitWall, screen.Namespace, screen.Name, 0, 0, PanelRigMap.PitWallWidth, PanelRigMap.PitWallWidth * 9 / 16));
+                else if (screen.IsSlots) tiles.Add(new RigTile(RigTileKind.Round, screen.Namespace, screen.Name, 0, 0, PanelRigMap.RoundSize, PanelRigMap.RoundSize));
+                else
                 {
-                    if (ReferenceEquals(offered[i], current)) opensOn = i;
+                    var aspect = screen.Width > 0 && screen.Height > 0 ? (double)screen.Height / screen.Width : 480.0 / 1280.0;
+                    var w = aspect > 1 ? PanelRigMap.FaceWidth / 2 : PanelRigMap.FaceWidth;
+                    tiles.Add(new RigTile(RigTileKind.Face, screen.Namespace, screen.Name, 0, 0, w, Math.Max(60, w * aspect)));
                 }
-                sizeRow = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
             }
-
-            var edited = Edited(screen);
-            var reinstall = Ui.OutlineButton(PanelAddScreen.ReinstallButton, PanelMetrics.RowButtonHeight);
-            reinstall.MinWidth = ButtonMinWidth;
-            reinstall.ToolTip = "Writes this screen's dashboard into SimHub again.";
-            reinstall.Click += (sender, args) => ReinstallScreen(screen);
-            var reinstallRow = Ui.Row(
-                PanelAddScreen.ReinstallTitle,
-                edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption,
-                reinstall);
-            reinstallRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            var save = Ui.OutlineButton(PanelAddScreen.SaveButton, PanelMetrics.RowButtonHeight);
-            save.MinWidth = ButtonMinWidth;
-            save.ToolTip = "Applies the name and the size, and writes the dashboard.";
-            save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Goes back without changing anything.";
-            cancel.Click += (sender, args) => Redraw();
-
-            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            var rows = new List<UIElement> { nameRow };
-            if (sizeRow != null) rows.Add(sizeRow);
-            rows.Add(Ui.Caption(PanelAddScreen.EditCaption));
-            rows.Add(reinstallRow);
-            rows.Add(Ui.Row(new Border(), Ui.HStack(8, cancel, save)));
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.EditTitle + " " + screen.Name, rows.ToArray()));
+            foreach (var bar in Settings.LedBarList())
+            {
+                var shape = LightShape.Parse(bar.Shape);
+                var leds = shape == null ? 9 : shape.Left + shape.Centre + shape.Right;
+                var groups = shape == null || shape.Bare ? 1 : 3;
+                var style = StripStyle.Rig;
+                var w = leds * style.Led + Math.Max(0, leds - groups) * style.Gap + (groups - 1) * style.GroupGap + 2 * style.PadX + 2;
+                tiles.Add(new RigTile(RigTileKind.Strip, bar.Namespace, bar.Name, 0, 0, w, style.Led + 2 * style.PadY + 2));
+            }
+            foreach (var matrix in Settings.MatrixPanels())
+            {
+                var side = MatrixStyle.Rig.Side + 2;
+                tiles.Add(new RigTile(RigTileKind.Matrix, matrix.ToString(System.Globalization.CultureInfo.InvariantCulture), Settings.MatrixName(matrix) ?? "Matrix " + matrix, 0, 0, side, side));
+            }
+            return tiles;
         }
 
-        /// <summary>
-        /// Whether this screen's folder no longer matches what OpenDash last wrote into it.
-        /// </summary>
-        /// <remarks>
-        /// Which is to say, whether somebody has opened it in Dash Studio and saved. The Install tab asks
-        /// before replacing one of those and keeps the copy under a name no later install claims; one
-        /// screen's reinstall costs the same thing, so it says so and keeps the copy the same way. A
-        /// folder we cannot fingerprint reads as unedited: the alternative is warning everybody whose
-        /// disk we could not read about work they may not have done.
-        /// </remarks>
-        private bool Edited(ScreenInstance screen)
+        /// <summary>One tile: its name over its picture, painted with the scenario.</summary>
+        private FrameworkElement BuildRigTile(RigTile tile)
         {
-            try
+            var name = Ui.Text(tile.Name, Theme.SizeLabel, FontWeights.Medium, Theme.TextSecondary);
+            name.Height = PanelRigMap.NameHeight;
+            name.Margin = new Thickness(0, 0, 0, PanelRigMap.NameGap);
+            var lights = PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);
+            FrameworkElement picture;
+            switch (tile.Kind)
             {
-                if (screen.Folder == null || plugin.Installer.Record == null) return false;
-                var recorded = plugin.Installer.Record.Get(screen.Folder);
-                if (recorded == null) return false;
-                var now = FolderFingerprint.Of(PackageExtractor.InstalledFolder(plugin.Installer.SimHubRoot, screen.Folder));
-                return now != null && !string.Equals(now, recorded, StringComparison.Ordinal);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not tell whether " + screen.Folder + " has been edited: " + ex.Message);
-                return false;
-            }
-        }
-
-        /// <summary>Applies whichever of the two answers was changed, and writes the dashboard when
-        /// either was: SimHub lists a dashboard under its title, so a rename that stopped at the card
-        /// left the screen listed under the name the driver had just stopped using.</summary>
-        private void SaveEdit(ScreenInstance screen, string wanted, PackageEntry entry)
-        {
-            // Whatever was changed, even nothing: pressing Save on a screen's own edit panel is the driver
-            // saying that this one is theirs.
-            screen.Keep();
-            var sizeChanged = entry != null && (entry.Width != screen.Width || entry.Height != screen.Height);
-            switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
-            {
-                case ScreenEdit.Resize:
-                    // The name first, so the folder ResizeScreen writes is titled with it rather than
-                    // with the name the screen is about to stop having.
-                    RenameScreen(screen, wanted);
-                    ResizeScreen(screen, entry);
-                    return;
-                case ScreenEdit.Rename:
-                    RenameScreen(screen, wanted);
-                    Save();
-                    var result = plugin.Installer.Write(screen);
-                    Save();
-                    plugin.Installer.Refresh();
-                    selected = screen.Namespace;
-                    Redraw();
-                    Announce(
-                        result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name, result.Error),
-                        result.Ok ? Theme.TextSecondary : Theme.Caution);
-                    return;
+                case RigTileKind.Strip:
+                    var bar = Settings.LedBarByNamespace(tile.Id);
+                    var shape = bar == null ? null : LightShape.Parse(bar.Shape);
+                    var options = new StripOptions { SpotterWhole = bar != null && bar.SpotterWhole };
+                    if (bar != null && bar.EffectsOff != null) foreach (var off in bar.EffectsOff) options.EffectsOff.Add(off);
+                    picture = Ui.Strip(PanelEmulation.StripFrame(shape == null ? 3 : shape.Left, shape == null ? 9 : shape.Centre, rigScenario, options), StripStyle.Rig, lights);
+                    break;
+                case RigTileKind.Matrix:
+                    int slot;
+                    int.TryParse(tile.Id, out slot);
+                    var matrix = new MatrixOptions
+                    {
+                        Rest = Settings.MatrixRest(slot),
+                        Side = Settings.MatrixSide(slot),
+                        Bands = Settings.MatrixGearBands(slot),
+                        Flags = Settings.MatrixFlags(slot),
+                        Pit = Settings.MatrixPit(slot),
+                        Spotter = Settings.MatrixSpotter(slot),
+                        Warnings = Settings.MatrixWarnings(slot),
+                    };
+                    picture = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, rigScenario, matrix), MatrixStyle.Rig, lights);
+                    break;
+                case RigTileKind.Round:
+                    picture = new Ellipse
+                    {
+                        Width = tile.Width,
+                        Height = tile.Height,
+                        Fill = Ui.Brush(Theme.SurfaceInset),
+                        Stroke = Ui.Brush(PanelEmulation.RingColour(rigScenario)),
+                        StrokeThickness = 6,
+                    };
+                    break;
+                case RigTileKind.Companion:
+                    picture = ScreenTile(tile, PanelEmulation.Band(rigScenario), true);
+                    break;
                 default:
-                    Save();
-                    Redraw();
-                    return;
+                    picture = ScreenTile(tile, PanelEmulation.Band(rigScenario), false);
+                    break;
             }
-        }
-
-        /// <summary>Takes the name from the box, kept distinct from every other screen's. An empty box
-        /// keeps the name it had, which is what PanelAddScreen.Edit has already decided.</summary>
-        private void RenameScreen(ScreenInstance screen, string wanted)
-        {
-            var trimmed = (wanted ?? string.Empty).Trim();
-            if (trimmed.Length == 0 || string.Equals(trimmed, screen.Name, StringComparison.Ordinal)) return;
-            screen.Name = PackageCatalogue.UniqueName(
-                trimmed,
-                Settings.RigScreens().Where(s => !ReferenceEquals(s, screen)).Select(s => s.Name));
+            return Ui.VStack(0, name, picture);
         }
 
         /// <summary>
-        /// Writes this one screen's dashboard again, at the name and size it already has.
+        /// A screen's tile: the revs across its top, three zones, and its band -- or, for a companion, the
+        /// flag over the whole of it -- in the dash's own words for the scenario.
         /// </summary>
-        /// <remarks>
-        /// The repair for a dashboard that is there but wrong: overwritten by an update, edited by
-        /// accident, or listed in SimHub under a name that is no longer the screen's. The Install tab's
-        /// Reinstall does the whole rig and is the wrong instrument for one screen; the "Install it
-        /// again" button on the card is the same press but appears only once the folder has gone.
-        /// </remarks>
-        private void ReinstallScreen(ScreenInstance screen)
+        private FrameworkElement ScreenTile(RigTile tile, FaceBand band, bool companion)
         {
-            var result = plugin.Installer.Write(screen);
-            Save(screen);
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-            Announce(
-                result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error),
-                result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
-        {
-            if (entry == null || (entry.Width == screen.Width && entry.Height == screen.Height))
+            var body = new DockPanel { LastChildFill = true };
+            if (companion)
             {
-                Redraw();
-                return;
+                var fill = band.Alert && band.FillHex != null && !band.Outlined ? band.FillHex : Theme.SurfaceInset;
+                var words = band.Alert ? band.Text ?? string.Empty : "Relative";
+                return new Border
+                {
+                    Width = tile.Width,
+                    Height = tile.Height,
+                    CornerRadius = new CornerRadius(6),
+                    BorderBrush = Ui.Brush(band.Outlined ? band.FillHex : Theme.Border),
+                    BorderThickness = new Thickness(band.Outlined ? 3 : PanelMetrics.BorderWeight),
+                    Background = Ui.Brush(fill),
+                    Child = new TextBlock
+                    {
+                        Text = words,
+                        FontFamily = PanelFonts.Label,
+                        FontSize = 9,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = Ui.Brush(band.Alert && !band.Outlined ? band.TextHex : Theme.TextSecondary),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        TextWrapping = TextWrapping.Wrap,
+                        TextAlignment = TextAlignment.Center,
+                    },
+                };
             }
-            var log = new SimHubInstallLog();
-            // The old folder first: a screen that was the stock one at its old size owns that package's
-            // own folder, and leaving it behind would put a dashboard in SimHub's list that nothing on
-            // the rig answers for.
-            var old = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, log);
-            if (!old.Ok) Log.Warn("The old folder of " + screen.Name + " could not be removed: " + old.Error);
 
-            Settings.ResizeScreen(screen, entry);
-            Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-            Announce(
-                result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, result.Error),
-                result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
+            var revs = PanelEmulation.Revs(20, rigScenario);
+            var revRow = new UniformGrid { Rows = 1, Columns = revs.Length, Height = 9, Margin = new Thickness(0, 0, 0, 3) };
+            foreach (var led in revs) revRow.Children.Add(new Border { Margin = new Thickness(1, 1, 1, 1), CornerRadius = new CornerRadius(1), Background = Ui.Brush(led ?? Theme.SurfaceRaised) });
+            DockPanel.SetDock(revRow, Dock.Top);
+            body.Children.Add(revRow);
 
-        private static string StockNamespaceOf(PackageEntry entry)
-        {
-            var probe = new ScreenInstance { Kind = entry.Kind, Width = entry.Width, Height = entry.Height, Folder = entry.Folder };
-            return probe.StockNamespace;
-        }
-
-        private static string Describe(PackageEntry entry)
-        {
-            var kind = string.Equals(entry.Kind, Contract.KindCompanion, StringComparison.Ordinal) ? "companion"
-                : string.Equals(entry.Kind, Contract.KindPitWall, StringComparison.Ordinal) ? "pit wall"
-                : string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "slots"
-                : "face";
-            return entry.Width > 0 ? entry.SizeLabel + "  ·  " + kind : entry.Folder + "  ·  " + kind;
-        }
-
-        private void AddScreen(PackageEntry entry, string name)
-        {
-            var screen = Settings.AddScreen(entry, name);
-            Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-
-            // Said at the moment it becomes true rather than left to be found: SimHub reads its
-            // template list once, at startup, and assigning a dashboard to a display is in another part
-            // of SimHub entirely. Both are the steps a new user gives up on.
-            // The dashboard is listed in SimHub under its *title*, which the installer sets to the name
-            // the driver just chose -- not under the folder. Naming the folder here sent them looking
-            // through Dash Studio for a row that does not exist under that word.
-            var line = result.Ok
-                ? PanelAddScreen.Added(screen.Name, screen.Name)
-                : PanelAddScreen.AddFailed(screen.Name, result.Error);
-            Announce(line, result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        /// <summary>
-        /// The remove confirmation, which says the two things that are easy to miss.
-        /// </summary>
-        /// <remarks>
-        /// The folder goes, and a wheel button bound to this screen's actions stops doing anything,
-        /// because the action is no longer registered. ADR 0017 accepts that cost and this is where it
-        /// is paid: a driver who removes a screen and finds a dead button three laps into a race is a
-        /// bug report one sentence prevents.
-        /// </remarks>
-        private void ShowRemove(ScreenInstance screen)
-        {
-            var bound = screen.IsFace
-                ? " Any wheel button you bound to it stops working."
-                : string.Empty;
-            var remove = Ui.DestructiveButton("Remove it");
-            remove.ToolTip = "Removes the screen, its settings and its dashboard.";
-            remove.Click += (sender, args) =>
+            var bandHeight = Math.Max(14, Math.Round(tile.Height * 0.18));
+            var bandBox = new Border
             {
-                var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
-                Settings.RemoveScreen(screen.Namespace);
-                Save();
-                plugin.Installer.Refresh();
-                selected = null;
-                Redraw();
-                Announce(
-                    result.Ok
-                        ? "Removed " + screen.Name + ". SimHub still lists its dashboard until you restart it."
-                        : "Removed " + screen.Name + ", but its dashboard could not be deleted: " + result.Error,
-                    result.Ok ? Theme.TextSecondary : Theme.Caution);
+                Height = bandHeight,
+                Margin = new Thickness(0, 3, 0, 0),
+                Background = Ui.Brush(band.Alert && !band.Outlined && band.FillHex != null ? band.FillHex : band.Chequer ? Theme.FlagChequer : Theme.SurfaceZone),
+                BorderBrush = band.Outlined ? Ui.Brush(band.FillHex) : null,
+                BorderThickness = new Thickness(band.Outlined ? 2 : 0),
+                Child = new TextBlock
+                {
+                    Text = band.Alert ? band.Text ?? string.Empty : "Band D",
+                    FontFamily = PanelFonts.Label,
+                    FontSize = 10,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = Ui.Brush(band.Alert ? band.TextHex : Theme.TextSecondary),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                },
             };
-            var cancel = BuildSecondaryButton("Keep it", "Leaves this screen alone.");
-            // The answer to the question the line over the cards asks of a migrated screen, as much as
-            // Remove it is, so it keeps the screen as well as going back.
-            cancel.Click += (sender, args) =>
+            DockPanel.SetDock(bandBox, Dock.Bottom);
+            body.Children.Add(bandBox);
+
+            var zones = new Grid();
+            zones.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
+            zones.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) });
+            zones.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
+            for (var i = 0; i < 3; i++)
             {
-                Save(screen);
-                Redraw();
+                var zone = new Border { Background = Ui.Brush(Theme.SurfaceZone), Margin = new Thickness(i == 0 ? 0 : 3, 0, 0, 0) };
+                Grid.SetColumn(zone, i);
+                zones.Children.Add(zone);
+            }
+            body.Children.Add(zones);
+
+            return new Border
+            {
+                Width = tile.Width,
+                Height = tile.Height,
+                Padding = new Thickness(4),
+                Background = Ui.Brush(Theme.SurfaceInset),
+                BorderBrush = Ui.Brush(Theme.Border),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                CornerRadius = new CornerRadius(3),
+                Child = body,
             };
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
-                Ui.Caption("Removes the screen, its dashboard and its settings." + bound),
-                Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
         }
 
-        /// <summary>A line under the cards saying what just happened, until the next thing happens.</summary>
-        private void Announce(string line, string colour)
+        /// <summary>The chips, in PanelEmulation's five groups; picking one paints every tile with it.</summary>
+        private FrameworkElement BuildScenarioChips()
         {
-            var stack = bodyHost.Content as StackPanel;
-            var section = stack?.Children.Count > 0 ? stack.Children[0] as Border : null;
-            var rows = section?.Child as StackPanel;
-            if (rows == null) return;
-            var text = Ui.Text(line, Theme.SizeSmall, FontWeights.Normal, colour);
-            text.TextWrapping = TextWrapping.Wrap;
-            text.MaxWidth = BodyWidth;
-            text.Margin = new Thickness(0, 8, 0, 0);
-            rows.Children.Insert(Math.Min(2, rows.Children.Count), text);
-        }
-
-        private FrameworkElement BackRow()
-        {
-            var back = BuildSecondaryButton("Back", "Goes back to your rig.");
-            back.Click += (sender, args) => Redraw();
-            return Ui.Row(new Border(), back);
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal };
+            foreach (var group in PanelEmulation.Groups)
+            {
+                var chips = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+                foreach (var scenario in group.Scenarios)
+                {
+                    var id = scenario.Id;
+                    var chip = Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == rigScenario, () =>
+                    {
+                        rigScenario = id;
+                        RebuildPage();
+                    });
+                    chip.Margin = new Thickness(0, 0, 6, 6);
+                    chips.Children.Add(chip);
+                }
+                var column = Ui.VStack(0, Ui.Eyebrow(group.Title), chips);
+                column.Margin = new Thickness(0, 0, 32, 12);
+                wrap.Children.Add(column);
+            }
+            return wrap;
         }
     }
 }

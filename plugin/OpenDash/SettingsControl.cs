@@ -1,20 +1,22 @@
-// SettingsControl.cs: the OpenDash page in SimHub's left menu. The shell -- header, the tab bar, the
-// body the selected tab fills, and the footer -- plus the controls every tab uses.
+// SettingsControl.cs: the OpenDash page in SimHub's left menu. The shell -- a sidebar of pages, the main
+// column the page that is showing fills, the sheet that opens beside it -- plus the controls every page uses.
 //
-// Four tabs, and a screen is the unit: Rig, Data, Lights, Install. docs/design/plugin.md is the design
-// and is ahead of the canvas on two points, both said there. What replaced was one scrolling page of
-// nine sections grouped by the kind of setting rather than by anything a user was trying to do, with
-// the zones somebody actually came to change sitting between a legacy slot grid and a module list.
+// One page per thing on the rig since #503: Home, Rig, Screens, LEDs, Matrix, Shortcuts, Settings and, pinned
+// at the sidebar's foot, Updates. The four tabs grouped settings by their kind, which was honest about the
+// settings model and wrong about the driver: somebody who came to change their wheel found its rows on three
+// tabs. The frame's numbers are PanelShell's, where a test holds them to the artboards; the page files are
+// SettingsControl.<Page>*.cs, one owner each, and reach the shell through the members in the hook region.
 //
 // Every change writes the settings object and saves it at once; the attached properties read the same
 // object, so a change reaches a running dashboard on the next frame (ADR 0003).
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using SimHub.Plugins;
 using SimHub.Plugins.Styles;
 using SimHub.Plugins.UI;
@@ -27,56 +29,53 @@ namespace OpenDashPlugin
         public const string IssuesUrl = "https://github.com/xorob0/OpenDash/issues";
 
         /// <summary>
-        /// What the page grows to, and what it will not grow past.
+        /// The measure a caption, a picture of a face or the live preview is drawn against inside a page.
         /// </summary>
         /// <remarks>
-        /// The canvas draws it 960 wide and it used to be exactly that, pinned and left-aligned, so a
-        /// driver with SimHub across a 4K monitor read a column of settings in the left third of it and
-        /// one on a narrow window scrolled sideways. It fills what it is given now, between a floor
-        /// short enough for a half-screen window and a ceiling that keeps a line of prose readable --
-        /// past about twelve hundred a caption is a single line running the width of a desk, which is
-        /// the thing line length rules exist to prevent.
+        /// A ceiling rather than a width: the main column grows to PanelShell.ContentMax and what stretches
+        /// simply stretches, but a line of prose and a preview keep this, which is the room the artboards
+        /// give them at their 1200 px width.
         /// </remarks>
-        private const double PageMinWidth = 640;
-        private const double PageMaxWidth = 1200;
-
-        /// <summary>The width the canvas draws, which is what every fixed measure inside is still drawn
-        /// against: a card, a picture of a face, a drop-down. Those keep their size and the room around
-        /// them changes, which is what makes the page wider rather than everything in it.</summary>
-        private const double PageWidth = 960;
-        private const double PagePadding = 32;
-
-        /// <summary>The column a tab has to itself at the canvas's width: the page less its own frame and
-        /// its side padding. A ceiling now rather than a width — what is drawn to it caps there and what
-        /// stretches simply stretches.</summary>
-        private const double BodyWidth = PageWidth - 2 * PanelMetrics.BorderWeight - 2 * PagePadding;
+        private const double BodyWidth = 880;
 
         /// <summary>What a button holds even when its word is short, so that two of them in a row are the
-        /// same size. The canvas draws it and design/tokens.json carries no control.minWidth for it.</summary>
+        /// same size.</summary>
         private const double ButtonMinWidth = 96;
-
-        private const string TabRig = "Rig";
-        private const string TabData = "Data";
-        private const string TabLights = "Lights";
-        private const string TabInstall = "Install";
-        private static readonly string[] Tabs = { TabRig, TabData, TabLights, TabInstall };
 
         private readonly OpenDash plugin;
 
-        /// <summary>
-        /// Which tab is showing.
-        /// </summary>
-        /// <remarks>
-        /// Held for the life of the panel and not persisted. Somebody who came to change a zone should
-        /// find themselves where they left off within one sitting; somebody coming back next week should
-        /// land on Rig, which is the answer to "what is this".
-        /// </remarks>
-        private string tab = TabRig;
-
-        private readonly ContentControl bodyHost = new ContentControl();
-        private StackPanel tabBar;
-
         private OpenDashSettings Settings => plugin.Settings;
+
+        // --- The frame -------------------------------------------------------------------------------
+
+        private readonly Grid root = new Grid();
+        private readonly DockPanel frame = new DockPanel { LastChildFill = true };
+        private readonly Border sidebarHost = new Border();
+        private readonly ScrollViewer mainScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        };
+        private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Left };
+        private readonly StackPanel messageHost = new StackPanel { Orientation = Orientation.Vertical };
+        private readonly ContentControl pageHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+
+        /// <summary>
+        /// Where the panel is. Held for the session and never persisted: somebody who came to change a zone
+        /// lands where they left off within one sitting, and somebody coming back next week lands on Home.
+        /// </summary>
+        private PanelRoute route = PanelRoute.Home;
+
+        /// <summary>Which card each page has selected, for the session: a screen's namespace, a strip's, a
+        /// matrix slot. A page that selects nothing leaves its entry empty.</summary>
+        private readonly Dictionary<PanelPage, string> selections = new Dictionary<PanelPage, string>();
+
+        private PanelLayout layout = PanelLayout.Full;
+        private double controlWidth = PanelShell.FullFrom;
+
+        /// <summary>What the page being left asked to have undone: controls it held, a download it was
+        /// watching. Run and cleared on every Go.</summary>
+        private readonly List<Action> leaveActions = new List<Action>();
 
         public SettingsControl(OpenDash plugin)
         {
@@ -88,17 +87,27 @@ namespace OpenDashPlugin
             SnapsToDevicePixels = true;
             // What the idle screen's mark says, so a driver who read it there finds the same offer here.
             updateStatus = UpdateMark.Opening(Settings.CheckForUpdates, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.RigVersion);
-            Content = BuildPage();
-            ShowTab(tab);
+            Content = BuildFrame();
+
             // The answers arrive from the plugin, which asks for Init and for this page alike. Held only
-            // while the page is on screen, so a page SimHub has let go of is not kept alive by the plugin.
+            // while the page is on screen, so a page SimHub has let go of is not kept alive by the plugin;
+            // the clock is the same, and nothing ticks behind a panel nobody is looking at.
             plugin.UpdateChecked += ShowUpdateAnswer;
             Loaded += (sender, args) =>
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.UpdateChecked += ShowUpdateAnswer;
+                StartClock();
             };
-            Unloaded += (sender, args) => plugin.UpdateChecked -= ShowUpdateAnswer;
+            Unloaded += (sender, args) =>
+            {
+                plugin.UpdateChecked -= ShowUpdateAnswer;
+                StopClock();
+                // A page that is not on screen must not still be drawing a dashboard.
+                DropPreview();
+            };
+
+            Go(route);
             // Init has already queued the day's check, so this asks only when that one did not start: never on
             // the startup path, never within the day, never twice in one start even when the first found no
             // network, and never at all unless the setting says so. A check still in flight answers here too.
@@ -107,158 +116,264 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The whole page: the frame the canvas draws, and inside it the header, the tab strip, the body
-        /// and a footer at the foot.
+        /// The frame: the sidebar docked left, the main column scrolling beside it, and the sheet's layer
+        /// over the main column.
         /// </summary>
         /// <remarks>
-        /// The canvas draws the panel 960 by 1180 and nothing here sets a height. SimHub hands the control
-        /// to its own settings menu, whose window is whatever the user has dragged it to, so a fixed height
-        /// would clip the footer off a shorter one instead of shortening the page. The frame's MinHeight
-        /// is the viewport instead, which is the same drawing wherever it is tall enough and a page that
-        /// scrolls wherever it is not.
+        /// Nothing sets a height. SimHub hands the control to its own settings menu, whose window is whatever
+        /// the user has dragged it to; the sidebar fills it and the main column scrolls.
         /// </remarks>
-        private UIElement BuildPage()
+        private UIElement BuildFrame()
         {
-            var page = new DockPanel { LastChildFill = true };
-            var header = BuildHeader();
-            DockPanel.SetDock(header, Dock.Top);
-            var tabs = BuildTabBar();
-            DockPanel.SetDock(tabs, Dock.Top);
-            var footer = BuildFooter();
-            DockPanel.SetDock(footer, Dock.Bottom);
+            var column = new StackPanel { Orientation = Orientation.Vertical };
+            column.Children.Add(messageHost);
+            column.Children.Add(pageHost);
+            mainFrame.Child = column;
+            mainScroll.Content = mainFrame;
 
-            bodyHost.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
-            bodyHost.VerticalAlignment = VerticalAlignment.Top;
+            DockPanel.SetDock(sidebarHost, Dock.Left);
+            frame.Children.Add(sidebarHost);
+            frame.Children.Add(mainScroll);
 
-            page.Children.Add(header);
-            page.Children.Add(tabs);
-            page.Children.Add(footer);
-            page.Children.Add(bodyHost);
-
-            var frame = new Border
+            root.Children.Add(frame);
+            root.Children.Add(BuildSheetLayer());
+            root.SizeChanged += (sender, args) => Resize(args.NewSize.Width);
+            root.PreviewKeyDown += (sender, args) =>
             {
-                BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
-                MinWidth = PageMinWidth,
-                MaxWidth = PageMaxWidth,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Child = page,
+                if (args.Key == Key.Escape && SheetOpen)
+                {
+                    CloseSheet();
+                    args.Handled = true;
+                }
             };
-            var scroller = new ScrollViewer
-            {
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = frame,
-            };
-            // The footer sits at the bottom of the viewport when the content is shorter (margin-top: auto).
-            // The frame carries it rather than the page, or the two pixels of border would put the content
-            // past the viewport and leave a scrollbar on every short tab.
-            frame.SetBinding(MinHeightProperty, new Binding("ViewportHeight") { Source = scroller });
-            return scroller;
+            ApplyLayout();
+            return root;
         }
 
-        /// <summary>72 px: the segment mark and the wordmark on the left, "Plugin" and the version on the right.</summary>
-        private FrameworkElement BuildHeader()
+        /// <summary>
+        /// Follows the control's width: the sidebar, the gutter and the ceiling change at once, and the page
+        /// is drawn again only when the sidebar changes between labels and a rail, which is the one change a
+        /// page's own layout answers to. A card grid decides its columns as it is measured.
+        /// </summary>
+        private void Resize(double width)
         {
-            var wordmark = Ui.HStack(0,
-                Ui.Tracked("open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, Theme.TrackingNumeral, PanelFonts.Data),
-                Ui.Tracked("Dash", Theme.SizeWordmark, FontWeights.Bold, Theme.TextPrimary, Theme.TrackingNumeral, PanelFonts.Data));
-            var left = Ui.HStack(12, Ui.Mark(), wordmark);
-            var right = Ui.HStack(8, Ui.Label("Plugin"), Ui.Numeral(OpenDash.Version, Theme.SizeNumeral, Theme.TextSecondary));
-            var grid = Ui.Row(left, right);
-            grid.Height = 72;
-            grid.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
-            return grid;
+            if (width <= 0) return;
+            controlWidth = width;
+            var next = PanelShell.Layout(width);
+            var flipped = PanelShell.IsNarrow(next) != PanelShell.IsNarrow(layout);
+            layout = next;
+            Ui.Layout = next;
+            ApplyLayout();
+            if (flipped)
+            {
+                RefreshSidebar();
+                RebuildPage();
+            }
+            if (SheetOpen) SizeSheet();
         }
 
-        private FrameworkElement BuildTabBar()
+        private void ApplyLayout()
         {
-            tabBar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(PagePadding, 0, PagePadding, 0) };
-            FillTabBar();
-            return new Border
-            {
-                BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-                Child = tabBar,
-            };
+            var pad = PanelShell.MainPaddingX(layout);
+            mainFrame.Padding = new Thickness(pad, PanelShell.MainPaddingTop, pad, PanelShell.MainPaddingBottom);
+            mainFrame.MaxWidth = WidePage(route.Page) ? double.PositiveInfinity : PanelShell.ContentMax + 2 * pad;
+            mainFrame.HorizontalAlignment = HorizontalAlignment.Stretch;
+            sidebarHost.Width = PanelShell.SidebarWidthFor(layout);
+            sheetLayer.Margin = new Thickness(PanelShell.SidebarWidthFor(layout), 0, 0, 0);
         }
 
-        private void FillTabBar()
+        /// <summary>The Rig page draws the rig and is better for the room, so it takes the whole column.</summary>
+        private static bool WidePage(PanelPage page)
         {
-            tabBar.Children.Clear();
-            foreach (var name in Tabs)
+            return page == PanelPage.Rig;
+        }
+
+        // --- The hooks a page reaches the shell through -------------------------------------------------
+
+        /// <summary>
+        /// Goes to a page, and to a row on it when the route names one.
+        /// </summary>
+        /// <remarks>
+        /// Everything the page being left held goes with it: the live preview of a screen, which holds
+        /// SimHub's renderer (ADR 0020); the page's lines; its tick callbacks and whatever it asked to have
+        /// undone; the sheet. The page is built afresh from the settings rather than re-shown, so nothing has
+        /// to be kept in step while it is not on screen, and a control a page holds belongs to the one build
+        /// that made it.
+        /// </remarks>
+        private void Go(PanelRoute to)
+        {
+            DropPreview();
+            ClearMessages();
+            ClearTicks();
+            ClearUpdateHandlers();
+            RunLeaveActions();
+            CloseSheet();
+            route = to ?? PanelRoute.Home;
+            ApplyLayout();
+            RefreshAttention();
+            pageHost.Content = BuildPage(route);
+            RefreshSidebar();
+            if (route.Anchor != null) ScrollToAnchor(route.Anchor);
+            else mainScroll.ScrollToTop();
+        }
+
+        private void Go(PanelPage page, string anchor = null)
+        {
+            Go(new PanelRoute(page, anchor));
+        }
+
+        /// <summary>Draws the page that is showing again, after something changed the rig under it.</summary>
+        private void Redraw()
+        {
+            Go(new PanelRoute(route.Page));
+        }
+
+        /// <summary>Draws the page again without leaving it: the lines stay, the scroll stays. For a change
+        /// of layout, where nothing about the rig moved.</summary>
+        private void RebuildPage()
+        {
+            DropPreview();
+            ClearTicks();
+            ClearUpdateHandlers();
+            RunLeaveActions();
+            var offset = mainScroll.VerticalOffset;
+            pageHost.Content = BuildPage(route);
+            mainScroll.ScrollToVerticalOffset(offset);
+        }
+
+        /// <summary>Selects a card on a page for the session, without drawing anything.</summary>
+        private void Select(PanelPage page, string id)
+        {
+            if (id == null) selections.Remove(page);
+            else selections[page] = id;
+        }
+
+        /// <summary>The card a page has selected, or null.</summary>
+        private string Selected(PanelPage page)
+        {
+            string id;
+            return selections.TryGetValue(page, out id) ? id : null;
+        }
+
+        /// <summary>Goes to a page with a card selected on it: Home's "Open Rim".</summary>
+        private void Open(PanelPage page, string id, string anchor = null)
+        {
+            Select(page, id);
+            Go(new PanelRoute(page, anchor));
+        }
+
+        /// <summary>The room a page has for its content at the width the panel is now.</summary>
+        private double ContentWidth => PanelShell.ContentWidth(controlWidth, WidePage(route.Page));
+
+        /// <summary>Whether the sidebar is a rail, which is when a page stacks what it would lay side by side.</summary>
+        private bool Narrow => PanelShell.IsNarrow(layout);
+
+        /// <summary>Whether a page may lay two blocks side by side.</summary>
+        private bool TwoColumns => PanelShell.TwoColumns(layout, ContentWidth);
+
+        /// <summary>Asks for something to be undone when the page is left: a control it held, a watch it set.</summary>
+        private void OnLeave(Action undo)
+        {
+            if (undo != null) leaveActions.Add(undo);
+        }
+
+        private void RunLeaveActions()
+        {
+            var actions = leaveActions.ToList();
+            leaveActions.Clear();
+            foreach (var action in actions)
             {
-                var captured = name;
-                tabBar.Children.Add(Ui.Tab(captured, captured == tab, () => ShowTab(captured)));
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("Leaving a page failed to undo something: " + ex.Message);
+                }
             }
         }
 
         /// <summary>
-        /// Draws a tab, rebuilding it from the settings rather than re-showing what was there.
+        /// Builds a page. Each page's file owns its Build method and everything under it; this is the only
+        /// place the shell names them.
         /// </summary>
-        /// <remarks>
-        /// A tab is thrown away when it is left, so nothing has to be kept in step while it is not on
-        /// screen: adding a screen on Install and switching to Rig shows the screen, and every cached
-        /// control a tab holds belongs to the one build that created it. The refresh methods each guard
-        /// against a null control for that reason -- they are called from the constructor, from a
-        /// background check that lands after a tab has gone, and from a build that is still in progress.
-        /// </remarks>
-        private void ShowTab(string name)
+        private FrameworkElement BuildPage(PanelRoute to)
         {
-            tab = name;
-            FillTabBar();
-            ForgetTabControls();
-            switch (name)
+            try
             {
-                case TabData:
-                    bodyHost.Content = BuildDataTab();
-                    break;
-                case TabLights:
-                    bodyHost.Content = BuildLightsTab();
-                    break;
-                case TabInstall:
-                    bodyHost.Content = BuildInstallTab();
-                    break;
-                default:
-                    bodyHost.Content = BuildRigTab();
-                    break;
+                switch (to.Page)
+                {
+                    case PanelPage.Rig: return BuildRigPage(to);
+                    case PanelPage.Screens: return BuildScreensPage(to);
+                    case PanelPage.Leds: return BuildLedsPage(to);
+                    case PanelPage.Matrix: return BuildMatrixPage(to);
+                    case PanelPage.Shortcuts: return BuildShortcutsPage(to);
+                    case PanelPage.Settings: return BuildSettingsPage(to);
+                    case PanelPage.Updates: return BuildUpdatesPage(to);
+                    default: return BuildHomePage(to);
+                }
+            }
+            catch (Exception ex)
+            {
+                // A page that throws while it is drawn leaves the panel usable, the sidebar with it, and
+                // says where to look rather than showing SimHub's own crash dialog.
+                Log.Error("Drawing the " + PanelNav.Label(to.Page) + " page failed", ex);
+                return Ui.VStack(12,
+                    Ui.PageTitle(PanelNav.Label(to.Page)),
+                    Ui.Prose("This page could not be drawn. See SimHub's log.", Theme.SizeBody, Theme.Caution));
             }
         }
 
-        /// <summary>Drops every control the tab being left owned, so a refresh cannot write into a
-        /// control that is no longer on screen and read as having done something.</summary>
-        private void ForgetTabControls()
+        /// <summary>
+        /// A page as the artboards lay one out: the title, with the page's own actions to its right, and
+        /// the sections under it 28 apart.
+        /// </summary>
+        private FrameworkElement PageLayout(string title, FrameworkElement actions, params UIElement[] sections)
         {
-            // The preview holds SimHub's renderer rather than a control we made, so it is let go rather
-            // than forgotten: a tab that is not on screen must not still be drawing a dashboard.
-            DropPreview();
-            faceWarningText = null;
-            faceWarningRow = null;
-            zoneSelects.Clear();
-            zoneMaskButtons.Clear();
-            zoneMaskBoxes.Clear();
-            barEndButtons.Clear();
-            carTablesButton = null;
-            carTablesLine = null;
-            flagBoxLine = null;
-            flagBoxButton = null;
-            flagBoxCopyButton = null;
-            flagBoxPath = null;
-            updateLine = null;
-            updateButton = null;
-            restoreButton = null;
-            checkButton = null;
-            reinstallButton = null;
-            statusHost = null;
-            dashboardTitle = null;
-            // A press waiting for its listing drew into a column that has just gone.
-            pendingApply = null;
+            var head = actions == null ? (FrameworkElement)Ui.PageTitle(title) : Ui.Row(Ui.PageTitle(title), actions);
+            var stack = new StackPanel { Orientation = Orientation.Vertical };
+            stack.Children.Add(head);
+            foreach (var section in sections)
+            {
+                if (section == null) continue;
+                var element = section as FrameworkElement;
+                if (element != null)
+                {
+                    var margin = element.Margin;
+                    element.Margin = new Thickness(margin.Left, margin.Top + PanelShell.SectionGap, margin.Right, margin.Bottom);
+                }
+                stack.Children.Add(section);
+            }
+            return stack;
         }
 
-        /// <summary>Redraws the tab that is showing, after something changed the rig under it.</summary>
-        private void Redraw()
+        /// <summary>A section of a page: its heading, and what is under it 14 below.</summary>
+        private static FrameworkElement PageSection(string heading, params UIElement[] children)
         {
-            ShowTab(tab);
+            var stack = new StackPanel { Orientation = Orientation.Vertical };
+            if (!string.IsNullOrEmpty(heading))
+            {
+                var title = Ui.Heading(heading);
+                title.Margin = new Thickness(0, 0, 0, 14);
+                stack.Children.Add(title);
+            }
+            foreach (var child in children)
+            {
+                if (child != null) stack.Children.Add(child);
+            }
+            return stack;
+        }
+
+        /// <summary>Brings the row carrying that anchor into view once the page has been laid out.</summary>
+        private void ScrollToAnchor(string anchor)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var target = Ui.FindAnchor(pageHost.Content as DependencyObject, anchor);
+                if (target == null) return;
+                target.BringIntoView();
+            }), DispatcherPriority.Loaded);
         }
 
         private void Save()
@@ -276,28 +391,19 @@ namespace OpenDashPlugin
             Save();
         }
 
-        // --- The controls every tab uses --------------------------------------------------------
+        // --- The controls every page uses --------------------------------------------------------------
 
-        /// <summary>SimHub's own switch (SHToggleButton), so that it looks like every other toggle in SimHub.</summary>
+        /// <summary>
+        /// A switch, drawn as the artboards draw .tog.
+        /// </summary>
+        /// <remarks>
+        /// It was SimHub's SHToggleButton, which looked like SimHub's and not like the redesign, and which
+        /// declared no size of its own and grew to whatever it was measured against. The kit's switch is a
+        /// ToggleButton too, so every caller that set a tooltip or an alignment on it keeps working.
+        /// </remarks>
         private static ToggleButton BuildToggle(bool isOn, Action<bool> changed)
         {
-            ToggleButton toggle;
-            try
-            {
-                toggle = new SHToggleButton();
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("SHToggleButton is unavailable; using a plain toggle: " + ex.Message);
-                toggle = new ToggleButton();
-            }
-            toggle.IsChecked = isOn;
-            // SimHub's switch brings no ring of its own, and a row reached by the keyboard has to say where
-            // it is; the kit's ring is an adorner, so it costs the row no height.
-            toggle.FocusVisualStyle = Ui.FocusRing();
-            toggle.Checked += (sender, args) => changed(true);
-            toggle.Unchecked += (sender, args) => changed(false);
-            return toggle;
+            return Ui.Switch(isOn, changed);
         }
 
         private static Segmented BuildSegmented(string[] values, string[] labels, string selected, Action<string> changed)
@@ -309,13 +415,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// One value of a value set, as a drop-down: the control for a list longer than the two or three
-        /// options Segmented.cs is drawn for. The labels are positional, so values[i] is what labels[i] names.
+        /// One value of a value set, as a drop-down: the control for a list longer than a segmented bar is
+        /// drawn for. The labels are positional, so values[i] is what labels[i] names.
         /// </summary>
         /// <remarks>
-        /// Ui.Field is the chrome, so the box carries the same ground, outline and ring as the drop button
-        /// and the text field beside it. Its corner stays SimHub's: a ComboBox has no CornerRadius, and the
-        /// template that would give it one supplies the list under it as well, which Widgets.Field records.
+        /// Ui.Field is the chrome, so the box carries the same ground, outline and ring as the fields beside
+        /// it. Its corner stays SimHub's: a ComboBox has no CornerRadius, and the template that would give it
+        /// one supplies the list under it as well, which Widgets.Field records.
         /// </remarks>
         private static ComboBox BuildChoice(string[] values, string[] labels, string selected, double width, Action<string> changed)
         {
@@ -333,7 +439,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
-        private static ComboBox BuildPageSelect(System.Collections.Generic.IReadOnlyList<ZonePage> pages, int selected, double width, Action<int> changed)
+        private static ComboBox BuildPageSelect(IReadOnlyList<ZonePage> pages, int selected, double width, Action<int> changed)
         {
             var box = new ComboBox { Width = width, HorizontalAlignment = HorizontalAlignment.Left };
             Ui.Field(box, Theme.ControlHeightSm);
@@ -377,13 +483,20 @@ namespace OpenDashPlugin
             return box;
         }
 
-        /// <summary>
-        /// The one accented action a tab is allowed, which is the press somebody came to the tab to make.
-        /// </summary>
-        /// <remarks>
-        /// A second one on the same tab costs the first the whole of its meaning, so a tab that finds
-        /// itself wanting two has picked the wrong one rather than earned another.
-        /// </remarks>
+        /// <summary>A text box for a name, at the width a form gives one.</summary>
+        private static TextBox BuildNameBox(string text, double width = 280)
+        {
+            var box = new TextBox
+            {
+                Width = width,
+                Text = text ?? string.Empty,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            };
+            Ui.Field(box, Theme.ControlHeightSm);
+            return box;
+        }
+
+        /// <summary>The one accented action a page is allowed, which is the press somebody came to it to make.</summary>
         private static Button BuildPrimaryButton(string content, string tooltip)
         {
             var button = Ui.PrimaryButton(content);
@@ -392,14 +505,7 @@ namespace OpenDashPlugin
             return button;
         }
 
-        /// <summary>
-        /// A secondary action, which until now was SimHub's SHButtonPrimary in spite of the name.
-        /// </summary>
-        /// <remarks>
-        /// The canvas allows one primary per panel, so a page of eight accented buttons says nothing about
-        /// which of them is the thing to press. These are the outline the canvas draws instead;
-        /// BuildPrimaryButton is what the one accented action of a tab asks for.
-        /// </remarks>
+        /// <summary>Every other action: the outline the artboards draw.</summary>
         private static Button BuildSecondaryButton(string content, string tooltip)
         {
             var button = Ui.OutlineButton(content);
@@ -408,13 +514,7 @@ namespace OpenDashPlugin
             return button;
         }
 
-        /// <summary>
-        /// The press that takes something away: the outline again, in danger.
-        /// </summary>
-        /// <remarks>
-        /// The colour is the whole of the difference. A destructive press sits in a row beside the one that
-        /// goes back, and a heavier ground would make the thing to avoid the loudest thing on the row.
-        /// </remarks>
+        /// <summary>The press that takes something away: the outline again, in danger.</summary>
         private static Button BuildDestructiveButton(string content, string tooltip)
         {
             var button = Ui.DestructiveButton(content);
@@ -423,14 +523,7 @@ namespace OpenDashPlugin
             return button;
         }
 
-        /// <summary>
-        /// An action its ink alone carries: no ground, no outline, no padding and no minimum width.
-        /// </summary>
-        /// <remarks>
-        /// What the header over a screen offers, where Rename and Remove are about the thing already on
-        /// screen rather than about the page, and two outlines there would read as the page's own actions.
-        /// Danger is the ink the removing one takes.
-        /// </remarks>
+        /// <summary>An action its ink alone carries: no ground, no outline, no padding and no minimum width.</summary>
         private static Button BuildTextButton(string content, string tooltip, string hex = Theme.TextPrimary)
         {
             var button = Ui.LinkButton(content, hex);
@@ -439,12 +532,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// SimHub's own control for binding an input to an action, so a wheel button is bound here
-        /// rather than by sending the driver to Controls and events to find the name.
+        /// SimHub's own control for binding an input to an action, so a wheel button is bound here rather
+        /// than by sending the driver to Controls and events to find the name.
         ///
-        /// It is a SimHub UserControl and SimHub is not always there -- the panel is constructed in
-        /// tests and could be constructed by a host that does not carry the style -- so a failure
-        /// falls back to naming the action, which is exactly what somebody binding it by hand needs.
+        /// It is a SimHub UserControl and SimHub is not always there -- the panel is constructed in tests and
+        /// could be constructed by a host that does not carry the style -- so a failure falls back to naming
+        /// the action, which is exactly what somebody binding it by hand needs.
         /// </summary>
         private static FrameworkElement BuildBinder(string action, string friendlyName, bool hold = false)
         {
@@ -469,19 +562,19 @@ namespace OpenDashPlugin
         /// <summary>
         /// Forces a glance binding to the one press type that can hold anything.
         ///
-        /// SimHub only calls an action's start on press and its end on release when the mapping's
-        /// press type is `During`; every other type goes through TriggerAction, which fires start and
-        /// end back to back. The binding dialog offers ShortAndLongPress by default, so a driver who
-        /// binds the glance the obvious way gets a page that appears and vanishes in one frame.
+        /// SimHub only calls an action's start on press and its end on release when the mapping's press type
+        /// is `During`; every other type goes through TriggerAction, which fires start and end back to back.
+        /// The binding dialog offers ShortAndLongPress by default, so a driver who binds the glance the
+        /// obvious way gets a page that appears and vanishes in one frame.
         ///
         /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
         /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
         ///
-        /// Decided in #435, and kept as a correction rather than turned into a warning: a warning
-        /// would leave in place a binding that cannot hold anything, and there is no press type but
-        /// `During` a driver could choose and still have a glance. It is the one place OpenDash does
-        /// not let SimHub's own control mean what it says, so the row says it instead of doing it
-        /// silently: every glance row's caption ends on PanelCopy.GlanceBoundAsHold.
+        /// Decided in #435, and kept as a correction rather than turned into a warning: a warning would leave
+        /// in place a binding that cannot hold anything, and there is no press type but `During` a driver
+        /// could choose and still have a glance. It is the one place OpenDash does not let SimHub's own
+        /// control mean what it says, so the row says it instead of doing it silently: every glance row's
+        /// caption ends on PanelCopy.GlanceBoundAsHold.
         /// </summary>
         private static void HoldWhilePressed(ControlsEditor editor)
         {
@@ -498,29 +591,10 @@ namespace OpenDashPlugin
             apply();
         }
 
-        // --- Footer -----------------------------------------------------------------------------
-
-        /// <summary>56 px, rule on top: Documentation and Report an issue links, "MIT licence" on the right.</summary>
-        private FrameworkElement BuildFooter()
-        {
-            var links = Ui.HStack(24, BuildLink("Documentation", DocumentationUrl), BuildLink("Report an issue", IssuesUrl));
-            var grid = Ui.Row(links, Ui.Label("MIT licence"));
-            grid.Height = 56;
-            grid.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
-            return new Border
-            {
-                BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, 1, 0, 0),
-                Child = grid,
-            };
-        }
-
         /// <summary>
-        /// SimHub's link button (SHLinkButton) carrying the canvas's accent text and external-link icon.
+        /// SimHub's link button (SHLinkButton) carrying the accent text and the external-link icon.
         /// </summary>
         /// <remarks>
-        /// The icon leads the label, as it does on a button that carries one, and at the same 8 px.
-        ///
         /// The hover is drawn here because neither half of the link can inherit it: the ink is set on the
         /// TextBlock and on the Path rather than left to the button, so SHLinkButton's own template has
         /// nothing to reach. The two change together, or a hovered link is a lit word beside a dim glyph.

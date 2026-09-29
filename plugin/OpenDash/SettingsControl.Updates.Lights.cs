@@ -1,20 +1,13 @@
-// SettingsControl.Install.Lights.cs: the "Lights OpenDash can install" section of the Install tab -- one
-// row per light profile the build carries, in the shape the canvas gives it.
+// SettingsControl.Updates.Lights.cs: the "Lights OpenDash can install" section of the Updates page -- the flag
+// box's row and one row per strip shape the build carries, with what the rig's strips of it hold in SimHub.
 //
-// Lifted out of SettingsControl.Install.cs beside the package rows and the plugin's own section, so the
-// three sections of the tab are a file each. What decides a row -- which shapes share one, what it is
-// called, what its caption says and what its tooltip says -- is in PanelLightRows.cs, which the test
-// project compiles; this file is the drawing and the two presses.
+// What decides a row -- which shapes share one, what it is called, what its caption and tooltip say -- is in
+// PanelLightRows.cs, which the test project compiles. Asking SimHub and installing are in
+// SettingsControl.Profiles.cs, shared with LEDs, Matrix and Home; the by-hand route for the flag box is on the
+// Matrix page, beside the profile it is the route for.
 //
-// The flag box row used to be on the Lights tab (SettingsControl.Lights.cs), which is where a driver goes
-// to configure rather than to install. It is here now beside the strips, because the twenty profiles are
-// one list and a driver who owns a wheel and a box should not have to find them in two places.
-//
-// NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS, which is the consent half of ADR 0013 and what the
-// section's own caption says. Drawing the section is free of side effects: FlagBoxInstaller.Plan and
-// StripInstaller.InstalledEverywhere only ask SimHub what it already holds, and the profiles are read
-// out of the assembly rather than off disk. The same holds for an update: a strip installed by an older
-// build is reported and offered an Update, and is not rewritten until that is pressed.
+// NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS (ADR 0013). A strip installed by an older build is reported
+// and offered an Update, and is not rewritten until that is pressed.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,12 +19,7 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private TextBlock flagBoxLine;
-        private Button flagBoxButton;
-        private Button flagBoxCopyButton;
-        private TextBox flagBoxPath;
-
-        private const string LightsSectionLabel = "Lights OpenDash can install";
+        private const string LightsSectionLabel = PanelUpdates.LightsTitle;
 
         private FrameworkElement BuildLightsSection()
         {
@@ -46,7 +34,7 @@ namespace OpenDashPlugin
             if (rows.Count == 0)
             {
                 children.Add(Ui.Caption(PanelLightRows.NoProfiles, BodyWidth));
-                return Ui.Section(LightsSectionLabel, children.ToArray());
+                return PageSection(LightsSectionLabel, children.ToArray());
             }
 
             // The rows go in as one child rather than as a child each: a section holds what it is given
@@ -57,11 +45,7 @@ namespace OpenDashPlugin
             // that pill being read as a fact: it says the settings could not be asked, which is what the
             // press would run into.
             if (stripsUnavailable) children.Add(Ui.Caption(PanelLightRows.Unavailable, BodyWidth));
-            if (flagBox != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable)
-            {
-                children.Add(BuildFlagBoxFallback(flagBoxPlan));
-            }
-            return Ui.Section(LightsSectionLabel, children.ToArray());
+            return PageSection(LightsSectionLabel, children.ToArray());
         }
 
         /// <summary>
@@ -83,12 +67,7 @@ namespace OpenDashPlugin
                 plan,
                 InstallFlagBox,
                 current => FlagBoxInstallPlan.Summary(current, plugin.FlagBox?.Path),
-                button =>
-                {
-                    flagBoxButton = button;
-                    flagBoxButton.ToolTip =
-                        "Adds OpenDash's profile. Your own profiles are never changed.";
-                });
+                button => button.ToolTip = "Adds OpenDash's profile. Your own profiles are never changed.");
         }
 
         /// <summary>
@@ -176,80 +155,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Each of the rig's bars with what SimHub holds for it, off one read of every LED device.
-        /// </summary>
-        /// <remarks>
-        /// Reachable is false when no LED device could be read at all, which the section reports as
-        /// SimHub's LED settings being unavailable. An unreachable driver is a state a driver can do
-        /// nothing about rather than an error, so a failure to read is reported as one.
-        /// </remarks>
-        private IList<KeyValuePair<LedBar, FlagBoxPlan>> BarCensus(IDictionary<string, string> embedded, out bool reachable)
-        {
-            List<List<InstalledProfile>> devices;
-            try
-            {
-                devices = StripInstaller.InstalledEverywhere();
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Reading SimHub's LED profiles failed: " + ex.Message);
-                devices = new List<List<InstalledProfile>>();
-            }
-            reachable = devices.Any(device => device != null);
-            var census = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
-            foreach (var bar in Settings.LedBarList())
-            {
-                if (bar == null || bar.ProfileShapeId == null) continue;
-                string json;
-                var description = embedded.TryGetValue(bar.ProfileShapeId, out json) ? FlagBoxProfile.DescriptionOf(json) : null;
-                census.Add(new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, description, devices)));
-            }
-            return census;
-        }
-
-        /// <summary>
-        /// Rewrites every bar of these shapes whose copy in SimHub is older than this build's, each into
-        /// the device it names, and reports the row as it then stands.
-        /// </summary>
-        /// <remarks>
-        /// The census is read again at the press rather than carried from the draw, so what is rewritten
-        /// is what SimHub holds when the button is pressed, which SimHub's own editor may have changed
-        /// since the tab was drawn. Each bar goes through InstallBar, the same install adding or moving it
-        /// runs, so an update writes exactly what adding the strip today would write: its own name, its
-        /// own id, its own properties.
-        ///
-        /// A bar whose device SimHub no longer has is left alone, and the press reports that it failed
-        /// with the reason in SimHub's log. InstallBar takes the bar's copy out of every device before it
-        /// installs into the one the bar names, so running it there would remove a strip that still
-        /// lights and put nothing in its place.
-        /// </remarks>
-        private FlagBoxPlan UpdateBars(IReadOnlyList<string> shapeIds, IDictionary<string, string> embedded)
-        {
-            bool reachable;
-            var outdated = PanelLightRows.OutdatedBars(shapeIds, BarCensus(embedded, out reachable));
-            var results = new List<FlagBoxPlan>();
-            foreach (var bar in outdated)
-            {
-                string json;
-                if (!embedded.TryGetValue(bar.ProfileShapeId, out json))
-                {
-                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
-                }
-                else if (LedTargets.Find(bar.Device) == null)
-                {
-                    Log.Warn("The profile for " + bar.Name + " was not updated: the LED device it names is no longer in SimHub.");
-                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.Failed });
-                }
-                else
-                {
-                    results.Add(InstallBar(bar, json));
-                }
-            }
-            if (results.Any(plan => plan.State != FlagBoxInstallState.UpToDate)) return FlagBoxInstallPlan.Combine(results);
-            return PanelLightRows.RowPlan(shapeIds, BarCensus(embedded, out reachable), reachable);
-        }
-
-        /// <summary>
         /// An install row: what the profile is, the state it is in, and one button that changes it.
         /// </summary>
         /// <remarks>
@@ -297,83 +202,5 @@ namespace OpenDashPlugin
             return row;
         }
 
-        /// <summary>Asks SimHub what it holds for the flag box, without touching it.</summary>
-        private FlagBoxPlan SafePlan()
-        {
-            try
-            {
-                return FlagBoxInstaller.Plan(plugin.FlagBoxJson);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Reading SimHub's matrix profiles failed: " + ex.Message);
-                return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
-            }
-        }
-
-        private FlagBoxPlan InstallFlagBox()
-        {
-            try
-            {
-                return FlagBoxInstaller.Install(plugin.FlagBoxJson);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Installing the flag box profile failed", ex);
-                return new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-            }
-        }
-
-        /// <summary>
-        /// The by-hand route for the flag box, beneath the rows and only when the one-click one is not
-        /// there at all.
-        /// </summary>
-        /// <remarks>
-        /// ADR 0013 (docs/decisions/0013-lighting-hardware.md) keeps the extracted file precisely so that
-        /// there is something to import when the matrix driver cannot be reached, so it could not go with
-        /// the sentence it used to sit beside. It is under the rows rather than in one because the canvas
-        /// draws a row as a name, a state and one button, and because it answers for the flag box alone:
-        /// no strip profile is ever written to the OpenDash folder.
-        ///
-        /// Built only in the state that needs it, rather than built and hidden, so that a section with
-        /// nothing to fall back to does not carry the gap of a block nobody can see.
-        /// </remarks>
-        private FrameworkElement BuildFlagBoxFallback(FlagBoxPlan plan)
-        {
-            flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
-            flagBoxCopyButton = BuildSecondaryButton(
-                "Copy to SimHub's import folder",
-                "Puts a copy in Documents\\SimHub.");
-            flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
-            var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, flagBoxCopyButton, FlagBoxPathBox()));
-            block.HorizontalAlignment = HorizontalAlignment.Left;
-            return block;
-        }
-
-        private void CopyFlagBoxForImport()
-        {
-            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
-            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
-            if (flagBoxLine == null) return;
-            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
-                ? "Could not copy the profile: " + copied.Message
-                : "Copied to " + copied?.Path + ". In SimHub, open your device's profiles and press Import.";
-        }
-
-        private FrameworkElement FlagBoxPathBox()
-        {
-            var box = new TextBox
-            {
-                Width = 320,
-                IsReadOnly = true,
-                Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where OpenDash left the profile.",
-            };
-            // The kit's field chrome, so a path that is read rather than typed still reads as the same
-            // shape as the number boxes on the other tabs, and carries the ring a keyboard needs.
-            Ui.Field(box, Theme.ControlHeightSm);
-            flagBoxPath = box;
-            return box;
-        }
     }
 }
