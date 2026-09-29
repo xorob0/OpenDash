@@ -56,10 +56,13 @@ export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
  * **Two of the four are retired from the panel, not from the profile.** The rebuilt panel (#503, per
  * #369) offers one switch -- the car's own lights, or not -- and "not" is `leftToRight`.
  * `meetInMiddle` and `f1` are {@link RETIRED_LED_RPM_STYLES}, and the plugin normalises a stored one
- * to `leftToRight` rather than leave a strip on a style nobody can choose again. The profile keeps their conditional groups
- * all the same, so that a file of the previous vintage, installed beside a settings file that still
- * says `f1`, still lights rather than matching no group and going dark; {@link LED_RPM_STYLES}
- * therefore stays four.
+ * to `leftToRight` -- on load and again on read -- rather than leave a strip on a style nobody can
+ * choose again, so this release's plugin never publishes either. They stay in two places all the
+ * same. In {@link LED_RPM_STYLES}, which therefore stays four, so that a stored `f1` is still a legal
+ * value when the plugin's choice check reads it, and is migrated rather than refused. And in every
+ * new strip profile as their conditional groups, because a profile can meet a publisher of `f1` that
+ * is not this plugin -- an older plugin it is installed beside, or a hand-imported profile's rig --
+ * and a strip matching no group goes dark.
  */
 export type LedRpmStyle = 'car' | 'leftToRight' | 'meetInMiddle' | 'f1';
 
@@ -273,9 +276,10 @@ export const RETIRED_LED_CENTRE = 'rpmOnly';
  * The two rev light styles the rebuilt panel no longer offers, retired into `leftToRight`. #369, #503.
  *
  * Named for the reason {@link RETIRED_LED_CENTRE} is: the plugin migrates a stored one rather than
- * guessing. Unlike the retired centre they are still values of {@link LedRpmStyle} and still groups
- * in every strip profile, because a profile installed by the previous release reads the style from
- * the same property and has to keep lighting until it is replaced.
+ * guessing, and never publishes one. Unlike the retired centre they are still values of
+ * {@link LedRpmStyle}, so that a stored one is still legal when the plugin reads it and is migrated
+ * rather than refused, and still groups in every strip profile, so that a new profile used beside an
+ * older plugin -- which still publishes `f1` -- does not go dark.
  */
 export const RETIRED_LED_RPM_STYLES: readonly LedRpmStyle[] = ['meetInMiddle', 'f1'];
 
@@ -681,10 +685,15 @@ export const setting = {
    */
   ledBrightness: (): Expr => isnull(prop(propertyName(LED_BRIGHTNESS_SETTING)), flagBox.dayBrightness()),
   /**
-   * The brightness a strip is drawn at. With no brightness of its own it is the rig's, exactly what
-   * the flag box draws, night brightness included. With one, it is that, and at night the lower of it
-   * and the night brightness, so that night mode dims a strip turned up for daylight and never
-   * brightens one turned down.
+   * The brightness a strip is drawn at:
+   *
+   * `if(isnull([OpenDash.LedBrightness]), flagBox.brightness(), if(night, min(own, nightBrightness), own))`
+   *
+   * With no brightness of its own it is the rig's, exactly what the flag box draws, night brightness
+   * included -- so at night it follows `LightsNightBrightness` even where that is above the day
+   * brightness, as the box does, and "null = the same as the rig" holds literally. With one, it is
+   * that, and at night the lower of it and the night brightness, so that night mode dims a strip
+   * turned up for daylight and never brightens one turned down.
    */
   ledBrightnessInForce: (): Expr =>
     iff(
