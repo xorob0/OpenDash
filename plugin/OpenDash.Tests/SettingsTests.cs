@@ -1595,7 +1595,7 @@ namespace OpenDashPlugin.Tests
             main.LayoutX = 120;
             main.LayoutY = 40;
 
-            var copy = settings.DuplicateScreen(main.Namespace);
+            var copy = settings.DuplicateScreen(main.Namespace, entry);
             // Placed by the Rig page until the driver drags it, rather than on top of its source.
             Assert.Null(copy.LayoutX);
             Assert.Null(copy.LayoutY);
@@ -1629,14 +1629,32 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("MainDash2ZoneB", names);
 
             // A name asked for is used, and made unique if it has to be.
-            var named = settings.DuplicateScreen(main.Namespace, "  Rim ");
+            var named = settings.DuplicateScreen(main.Namespace, entry, "  Rim ");
             Assert.Equal("Rim", named.Name);
             Assert.Equal("Rim", named.Namespace);
-            Assert.Equal("Main dash (3)", settings.DuplicateScreen(copy.Namespace, "Main dash").Name);
+            Assert.Equal("Main dash (3)", settings.DuplicateScreen(copy.Namespace, entry, "Main dash").Name);
             // Nothing to duplicate is nothing added.
             var before = settings.RigScreens().Count;
-            Assert.Null(settings.DuplicateScreen("Gone"));
+            Assert.Null(settings.DuplicateScreen("Gone", entry));
             Assert.Equal(before, settings.RigScreens().Count);
+            Assert.Throws<ArgumentNullException>(() => settings.DuplicateScreen(main.Namespace, null));
+
+            // The package's stock folder goes with the stock namespace, so a copy never takes it, even
+            // with the stock screen gone: a copy of the second screen at a size, named as the size, is
+            // not handed "OpenDash 1280x480", and the next screen added at that size is stock again.
+            var rig = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            rig.Normalise();
+            var rim = rig.AddScreen(entry, "Rim");
+            var second = rig.AddScreen(entry, "Main dash");
+            Assert.Equal("OpenDash 1280x480", rim.Folder);
+            Assert.Equal("OpenDash Main dash", second.Folder);
+            rig.RemoveScreen(rim.Namespace);
+            var sized = rig.DuplicateScreen(second.Namespace, entry, "1280x480");
+            Assert.NotEqual(entry.Folder, sized.Folder);
+            Assert.Equal("OpenDash 1280x480 2", sized.Folder);
+            var again = rig.AddScreen(entry, "Rim");
+            Assert.True(again.IsStock);
+            Assert.Equal(entry.Folder, again.Folder);
         }
 
         [Fact]
@@ -1683,7 +1701,7 @@ namespace OpenDashPlugin.Tests
             settings.Rig[0].SetZonePage("TowerA", 9);
             settings.Rig[0].WebViewUrl = "https://example.com/";
 
-            var copy = settings.DuplicateScreen(Contract.PitWallPrefix);
+            var copy = settings.DuplicateScreen(Contract.PitWallPrefix, new PackageEntry { Package = "w", Folder = "OpenDash Pit wall", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 });
             Assert.Equal(Contract.KindPitWall, copy.Kind);
             Assert.Equal("PitWall2", copy.Namespace);
             Assert.False(copy.IsStock);

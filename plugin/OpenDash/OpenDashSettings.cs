@@ -1574,9 +1574,16 @@ namespace OpenDashPlugin
         /// carry, and its folder, which its dashboard lives in; and its place on the Rig page, which is
         /// the driver's to choose. A face opens on its start pages, as every face does on a start.
         /// Null when the rig has no screen of that namespace. #503.
+        ///
+        /// <paramref name="entry"/> is the package the source was made from, which the caller finds in
+        /// the catalogue by <see cref="ScreenInstance.Package"/>, and its folder is reserved as
+        /// <see cref="PackageCatalogue.NewScreen"/> reserves it: the copy never takes its package's stock
+        /// folder, even with the stock screen removed, since the stock folder goes with the stock
+        /// namespace and only the first screen at a size holds those.
         /// </remarks>
-        public ScreenInstance DuplicateScreen(string ns, string name = null)
+        public ScreenInstance DuplicateScreen(string ns, PackageEntry entry, string name = null)
         {
+            if (entry == null) throw new ArgumentNullException(nameof(entry));
             var source = ScreenByNamespace(ns);
             if (source == null) return null;
             var taken = new List<string>();
@@ -1593,7 +1600,7 @@ namespace OpenDashPlugin
             var wanted = string.IsNullOrWhiteSpace(name) ? source.Name : name.Trim();
             copy.Name = PackageCatalogue.UniqueName(wanted, names);
             copy.Namespace = PackageCatalogue.UniqueNamespace(copy.Name, new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase));
-            copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, source.Folder);
+            copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, entry.Folder);
             copy.Unclaimed = false;
             // Laid out by the Rig page until the driver drags it: on top of the source is nowhere.
             copy.LayoutX = null;
