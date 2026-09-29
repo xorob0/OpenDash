@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
 import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV,
   CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP,
-  PROPERTY_PREFIX, zoneProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
+  FLAGS_IN_PIT_LANE_SETTING, PROPERTY_PREFIX, zoneProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { IDLE_SCREEN_NAME } from '../src/idle.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -111,6 +111,8 @@ describe('contract', () => {
     const unread = new Set([
       ...zoneProperties(),
       ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP].map((n) => `${PROPERTY_PREFIX}.${n}`),
+      // Declared ahead of its reader: the flags learn to ask it in the next change of #503.
+      `${PROPERTY_PREFIX}.${FLAGS_IN_PIT_LANE_SETTING}`,
     ]);
     const zoneProps = new Set(zoneProperties());
     const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_FLASHES, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);
