@@ -110,11 +110,14 @@ describe('card expressions', () => {
   // fuel module draw the same property behind a completed lap, so on the out lap the main face
   // named a figure that moves every frame while the second screen beside it drew its absence. The
   // absence is `--` here too: `-.-` was the one card writing a no-data glyph of its own.
-  test('fuel laps wait for the lap that says what one costs, then go red only under a lap', () => {
+  // And since #503 it is red under the rig's one low-fuel threshold rather than under a lap of its
+  // own, the threshold the strip, the box and the fuel module read.
+  test('fuel laps wait for the lap that says what one costs, then go red under the rig threshold', () => {
     const laps = 'isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)';
     const settled = values.fuelIsSettled();
+    const threshold = 'isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))';
     expect(formulaOf(textItem('fuelLaps', 'value'), 'Text')).toBe(`if(${settled}, format(${laps}, '0.0'), '${values.NO_VALUE}')`);
-    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(`if(${settled}, if((${laps}) < (1), '#FF2D46', '#F5F7FA'), '#33383F')`);
+    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(`if(${settled}, if((${laps}) < (${threshold}), '#FF2D46', '#F5F7FA'), '#33383F')`);
   });
 
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
