@@ -114,7 +114,8 @@ namespace OpenDashPlugin
             {
                 var slot = Contract.PitWallZoneSlotByKey(page.Title + panel.Name);
                 var name = ScreensCellText(panel.Configurable ? PanelScreens.PitWallZoneLabel(slot) : panel.Name, PanelPitWallPlan.ZoneNameSize, FontWeights.SemiBold, Theme.TextSecondary);
-                var what = ScreensCellText(slot == null ? string.Empty : ScreensZonePageName(slot, screen), PanelPitWallPlan.ZonePageSize, FontWeights.SemiBold, Theme.TextPrimary);
+                // A zone's page, or what a fixed panel always shows.
+                var what = ScreensCellText(slot == null ? panel.Shows ?? string.Empty : ScreensZonePageName(slot, screen), PanelPitWallPlan.ZonePageSize, FontWeights.SemiBold, Theme.TextPrimary);
                 what.Margin = new Thickness(0, 4, 0, 0);
                 var box = new Border
                 {
@@ -127,9 +128,6 @@ namespace OpenDashPlugin
                     Padding = new Thickness(PanelPitWallPlan.ZonePaddingX, PanelPitWallPlan.ZonePaddingY, PanelPitWallPlan.ZonePaddingX, PanelPitWallPlan.ZonePaddingY),
                     Child = Ui.VStack(0, name, what),
                 };
-                // The fixed Board and Tower have no zone and so no place to describe; an empty hover is a box.
-                var tip = PanelPitWallPlan.ZoneDescription(slot);
-                if (!string.IsNullOrEmpty(tip)) box.ToolTip = tip;
                 Canvas.SetLeft(box, panel.X);
                 Canvas.SetTop(box, panel.Y);
                 canvas.Children.Add(box);
@@ -167,8 +165,8 @@ namespace OpenDashPlugin
                     ScreensSave(screen, redraw);
                 });
                 choice.Uid = "screens.pitwall.zone." + captured.Key;
+                // No hover saying where the zone is: the picture beside the list shows it.
                 var label = Ui.Text(PanelScreens.PitWallZoneLabel(captured), Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
-                label.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
                 stack.Children.Add(ScreensAsideLine(label, choice));
             }
             return Ui.CardBox(stack, 14);
@@ -187,7 +185,7 @@ namespace OpenDashPlugin
                     ScreensSave(screen, redraw);
                 }, PanelScreens.PortraitChoiceWidth);
                 choice.Uid = "screens.pitwall.portrait." + captured.Key;
-                choice.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
+                choice.ToolTip = PanelPitWallPlan.ZonePosition(captured);
                 choices.Add(choice);
             }
             return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), choices.ToArray());
@@ -230,7 +228,8 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildWebViewBox(ScreenInstance screen)
         {
-            var box = Ui.Input(screen.WebViewUrl ?? string.Empty, PanelPitWallPlan.AddressWidth);
+            var width = PanelPitWallPlan.AddressWidthFor(ContentWidth);
+            var box = Ui.Input(screen.WebViewUrl ?? string.Empty, width);
             var watermark = Ui.Text(PanelPitWallPlan.AddressPlaceholder, PanelShell.InputTextSize, FontWeights.Normal, Theme.TextLabel);
             watermark.HorizontalAlignment = HorizontalAlignment.Left;
             watermark.VerticalAlignment = VerticalAlignment.Center;
@@ -261,7 +260,7 @@ namespace OpenDashPlugin
             };
             reread();
 
-            var host = new Grid { Width = PanelPitWallPlan.AddressWidth, HorizontalAlignment = HorizontalAlignment.Right };
+            var host = new Grid { Width = width, HorizontalAlignment = HorizontalAlignment.Right };
             host.Children.Add(box);
             host.Children.Add(watermark);
             return host;

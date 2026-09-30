@@ -50,12 +50,23 @@ namespace OpenDashPlugin
         /// <summary>The narrowest the picture is drawn, however narrow the column.</summary>
         public const double PictureLeast = 120;
 
-        /// <summary>The width the picture takes on a page <paramref name="content"/> wide, its frame included:
-        /// beside the zone list in two columns, the whole width stacked.</summary>
+        /// <summary>
+        /// The width the picture takes on a page <paramref name="content"/> wide, its frame included: beside
+        /// the zone list in two columns, and stacked the whole width up to <see cref="StackedMax"/>.
+        /// </summary>
+        /// <remarks>
+        /// Stacked, the zone list and the rows go under the picture, and a 16 by 9 picture the width of a wide
+        /// page stood 485 px tall and pushed them out of sight, which the face's picture is capped against
+        /// for the same reason. Beside the list it keeps its column, since the list is beside it.
+        /// </remarks>
         public static double PictureWidthFor(double content, bool twoColumns)
         {
-            return Math.Max(PictureLeast, twoColumns ? content - ListWidth - ListGap : content);
+            return Math.Max(PictureLeast, twoColumns ? content - ListWidth - ListGap : Math.Min(content, StackedMax));
         }
+
+        /// <summary>The widest a stacked picture is drawn, frame included: the widest whose page
+        /// (<see cref="PictureHeight"/>) stands no taller than PanelFacePlan.MaxHeight.</summary>
+        public static readonly double StackedMax = Math.Ceiling((PanelFacePlan.MaxHeight + 1) * 16 / 9) - 1 + 2 * Frame;
 
         /// <summary>The page itself inside a picture <paramref name="outer"/> wide: the frame is drawn inside
         /// the column, not beside it, or the column clips the picture's right edge.</summary>
@@ -78,6 +89,14 @@ namespace OpenDashPlugin
         /// <summary>The web view address box, as the artboard draws it.</summary>
         public const double AddressWidth = 320;
 
+        /// <summary>The address box in a column <paramref name="column"/> wide: the artboard's 320, or less
+        /// where 320 would squeeze the row's title under PanelScreens.RowTitleLeast, as every other row's
+        /// controls are held.</summary>
+        public static double AddressWidthFor(double column)
+        {
+            return Math.Min(AddressWidth, PanelScreens.ControlsWidth(column));
+        }
+
         /// <summary>The picture's height at a width: the wall's own 16 by 9.</summary>
         public static double PictureHeight(double width)
         {
@@ -92,7 +111,7 @@ namespace OpenDashPlugin
             var k = width / ThumbWidth;
             foreach (var panel in page.Panels)
             {
-                panels.Add(new Panel(panel.Name, Math.Round(panel.X * k), Math.Round(panel.Y * k), Math.Floor(panel.Width * k), Math.Floor(panel.Height * k), panel.Configurable));
+                panels.Add(new Panel(panel.Name, Math.Round(panel.X * k), Math.Round(panel.Y * k), Math.Floor(panel.Width * k), Math.Floor(panel.Height * k), panel.Configurable, panel.Shows));
             }
             return panels;
         }
@@ -106,7 +125,7 @@ namespace OpenDashPlugin
         /// list below can be pointed at or a fixed part of the page.</summary>
         public sealed class Panel
         {
-            public Panel(string name, double x, double y, double width, double height, bool configurable)
+            public Panel(string name, double x, double y, double width, double height, bool configurable, string shows = null)
             {
                 Name = name;
                 X = x;
@@ -114,7 +133,12 @@ namespace OpenDashPlugin
                 Width = width;
                 Height = height;
                 Configurable = configurable;
+                Shows = shows;
             }
+
+            /// <summary>What a fixed panel shows, drawn under its name as a zone's page is ("Board ·
+            /// Leaderboard" on the artboard's Race picture); null for a zone, whose page is its setting.</summary>
+            public string Shows { get; private set; }
 
             public string Name { get; private set; }
 
@@ -182,11 +206,11 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<Page> Pages = new[]
         {
             new Page("Race",
-                new Panel("Board", 4, 4, 118, 134, false),
+                new Panel("Board", 4, 4, 118, 134, false, "Leaderboard"),
                 new Panel("A", 128, 4, 118, 65, true),
                 new Panel("B", 128, 73, 118, 65, true)),
             new Page("Tower",
-                new Panel("Tower", 4, 4, 110, 134, false),
+                new Panel("Tower", 4, 4, 110, 134, false, "Leaderboard"),
                 new Panel("Wide", 118, 4, 131, 59, true),
                 new Panel("A", 118, 67, 63, 71, true),
                 new Panel("B", 185, 67, 63, 71, true)),
@@ -220,14 +244,25 @@ namespace OpenDashPlugin
             { "PortraitD", "lower right" },
         };
 
-        /// <summary>The caption of one zone's row: "Race page, upper right." Written from the table above
-        /// rather than beside it, so the words cannot drift from the picture the panel draws.</summary>
+        /// <summary>Where one zone is: "Race page, upper right." Written from the table above rather than
+        /// beside it, so the words cannot drift from the picture the panel draws; PanelPitWallPlanTests reads
+        /// each one off its rectangle. The landscape zones are not described on the page, which draws them in
+        /// the picture beside their list.</summary>
         public static string ZoneDescription(Contract.PitWallZoneSlot slot)
         {
             if (slot == null) return string.Empty;
             string where;
             if (!ZoneWhere.TryGetValue(slot.Key, out where)) return string.Empty;
             return slot.Page + " page, " + where + ".";
+        }
+
+        /// <summary>A portrait zone's hover: its place alone, "Upper left.", under a row titled Portrait layout,
+        /// where "Portrait page" would name a page the wall does not have.</summary>
+        public static string ZonePosition(Contract.PitWallZoneSlot slot)
+        {
+            string where;
+            if (slot == null || !ZoneWhere.TryGetValue(slot.Key, out where) || where.Length == 0) return string.Empty;
+            return char.ToUpperInvariant(where[0]) + where.Substring(1) + ".";
         }
 
         /// <summary>Every zone and page the quick glance can be set to, packed the way

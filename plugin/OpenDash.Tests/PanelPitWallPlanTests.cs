@@ -82,6 +82,13 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(PanelShell.ContentMax - 324, PanelPitWallPlan.PictureWidthFor(PanelShell.ContentMax, true));
             Assert.Equal(544, PanelPitWallPlan.PictureWidthFor(544, false));
+            // Stacked, the picture stops where its page would stand taller than the face's picture may, so
+            // the zone list and the rows under it stay in sight on a wide page.
+            Assert.Equal(750, PanelPitWallPlan.StackedMax);
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(999, false));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(PanelShell.ContentMax, false));
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax)) <= PanelFacePlan.MaxHeight);
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax + 1)) > PanelFacePlan.MaxHeight);
             Assert.Equal(PanelPitWallPlan.PictureLeast, PanelPitWallPlan.PictureWidthFor(300, true));
             Assert.Equal(120, PanelPitWallPlan.PictureLeast);
             Assert.Equal(1, PanelPitWallPlan.Frame);
@@ -201,6 +208,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Tower page, lower left.", Description("TowerA"));
             Assert.Equal("Tower page, lower right.", Description("TowerB"));
             Assert.Equal("Telemetry page, top.", Description("TelemetryA"));
+            // A portrait zone's hover is its place alone, under a row that already says Portrait layout.
+            Assert.Equal("Upper left.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitA")));
+            Assert.Equal("Lower right.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitD")));
+            Assert.Equal(string.Empty, PanelPitWallPlan.ZonePosition(null));
             // Every zone of every page has one, the portrait package's included.
             foreach (var slot in Contract.PitWallZoneSlots) Assert.NotEqual(string.Empty, PanelPitWallPlan.ZoneDescription(slot));
         }
@@ -280,11 +291,33 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>The web view address box is the artboard's 320.</summary>
+        /// <summary>The web view address box is the artboard's 320, and narrower only where 320 would squeeze
+        /// its row's title under the least every other row keeps.</summary>
         [Fact]
         public void The_address_box_is_the_width_the_canvas_draws()
         {
             Assert.Equal(320, PanelPitWallPlan.AddressWidth);
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(PanelShell.ContentMax));
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(320 + PanelShell.RowGap + PanelScreens.RowTitleLeast));
+            Assert.Equal(PanelScreens.ControlsWidth(400), PanelPitWallPlan.AddressWidthFor(400));
+            Assert.True(PanelPitWallPlan.AddressWidthFor(400) < 320);
+        }
+
+        /// <summary>The fixed panels say what they show under their name, as the artboard's Race picture writes
+        /// "Board · Leaderboard"; a zone's page is its setting and the table leaves it empty.</summary>
+        [Fact]
+        public void A_fixed_panel_says_what_it_shows()
+        {
+            Assert.Equal("Leaderboard", Panel("Race", "Board").Shows);
+            Assert.Equal("Leaderboard", Panel("Tower", "Tower").Shows);
+            foreach (var page in PanelPitWallPlan.Pages)
+            {
+                foreach (var panel in page.Panels)
+                {
+                    Assert.Equal(panel.Configurable, panel.Shows == null);
+                }
+                Assert.Equal(page.Panels.Select(p => p.Shows), PanelPitWallPlan.Scaled(page, 448).Select(p => p.Shows));
+            }
         }
 
         /// <summary>A watermark and not a value: what the empty box shows is exactly what
