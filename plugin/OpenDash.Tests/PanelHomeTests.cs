@@ -779,6 +779,10 @@ namespace OpenDashPlugin.Tests
             // A key step reaches only changed, so the figure is set there too, before an unchanged value returns.
             Assert.Contains("var slider = Ui.Slider(value, v => { numeral.Text = PanelHome.Percent(v); if (nightOn) {", code);
             Assert.Contains("var night = Ui.Switch(nightOn, on =>", code);
+            // Both controls are named for UI Automation, as the sidebar's and the Rig page's night switches are:
+            // the eyebrows over them are separate text.
+            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));", code);
+            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);", code);
         }
 
         /// <summary>Home draws night mode and a brightness as controls, so it says so before it draws

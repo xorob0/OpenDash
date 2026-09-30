@@ -665,6 +665,9 @@ namespace OpenDashPlugin
                     ShowLightingChange();
                 }
             }, v => numeral.Text = PanelHome.Percent(v), false);
+            // The eyebrows over the controls are text beside them, which names nothing to UI Automation: each
+            // control carries its own name, the slider the brightness in force, as its eyebrow does.
+            System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));
             var label = Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn));
             label.VerticalAlignment = VerticalAlignment.Center;
             var labelLine = new DockPanel { LastChildFill = true };
@@ -679,6 +682,7 @@ namespace OpenDashPlugin
                 ShowLightingChange();
             });
             night.HorizontalAlignment = HorizontalAlignment.Left;
+            System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
 
             var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small);
             rig.Padding = new Thickness(PanelHome.QuickRigPaddingX, 0, PanelHome.QuickRigPaddingX, 0);
