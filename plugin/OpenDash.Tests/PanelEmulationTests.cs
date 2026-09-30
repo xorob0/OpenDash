@@ -125,7 +125,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_face_band_says_what_the_dash_says()
         {
-            Assert.Equal("YELLOW FLAG", PanelEmulation.Band(PanelEmulation.Yellow).Text);
+            Assert.Equal("YELLOW", PanelEmulation.Band(PanelEmulation.Yellow).Text);
             Assert.Equal(Theme.FlagYellow, PanelEmulation.Band(PanelEmulation.Yellow).FillHex);
             Assert.Equal(Theme.OnFlag, PanelEmulation.Band(PanelEmulation.Yellow).TextHex);
             Assert.Equal("WHITE · LAST LAP", PanelEmulation.Band(PanelEmulation.White).Text);

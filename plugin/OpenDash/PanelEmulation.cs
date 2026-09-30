@@ -536,20 +536,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A face's band under a scenario, in the dash's own words: "YELLOW FLAG", "WHITE · LAST LAP", "Pit
+        /// A face's band under a scenario, in the dash's own words: "YELLOW", "WHITE · LAST LAP", "Pit
         /// limiter". Anything the dash does not put on its band leaves the band to its own page.
         /// </summary>
         public static FaceBand Band(string scenarioId)
         {
             switch (scenarioId)
             {
-                case Green: return new FaceBand(Theme.FlagGreen, "GREEN FLAG", Theme.OnFlag, false, false);
-                case Yellow: return new FaceBand(Theme.FlagYellow, "YELLOW FLAG", Theme.OnFlag, false, false);
-                case Blue: return new FaceBand(Theme.FlagBlue, "BLUE FLAG", Theme.OnFlag, false, false);
+                case Green: return new FaceBand(Theme.FlagGreen, "GREEN", Theme.OnFlag, false, false);
+                case Yellow: return new FaceBand(Theme.FlagYellow, "YELLOW", Theme.OnFlag, false, false);
+                case Blue: return new FaceBand(Theme.FlagBlue, "BLUE", Theme.OnFlag, false, false);
                 case White: return new FaceBand(Theme.FlagWhite, "WHITE · LAST LAP", Theme.OnFlag, false, false);
-                case Black: return new FaceBand(Theme.FlagBlack, "BLACK FLAG", Theme.FlagBlack, true, false);
+                case Black: return new FaceBand(Theme.FlagBlack, "BLACK", Theme.FlagBlack, true, false);
                 case Chequer: return new FaceBand(null, null, Theme.OnFlag, false, true);
-                case Red: return new FaceBand(Theme.FlagRed, "RED FLAG", Theme.OnFlag, false, false);
+                case Red: return new FaceBand(Theme.FlagRed, "RED", Theme.OnFlag, false, false);
                 case Limiter: return new FaceBand(Theme.PitLimiter, "Pit limiter", Theme.OnFlag, false, false);
                 default: return FaceBand.Idle;
             }
