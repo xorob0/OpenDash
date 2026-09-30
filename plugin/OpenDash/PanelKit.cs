@@ -10,7 +10,7 @@ namespace OpenDashPlugin
 {
     public static class PanelKit
     {
-        // --- The device card: Screens' .scard, which LEDs and Matrix draw their cards as ---------------
+        // --- The device card: Screens' .scard (Ui.DeviceCard) --------------------------------------------
 
         /// <summary>.scard's padding and the gap its column puts between the picture, the name block and
         /// the state line.</summary>
@@ -54,6 +54,33 @@ namespace OpenDashPlugin
         /// .num face (the display family, 600) at 13, the button's 8 px gap after the words.</summary>
         public const double AddTileDetailSize = 13;
         public const double AddTileDetailGap = 8;
+
+        // --- The light cards: LEDs' .dcard (Ui.StripCard) and Matrix's .mcard (Ui.MatrixCard) -------------
+
+        /// <summary>.dcard and .mcard alike: "padding: 12px 14px", the name at 15/600 and the state at 12.</summary>
+        public const double LightCardPaddingX = 14;
+        public const double LightCardPaddingY = 12;
+        public const double LightCardNameSize = 15;
+        public const double LightCardStateSize = 12;
+
+        /// <summary>.dcard's column gap of 10 between the name line, the strip and the state; the shape's
+        /// numerals on the name line at 14 (.num); the state's dot 7 across, 6 before the word
+        /// (<see cref="CardStateGap"/>). The strip's own numbers are StripStyle.Card's.</summary>
+        public const double StripCardGap = 10;
+        public const double StripCardShapeSize = 14;
+        public const double StripCardStateDot = 7;
+
+        /// <summary>.mcard's row gap of 12 between the 8x8 and the words, and the words' column gap of 3. The
+        /// 8x8's own numbers are MatrixStyle.Card's.</summary>
+        public const double MatrixCardGap = 12;
+        public const double MatrixCardTextGap = 3;
+
+        /// <summary>LEDs' and Matrix's dashed tile, on one line: the words at 14/500, 8 after the plus, which
+        /// is 18 on LEDs and 16 on Matrix; Matrix's "2 / 4" follows as <see cref="AddTileDetailSize"/>.</summary>
+        public const double InlineAddTextSize = 14;
+        public const double InlineAddGap = 8;
+        public const double StripAddIcon = 18;
+        public const double MatrixAddIcon = 16;
 
         // --- Chips ---------------------------------------------------------------------------------------
 

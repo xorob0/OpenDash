@@ -53,7 +53,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_selected_card_is_edged_and_barred_in_the_accent()
         {
-            var card = Factory("DeviceCard");
+            // Every card is one press, CardButton, which the screen, strip and matrix cards all return.
+            foreach (var factory in new[] { "DeviceCard", "StripCard", "MatrixCard" }) Assert.Contains("return CardButton(", Factory(factory));
+            var card = Factory("CardButton");
             Assert.Contains("BorderBrush = Brush(selected ? Theme.Accent : Theme.Rule),", card);
             Assert.Contains("Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent", card);
             Assert.Contains("BorderThickness = new Thickness(PanelMetrics.BorderWeight),", card);
@@ -97,6 +99,37 @@ namespace OpenDashPlugin.Tests
             var start = widgets.IndexOf("private static ControlTemplate DashedCardTemplate()", StringComparison.Ordinal);
             var body = widgets.Substring(start, widgets.IndexOf("private static FrameworkElementFactory DashedFrame()", start, StringComparison.Ordinal) - start);
             Assert.Contains("template.Triggers.Add(DisabledFade());", body);
+        }
+
+        /// <summary>
+        /// LEDs and Matrix draw cards of their own shape, and their add tile on one line, so the kit has them
+        /// rather than each page re-implementing a card or taking Screens' numbers. Leds.dc.html's .dcard
+        /// {gap:10px;padding:12px 14px}, its name 15/600 beside the shape's .num at 14, and its state 12 led
+        /// by a 7 px dot; Matrix.dc.html's .mcard{gap:12px;padding:12px 14px}, the words' column gap 3.
+        /// </summary>
+        [Fact]
+        public void The_light_cards_are_the_artboards_dcard_and_mcard()
+        {
+            Assert.Equal(14, PanelKit.LightCardPaddingX);
+            Assert.Equal(12, PanelKit.LightCardPaddingY);
+            Assert.Equal(15, PanelKit.LightCardNameSize);
+            Assert.Equal(12, PanelKit.LightCardStateSize);
+            Assert.Equal(10, PanelKit.StripCardGap);
+            Assert.Equal(14, PanelKit.StripCardShapeSize);
+            Assert.Equal(7, PanelKit.StripCardStateDot);
+            Assert.Equal(12, PanelKit.MatrixCardGap);
+            Assert.Equal(3, PanelKit.MatrixCardTextGap);
+            // The dashed tile on one line: "gap: 8px ... font-size: 14px; font-weight: 500", the plus an
+            // 18 px svg on LEDs and 16 on Matrix, and no height of its own.
+            Assert.Equal(14, PanelKit.InlineAddTextSize);
+            Assert.Equal(8, PanelKit.InlineAddGap);
+            Assert.Equal(18, PanelKit.StripAddIcon);
+            Assert.Equal(16, PanelKit.MatrixAddIcon);
+            Assert.DoesNotContain("MinHeight", Factory("InlineAddCard"));
+            Assert.Contains("Template = DashedCardTemplate(),", Factory("InlineAddCard"));
+            // The pictures inside them are the kit's in the cards' own styles.
+            Assert.Equal(9, StripStyle.Card.Led);
+            Assert.Equal(5, MatrixStyle.Card.Cell);
         }
 
         [Fact]
@@ -191,7 +224,7 @@ namespace OpenDashPlugin.Tests
         private static string Factory(string name)
         {
             var kit = Kit();
-            var start = Regex.Match(kit, @"public static \w+ " + name + @"\(");
+            var start = Regex.Match(kit, @"(?:public|private) static \w+ " + name + @"\(");
             Assert.True(start.Success, name + " is a kit factory");
             var next = Regex.Match(kit.Substring(start.Index + start.Length), @"\n {8}(?:public|private|internal|protected)\b");
             Assert.True(next.Success, name + " is followed by another member");
@@ -200,7 +233,23 @@ namespace OpenDashPlugin.Tests
 
         [Theory]
         [InlineData("DeviceCard", "PanelKit.CardPadding")]
-        [InlineData("DeviceCard", "PanelKit.CardFootBar")]
+        [InlineData("CardButton", "PanelKit.CardFootBar")]
+        [InlineData("StripCard", "PanelKit.LightCardPaddingX")]
+        [InlineData("StripCard", "PanelKit.LightCardPaddingY")]
+        [InlineData("StripCard", "PanelKit.LightCardNameSize")]
+        [InlineData("StripCard", "PanelKit.LightCardStateSize")]
+        [InlineData("StripCard", "PanelKit.StripCardGap")]
+        [InlineData("StripCard", "PanelKit.StripCardShapeSize")]
+        [InlineData("StripCard", "PanelKit.StripCardStateDot")]
+        [InlineData("MatrixCard", "PanelKit.LightCardPaddingX")]
+        [InlineData("MatrixCard", "PanelKit.LightCardNameSize")]
+        [InlineData("MatrixCard", "PanelKit.LightCardStateSize")]
+        [InlineData("MatrixCard", "PanelKit.MatrixCardGap")]
+        [InlineData("MatrixCard", "PanelKit.MatrixCardTextGap")]
+        [InlineData("InlineAddCard", "PanelKit.InlineAddTextSize")]
+        [InlineData("InlineAddCard", "PanelKit.InlineAddGap")]
+        [InlineData("InlineAddCard", "PanelKit.AddTileDetailSize")]
+        [InlineData("InlineAddCard", "PanelKit.AddTileDetailGap")]
         [InlineData("DashedAddCard", "PanelKit.AddTileGap")]
         [InlineData("Chip", "PanelKit.ChipHeight")]
         [InlineData("BindingChip", "PanelKit.BindingChipHeight")]

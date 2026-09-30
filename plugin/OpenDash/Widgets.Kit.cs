@@ -854,8 +854,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A device's card, as Screens, LEDs and Matrix draw theirs: a picture, the name, a line of facts and
-        /// a state with its dot. Selected, it is outlined in the accent with an accent bar along its foot.
+        /// A screen's card, as Screens.dc.html draws its .scard: a picture, the name, a line of facts and a
+        /// state with its dot. Selected, it is outlined in the accent with an accent bar along its foot. LEDs
+        /// and Matrix draw cards of their own shape: <see cref="StripCard"/> and <see cref="MatrixCard"/>.
         /// </summary>
         public static Button DeviceCard(FrameworkElement thumb, string name, string meta, string state, string stateHex, bool selected, Action click)
         {
@@ -892,9 +893,93 @@ namespace OpenDashPlugin
                 rows.Children.Add(line);
             }
 
+            return CardButton(rows, new Thickness(PanelKit.CardPadding), selected, click);
+        }
+
+        /// <summary>
+        /// A strip's card, as Leds.dc.html draws its .dcard: the name at 15/600 with the shape's numerals at
+        /// 14 in the display family on the right of the same line, the strip under it (a picture made with
+        /// <see cref="Strip"/> in <see cref="StripStyle.Card"/>), and the state at 12 led by a 7 px dot, the
+        /// three 10 apart inside 12 by 14. Selected as every card is.
+        /// </summary>
+        public static Button StripCard(string name, string shape, FrameworkElement strip, string state, string stateHex, bool selected, Action click)
+        {
+            var rows = new StackPanel { Orientation = Orientation.Vertical };
+            var head = new DockPanel { LastChildFill = true };
+            if (!string.IsNullOrEmpty(shape))
+            {
+                var numerals = Text(shape, PanelKit.StripCardShapeSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+                numerals.VerticalAlignment = VerticalAlignment.Center;
+                numerals.Margin = new Thickness(PanelKit.StripCardGap, 0, 0, 0);
+                DockPanel.SetDock(numerals, Dock.Right);
+                head.Children.Add(numerals);
+            }
+            var title = Text(name ?? string.Empty, PanelKit.LightCardNameSize, FontWeights.SemiBold, Theme.TextPrimary);
+            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            title.VerticalAlignment = VerticalAlignment.Center;
+            head.Children.Add(title);
+            rows.Children.Add(head);
+            if (strip != null)
+            {
+                strip.Margin = new Thickness(0, PanelKit.StripCardGap, 0, 0);
+                strip.HorizontalAlignment = HorizontalAlignment.Left;
+                rows.Children.Add(strip);
+            }
+            if (!string.IsNullOrEmpty(state))
+            {
+                var hex = stateHex ?? Theme.TextSecondary;
+                var dot = new Ellipse { Width = PanelKit.StripCardStateDot, Height = PanelKit.StripCardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
+                dot.Margin = new Thickness(0, 0, PanelKit.CardStateGap, 0);
+                var word = Text(state, PanelKit.LightCardStateSize, FontWeights.Normal, hex);
+                word.TextTrimming = TextTrimming.CharacterEllipsis;
+                word.ToolTip = state;
+                var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, PanelKit.StripCardGap, 0, 0) };
+                DockPanel.SetDock(dot, Dock.Left);
+                line.Children.Add(dot);
+                line.Children.Add(word);
+                rows.Children.Add(line);
+            }
+            return CardButton(rows, new Thickness(PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY, PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY), selected, click);
+        }
+
+        /// <summary>
+        /// A matrix's card, as Matrix.dc.html draws its .mcard: a row, the 8x8 (a picture made with
+        /// <see cref="Matrix"/> in <see cref="MatrixStyle.Card"/>) 12 before a column of the name at 15/600
+        /// and, 3 under it, the state at 12 in its own ink with no dot, inside 12 by 14.
+        /// </summary>
+        public static Button MatrixCard(FrameworkElement picture, string name, string state, string stateHex, bool selected, Action click)
+        {
+            var row = new DockPanel { LastChildFill = true };
+            if (picture != null)
+            {
+                picture.Margin = new Thickness(0, 0, PanelKit.MatrixCardGap, 0);
+                picture.VerticalAlignment = VerticalAlignment.Center;
+                DockPanel.SetDock(picture, Dock.Left);
+                row.Children.Add(picture);
+            }
+            var words = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
+            var title = Text(name ?? string.Empty, PanelKit.LightCardNameSize, FontWeights.SemiBold, Theme.TextPrimary);
+            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            words.Children.Add(title);
+            if (!string.IsNullOrEmpty(state))
+            {
+                var word = Text(state, PanelKit.LightCardStateSize, FontWeights.Normal, stateHex ?? Theme.TextSecondary);
+                word.TextTrimming = TextTrimming.CharacterEllipsis;
+                word.ToolTip = state;
+                word.Margin = new Thickness(0, PanelKit.MatrixCardTextGap, 0, 0);
+                words.Children.Add(word);
+            }
+            row.Children.Add(words);
+            return CardButton(row, new Thickness(PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY, PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY), selected, click);
+        }
+
+        /// <summary>The press every card is: the zone ground inside a rule, and when selected the accent edge
+        /// and the 2 px accent bar along its foot, over the card's own content at its own padding.</summary>
+        private static Button CardButton(UIElement content, Thickness padding, bool selected, Action click)
+        {
             var bar = new Rectangle { Height = PanelKit.CardFootBar, Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent, VerticalAlignment = VerticalAlignment.Bottom };
             var body = new Grid();
-            body.Children.Add(new Border { Padding = new Thickness(PanelKit.CardPadding), Child = rows });
+            body.Children.Add(new Border { Padding = padding, Child = content });
             body.Children.Add(bar);
 
             var button = new Button
@@ -915,9 +1000,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The dashed tile that adds one, beside the cards: a plus over its words, in secondary ink, and an
-        /// optional count after the words -- Matrix.dc.html's "Add a matrix 2 / 4", the count in the display
-        /// family at 13/600, 8 after the words.
+        /// The dashed tile that adds one, beside Screens' cards: a plus over its words, in secondary ink, and an
+        /// optional count after the words, in the display family at 13/600, 8 after them. LEDs and Matrix lay
+        /// their tile out on one line: <see cref="InlineAddCard"/>.
         /// </summary>
         /// <remarks>
         /// A tile set IsEnabled = false (Matrix at four) fades to the kit's 40 per cent through its template,
@@ -955,6 +1040,59 @@ namespace OpenDashPlugin
                 Cursor = Cursors.Hand,
                 Content = stack,
                 Padding = new Thickness(PanelKit.CardPadding),
+                FocusVisualStyle = FocusRing(),
+                Template = DashedCardTemplate(),
+            };
+            button.MouseEnter += (sender, args) =>
+            {
+                if (!button.IsEnabled) return;
+                label.Foreground = Brush(Theme.TextPrimary);
+                if (count != null) count.Foreground = Brush(Theme.TextPrimary);
+                SetIconInk(plus, Theme.TextPrimary);
+            };
+            button.MouseLeave += (sender, args) =>
+            {
+                label.Foreground = Brush(Theme.TextSecondary);
+                if (count != null) count.Foreground = Brush(Theme.TextSecondary);
+                SetIconInk(plus, Theme.TextSecondary);
+            };
+            if (click != null) button.Click += (sender, args) => click();
+            return button;
+        }
+
+        /// <summary>
+        /// The dashed tile as LEDs and Matrix draw theirs beside their cards: one line, the plus
+        /// <paramref name="iconSize"/> wide (Leds.dc.html's 18, Matrix.dc.html's 16) 8 before its words at
+        /// 14/500, and an optional count 8 after them in the display family at 13 -- "Add a matrix 2 / 4".
+        /// No height of its own: the card grid lays it at its row's height, which the cards beside it set, so
+        /// it never stretches them the way <see cref="DashedAddCard"/>'s 96 floor would.
+        /// </summary>
+        /// <remarks>
+        /// A tile set IsEnabled = false (Matrix at four) fades through its template, as the stacked one does.
+        /// </remarks>
+        public static Button InlineAddCard(string text, double iconSize, Action click, string detail = null)
+        {
+            var plus = NavIcon(PanelIcons.Add, Theme.TextSecondary, iconSize);
+            var label = Text(text, PanelKit.InlineAddTextSize, FontWeights.Medium, Theme.TextSecondary);
+            label.VerticalAlignment = VerticalAlignment.Center;
+            TextBlock count = null;
+            var line = HStack(PanelKit.InlineAddGap, plus, label);
+            if (!string.IsNullOrEmpty(detail))
+            {
+                count = Text(detail, PanelKit.AddTileDetailSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+                count.VerticalAlignment = VerticalAlignment.Center;
+                count.Margin = new Thickness(PanelKit.AddTileDetailGap, 0, 0, 0);
+                line.Children.Add(count);
+            }
+            line.HorizontalAlignment = HorizontalAlignment.Center;
+            line.VerticalAlignment = VerticalAlignment.Center;
+            var button = new Button
+            {
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderBrush = System.Windows.Media.Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Content = line,
+                Padding = new Thickness(PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY, PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY),
                 FocusVisualStyle = FocusRing(),
                 Template = DashedCardTemplate(),
             };
