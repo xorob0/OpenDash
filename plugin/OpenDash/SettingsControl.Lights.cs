@@ -18,6 +18,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -459,12 +460,28 @@ namespace OpenDashPlugin
 
         /// <summary>Focuses a control once the layout that drew it has run: a control added a moment ago is
         /// not visible yet, and focus handed to it then goes nowhere.</summary>
+        /// <remarks>
+        /// Without scrolling to it. Focus hands the control back to the keyboard after a redraw under it, and a
+        /// focused control asks its ScrollViewer to bring it into view: after a device pick, the line Say had just
+        /// scrolled to at the top of the page was scrolled away again whenever the picker sat below the fold,
+        /// which in one column is always. The request is raised inside Focus, so it is handled there, once.
+        /// </remarks>
         private void LedsFocusLater(Func<UIElement> find)
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 var element = find();
-                if (element != null) element.Focus();
+                if (element == null) return;
+                RequestBringIntoViewEventHandler stay = (sender, args) => args.Handled = true;
+                element.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
+                try
+                {
+                    element.Focus();
+                }
+                finally
+                {
+                    element.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
+                }
             }), DispatcherPriority.Loaded);
         }
 
@@ -620,9 +637,28 @@ namespace OpenDashPlugin
                 if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
             };
             drawBrightness(false);
+            // Not while its list is open: the chooser would be replaced under the popup, which would stay up with
+            // the old value and out of Escape's reach. The redraw waits for the list to close.
+            var owed = false;
             OnLighting(() =>
             {
-                if (rigInForce() != rigShown) drawBrightness(false);
+                if (rigInForce() == rigShown) return;
+                var open = LedsFirstControl(brightness.Child) as ToggleButton;
+                if (open == null || open.IsChecked != true)
+                {
+                    drawBrightness(false);
+                    return;
+                }
+                if (owed) return;
+                owed = true;
+                RoutedEventHandler closed = null;
+                closed = (sender, args) =>
+                {
+                    open.Unchecked -= closed;
+                    owed = false;
+                    if (rigInForce() != rigShown) drawBrightness(false);
+                };
+                open.Unchecked += closed;
             });
             rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));
 

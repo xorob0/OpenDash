@@ -1211,6 +1211,40 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Say(PanelLeds.Removed(name, held, takenOut), PanelLeds.RemovedCleanly(held, takenOut));", leds);
         }
 
+        /// <summary>
+        /// Focus handed back after a redraw does not scroll: a focused control asks to be brought into view, which
+        /// scrolled the line Say had just shown at the top of the page away again. Read as text because the page
+        /// is WPF.
+        /// </summary>
+        [Fact]
+        public void Focus_handed_back_leaves_the_line_in_view()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var focus = leds.Substring(leds.IndexOf("private void LedsFocusLater(", StringComparison.Ordinal));
+            focus = focus.Substring(0, focus.IndexOf("DispatcherPriority.Loaded);", StringComparison.Ordinal));
+            Assert.Contains("element.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);", focus);
+            Assert.Contains("element.Focus();", focus);
+            Assert.Contains("element.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);", focus);
+            Assert.Contains("(sender, args) => args.Handled = true", focus);
+            // And no control on the page is focused around it.
+            Assert.Equal(1, Occurrences(leds, ".Focus()"));
+        }
+
+        /// <summary>
+        /// A wheel's brightness press repaints the Brightness chooser's first entry, but never under its open list:
+        /// the redraw waits for the list to close.
+        /// </summary>
+        [Fact]
+        public void The_brightness_chooser_is_not_replaced_under_its_open_list()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var lighting = leds.Substring(leds.IndexOf("var owed = false;", StringComparison.Ordinal));
+            lighting = lighting.Substring(0, lighting.IndexOf("rows.Add(", StringComparison.Ordinal));
+            Assert.Contains("if (open == null || open.IsChecked != true)", lighting);
+            Assert.Contains("open.Unchecked += closed;", lighting);
+            Assert.Contains("open.Unchecked -= closed;", lighting);
+        }
+
         /// <summary>A Brightness pick says what it set (ruling 50), in a line of its own.</summary>
         [Fact]
         public void A_brightness_pick_says_what_it_set()
