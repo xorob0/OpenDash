@@ -349,7 +349,28 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelSettings.AlertSurfacesFit(680));
             Assert.True(PanelSettings.AlertSurfacesFit(1112));
             Assert.False(PanelSettings.AlertSurfacesFit(679));
-            Assert.Contains("Ui.SoonRow(PanelSoon.AlertDisplay)", Page());
+            var page = Page();
+            // Folded, the row is the name alone: a switch in the off position would say alerts are off.
+            Assert.Contains("Ui.Soon(Ui.SettingRow(PanelSoon.AlertDisplay.Title, null), PanelSoon.AlertDisplay)", page);
+            Assert.DoesNotContain("Ui.SoonRow(PanelSoon.AlertDisplay)", page);
+            // A greyed name wraps its tag under it rather than clipping it at the cell's edge.
+            Assert.DoesNotContain("Ui.HStack(8, name, Ui.SoonTag(soon))", page);
+            Assert.Contains("var line = new WrapPanel { Orientation = Orientation.Horizontal };", page);
+        }
+
+        /// <summary>The artboard's th width: the names take 30% of the table and the surface columns share the
+        /// rest, each at least its heading's width.</summary>
+        [Fact]
+        public void The_names_take_the_artboards_share_of_the_table()
+        {
+            Assert.Equal(0.3, PanelSettings.AlertNameShare);
+            Assert.Equal(268.2, PanelSettings.AlertNameMaxWidth(894), 6);
+            Assert.Equal(PanelSettings.AlertNameMinWidth, PanelSettings.AlertNameMaxWidth(300));
+            Assert.True(PanelSettings.AlertNameMaxWidth(PanelSettings.AlertSurfacesFrom - 2) > PanelSettings.AlertNameMinWidth);
+            var page = Page();
+            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth, MaxWidth = PanelSettings.AlertNameMaxWidth(table) }", page);
+            Assert.Contains("foreach (var column in PanelSettings.SurfaceColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });", page);
+            Assert.Contains("grid.ColumnDefinitions[column].MinWidth = Math.Ceiling(head.DesiredSize.Width) + 2 * PanelSettings.AlertCellPaddingX;", page);
         }
 
         /// <summary>A temperature of 0 is the unit's own default, which the empty box shows as its placeholder,

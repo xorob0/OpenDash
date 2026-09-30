@@ -509,11 +509,16 @@ namespace OpenDashPlugin
             var temperature = units[1];
             var surfaces = PanelSettings.AlertSurfacesFit(ContentWidth);
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            // With the surface columns, the names take the artboard's 30% and the slack spreads over the four
+            // (each held to its heading's width, SettingsAlertHeader); without them the names take it all.
+            var table = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
+            grid.ColumnDefinitions.Add(surfaces
+                ? new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth, MaxWidth = PanelSettings.AlertNameMaxWidth(table) }
+                : new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             if (surfaces)
             {
-                foreach (var column in PanelSettings.SurfaceColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                foreach (var column in PanelSettings.SurfaceColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             }
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
@@ -537,7 +542,8 @@ namespace OpenDashPlugin
             FrameworkElement folded = null;
             if (!surfaces)
             {
-                folded = Ui.SoonRow(PanelSoon.AlertDisplay);
+                // Its name alone: SoonRow's default off switch would say that alerts are off, and they are shown.
+                folded = Ui.Soon(Ui.SettingRow(PanelSoon.AlertDisplay.Title, null), PanelSoon.AlertDisplay);
                 folded.Margin = new Thickness(0, PanelSettings.PreviewMarginBottom, 0, 0);
             }
             return PageSection(null, true, PanelKit.SectionHeadingGapSettings, heading, Ui.CardBox(grid, 0), folded);
@@ -564,6 +570,9 @@ namespace OpenDashPlugin
                     tag.Margin = new Thickness(0, PanelSettings.AlertHeaderTagGap, 0, 0);
                     head.Children.Add(label);
                     head.Children.Add(tag);
+                    // A star column is not sized by its content, so it is held to its heading's width.
+                    head.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    grid.ColumnDefinitions[column].MinWidth = Math.Ceiling(head.DesiredSize.Width) + 2 * PanelSettings.AlertCellPaddingX;
                     SettingsAlertCell(grid, row, column++, head, PanelSoon.AlertDisplay, true);
                 }
             }
@@ -582,7 +591,19 @@ namespace OpenDashPlugin
 
             var name = Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeights.Medium, Theme.TextPrimary);
             name.TextWrapping = TextWrapping.Wrap;
-            var nameLine = soon == null ? (FrameworkElement)name : Ui.HStack(8, name, Ui.SoonTag(soon));
+            // A greyed name's Soon tag goes under the name when the column is short, as a kit row's title line
+            // wraps its tags, rather than being clipped at the cell's edge.
+            FrameworkElement nameLine = name;
+            if (soon != null)
+            {
+                var line = new WrapPanel { Orientation = Orientation.Horizontal };
+                var tag = Ui.SoonTag(soon);
+                tag.Margin = new Thickness(8, 0, 0, 0);
+                tag.VerticalAlignment = VerticalAlignment.Center;
+                line.Children.Add(name);
+                line.Children.Add(tag);
+                nameLine = line;
+            }
             nameLine.HorizontalAlignment = HorizontalAlignment.Left;
             var nameCell = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
             nameCell.Children.Add(nameLine);

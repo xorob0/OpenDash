@@ -347,6 +347,24 @@ namespace OpenDashPlugin
             return contentWidth >= AlertSurfacesFrom;
         }
 
+        /// <summary>The artboard's th width: 30% of the table for the alert's name, where the surface columns are
+        /// drawn. The rest spreads over the surface columns, as the artboard's auto layout spreads it, rather
+        /// than all of it going to the names.</summary>
+        public const double AlertNameShare = 0.3;
+
+        /// <summary>The names' weight against each surface column's 1: enough that the names reach their 30%
+        /// wherever the surface columns have their room.</summary>
+        public const double AlertNameWeight = 3;
+
+        /// <summary>The longest live name, "Water temperature", with its cell's padding and some to spare.</summary>
+        public const double AlertNameMinWidth = 150;
+
+        /// <summary>The most the names' column takes of a table that wide.</summary>
+        public static double AlertNameMaxWidth(double tableWidth)
+        {
+            return Math.Max(AlertNameMinWidth, tableWidth * AlertNameShare);
+        }
+
         public const double AlertCellPaddingX = 12;
         public const double AlertCellPaddingY = 10;
         public const double AlertTextSize = 14;
