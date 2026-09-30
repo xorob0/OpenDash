@@ -372,25 +372,41 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line under the switch: whether the car in the sim is one Lovely Car Data has measured. Null
-        /// while the switch is off, or while no car is loaded and the tables are there, since then there is
-        /// nothing to say.
+        /// The line under the switch: whether the car in the sim is one Lovely Car Data has measured. Only while
+        /// the switch is on and a car is loaded in a game the tables cover; null otherwise, since then there is
+        /// nothing true to say.
         /// </summary>
         /// <remarks>
         /// With no tables on disk, which is every fresh install, no car can be found in them, and saying the
         /// car "is not in Lovely Car Data" would be false for a car it measures. The line says what is missing
-        /// instead, and where the row that fetches it is.
+        /// instead, and where the row that fetches it is. The plugin reads only iRacing's tables
+        /// (CarLightLibrary), so in any other game every car would read as missing, which the greyed row for
+        /// the other sims' car data already says is not read yet: there the line says nothing.
         /// </remarks>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded)
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesCoverGame)
         {
-            if (!on) return null;
+            if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
             if (!tablesLoaded) return CarTablesMissing;
-            if (string.IsNullOrWhiteSpace(car)) return null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
         }
 
-        /// <summary>The car line while no tables are on disk.</summary>
+        /// <summary>The car line while a car is loaded and no tables are on disk.</summary>
         public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it under Every strip.";
+
+        /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing", "IRacing").</summary>
+        public const string TablesGame = "iRacing";
+
+        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone.</summary>
+        public static bool TablesCoverGame(string game)
+        {
+            return game != null && string.Equals(game.Trim(), TablesGame, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Whether the tables are on disk: any car in them.</summary>
+        public static bool TablesLoaded(int carCount)
+        {
+            return carCount > 0;
+        }
 
         /// <summary>Whether the car line is the good news, drawn in green with the ringed check, rather than
         /// something to act on, drawn in amber with the warning.</summary>
@@ -438,8 +454,16 @@ namespace OpenDashPlugin
         /// <summary>The brightnesses a strip can be set to of its own, in tens.</summary>
         public static readonly int[] BrightnessSteps = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
 
-        /// <summary>The brightness chooser's entries: the rig's, named with its value, then each step. The page
-        /// draws the chooser again when the rig's brightness moves, so the value named is the one in force.</summary>
+        /// <summary>The rig's brightness in force, which a strip that follows the rig runs at: the night
+        /// brightness while night mode is on, as PreviewDim dims the pictures, and the day's otherwise.</summary>
+        public static int RigBrightnessInForce(bool night, int day, int nightBrightness)
+        {
+            return night ? nightBrightness : day;
+        }
+
+        /// <summary>The brightness chooser's entries: the rig's, named with its value in force
+        /// (<see cref="RigBrightnessInForce"/>), then each step. The page draws the chooser again when that value
+        /// moves, by a wheel's press or by night mode, so the value named is the one the strip runs at.</summary>
         public static string[] BrightnessLabels(int rig)
         {
             var labels = new List<string> { "Same as rig" + Dot + Percent(rig) };

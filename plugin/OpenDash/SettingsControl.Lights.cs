@@ -492,9 +492,9 @@ namespace OpenDashPlugin
                 var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));
                 width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;
                 var live = plugin.Live ?? LiveStatus.None;
-                var loaded = plugin.CarLights.CarCount > 0;
+                var loaded = PanelLeds.TablesLoaded(plugin.CarLights.CarCount);
                 var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);
-                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded);
+                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, PanelLeds.TablesCoverGame(live.GameName));
                 carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
                 var key = line + "|" + known;
                 if (line == null || key == shown) return;
@@ -523,14 +523,25 @@ namespace OpenDashPlugin
             show();
             OnTick(show);
 
-            var centre = Ui.ChoiceButton(PanelLights.CentreLabels, PanelLeds.CentreIndex(Settings.BarCentre(ns)), i =>
+            // Drawn again after a pick, so the list marks the entry now chosen rather than the one it opened on,
+            // and keyboard focus goes back to the button drawn in its place.
+            var centre = new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+            Action drawCentre = null;
+            drawCentre = () =>
             {
-                var live = Settings.LedBarByNamespace(ns);
-                if (live != null) live.Centre = Contract.LedCentres[i];
-                Save();
-                // Live draws the car's run only while the centre shows the revs.
-                redrawPreview();
-            }, 160);
+                centre.Child = Ui.ChoiceButton(PanelLights.CentreLabels, PanelLeds.CentreIndex(Settings.BarCentre(ns)), i =>
+                {
+                    var live = Settings.LedBarByNamespace(ns);
+                    if (live != null) live.Centre = Contract.LedCentres[i];
+                    Save();
+                    // Live draws the car's run only while the centre shows the revs, and the card and the preview
+                    // draw the revs in the centre only while it does.
+                    redrawPreview();
+                    drawCentre();
+                    LedsFocusLater(() => LedsFirstControl(centre.Child));
+                }, 160);
+            };
+            drawCentre();
 
             return Ui.VStack(0,
                 Ui.Anchor(LedsHeading(PanelLeds.RevLightsTitle), PanelLeds.AnchorRevLights),
@@ -554,15 +565,18 @@ namespace OpenDashPlugin
             }
             var rows = new List<UIElement> { Ui.Anchor(deviceRow, PanelLeds.AnchorDevice) };
 
-            // The chooser names the rig's brightness in its first entry, so it is drawn again when a wheel's
-            // press moves that; the page itself is not rebuilt by one. Nothing is said after a pick: the chooser
+            // The chooser names the rig's brightness in force in its first entry, so it is drawn again when a
+            // wheel's press or night mode moves that; the page itself is not rebuilt by one. It is drawn again
+            // after a pick too, so the list marks the entry now chosen. Nothing is said after a pick: the chooser
             // already shows it, and a line would pull the page to its top.
             var brightness = new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
             var rigShown = -1;
-            Action drawBrightness = () =>
+            Func<int> rigInForce = () => PanelLeds.RigBrightnessInForce(Settings.LightsNightMode, Settings.LightsBrightness, Settings.LightsNightBrightness);
+            Action<bool> drawBrightness = null;
+            drawBrightness = refocus =>
             {
-                var hadFocus = brightness.IsKeyboardFocusWithin;
-                rigShown = Settings.LightsBrightness;
+                refocus = refocus || brightness.IsKeyboardFocusWithin;
+                rigShown = rigInForce();
                 brightness.Child = Ui.ChoiceButton(PanelLeds.BrightnessLabels(rigShown), PanelLeds.BrightnessIndex(Settings.BarBrightness(ns)), i =>
                 {
                     Settings.SetBarBrightness(ns, PanelLeds.BrightnessValue(i));
@@ -571,13 +585,14 @@ namespace OpenDashPlugin
                     // At night the card is drawn at the lower of this and the night brightness, too.
                     Action redimCard;
                     if (ledsCardRedims.TryGetValue(ns, out redimCard)) redimCard();
+                    drawBrightness(true);
                 }, 160);
-                if (hadFocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
+                if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
             };
-            drawBrightness();
+            drawBrightness(false);
             OnLighting(() =>
             {
-                if (Settings.LightsBrightness != rigShown) drawBrightness();
+                if (rigInForce() != rigShown) drawBrightness(false);
             });
             rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));
 
@@ -1151,16 +1166,21 @@ namespace OpenDashPlugin
                     picture.Child = Ui.Strip(PanelLeds.ShapeFrame(side, centre), StripStyle.AddLeds);
                     note.Text = PanelLights.BarShapeNote(side, centre, fanatec);
                 };
-                Action showCentre = () =>
+                // Drawn again after a pick, so the list marks the count now chosen, and keyboard focus goes back
+                // to the button drawn in its place.
+                FrameworkElement middle = null;
+                Action showCentre = null;
+                showCentre = () =>
                 {
-                    var middle = Ui.ChoiceButton(
+                    middle = Ui.ChoiceButton(
                         centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
                         Array.IndexOf(centres, centre),
                         i =>
                         {
                             centre = centres[i];
-                            showPicture();
+                            showCentre();
                             refresh();
+                            LedsFocusLater(() => LedsFirstControl(middle));
                         }, 90);
                     centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle, PanelLights.BarCentreCaption);
                     showPicture();

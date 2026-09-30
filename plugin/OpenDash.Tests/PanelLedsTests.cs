@@ -390,11 +390,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_car_line_says_whether_Lovely_Car_Data_has_the_car_and_nothing_otherwise()
         {
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true, true));
-            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false, true));
-            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false, true));
-            Assert.Null(PanelLeds.CarLine(true, null, false, true));
-            Assert.Null(PanelLeds.CarLine(true, " ", true, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true, true, true));
+            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false, true, true));
+            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false, true, true));
+            Assert.Null(PanelLeds.CarLine(true, null, false, true, true));
+            Assert.Null(PanelLeds.CarLine(true, " ", true, true, true));
             Assert.True(PanelLeds.CarLineGood(true, true));
             Assert.False(PanelLeds.CarLineGood(false, true));
             Assert.Equal(Theme.StatusUpToDate, PanelLeds.CarLineHex(true));
@@ -402,16 +402,38 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>With no tables on disk no car can be found in them, so the line never says a car is missing
-        /// from Lovely Car Data then: it says the tables are, and where the row that fetches them is.</summary>
+        /// from Lovely Car Data then: it says the tables are, and where the row that fetches them is. With no car
+        /// loaded, which is every fresh install at the desk, it says nothing (ruling 48).</summary>
         [Fact]
         public void With_no_tables_the_car_line_says_they_are_missing_rather_than_the_car()
         {
-            Assert.Equal("Lovely Car Data is not downloaded yet. Download it under Every strip.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false));
-            Assert.Equal(PanelLeds.CarTablesMissing, PanelLeds.CarLine(true, null, false, false));
-            Assert.Null(PanelLeds.CarLine(false, "Porsche 911 GT3 R (992)", false, false));
+            Assert.Equal("Lovely Car Data is not downloaded yet. Download it under Every strip.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, true));
+            Assert.Null(PanelLeds.CarLine(true, null, false, false, true));
+            Assert.Null(PanelLeds.CarLine(true, " ", false, false, true));
+            Assert.Null(PanelLeds.CarLine(false, "Porsche 911 GT3 R (992)", false, false, true));
             Assert.False(PanelLeds.CarLineGood(true, false));
             Assert.Contains(PanelLights.CarTablesTitle, PanelLeds.CarTablesMissing);
             Assert.Contains(PanelLeds.EveryStripTitle, PanelLeds.CarTablesMissing);
+            Assert.True(PanelLeds.TablesLoaded(84));
+            Assert.False(PanelLeds.TablesLoaded(0));
+        }
+
+        /// <summary>The plugin reads iRacing's tables alone, so in any other game a car the archive does carry
+        /// would read as missing: the line says nothing there, tables or not.</summary>
+        [Theory]
+        [InlineData("iRacing", true)]
+        [InlineData("IRacing", true)]
+        [InlineData(" iracing ", true)]
+        [InlineData("Assetto Corsa Competizione", false)]
+        [InlineData("AssettoCorsaCompetizione", false)]
+        [InlineData("Le Mans Ultimate", false)]
+        [InlineData(null, false)]
+        public void The_car_line_speaks_only_in_the_game_the_tables_cover(string game, bool covered)
+        {
+            Assert.Equal(covered, PanelLeds.TablesCoverGame(game));
+            var said = PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, true, PanelLeds.TablesCoverGame(game));
+            Assert.Equal(covered ? "Porsche 911 GT3 R (992) is not in Lovely Car Data." : null, said);
+            Assert.Equal(covered ? PanelLeds.CarTablesMissing : null, PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, PanelLeds.TablesCoverGame(game)));
         }
 
         [Fact]
@@ -440,6 +462,21 @@ namespace OpenDashPlugin.Tests
             // A value written elsewhere lands on the nearest entry.
             Assert.Equal(PanelLeds.BrightnessIndex(60), PanelLeds.BrightnessIndex(62));
             Assert.Equal(1, PanelLeds.BrightnessIndex(0));
+        }
+
+        /// <summary>At night a strip that follows the rig runs at the night brightness, as its pictures are dimmed
+        /// to, so the first entry names that value and not the day's.</summary>
+        [Fact]
+        public void The_rigs_entry_names_the_brightness_in_force_at_night()
+        {
+            Assert.Equal(80, PanelLeds.RigBrightnessInForce(false, 80, 30));
+            Assert.Equal(30, PanelLeds.RigBrightnessInForce(true, 80, 30));
+            Assert.Equal("Same as rig · 30%", PanelLeds.BrightnessLabels(PanelLeds.RigBrightnessInForce(true, 80, 30))[0]);
+            // The same value the pictures are dimmed to.
+            Assert.Equal(PanelEmulation.Dim(true, PanelLeds.RigBrightnessInForce(true, 80, 30)), PanelLeds.PreviewDim(true, 30, null), 3);
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("PanelLeds.RigBrightnessInForce(Settings.LightsNightMode, Settings.LightsBrightness, Settings.LightsNightBrightness)", leds);
+            Assert.Contains("PanelLeds.BrightnessLabels(rigShown)", leds);
         }
 
         // --- Effects ----------------------------------------------------------------------------------------------
