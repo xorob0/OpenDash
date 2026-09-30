@@ -1020,6 +1020,79 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>
+        /// Every setting a screen owns is written from the Screens page, the only place a screen's own settings
+        /// are edited, as PanelDataTabTests holds the rig-wide ones to the panel: each property a kind
+        /// publishes, less the four the plugin publishes rather than stores (a face zone's page and position, a
+        /// companion's page and the module it is forced onto), and the stored settings that are not properties
+        /// (the three quick glances outside a face, the companion's start, the shared slots).
+        /// </summary>
+        /// <remarks>
+        /// Each property is mapped to its writer here, and the map must cover the kind's names exactly, so a
+        /// property added to the contract turns this red until someone says where the page writes it.
+        /// </remarks>
+        [Fact]
+        public void Every_setting_a_screen_owns_is_written_from_the_screens_page()
+        {
+            const string ns = "Rim";
+            var published = new HashSet<string>();
+            var writers = new Dictionary<string, string>();
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                published.Add(Contract.ZonePageProperty(ns, letter));
+                published.Add(Contract.ZonePositionProperty(ns, letter));
+                writers[Contract.ZoneMaskProperty(ns, letter)] = "PanelScreens.Tick(";
+                writers[Contract.ZoneStartProperty(ns, letter)] = "PanelScreens.Reorder(";
+                writers[Contract.ZoneClassOnlyProperty(ns, letter)] = "face.SetClassOnly(";
+            }
+            foreach (var slot in Contract.BarSlots) writers[Contract.BarFieldProperty(ns, slot)] = "screen.Face.SetBarField(";
+            writers[Contract.QuickGlanceProperty(ns)] = "screen.Face.QuickGlance =";
+            writers[Contract.FlagFormatProperty(ns)] = "screen.FlagFormat =";
+            writers[Contract.LapReviewProperty(ns)] = "screen.LapReview =";
+            writers[Contract.RevBarProperty(ns)] = "Settings.SetScreenRevBar(";
+            AssertCovers(Contract.ScreenPropertyNames(Contract.KindFace, ns), writers, published);
+
+            published.Clear();
+            writers.Clear();
+            for (var module = 1; module <= Modules.Count; module++) writers[Contract.ModuleProperty(ns, module)] = "screen.Modules[index] = on;";
+            published.Add(Contract.CompanionPageProperty(ns));
+            published.Add(Contract.CompanionOpenOnProperty(ns));
+            writers[Contract.CompanionFlagFormatProperty(ns)] = "screen.CompanionFlagFormat =";
+            AssertCovers(Contract.ScreenPropertyNames(Contract.KindCompanion, ns), writers, published);
+
+            published.Clear();
+            writers.Clear();
+            foreach (var slot in Contract.PitWallZoneSlots) writers[Contract.ZoneProperty(ns, slot)] = "screen.SetZonePage(";
+            writers[Contract.PitWallPageProperty(ns)] = "screen.PitWallPage =";
+            writers[Contract.WebViewUrlProperty(ns)] = "screen.WebViewUrl =";
+            writers[Contract.PitWallClassOnlyProperty(ns)] = "screen.PitWallClassOnly =";
+            writers[Contract.PitWallFlagFormatProperty(ns)] = "screen.PitWallFlagFormat =";
+            AssertCovers(Contract.ScreenPropertyNames(Contract.KindPitWall, ns), writers, published);
+            Assert.Empty(Contract.ScreenPropertyNames(Contract.KindSlots, ns));
+
+            // The stored settings that are not properties, and the whole list of writers, in the page's own
+            // sources: the four editors, and the zone list's other presses beside Tick and Reorder.
+            var dir = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var sources = string.Concat(System.IO.Directory.GetFiles(dir, "SettingsControl.Screens*.cs").Select(RepoPaths.Code));
+            foreach (var writer in new[]
+            {
+                "PanelScreens.Tick(", "PanelScreens.SetEveryPage(", "PanelScreens.Reorder(", "face.SetClassOnly(", "screen.Face.SetBarField(",
+                "screen.Face.QuickGlance =", "screen.FlagFormat =", "screen.LapReview =", "Settings.SetScreenRevBar(",
+                "screen.Modules[index] = on;", "screen.CompanionFlagFormat =", "screen.CompanionStart =", "screen.CompanionQuickGlance =",
+                "screen.OpenOnStartModule(", "screen.SetZonePage(", "screen.PitWallPage =", "screen.WebViewUrl =", "screen.PitWallClassOnly =",
+                "screen.PitWallFlagFormat =", "screen.PitWallQuickGlance =", "Settings.SetSlot(", "Settings.SetRevBar(",
+            })
+            {
+                Assert.True(sources.Contains(writer), "no Screens file writes " + writer);
+            }
+        }
+
+        private static void AssertCovers(IEnumerable<string> names, Dictionary<string, string> writers, HashSet<string> published)
+        {
+            var all = names.ToList();
+            Assert.Equal(all.OrderBy(n => n, System.StringComparer.Ordinal), writers.Keys.Concat(published).OrderBy(n => n, System.StringComparer.Ordinal));
+        }
+
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
         [Fact]
