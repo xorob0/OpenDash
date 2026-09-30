@@ -1,4 +1,4 @@
-// PanelFacePlanTests.cs: the picture the Rig tab configures a face on, held against the canvas the way
+// PanelFacePlanTests.cs: the picture the Screens page configures a face on, held against the canvas the way
 // PanelMetricsTests holds the rest of the panel's geometry.
 //
 // SettingsControl.Screens.Face.cs is WPF and cannot be compiled here, which is why PanelFacePlan.cs exists: a
@@ -14,60 +14,97 @@ namespace OpenDashPlugin.Tests
     {
         private static Contract.FaceSize Reference { get { return Contract.ReferenceFace; } }
 
-        /// <summary>The plan of the 1920 x 480 face, which is the one the canvas draws: 844 wide, its rows
-        /// 26, 24, 138 and 30, and its zones 338, 167 and 337 across.</summary>
+        /// <summary>The plan of the 1920 x 480 face at the width the canvas draws it: 844 across, its rows
+        /// 21, 24, 138 and 36, and its zones 334, 165 and 335 across, 5 apart.</summary>
         [Fact]
         public void The_reference_face_is_the_picture_the_canvas_draws()
         {
             var plan = PanelFacePlan.For(Reference);
             Assert.Equal(844, PanelFacePlan.PictureWidth);
-            Assert.Equal(26, plan.RevBar);
+            Assert.Equal(844, plan.Width);
+            Assert.Equal(21, plan.RevBar);
             Assert.Equal(24, plan.Bar);
             Assert.Equal(138, plan.Body);
-            Assert.Equal(30, plan.Band);
+            Assert.Equal(36, plan.Band);
             Assert.Equal(new[] { "B", "A", "C" }, plan.Letters);
-            Assert.Equal(new double[] { 338, 167, 337 }, plan.Cells);
+            Assert.Equal(new double[] { 334, 165, 335 }, plan.Cells);
         }
 
-        /// <summary>What a cell gives the two controls in it: 324, 153 and 323, which is the cell less the
-        /// seven of padding at each side.</summary>
+        /// <summary>The picture at another width is the same rule at that width: For(face) is For(face, 844),
+        /// and a narrower one scales every row by its own width and keeps each row's least.</summary>
         [Fact]
-        public void A_cell_gives_its_controls_the_width_the_canvas_draws()
+        public void A_picture_is_drawn_at_the_width_the_page_gives_it()
         {
-            var plan = PanelFacePlan.For(Reference);
-            Assert.Equal(new double[] { 324, 153, 323 }, plan.Cells.Select(PanelFacePlan.Inner).ToArray());
-            Assert.Equal(7, PanelFacePlan.CellPaddingX);
-            Assert.Equal(8, PanelFacePlan.CellPaddingY);
-            Assert.Equal(9, PanelFacePlan.CellGap);
+            foreach (var face in Contract.FaceSizes)
+            {
+                var standard = PanelFacePlan.For(face);
+                var same = PanelFacePlan.For(face, PanelFacePlan.PictureWidth);
+                Assert.Equal(standard.Cells, same.Cells);
+                Assert.Equal(standard.Height, same.Height);
+            }
+            // Beside the aside on the widest page (1112 less 316 and 24) and alone on a phone-width one.
+            Assert.Equal(772, PanelFacePlan.PictureWidthFor(PanelShell.ContentMax, true));
+            Assert.Equal(400, PanelFacePlan.PictureWidthFor(400, false));
+            Assert.Equal(754, PanelFacePlan.RowsWidth(772));
+            var wide = PanelFacePlan.For(Contract.FaceSizes[1], 754);
+            Assert.Equal(754, wide.Cells.Sum() + 2 * PanelFacePlan.Seam);
+            Assert.Equal(Math.Floor(320 * 754.0 / 1280), wide.Body);
+            var narrow = PanelFacePlan.For(Reference, 300);
+            Assert.Equal(PanelFacePlan.CellLeast, narrow.Body);
+            Assert.Equal(PanelFacePlan.RevBarLeast, narrow.RevBar);
+            Assert.Equal(PanelFacePlan.BandLeast, narrow.Band);
         }
 
-        /// <summary>The controls the picture carries, at the sizes the canvas draws them: the two ends of
-        /// the bar, band D's row, the count of a cycle, and the bindings under the picture.</summary>
+        /// <summary>The picture's frame and the cells' insides, as Screens.dc.html draws them: an 8 px inset
+        /// inside a 1 px rule, parts 5 apart, a zone padded 9 by 10 with its lines 6 apart, the accent's 2 px
+        /// edge on the part the aside shows, and the aside itself 316 wide, 24 from the picture.</summary>
         [Fact]
-        public void The_controls_inside_the_picture_are_the_sizes_the_canvas_draws()
+        public void The_picture_is_framed_and_its_cells_padded_as_the_canvas_draws_them()
         {
-            Assert.Equal(132, PanelFacePlan.BarEndLeftWidth);
-            Assert.Equal(146, PanelFacePlan.BarEndRightWidth);
-            Assert.Equal(150, PanelFacePlan.BandSelectWidth);
-            Assert.Equal(10, PanelFacePlan.BandGap);
-            Assert.Equal(11, PanelFacePlan.CountCaptionSize);
-            Assert.Equal(12, PanelFacePlan.CountChevronSize);
-            Assert.Equal(200, PanelFacePlan.GlanceSelectWidth);
-            Assert.True(PanelFacePlan.CountCaptionSize < Theme.SizeLabel,
-                "a count is set smaller than a value, which is what tells the two apart in a cell");
-            Assert.True(PanelFacePlan.CountChevronSize < Theme.IconSize,
-                "and under a chevron smaller than every other icon on the panel");
+            Assert.Equal(8, PanelFacePlan.Inset);
+            Assert.Equal(1, PanelFacePlan.Frame);
+            Assert.Equal(5, PanelFacePlan.Seam);
+            Assert.Equal(10, PanelFacePlan.CellPaddingX);
+            Assert.Equal(9, PanelFacePlan.CellPaddingY);
+            Assert.Equal(6, PanelFacePlan.CellGap);
+            Assert.Equal(18, PanelFacePlan.LetterSize);
+            Assert.Equal(16, PanelFacePlan.BandLetterSize);
+            Assert.Equal(13, PanelFacePlan.CountSize);
+            Assert.Equal(15, PanelFacePlan.PageSize);
+            Assert.Equal(14, PanelFacePlan.BandPageSize);
+            Assert.Equal(12, PanelFacePlan.ButtonLineSize);
+            Assert.Equal(11, PanelFacePlan.BarTextSize);
+            Assert.Equal(2, PanelFacePlan.SelectedEdge);
+            Assert.Equal(316, PanelFacePlan.AsideWidth);
+            Assert.Equal(24, PanelFacePlan.AsideGap);
         }
 
-        /// <summary>The rows the face's own rectangles are too small to carry are the two that hold a
-        /// control: the bar's least is the short control height rather than a number of its own.</summary>
+        /// <summary>The rev strip is twenty segments of a mid-range shift, and dark when the rev bar is off.</summary>
+        [Fact]
+        public void The_rev_strip_is_twenty_segments_that_go_dark_with_the_rev_bar()
+        {
+            var on = PanelFacePlan.RevColours(true);
+            Assert.Equal(20, on.Length);
+            Assert.Equal(9, on.Count(c => c == Theme.ShiftStage1));
+            Assert.Equal(5, on.Count(c => c == Theme.ShiftStage2));
+            Assert.Equal(2, on.Count(c => c == Theme.ShiftStage3));
+            Assert.Equal(Theme.ShiftStage1, on[0]);
+            Assert.Equal(Theme.SurfaceRaised, on[19]);
+            Assert.All(PanelFacePlan.RevColours(false), c => Assert.Equal(Theme.SurfaceRaised, c));
+            Assert.Equal(3, PanelFacePlan.RevGap);
+        }
+
+        /// <summary>The rows the face's own rectangles are too small to carry: the rev strip's 16, the bar's
+        /// short control height, band D's line of four facts, and a zone's three lines.</summary>
         [Fact]
         public void A_row_is_never_smaller_than_what_it_has_to_hold()
         {
-            Assert.Equal(26, PanelFacePlan.RevBarLeast);
-            Assert.Equal(30, PanelFacePlan.BandLeast);
-            Assert.Equal(138, PanelFacePlan.CellLeast);
+            Assert.Equal(16, PanelFacePlan.RevBarLeast);
+            Assert.Equal(36, PanelFacePlan.BandLeast);
+            Assert.Equal(84, PanelFacePlan.CellLeast);
             Assert.Equal(Theme.ControlHeightSm, PanelFacePlan.BarLeast);
+            // A zone's three lines and its padding fit the least.
+            Assert.True(2 * PanelFacePlan.CellPaddingY + PanelFacePlan.LetterSize + PanelFacePlan.PageSize + PanelFacePlan.ButtonLineSize + 2 * PanelFacePlan.CellGap <= PanelFacePlan.CellLeast);
 
             foreach (var face in Contract.FaceSizes)
             {
@@ -103,15 +140,15 @@ namespace OpenDashPlugin.Tests
                 what + " is drawn " + drawn + " where the face scales to " + scaled + " and its least is " + least);
         }
 
-        /// <summary>The cells and the seams between them fill the body exactly: a cell rounded on its own
-        /// would leave a pixel of rule showing at the end of the row.</summary>
+        /// <summary>The cells and the gaps between them fill the body exactly: a cell rounded on its own
+        /// would leave a sliver of ground showing at the end of the row.</summary>
         [Fact]
         public void The_cells_and_their_seams_fill_the_body_exactly()
         {
             foreach (var face in Contract.FaceSizes)
             {
                 var plan = PanelFacePlan.For(face);
-                var span = plan.Stacked ? plan.Body : PanelFacePlan.PictureWidth;
+                var span = plan.Stacked ? plan.Body : plan.Width;
                 var seams = (plan.Cells.Length - 1) * PanelFacePlan.Seam;
                 Assert.Equal(span, plan.Cells.Sum() + seams);
             }

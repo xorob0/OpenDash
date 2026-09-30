@@ -1,4 +1,6 @@
-// PanelScreensTests.cs: when the Screens page tells a driver to remove the dashboards they have no screen for.
+// PanelScreensTests.cs: the Screens page's decisions and words -- what a card says, the zone list a face is
+// configured through, the rows each kind draws and what search finds -- and first, when the page tells a
+// driver to keep or remove the screens they did not choose.
 //
 // The line is for a rig the migration made, and whether a screen is one of those is carried by the screen
 // rather than guessed from how many the rig holds (#478). What is held here is that fact through every path
@@ -6,6 +8,7 @@
 // keeping or removing its screens, and a rig a released build migrated before the fact was recorded. The
 // settings go through Json.NET, which is what SimHub writes and reads them with.
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -206,54 +209,322 @@ namespace OpenDashPlugin.Tests
         public void The_screens_page_is_titled_and_its_rows_are_found_where_they_are()
         {
             Assert.Equal("Screens", PanelScreens.Title);
-            // One phrase for one state, a state and not an instruction: the card and the fix box under it
-            // both say it, as Main's Right now and the Screens fix box do, and Home says it of the screen.
-            Assert.Equal("Not in SimHub yet", PanelScreens.NotInSimHubYet);
-            var waiting = new AttentionInput();
-            waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
-            Assert.Equal("Rim is not in SimHub yet", System.Linq.Enumerable.Single(PanelAttention.Find(waiting)).Title);
-            // The empty rig's pill, which Home's card says too, with the stop a sentence takes.
+            // The empty rig's words, which Home's card says too.
             Assert.Equal("No screens yet", PanelScreens.NoScreens);
+            Assert.Equal("Add the screen your rig has.", PanelCopy.EmptyRig);
             // A failure points at the log (voice.md), in the words its siblings use.
             Assert.Equal("Could not duplicate Rim. See SimHub's log.", PanelAddScreen.DuplicateFailed("Rim"));
-            var anchors = new[]
-            {
-                PanelScreens.AnchorCards, PanelScreens.AnchorRevBar, PanelScreens.AnchorFlagDisplay, PanelScreens.AnchorLapReview,
-                PanelScreens.AnchorZones, PanelScreens.AnchorPitWallPage, PanelScreens.AnchorWebView, PanelScreens.AnchorModules,
-                PanelScreens.AnchorFirstModule, PanelScreens.AnchorSlots,
-            };
+            var anchors = AnchorTable.Of(typeof(PanelScreens)).Select(line => line.Substring(line.IndexOf(" = ", System.StringComparison.Ordinal) + 3)).ToArray();
             Assert.All(anchors, anchor => Assert.StartsWith("screens.", anchor, System.StringComparison.Ordinal));
-            Assert.Equal(anchors.Length, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(anchors)));
+            Assert.Equal(anchors.Length, anchors.Distinct().Count());
             Assert.All(PanelScreens.Search, entry => Assert.Contains(entry.Route.Anchor, anchors));
+            Assert.Equal(PanelScreens.Search.Length, PanelScreens.Search.Select(entry => entry.Label).Distinct().Count());
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.Title && entry.Route.Anchor == PanelScreens.AnchorCards);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
-            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelDataTab.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
-            // The rows' titles, which the panes draw and search lists by the same constants.
-            Assert.Equal("Flag display", PanelScreens.FlagDisplayTitle);
-            Assert.Equal("Lap review", PanelScreens.LapReviewTitle);
-            Assert.Equal("Zones", PanelScreens.ZonesTitle);
-            Assert.Equal("Page", PanelScreens.PitWallPageTitle);
-            Assert.Equal("Web view address", PanelScreens.WebViewTitle);
-            Assert.Equal("Modules", PanelScreens.ModulesTitle);
-            Assert.Equal("First module", PanelScreens.FirstModuleTitle);
-            // The round pane's heading is the artboard's noun, and "slots" still finds it.
-            Assert.Equal("Cards", PanelScreens.CardsTitle);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevRingTitle && entry.Route.Anchor == PanelScreens.AnchorRevRing);
+            // Every row title and heading the page draws is a search label.
+            foreach (var label in new[]
+            {
+                PanelScreens.RevBarTitle, PanelScreens.FlagDisplayTitle, PanelScreens.LapReviewTitle, PanelShortcuts.QuickGlanceTitle,
+                PanelScreens.InfoBarTitle, PanelScreens.NextPageTitle, PanelScreens.PreviousPageTitle, PanelScreens.ClassOnlyTitle,
+                PanelScreens.DetailsTitle, PanelScreens.PitWallPageTitle, PanelScreens.WebViewTitle, PanelScreens.PortraitTitle,
+                PanelScreens.ModulesTitle, PanelScreens.FirstModuleTitle, PanelScreens.NextModuleTitle, PanelScreens.CardsTitle,
+                PanelScreens.RevRingTitle, PanelScreens.ZonesTitle,
+            })
+            {
+                Assert.Contains(PanelScreens.Search, entry => entry.Label == label);
+            }
+            // "slots" still finds the round screen's cards, and "revbar" the rev bar.
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
-            // The round pane's Revbar writes the rig-wide setting, and its caption names everything that
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && System.Array.IndexOf(entry.Keywords, "revbar") >= 0);
+            // The round pane's Rev ring writes the rig-wide setting, and its caption names everything that
             // follows it: the round screens, the phone's speedo, and a face that never set its own.
             Assert.Equal("Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.", PanelScreens.RigRevBarCaption);
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
             Assert.Contains("PanelScreens.RigRevBarCaption,", round);
             Assert.Contains("Settings.SetRevBar(value);", round);
-            // The card's states, the header's Duplicate, and the fix box under a screen that is gone, whose
-            // detail is Home's too.
-            Assert.Equal("In SimHub", PanelScreens.InSimHub);
-            Assert.Equal("Missing", PanelScreens.Missing);
-            Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
-            Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
-            Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
             // The note an upgrading user meets, in the noun and verbs Home uses.
             Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
+        }
+
+        /// <summary>
+        /// A card's three states and the fix box under the two that need one: one phrase for one state, a
+        /// missing folder before a waiting restart, since restarting will not bring a folder back (ruling 27).
+        /// </summary>
+        [Fact]
+        public void A_card_says_whether_SimHub_has_its_screen_in_the_words_the_fix_box_uses()
+        {
+            Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(true, false));
+            Assert.Equal(ScreenState.Restart, PanelScreens.StateOf(true, true));
+            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, true));
+            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, false));
+            Assert.Equal("In SimHub", PanelScreens.StateLabel(ScreenState.InSimHub));
+            Assert.Equal("Restart SimHub to load it", PanelScreens.StateLabel(ScreenState.Restart));
+            Assert.Equal("Missing", PanelScreens.StateLabel(ScreenState.Missing));
+            Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
+            Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
+            Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));
+            Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
+            Assert.Equal("Then assign \"Rim\" to this display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
+            Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
+            Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
+            Assert.Equal("Install it again", PanelAttention.InstallAgain);
+        }
+
+        /// <summary>A card says the kind, and the header beside the name says the kind and the size.</summary>
+        [Fact]
+        public void A_card_names_the_kind_and_the_header_the_kind_and_size()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var rim = settings.AddScreen(Entry("OpenDash 1280x480", Contract.KindFace, 1280, 480), "Rim");
+            var round = settings.AddScreen(Entry("OpenDash 480 round", Contract.KindSlots, 480, 480), "Round");
+            Assert.Equal("Face", PanelScreens.CardMeta(rim));
+            Assert.Equal("Face · 1280 × 480", PanelScreens.Facts(rim));
+            Assert.Equal("Round", PanelScreens.CardMeta(round));
+            Assert.Equal("Round · 480 × 480", PanelScreens.Facts(round));
+            var gone = new ScreenInstance { Kind = Contract.KindPitWall, Name = "Wall" };
+            Assert.Equal("Pit wall", PanelScreens.Facts(gone));
+            Assert.Equal(string.Empty, PanelScreens.Facts(null));
+        }
+
+        /// <summary>The header's presses and the remove sheet: what removing costs, and the bound buttons
+        /// that stop working where the kind has actions of its own.</summary>
+        [Fact]
+        public void Removing_says_what_it_costs()
+        {
+            Assert.Equal("Edit", PanelScreens.EditButton);
+            Assert.Equal("Duplicate", PanelScreens.DuplicateButton);
+            Assert.Equal("Remove", PanelScreens.RemoveButton);
+            Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.Equal("Remove Rim", PanelScreens.RemoveTitle("Rim"));
+            Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.", PanelScreens.RemoveBody(true));
+            Assert.Equal("Removes the screen, its dashboard and its settings.", PanelScreens.RemoveBody(false));
+            Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindPitWall }));
+            Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindCompanion }));
+            Assert.False(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindSlots }));
+            Assert.Equal("Keep it", PanelScreens.KeepButton);
+            Assert.Equal("Remove it", PanelScreens.RemoveItButton);
+            Assert.Equal("Removed Rim. SimHub still lists its dashboard until you restart it.", PanelScreens.Removed("Rim"));
+            Assert.Equal("Removed Rim, but its dashboard could not be deleted: locked", PanelScreens.RemoveFailed("Rim", "locked"));
+        }
+
+        /// <summary>A face's rows, in voice.md's words where the artboard's differ (findings 10 to 15).</summary>
+        [Fact]
+        public void A_faces_rows_are_named_as_voice_md_names_them()
+        {
+            Assert.Equal("Rev bar", PanelScreens.RevBarTitle);
+            Assert.Equal("Flag display", PanelScreens.FlagDisplayTitle);
+            Assert.Equal(new[] { "Band D", "Full screen" }, PanelScreens.FlagLabels);
+            Assert.Equal(Contract.FlagFormats.Length, PanelScreens.FlagLabels.Length);
+            Assert.Equal(new[] { "Off", "Bar", "Full screen" }, PanelScreens.BarFlagLabels);
+            Assert.Equal(Contract.CompanionFlagFormats.Length, PanelScreens.BarFlagLabels.Length);
+            Assert.Equal("Lap review", PanelScreens.LapReviewTitle);
+            Assert.Equal(new[] { "Off", "Races", "Always" }, PanelScreens.LapReviewLabels);
+            Assert.Equal(Contract.LapReviewModes.Length, PanelScreens.LapReviewLabels.Length);
+            Assert.Equal("Shows your last lap for four seconds after the line.", PanelScreens.LapReviewCaption);
+            Assert.Equal("OpenDash no longer ships a 1024 × 600 face. Your settings are kept.", PanelScreens.NoLongerShipped("1024 × 600"));
+            // The seven greyed rows are the registry's, in the artboard's order, with voice.md's noun phrases.
+            Assert.Equal(
+                new[] { "Rev fill under the lights", "Spotter at the rev bar ends", "Pit page in the pit lane", "Pop-ups", "Edge lights for the delta", "Screen care", "Fit" },
+                new[] { PanelSoon.RevFill, PanelSoon.SpotterAtRevBarEnds, PanelSoon.PitPageInPitLane, PanelSoon.PopUps, PanelSoon.DeltaEdgeLights, PanelSoon.ScreenCare, PanelSoon.Fit }.Select(item => item.Title));
+            var face = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Face.cs"));
+            var order = new[] { "PanelSoon.RevFill", "PanelSoon.SpotterAtRevBarEnds", "PanelSoon.PitPageInPitLane", "PanelSoon.PopUps", "PanelSoon.DeltaEdgeLights", "PanelSoon.ScreenCare", "PanelSoon.Fit" }
+                .Select(name => face.IndexOf(name, System.StringComparison.Ordinal)).ToArray();
+            Assert.All(order, at => Assert.True(at >= 0));
+            Assert.Equal(order.OrderBy(at => at), order);
+        }
+
+        /// <summary>The picture's bar and its aside: two fields an end on a wide face, one on the portrait, none
+        /// on the nano; the middle is the car's settings, and the aside opens on what was last picked.</summary>
+        [Fact]
+        public void The_info_bar_lists_the_fields_the_face_has()
+        {
+            var reference = Contract.ReferenceFace;
+            var portrait = Contract.FaceSizes.Single(f => f.Body == Contract.FaceBody.Column);
+            var nano = Contract.FaceSizes.Single(f => !f.HasBar);
+            Assert.Equal(new[] { "Left1", "Left2", "Right1", "Right2" }, PanelScreens.BarRows(reference).Select(r => r.Slot));
+            Assert.Equal(new[] { "Left, first", "Left, second", "Right, first", "Right, second" }, PanelScreens.BarRows(reference).Select(r => r.Label));
+            Assert.Equal(new[] { "Left1", "Right1" }, PanelScreens.BarRows(portrait).Select(r => r.Slot));
+            Assert.Equal(new[] { "Left", "Right" }, PanelScreens.BarRows(portrait).Select(r => r.Label));
+            Assert.Empty(PanelScreens.BarRows(nano));
+            Assert.All(PanelScreens.BarRows(reference), row => Assert.Contains(row.Slot, Contract.BarSlots));
+
+            var settings = new FaceSettings();
+            settings.Normalise();
+            Assert.Equal("Race time · Lap", PanelScreens.BarEnd(settings, reference, true));
+            Assert.Equal("Position · Class", PanelScreens.BarEnd(settings, reference, false));
+            Assert.Equal("Race time", PanelScreens.BarEnd(settings, portrait, true));
+            Assert.Equal("Info bar", PanelScreens.InfoBarTitle);
+            Assert.Equal("Car settings", PanelScreens.InfoBarMiddle);
+
+            Assert.Equal("B", PanelScreens.AsideKey(null, reference));
+            Assert.Equal("A", PanelScreens.AsideKey(null, portrait));
+            Assert.Equal("C", PanelScreens.AsideKey("C", reference));
+            Assert.Equal(PanelScreens.BarKey, PanelScreens.AsideKey(PanelScreens.BarKey, reference));
+            Assert.Equal("B", PanelScreens.AsideKey(PanelScreens.BarKey, nano));
+            Assert.Equal("B", PanelScreens.AsideKey("Z", reference));
+        }
+
+        /// <summary>A zone in the picture: how many pages it cycles, the page it opens on, and the button that
+        /// advances it -- or "No button", or nothing when the bindings cannot be read.</summary>
+        [Fact]
+        public void A_zone_in_the_picture_counts_its_pages_and_names_its_button()
+        {
+            var settings = new FaceSettings();
+            settings.Normalise();
+            var zoneA = FacePages.For("A").Count;
+            Assert.Equal(zoneA + " of " + zoneA, PanelScreens.ZoneCount(settings, "A"));
+            settings.SetPageEnabled("A", 1, false);
+            Assert.Equal((zoneA - 1) + " of " + zoneA, PanelScreens.ZoneCount(settings, "A"));
+            Assert.Equal(string.Empty, PanelScreens.ZoneButtonLine(null));
+            Assert.Equal("No button", PanelScreens.ZoneButtonLine(new string[0]));
+            Assert.Equal(PanelBindings.ChipText(new[] { "Keyboard.F5" }), PanelScreens.ZoneButtonLine(new[] { "Keyboard.F5" }));
+        }
+
+        /// <summary>
+        /// A zone's list: the ticked pages in the zone's order with the first marked, then under Show all the
+        /// rest; the last ticked page locked; Energy, Damage and Track rivals said to be empty in iRacing and
+        /// still tickable (rulings 29 and 30).
+        /// </summary>
+        [Fact]
+        public void A_zones_list_is_its_ticked_pages_in_order_and_the_first_is_where_it_opens()
+        {
+            var settings = new FaceSettings();
+            settings.Normalise();
+            settings.SetOrder("A", new[] { 2, 0, 1, 3 });
+            settings.SetPageEnabled("A", 1, false);
+            var rows = PanelScreens.ZoneRows(settings, "A", false);
+            Assert.Equal(new[] { 2, 0, 3 }, rows.Select(r => r.Page));
+            Assert.Equal(new[] { true, false, false }, rows.Select(r => r.First));
+            Assert.All(rows, r => Assert.True(r.Ticked));
+            Assert.All(rows, r => Assert.False(r.Locked));
+            Assert.Equal(2, PanelScreens.FirstTicked(settings, "A"));
+
+            var all = PanelScreens.ZoneRows(settings, "A", true);
+            Assert.Equal(new[] { 2, 0, 3, 1 }, all.Select(r => r.Page));
+            Assert.False(all[3].Ticked);
+            Assert.Equal("Gear alone", all[3].Name);
+
+            settings.SetPageEnabled("A", 0, false);
+            settings.SetPageEnabled("A", 3, false);
+            var one = PanelScreens.ZoneRows(settings, "A", false);
+            Assert.Single(one);
+            Assert.True(one[0].Locked);
+            Assert.Equal("A zone keeps at least one page.", PanelScreens.LastPageTooltip);
+
+            var zoneB = PanelScreens.ZoneRows(settings, "B", true);
+            Assert.Equal(new[] { "Energy", "Damage", "Track rivals" }, zoneB.Where(r => r.NotInIracing).Select(r => r.Name));
+            Assert.True(PanelScreens.IsNotInIracing("energy"));
+            Assert.False(PanelScreens.IsNotInIracing("fuel"));
+            Assert.False(PanelScreens.IsNotInIracing(null));
+            Assert.True(PanelScreens.ListsSoonModules("B") && PanelScreens.ListsSoonModules("C"));
+            Assert.False(PanelScreens.ListsSoonModules("A") || PanelScreens.ListsSoonModules("D"));
+            Assert.Equal(new[] { "Show all", "Only ticked", "All", "None", "Drag to reorder", "First", "Not in iRacing", "My class only", "Next page", "Previous page" },
+                new[] { PanelScreens.ShowAll, PanelScreens.OnlyTicked, PanelScreens.AllPages, PanelScreens.NoPages, PanelScreens.DragHint, PanelScreens.FirstTag, PanelScreens.NotInIracing, PanelScreens.ClassOnlyTitle, PanelScreens.NextPageTitle, PanelScreens.PreviousPageTitle });
+        }
+
+        /// <summary>A drag in the list moves the page it drew, and every page the list did not draw keeps its
+        /// place after them, so the zone's order stays whole.</summary>
+        [Fact]
+        public void A_drag_in_the_list_reorders_the_zone_and_keeps_its_order_whole()
+        {
+            var settings = new FaceSettings();
+            settings.Normalise();
+            settings.SetPageEnabled("A", 1, false);
+            // Drawn: 0, 2, 3 (1 is not ticked). Drag the last to the top.
+            Assert.Equal(new[] { 3, 0, 2, 1 }, PanelScreens.Reordered(settings, "A", false, 2, 0));
+            // Drawn under Show all: 0, 2, 3, 1. Drag the unticked page to the top.
+            Assert.Equal(new[] { 1, 0, 2, 3 }, PanelScreens.Reordered(settings, "A", true, 3, 0));
+            settings.SetOrder("A", PanelScreens.Reordered(settings, "A", false, 2, 0));
+            Assert.Equal(3, PanelScreens.FirstTicked(settings, "A"));
+            var whole = PanelScreens.Reordered(settings, "B", false, 0, 5);
+            Assert.Equal(FacePages.For("B").Count, whole.Length);
+            Assert.Equal(whole.Length, whole.Distinct().Count());
+        }
+
+        /// <summary>The quick glance is picked zone first, then only the pages that zone carries (ruling 32); a
+        /// new zone keeps the page where it has it and opens on its first otherwise.</summary>
+        [Fact]
+        public void The_glance_offers_only_the_pages_its_zone_carries()
+        {
+            Assert.Equal(new[] { "Zone A", "Zone B", "Zone C", "Band D" }, PanelScreens.GlanceZoneLabels());
+            Assert.Equal(FacePages.ZoneA.Select(p => p.Name), PanelScreens.GlancePageLabels(0));
+            Assert.Equal(FacePages.BandD.Select(p => p.Name), PanelScreens.GlancePageLabels(3));
+            // Zone C's Track is zone A's Track: one drawing.
+            var track = Contract.QuickGlanceValue(2, FacePages.ZoneBC.First(p => p.Id == "track").Number);
+            Assert.Equal(Contract.QuickGlanceValue(0, 3), PanelScreens.GlanceWithZone(track, 0));
+            // Band D carries no Track, so it opens on its first page.
+            Assert.Equal(Contract.QuickGlanceValue(3, 0), PanelScreens.GlanceWithZone(track, 3));
+            // Relative is in B and C and in band D.
+            var relative = Contract.QuickGlanceValue(1, FacePages.ZoneBC.First(p => p.Id == "relative").Number);
+            Assert.Equal(Contract.QuickGlanceValue(3, 6), PanelScreens.GlanceWithZone(relative, 3));
+            Assert.Equal(new[] { "Race A", "Race B", "Tower A", "Tower B", "Telemetry A", "Telemetry B", "Telemetry C" }, PanelScreens.PitWallGlanceZoneLabels());
+        }
+
+        /// <summary>Details name what a reader could type exactly: the name SimHub lists, the folder as stored,
+        /// and the properties by the frozen namespace, never derived from the name (ruling 38).</summary>
+        [Fact]
+        public void Details_name_the_properties_by_the_namespace()
+        {
+            Assert.Equal("OpenDash.Face1280x480*", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindFace, Namespace = "Face1280x480", Name = "Rim" }));
+            Assert.Equal("OpenDash.PitWall* and OpenDash.WebViewUrl", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindPitWall, Namespace = Contract.PitWallPrefix }));
+            Assert.Equal("OpenDash.Garage*", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindPitWall, Namespace = "Garage" }));
+            Assert.Equal("OpenDash.Slot01 to OpenDash.Slot02", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
+            Assert.Equal("OpenDash.Slot01 to OpenDash.Slot06", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
+            Assert.Equal(string.Empty, PanelScreens.Properties(null));
+            Assert.Equal(new[] { "Details", "SimHub name", "Folder", "Properties", "Version", "Not installed" },
+                new[] { PanelScreens.DetailsTitle, PanelScreens.SimHubNameLabel, PanelScreens.FolderLabel, PanelScreens.PropertiesLabel, PanelScreens.VersionLabel, PanelScreens.NotInstalled });
+        }
+
+        /// <summary>A pit wall: the page on screen picks the zones the list names; a wall on end draws the
+        /// portrait layout's four instead (ruling 34), each choice naming its zone.</summary>
+        [Fact]
+        public void A_pit_wall_lists_the_zones_of_the_page_on_screen()
+        {
+            Assert.Equal("Page on screen", PanelScreens.PitWallPageTitle);
+            Assert.Equal(new[] { "RaceA", "RaceB" }, PanelScreens.PitWallZones(0).Select(s => s.Key));
+            Assert.Equal(new[] { "TowerWide", "TowerA", "TowerB" }, PanelScreens.PitWallZones(1).Select(s => s.Key));
+            Assert.Equal(new[] { "TelemetryA", "TelemetryB", "TelemetryC" }, PanelScreens.PitWallZones(2).Select(s => s.Key));
+            Assert.Equal(new[] { "Wide zone", "Zone A", "Zone B" }, PanelScreens.PitWallZones(1).Select(PanelScreens.PitWallZoneLabel));
+            Assert.Equal("Tower zones", PanelScreens.PitWallZonesLabel("Tower"));
+            Assert.Equal(new[] { "PortraitA", "PortraitB", "PortraitC", "PortraitD" }, PanelScreens.PortraitZones().Select(s => s.Key));
+            Assert.Equal("A · Fuel", PanelScreens.PortraitLabels("A")[0]);
+            Assert.Equal(ZonePages.Standard.Count, PanelScreens.PortraitLabels("D").Length);
+            Assert.True(PanelScreens.IsPortrait(new ScreenInstance { Width = 1080, Height = 1920 }));
+            Assert.False(PanelScreens.IsPortrait(new ScreenInstance { Width = 1920, Height = 1080 }));
+            Assert.Equal("Portrait layout", PanelScreens.PortraitTitle);
+            Assert.Equal("Web view address", PanelScreens.WebViewTitle);
+        }
+
+        /// <summary>A companion's count, and a round screen's cards: one per slot its package reads.</summary>
+        [Fact]
+        public void A_companion_counts_its_modules_and_a_round_screen_its_cards()
+        {
+            var modules = Modules.Defaults();
+            Assert.Equal("18 of 21", PanelScreens.ModuleCount(modules));
+            Assert.Equal("0 of 21", PanelScreens.ModuleCount(null));
+            Assert.Equal(Modules.All.Select(m => m.Name), PanelScreens.ModuleNames());
+            Assert.Equal(new[] { "Controls and events", "NextScreen" }, PanelScreens.CompanionPagingCrumbs);
+            Assert.All(PanelScreens.CompanionPagingCrumbs, crumb => Assert.Contains(crumb, PanelCopy.CompanionPaging));
+            Assert.Equal(2, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
+            Assert.Equal(6, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
+            Assert.Equal(Contract.SlotCount, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 }));
+            Assert.Equal("Card 1", PanelScreens.CardLabel(1));
+            Assert.Equal("Rev ring", PanelScreens.RevRingTitle);
+            Assert.Equal("Cards are shared by every round screen.", PanelScreens.CardsCaption);
+        }
+
+        /// <summary>The greyed rows the page draws: the Screens page's twelve registry entries, two of them only
+        /// inside the Add sheet.</summary>
+        [Fact]
+        public void The_page_draws_every_greyed_row_the_registry_gives_it()
+        {
+            Assert.Equal(PanelSoon.For(PanelPage.Screens).Select(item => item.Anchor).OrderBy(a => a, System.StringComparer.Ordinal),
+                PanelScreens.SoonDrawn.Select(item => item.Anchor).OrderBy(a => a, System.StringComparer.Ordinal));
+            Assert.Equal(new[] { PanelSoon.FlagsScreen, PanelSoon.YourDisplays }, PanelScreens.SoonDrawn.Where(item => item.InSheetOnly));
         }
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
@@ -264,12 +535,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[]
             {
                 "AnchorCards = screens.cards",
+                "AnchorClassOnly = screens.class-only",
+                "AnchorDetails = screens.details",
                 "AnchorFirstModule = screens.first-module",
                 "AnchorFlagDisplay = screens.flag-display",
+                "AnchorGlance = screens.glance",
                 "AnchorLapReview = screens.lap-review",
                 "AnchorModules = screens.modules",
+                "AnchorPaging = screens.paging",
                 "AnchorPitWallPage = screens.pitwall-page",
+                "AnchorPortrait = screens.portrait",
                 "AnchorRevBar = screens.revbar",
+                "AnchorRevRing = screens.rev-ring",
                 "AnchorSlots = screens.slots",
                 "AnchorWebView = screens.webview",
                 "AnchorZones = screens.zones",

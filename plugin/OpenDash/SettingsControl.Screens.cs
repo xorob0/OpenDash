@@ -1,19 +1,21 @@
-// SettingsControl.Screens.cs: the Screens page -- a card per screen on the rig, and the selected screen's own
-// settings under it: its header, its live preview, what needs fixing and the pane of its kind.
+// SettingsControl.Screens.cs: the Screens page (Screens.dc.html) -- a card per screen on the rig, and the
+// selected screen under them: its header, what needs fixing, its live preview and the editor of its kind.
 //
-// This is the old Rig tab re-hosted by the #503 foundation so that every control keeps working while the
-// Screens page agent rebuilds it to Screens.dc.html. The panes are the files beside this one:
-// .Screens.Face.cs, .Screens.PitWall.cs, .Screens.Companion.cs and .Screens.Round.cs. The wheel buttons that
-// were under a face moved to Shortcuts, where every binding now is; Add, Edit and Remove open in the sheet.
+// The editors are the files beside this one: .Screens.Face.cs, .Screens.PitWall.cs, .Screens.Companion.cs
+// and .Screens.Round.cs. Add, Edit and Remove open in the sheet (AddScreen.dc.html for Add). Every decision
+// and every word is PanelScreens' or PanelAddScreen's; this file draws them.
 //
 // A screen is the unit (ADR 0017). A face is configured on a picture of itself, because "zone C" means nothing
 // until you see where zone C is.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace OpenDashPlugin
 {
@@ -36,53 +38,45 @@ namespace OpenDashPlugin
         /// control, which is the second of the two sizes control.icon describes.</summary>
         private const double IconAlone = PanelIcons.SizeAlone;
 
+        /// <summary>Whether the Details under a screen's rows are open, for the session.</summary>
+        private bool screensDetailsOpen;
+
         private FrameworkElement BuildScreensPage(PanelRoute to)
         {
             var rig = Settings.RigScreens();
-            var sections = new List<UIElement> { Ui.Anchor(BuildScreenCards(rig), PanelScreens.AnchorCards) };
+            var sections = new List<UIElement>();
+            if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());
+            sections.Add(Ui.Anchor(BuildScreenCards(rig), PanelScreens.AnchorCards));
             if (rig.Count == 0)
             {
-                sections.Add(BuildEmptyRig());
+                sections.Add(Ui.Prose(PanelCopy.EmptyRig, Theme.SizeBody));
                 return PageLayout(PanelScreens.Title, null, sections.ToArray());
             }
-            if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());
 
             var screen = SelectedScreen;
             var selected = new List<UIElement> { BuildScreenHeader(screen) };
             var fix = BuildScreenFix(screen);
             if (fix != null) selected.Add(fix);
-            // The screen itself, between its name and the controls that change it. Null when its package is
-            // not installed, which the fix above says in its own words.
+            // The screen itself, between its name and the controls that change it (ADR 0020). Null when its
+            // package is not installed, which the fix above says in its own words.
             var preview = BuildScreenPreview(screen, ContentWidth);
-            if (preview != null)
-            {
-                preview.Margin = new Thickness(0, 18, 0, 0);
-                selected.Add(preview);
-            }
-            var pane = BuildScreenPane(screen);
-            pane.Margin = new Thickness(0, 18, 0, 0);
-            selected.Add(pane);
+            if (preview != null) selected.Add(preview);
+            selected.Add(BuildScreenEditor(screen));
 
             var block = new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
                 BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
                 Padding = new Thickness(0, 20, 0, 0),
-                Child = Ui.VStack(0, selected.ToArray()),
+                Child = Ui.VStack(18, selected.ToArray()),
             };
             sections.Add(block);
             return PageLayout(PanelScreens.Title, null, sections.ToArray());
         }
 
-        /// <summary>The kind as a word, for the facts under a screen's name.</summary>
-        private static string KindLabel(ScreenInstance screen)
-        {
-            return PanelAddScreen.KindName(screen.Kind);
-        }
-
         /// <summary>
         /// The cards, one per screen, and the dashed tile that adds one: a picture of the screen's shape, its
-        /// name, its kind and size, and whether SimHub has it.
+        /// name, its kind, and whether SimHub has it.
         /// </summary>
         private FrameworkElement BuildScreenCards(IReadOnlyList<ScreenInstance> rig)
         {
@@ -91,18 +85,14 @@ namespace OpenDashPlugin
             foreach (var screen in rig)
             {
                 var captured = screen;
-                var installed = Installed(captured);
-                var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, captured.Namespace);
-                var state = !installed ? PanelScreens.Missing : restart ? PanelScreens.NotInSimHubYet : PanelScreens.InSimHub;
-                var stateHex = !installed ? Theme.StatusFailed : restart ? Theme.Caution : Theme.StatusUpToDate;
+                var state = ScreensStateOf(captured);
                 var thumb = Ui.Thumb(captured.IsSlots ? "round" : captured.Kind, captured.Width, captured.Height);
                 cards.Add(Ui.DeviceCard(
                     thumb,
                     captured.Name,
-                    // A screen whose package is gone has no size to show, and "0 × 0" is worse than the folder.
-                    KindLabel(captured) + " · " + (captured.Width > 0 ? captured.SizeLabel : (captured.Folder ?? string.Empty)),
-                    state,
-                    stateHex,
+                    PanelScreens.CardMeta(captured),
+                    PanelScreens.StateLabel(state),
+                    PanelScreens.StateHex(state),
                     current != null && ReferenceEquals(current, captured),
                     () =>
                     {
@@ -112,6 +102,13 @@ namespace OpenDashPlugin
             }
             cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
             return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, 6, cards.ToArray());
+        }
+
+        /// <summary>Whether SimHub has the screen: its folder, then whether it was written after SimHub started
+        /// (the answer from the last Go, Redraw or Check again).</summary>
+        private ScreenState ScreensStateOf(ScreenInstance screen)
+        {
+            return PanelScreens.StateOf(Installed(screen), PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace));
         }
 
         private bool Installed(ScreenInstance screen)
@@ -128,56 +125,56 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The first run, which is the empty state of the thing itself rather than a wizard in front of it.
-        /// </summary>
-        /// <remarks>
-        /// #85's design, and the reason it is one fewer surface to build: nothing has to be dismissed,
-        /// because the empty state stops appearing exactly when it stops being true.
-        /// </remarks>
-        private FrameworkElement BuildEmptyRig()
-        {
-            var pill = Ui.StatusPill(Theme.TextDim, PanelScreens.NoScreens, Theme.TextLabel);
-            var text = Ui.Caption(PanelCopy.EmptyRig);
-            return Ui.VStack(4, pill, text);
-        }
-
-        /// <summary>
-        /// The line an upgrading user meets, and only them: a rig migrated from an older plugin holds cards
-        /// for screens nobody owns. Nothing is deleted on their behalf (ADR 0017); the line goes when it stops
-        /// being true rather than when somebody dismisses it. PanelScreens decides when that is.
+        /// The line an upgrading user meets, over the cards, and only them: a rig migrated from an older
+        /// plugin holds cards for screens nobody owns. Nothing is deleted on their behalf (ADR 0017); the line
+        /// goes when it stops being true rather than when somebody dismisses it.
         /// </summary>
         private FrameworkElement BuildUnclaimedNote()
         {
             var icon = Ui.NavIcon(PanelIcons.Warning, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(PanelScreens.UnclaimedNote);
+            var text = Ui.Prose(PanelScreens.UnclaimedNote);
             return Ui.HStack(10, icon, text);
         }
 
-        /// <summary>The name, the facts beside it, and the presses that act on the screen itself.</summary>
+        /// <summary>The name, the kind and size beside it, and the presses that act on the screen itself.</summary>
         private FrameworkElement BuildScreenHeader(ScreenInstance screen)
         {
             var title = Ui.SubHeading(screen.Name);
-            var facts = Ui.Caption(KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty));
+            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            var facts = Ui.Prose(PanelScreens.Facts(screen));
+            facts.TextWrapping = TextWrapping.NoWrap;
             facts.VerticalAlignment = VerticalAlignment.Bottom;
             facts.Margin = new Thickness(0, 0, 0, 3);
             var name = Ui.HStack(12, title, facts);
 
-            var edit = Ui.Button("Edit", PanelButtonKind.Outline, PanelButtonSize.Small);
-            edit.ToolTip = "Change this screen's name or size, or install its dashboard again.";
+            var edit = Ui.Button(PanelScreens.EditButton, PanelButtonKind.Outline, PanelButtonSize.Small);
+            edit.ToolTip = PanelScreens.EditTooltip;
             edit.Click += (sender, args) => ShowEdit(screen);
-            var duplicate = Ui.Button("Duplicate", PanelButtonKind.Outline, PanelButtonSize.Small);
+            // New in this release, and tagged so for one (Screens.dc.html).
+            var duplicate = Ui.Button(PanelScreens.DuplicateButton, PanelButtonKind.Outline, PanelButtonSize.Small);
+            duplicate.Content = Ui.HStack(8, Ui.Text(PanelScreens.DuplicateButton, Theme.SizeSmall, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
             duplicate.ToolTip = PanelScreens.DuplicateTooltip;
             duplicate.Click += (sender, args) => DuplicateScreen(screen);
-            var remove = Ui.Button("Remove", PanelButtonKind.GhostDanger, PanelButtonSize.Small);
-            remove.ToolTip = "Removes this screen, its settings and its dashboard.";
+            var remove = Ui.Button(PanelScreens.RemoveButton, PanelButtonKind.GhostDanger, PanelButtonSize.Small);
+            remove.ToolTip = PanelScreens.RemoveTooltip;
             remove.Click += (sender, args) => ShowRemove(screen);
+            var presses = Ui.HStack(6, edit, duplicate, remove);
 
-            // Where its properties live, quieter than the facts: ADR 0017 freezes the namespace at creation and
-            // a rename does not move it, so a screen called "Rim" whose properties say MainDash has to say so.
-            var origin = Ui.Caption((screen.Folder ?? "Not installed") + " · properties OpenDash." + screen.Namespace + "*");
-            origin.Margin = new Thickness(0, 6, 0, 0);
-            return Ui.VStack(0, Ui.Row(name, Ui.HStack(6, edit, duplicate, remove)), origin);
+            // Side by side while both fit, the presses under the name on a narrow page.
+            if (!TwoColumns)
+            {
+                presses.Margin = new Thickness(0, 10, 0, 0);
+                return Ui.VStack(0, name, presses);
+            }
+            var row = new DockPanel { LastChildFill = true };
+            presses.VerticalAlignment = VerticalAlignment.Center;
+            presses.Margin = new Thickness(24, 0, 0, 0);
+            DockPanel.SetDock(presses, Dock.Right);
+            row.Children.Add(presses);
+            name.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(name);
+            return row;
         }
 
         /// <summary>
@@ -186,36 +183,111 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildScreenFix(ScreenInstance screen)
         {
-            if (!Installed(screen))
+            switch (ScreensStateOf(screen))
             {
-                var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
-                write.ToolTip = "Puts this screen's dashboard back into SimHub.";
-                write.Click += (sender, args) => InstallScreenAgain(screen);
-                var box = Ui.FixBox(PanelScreens.MissingTitle, PanelAttention.MissingDetail, null, write);
-                box.Margin = new Thickness(0, 18, 0, 0);
-                return box;
+                case ScreenState.Missing:
+                    var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
+                    write.ToolTip = "Puts this screen's dashboard back into SimHub.";
+                    write.Click += (sender, args) => InstallScreenAgain(screen);
+                    return Ui.FixBox(PanelScreens.MissingTitle, PanelAttention.MissingDetail, null, write);
+                case ScreenState.Restart:
+                    // The card above says this state in the same words: one phrase for one state.
+                    return Ui.FixBox(PanelScreens.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);
+                default:
+                    return null;
             }
-            var restart = PanelAttention.Of(issues, PanelAttention.ScreenRestart, screen.Namespace);
-            if (restart == null) return null;
-            // The card above says this state as PanelScreens.NotInSimHubYet, so the fix box does too: one phrase
-            // for one state. Home names the screen in its title, because Home lists every screen's.
-            var fix = Ui.FixBox(PanelScreens.NotInSimHubYet, restart.Detail, null, null, PanelIcons.Restart);
-            fix.Margin = new Thickness(0, 18, 0, 0);
-            return fix;
         }
 
-        private FrameworkElement BuildScreenPane(ScreenInstance screen)
+        /// <summary>The editor of the screen's kind, then its Details; a face lays its Details under the rows of
+        /// its own left column, beside the aside.</summary>
+        private FrameworkElement BuildScreenEditor(ScreenInstance screen)
         {
-            if (screen.IsCompanion) return BuildCompanionPane(screen);
-            if (screen.IsPitWall) return BuildPitWallPane(screen);
-            if (screen.IsSlots) return BuildSlotsPane(screen);
-            return BuildFacePane(screen);
+            if (!screen.IsCompanion && !screen.IsPitWall && !screen.IsSlots) return BuildFacePane(screen);
+            FrameworkElement editor;
+            if (screen.IsCompanion) editor = BuildCompanionPane(screen);
+            else if (screen.IsPitWall) editor = BuildPitWallPane(screen);
+            else editor = BuildSlotsPane(screen);
+            var details = BuildScreenDetails(screen);
+            details.Margin = new Thickness(0, 12, 0, 0);
+            return Ui.VStack(0, editor, details);
+        }
+
+        /// <summary>
+        /// The screen's names as SimHub and a reader of its properties meet them, folded away: what it is
+        /// called, where its dashboard lives, what it publishes, and the dashboard's version.
+        /// </summary>
+        private FrameworkElement BuildScreenDetails(ScreenInstance screen)
+        {
+            var details = Ui.Collapsible(PanelScreens.DetailsTitle, null, screensDetailsOpen, () =>
+            {
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var rows = new[]
+                {
+                    new[] { PanelScreens.SimHubNameLabel, screen.Name, null },
+                    new[] { PanelScreens.FolderLabel, screen.Folder ?? PanelScreens.NotInstalled, "code" },
+                    new[] { PanelScreens.PropertiesLabel, PanelScreens.Properties(screen), "code" },
+                    new[] { PanelScreens.VersionLabel, ScreensInstalledVersion(screen), null },
+                };
+                for (var i = 0; i < rows.Length; i++)
+                {
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    var label = Ui.Text(rows[i][0], Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+                    label.Margin = new Thickness(0, i == 0 ? 0 : 6, 0, 0);
+                    var value = Ui.Text(rows[i][1] ?? string.Empty, rows[i][2] == null ? Theme.SizeSmall : Theme.SizeLabel, FontWeights.Normal, Theme.TextPrimary,
+                        rows[i][2] == null ? null : new FontFamily("Consolas"));
+                    value.TextWrapping = TextWrapping.Wrap;
+                    value.Margin = label.Margin;
+                    Grid.SetRow(label, i);
+                    Grid.SetRow(value, i);
+                    Grid.SetColumn(value, 1);
+                    grid.Children.Add(label);
+                    grid.Children.Add(value);
+                }
+                return grid;
+            }, open => screensDetailsOpen = open);
+            var block = new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(0, 6, 0, 0),
+                Child = details,
+            };
+            return Ui.Anchor(block, PanelScreens.AnchorDetails);
+        }
+
+        /// <summary>The version the screen's dashboard says it is, read when Details is opened: the disk is
+        /// asked only then.</summary>
+        private string ScreensInstalledVersion(ScreenInstance screen)
+        {
+            try
+            {
+                if (screen.Folder == null) return PanelScreens.NotInstalled;
+                var root = plugin.Installer.SimHubRoot;
+                var exists = PackageExtractor.IsInstalled(root, screen.Folder);
+                var sidecar = PackageExtractor.InstalledSidecar(root, screen.Folder);
+                var text = exists && File.Exists(sidecar) ? File.ReadAllText(sidecar) : null;
+                return DashboardInstaller.InstalledVersionFrom(exists, text) ?? PanelScreens.NotInstalled;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not read the version of " + screen.Folder + ": " + ex.Message);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>A row of the kit at the Screens page's own segmented padding (Screens.dc.html's .seg, 13).</summary>
+        private static Segmented ScreensSegmented(string[] values, string[] labels, string selected, Action<string> changed)
+        {
+            return BuildSegmented(values, labels, selected, changed, Segmented.BarHeight, PanelKit.SegmentedPaddingScreens);
         }
 
         // --- Adding, editing, duplicating and removing ---------------------------------------------------
 
         /// <summary>
-        /// The add sheet: what kind of screen, what size, and what it is called.
+        /// The add sheet (AddScreen.dc.html): the kind, then the size the kind comes in, then the name, and at
+        /// its foot what to do once it is added.
         /// </summary>
         private void ShowAddScreen()
         {
@@ -223,7 +295,7 @@ namespace OpenDashPlugin
             var types = PanelAddScreen.Types(catalogue);
             if (types.Count == 0)
             {
-                ShowSheet(PanelAddScreen.SectionTitle, Ui.Caption("This build ships no dashboards."), null);
+                ShowSheet(PanelAddScreen.SectionTitle, Ui.Prose(PanelAddScreen.NothingToAdd, Theme.SizeBody), null);
                 return;
             }
 
@@ -233,11 +305,19 @@ namespace OpenDashPlugin
             PackageEntry entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
             var typed = false;
 
-            var name = BuildNameBox(string.Empty);
-            name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
+            var name = Ui.Input(string.Empty);
+            name.HorizontalAlignment = HorizontalAlignment.Stretch;
+            var note = Ui.Prose(string.Empty);
+            var nextStep = Ui.Prose(PanelAddScreen.NextStep(string.Empty));
+            name.TextChanged += (sender, args) =>
+            {
+                // Only what the driver types counts as theirs: a default the sheet filled in is not.
+                if (name.IsKeyboardFocusWithin) typed = name.Text.Trim().Length > 0;
+                nextStep.Text = PanelAddScreen.NextStep(name.Text);
+            };
 
-            var sizeHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch };
-            var note = Ui.Caption(string.Empty);
+            var kindsHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            var sizesHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
 
             Action fillName = () =>
             {
@@ -250,81 +330,171 @@ namespace OpenDashPlugin
             {
                 var second = Settings.RigScreens().Any(s => string.Equals(s.Namespace, StockNamespaceOf(entry), StringComparison.Ordinal));
                 note.Text = PanelAddScreen.Note(entry, second);
+                note.Visibility = note.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             };
-            Action<PackageEntry> choose = chosen =>
-            {
-                entry = chosen;
-                fillName();
-                refreshNote();
-            };
-            Action showSize = () =>
+            Action drawSizes = null;
+            drawSizes = () =>
             {
                 var offered = PanelAddScreen.Offered(type);
-                entry = offered[PanelAddScreen.PreferredIndex(type)];
-                var question = PanelAddScreen.Question(type);
-                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, PanelAddScreen.PreferredIndex(type), choose);
-                fillName();
-                refreshNote();
-            };
-
-            // What the chosen kind is, under the control that chose it: two words on a button cannot say what
-            // a companion is, and a driver adding their first screen has nowhere else to find out.
-            var typeCaption = Ui.Caption(type.Caption);
-            typeCaption.Margin = new Thickness(0, 0, 0, 12);
-            var typeRow = Ui.Row(
-                PanelAddScreen.TypeTitle,
-                PanelAddScreen.TypeCaption,
-                BuildSegmented(
-                    types.Select(t => t.Kind).ToArray(),
-                    types.Select(t => t.Label).ToArray(),
-                    type.Kind,
-                    kind =>
+                var tiles = new List<UIElement>();
+                for (var i = 0; i < offered.Count; i++)
+                {
+                    var option = offered[i];
+                    tiles.Add(Ui.ChoiceTile(BuildSizeTile(type, option, i, ReferenceEquals(option, entry)), ReferenceEquals(option, entry), () =>
                     {
-                        type = types.First(t => string.Equals(t.Kind, kind, StringComparison.Ordinal));
-                        typeCaption.Text = type.Caption;
-                        showSize();
+                        entry = option;
+                        drawSizes();
+                        fillName();
+                        refreshNote();
+                    }, centred: true));
+                }
+                sizesHost.Content = Ui.CardGrid(96, 8, 4, tiles.ToArray());
+            };
+            Action drawKinds = null;
+            drawKinds = () =>
+            {
+                var tiles = new List<UIElement>();
+                foreach (var candidate in types)
+                {
+                    var option = candidate;
+                    tiles.Add(Ui.ChoiceTile(BuildKindTile(option.Label, option.Caption, null), ReferenceEquals(option, type), () =>
+                    {
+                        type = option;
+                        entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+                        drawKinds();
+                        drawSizes();
+                        fillName();
+                        refreshNote();
                     }));
-
-            showSize();
+                }
+                tiles.Add(Ui.ChoiceTile(BuildKindTile(PanelSoon.FlagsScreen.Title, PanelAddScreen.FlagsScreenCaption, Ui.SoonTag(PanelSoon.FlagsScreen)), false, null, false, PanelSoon.FlagsScreen));
+                kindsHost.Content = Ui.CardGrid(140, 8, 3, tiles.ToArray());
+            };
+            drawKinds();
+            drawSizes();
+            fillName();
+            refreshNote();
 
             var add = Ui.Button(PanelAddScreen.AddButton, PanelButtonKind.Primary, PanelButtonSize.Large);
             add.MinWidth = ButtonMinWidth;
-            add.ToolTip = "Creates the screen and installs its dashboard.";
-            add.Click += (sender, args) => AddScreen(entry, name.Text);
-            var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
-            cancel.ToolTip = "Goes back without adding anything.";
+            add.ToolTip = PanelAddScreen.AddTooltip;
+            add.Click += (sender, args) =>
+            {
+                CloseSheet();
+                AddScreen(entry, name.Text);
+            };
+            var cancel = Ui.Button(PanelAddScreen.CancelButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
+            cancel.ToolTip = PanelAddScreen.CancelTooltip;
             cancel.Click += (sender, args) => CloseSheet();
 
+            var displays = Ui.Soon(BuildDashedLine(PanelSoon.YourDisplays.Title, Ui.SoonTag(PanelSoon.YourDisplays)), PanelSoon.YourDisplays);
             var body = Ui.VStack(0,
-                typeRow,
-                typeCaption,
-                sizeHost,
-                Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name),
-                note);
-            ShowSheet(PanelAddScreen.SectionTitle, body, SheetFooter(null, cancel, add));
+                Ui.Step(1, PanelAddScreen.KindStep, kindsHost, first: true),
+                Ui.Step(2, PanelAddScreen.SizeStep, Ui.VStack(8, displays, sizesHost)),
+                Ui.Step(3, PanelAddScreen.NameStep, Ui.VStack(8, name, note)));
+            var footer = Ui.VStack(14, Ui.Eyebrow(PanelAddScreen.NextStepsTitle), nextStep, SheetFooter(null, cancel, add));
+            ShowSheet(PanelAddScreen.SectionTitle, body, footer);
         }
 
-        /// <summary>The size or the orientation control, in the row the question calls for.</summary>
+        /// <summary>A kind tile's words: its name at 15 SemiBold (and a Soon tag beside it when greyed), and
+        /// the note under it at 12.</summary>
+        private static FrameworkElement BuildKindTile(string title, string caption, FrameworkElement tag)
+        {
+            var head = new DockPanel { LastChildFill = true };
+            if (tag != null)
+            {
+                tag.Margin = new Thickness(6, 0, 0, 0);
+                DockPanel.SetDock(tag, Dock.Right);
+                head.Children.Add(tag);
+            }
+            var name = Ui.Text(title, 15, FontWeights.SemiBold, Theme.TextPrimary);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            head.Children.Add(name);
+            var note = Ui.Prose(caption, Theme.SizeLabel);
+            note.Margin = new Thickness(0, 6, 0, 0);
+            return Ui.VStack(0, head, note);
+        }
+
+        /// <summary>A size tile: the screen's outline in a 44 px band, its size in the display family and the
+        /// name the design gives it, if any.</summary>
+        private static FrameworkElement BuildSizeTile(ScreenType type, PackageEntry entry, int index, bool selected)
+        {
+            var shape = PanelAddScreen.TileShape(entry.Width, entry.Height);
+            var ink = Ui.Brush(selected ? Theme.Accent : Theme.TextLabel);
+            FrameworkElement outline;
+            if (entry.Width > 0 && entry.Width == entry.Height)
+            {
+                outline = new Ellipse { Width = shape[0], Height = shape[1], Stroke = ink, StrokeThickness = 1.5 };
+            }
+            else
+            {
+                outline = new Border { Width = shape[0], Height = shape[1], BorderBrush = ink, BorderThickness = new Thickness(1.5), CornerRadius = new CornerRadius(Theme.Radius) };
+            }
+            outline.HorizontalAlignment = HorizontalAlignment.Center;
+            outline.VerticalAlignment = VerticalAlignment.Center;
+            var band = new Border { Height = 44, Child = outline };
+            var label = Ui.Text(PanelAddScreen.SizeLabel(type, entry, index), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
+            label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.Margin = new Thickness(0, 6, 0, 0);
+            var stack = Ui.VStack(0, band, label);
+            var hint = PanelAddScreen.SizeHint(type, entry);
+            if (!string.IsNullOrEmpty(hint))
+            {
+                var words = Ui.Text(hint, 11, FontWeights.Normal, Theme.TextSecondary);
+                words.HorizontalAlignment = HorizontalAlignment.Center;
+                words.Margin = new Thickness(0, 4, 0, 0);
+                stack.Children.Add(words);
+            }
+            return stack;
+        }
+
+        /// <summary>A line in a dashed outline, 10 by 12 in: the Add sheet's greyed "Your displays".</summary>
+        private static FrameworkElement BuildDashedLine(string text, FrameworkElement tag)
+        {
+            var dash = new Rectangle
+            {
+                Stroke = Ui.Brush(Theme.Border),
+                StrokeThickness = PanelMetrics.BorderWeight,
+                StrokeDashArray = new DoubleCollection { 4, 3 },
+                RadiusX = Theme.Radius,
+                RadiusY = Theme.Radius,
+            };
+            var line = new DockPanel { LastChildFill = true, Margin = new Thickness(12, 10, 12, 10) };
+            if (tag != null)
+            {
+                DockPanel.SetDock(tag, Dock.Right);
+                line.Children.Add(tag);
+            }
+            line.Children.Add(Ui.Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary));
+            var host = new Grid();
+            host.Children.Add(dash);
+            host.Children.Add(line);
+            return host;
+        }
+
+        /// <summary>The size or the orientation control of the edit sheet: a segmented pair for a way round or
+        /// a few sizes, a list for more.</summary>
         private FrameworkElement BuildSizeRow(ScreenType type, IReadOnlyList<PackageEntry> offered, SizeQuestion question, int selected, Action<PackageEntry> chose)
         {
-            var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
             var labels = offered.Select((e, i) => PanelAddScreen.SizeLabel(type, e, i)).ToArray();
-            Action<string> changed = value =>
+            var opens = selected < 0 || selected >= offered.Count ? 0 : selected;
+            FrameworkElement control;
+            if (question == SizeQuestion.Orientation || offered.Count <= 3)
             {
-                int index;
-                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
-                if (index < 0 || index >= offered.Count) return;
-                chose(offered[index]);
-            };
-            // Two answers are a pair of buttons; eight are a list. The orientation question is always the pair,
-            // which is what makes it read as "which way round" rather than as a resolution.
-            var opens = values[selected < 0 || selected >= values.Length ? 0 : selected];
-            var control = question == SizeQuestion.Orientation || offered.Count <= 3
-                ? (FrameworkElement)BuildSegmented(values, labels, opens, changed)
-                : BuildChoice(values, labels, opens, 240, changed);
-            return question == SizeQuestion.Orientation
-                ? Ui.Row(PanelAddScreen.OrientationTitle, PanelAddScreen.OrientationCaption, control)
-                : Ui.Row(PanelAddScreen.SizeTitle, PanelAddScreen.SizeCaption, control);
+                var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
+                control = ScreensSegmented(values, labels, values[opens], value =>
+                {
+                    int index;
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
+                    if (index < 0 || index >= offered.Count) return;
+                    chose(offered[index]);
+                });
+            }
+            else
+            {
+                control = Ui.ChoiceButton(labels, opens, index => chose(offered[index]));
+            }
+            return Ui.SettingRow(question == SizeQuestion.Orientation ? PanelAddScreen.OrientationTitle : PanelAddScreen.SizeTitle, control);
         }
 
         /// <summary>
@@ -336,7 +506,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private void ShowEdit(ScreenInstance screen)
         {
-            var name = BuildNameBox(screen.Name);
+            var name = Ui.Input(screen.Name, 240);
 
             // The size question is asked only where this build has another size to offer, which is the same
             // rule the add sheet follows; a kind that ships one package draws no row at all.
@@ -363,23 +533,23 @@ namespace OpenDashPlugin
             reinstall.MinWidth = ButtonMinWidth;
             reinstall.ToolTip = "Writes this screen's dashboard into SimHub again.";
             reinstall.Click += (sender, args) => ReinstallScreen(screen);
-            var reinstallRow = Ui.Row(
+            var reinstallRow = Ui.SettingRow(
                 PanelAddScreen.ReinstallTitle,
-                edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption,
-                reinstall);
+                reinstall,
+                edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption);
 
             var save = Ui.Button(PanelAddScreen.SaveButton, PanelButtonKind.Primary, PanelButtonSize.Large);
             save.MinWidth = ButtonMinWidth;
             save.ToolTip = "Applies the name and the size, and writes the dashboard.";
             save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);
-            var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
+            var cancel = Ui.Button(PanelAddScreen.CancelButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.ToolTip = "Goes back without changing anything.";
             cancel.Click += (sender, args) => CloseSheet();
 
-            var rows = new List<UIElement> { Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name) };
+            var rows = new List<UIElement> { Ui.SettingRow(PanelAddScreen.NameTitle, name, PanelAddScreen.NameCaption) };
             if (sizeRow != null) rows.Add(sizeRow);
             rows.Add(reinstallRow);
-            ShowSheet(PanelAddScreen.EditTitle + " " + screen.Name, Ui.VStack(0, rows.ToArray()), SheetFooter(PanelAddScreen.EditCaption, cancel, save));
+            ShowSheet(PanelAddScreen.EditTitle + " " + screen.Name, Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaption, cancel, save));
         }
 
         /// <summary>
@@ -536,11 +706,8 @@ namespace OpenDashPlugin
         /// </summary>
         private void ShowRemove(ScreenInstance screen)
         {
-            var bound = screen.IsFace || screen.IsPitWall || screen.IsCompanion
-                ? " Any button you bound to it stops working."
-                : string.Empty;
-            var remove = Ui.Button("Remove it", PanelButtonKind.Danger, PanelButtonSize.Large);
-            remove.ToolTip = "Removes the screen, its settings and its dashboard.";
+            var remove = Ui.Button(PanelScreens.RemoveItButton, PanelButtonKind.Danger, PanelButtonSize.Large);
+            remove.ToolTip = PanelScreens.RemoveTooltip;
             remove.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
@@ -549,13 +716,10 @@ namespace OpenDashPlugin
                 plugin.Installer.Refresh();
                 Select(PanelPage.Screens, null);
                 Redraw();
-                Say(result.Ok
-                        ? "Removed " + screen.Name + ". SimHub still lists its dashboard until you restart it."
-                        : "Removed " + screen.Name + ", but its dashboard could not be deleted: " + result.Error,
-                    result.Ok);
+                Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name, result.Error), result.Ok);
             };
-            var keep = Ui.Button("Keep it", PanelButtonKind.Ghost, PanelButtonSize.Large);
-            keep.ToolTip = "Leaves this screen alone.";
+            var keep = Ui.Button(PanelScreens.KeepButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
+            keep.ToolTip = PanelScreens.KeepTooltip;
             // The answer to the question the line over the cards asks of a migrated screen, as much as Remove
             // it is, so it keeps the screen as well as going back.
             keep.Click += (sender, args) =>
@@ -563,7 +727,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 Redraw();
             };
-            ShowSheet("Remove " + screen.Name, Ui.Prose("Removes the screen, its dashboard and its settings." + bound, Theme.SizeBody),
+            ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(PanelScreens.HasActions(screen)), Theme.SizeBody),
                 SheetFooter(null, keep, remove));
         }
     }

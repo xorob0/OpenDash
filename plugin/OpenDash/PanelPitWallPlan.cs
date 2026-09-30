@@ -1,5 +1,5 @@
-// PanelPitWallPlan.cs: the picture of the three pit wall pages the Rig tab configures a screen on, the
-// words that go under it, and the companion grid beside it, as numbers.
+// PanelPitWallPlan.cs: the picture of the pit wall page the Screens page configures a screen on, the
+// words that go beside it, and the companion grid, as numbers.
 //
 // A pit wall's zones are letters, and a letter is a position: zone C is wherever the Tower page draws it.
 // The panel therefore says where each zone is twice, once as a miniature of every page and once as a
@@ -9,7 +9,11 @@
 // table below, so a rectangle that moves takes its sentence with it and PanelPitWallPlanTests fails when
 // it does not.
 //
-// Apart from SettingsControl.Panes.cs for the reason PanelFacePlan.cs is apart from it: the panel is WPF
+// Screens.dc.html draws one page at a time, the one "Page on screen" picks, at the wall's own 16 by 9 and
+// as wide as the column gives it; the table below is that page at 253 across, and Scaled draws it at any
+// other width.
+//
+// Apart from SettingsControl.Screens.PitWall.cs for the reason PanelFacePlan.cs is apart from it: the panel is WPF
 // and the net8.0 test project cannot compile a line of it, so the geometry lives where the tests can hold
 // it against the canvas. Pure: no WPF types.
 //
@@ -25,43 +29,42 @@ namespace OpenDashPlugin
     /// <summary>The three pit wall pages as rectangles, and the sentence each zone's row carries.</summary>
     public static class PanelPitWallPlan
     {
-        /// <summary>A page miniature, which is 1920 x 1080 at about 0.132. The pit wall is the one kind
-        /// whose picture is three pictures, so the scale is the canvas's own number rather than a width
-        /// divided by the face's, the way PanelFacePlan.PictureWidth is.</summary>
+        /// <summary>The design space the page table is written in: 1920 x 1080 at about 0.132. A picture at
+        /// another width is this scaled, never a rectangle near it.</summary>
         public const double ThumbWidth = 253;
 
         public const double ThumbHeight = 142;
 
-        /// <summary>Between one miniature and the next. Three of them and two gaps come to 797 with the
-        /// one pixel frame each carries, which is what has to fit the 896 a pane's body is given.</summary>
-        public const double ThumbGap = 16;
-
-        /// <summary>Every panel is drawn this far in from the miniature's edge, which is what leaves the
-        /// surface.inset ground showing around them rather than a page of pure ui.field.</summary>
+        /// <summary>Every panel is drawn this far in from the page's edge, which is what leaves the
+        /// surface.inset ground showing around them.</summary>
         public const double Inset = 4;
 
-        /// <summary>The page's name under its miniature: text.secondary at the caption size, not the
-        /// tracked label the miniature's own panels are drawn with.</summary>
-        public const double CaptionSize = Theme.SizeSmall;
+        /// <summary>The zone list beside the picture (the artboard's 300 px card), and the gap between them.</summary>
+        public const double ListWidth = 300;
 
-        public const double CaptionGap = 8;
+        public const double ListGap = 24;
 
-        /// <summary>Every control in the list is the same box: the four zones, the wide zone and the web
-        /// view address, at the full control height and so at the body size rather than the label size.
-        ///
-        /// It was 220, which is what the face pane's glance select takes. The wide zone names three of
-        /// its six pages by what the extra width buys, and "Lap history · delta to best" is longer than
-        /// anything the narrow list holds, so the box grew with the longest label rather than letting a
-        /// ComboBox ellipsise the half of the name that says which page it is.</summary>
-        public const double SelectWidth = 260;
+        /// <summary>The web view address box, as the artboard draws it.</summary>
+        public const double AddressWidth = 320;
 
-        public const double SelectHeight = Theme.ControlHeight;
+        /// <summary>The picture's height at a width: the wall's own 16 by 9.</summary>
+        public static double PictureHeight(double width)
+        {
+            return Math.Floor(width * 9 / 16);
+        }
 
-        public const double AddressWidth = SelectWidth;
-
-        /// <summary>What sits above each page's group of zone rows: the 18 the artboard's section column puts
-        /// between its blocks.</summary>
-        public const double GroupGap = 18;
+        /// <summary>A page's panels at a picture <paramref name="width"/> across, scaled from the table.</summary>
+        public static IReadOnlyList<Panel> Scaled(Page page, double width)
+        {
+            var panels = new List<Panel>();
+            if (page == null) return panels;
+            var k = width / ThumbWidth;
+            foreach (var panel in page.Panels)
+            {
+                panels.Add(new Panel(panel.Name, Math.Round(panel.X * k), Math.Round(panel.Y * k), Math.Floor(panel.Width * k), Math.Floor(panel.Height * k), panel.Configurable));
+            }
+            return panels;
+        }
 
         /// <summary>What an empty address box shows. A watermark and never a value: Contract.NormaliseUrl
         /// keeps only an absolute address, so a bare scheme stored in the setting is blanked on the first
@@ -233,15 +236,32 @@ namespace OpenDashPlugin
         }
     }
 
-    /// <summary>The companion's grid of modules, which has no picture and so no plan beyond three numbers.</summary>
+    /// <summary>The companion's grid of modules, which has no picture and so no plan beyond a few numbers.</summary>
     public static class PanelCompanionPlan
     {
-        /// <summary>Two columns of eleven and ten rather than three of seven: the name is a body line and
-        /// not a label, and three columns of it do not leave room for the toggle at the panel's width.</summary>
-        public const int ModuleColumns = 2;
+        /// <summary>Three columns of seven, as Screens.dc.html draws them: a checkbox beside each name, which
+        /// leaves the room a switch took.</summary>
+        public const int ModuleColumns = 3;
 
-        public const double ModuleRowGap = 12;
+        /// <summary>Between two modules, across and down: the artboard's 6.</summary>
+        public const double ModuleGap = 6;
 
-        public const double ModuleColumnGap = 40;
+        /// <summary>One module's row (.mod): 34 high, padded 10.</summary>
+        public const double ModuleHeight = 34;
+
+        public const double ModulePaddingX = 10;
+
+        /// <summary>The narrowest a column may be and still hold a name and "Not in iRacing" beside it.</summary>
+        public const double ModuleLeast = 200;
+
+        /// <summary>How many columns fit a grid <paramref name="width"/> across: three at most, one at least.</summary>
+        public static int ColumnsFor(double width)
+        {
+            for (var columns = ModuleColumns; columns > 1; columns--)
+            {
+                if (columns * ModuleLeast + (columns - 1) * ModuleGap <= width) return columns;
+            }
+            return 1;
+        }
     }
 }

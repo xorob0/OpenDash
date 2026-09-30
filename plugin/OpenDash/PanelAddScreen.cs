@@ -73,17 +73,10 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "Add a screen";
 
-        public const string TypeTitle = "Screen type";
-
-        public const string TypeCaption = null;
-
+        /// <summary>The edit sheet's rows for a screen already on the rig.</summary>
         public const string SizeTitle = "Screen size";
 
-        public const string SizeCaption = null;
-
         public const string OrientationTitle = "Orientation";
-
-        public const string OrientationCaption = null;
 
         public const string NameTitle = "Name";
 
@@ -151,15 +144,15 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Derived from the packages rather than written down, so a build carrying no pit wall does not
         /// offer a pit wall: the census is what is embedded, which is the rule the Install tab's rows
-        /// already follow. The order is PackageCatalogue's own -- faces, companions, pit walls, then the
-        /// card model -- because that is the order a rig is usually built in.
+        /// already follow. The order is AddScreen.dc.html's -- faces, pit walls, companions, then the round
+        /// screens -- which is the order a rig is usually built in.
         /// </remarks>
         public static IReadOnlyList<ScreenType> Types(IEnumerable<PackageEntry> catalogue)
         {
             var types = new List<ScreenType>();
             if (catalogue == null) return types;
             var entries = catalogue.Where(e => e != null).ToList();
-            foreach (var kind in new[] { Contract.KindFace, Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots })
+            foreach (var kind in new[] { Contract.KindFace, Contract.KindPitWall, Contract.KindCompanion, Contract.KindSlots })
             {
                 var of = entries.Where(e => string.Equals(e.Kind, kind, StringComparison.Ordinal)).ToList();
                 if (of.Count == 0) continue;
@@ -173,14 +166,14 @@ namespace OpenDashPlugin
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
             if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return KindName(kind);
-            return "Dash or wheel";
+            return "Dash face";
         }
 
         /// <summary>
         /// A kind's name where a screen already has one: the card's facts and the header under its name
         /// ("Round · 480 × 480"), as Screens.dc.html writes them. The Add sheet's tile says the same for the
-        /// three the sheet asks about in the same words, and asks about a face as "Dash or wheel", which is
-        /// the question rather than the name. Never the internal kind id: "Slots" is the settings model's.
+        /// three the sheet asks about in the same words, and calls a face a "Dash face", as AddScreen.dc.html
+        /// does. Never the internal kind id: "Slots" is the settings model's.
         /// </summary>
         public static string KindName(string kind)
         {
@@ -190,21 +183,67 @@ namespace OpenDashPlugin
             return "Face";
         }
 
+        /// <summary>The note under a kind's name on its tile: where a screen of that kind is found.</summary>
         public static string CaptionOf(string kind)
         {
-            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal))
-            {
-                return "A phone or tablet beside the wheel.";
-            }
-            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal))
-            {
-                return "A monitor for your engineer.";
-            }
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal))
-            {
-                return "Round faces on the older card layout.";
-            }
-            return "The main screen in front of the driver.";
+            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Phone or tablet";
+            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Monitor or TV";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Cards on a round screen";
+            return "Wheel or dash";
+        }
+
+        /// <summary>The greyed kind tile's note (#116).</summary>
+        public const string FlagsScreenCaption = "A second display for flags";
+
+        // --- The sheet's three steps and its foot -----------------------------------------------------
+
+        public const string KindStep = "Kind";
+
+        public const string SizeStep = "Size";
+
+        public const string NameStep = "Name";
+
+        /// <summary>The foot's heading: a noun, not "What happens next".</summary>
+        public const string NextStepsTitle = "Next steps";
+
+        /// <summary>The foot's step, built from the name in the box as it is typed: SimHub lists the dashboard
+        /// under it.</summary>
+        public static string NextStep(string name)
+        {
+            return "Restart SimHub, then assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
+        }
+
+        public const string AddTooltip = "Creates the screen and installs its dashboard.";
+
+        public const string CancelButton = "Cancel";
+
+        public const string CancelTooltip = "Goes back without adding anything.";
+
+        /// <summary>What the sheet says in a build carrying no dashboard at all.</summary>
+        public const string NothingToAdd = "This build ships no dashboards.";
+
+        /// <summary>The name the design gives a package, under its size on a tile ("Rim", "Nano"); null where
+        /// it gives none, and none for a pair asked as an orientation or a round screen, whose tiles already
+        /// say what they are.</summary>
+        public static string SizeHint(ScreenType type, PackageEntry entry)
+        {
+            if (entry == null || Question(type) == SizeQuestion.Orientation) return null;
+            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return null;
+            return PackageCatalogue.NameFor(entry.Folder);
+        }
+
+        /// <summary>The outline a size tile draws inside its 44 px band: AddScreen.dc.html's own formula, a
+        /// wide screen squeezed and a tall one stretched so both read as their shape at a glance, and a
+        /// round one a circle.</summary>
+        public static double[] TileShape(int width, int height)
+        {
+            if (width <= 0 || height <= 0) return new double[] { 40, 40 };
+            var w = width / 2.2;
+            var k = 40 / Math.Max(w, height);
+            var shapeWidth = Math.Min(Math.Round(w * k * 1.6), 96);
+            var shapeHeight = Math.Max(Math.Min(Math.Round(height * k * 0.9), 40), 12);
+            if (width == height) shapeWidth = shapeHeight = 36;
+            return new[] { shapeWidth, shapeHeight };
         }
 
         /// <summary>
@@ -265,8 +304,13 @@ namespace OpenDashPlugin
                 return index >= 0 && index < OrientationLabels.Length ? OrientationLabels[index] : entry.SizeLabel;
             }
             // The design's own caption where a package has one -- "480 round" reads as the product
-            // writes it -- and the pixels otherwise, which is what a driver measures their screen in.
+            // writes it -- and every round screen the same way; the pixels otherwise, which is what a
+            // driver measures their screen in.
             if (entry.SizeCaption != null) return entry.SizeCaption;
+            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal) && entry.Width > 0 && entry.Width == entry.Height)
+            {
+                return entry.Width + " round";
+            }
             return entry.Width > 0 ? entry.SizeLabel : entry.Folder ?? string.Empty;
         }
 

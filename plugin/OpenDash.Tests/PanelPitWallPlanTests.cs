@@ -34,31 +34,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { x, y, width, height }, new[] { panel.X, panel.Y, panel.Width, panel.Height });
         }
 
-        /// <summary>The miniature itself: 1920 x 1080 at about 0.132, drawn 4 in from every edge, with its
-        /// page's name under it at the caption size.</summary>
+        /// <summary>The page table's design space: 1920 x 1080 at about 0.132, drawn 4 in from every edge.</summary>
         [Fact]
-        public void A_miniature_is_the_size_the_canvas_draws()
+        public void The_table_is_the_pit_walls_own_sixteen_by_nine()
         {
             Assert.Equal(253, PanelPitWallPlan.ThumbWidth);
             Assert.Equal(142, PanelPitWallPlan.ThumbHeight);
-            Assert.Equal(16, PanelPitWallPlan.ThumbGap);
             Assert.Equal(4, PanelPitWallPlan.Inset);
-            Assert.Equal(8, PanelPitWallPlan.CaptionGap);
-            Assert.Equal(Theme.SizeSmall, PanelPitWallPlan.CaptionSize);
             Assert.Equal(0.132, Math.Round(PanelPitWallPlan.ThumbWidth / 1920, 3));
             // The height follows from the width rather than being a scale of its own, so that the
-            // miniature is the pit wall's own 16 by 9 and not a rectangle near it.
+            // picture is the pit wall's own 16 by 9 and not a rectangle near it.
             Assert.Equal(PanelPitWallPlan.ThumbHeight, Math.Floor(1080 * PanelPitWallPlan.ThumbWidth / 1920));
+            Assert.Equal(PanelPitWallPlan.ThumbHeight, PanelPitWallPlan.PictureHeight(PanelPitWallPlan.ThumbWidth));
+            Assert.Equal(Math.Floor(1080 * 448.0 / 1920), PanelPitWallPlan.PictureHeight(448));
         }
 
-        /// <summary>Three miniatures, their frames and the two gaps between them, against the 896 a pane's
-        /// body is given. The row grew by half when the miniatures did, so this is what says it still fits.</summary>
+        /// <summary>The page on screen is drawn as wide as its column: the table scaled, every panel inside
+        /// the picture and in the same place relative to the others.</summary>
         [Fact]
-        public void The_row_of_three_fits_the_body_of_a_pane()
+        public void A_page_is_the_table_scaled_to_the_width()
         {
-            var width = 3 * (PanelPitWallPlan.ThumbWidth + 2 * PanelMetrics.BorderWeight) + 2 * PanelPitWallPlan.ThumbGap;
-            Assert.Equal(797, width);
-            Assert.True(width <= 896, "the row of three is " + width + " wide and the body is 896");
+            foreach (var page in PanelPitWallPlan.Pages)
+            {
+                Assert.Equal(page.Panels.Select(p => p.X), PanelPitWallPlan.Scaled(page, PanelPitWallPlan.ThumbWidth).Select(p => p.X));
+                foreach (var width in new double[] { 300, 448, 772 })
+                {
+                    var scaled = PanelPitWallPlan.Scaled(page, width);
+                    Assert.Equal(page.Panels.Count, scaled.Count);
+                    foreach (var panel in scaled)
+                    {
+                        Assert.True(panel.X >= 0 && panel.Right <= width, page.Title + " " + panel.Name + " leaves the picture at " + width);
+                        Assert.True(panel.Y >= 0 && panel.Bottom <= PanelPitWallPlan.PictureHeight(width), page.Title + " " + panel.Name + " leaves the picture at " + width);
+                    }
+                }
+            }
+            Assert.Empty(PanelPitWallPlan.Scaled(null, 300));
+            // Beside the picture: the zone list's card, 24 away, as the artboard draws it.
+            Assert.Equal(300, PanelPitWallPlan.ListWidth);
+            Assert.Equal(24, PanelPitWallPlan.ListGap);
         }
 
         /// <summary>The three pages, in the order the picture draws them.</summary>
@@ -252,17 +265,11 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>The six controls of the list under the picture, at the size the canvas draws them,
-        /// save the width, which the longest wide-zone label decides.</summary>
+        /// <summary>The web view address box is the artboard's 320.</summary>
         [Fact]
-        public void The_zone_list_is_the_size_the_canvas_draws()
+        public void The_address_box_is_the_width_the_canvas_draws()
         {
-            Assert.Equal(260, PanelPitWallPlan.SelectWidth);
-            Assert.Equal(260, PanelPitWallPlan.AddressWidth);
-            Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);
-            Assert.Equal(32, PanelPitWallPlan.SelectHeight);
-            // Each page's group of zone rows, 18 below the one before.
-            Assert.Equal(18, PanelPitWallPlan.GroupGap);
+            Assert.Equal(320, PanelPitWallPlan.AddressWidth);
         }
 
         /// <summary>A watermark and not a value: what the empty box shows is exactly what
@@ -274,14 +281,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultWebViewUrl, Contract.NormaliseUrl(PanelPitWallPlan.AddressPlaceholder));
         }
 
-        /// <summary>The companion's grid: two columns, and the two gaps between its rows.</summary>
+        /// <summary>The companion's grid: three columns of seven where they fit (ruling 36), fewer where a
+        /// module and "Not in iRacing" beside it would not.</summary>
         [Fact]
-        public void The_companion_grid_is_two_columns()
+        public void The_companion_grid_is_three_columns_where_they_fit()
         {
-            Assert.Equal(2, PanelCompanionPlan.ModuleColumns);
-            Assert.Equal(12, PanelCompanionPlan.ModuleRowGap);
-            Assert.Equal(40, PanelCompanionPlan.ModuleColumnGap);
-            Assert.Equal(11, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(3, PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(7, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(6, PanelCompanionPlan.ModuleGap);
+            Assert.Equal(34, PanelCompanionPlan.ModuleHeight);
+            Assert.Equal(10, PanelCompanionPlan.ModulePaddingX);
+            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(PanelShell.ContentMax));
+            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(612));
+            Assert.Equal(2, PanelCompanionPlan.ColumnsFor(611));
+            Assert.Equal(2, PanelCompanionPlan.ColumnsFor(406));
+            Assert.Equal(1, PanelCompanionPlan.ColumnsFor(405));
+            Assert.Equal(1, PanelCompanionPlan.ColumnsFor(0));
         }
 
         /// <summary>A companion's section binds one action of OpenDash's, the held glance: its paging is

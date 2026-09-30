@@ -1,90 +1,124 @@
-// PanelFacePlan.cs: the picture of a face the Rig tab configures a screen on, as numbers.
+// PanelFacePlan.cs: the picture of a face the Screens page configures a screen on, as numbers.
 //
 // A screen is configured on a picture of itself, because "zone C" means nothing until you see where
-// zone C is. The picture is the face's own rectangles scaled to the width the panel gives it, which is
+// zone C is. The picture is the face's own rectangles scaled to the width the page gives it, which is
 // what stops one face's proportions being drawn for every face; before this class the four rows were
 // four constants, so a 1920 x 480 face whose rows are 48, 56, 314 and 60 was drawn 19, 24, 150 and 26.
 //
-// Apart from SettingsControl.Panes.cs for the reason PanelMetrics.cs is apart from Widgets.cs: the panel
-// is WPF and the net8.0 test project cannot compile a line of it, so the geometry lives where
-// PanelFacePlanTests can hold it against the canvas. Pure: no WPF types.
+// Screens.dc.html draws the picture as a strip of twenty rev segments, the info bar, the three zones and
+// band D, each of them a press that opens what it shows in the aside beside it, 5 apart inside an 8 px
+// inset. Apart from SettingsControl.Screens.Face.cs for the reason PanelMetrics.cs is apart from
+// Widgets.cs: the panel is WPF and the net8.0 test project cannot compile a line of it, so the geometry
+// lives where PanelFacePlanTests can hold it against the canvas. Pure: no WPF types.
 using System;
 using System.Collections.Generic;
 
 namespace OpenDashPlugin
 {
-    /// <summary>The rows and the cells of one face's picture, at the width the panel draws it.</summary>
+    /// <summary>The rows and the cells of one face's picture, at the width the page draws it.</summary>
     public sealed class PanelFacePlan
     {
-        /// <summary>The width every face is drawn at, which is the canvas's own number inside the 896 px
-        /// the body of a pane is given.</summary>
+        /// <summary>The width a face is drawn at when nothing says otherwise: the canvas's own number inside
+        /// the 896 px the body of a pane used to be given.</summary>
         public const double PictureWidth = 844;
 
-        /// <summary>The one pixel of ui.rule between two rows of the picture, and between two cells.</summary>
-        public const double Seam = 1;
+        /// <summary>The gap between two rows of the picture, and between two cells: the artboard's 5.</summary>
+        public const double Seam = 5;
 
-        // The least a row can be and still hold what it draws. A row of the picture is a strip of
-        // controls rather than a band of pixels, so where a face's own rectangle scales to less than its
-        // controls need, the row keeps the controls and stops being to scale. At 1920 x 480 this is what
-        // draws the rev bar at 26 and band D at 30 where the face alone would give 21 and 26.
-        public const double RevBarLeast = 26;
+        /// <summary>The inset ground around the rows, and the rule around that: the artboard's 8 and 1.</summary>
+        public const double Inset = 8;
+
+        public const double Frame = 1;
+
+        // The least a row can be and still hold what it draws. A row of the picture is a press carrying
+        // words rather than a band of pixels, so where a face's own rectangle scales to less than its words
+        // need, the row keeps the words and stops being to scale.
+
+        /// <summary>The rev strip: the artboard's 16, a row of segments 3 in from its edges.</summary>
+        public const double RevBarLeast = 16;
+
+        /// <summary>The info bar: one line of 11 px words, the artboard's 26 less the border it lends.</summary>
         public const double BarLeast = Theme.ControlHeightSm;
-        public const double BandLeast = 30;
+
+        /// <summary>Band D: its letter, first page, count and button along one line, the artboard's 40 less
+        /// what the border and the padding share.</summary>
+        public const double BandLeast = 36;
 
         /// <summary>
-        /// The least a zone cell can be: its padding above and below, its letter, and the two controls
-        /// under it nine apart.
+        /// The least a zone cell can be: its padding above and below, the letter and count, the first page
+        /// and the button line under it, six apart.
         /// </summary>
         /// <remarks>
-        /// The tightest box on the panel, which is why it is written down rather than left to come out
-        /// of the arithmetic. The reference face scales to exactly this, so the floor binds on no face
-        /// that ships today and is here for the one that does not fit tomorrow.
+        /// 9 + 18 + 6 + 19 + 6 + 16 + 9, rounded up: the tightest box on the page. The reference face scales
+        /// past it at every width a picture is drawn at beside the aside, so it binds only on a narrow page.
         /// </remarks>
-        public const double CellLeast = 138;
+        public const double CellLeast = 84;
 
-        // The controls inside the picture. Canvas geometry the token file does not carry; docs/design/plugin.md
-        // records which of these are owed as tokens, in the way PanelMetrics.cs records its own.
+        /// <summary>A cell is padded 9 above and below and 10 at the sides (the artboard's .zone).</summary>
+        public const double CellPaddingX = 10;
 
-        /// <summary>A zone cell is padded 8 above and below and 7 at the sides, which is what makes zone B's
-        /// select 324 wide inside a cell of 338.</summary>
-        public const double CellPaddingX = 7;
+        public const double CellPaddingY = 9;
 
-        public const double CellPaddingY = 8;
+        /// <summary>Between the letter row, the first page and the button line.</summary>
+        public const double CellGap = 6;
 
-        /// <summary>Between the letter, the page select and the count, and between the class filter and
-        /// the control above it.</summary>
-        /// <summary>The room a switch is given in a zone cell. SimHub's SHToggleButton renders wider than
-        /// it measures, so the label beside one needs a floor under the switch's width rather than the
-        /// gap alone; 46 is the knob and its track with the gap clear of both.</summary>
-        public const double SwitchWidth = 46;
+        /// <summary>A zone's letter, in the display family (.num at 18); band D's at 16.</summary>
+        public const double LetterSize = 18;
 
-        public const double CellGap = 9;
+        public const double BandLetterSize = 16;
 
-        /// <summary>The two ends of the bar, which are not the same width: the right end carries a class
-        /// position beside a position and needs the room.</summary>
-        public const double BarEndLeftWidth = 132;
+        /// <summary>The count beside a letter ("4 of 21"), the first page under it, and the button line.</summary>
+        public const double CountSize = 13;
 
-        public const double BarEndRightWidth = 146;
+        public const double PageSize = 15;
 
-        /// <summary>Band D lays its controls along the row rather than stacking them, so it carries a gap
-        /// of its own and a select narrower than the band is wide.</summary>
-        public const double BandGap = 10;
+        public const double BandPageSize = 14;
 
-        public const double BandSelectWidth = 150;
+        public const double ButtonLineSize = 12;
 
-        /// <summary>The count of a cycle is a tracked label rather than a value: eleven, in text.label,
-        /// under a chevron of twelve rather than the sixteen every other icon is drawn at.</summary>
-        public const double CountCaptionSize = 11;
+        /// <summary>The info bar's words: the artboard's 11, in text.secondary, the middle in text.label.</summary>
+        public const double BarTextSize = 11;
 
-        public const double CountChevronSize = 12;
+        /// <summary>A selected cell or bar is outlined 2 in the accent, the others 1 in the rule.</summary>
+        public const double SelectedEdge = 2;
 
-        /// <summary>The glance is one choice and not two, so it is one select. (Its binder moved to
-        /// Shortcuts with #503, and the gap it sat at went with it.)</summary>
-        public const double GlanceSelectWidth = 200;
+        /// <summary>The aside beside the picture (the Info bar or the selected zone), and the gap between
+        /// them, when the page has two columns; under the picture otherwise.</summary>
+        public const double AsideWidth = 316;
 
-        private PanelFacePlan(Contract.FaceSize face)
+        public const double AsideGap = 24;
+
+        /// <summary>The width the picture is drawn at on a page <paramref name="content"/> wide: beside the
+        /// aside in two columns, the whole width stacked.</summary>
+        public static double PictureWidthFor(double content, bool twoColumns)
         {
-            var scale = PictureWidth / face.Width;
+            return Math.Max(0, twoColumns ? content - AsideWidth - AsideGap : content);
+        }
+
+        /// <summary>The rev strip's segments: twenty, 3 apart, inside 3 by 5 of padding.</summary>
+        public const int RevSegments = 20;
+
+        public const double RevGap = 3;
+
+        /// <summary>Nine green, five amber, two red and four unlit, as the artboard draws a mid-range shift.</summary>
+        public static string[] RevColours(bool on)
+        {
+            var colours = new string[RevSegments];
+            for (var i = 0; i < RevSegments; i++)
+            {
+                colours[i] = !on ? Theme.SurfaceRaised
+                    : i < 9 ? Theme.ShiftStage1
+                    : i < 14 ? Theme.ShiftStage2
+                    : i < 16 ? Theme.ShiftStage3
+                    : Theme.SurfaceRaised;
+            }
+            return colours;
+        }
+
+        private PanelFacePlan(Contract.FaceSize face, double width)
+        {
+            Width = width;
+            var scale = width / face.Width;
             Stacked = face.Body == Contract.FaceBody.Column;
             HasBar = face.HasBar;
             RevBar = Row(face.RevBarHeight, scale, RevBarLeast);
@@ -93,14 +127,30 @@ namespace OpenDashPlugin
             Body = Row(face.BodyHeight, scale, Stacked ? cells * CellLeast + (cells - 1) * Seam : CellLeast);
             Band = Row(face.BandHeight, scale, BandLeast);
             Letters = face.BodyOrder;
-            Cells = Split(Stacked ? Body : PictureWidth, face.Parts);
+            Cells = Split(Stacked ? Body : width, face.Parts);
         }
 
-        /// <summary>The picture of one face.</summary>
+        /// <summary>The picture of one face at <see cref="PictureWidth"/>.</summary>
         public static PanelFacePlan For(Contract.FaceSize face)
         {
-            return new PanelFacePlan(face);
+            return For(face, PictureWidth);
         }
+
+        /// <summary>The picture of one face with its rows <paramref name="width"/> across: the room the page
+        /// has for the picture, less the inset and the frame on both sides (see <see cref="RowsWidth"/>).</summary>
+        public static PanelFacePlan For(Contract.FaceSize face, double width)
+        {
+            return new PanelFacePlan(face, Math.Max(1, Math.Floor(width)));
+        }
+
+        /// <summary>The width the rows take inside a picture <paramref name="outer"/> wide.</summary>
+        public static double RowsWidth(double outer)
+        {
+            return outer - 2 * (Inset + Frame);
+        }
+
+        /// <summary>The width the rows are drawn across.</summary>
+        public double Width { get; private set; }
 
         /// <summary>Zone A over zone B over zone C, rather than side by side.</summary>
         public bool Stacked { get; private set; }
@@ -113,7 +163,7 @@ namespace OpenDashPlugin
         /// <summary>Zero where the face has no bar, in which case the row is not drawn at all.</summary>
         public double Bar { get; private set; }
 
-        /// <summary>The whole region the three zones share, the seams between them included.</summary>
+        /// <summary>The whole region the three zones share, the gaps between them included.</summary>
         public double Body { get; private set; }
 
         public double Band { get; private set; }
@@ -125,16 +175,11 @@ namespace OpenDashPlugin
         /// heights down a portrait one.</summary>
         public double[] Cells { get; private set; }
 
-        /// <summary>The whole picture, seams included, which is what a pane has to find room for.</summary>
+        /// <summary>The rows and the gaps between them, which is what a page has to find room for inside the
+        /// inset.</summary>
         public double Height
         {
             get { return RevBar + Seam + (HasBar ? Bar + Seam : 0) + Body + Seam + Band; }
-        }
-
-        /// <summary>What a control inside a cell is given, which is the cell less its side padding.</summary>
-        public static double Inner(double cell)
-        {
-            return cell - 2 * CellPaddingX;
         }
 
         /// <summary>"Zone B", and "Band D" for the zone that is drawn as a band. Presentation only: the
@@ -175,8 +220,7 @@ namespace OpenDashPlugin
             return values.ToArray();
         }
 
-        /// <summary>"Zone C · Track": one control names the zone and the page together, because a glance
-        /// is one choice and the two halves of it mean nothing apart.</summary>
+        /// <summary>"Zone C · Track": the zone and the page together, as a glance is one choice.</summary>
         public static string GlanceLabel(int value)
         {
             var glance = Contract.NormaliseQuickGlance(value);
@@ -196,8 +240,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Every cell but the last is rounded and the last takes what is left, so that the cells and
-        /// their seams add up to the span exactly rather than leaving a pixel of rule showing at the end
-        /// of the row. At 1920 x 480 that is 338, 167 and 337.
+        /// the gaps between them add up to the span exactly rather than leaving a sliver of ground showing
+        /// at the end of the row.
         /// </remarks>
         private static double[] Split(double span, int[] parts)
         {
