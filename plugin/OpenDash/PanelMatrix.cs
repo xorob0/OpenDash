@@ -599,6 +599,26 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The chips a matrix offers: every one, less the revs chip while the idle display rests dark. The revs
+        /// change only the gear, so on a dark matrix that chip would press and draw the same dark frame, named
+        /// the same, as the idle display's; Shift colours, which it is there to show, is hidden then too. Every
+        /// chip when the settings are not known.
+        /// </summary>
+        public static IList<string> PreviewChips(MatrixOptions options)
+        {
+            var gear = options == null || ShowsGearRows(options.Rest);
+            return PreviewScenarios.Where(id => gear || id != RevsScenario).ToList();
+        }
+
+        /// <summary>The chip the preview draws for a matrix: the one held for the session when that matrix
+        /// offers it (<see cref="PreviewChips"/>), else the idle display. A held revs chip comes back when the
+        /// idle display rests on the gear again.</summary>
+        public static string PreviewScenario(string held, MatrixOptions options)
+        {
+            return held != null && PreviewChips(options).Contains(held) ? held : IdleScenario;
+        }
+
+        /// <summary>
         /// A matrix's settings as its picture reads them, the families included: a family switched off
         /// leaves the matrix at its idle display under that chip, which is what the matrix would do.
         /// </summary>

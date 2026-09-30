@@ -355,7 +355,7 @@ namespace OpenDashPlugin
             all.FontSize = Theme.SizeSmall;
             all.Height = double.NaN;
             all.HorizontalAlignment = HorizontalAlignment.Left;
-            all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario));
+            all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)));
             // New in this release (the Map's "Live 8×8 preview", ruling 7). The preview has no title to follow
             // and the frame's padding is narrower than the tag is tall, so the tag has the frame's own line,
             // over it and clear of the lamps, rather than following the link to Rig.
@@ -376,14 +376,17 @@ namespace OpenDashPlugin
             };
             drawChips = () =>
             {
-                var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario);
+                // The chips this matrix offers, read as they are drawn: a change to the idle display rebuilds
+                // the page, and with it the chips.
+                var offered = PanelMatrix.PreviewChips(PanelMatrix.OptionsFor(Settings, m));
+                var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m));
                 var focused = -1;
                 for (var i = 0; i < chips.Children.Count; i++)
                 {
                     if (chips.Children[i].IsKeyboardFocusWithin) focused = i;
                 }
                 chips.Children.Clear();
-                foreach (var id in PanelMatrix.PreviewScenarios)
+                foreach (var id in offered)
                 {
                     var chosen = id;
                     var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () =>
@@ -407,7 +410,8 @@ namespace OpenDashPlugin
         /// <summary>The scenario the preview draws under the chip it is on, as the matrix's settings leave it.</summary>
         private string MatrixDrawn(int matrix)
         {
-            return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario), PanelMatrix.OptionsFor(Settings, matrix), Settings.MatrixCriticalOnly(matrix));
+            var options = PanelMatrix.OptionsFor(Settings, matrix);
+            return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options, Settings.MatrixCriticalOnly(matrix));
         }
 
         /// <summary>Puts a fresh frame's lamps into a picture already on the page, so what re-dims it through

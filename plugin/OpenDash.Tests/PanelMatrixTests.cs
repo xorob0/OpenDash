@@ -416,7 +416,7 @@ namespace OpenDashPlugin.Tests
                 "cancel.Click += (sender, args) => CloseSheet();",
                 // The links.
                 "thresholds.Click += (sender, args) => Go(PanelMatrix.ThresholdsRoute);",
-                "all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario));",
+                "all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)));",
                 // Which idle-display rows show, and the switches that change which do.
                 "if (PanelMatrix.ShowsGearRows(rest))",
                 "if (PanelMatrix.ShowsCarShiftPoints(rest, bands))",
@@ -432,8 +432,8 @@ namespace OpenDashPlugin.Tests
                 // The cards: which matrix the page opens on, a card never claiming what nothing read, and the
                 // empty state only on an empty rig.
                 "var device = MatrixLayer(Ui.Soon( MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.SimHubDevice));",
-                "foreach (var id in PanelMatrix.PreviewScenarios) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
-                "var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario);",
+                "foreach (var id in offered) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
+                "var offered = PanelMatrix.PreviewChips(PanelMatrix.OptionsFor(Settings, m)); var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m));",
                 "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
                 "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
@@ -892,6 +892,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(null));
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(PanelEmulation.Oil));
             Assert.Equal(PanelEmulation.Yellow, PanelMatrix.PreviewScenario(PanelEmulation.Yellow));
+            // The revs chip only on a matrix that rests on the gear: on a dark one it would draw the idle
+            // display's dark frame under a second name. A held revs chip falls back to the idle display there,
+            // and comes back with the gear.
+            var restsOnGear = new MatrixOptions { Rest = "gear" };
+            var restsDark = new MatrixOptions { Rest = "dark" };
+            Assert.Equal(PanelMatrix.PreviewScenarios, PanelMatrix.PreviewChips(restsOnGear));
+            Assert.Equal(PanelMatrix.PreviewScenarios, PanelMatrix.PreviewChips(null));
+            Assert.Equal(PanelMatrix.PreviewScenarios.Where(id => id != PanelMatrix.RevsScenario), PanelMatrix.PreviewChips(restsDark));
+            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.PreviewScenario(PanelMatrix.RevsScenario, restsOnGear));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(PanelMatrix.RevsScenario, restsDark));
+            Assert.Equal(PanelEmulation.Yellow, PanelMatrix.PreviewScenario(PanelEmulation.Yellow, restsDark));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(PanelEmulation.Oil, restsOnGear));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(null, restsOnGear));
+            // The page reads the held chip through the matrix's own settings, never the list of every chip.
+            Assert.DoesNotContain("PanelMatrix.PreviewScenario(matrixPreviewScenario)", MatrixSource());
+            Assert.DoesNotContain("foreach (var id in PanelMatrix.PreviewScenarios)", MatrixSource());
             Assert.Equal("All devices at once", PanelMatrix.AllDevices);
             var bandsOn = new MatrixOptions { Rest = "gear", Bands = true };
             var bandsOff = new MatrixOptions { Rest = "gear", Bands = false };
@@ -994,13 +1010,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.IdleScenario, new MatrixOptions(), true));
 
             var source = MatrixSource();
-            Assert.Contains("PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario), PanelMatrix.OptionsFor(Settings, matrix), Settings.MatrixCriticalOnly(matrix))", source);
+            Assert.Contains("var options = PanelMatrix.OptionsFor(Settings, matrix); return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options, Settings.MatrixCriticalOnly(matrix));", FlatSource());
             Assert.Contains("Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint();", source);
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);", source);
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
-            Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario))", source);
+            Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)))", source);
             // The preview is named for what it draws, when it is built and on every repaint, on its frame: the
             // one element there that a screen reader is told about, as an image.
             var flatSource = FlatSource();
