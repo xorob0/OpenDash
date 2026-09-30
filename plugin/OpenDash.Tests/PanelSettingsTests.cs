@@ -358,6 +358,10 @@ namespace OpenDashPlugin.Tests
             // A greyed name wraps its tag under it rather than clipping it at the cell's edge.
             Assert.DoesNotContain("Ui.HStack(8, name, Ui.SoonTag(soon))", page);
             Assert.Contains("var line = new WrapPanel { Orientation = Orientation.Horizontal };", page);
+            // Every tick hovers #512, the columns' own ticket, on a greyed row as on a live one: the artboard
+            // titles every checkbox "Coming soon · #512".
+            Assert.Contains("SettingsAlertCell(grid, row, column++, SettingsCheck(on), PanelSoon.AlertDisplay, true);", page);
+            Assert.DoesNotContain("soon ?? PanelSoon.AlertDisplay", page);
         }
 
         /// <summary>The artboard's th width: the names take 30% of the table and the surface columns share the

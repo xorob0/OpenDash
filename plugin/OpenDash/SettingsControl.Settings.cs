@@ -581,8 +581,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One alert: its name (with its caption, or its Soon tag when it is greyed), what it warns at, where it
-        /// shows, and "Try", which opens Rig on its scenario. A greyed row is faded cell by cell with its own
-        /// ticket; on a live row only the surface cells are, with #512's.
+        /// shows, and "Try", which opens Rig on its scenario. Every surface cell is greyed with #512, the
+        /// columns' own ticket, on a greyed row too; a greyed row's other cells carry its own. Each cell is
+        /// wrapped once, so the fade is the artboard's 0.45 and never doubled.
         /// </summary>
         private void SettingsAlertRow(Grid grid, int row, SettingsAlert alert, FrameworkElement box, string caption, string temperature, bool surfaces, SoonItem soon, bool last = false)
         {
@@ -628,7 +629,7 @@ namespace OpenDashPlugin
 
             if (surfaces)
             {
-                foreach (var on in alert.Surfaces) SettingsAlertCell(grid, row, column++, SettingsCheck(on), soon ?? PanelSoon.AlertDisplay, true);
+                foreach (var on in alert.Surfaces) SettingsAlertCell(grid, row, column++, SettingsCheck(on), PanelSoon.AlertDisplay, true);
             }
 
             FrameworkElement tryIt = null;
