@@ -191,8 +191,13 @@ namespace OpenDashPlugin
         /// own aspect; a face taller than <see cref="FaceMaxHeight"/> is drawn narrower instead.</summary>
         public const double FaceWidth = 300;
         public const double FaceMaxHeight = 180;
+
+        /// <summary>The box a pit wall or a phone is fitted inside at its own aspect: the artboard's 1920 x 1080
+        /// pit wall fills it, and its portrait phone is 135 high.</summary>
         public const double PitWallWidth = 240;
         public const double PitWallHeight = 135;
+
+        /// <summary>A phone of no known size, drawn as the artboard's.</summary>
         public const double CompanionWidth = 76;
         public const double CompanionHeight = 135;
         public const double RoundSize = 110;
@@ -299,12 +304,15 @@ namespace OpenDashPlugin
             {
                 if (screen == null) continue;
                 var name = screen.Name ?? string.Empty;
-                if (screen.IsCompanion) tiles.Add(new RigTile(RigTileKind.Companion, screen.Namespace, name, 0, 0, CompanionWidth, CompanionHeight));
-                else if (screen.IsPitWall) tiles.Add(new RigTile(RigTileKind.PitWall, screen.Namespace, name, 0, 0, PitWallWidth, PitWallHeight));
+                double w, h;
+                if (screen.IsCompanion || screen.IsPitWall)
+                {
+                    SecondScreenTileSize(screen.IsCompanion, screen.Width, screen.Height, out w, out h);
+                    tiles.Add(new RigTile(screen.IsCompanion ? RigTileKind.Companion : RigTileKind.PitWall, screen.Namespace, name, 0, 0, w, h));
+                }
                 else if (screen.IsSlots) tiles.Add(new RigTile(RigTileKind.Round, screen.Namespace, name, 0, 0, RoundSize, RoundSize));
                 else
                 {
-                    double w, h;
                     FaceTileSize(screen.Width, screen.Height, out w, out h);
                     tiles.Add(new RigTile(RigTileKind.Face, screen.Namespace, name, 0, 0, w, h));
                 }
@@ -337,6 +345,37 @@ namespace OpenDashPlugin
             {
                 height = FaceMaxHeight;
                 width = Math.Floor(FaceMaxHeight * sw / sh);
+            }
+        }
+
+        /// <summary>
+        /// A pit wall's or a phone's tile: the screen's own aspect fitted inside <see cref="PitWallWidth"/> x
+        /// <see cref="PitWallHeight"/>, floored to the pixel, as the Screens page draws each at its own
+        /// proportions. A screen of no known size is drawn as the artboard's: a 240 x 135 pit wall, a 76 x 135
+        /// phone.
+        /// </summary>
+        /// <remarks>
+        /// The plugin embeds both orientations of each: the 850 x 480 phone, which is the default, and the
+        /// 480 x 850 one; the 1920 x 1080 pit wall and the 1080 x 1920 portrait one. A fixed size drew a
+        /// landscape phone as a portrait tile and a portrait pit wall as a landscape one.
+        /// </remarks>
+        public static void SecondScreenTileSize(bool companion, int screenWidth, int screenHeight, out double width, out double height)
+        {
+            if (screenWidth <= 0 || screenHeight <= 0)
+            {
+                width = companion ? CompanionWidth : PitWallWidth;
+                height = companion ? CompanionHeight : PitWallHeight;
+                return;
+            }
+            if (screenWidth * PitWallHeight >= screenHeight * PitWallWidth)
+            {
+                width = PitWallWidth;
+                height = Math.Floor(PitWallWidth * screenHeight / screenWidth);
+            }
+            else
+            {
+                height = PitWallHeight;
+                width = Math.Floor(PitWallHeight * screenWidth / screenHeight);
             }
         }
 
@@ -936,13 +975,31 @@ namespace OpenDashPlugin
         /// <summary>The fixed panels of a pit wall page by what they show; a zone is named for its page.</summary>
         public const string BoardLabel = "Leaderboard";
 
+        /// <summary>The portrait pit wall's one page, by the name its zones' settings carry
+        /// (Contract.PitWallZoneSlots' "Portrait"), which its band shows when no flag takes it.</summary>
+        public const string PortraitPage = "Portrait";
+
+        /// <summary>The portrait page under its header, as fractions: the board takes the first 800 of 1856
+        /// px, the session and lap-data row the next 112, and the four zones the rest, two by two.</summary>
+        public const double PortraitBoardShare = 0.43;
+        public const double PortraitZonesTop = 0.49;
+        public const double PortraitCellGap = 0.02;
+
+        /// <summary>Whether a pit wall is the portrait package, which has one page of its own rather than the
+        /// landscape three.</summary>
+        public static bool PitWallPortrait(ScreenInstance screen)
+        {
+            return screen != null && screen.Width > 0 && screen.Height > screen.Width;
+        }
+
         /// <summary>
         /// The panels of the page a pit wall is on, as fractions of the tile's body under its band: the board
         /// or the tower by name, each zone by the page it shows. The Race page is the artboard's Leaderboard,
-        /// Fuel and Tyres.
+        /// Fuel and Tyres; the portrait pit wall draws its one page, the board over zones A to D.
         /// </summary>
         public static IList<RigCell> PitWallCells(ScreenInstance screen)
         {
+            if (PitWallPortrait(screen)) return PortraitCells(screen);
             var index = Contract.NormalisePitWallPage(screen == null ? Contract.DefaultPitWallPage : screen.PitWallPage);
             var title = Contract.PitWallPageNames[index];
             var page = PanelPitWallPlan.Pages.First(p => p.Title == title);
@@ -953,14 +1010,7 @@ namespace OpenDashPlugin
             {
                 string text;
                 if (!panel.Configurable) text = panel.Name == "Board" ? BoardLabel : panel.Name;
-                else
-                {
-                    var key = title + panel.Name;
-                    var slot = Contract.PitWallZoneSlotByKey(key);
-                    var chosen = screen == null ? (slot == null ? 0 : slot.Fallback) : screen.ZonePage(key);
-                    var pages = slot != null && slot.Wide ? ZonePages.Wide : ZonePages.Standard;
-                    text = chosen >= 0 && chosen < pages.Count ? pages[chosen].Name : string.Empty;
-                }
+                else text = PitWallZoneName(screen, title + panel.Name);
                 cells.Add(new RigCell(text,
                     Fraction(panel.X - PanelPitWallPlan.Inset, spanX),
                     Fraction(panel.Y - PanelPitWallPlan.Inset, spanY),
@@ -970,15 +1020,43 @@ namespace OpenDashPlugin
             return cells;
         }
 
+        /// <summary>The portrait page: the board across the top, and zones A to D two by two under the session
+        /// row, upper left, upper right, lower left, lower right, as PanelPitWallPlan places them.</summary>
+        private static IList<RigCell> PortraitCells(ScreenInstance screen)
+        {
+            var half = (1 - PortraitCellGap) / 2;
+            var zoneHeight = (1 - PortraitZonesTop - PortraitCellGap) / 2;
+            var cells = new List<RigCell> { new RigCell(BoardLabel, 0, 0, 1, PortraitBoardShare) };
+            var letters = Contract.PitWallZoneLetters;
+            for (var i = 0; i < letters.Length; i++)
+            {
+                var x = i % 2 == 0 ? 0 : half + PortraitCellGap;
+                var y = PortraitZonesTop + (i < 2 ? 0 : zoneHeight + PortraitCellGap);
+                cells.Add(new RigCell(PitWallZoneName(screen, PortraitPage + letters[i]), x, y, half, zoneHeight));
+            }
+            return cells;
+        }
+
+        /// <summary>A pit wall zone by the page it shows: the screen's choice, or the slot's own opening page.</summary>
+        private static string PitWallZoneName(ScreenInstance screen, string key)
+        {
+            var slot = Contract.PitWallZoneSlotByKey(key);
+            var chosen = screen == null ? (slot == null ? 0 : slot.Fallback) : screen.ZonePage(key);
+            var pages = slot != null && slot.Wide ? ZonePages.Wide : ZonePages.Standard;
+            return chosen >= 0 && chosen < pages.Count ? pages[chosen].Name : string.Empty;
+        }
+
         private static double Fraction(double value, double span)
         {
             var f = value / span;
             return f < 0 ? 0 : f > 1 ? 1 : f;
         }
 
-        /// <summary>What a pit wall's band says when no scenario takes it: the page it is on.</summary>
+        /// <summary>What a pit wall's band says when no scenario takes it: the page it is on, which is
+        /// <see cref="PortraitPage"/> on the portrait pit wall.</summary>
         public static string PitWallBandIdle(ScreenInstance screen)
         {
+            if (PitWallPortrait(screen)) return PortraitPage;
             var index = Contract.NormalisePitWallPage(screen == null ? Contract.DefaultPitWallPage : screen.PitWallPage);
             return Contract.PitWallPageNames[index];
         }

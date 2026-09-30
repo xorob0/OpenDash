@@ -19,8 +19,8 @@ namespace OpenDashPlugin.Tests
             return new ScreenInstance { Kind = kind, Namespace = ns, Name = name, Width = width, Height = height };
         }
 
-        /// <summary>A rig like the artboard's: two faces, a pit wall, a phone, a round, two strips and two
-        /// matrices.</summary>
+        /// <summary>A rig like the artboard's: two faces, a pit wall, a portrait phone, a round, two strips and
+        /// two matrices.</summary>
         private static OpenDashSettings Rig()
         {
             var settings = new OpenDashSettings();
@@ -30,7 +30,7 @@ namespace OpenDashPlugin.Tests
                 Screen(Contract.KindFace, "MainDash", "Main dash", 1280, 480),
                 Screen(Contract.KindFace, "Rim", "Rim", 1280, 480),
                 Screen(Contract.KindPitWall, "PitWall", "Pit wall", 1920, 1080),
-                Screen(Contract.KindCompanion, "Companion", "Phone", 850, 480),
+                Screen(Contract.KindCompanion, "Companion", "Phone", 480, 850),
                 Screen(Contract.KindSlots, "Slots480x480", "Round", 480, 480),
             };
             settings.AddLedBar("0-15-0", "Dash brow", LedBar.ArduinoDevice);
@@ -137,6 +137,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { RigTileKind.Face, RigTileKind.Face, RigTileKind.PitWall, RigTileKind.Companion, RigTileKind.Round, RigTileKind.Strip, RigTileKind.Strip, RigTileKind.Matrix, RigTileKind.Matrix }, tiles.Select(t => t.Kind));
             // A 1280 x 480 face at 300 across, as the artboard's rim: 300 x 112.
             Assert.Equal(new[] { 300.0, 112 }, new[] { tiles[0].Width, tiles[0].Height });
+            // The 1920 x 1080 pit wall fills the 240 x 135 box; the 480 x 850 phone is 135 high.
             Assert.Equal(new[] { 240.0, 135 }, new[] { tiles[2].Width, tiles[2].Height });
             Assert.Equal(new[] { 76.0, 135 }, new[] { tiles[3].Width, tiles[3].Height });
             Assert.Equal(new[] { 110.0, 110 }, new[] { tiles[4].Width, tiles[4].Height });
@@ -168,6 +169,32 @@ namespace OpenDashPlugin.Tests
             // A screen of no known size is drawn as the artboard's 1280 x 480.
             PanelRigMap.FaceTileSize(0, 0, out w, out h);
             Assert.Equal(new[] { 300.0, 112 }, new[] { w, h });
+        }
+
+        [Fact]
+        public void A_pit_wall_and_a_phone_take_their_screens_own_aspect()
+        {
+            var settings = Rig();
+            settings.Rig = new List<ScreenInstance>
+            {
+                Screen(Contract.KindCompanion, "Companion", "Phone", 850, 480),
+                Screen(Contract.KindCompanion, "CompanionPortrait", "Phone portrait", 480, 850),
+                Screen(Contract.KindPitWall, "PitWall", "Pit wall", 1920, 1080),
+                Screen(Contract.KindPitWall, "PitWallPortrait", "Pit wall portrait", 1080, 1920),
+                Screen(Contract.KindCompanion, "Unknown", "Phone of no size", 0, 0),
+                Screen(Contract.KindPitWall, "UnknownWall", "Pit wall of no size", 0, 0),
+            };
+            var tiles = PanelRigMap.Tiles(settings).Take(6).ToList();
+            Assert.Equal(new[] { RigTileKind.Companion, RigTileKind.Companion, RigTileKind.PitWall, RigTileKind.PitWall, RigTileKind.Companion, RigTileKind.PitWall }, tiles.Select(t => t.Kind));
+            // The default phone is landscape, and drawn so; 850 x 480 is a hair taller than 16:9.
+            Assert.Equal(new[] { 239.0, 135 }, new[] { tiles[0].Width, tiles[0].Height });
+            Assert.True(tiles[0].Width > tiles[0].Height);
+            Assert.Equal(new[] { 76.0, 135 }, new[] { tiles[1].Width, tiles[1].Height });
+            Assert.Equal(new[] { 240.0, 135 }, new[] { tiles[2].Width, tiles[2].Height });
+            Assert.Equal(new[] { 75.0, 135 }, new[] { tiles[3].Width, tiles[3].Height });
+            // A screen of no known size is the artboard's.
+            Assert.Equal(new[] { 76.0, 135 }, new[] { tiles[4].Width, tiles[4].Height });
+            Assert.Equal(new[] { 240.0, 135 }, new[] { tiles[5].Width, tiles[5].Height });
         }
 
         [Fact]
@@ -621,6 +648,43 @@ namespace OpenDashPlugin.Tests
             wall.PitWallPage = 1;
             Assert.Equal(new[] { "Tower", ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
             Assert.Equal("Tower", PanelRigMap.PitWallBandIdle(wall));
+            Assert.False(PanelRigMap.PitWallPortrait(wall));
+        }
+
+        [Fact]
+        public void A_portrait_pit_wall_shows_its_own_page_rather_than_a_landscape_one()
+        {
+            var wall = Screen(Contract.KindPitWall, "PitWallPortrait", "Pit wall portrait", 1080, 1920);
+            // Its page is not one of the landscape three, whatever PitWallPage says.
+            wall.PitWallPage = 1;
+            Assert.True(PanelRigMap.PitWallPortrait(wall));
+            Assert.Equal("Portrait", PanelRigMap.PitWallBandIdle(wall));
+            Assert.DoesNotContain(PanelRigMap.PitWallBandIdle(wall), Contract.PitWallPageNames);
+            Assert.Contains(Contract.PitWallZoneSlots, s => s.Page == PanelRigMap.PortraitPage && !s.Landscape);
+
+            var cells = PanelRigMap.PitWallCells(wall);
+            var standard = ZonePages.Standard;
+            Assert.Equal(new[]
+            {
+                "Leaderboard",
+                standard[Contract.PitWallZoneSlotByKey("PortraitA").Fallback].Name,
+                standard[Contract.PitWallZoneSlotByKey("PortraitB").Fallback].Name,
+                standard[Contract.PitWallZoneSlotByKey("PortraitC").Fallback].Name,
+                standard[Contract.PitWallZoneSlotByKey("PortraitD").Fallback].Name,
+            }, cells.Select(c => c.Text));
+            // The board across the top, then A and B side by side, C and D under them.
+            Assert.Equal(new[] { 0.0, 0, 1 }, new[] { cells[0].X, cells[0].Y, cells[0].Width });
+            Assert.True(cells[1].Y > cells[0].Y + cells[0].Height);
+            Assert.Equal(cells[1].Y, cells[2].Y);
+            Assert.True(cells[2].X > cells[1].X + cells[1].Width);
+            Assert.Equal(cells[1].X, cells[3].X);
+            Assert.Equal(cells[2].X, cells[4].X);
+            Assert.True(cells[3].Y > cells[1].Y + cells[1].Height);
+            Assert.All(cells, c => Assert.True(c.X + c.Width <= 1 + 1e-9 && c.Y + c.Height <= 1 + 1e-9));
+
+            // Each zone named for the page chosen for it.
+            wall.SetZonePage("PortraitC", 5);
+            Assert.Equal(standard[5].Name, PanelRigMap.PitWallCells(wall)[3].Text);
         }
 
         [Fact]
