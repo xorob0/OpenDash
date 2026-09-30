@@ -13,6 +13,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Shapes;
 
 namespace OpenDashPlugin
@@ -112,6 +113,12 @@ namespace OpenDashPlugin
                 var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);
                 if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);
                 button.ToolTip = PanelMatrix.ProfileTooltip(state, matrixFailedFrom);
+                // The redraw puts the next state's press where this one was and gives it the keyboard's focus,
+                // so the second press of a double-click, or Enter held down, would install again: a second
+                // write to SimHub, and a message that says Reinstalled over the one that gave the select step.
+                // Only a fresh press counts.
+                button.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
+                button.PreviewKeyDown += (sender, args) => { if (args.Key == Key.Enter && args.IsRepeat) args.Handled = true; };
                 button.Click += (sender, args) =>
                 {
                     var from = PanelMatrix.PressedFrom(state, matrixFailedFrom);

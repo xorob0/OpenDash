@@ -238,6 +238,16 @@ namespace OpenDashPlugin.Tests
                 + "Redraw(); "
                 + "var said = PanelMatrix.InstallSaid(from, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList()); "
                 + "if (said != null) Say(said); };", flat);
+            // A repeat of the one press is ignored: the redraw puts the next state's press where it was, with the
+            // keyboard's focus, so a double-click's second press or a held Enter would install a second time.
+            foreach (var guard in new[]
+            {
+                "button.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };",
+                "button.PreviewKeyDown += (sender, args) => { if (args.Key == Key.Enter && args.IsRepeat) args.Handled = true; };",
+            })
+            {
+                Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(guard)));
+            }
             // The note is said inside that one message, never as a line of its own.
             Assert.DoesNotContain("Say(PanelMessage.Info(result.Note))", matrix);
             // SimHub is asked again whenever the shell asks what needs fixing (Go, Redraw, Check again and the
