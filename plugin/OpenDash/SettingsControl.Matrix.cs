@@ -213,7 +213,7 @@ namespace OpenDashPlugin
         private MatrixPreviewColumn BuildMatrixPreview(int matrix, Border cardPicture)
         {
             var m = matrix;
-            var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.PreviewScenario(matrixPreviewScenario), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
+            var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
             // New in this release (the Map's "Live 8×8 preview"): the tag sits in the frame's corner, since
@@ -247,9 +247,8 @@ namespace OpenDashPlugin
             Action drawChips = null;
             Action repaint = () =>
             {
-                var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario);
                 var options = PanelMatrix.OptionsFor(Settings, m);
-                MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Preview);
+                MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);
                 if (cardPicture != null) MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);
             };
             drawChips = () =>
@@ -280,6 +279,12 @@ namespace OpenDashPlugin
 
             var column = Ui.VStack(PanelMatrix.PreviewGap, frame, all, chips);
             return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);
+        }
+
+        /// <summary>The scenario the preview draws under the chip it is on, as the matrix's settings leave it.</summary>
+        private string MatrixDrawn(int matrix)
+        {
+            return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario), PanelMatrix.OptionsFor(Settings, matrix), Settings.MatrixCriticalOnly(matrix));
         }
 
         /// <summary>Puts a fresh frame's lamps into a picture already on the page, so what re-dims it through
@@ -316,7 +321,7 @@ namespace OpenDashPlugin
                 MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.FlagsTitle), PanelMatrix.FlagsTitle, null, null,
                     BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[i] = on; Save(); repaint(); })),
                 MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, PanelMatrix.CriticalFlagsOnlyCaption,
-                    BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); })));
+                    BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint(); })));
 
             var pit = MatrixLayer(
                 MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, PanelMatrix.PitLaneCaption, null,

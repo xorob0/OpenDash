@@ -321,12 +321,11 @@ namespace OpenDashPlugin
         // --- The preview -----------------------------------------------------------------------------
 
         /// <summary>
-        /// The scenario the idle display is drawn in, on the cards and under the preview's first chip: the
-        /// revs part way, so the gear is drawn in its first shift colour when Shift colours is on and in its
-        /// one colour when it is off, as the artboard's green and white 4. At the revs' idle the flag box
-        /// draws the gear at rest, which does not move with the switch.
+        /// The scenario the idle display is drawn in, on the cards and under the preview's first chip: the revs
+        /// at idle, which is the box at rest -- the gear in its one white, whatever Shift colours says, as Home
+        /// draws the matrix and as the Rig page's "Idle" chip does, so one picture has one name.
         /// </summary>
-        public const string IdleScenario = PanelEmulation.Mid;
+        public const string IdleScenario = PanelEmulation.Idle;
 
         /// <summary>The preview's chips, in the artboard's order.</summary>
         public static readonly string[] PreviewScenarios =
@@ -366,6 +365,36 @@ namespace OpenDashPlugin
                 Spotter = settings.MatrixSpotter(matrix),
                 Warnings = settings.MatrixWarnings(matrix),
             };
+        }
+
+        /// <summary>
+        /// The scenario a chip is drawn in, which is the chip's own unless the matrix would not show it: a
+        /// family switched off, a car on the side the matrix is not mounted on, or, with Critical flags only on,
+        /// a flag that is news rather than a warning (the chequer, the white and the green). Each of those
+        /// leaves the matrix at its idle display, so it is drawn as the first chip draws it. The flag box's
+        /// catalogue is packages/dash/src/flags.ts ("critical"); docs/design/flag-box.md says what it drops.
+        /// </summary>
+        public static string DrawnScenario(string scenario, MatrixOptions options, bool criticalOnly)
+        {
+            if (scenario == null || scenario == IdleScenario) return IdleScenario;
+            if (criticalOnly && IsNewsFlag(scenario)) return IdleScenario;
+            // Whether anything but the idle display shows: the chip on a matrix that rests dark.
+            var dark = new MatrixOptions
+            {
+                Side = options == null ? Contract.FlagBoxSides[0] : options.Side,
+                Rest = "dark",
+                Flags = options == null || options.Flags,
+                Pit = options == null || options.Pit,
+                Spotter = options == null || options.Spotter,
+                Warnings = options == null || options.Warnings,
+            };
+            return PanelEmulation.GlyphFor(scenario, dark) == null ? IdleScenario : scenario;
+        }
+
+        /// <summary>The flags Critical flags only drops, among those the emulation draws.</summary>
+        public static bool IsNewsFlag(string scenario)
+        {
+            return scenario == PanelEmulation.Chequer || scenario == PanelEmulation.White || scenario == PanelEmulation.Green;
         }
 
         /// <summary>What the chips are, for a screen reader: the artboard's group.</summary>

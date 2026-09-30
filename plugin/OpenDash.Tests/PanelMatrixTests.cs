@@ -314,19 +314,28 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(new[] { "Idle display", "Yellow", "Blue", "Pit limiter", "Car left", "Low fuel", "Chequered" },
                 PanelMatrix.PreviewScenarios.Select(PanelMatrix.PreviewLabel));
-            Assert.Equal(PanelEmulation.Mid, PanelMatrix.IdleScenario);
+            // The box at rest: the gear in its one white whatever Shift colours says, as Home and Rig's Idle draw it.
+            Assert.Equal(PanelEmulation.Idle, PanelMatrix.IdleScenario);
+            Assert.Equal("Idle display", PanelMatrix.PreviewLabel(PanelMatrix.IdleScenario));
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(null));
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(PanelEmulation.Oil));
             Assert.Equal(PanelEmulation.Yellow, PanelMatrix.PreviewScenario(PanelEmulation.Yellow));
             Assert.Equal("All devices at once", PanelMatrix.AllDevices);
+            var bandsOn = new MatrixOptions { Rest = "gear", Bands = true };
+            var bandsOff = new MatrixOptions { Rest = "gear", Bands = false };
+            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOn));
+            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOff));
 
+            // Every setting reaches the picture, each from its own switch: every field is moved off its default.
             var settings = new OpenDashSettings();
             settings.Normalise();
             var slot = settings.AddMatrixPanel("Left pillar");
-            settings.FlagBoxFlags[slot - 1] = false;
-            settings.FlagBoxSide[slot - 1] = "left";
+            var i = slot - 1;
+            settings.FlagBoxFlags[i] = false;
+            settings.FlagBoxSide[i] = "left";
             settings.SetMatrixRest(slot, "gear");
-            settings.FlagBoxMatrixGearBands[slot - 1] = false;
+            settings.FlagBoxMatrixGearBands[i] = !settings.MatrixGearBands(slot);
+            settings.FlagBoxMatrixGearCarLadder[i] = !settings.MatrixGearCarLadder(slot);
             var options = PanelMatrix.OptionsFor(settings, slot);
             Assert.False(options.Flags);
             Assert.True(options.Pit);
@@ -334,10 +343,69 @@ namespace OpenDashPlugin.Tests
             Assert.True(options.Warnings);
             Assert.Equal("left", options.Side);
             Assert.Equal("gear", options.Rest);
-            Assert.False(options.Bands);
-            // A family switched off leaves the matrix at its idle display under that chip.
-            Assert.Equal(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, options), PanelEmulation.GlyphFor(PanelEmulation.Yellow, options));
-            Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, options), PanelEmulation.GlyphFor(PanelEmulation.LowFuel, options));
+            Assert.Equal(!Contract.DefaultFlagBoxGearBands, options.Bands);
+            Assert.Equal(!Contract.DefaultFlagBoxGearCarLadder, options.CarLadder);
+
+            // A family switched off leaves the matrix at its idle display under its chip, and only under its chip.
+            var chips = new Dictionary<string, string>
+            {
+                { "Flags", PanelEmulation.Yellow }, { "Pit", PanelEmulation.Limiter },
+                { "Spotter", PanelEmulation.CarLeft }, { "Warnings", PanelEmulation.LowFuel },
+            };
+            foreach (var family in chips.Keys)
+            {
+                var one = new OpenDashSettings();
+                one.Normalise();
+                var n = one.AddMatrixPanel("A");
+                one.SetMatrixRest(n, "gear");
+                if (family == "Flags") one.FlagBoxFlags[n - 1] = false;
+                if (family == "Pit") one.FlagBoxPit[n - 1] = false;
+                if (family == "Spotter") one.FlagBoxSpotter[n - 1] = false;
+                if (family == "Warnings") one.FlagBoxWarnings[n - 1] = false;
+                var read = PanelMatrix.OptionsFor(one, n);
+                Assert.Equal(family != "Flags", read.Flags);
+                Assert.Equal(family != "Pit", read.Pit);
+                Assert.Equal(family != "Spotter", read.Spotter);
+                Assert.Equal(family != "Warnings", read.Warnings);
+                foreach (var chip in chips)
+                {
+                    var drawn = PanelMatrix.DrawnScenario(chip.Value, read, false);
+                    if (chip.Key == family) Assert.Equal(PanelMatrix.IdleScenario, drawn);
+                    else Assert.Equal(chip.Value, drawn);
+                    var glyph = PanelEmulation.GlyphFor(drawn, read);
+                    if (chip.Key == family) Assert.Equal(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                    else Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                }
+            }
+            // A car on the side the matrix is not mounted on leaves it at rest too.
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "right" }, false));
+            Assert.Equal(PanelEmulation.CarLeft, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "left" }, false));
+
+            // Critical flags only drops the news, the chequer among the chips, and keeps the warnings.
+            Assert.Equal(PanelEmulation.Chequer, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), false));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), true));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.White, new MatrixOptions(), true));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Green, new MatrixOptions(), true));
+            foreach (var critical in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Red, PanelEmulation.Black })
+            {
+                Assert.Equal(critical, PanelMatrix.DrawnScenario(critical, new MatrixOptions(), true));
+                Assert.False(PanelMatrix.IsNewsFlag(critical));
+            }
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.IdleScenario, new MatrixOptions(), true));
+
+            var source = MatrixSource();
+            Assert.Contains("PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario), PanelMatrix.OptionsFor(Settings, matrix), Settings.MatrixCriticalOnly(matrix))", source);
+            Assert.Contains("Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint();", source);
+            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());", source);
+            Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);", source);
+            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
+            Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
+            Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario))", source);
+            foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
+                "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })
+            {
+                Assert.Contains(write, source);
+            }
 
             // The artboard's numbers.
             Assert.Equal(300, PanelMatrix.PreviewColumnWidth);
