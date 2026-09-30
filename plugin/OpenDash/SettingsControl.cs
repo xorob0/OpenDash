@@ -311,8 +311,15 @@ namespace OpenDashPlugin
         // once -- re-dimming a picture is a property set, and a page whose lighting is only a dimmed preview
         // uses this and nothing else -- and last rebuilds the page, a burst of presses once, only when the
         // build called DrawsLighting(), which is for a page that draws the night switch or a brightness
-        // itself (Home, Rig, Settings). A rebuild runs the whole build on SimHub's interface thread, so a page
-        // whose build asks SimHub anything (its devices, its profiles) must not call DrawsLighting().
+        // itself (Home, Rig, Settings). A rebuild runs the whole build on SimHub's interface thread while the
+        // driver may be on track, so a page whose build reads SimHub's devices, its profiles or the disk
+        // (LedTargets, StripInstaller, FlagBoxInstaller, PackageExtractor, SafePlan, BarCensus) must not call
+        // DrawsLighting(); reading settings, SimHub's own included (its units), is not that. A page that
+        // writes LightsNightMode, LightsBrightness or LightsNightBrightness calls ShowLightingChange() after
+        // Save -- never RefreshSidebar alone, which leaves the OnLighting repaints and the DrawsLighting
+        // rebuild undone (Home's slider kept its "Brightness" label and day value with night mode on) -- and a
+        // slider calls it when the drag ends rather than on every value, since the rebuild would take the
+        // slider from under the pointer.
         // Lifetime: OnDrop(action) lets go of what one build holds, on every rebuild and on Go;
         // OnLeave(key, action) undoes what the page started, on Go only, one action per key -- a rebuild
         // registering the same key again replaces the action rather than adding a second, so an undo runs
@@ -320,11 +327,14 @@ namespace OpenDashPlugin
         // second while showing; OnUpdate(checking, answered) hears the update check. Layout: PageLayout,
         // PageSection, ContentWidth (less the scroll bar), Narrow (the rail: the sidebar is icons) and
         // TwoColumns (the only test for laying two blocks side by side: the full sidebar and at least
-        // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit), all read while
+        // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit -- from 1000 to
+        // about 1080 px the sidebar is full and the content is 679 to 759 -- so a page lays blocks side by
+        // side only when TwoColumns is true and stacks them otherwise, never testing !Narrow), all read while
         // building -- the shell rebuilds the page when any of them moves, so anything a page has in flight
         // (a download, a press it is waiting on) lives in a field outside the build and the next build draws
         // it from there. WidePage(page) is the shell's list of pages that take the whole column rather than
-        // stop at PanelShell.ContentMax (Rig alone). Lines: Say. Sheets: ShowSheet(title, body, footer,
+        // stop at PanelShell.ContentMax (Rig alone: Rig is wide already, and there is no PanelShell.Wide).
+        // Lines: Say. Sheets: ShowSheet(title, body, footer,
         // closed), SheetFooter, CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
         // and every binding named through PanelBindings.TriggerLabel); issues, the answer RefreshAttention keeps,
@@ -352,11 +362,26 @@ namespace OpenDashPlugin
         //              PanelConfirmation.cs
         //   shared     PanelCopy.cs and PanelLights.cs hold words several pages draw. Neither has per-page
         //              regions: a page adds the constants it needs and changes only constants its own page
-        //              alone draws, never one another page reads.
+        //              alone draws, never one another page reads. PanelCopy.LightRow is the Updates page's
+        //              (the Matrix header draws PanelMatrix.ProfileRow); the empty states are the pages'
+        //              own (PanelScreens.NoScreens, PanelLeds.NoStrips, PanelMatrix.NoPanels).
         //   shell      everything else: SettingsControl.cs and its other partials (.Sidebar, .Sheet, .Status,
         //              .Live, .Messages, .Preview, .Bindings, .Profiles), Widgets*.cs, Segmented.cs,
         //              PanelShell.cs, PanelKit.cs, PanelNav.cs, PanelAttention.cs, PanelSearch.cs,
         //              PanelSoon.cs, PanelBindings.cs, PanelEmulation.cs and the rest of Panel*.cs.
+        // Frozen names inside page files: a page owns its words, but these members are read from a file its
+        // agent may not edit, so the page keeps each one's name and meaning and may change only what it says.
+        //   read by the shell: every page's Title, Search and SoonDrawn (PanelNav, PanelSearch, PanelAttention);
+        //     PanelSettings.NightModeTitle (Sidebar); PanelShortcuts.Title (Bindings); PanelAddScreen.Reinstalled,
+        //     ReinstallFailed and KindName (Profiles, PanelCopy); PanelLightRows.RowPlan, OutdatedBars and
+        //     FanatecSuffix (Profiles, PanelLights); PanelReorder.TargetIndex (Widgets.Kit); PanelRigMap.GridStep
+        //     (Widgets.Lights: DotGrid snaps to it) and RealHardwareTitle (PanelSoon); PanelLeds.StripUpdateRoute
+        //     (PanelAttention).
+        //   read by another page: PanelScreens.NoScreens and Title, PanelLeds.NoStrips, PanelMatrix.NoPanels,
+        //     PanelRigMap.Title, PanelSettings.BrightnessTitle, NightBrightnessTitle and NightModeTitle (Home,
+        //     Rig); PanelFacePlan.ZoneLabel and ZoneOrder, PanelShortcuts.QuickGlanceTitle (Shortcuts, Screens);
+        //     PanelDataTab.RevBarTitle, RevBarCaption, RevBarValues and RevBarLabels (Screens);
+        //     PanelLightRows.DotHex, FlagBoxCaption and ShapeLabel, PanelUpdates.AnchorLights (Matrix, LEDs).
         // A page's greyed rows and its search-label exemptions are its own: SoonDrawn and
         // SearchDrawnOtherwise in its Panel<Page>.cs. All pages share one partial class, so every member a
         // page adds for itself is private and carries its page's name as a prefix (ScreensTile,

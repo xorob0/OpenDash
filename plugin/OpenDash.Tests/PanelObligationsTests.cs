@@ -136,6 +136,32 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// Night mode set from the panel is shown the way a wheel press is: ShowLightingChange, which sets the
+        /// sidebar's switch, repaints what the build asked through OnLighting and rebuilds a page that draws
+        /// lighting. The Settings stub called RefreshSidebar alone, which left Home's slider on its day label
+        /// and the LEDs and Matrix pictures undimmed.
+        /// </summary>
+        [Fact]
+        public void Night_mode_set_from_the_panel_shows_as_a_wheel_press_does()
+        {
+            var writes = 0;
+            foreach (var path in RepoPaths.SettingsControlSources())
+            {
+                var code = RepoPaths.Code(path);
+                foreach (System.Text.RegularExpressions.Match write in System.Text.RegularExpressions.Regex.Matches(code, @"Settings\.LightsNightMode = on;"))
+                {
+                    writes++;
+                    var after = code.Substring(write.Index, Math.Min(160, code.Length - write.Index));
+                    Assert.True(after.Contains("ShowLightingChange();"), Path.GetFileName(path) + " sets night mode without ShowLightingChange");
+                }
+            }
+            Assert.True(writes >= 4, "Home, Rig, the sidebar and Settings each set night mode");
+            var settings = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
+            Assert.Contains("if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange();", settings);
+            Assert.Contains("if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange();", settings);
+        }
+
+        /// <summary>
         /// An undo a page registers while it is built runs once on Go, however many times the page was built
         /// in place since: OnLeave takes a key, and a key registered again replaces its action.
         /// </summary>

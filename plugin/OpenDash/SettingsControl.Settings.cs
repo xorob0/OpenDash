@@ -122,17 +122,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Brightness and night mode are the rig's rather than any one device's, so they sit here and
-        /// in the sidebar rather than inside the first device that happened to want them.</summary>
+        /// in the sidebar rather than inside the first device that happened to want them. Each write calls
+        /// ShowLightingChange, as the shell's hooks ask; a number box reports on every blur, so an unchanged
+        /// value is not a change, or each rebuild's commit of the focused box would schedule the next.</summary>
         private FrameworkElement BuildLightingSection()
         {
             return PageSection(PanelSettings.LightingTitle,
-                Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; Save(); })),
-                Ui.Row(PanelSettings.NightBrightnessTitle, PanelSettings.NightBrightnessCaption, BuildPercentBox(Settings.LightsNightBrightness, v => { Settings.LightsNightBrightness = v; Save(); })),
+                Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, BuildPercentBox(Settings.LightsBrightness, v => { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); })),
+                Ui.Row(PanelSettings.NightBrightnessTitle, PanelSettings.NightBrightnessCaption, BuildPercentBox(Settings.LightsNightBrightness, v => { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); })),
                 Ui.Row(PanelSettings.NightModeTitle, null, BuildToggle(Settings.LightsNightMode, on =>
                 {
                     Settings.LightsNightMode = on;
                     Save();
-                    RefreshSidebar();
+                    ShowLightingChange();
                 })));
         }
     }
