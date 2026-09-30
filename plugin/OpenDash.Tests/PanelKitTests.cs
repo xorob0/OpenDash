@@ -93,7 +93,7 @@ namespace OpenDashPlugin.Tests
             var tile = Factory("DashedAddCard");
             Assert.Contains("string detail = null", tile);
             Assert.Contains("PanelKit.AddTileDetailSize", tile);
-            var widgets = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.cs"));
+            var widgets = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.cs"));
             var start = widgets.IndexOf("private static ControlTemplate DashedCardTemplate()", StringComparison.Ordinal);
             var body = widgets.Substring(start, widgets.IndexOf("private static FrameworkElementFactory DashedFrame()", start, StringComparison.Ordinal) - start);
             Assert.Contains("template.Triggers.Add(DisabledFade());", body);
@@ -182,16 +182,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(40, PanelKit.SliderValueMinWidth);
         }
 
-        private static string Kit() => File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
+        /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
+        private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 
-        /// <summary>The body of one kit factory, from its signature to the next member's doc comment.</summary>
+        /// <summary>The body of one kit factory, from its signature to the next member declared beside it. The
+        /// next doc comment was the end until the comments were stripped, and without one a factory's body ran
+        /// to the end of the file, where every other factory's constants would have held its pins.</summary>
         private static string Factory(string name)
         {
             var kit = Kit();
             var start = Regex.Match(kit, @"public static \w+ " + name + @"\(");
             Assert.True(start.Success, name + " is a kit factory");
-            var next = kit.IndexOf("/// <summary>", start.Index, StringComparison.Ordinal);
-            return next < 0 ? kit.Substring(start.Index) : kit.Substring(start.Index, next - start.Index);
+            var next = Regex.Match(kit.Substring(start.Index + start.Length), @"\n {8}(?:public|private|internal|protected)\b");
+            Assert.True(next.Success, name + " is followed by another member");
+            return kit.Substring(start.Index, start.Length + next.Index);
         }
 
         [Theory]
@@ -240,7 +244,7 @@ namespace OpenDashPlugin.Tests
             var handlers = 0;
             foreach (var path in sources)
             {
-                var text = File.ReadAllText(path);
+                var text = RepoPaths.Code(path);
                 foreach (Match up in Regex.Matches(text, @"(\w+)\.MouseLeftButtonUp \+="))
                 {
                     handlers++;
@@ -261,11 +265,11 @@ namespace OpenDashPlugin.Tests
         public void A_segmented_option_and_the_dim_act_on_their_own_press_and_release()
         {
             var root = Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
-            var segmented = File.ReadAllText(Path.Combine(root, "Segmented.cs"));
+            var segmented = RepoPaths.Code(Path.Combine(root, "Segmented.cs"));
             Assert.Contains("box.MouseLeftButtonDown +=", segmented);
             Assert.Contains("box.CaptureMouse()", segmented);
             Assert.Contains("if (!box.IsMouseCaptured) return;", segmented);
-            var sheet = File.ReadAllText(Path.Combine(root, "SettingsControl.Sheet.cs"));
+            var sheet = RepoPaths.Code(Path.Combine(root, "SettingsControl.Sheet.cs"));
             Assert.DoesNotContain("dim.MouseLeftButtonDown += (sender, args) => CloseSheet();", sheet);
             Assert.Contains("dim.CaptureMouse()", sheet);
             Assert.Contains("if (!dim.IsMouseCaptured) return;", sheet);
