@@ -1,12 +1,12 @@
-// PanelLightRowsTests.cs: the rows the Install tab's Lights section draws, and the one thing about them
+// PanelLightRowsTests.cs: the census of the light profiles this build embeds, and the one thing about it
 // that is mirrored out of the dash build rather than read back from it.
 //
-// Two different jobs here. The first is the shape of the section: eight rows over a full build, in the
-// canvas's order, with the grouped ones counting their own members so that a length added to
-// packages/dash/src/leds/strip.ts cannot leave a caption saying "five" over six profiles. The second is
-// the device captions, which are the only thing PanelLightRows carries that no embedded artefact does --
-// a strip profile's JSON has a Name and nothing else we could caption from -- and which are therefore
-// held against strip.ts in both directions.
+// No page draws the census rows since the Install tab went (#503): the Updates page draws a row per strip
+// on the rig, which PanelUpdatesTests pins. What these tests hold is the census the frozen RowPlan and
+// OutdatedBars group by, and through it the embedded build against the generator: every shape a build
+// emits lands in exactly one group, the reversed twins included, and the device captions are held against
+// packages/dash/src/leds/strip.ts in both directions, since a strip profile's JSON has a Name and nothing
+// else a caption could be read from.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -272,49 +272,11 @@ namespace OpenDashPlugin.Tests
             // The whole reason a strip row has a tooltip of its own. FlagBoxInstallPlan.Summary offers the
             // copy in the OpenDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
             // that sentence over a strip row sends a driver looking for a file nothing ever created.
-            var strip = PanelLightRows.Tooltip(5, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
+            var strip = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).Tooltip;
             Assert.Equal(PanelLightRows.Unavailable, strip);
             Assert.DoesNotContain("OpenDash folder", strip, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("by hand", strip, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
-        }
-
-        /// <summary>
-        /// What a strip row says of the rig's strips, and the one press it can have.
-        /// </summary>
-        /// <remarks>
-        /// This replaces a test of the wording the rows had while they compared the embedded profiles
-        /// with SimHub, member by member and worst first: "at least one of these seven is not installed,
-        /// install them all". That wording described a press the rows lost when a strip became a bar, and
-        /// a reduction #457 replaces, so it is no longer true of anything the panel draws.
-        /// </remarks>
-        [Fact]
-        public void A_strip_tooltip_says_what_the_rigs_strips_hold_and_offers_only_the_press_the_row_has()
-        {
-            // No strip of the shape in SimHub: a strip is added on the LEDs page, and the row has no
-            // Install press to name, so it says where to go.
-            var one = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of this shape is in SimHub. Add one on the LEDs page.", one);
-            var group = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of these shapes is in SimHub. Add one on the LEDs page.", group);
-
-            // Current: the version it carries, and no warning, because there is no press to warn about.
-            var current = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.3.0", EmbeddedVersion = "0.3.0" });
-            Assert.Equal("Installed and up to date (0.3.0).", current);
-            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, current, StringComparison.Ordinal);
-            Assert.DoesNotContain("(", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }), StringComparison.Ordinal);
-
-            // Older: both versions, and the warning the flag box's Update carries, since the row's Update
-            // replaces the copy in SimHub by id and whatever was changed in it there goes with it.
-            var older = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, InstalledVersion = "0.3.0-rc.8", EmbeddedVersion = "0.3.0" });
-            Assert.Equal("A newer profile is available (0.3.0-rc.8 to 0.3.0). " + FlagBoxInstallPlan.Replaces, older);
-            // A strip installed before strips carried a version says the new one alone rather than
-            // inventing an old one.
-            var unstamped = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, EmbeddedVersion = "0.3.0" });
-            Assert.Equal("A newer profile is available (0.3.0). " + FlagBoxInstallPlan.Replaces, unstamped);
-
-            Assert.Equal(PanelLightRows.Unavailable, PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
-            Assert.Equal("Install failed. See SimHub's log.", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Failed }));
         }
 
         /// <summary>What a strip built by this checkout's VERSION says in its description.</summary>
@@ -592,8 +554,8 @@ namespace OpenDashPlugin.Tests
         public void The_rows_a_real_build_produces_are_the_rows_the_canvas_draws()
         {
             // The whole census end to end, off the files the plugin actually embeds: the file name gives
-            // the shape id and the profile's own Name gives the row its title, exactly as
-            // SettingsControl.Updates.Lights.cs reads them out of the assembly.
+            // the shape id and the profile's own Name gives the row its title, as FlagBoxProfile reads them
+            // out of the assembly. No page draws these rows; the test holds the build's 121 profiles.
             var built = BuiltProfiles();
             if (built == null)
             {
