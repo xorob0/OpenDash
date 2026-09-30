@@ -208,6 +208,13 @@ namespace OpenDashPlugin
 
         public const string SizeStep = "Size";
 
+        /// <summary>The second step's title: "Orientation" over a pair that is one screen either way up, as the
+        /// edit sheet asks it, and "Size" otherwise.</summary>
+        public static string SizeStepTitle(ScreenType type)
+        {
+            return Question(type) == SizeQuestion.Orientation ? OrientationTitle : SizeStep;
+        }
+
         public const string NameStep = "Name";
 
         /// <summary>The foot's heading: a noun, not "What happens next".</summary>

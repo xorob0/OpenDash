@@ -186,6 +186,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(of[Contract.KindPitWall]));
             // The round faces are two genuine sizes rather than one screen either way up.
             Assert.Equal(SizeQuestion.Size, PanelAddScreen.Question(of[Contract.KindSlots]));
+            // The Add sheet's second step is titled as the question is asked, as the edit sheet's row is.
+            Assert.Equal("Size", PanelAddScreen.SizeStepTitle(of[Contract.KindFace]));
+            Assert.Equal("Orientation", PanelAddScreen.SizeStepTitle(of[Contract.KindPitWall]));
+            Assert.Equal("Orientation", PanelAddScreen.SizeStepTitle(of[Contract.KindCompanion]));
 
             // And a build carrying one companion asks nothing at all about it.
             var one = PanelAddScreen.Types(Catalogue().Where(e => e.Folder != "OpenDash Companion portrait").ToList())

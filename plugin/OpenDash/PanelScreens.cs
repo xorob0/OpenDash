@@ -85,11 +85,14 @@ namespace OpenDashPlugin
         /// SimHub has not read it. One phrase for the one state, on the card and in the box.</summary>
         public const string RestartToLoad = "Restart SimHub to load it";
 
-        /// <summary>A card's state: the dashboard's folder is gone.</summary>
-        public const string Missing = "Missing";
+        /// <summary>A card's state, and the title of the fix box under it: the dashboard's folder is gone. One
+        /// phrase for the one state, as <see cref="RestartToLoad"/> is, and Home's "Rim's dashboard is missing
+        /// from SimHub" in fewer words.</summary>
+        public const string Missing = "Missing from SimHub";
 
-        /// <summary>The fix box under a screen whose dashboard is gone; its detail is PanelAttention.MissingDetail.</summary>
-        public const string MissingTitle = "This screen's dashboard is missing from SimHub";
+        /// <summary>The fix box under a screen whose dashboard is gone, titled as its card is; its detail is
+        /// PanelAttention.MissingDetail.</summary>
+        public const string MissingTitle = Missing;
 
         /// <summary>The hover of the fix box's PanelAttention.InstallAgain.</summary>
         public const string InstallAgainTooltip = "Puts this screen's dashboard back into SimHub.";
@@ -162,14 +165,14 @@ namespace OpenDashPlugin
         // --- The header's presses -----------------------------------------------------------------------
 
         public const string EditButton = "Edit";
-        public const string EditTooltip = "Change this screen's name or size, or install its dashboard again.";
+        public const string EditTooltip = "Changes this screen's name or size, or reinstalls its dashboard.";
         public const string DuplicateButton = "Duplicate";
 
         /// <summary>A screen's header press that copies it.</summary>
         public const string DuplicateTooltip = "Adds a second screen set up like this one.";
 
         public const string RemoveButton = "Remove";
-        public const string RemoveTooltip = "Removes this screen, its settings and its dashboard.";
+        public const string RemoveTooltip = "Removes this screen, its dashboard and its settings.";
 
         // --- The remove sheet ---------------------------------------------------------------------------
 
@@ -195,14 +198,17 @@ namespace OpenDashPlugin
         public const string KeepTooltip = "Leaves this screen alone.";
         public const string RemoveItButton = "Remove it";
 
+        /// <summary>After a remove: SimHub reads its list at startup, so the step left is named.</summary>
         public static string Removed(string name)
         {
-            return "Removed " + name + ". SimHub still lists its dashboard until you restart it.";
+            return "Removed " + name + ". Restart SimHub to take its dashboard off the list.";
         }
 
-        public static string RemoveFailed(string name, string error)
+        /// <summary>A remove whose folder stayed: "removed", as the sheet says, and the reason in the log, as
+        /// PanelAddScreen.DuplicateFailed points there.</summary>
+        public static string RemoveFailed(string name)
         {
-            return "Removed " + name + ", but its dashboard could not be deleted: " + error;
+            return "Removed " + name + ", but its dashboard could not be removed. See SimHub's log.";
         }
 
         // --- A face's rows ------------------------------------------------------------------------------
@@ -243,8 +249,9 @@ namespace OpenDashPlugin
         /// <summary>The bar's middle cell, which is fixed: the car's settings.</summary>
         public const string InfoBarMiddle = "Car settings";
 
-        /// <summary>Under a zone that no wheel button advances.</summary>
-        public const string NoButton = "No button";
+        /// <summary>Under a zone that no wheel button advances: the Next page chip's own words beside it, one
+        /// phrase for the one state rather than the artboard's "No button".</summary>
+        public const string NoButton = PanelBindings.NotBound;
 
         /// <summary>What the aside shows: the bar or zone last picked on this screen where the face has it, and
         /// the first zone of the picture otherwise.</summary>
@@ -330,7 +337,7 @@ namespace OpenDashPlugin
             return order.Skip(at).Concat(order.Take(at)).ToArray();
         }
 
-        /// <summary>The line under a zone of the picture: the button that advances it, "No button" when none
+        /// <summary>The line under a zone of the picture: the button that advances it, "Not bound" when none
         /// does, and nothing when SimHub's bindings cannot be read, which says nothing either way.</summary>
         public static string ZoneButtonLine(IList<string> triggers)
         {
@@ -343,7 +350,9 @@ namespace OpenDashPlugin
         public const string ShowAll = "Show all";
         public const string OnlyTicked = "Only ticked";
         public const string AllPages = "All";
+        public const string AllPagesTooltip = "Ticks every page.";
         public const string NoPages = "None";
+        public const string NoPagesTooltip = "Unticks every page but the first.";
         public const string DragHint = "Drag to reorder";
         public const string FirstTag = "First";
         public const string NotInIracing = "Not in iRacing";
@@ -441,6 +450,34 @@ namespace OpenDashPlugin
         public static bool ListsSoonModules(string letter)
         {
             return letter == "B" || letter == "C";
+        }
+
+        /// <summary>
+        /// The line under the face's rows when two zones, or a zone and the glance, open on the same page:
+        /// "Zone C and band D both show the relative.", one line per page, nothing when there is none.
+        /// </summary>
+        /// <remarks>
+        /// FacePageClash.Warning says "zone D"; this page, its picker and its aside say "Band D", so the line
+        /// names each zone as PanelFacePlan.ZoneLabel does.
+        /// </remarks>
+        public static string PageClash(FaceSettings settings)
+        {
+            var lines = FacePageClash.Find(settings).Select(clash =>
+            {
+                var parts = clash.Zones.Select(letter => Lower(PanelFacePlan.ZoneLabel(letter))).ToList();
+                if (clash.Glance) parts.Add("the quick glance");
+                var list = parts.Count == 2
+                    ? parts[0] + " and " + parts[1]
+                    : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[parts.Count - 1];
+                var verb = parts.Count == 2 ? " both show " : " all show ";
+                return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + FacePageClash.DisplayName(clash.PageName) + ".";
+            });
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string Lower(string words)
+        {
+            return string.IsNullOrEmpty(words) ? words : char.ToLowerInvariant(words[0]) + words.Substring(1);
         }
 
         // --- The quick glance ---------------------------------------------------------------------------
@@ -642,9 +679,11 @@ namespace OpenDashPlugin
         /// Revbar was never set, since ScreenRevBar falls back to the rig's while a screen's is null and a new
         /// face starts null. "Applies to every round face on your rig." let a driver turn off the main face's
         /// rev bar from the round pane unawares; ruling 38's "Every round screen and the phone's speedo." left
-        /// those faces out too.
+        /// those faces out too. The companion is named by its kind and its module by the module's name: "the
+        /// phone" named nothing on a rig whose companion is called Tablet, and only a face has a rev bar of
+        /// its own.
         /// </summary>
-        public const string RigRevBarCaption = "Every round screen, the phone's speedo, and any screen whose own rev bar you have not set.";
+        public const string RigRevBarCaption = "Every round screen, the companion's Speedo, and any face whose own rev bar you have not set.";
 
         // --- Anchors, search and the greyed rows ---------------------------------------------------------
 

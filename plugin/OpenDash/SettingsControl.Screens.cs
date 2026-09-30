@@ -384,6 +384,7 @@ namespace OpenDashPlugin
                 note.Text = PanelAddScreen.Note(entry, second);
                 note.Visibility = note.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             };
+            TextBlock sizeTitle = null;
             Action drawSizes = null;
             drawSizes = () =>
             {
@@ -413,6 +414,7 @@ namespace OpenDashPlugin
                     {
                         type = option;
                         entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+                        if (sizeTitle != null) sizeTitle.Text = PanelAddScreen.SizeStepTitle(type);
                         drawKinds();
                         drawSizes();
                         fillName();
@@ -440,12 +442,24 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => CloseSheet();
 
             var displays = Ui.Soon(BuildDashedLine(PanelSoon.YourDisplays.Title, Ui.SoonTag(PanelSoon.YourDisplays)), PanelSoon.YourDisplays);
+            var sizeStep = Ui.Step(2, PanelAddScreen.SizeStepTitle(type), Ui.VStack(8, displays, sizesHost));
+            // The step's title is the kit's text beside its number ring, and follows the kind: "Orientation"
+            // over a way round, as the edit sheet asks the same question, "Size" otherwise.
+            sizeTitle = ScreensStepTitle(sizeStep);
             var body = Ui.VStack(0,
                 Ui.Step(1, PanelAddScreen.KindStep, kindsHost, first: true),
-                Ui.Step(2, PanelAddScreen.SizeStep, Ui.VStack(8, displays, sizesHost)),
+                sizeStep,
                 Ui.Step(3, PanelAddScreen.NameStep, Ui.VStack(8, name, note)));
             var footer = Ui.VStack(14, Ui.Eyebrow(PanelAddScreen.NextStepsTitle), nextStep, SheetFooter(null, cancel, add));
             ShowSheet(PanelAddScreen.SectionTitle, body, footer);
+        }
+
+        /// <summary>The title of a step Ui.Step drew: the text beside its number ring.</summary>
+        private static TextBlock ScreensStepTitle(Border step)
+        {
+            var stack = step == null ? null : step.Child as Panel;
+            var head = stack == null || stack.Children.Count == 0 ? null : stack.Children[0] as Panel;
+            return head == null ? null : head.Children.OfType<TextBlock>().LastOrDefault();
         }
 
         /// <summary>A kind tile's words: its name at 15 SemiBold (and a Soon tag beside it when greyed), and
@@ -768,7 +782,8 @@ namespace OpenDashPlugin
                 plugin.Installer.Refresh();
                 Select(PanelPage.Screens, null);
                 Redraw();
-                Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name, result.Error), result.Ok);
+                if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);
+                Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);
             };
             var keep = Ui.Button(PanelScreens.KeepButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
             keep.ToolTip = PanelScreens.KeepTooltip;

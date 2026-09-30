@@ -246,8 +246,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && System.Array.IndexOf(entry.Keywords, "revbar") >= 0);
             // The round pane's Rev ring writes the rig-wide setting, and its caption names everything that
-            // follows it: the round screens, the phone's speedo, and a face that never set its own.
-            Assert.Equal("Every round screen, the phone's speedo, and any screen whose own rev bar you have not set.", PanelScreens.RigRevBarCaption);
+            // follows it: the round screens, the companion's Speedo, and a face that never set its own.
+            Assert.Equal("Every round screen, the companion's Speedo, and any face whose own rev bar you have not set.", PanelScreens.RigRevBarCaption);
+            Assert.Contains(Modules.All, module => module.Name == "Speedo");
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
             Assert.Contains("PanelScreens.RigRevBarCaption,", round);
             Assert.Contains("Settings.SetRevBar(value);", round);
@@ -268,13 +269,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, false));
             Assert.Equal("In SimHub", PanelScreens.StateLabel(ScreenState.InSimHub));
             Assert.Equal("Restart SimHub to load it", PanelScreens.StateLabel(ScreenState.Restart));
-            Assert.Equal("Missing", PanelScreens.StateLabel(ScreenState.Missing));
+            Assert.Equal("Missing from SimHub", PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
             Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
             Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));
             Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
             Assert.Equal("Then assign \"Rim\" to this display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
-            Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
+            // The fix box under each state is titled with the card's phrase.
+            Assert.Equal(PanelScreens.MissingTitle, PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
             Assert.Equal("Install it again", PanelAttention.InstallAgain);
             Assert.Equal("Puts this screen's dashboard back into SimHub.", PanelScreens.InstallAgainTooltip);
@@ -306,8 +308,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Duplicate", PanelScreens.DuplicateButton);
             Assert.Equal("Remove", PanelScreens.RemoveButton);
             Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
-            Assert.Equal("Change this screen's name or size, or install its dashboard again.", PanelScreens.EditTooltip);
-            Assert.Equal("Removes this screen, its settings and its dashboard.", PanelScreens.RemoveTooltip);
+            Assert.Equal("Changes this screen's name or size, or reinstalls its dashboard.", PanelScreens.EditTooltip);
+            Assert.Contains(PanelAddScreen.ReinstallButton.ToLowerInvariant(), PanelScreens.EditTooltip);
+            // The hover and the sheet list what goes in one order.
+            Assert.Equal("Removes this screen, its dashboard and its settings.", PanelScreens.RemoveTooltip);
             Assert.Equal("Leaves this screen alone.", PanelScreens.KeepTooltip);
             Assert.Equal("Remove Rim", PanelScreens.RemoveTitle("Rim"));
             Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.", PanelScreens.RemoveBody(true));
@@ -318,8 +322,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindSlots }));
             Assert.Equal("Keep it", PanelScreens.KeepButton);
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
-            Assert.Equal("Removed Rim. SimHub still lists its dashboard until you restart it.", PanelScreens.Removed("Rim"));
-            Assert.Equal("Removed Rim, but its dashboard could not be deleted: locked", PanelScreens.RemoveFailed("Rim", "locked"));
+            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard off the list.", PanelScreens.Removed("Rim"));
+            Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
         }
 
         /// <summary>A face's rows, in voice.md's words where the artboard's differ (findings 10 to 15).</summary>
@@ -391,7 +395,9 @@ namespace OpenDashPlugin.Tests
             settings.SetPageEnabled("A", 1, false);
             Assert.Equal((zoneA - 1) + " of " + zoneA, PanelScreens.ZoneCount(settings, "A"));
             Assert.Equal(string.Empty, PanelScreens.ZoneButtonLine(null));
-            Assert.Equal("No button", PanelScreens.ZoneButtonLine(new string[0]));
+            // The chip beside the aside's Next page says the same state in the same words.
+            Assert.Equal("Not bound", PanelScreens.ZoneButtonLine(new string[0]));
+            Assert.Equal(PanelBindings.NotBound, PanelScreens.NoButton);
             Assert.Equal(PanelBindings.ChipText(new[] { "Keyboard.F5" }), PanelScreens.ZoneButtonLine(new[] { "Keyboard.F5" }));
         }
 
@@ -441,6 +447,9 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.ListsSoonModules("A") || PanelScreens.ListsSoonModules("D"));
             Assert.Equal(new[] { "Show all", "Only ticked", "All", "None", "Drag to reorder", "First", "Not in iRacing", "My class only", "Next page", "Previous page" },
                 new[] { PanelScreens.ShowAll, PanelScreens.OnlyTicked, PanelScreens.AllPages, PanelScreens.NoPages, PanelScreens.DragHint, PanelScreens.FirstTag, PanelScreens.NotInIracing, PanelScreens.ClassOnlyTitle, PanelScreens.NextPageTitle, PanelScreens.PreviousPageTitle });
+            // All and None sit beside Show all, so each says what it does to the ticks.
+            Assert.Equal("Ticks every page.", PanelScreens.AllPagesTooltip);
+            Assert.Equal("Unticks every page but the first.", PanelScreens.NoPagesTooltip);
         }
 
         /// <summary>
@@ -532,6 +541,15 @@ namespace OpenDashPlugin.Tests
             var relative = Contract.QuickGlanceValue(1, FacePages.ZoneBC.First(p => p.Id == "relative").Number);
             Assert.Equal(Contract.QuickGlanceValue(3, 6), PanelScreens.GlanceWithZone(relative, 3));
             Assert.Equal(new[] { "Race A", "Race B", "Tower A", "Tower B", "Telemetry A", "Telemetry B", "Telemetry C" }, PanelScreens.PitWallGlanceZoneLabels());
+
+            // The clash line under the glance names band D as the picker above it does.
+            var face = new FaceSettings();
+            face.Normalise();
+            Assert.Equal(string.Empty, PanelScreens.PageClash(face));
+            face.SetStart("D", FacePages.BandD.First(p => p.Id == "relative").Number);
+            Assert.Equal("Zone C and band D both show the relative.", PanelScreens.PageClash(face));
+            face.QuickGlance = Contract.QuickGlanceValue(2, 14);
+            Assert.Equal("Zone C, band D and the quick glance all show the relative.", PanelScreens.PageClash(face));
         }
 
         /// <summary>Details name what a reader could type exactly: the name SimHub lists, the folder as stored,

@@ -106,7 +106,7 @@ namespace OpenDashPlugin
                 Ui.Anchor(Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption), PanelScreens.AnchorLapReview),
                 Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
             };
-            var clash = FacePageClash.Warning(screen.Face);
+            var clash = PanelScreens.PageClash(screen.Face);
             if (clash.Length > 0) rows.Add(BuildScreensWarning(clash));
             rows.Add(Ui.SoonRow(PanelSoon.RevFill));
             rows.Add(Ui.SoonRow(PanelSoon.SpotterAtRevBarEnds));
@@ -496,8 +496,8 @@ namespace OpenDashPlugin
                     screensShowAll = !screensShowAll;
                     redraw();
                 }),
-                ScreensLink("screens.all", PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true); settle(); }),
-                ScreensLink("screens.none", PanelScreens.NoPages, () => { PanelScreens.SetEveryPage(face, letter, false); settle(); }));
+                ScreensLink("screens.all", PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true); settle(); }, PanelScreens.AllPagesTooltip),
+                ScreensLink("screens.none", PanelScreens.NoPages, () => { PanelScreens.SetEveryPage(face, letter, false); settle(); }, PanelScreens.NoPagesTooltip));
             var hint = Ui.HStack(6, Ui.Text(PanelScreens.DragHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary), Ui.NewTag());
             var foot = ScreensAsideLine(links, hint);
 
@@ -586,11 +586,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A press drawn as a word in the accent, with nothing around it: Show all, All, None.</summary>
-        private static Button ScreensLink(string uid, string text, Action click)
+        private static Button ScreensLink(string uid, string text, Action click, string tooltip = null)
         {
             var button = new Button
             {
                 Uid = uid,
+                ToolTip = tooltip,
                 Content = Ui.Text(text, Theme.SizeSmall, FontWeights.Medium, Theme.Accent),
                 Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent,
