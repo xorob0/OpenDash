@@ -793,7 +793,17 @@ namespace OpenDashPlugin.Tests
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             var evaluate = Between(code, "private void ShortcutsEvaluate(", "banner.Children.Clear();");
             Assert.Contains("var focused = groups.SelectMany(group => group.Rows).FirstOrDefault(row => row.Shown.IsKeyboardFocusWithin);", evaluate);
-            Assert.Contains("if (focused != null && focused.Shown.Visibility != Visibility.Visible) ShortcutsKeepFocus(groups, focused, filter);", evaluate);
+            Assert.Matches(@"if \(focused != null && focused\.Shown\.Visibility != Visibility\.Visible\)\s*\{\s*ShortcutsKeepFocus\(groups, focused, filter\);\s*touch\.Row = null;", evaluate);
+            // SimHub takes the focus off the row before this runs (its picker's Closed focuses the main window,
+            // and a focused Clear leaves the tree), so the row last pressed or focused in stands for it while
+            // the focus is on nothing but a bare window.
+            Assert.Contains("if (focused == null && touch.Row != null && touch.Row.Shown.Visibility == Visibility.Visible && ShortcutsFocusOnNothing()) focused = touch.Row;", evaluate);
+            Assert.True(evaluate.IndexOf("focused = touch.Row;", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "the touched row is taken before the rows are hidden");
+            var nothing = Between(code, "private static bool ShortcutsFocusOnNothing(", "\n        }");
+            Assert.Contains("var at = Keyboard.FocusedElement;", nothing);
+            Assert.Contains("return at == null || at is Window;", nothing);
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
+            Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\.Where\(row => row\.Bindable\)\)\s*\{\s*var touched = row;\s*row\.Shown\.PreviewMouseDown \+= \(sender, args\) => touch\.Row = touched;\s*row\.Shown\.GotKeyboardFocus \+= \(sender, args\) => touch\.Row = touched;", page);
             Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
             var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
             Assert.Contains("row.Bindable && row.Shown.Visibility == Visibility.Visible", keep);
@@ -857,7 +867,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
             Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
-            Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);", code);
+            Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty, touch);", code);
             Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);
             Assert.Contains("            evaluate();\n", code.Replace("\r\n", "\n"));
             Assert.Contains("var line = ShortcutsClashLine(clash);", code);

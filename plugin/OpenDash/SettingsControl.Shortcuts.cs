@@ -68,6 +68,13 @@ namespace OpenDashPlugin
             public readonly List<ShortcutsRowState> Rows = new List<ShortcutsRowState>();
         }
 
+        /// <summary>The live row the driver last pressed or focused in, which a binding made or cleared there
+        /// can hide once SimHub has taken the focus off it.</summary>
+        private sealed class ShortcutsTouch
+        {
+            public ShortcutsRowState Row;
+        }
+
         /// <summary>How this build lays a row out: its binder beside the name and the press or under them, and
         /// the width of the slot SimHub's editor is given, the same in every row so their columns line up.</summary>
         private sealed class ShortcutsLayout
@@ -122,7 +129,14 @@ namespace OpenDashPlugin
             }, padding: PanelKit.SegmentedPaddingShortcuts);
             var header = BuildShortcutsHeader(filter);
 
-            evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);
+            var touch = new ShortcutsTouch();
+            foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Bindable))
+            {
+                var touched = row;
+                row.Shown.PreviewMouseDown += (sender, args) => touch.Row = touched;
+                row.Shown.GotKeyboardFocus += (sender, args) => touch.Row = touched;
+            }
+            evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty, touch);
 
             // An editor replaces its model when it loads and whenever a binding is made, so a burst of changes
             // is read once, after it.
@@ -546,7 +560,7 @@ namespace OpenDashPlugin
         /// the page is readable, what the filter shows, each count and each clash. When any live row cannot be
         /// read, the filter, the counts and the clash lines are hidden and every row shows.
         /// </summary>
-        private void ShortcutsEvaluate(IList<ShortcutsGroupState> groups, FrameworkElement filter, StackPanel banner, TextBlock empty)
+        private void ShortcutsEvaluate(IList<ShortcutsGroupState> groups, FrameworkElement filter, StackPanel banner, TextBlock empty, ShortcutsTouch touch)
         {
             var uses = new Dictionary<ShortcutsRowState, IList<PanelShortcuts.BindingUse>>();
             var states = new Dictionary<ShortcutsRowState, PanelShortcuts.RowState>();
@@ -561,7 +575,12 @@ namespace OpenDashPlugin
             filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;
 
             // The row holding keyboard focus, which a binding made or cleared there can take out of the filter.
+            // By the time this runs SimHub has usually taken the focus off it: its picker's Closed hands the
+            // focus to SimHub's main window itself (SHDialogContentBase, 9.12.6), and a Clear button leaves the
+            // tree with its binding. So while the focus sits on no element but a bare window, the row last
+            // pressed or focused in stands for it.
             var focused = groups.SelectMany(group => group.Rows).FirstOrDefault(row => row.Shown.IsKeyboardFocusWithin);
+            if (focused == null && touch.Row != null && touch.Row.Shown.Visibility == Visibility.Visible && ShortcutsFocusOnNothing()) focused = touch.Row;
 
             var anyShown = false;
             foreach (var group in groups)
@@ -583,7 +602,11 @@ namespace OpenDashPlugin
                 group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
             }
 
-            if (focused != null && focused.Shown.Visibility != Visibility.Visible) ShortcutsKeepFocus(groups, focused, filter);
+            if (focused != null && focused.Shown.Visibility != Visibility.Visible)
+            {
+                ShortcutsKeepFocus(groups, focused, filter);
+                touch.Row = null;
+            }
 
             banner.Children.Clear();
             var clashes = readable
@@ -607,6 +630,14 @@ namespace OpenDashPlugin
             var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);
             empty.Text = emptyText ?? string.Empty;
             empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>Whether keyboard focus is on no element of the window, only on the window itself or
+        /// nowhere, as SimHub leaves it when its picker closes or the focused Clear leaves the tree.</summary>
+        private static bool ShortcutsFocusOnNothing()
+        {
+            var at = Keyboard.FocusedElement;
+            return at == null || at is Window;
         }
 
         /// <summary>
