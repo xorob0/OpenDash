@@ -334,10 +334,11 @@ namespace OpenDashPlugin
             if (bars.Count > 0)
             {
                 bool reachable;
-                var census = BarCensus(EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId)), out reachable);
+                var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId));
+                var census = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);
                 foreach (var entry in census)
                 {
-                    var row = PanelUpdates.StripRow(entry.Key.Name, reachable ? entry.Value : new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
+                    var row = PanelUpdates.StripRow(entry.Key.Name, entry.Value);
                     var detail = PanelUpdates.StripDetail(PanelLightRows.ShapeLabel(entry.Key.ProfileShapeId), entry.Key.Device);
                     strips.Add(new UpdatesReportItem(row.Name, detail, row.Version, row.State));
                 }

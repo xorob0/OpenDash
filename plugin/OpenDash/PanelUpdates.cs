@@ -111,19 +111,37 @@ namespace OpenDashPlugin
     }
 
     /// <summary>
-    /// What Reinstall everything did to the light profiles, counted per strip: a strip rewritten and a strip
-    /// that could not be are two strips, whatever shape they share.
+    /// What a press that writes light profiles did, strip by strip and by name: a strip rewritten and a strip
+    /// that could not be are two strips, whatever shape they share, and each is said by the name SimHub lists
+    /// its profile under. Reinstall everything fills it, and so does a light row's Update.
     /// </summary>
     public sealed class UpdatesLightsTally
     {
-        /// <summary>Older strip profiles brought to this build's version.</summary>
-        public int StripsUpdated { get; private set; }
+        private readonly List<string> updated = new List<string>();
+        private readonly List<KeyValuePair<string, string>> installed = new List<KeyValuePair<string, string>>();
+        private readonly List<string> notUpdated = new List<string>();
+        private readonly List<string> notInstalled = new List<string>();
+        private readonly List<string> noDevice = new List<string>();
 
-        /// <summary>Missing strip profiles installed.</summary>
-        public int StripsInstalled { get; private set; }
+        /// <summary>Older strip profiles brought to this build's version, by name.</summary>
+        public IReadOnlyList<string> Updated => updated;
 
-        public int StripsNotUpdated { get; private set; }
-        public int StripsNotInstalled { get; private set; }
+        /// <summary>Missing strip profiles installed, each with the name of the SimHub device it went to (null
+        /// when SimHub gives none), which the select step names.</summary>
+        public IReadOnlyList<KeyValuePair<string, string>> Installed => installed;
+
+        public IReadOnlyList<string> NotUpdated => notUpdated;
+        public IReadOnlyList<string> NotInstalled => notInstalled;
+
+        /// <summary>Strips the press left alone because SimHub does not list the device each names: installing
+        /// takes the strip's copy out of every device first, so writing one there would remove a strip that
+        /// still lights.</summary>
+        public IReadOnlyList<string> NoDevice => noDevice;
+
+        public int StripsUpdated => updated.Count;
+        public int StripsInstalled => installed.Count;
+        public int StripsNotUpdated => notUpdated.Count;
+        public int StripsNotInstalled => notInstalled.Count;
 
         /// <summary>What the flag box profile was left in, or null when the run did not write it.</summary>
         public FlagBoxInstallState? FlagBoxAfter { get; private set; }
@@ -131,33 +149,58 @@ namespace OpenDashPlugin
         /// <summary>Whether the flag box profile the run wrote was an older one rather than a missing one.</summary>
         public bool FlagBoxWasOlder { get; private set; }
 
-        /// <summary>One strip the run wrote: what SimHub held before, and what the write reported.</summary>
-        public void Strip(FlagBoxInstallState before, FlagBoxInstallState after)
+        /// <summary>What an install reported beside its state (FlagBoxPlan.Note): a device listing only its
+        /// maker's profiles, which the driver has to change before the select step can be taken.</summary>
+        public string Note { get; private set; }
+
+        /// <summary>One strip the run wrote: its name, the SimHub device it names, what SimHub held before,
+        /// and what the write reported.</summary>
+        public void Strip(string name, string device, FlagBoxInstallState before, FlagBoxPlan after)
         {
             var older = before == FlagBoxInstallState.Outdated;
-            if (after == FlagBoxInstallState.UpToDate)
+            if (after != null && after.State == FlagBoxInstallState.UpToDate)
             {
-                if (older) StripsUpdated++;
-                else StripsInstalled++;
+                if (older) updated.Add(name);
+                else installed.Add(new KeyValuePair<string, string>(name, device));
+                Noted(after);
             }
-            else if (older) StripsNotUpdated++;
-            else StripsNotInstalled++;
+            else if (older) notUpdated.Add(name);
+            else notInstalled.Add(name);
         }
 
-        public void FlagBox(FlagBoxInstallState before, FlagBoxInstallState after)
+        /// <summary>A strip the run picked and did not write, because SimHub does not list its device.</summary>
+        public void DeviceNotListed(string name)
+        {
+            noDevice.Add(name);
+        }
+
+        public void FlagBox(FlagBoxInstallState before, FlagBoxPlan after)
         {
             FlagBoxWasOlder = before == FlagBoxInstallState.Outdated;
-            FlagBoxAfter = after;
+            FlagBoxAfter = after == null ? FlagBoxInstallState.Failed : after.State;
+            if (FlagBoxAfter == FlagBoxInstallState.UpToDate) Noted(after);
         }
 
-        /// <summary>Whether that run is said in the ordinary ink: nothing it tried failed.</summary>
-        public bool Ok
+        private void Noted(FlagBoxPlan after)
+        {
+            if (Note == null && !string.IsNullOrWhiteSpace(after.Note)) Note = after.Note;
+        }
+
+        /// <summary>Whether a write failed, whose reason is in SimHub's log.</summary>
+        public bool Failed
         {
             get
             {
-                return StripsNotUpdated == 0 && StripsNotInstalled == 0
-                    && (!FlagBoxAfter.HasValue || FlagBoxAfter == FlagBoxInstallState.UpToDate);
+                return notUpdated.Count > 0 || notInstalled.Count > 0
+                    || (FlagBoxAfter.HasValue && FlagBoxAfter != FlagBoxInstallState.UpToDate);
             }
+        }
+
+        /// <summary>Whether that run is said in the ordinary ink: nothing it tried failed, nothing it picked was
+        /// left for want of a device, and nothing stands between an install and its use.</summary>
+        public bool Ok
+        {
+            get { return !Failed && noDevice.Count == 0 && Note == null; }
         }
     }
 
@@ -494,10 +537,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Whether any light row draws its Update press, which takes the press column's room from
-        /// every row: a profile older than this build's.</summary>
-        public static bool TableHasPress(IEnumerable<FlagBoxPlan> lightPlans)
+        /// every row: a profile older than this build's, on a device SimHub lists.</summary>
+        public static bool TableHasPress(IEnumerable<UpdatesRow> lightRows)
         {
-            return (lightPlans ?? Enumerable.Empty<FlagBoxPlan>()).Any(plan => plan != null && plan.State == FlagBoxInstallState.Outdated);
+            return (lightRows ?? Enumerable.Empty<UpdatesRow>()).Any(row => row != null && row.OffersUpdate);
+        }
+
+        /// <summary>
+        /// Which light row the strip-outdated fix lands on (PanelLeds.StripUpdateRoute, AnchorLights): the
+        /// first whose Update press is the fix, or -1 for the table itself when no row offers one.
+        /// </summary>
+        public static int LightsAnchor(IList<UpdatesRow> lightRows)
+        {
+            if (lightRows == null) return -1;
+            for (var i = 0; i < lightRows.Count; i++)
+            {
+                if (lightRows[i] != null && lightRows[i].OffersUpdate) return i;
+            }
+            return -1;
         }
 
         /// <summary>
@@ -607,11 +664,73 @@ namespace OpenDashPlugin
                 : PanelConfirmation.ReinstallLabel + " brings it to " + embeddedVersion.Trim() + ".";
         }
 
-        /// <summary>A strip's row: its name, the version of its profile in SimHub, and the state
-        /// PanelCopy.LightRow says, with an Update press while that profile is older than this build's.</summary>
-        public static UpdatesRow StripRow(string name, FlagBoxPlan plan)
+        /// <summary>
+        /// A strip's row: its name, the version of its profile in SimHub, and the state PanelCopy.LightRow says,
+        /// with an Update press while that profile is older than this build's and SimHub lists the strip's
+        /// device. Where it does not, the press could only fail, so the row offers none and its hover says the
+        /// step, as the LEDs page does; the state still says what SimHub holds.
+        /// </summary>
+        /// <param name="plan">The strip's plan from <see cref="StripPlans"/>.</param>
+        /// <param name="deviceListed">Whether SimHub lists the device the strip names (<see cref="DeviceListed"/>).</param>
+        public static UpdatesRow StripRow(string name, FlagBoxPlan plan, bool deviceListed = true)
         {
-            return LightRow(name, StripKind, plan, StripTooltip(plan));
+            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
+            var noDevice = !deviceListed && NeedsDevice(state);
+            return LightRow(name, StripKind, plan, noDevice ? DeviceNotListed : StripTooltip(plan), state == FlagBoxInstallState.Outdated && !noDevice);
+        }
+
+        /// <summary>The states a press would write a strip from, which it can only do on a device SimHub lists.</summary>
+        private static bool NeedsDevice(FlagBoxInstallState state)
+        {
+            return state == FlagBoxInstallState.Outdated || state == FlagBoxInstallState.NotInstalled || state == FlagBoxInstallState.Failed;
+        }
+
+        /// <summary>A strip whose SimHub device is not listed, in the LEDs page's words (PanelLeds.DeviceNotListed)
+        /// and with the page named, since the field it points at is not on this one.</summary>
+        public const string DeviceNotListed = "SimHub does not list this strip's device. Choose one under SimHub device on the LEDs page.";
+
+        /// <summary>
+        /// The strips' plans as the table and the presses read them: Unavailable for every strip while SimHub's
+        /// LED settings cannot be read, and NotEmbedded for a strip whose shape this build carries no profile
+        /// for, whatever SimHub holds.
+        /// </summary>
+        /// <remarks>
+        /// The census compares SimHub's copy with no embedded version at all for such a strip, so it calls a
+        /// stamped copy older and an unstamped one current: rc.2 built brow-N profiles that no later build
+        /// carries, and those strips read "Update available" with a press that could write nothing. The
+        /// version SimHub holds is kept, since the table's column says it truly.
+        /// </remarks>
+        /// <param name="census">What SimHub holds for each strip (BarCensus).</param>
+        /// <param name="reachable">Whether that read reached SimHub's LED settings.</param>
+        /// <param name="embeddedShapeIds">The shape ids this build carries a profile for, of the rig's strips.</param>
+        public static IList<KeyValuePair<LedBar, FlagBoxPlan>> StripPlans(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, ICollection<string> embeddedShapeIds)
+        {
+            var plans = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            foreach (var entry in census ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
+            {
+                if (entry.Key == null) continue;
+                FlagBoxPlan plan;
+                if (!reachable) plan = new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
+                else if (entry.Key.ProfileShapeId == null || embeddedShapeIds == null || !embeddedShapeIds.Contains(entry.Key.ProfileShapeId))
+                    plan = new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded, InstalledVersion = entry.Value == null ? null : entry.Value.InstalledVersion };
+                else plan = entry.Value;
+                plans.Add(new KeyValuePair<LedBar, FlagBoxPlan>(entry.Key, plan));
+            }
+            return plans;
+        }
+
+        /// <summary>Whether SimHub lists the device a strip names, off one read of SimHub's LED devices: their
+        /// names by id (LedTargets.All).</summary>
+        public static bool DeviceListed(IDictionary<string, string> devices, LedBar bar)
+        {
+            return bar != null && devices != null && devices.ContainsKey(LedBar.NormaliseDevice(bar.Device) ?? string.Empty);
+        }
+
+        /// <summary>The name SimHub shows for the device a strip names, or null when it lists none.</summary>
+        public static string DeviceName(IDictionary<string, string> devices, LedBar bar)
+        {
+            string name;
+            return bar != null && devices != null && devices.TryGetValue(LedBar.NormaliseDevice(bar.Device) ?? string.Empty, out name) ? name : null;
         }
 
         /// <summary>Whether the table draws the flag box profile's row: on a rig with a matrix, and only when
@@ -626,7 +745,7 @@ namespace OpenDashPlugin
         /// matrix settings cannot be reached and the by-hand route under the table is the way in.</param>
         public static UpdatesRow FlagBoxRow(string name, FlagBoxPlan plan, string extractedPath)
         {
-            return LightRow(name, MatrixKind, plan, FlagBoxTooltip(plan, extractedPath));
+            return LightRow(name, MatrixKind, plan, FlagBoxTooltip(plan, extractedPath), plan != null && plan.State == FlagBoxInstallState.Outdated);
         }
 
         /// <summary>
@@ -634,12 +753,12 @@ namespace OpenDashPlugin
         /// page's pill reads PanelLightRows.DotHex beside words of its own (PanelMatrix.ProfileRow), so this
         /// table does not take its dot from there.
         /// </summary>
-        private static UpdatesRow LightRow(string name, string kind, FlagBoxPlan plan, string tooltip)
+        private static UpdatesRow LightRow(string name, string kind, FlagBoxPlan plan, string tooltip, bool offersUpdate)
         {
             var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
             var words = PanelCopy.LightRow(state, plan == null ? null : plan.InstalledVersion);
             return new UpdatesRow(name, kind, VersionText(plan == null ? null : plan.InstalledVersion), words.State, words.StateHex,
-                Dot(words.StateHex), tooltip, state == FlagBoxInstallState.Outdated);
+                Dot(words.StateHex), tooltip, offersUpdate);
         }
 
         /// <summary>
@@ -673,10 +792,14 @@ namespace OpenDashPlugin
         /// apply to it: the strip is there and its profile is not, which the row's state already says.</summary>
         public const string StripNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on its device.";
 
-        /// <summary>A strip whose shape this build carries no profile for, whatever SimHub holds.</summary>
-        public const string StripNotEmbedded = "This build ships no LED profile for it.";
+        /// <summary>A strip whose shape this build carries no profile for, whatever SimHub holds, in the LEDs
+        /// page's words for it (PanelLeds.NoProfileForStrip).</summary>
+        public const string StripNotEmbedded = "This build ships no profile for this strip.";
 
-        public const string LightFailed = "Install failed. See SimHub's log.";
+        /// <summary>A failed row's hover: the state already says it failed, and this says where to look.</summary>
+        public const string LightFailed = SeeLog;
+
+        public const string SeeLog = "See SimHub's log.";
 
         /// <summary>An older light profile's tooltip, naming the version the row's Update brings: "Update
         /// brings it to 0.5.0."</summary>
@@ -688,11 +811,10 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, and a missing one
-        /// names the press on this page; an up-to-date one keeps only the step OpenDash does not take, since
-        /// installing a profile does not select it (FlagBoxInstallPlan.Summary). The rest are
-        /// FlagBoxInstallPlan.Summary's, which names the file to import by hand while SimHub's matrix settings
-        /// cannot be reached.
+        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, a missing one
+        /// names the press on this page, and a current one has none, as a current strip's has none. A failed
+        /// one says where to look. The rest are FlagBoxInstallPlan.Summary's, which names the file to import
+        /// by hand while SimHub's matrix settings cannot be reached.
         /// </summary>
         public static string FlagBoxTooltip(FlagBoxPlan plan, string extractedPath)
         {
@@ -702,9 +824,11 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotInstalled:
                     return FlagBoxNotInstalled;
                 case FlagBoxInstallState.UpToDate:
-                    return FlagBoxSelect;
+                    return null;
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Failed:
+                    return LightFailed;
                 default:
                     return FlagBoxInstallPlan.Summary(plan, extractedPath);
             }
@@ -712,13 +836,23 @@ namespace OpenDashPlugin
 
         public const string FlagBoxNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on your device.";
 
-        /// <summary>The step after the flag box profile is installed, in FlagBoxInstallPlan.Summary's words.</summary>
-        public const string FlagBoxSelect = "Select it on your device to use it.";
-
-        /// <summary>The step after strip profiles are installed, for one and for several: installing adds a
-        /// profile to its device's list without selecting it.</summary>
-        public const string StripSelect = "Select it on its device in SimHub to use it.";
-        public const string StripsSelect = "Select each on its device in SimHub to use it.";
+        /// <summary>
+        /// The step after profiles are installed, in the one form the LEDs page says it (PanelLeds.SelectIt):
+        /// 'Select "Rim" on Fanatec in SimHub to use it.', and for several 'Select "Rim" on Fanatec and
+        /// "OpenDash Flag box" in SimHub to use them.' Installing adds a profile to its device's list without
+        /// selecting it, and each is named with the device it went to, since after the run every row reads
+        /// "Up to date" and nothing on the page says which were installed. A device SimHub gives no name for,
+        /// and the flag box's, is left out rather than guessed.
+        /// </summary>
+        public static string SelectIt(IList<KeyValuePair<string, string>> installed)
+        {
+            var each = (installed ?? new KeyValuePair<string, string>[0])
+                .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+                .Select(pair => "\"" + pair.Key.Trim() + "\"" + (string.IsNullOrWhiteSpace(pair.Value) ? string.Empty : " on " + pair.Value.Trim()))
+                .ToList();
+            if (each.Count == 0) return null;
+            return "Select " + And(each) + " in SimHub to use " + (each.Count == 1 ? "it." : "them.");
+        }
 
         /// <summary>The light row's one press, while its profile is older than this build's.</summary>
         public const string RowUpdate = "Update";
@@ -792,28 +926,35 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The strips a press writes, in the census's order, each with what SimHub held for it: those
-        /// <paramref name="wanted"/> picks, and none while SimHub's LED settings cannot be read.
+        /// <paramref name="wanted"/> picks on a device SimHub lists, and none while SimHub's LED settings cannot
+        /// be read. The census is <see cref="StripPlans"/>', so a strip this build has no profile for is
+        /// NotEmbedded and neither rule picks it.
         /// </summary>
-        public static IList<KeyValuePair<LedBar, FlagBoxPlan>> StripsToWrite(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, Func<LedBar, FlagBoxInstallState, bool> wanted)
+        /// <param name="listed">Whether SimHub lists a strip's device (<see cref="DeviceListed"/>).</param>
+        public static IList<KeyValuePair<LedBar, FlagBoxPlan>> StripsToWrite(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, Func<LedBar, FlagBoxInstallState, bool> wanted, Func<LedBar, bool> listed)
         {
-            if (!reachable || wanted == null) return new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            return Picked(census, reachable, wanted).Where(entry => listed == null || listed(entry.Key)).ToList();
+        }
+
+        /// <summary>
+        /// The strips the rule picks that no press writes, because SimHub does not list the device each names:
+        /// installing takes the strip's copy out of every device first, so writing one there would remove a
+        /// strip that still lights. The run names them rather than calling them failures.
+        /// </summary>
+        public static IList<LedBar> StripsWithoutDevice(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, Func<LedBar, FlagBoxInstallState, bool> wanted, Func<LedBar, bool> listed)
+        {
+            if (listed == null) return new List<LedBar>();
+            return Picked(census, reachable, wanted).Where(entry => !listed(entry.Key)).Select(entry => entry.Key).ToList();
+        }
+
+        private static IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> Picked(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, Func<LedBar, FlagBoxInstallState, bool> wanted)
+        {
+            if (!reachable || wanted == null) return Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>();
             return (census ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
                 .Where(entry => entry.Key != null && entry.Value != null && wanted(entry.Key, entry.Value.State))
                 .ToList();
         }
 
-        /// <summary>
-        /// What a strip the press picked is reported as when it is not written, or null when it can be: no
-        /// profile in this build for its shape, or a device SimHub no longer has. The second is a failure
-        /// rather than a write, because installing takes the strip's copy out of every device first, and
-        /// running it there would remove a strip that still lights.
-        /// </summary>
-        public static FlagBoxPlan Unwritable(bool embedded, bool deviceFound)
-        {
-            if (!embedded) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-            if (!deviceFound) return new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-            return null;
-        }
 
         /// <summary>
         /// Every strip's plan after a press, which repaints every strip row: what the write reported for a
@@ -848,9 +989,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What Reinstall everything says when it has run: the dashboards it wrote and left alone and the step
-        /// OpenDash does not take for them (voice.md), then the light profiles it brought forward, each install
-        /// followed by the select step installing does not take, then what could not be written and where to
-        /// look. No dashboards clause where there was no dashboard to write.
+        /// OpenDash does not take for them (voice.md), then the light profiles (<see cref="LightsSaid"/>). No
+        /// dashboards clause where there was no dashboard to write.
         /// </summary>
         /// <param name="replaced">Dashboards written.</param>
         /// <param name="held">Dashboards left alone because they were edited and nobody said to replace them.</param>
@@ -859,37 +999,71 @@ namespace OpenDashPlugin
         /// <param name="flagBoxName">The flag box profile's name in SimHub.</param>
         public static string ReinstallSummary(int replaced, int held, bool wroteFonts, UpdatesLightsTally lights, string flagBoxName)
         {
-            lights = lights ?? new UpdatesLightsTally();
-            var line = new StringBuilder();
+            var line = new List<string>();
             if (replaced > 0)
             {
-                line.Append(replaced == 1 ? " Reinstalled 1 dashboard." : " Reinstalled " + replaced + " dashboards.");
-                if (held == 1) line.Append(" The one you edited was left alone.");
-                else if (held > 1) line.Append(" The " + held + " you edited were left alone.");
+                line.Add(replaced == 1 ? "Reinstalled 1 dashboard." : "Reinstalled " + replaced + " dashboards.");
+                if (held == 1) line.Add("The one you edited was left alone.");
+                else if (held > 1) line.Add("The " + held + " you edited were left alone.");
                 // Straight after the dashboards, so what it points at is what the line has just named.
-                line.Append(" " + ToSee(replaced, wroteFonts));
+                line.Add(ToSee(replaced, wroteFonts));
             }
-            else if (held == 1) line.Append(" The dashboard you edited was left alone.");
-            else if (held > 1) line.Append(" The " + held + " dashboards you edited were left alone.");
-            Profiles(line, "Updated", lights.StripsUpdated);
-            if (lights.StripsInstalled > 0)
-            {
-                Profiles(line, "Installed", lights.StripsInstalled);
-                line.Append(" " + (lights.StripsInstalled == 1 ? StripSelect : StripsSelect));
-            }
-            var name = string.IsNullOrWhiteSpace(flagBoxName) ? FlagBoxProfile.ProfileName : flagBoxName;
-            if (lights.FlagBoxAfter == FlagBoxInstallState.UpToDate)
-            {
-                line.Append(lights.FlagBoxWasOlder ? " Updated " + name + "." : " Installed " + name + ". " + FlagBoxSelect);
-            }
-            NotWritten(line, lights.StripsNotUpdated, "updated");
-            NotWritten(line, lights.StripsNotInstalled, "installed");
-            if (lights.FlagBoxAfter.HasValue && lights.FlagBoxAfter != FlagBoxInstallState.UpToDate)
-            {
-                line.Append(" " + name + " could not be " + (lights.FlagBoxWasOlder ? "updated." : "installed."));
-            }
-            if (!lights.Ok) line.Append(" See SimHub's log.");
-            return line.Length == 0 ? NothingToReinstall : line.ToString(1, line.Length - 1);
+            else if (held == 1) line.Add("The dashboard you edited was left alone.");
+            else if (held > 1) line.Add("The " + held + " dashboards you edited were left alone.");
+            var profiles = LightsSaid(lights, flagBoxName);
+            if (profiles != null) line.Add(profiles);
+            return line.Count == 0 ? NothingToReinstall : string.Join(" ", line);
+        }
+
+        /// <summary>
+        /// What a press that wrote light profiles says, or null when it wrote none and left none out: each
+        /// profile by the name SimHub lists it under, in the LEDs and Matrix pages' words ("Updated Rim's
+        /// profile.", "Installed OpenDash Flag box."), then what an install reported about the device, then the
+        /// select step, since the note has to be acted on before the step can be taken (voice.md: the steps
+        /// OpenDash does not take, in the order they are done), then what could not be written and where to
+        /// look, and last each strip left out for want of a device. A light row's Update says it too.
+        /// </summary>
+        public static string LightsSaid(UpdatesLightsTally lights, string flagBoxName)
+        {
+            if (lights == null) return null;
+            var name = string.IsNullOrWhiteSpace(flagBoxName) ? FlagBoxProfile.ProfileName : flagBoxName.Trim();
+            var flagBoxOk = lights.FlagBoxAfter == FlagBoxInstallState.UpToDate;
+            var line = new List<string>();
+            Profiles(line, "Updated", lights.Updated);
+            Profiles(line, "Installed", lights.Installed.Select(pair => pair.Key).ToList());
+            if (flagBoxOk) line.Add((lights.FlagBoxWasOlder ? "Updated " : "Installed ") + name + ".");
+            if (lights.Note != null) line.Add(lights.Note);
+            var select = new List<KeyValuePair<string, string>>(lights.Installed);
+            if (flagBoxOk && !lights.FlagBoxWasOlder) select.Add(new KeyValuePair<string, string>(name, null));
+            var step = SelectIt(select);
+            if (step != null) line.Add(step);
+            Profiles(line, "Could not update", lights.NotUpdated);
+            Profiles(line, "Could not install", lights.NotInstalled);
+            if (lights.FlagBoxAfter.HasValue && !flagBoxOk) line.Add((lights.FlagBoxWasOlder ? "Could not update " : "Could not install ") + name + ".");
+            if (lights.Failed) line.Add(SeeLog);
+            var noDevice = NoDeviceSaid(lights.NoDevice);
+            if (noDevice != null) line.Add(noDevice);
+            return line.Count == 0 ? null : string.Join(" ", line);
+        }
+
+        /// <summary>"Updated Rim's profile.", "Updated the profiles of Rim and Brow.": the LEDs page's form for
+        /// one, and its names for several.</summary>
+        private static void Profiles(List<string> line, string verb, IEnumerable<string> names)
+        {
+            var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).ToList();
+            if (list.Count == 1) line.Add(verb + " " + list[0] + "'s profile.");
+            else if (list.Count > 1) line.Add(verb + " the profiles of " + And(list) + ".");
+        }
+
+        /// <summary>The strips a press left out because SimHub does not list the device each names, and the
+        /// step, as the LEDs page says it (<see cref="DeviceNotListed"/>).</summary>
+        public static string NoDeviceSaid(IEnumerable<string> names)
+        {
+            var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).ToList();
+            if (list.Count == 0) return null;
+            return list.Count == 1
+                ? "SimHub does not list " + list[0] + "'s device. Choose one under SimHub device on the LEDs page."
+                : "SimHub does not list the devices of " + And(list) + ". Choose them under SimHub device on the LEDs page.";
         }
 
         /// <summary>A run that wrote nothing and had nothing to leave alone: a rig with no dashboard and every
@@ -908,18 +1082,6 @@ namespace OpenDashPlugin
 
         public const string ReopenThem = "Close and reopen your dashboards to see them.";
         public const string RestartToSeeThem = "Restart SimHub to see them.";
-
-        private static void Profiles(StringBuilder line, string verb, int count)
-        {
-            if (count == 1) line.Append(" " + verb + " 1 LED profile.");
-            else if (count > 1) line.Append(" " + verb + " " + count + " LED profiles.");
-        }
-
-        private static void NotWritten(StringBuilder line, int count, string participle)
-        {
-            if (count == 1) line.Append(" 1 LED profile could not be " + participle + ".");
-            else if (count > 1) line.Append(" " + count + " LED profiles could not be " + participle + ".");
-        }
 
         /// <summary>What Reinstall everything says when the dashboards could not be written. The reason is in
         /// SimHub's log, and the line says so rather than repeating it (voice.md).</summary>

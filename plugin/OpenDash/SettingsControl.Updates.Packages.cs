@@ -24,11 +24,13 @@ namespace OpenDashPlugin
             // The light rows are read first: a row with an Update press takes the press column from every row,
             // and the version column goes sooner to leave the names their room.
             bool stripsReachable;
-            FlagBoxPlan flagBoxPlan;
             var strips = UpdatesStripPlans(out stripsReachable);
-            flagBoxPlan = UpdatesDrawsFlagBox() ? SafePlan() : null;
-            var versionWidth = PanelUpdates.VersionWidth(width,
-                PanelUpdates.TableHasPress(strips.Select(s => s.Value).Concat(new[] { flagBoxPlan })));
+            var devices = strips.Count == 0 ? null : UpdatesDevices();
+            var stripRows = strips.Select(s => PanelUpdates.StripRow(s.Key.Name, s.Value, PanelUpdates.DeviceListed(devices, s.Key))).ToList();
+            var flagBoxPlan = UpdatesDrawsFlagBox() ? SafePlan() : null;
+            var flagBoxRow = flagBoxPlan == null ? null : PanelUpdates.FlagBoxRow(FlagBoxName(), flagBoxPlan, plugin.FlagBox?.Path);
+            var lightRows = stripRows.Concat(flagBoxRow == null ? new UpdatesRow[0] : new[] { flagBoxRow }).ToList();
+            var versionWidth = PanelUpdates.VersionWidth(width, PanelUpdates.TableHasPress(lightRows));
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             // Every row is a grid of its own, and the press column is as wide in all of them as in the widest,
             // so a row with an Update press keeps its version and state under the head's.
@@ -41,13 +43,14 @@ namespace OpenDashPlugin
                 rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));
                 rowFailed |= pair.Value.State == PanelCopy.InstallFailed;
             }
-            var lights = BuildLightRows(strips, flagBoxPlan, versionWidth);
+            var lights = BuildLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth);
             foreach (var row in lights) rows.Children.Add(row);
             if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());
             var table = Ui.CardBox(rows, 0);
-            // Where the strip-outdated fix lands (PanelLeds.StripUpdateRoute): the first light row, whose
-            // Update press is the fix, or the table when the rig has none.
-            if (lights.Count > 0) Ui.Anchor(lights[0], PanelUpdates.AnchorLights);
+            // Where the strip-outdated fix lands (PanelLeds.StripUpdateRoute): the first light row whose Update
+            // press is the fix, or the table when no row offers one.
+            var anchor = PanelUpdates.LightsAnchor(lightRows);
+            if (anchor >= 0) Ui.Anchor(lights[anchor], PanelUpdates.AnchorLights);
             else Ui.Anchor(table, PanelUpdates.AnchorLights);
 
             var children = new List<UIElement> { table };

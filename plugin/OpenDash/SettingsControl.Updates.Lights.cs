@@ -21,7 +21,8 @@ namespace OpenDashPlugin
     {
         /// <summary>
         /// What SimHub holds for each of the rig's strips, off one read of every LED device, each strip with its
-        /// plan, or Unavailable for every strip when SimHub's LED settings cannot be read.
+        /// plan as PanelUpdates.StripPlans reads the census: Unavailable for every strip when SimHub's LED
+        /// settings cannot be read, and NotEmbedded for a strip whose shape this build carries no profile for.
         /// </summary>
         /// <remarks>
         /// Only the rig's own strips' profiles are opened for the census, as the attention check does: the
@@ -29,18 +30,26 @@ namespace OpenDashPlugin
         /// </remarks>
         private IList<KeyValuePair<LedBar, FlagBoxPlan>> UpdatesStripPlans(out bool stripsReachable)
         {
-            var plans = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
             stripsReachable = true;
             var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
-            if (bars.Count == 0) return plans;
+            if (bars.Count == 0) return new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId));
             bool reachable;
-            var census = BarCensus(EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId)), out reachable);
+            var census = BarCensus(embedded, out reachable);
             stripsReachable = reachable;
-            foreach (var entry in census)
+            return PanelUpdates.StripPlans(census, reachable, embedded.Keys);
+        }
+
+        /// <summary>SimHub's LED devices, their names by id, off one read (LedTargets.All, which never throws):
+        /// whether a strip's device is listed, and the name the select step gives it.</summary>
+        private static IDictionary<string, string> UpdatesDevices()
+        {
+            var devices = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var target in LedTargets.All())
             {
-                plans.Add(new KeyValuePair<LedBar, FlagBoxPlan>(entry.Key, reachable ? entry.Value : new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
+                if (target != null && target.Id != null) devices[target.Id] = target.Name;
             }
-            return plans;
+            return devices;
         }
 
         /// <summary>Whether the table draws the flag box profile's row (PanelUpdates.DrawsFlagBoxRow).</summary>
@@ -52,14 +61,14 @@ namespace OpenDashPlugin
         /// <summary>
         /// The strips' rows, then the flag box's when the table draws it (<paramref name="flagBoxPlan"/> not null).
         /// </summary>
-        private IList<FrameworkElement> BuildLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, FlagBoxPlan flagBoxPlan, double versionWidth)
+        private IList<FrameworkElement> BuildLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, IList<UpdatesRow> stripRows, FlagBoxPlan flagBoxPlan, UpdatesRow flagBoxRow, double versionWidth)
         {
             var drawn = new List<FrameworkElement>();
             // Every strip's row is repainted by a press on any of them, each from its own strip's plan: the
             // press reads SimHub again, and a row only ever says what its own strip holds.
-            var painters = new List<Action<IDictionary<string, FlagBoxPlan>>>();
-            foreach (var entry in strips) drawn.Add(UpdatesStripRow(entry.Key, entry.Value, versionWidth, painters));
-            if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, versionWidth));
+            var painters = new List<Action<IDictionary<string, FlagBoxPlan>, IDictionary<string, string>>>();
+            for (var i = 0; i < strips.Count; i++) drawn.Add(UpdatesStripRow(strips[i].Key, stripRows[i], versionWidth, painters));
+            if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, flagBoxRow, versionWidth));
             return drawn;
         }
 
@@ -73,34 +82,33 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A strip's row, and its Update press while its profile is older than this build's.
+        /// A strip's row, and its Update press while its profile is older than this build's and SimHub lists
+        /// its device.
         /// </summary>
         /// <remarks>
-        /// The press writes this strip alone and repaints every strip's row from its own plan: what the write
-        /// REPORTED for a strip it could not write, so the row says so, and what SimHub now holds for the rest.
-        /// A row was once repainted with one plan for every strip of its shape, and a healthy strip read
-        /// "Install failed" when another strip of that shape could not be written.
+        /// The press writes this strip alone, repaints every strip's row from its own plan -- what the write
+        /// REPORTED for a strip it could not write, so the row says so, and what SimHub now holds for the rest
+        /// -- and says what it did, as the LEDs page's Update does. A row was once repainted with one plan for
+        /// every strip of its shape, and a healthy strip read "Install failed" when another strip of that
+        /// shape could not be written.
         /// </remarks>
-        private FrameworkElement UpdatesStripRow(LedBar bar, FlagBoxPlan plan, double versionWidth, IList<Action<IDictionary<string, FlagBoxPlan>>> painters)
+        private FrameworkElement UpdatesStripRow(LedBar bar, UpdatesRow first, double versionWidth, IList<Action<IDictionary<string, FlagBoxPlan>, IDictionary<string, string>>> painters)
         {
             var key = PanelUpdates.StripKey(bar);
             var actionHost = new Border();
             Action<UpdatesRow> paint;
-            var element = UpdatesTableRow(PanelUpdates.StripRow(bar.Name, plan), versionWidth, actionHost, out paint);
+            var element = UpdatesTableRow(first, versionWidth, actionHost, out paint);
 
-            Func<IDictionary<string, FlagBoxPlan>> update = () =>
-            {
-                UpdatesLightsTally ignored;
-                return UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out ignored);
-            };
+            UpdatesLightsTally said = null;
+            Func<IDictionary<string, FlagBoxPlan>> update = () => UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out said);
             Action<IDictionary<string, FlagBoxPlan>> draw = plans =>
             {
-                foreach (var painter in painters.ToList()) painter(plans);
+                var devices = UpdatesDevices();
+                foreach (var painter in painters.ToList()) painter(plans, devices);
             };
-            Action<FlagBoxPlan> own = null;
-            own = current =>
+            Action<UpdatesRow> own = null;
+            own = row =>
             {
-                var row = PanelUpdates.StripRow(bar.Name, current);
                 paint(row);
                 var hadFocus = actionHost.IsKeyboardFocusWithin;
                 actionHost.Child = null;
@@ -116,35 +124,53 @@ namespace OpenDashPlugin
                         // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
                         RefreshAttention();
                         RefreshSidebar();
+                        UpdatesSay(said);
                     };
                     actionHost.Child = button;
                 }
                 if (hadFocus) UpdatesRefocus(actionHost.Child, updatesReinstall);
             };
-            painters.Add(plans =>
+            painters.Add((plans, devices) =>
             {
                 FlagBoxPlan current;
-                if (plans != null && plans.TryGetValue(key, out current)) own(current);
+                if (plans != null && plans.TryGetValue(key, out current)) own(PanelUpdates.StripRow(bar.Name, current, PanelUpdates.DeviceListed(devices, bar)));
             });
-            own(plan);
+            own(first);
             return element;
+        }
+
+        /// <summary>What a light row's Update did, said as the LEDs and Matrix pages say theirs; nothing when
+        /// the press found nothing left to write.</summary>
+        private void UpdatesSay(UpdatesLightsTally said)
+        {
+            var line = PanelUpdates.LightsSaid(said, FlagBoxName());
+            if (line != null) Say(line, said.Ok);
         }
 
         /// <summary>
         /// The flag box profile's row, named as SimHub lists it, and its Update press while the profile in
         /// SimHub is older than this build's.
         /// </summary>
-        private FrameworkElement UpdatesFlagBoxRow(FlagBoxPlan plan, double versionWidth)
+        private FrameworkElement UpdatesFlagBoxRow(FlagBoxPlan plan, UpdatesRow first, double versionWidth)
         {
             var name = FlagBoxName();
             var path = plugin.FlagBox == null ? null : plugin.FlagBox.Path;
             var actionHost = new Border();
             Action<UpdatesRow> paint;
-            var element = UpdatesTableRow(PanelUpdates.FlagBoxRow(name, plan, path), versionWidth, actionHost, out paint);
-            Func<FlagBoxPlan> press = InstallFlagBox;
+            var element = UpdatesTableRow(first, versionWidth, actionHost, out paint);
+            var drawn = plan;
+            UpdatesLightsTally said = null;
+            Func<FlagBoxPlan> press = () =>
+            {
+                var result = InstallFlagBox();
+                said = new UpdatesLightsTally();
+                said.FlagBox(drawn.State, result);
+                return result;
+            };
             Action<FlagBoxPlan> draw = null;
             draw = current =>
             {
+                drawn = current;
                 var row = PanelUpdates.FlagBoxRow(name, current, path);
                 paint(row);
                 var hadFocus = actionHost.IsKeyboardFocusWithin;
@@ -161,6 +187,7 @@ namespace OpenDashPlugin
                         // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
                         RefreshAttention();
                         RefreshSidebar();
+                        UpdatesSay(said);
                     };
                     actionHost.Child = button;
                 }
@@ -176,12 +203,12 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The census is read at the press rather than carried from the draw, so what is written is what
-        /// SimHub holds when the button is pressed. Which strips are written, what stands in for one that may
-        /// not be (PanelUpdates.Unwritable: a device SimHub no longer has is a failure with the reason in
-        /// SimHub's log) and what each row is repainted with (PanelUpdates.AfterWrite) are PanelUpdates',
-        /// where they are pinned; this reads SimHub and writes.
+        /// SimHub holds when the button is pressed, and it is read through PanelUpdates.StripPlans, so a strip
+        /// this build has no profile for is NotEmbedded and never picked. Which strips are written, which are
+        /// left out because SimHub does not list their device, and what each row is repainted with
+        /// (PanelUpdates.AfterWrite) are PanelUpdates', where they are pinned; this reads SimHub and writes.
         /// </remarks>
-        /// <param name="tally">What the writes did, counted per strip.</param>
+        /// <param name="tally">What the writes did, strip by strip.</param>
         private IDictionary<string, FlagBoxPlan> UpdatesWriteStrips(Func<LedBar, FlagBoxInstallState, bool> wanted, out UpdatesLightsTally tally)
         {
             tally = new UpdatesLightsTally();
@@ -189,20 +216,24 @@ namespace OpenDashPlugin
             var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
             if (bars.Count == 0) return plans;
             var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId).Distinct(StringComparer.Ordinal));
+            var devices = UpdatesDevices();
+            Func<LedBar, bool> listed = bar => PanelUpdates.DeviceListed(devices, bar);
             bool reachable;
+            var census = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);
             var written = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
-            foreach (var entry in PanelUpdates.StripsToWrite(BarCensus(embedded, out reachable), reachable, wanted))
+            foreach (var entry in PanelUpdates.StripsToWrite(census, reachable, wanted, listed))
             {
                 var bar = entry.Key;
-                string json;
-                var hasJson = embedded.TryGetValue(bar.ProfileShapeId, out json);
-                var result = PanelUpdates.Unwritable(hasJson, hasJson && LedTargets.Find(bar.Device) != null);
-                if (result == null) result = InstallBar(bar, json);
-                else if (result.State == FlagBoxInstallState.Failed) Log.Warn("The profile for " + bar.Name + " was not written: the LED device it names is no longer in SimHub.");
-                tally.Strip(entry.Value.State, result.State);
+                var result = InstallBar(bar, embedded[bar.ProfileShapeId]);
+                tally.Strip(bar.Name, PanelUpdates.DeviceName(devices, bar), entry.Value.State, result);
                 written[PanelUpdates.StripKey(bar)] = result;
             }
-            var after = BarCensus(embedded, out reachable);
+            foreach (var bar in PanelUpdates.StripsWithoutDevice(census, reachable, wanted, listed))
+            {
+                Log.Warn("The profile for " + bar.Name + " was not written: SimHub does not list the LED device it names.");
+                tally.DeviceNotListed(bar.Name);
+            }
+            var after = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);
             return PanelUpdates.AfterWrite(after, reachable, written);
         }
 
@@ -218,7 +249,7 @@ namespace OpenDashPlugin
             if (plugin.FlagBoxJson != null)
             {
                 var before = SafePlan().State;
-                if (PanelUpdates.BringsFlagBoxForward(Settings.MatrixPanels().Any(), before)) tally.FlagBox(before, InstallFlagBox().State);
+                if (PanelUpdates.BringsFlagBoxForward(Settings.MatrixPanels().Any(), before)) tally.FlagBox(before, InstallFlagBox());
             }
             return tally;
         }

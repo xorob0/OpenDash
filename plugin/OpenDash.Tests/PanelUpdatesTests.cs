@@ -386,13 +386,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(110, PanelUpdates.VersionWidth(Column(3840), hasPress: true));
         }
 
-        /// <summary>Only an older light profile draws a press, and only the flag box's row on a rig with a
-        /// matrix and a build that carries the profile.</summary>
+        /// <summary>Only a row that draws its Update takes the press column: an older light profile on a
+        /// device SimHub lists. The flag box's row is drawn only on a rig with a matrix and a build that
+        /// carries the profile.</summary>
         [Fact]
         public void The_table_s_press_column_and_flag_box_row_are_drawn_only_when_used()
         {
-            Assert.True(PanelUpdates.TableHasPress(new[] { null, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }, new FlagBoxPlan { State = FlagBoxInstallState.Outdated } }));
-            Assert.False(PanelUpdates.TableHasPress(new[] { new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }, new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null }));
+            var older = new FlagBoxPlan { State = FlagBoxInstallState.Outdated };
+            Assert.True(PanelUpdates.TableHasPress(new[] { null, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }), PanelUpdates.StripRow("Dash", older) }));
+            Assert.True(PanelUpdates.TableHasPress(new[] { PanelUpdates.FlagBoxRow("OpenDash Flag box", older, null) }));
+            // An older profile on a device SimHub does not list offers nothing, and takes no room for it.
+            Assert.False(PanelUpdates.TableHasPress(new[] { PanelUpdates.StripRow("Dash", older, deviceListed: false) }));
+            Assert.False(PanelUpdates.TableHasPress(new[] { PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }), PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed }), null }));
             Assert.False(PanelUpdates.TableHasPress(null));
             Assert.True(PanelUpdates.DrawsFlagBoxRow(true, true));
             Assert.False(PanelUpdates.DrawsFlagBoxRow(false, true));
@@ -567,11 +572,90 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelLightRows.Unavailable, unreachable.Tooltip);
             var notEmbedded = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
             Assert.Equal("Unknown", notEmbedded.State);
-            Assert.Equal("This build ships no LED profile for it.", notEmbedded.Tooltip);
+            Assert.Equal("This build ships no profile for this strip.", notEmbedded.Tooltip);
+            Assert.False(notEmbedded.OffersUpdate);
 
+            // The state already says it failed; the hover says where to look.
             var failed = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed });
             Assert.Equal("Install failed", failed.State);
-            Assert.Equal("Install failed. See SimHub's log.", failed.Tooltip);
+            Assert.Equal("See SimHub's log.", failed.Tooltip);
+        }
+
+        /// <summary>A strip whose device SimHub does not list keeps the state SimHub holds, offers no press that
+        /// could only fail, and says the step as the LEDs page does, with the page it is on.</summary>
+        [Fact]
+        public void A_strip_on_a_device_SimHub_does_not_list_says_the_step_and_offers_no_press()
+        {
+            const string step = "SimHub does not list this strip's device. Choose one under SimHub device on the LEDs page.";
+            Assert.Equal(step, PanelUpdates.DeviceNotListed);
+            var older = PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Outdated, InstalledVersion = "0.4.2", EmbeddedVersion = "0.5.0" }, deviceListed: false);
+            Assert.Equal("Update available", older.State);
+            Assert.Equal("0.4.2", older.Version);
+            Assert.False(older.OffersUpdate);
+            Assert.Equal(step, older.Tooltip);
+            Assert.Equal(step, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }, deviceListed: false).Tooltip);
+            Assert.Equal(step, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, deviceListed: false).Tooltip);
+            // A state no press writes from is said as it is, device or not.
+            Assert.Null(PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, deviceListed: false).Tooltip);
+            Assert.Equal(PanelLightRows.Unavailable, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, deviceListed: false).Tooltip);
+
+            var devices = new Dictionary<string, string> { { LedBar.ArduinoDevice, "Arduino" } };
+            var arduino = new LedBar { Name = "Rim", Device = LedBar.ArduinoDevice };
+            Assert.True(PanelUpdates.DeviceListed(devices, arduino));
+            Assert.Equal("Arduino", PanelUpdates.DeviceName(devices, arduino));
+            var gone = new LedBar { Name = "Gone", Device = LedBar.DeviceId(new Guid("0b7b8d4e-5f1a-4c3e-9a55-2f7c1d9e6a10")) };
+            Assert.False(PanelUpdates.DeviceListed(devices, gone));
+            Assert.Null(PanelUpdates.DeviceName(devices, gone));
+            Assert.False(PanelUpdates.DeviceListed(null, arduino));
+        }
+
+        /// <summary>
+        /// A strip whose shape this build carries no profile for is NotEmbedded whatever SimHub holds: the
+        /// census compares SimHub's copy with no embedded version, so a stamped copy (rc.2's brow profiles)
+        /// reads older and an unstamped one current, and the row would offer an Update that writes nothing.
+        /// </summary>
+        [Fact]
+        public void A_strip_this_build_ships_no_profile_for_reads_unknown_whatever_SimHub_holds()
+        {
+            var brow = new LedBar { Name = "Brow", Namespace = "LedBrow", Shape = "brow-12", Device = LedBar.ArduinoDevice };
+            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
+            const string stamped = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0-rc.2; do not edit here, it is replaced on update.";
+            var arduino = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = LedBarProfile.IdFor(brow.Namespace), Description = stamped },
+            };
+            // What the census says of it when the build has nothing to compare with: older, with a press.
+            var raw = LedBarProfile.Plan(brow, null, new[] { arduino });
+            Assert.Equal(FlagBoxInstallState.Outdated, raw.State);
+            Assert.True(PanelUpdates.StripRow("Brow", raw).OffersUpdate);
+
+            var census = new[]
+            {
+                new KeyValuePair<LedBar, FlagBoxPlan>(brow, raw),
+                new KeyValuePair<LedBar, FlagBoxPlan>(rim, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }),
+            };
+            var plans = PanelUpdates.StripPlans(census, true, new[] { "3-9-3" });
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, plans[0].Value.State);
+            Assert.Equal("0.3.0-rc.2", plans[0].Value.InstalledVersion);
+            Assert.Same(census[1].Value, plans[1].Value);
+            var row = PanelUpdates.StripRow("Brow", plans[0].Value);
+            Assert.Equal("Unknown", row.State);
+            Assert.Equal("0.3.0-rc.2", row.Version);
+            Assert.Equal(PanelUpdates.StripNotEmbedded, row.Tooltip);
+            Assert.False(row.OffersUpdate);
+            Assert.False(PanelUpdates.TableHasPress(new[] { row }));
+            // Neither press picks it: Reinstall everything would say it failed with nothing in the log.
+            Assert.Equal(new[] { rim }, PanelUpdates.StripsToWrite(plans, true, PanelUpdates.ReinstallWrites, bar => true).Select(e => e.Key));
+            Assert.Empty(PanelUpdates.StripsToWrite(plans, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(brow)), bar => true));
+
+            // An unstamped copy is not "Up to date" either, and a build with no strip profiles says it of each.
+            arduino[0].Description = null;
+            var unstamped = LedBarProfile.Plan(brow, null, new[] { arduino });
+            Assert.Equal(FlagBoxInstallState.UpToDate, unstamped.State);
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelUpdates.StripPlans(new[] { new KeyValuePair<LedBar, FlagBoxPlan>(brow, unstamped) }, true, new string[0])[0].Value.State);
+            // SimHub out of reach outranks it: nothing is said as known then.
+            Assert.All(PanelUpdates.StripPlans(census, false, new[] { "3-9-3" }), entry => Assert.Equal(FlagBoxInstallState.Unavailable, entry.Value.State));
+            Assert.Empty(PanelUpdates.StripPlans(null, true, null));
         }
 
         /// <summary>A light row's dot is its own words' ink, so an older profile's amber words have an
@@ -604,9 +688,8 @@ namespace OpenDashPlugin.Tests
 
             var current = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, null);
             Assert.Equal("Up to date", current.State);
-            // The row has no Reinstall, so it is not told about one, and it does not repeat its state: it keeps
-            // the one step installing does not take.
-            Assert.Equal("Select it on your device to use it.", current.Tooltip);
+            // As a current strip's row: the state and the version already say it all.
+            Assert.Null(current.Tooltip);
             Assert.False(current.OffersUpdate);
 
             var none = PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null);
@@ -616,7 +699,7 @@ namespace OpenDashPlugin.Tests
             var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
             Assert.Equal("Unknown", unreachable.State);
             Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.", unreachable.Tooltip);
-            Assert.Equal("Install failed. See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
+            Assert.Equal("See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
         }
 
         /// <summary>A light row's Update press says what it costs, in the words the Matrix and LEDs pages
@@ -641,17 +724,23 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.ReinstallQuestion(new[] { "Rim", "Pit wall" }));
         }
 
-        /// <summary>Counts strips one by one, and a flag box write by what it was before.</summary>
-        private static UpdatesLightsTally Tally(int updated = 0, int installed = 0, int notUpdated = 0, int notInstalled = 0, FlagBoxInstallState? flagBoxBefore = null, FlagBoxInstallState? flagBoxAfter = null)
+        private static readonly FlagBoxPlan Wrote = new FlagBoxPlan { State = FlagBoxInstallState.UpToDate };
+        private static readonly FlagBoxPlan Refused = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
+
+        /// <summary>Counts strips one by one, by name, and a flag box write by what it was before.</summary>
+        private static UpdatesLightsTally Tally(string[] updated = null, string[] installed = null, string[] notUpdated = null, string[] notInstalled = null, string[] noDevice = null, FlagBoxInstallState? flagBoxBefore = null, FlagBoxInstallState? flagBoxAfter = null, string note = null)
         {
             var tally = new UpdatesLightsTally();
-            for (var i = 0; i < updated; i++) tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate);
-            for (var i = 0; i < installed; i++) tally.Strip(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate);
-            for (var i = 0; i < notUpdated; i++) tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed);
-            for (var i = 0; i < notInstalled; i++) tally.Strip(FlagBoxInstallState.Failed, FlagBoxInstallState.Failed);
-            if (flagBoxBefore.HasValue) tally.FlagBox(flagBoxBefore.Value, flagBoxAfter.Value);
+            foreach (var name in updated ?? new string[0]) tally.Strip(name, "Arduino", FlagBoxInstallState.Outdated, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = note });
+            foreach (var name in installed ?? new string[0]) tally.Strip(name, name == "Rim" ? "Fanatec" : null, FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = note });
+            foreach (var name in notUpdated ?? new string[0]) tally.Strip(name, "Arduino", FlagBoxInstallState.Outdated, Refused);
+            foreach (var name in notInstalled ?? new string[0]) tally.Strip(name, "Arduino", FlagBoxInstallState.Failed, Refused);
+            foreach (var name in noDevice ?? new string[0]) tally.DeviceNotListed(name);
+            if (flagBoxBefore.HasValue) tally.FlagBox(flagBoxBefore.Value, new FlagBoxPlan { State = flagBoxAfter.Value });
             return tally;
         }
+
+        private static string[] Strips(params string[] names) => names;
 
         [Fact]
         public void Reinstall_everything_says_what_it_wrote_and_the_step_left()
@@ -665,51 +754,104 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box"));
             Assert.Equal("Reinstalled 3 dashboards. Restart SimHub to see them.",
                 PanelUpdates.ReinstallSummary(3, 0, true, Tally(), "OpenDash Flag box"));
-            // The step follows the dashboards, so it points at them and not at the last profile named.
-            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen your dashboards to see them. Updated 2 LED profiles. Updated OpenDash Flag box.",
-                PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: 2, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
-            // Installing a profile adds it without selecting it, and the line names that step (voice.md).
-            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated 1 LED profile. Installed 2 LED profiles. Select each on its device in SimHub to use it. Installed OpenDash Flag box. Select it on your device to use it.",
-                PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: 1, installed: 2, flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+            // The step follows the dashboards, so it points at them and not at the last profile named, and each
+            // profile is named as SimHub lists it, in the LEDs and Matrix pages' words.
+            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen your dashboards to see them. Updated the profiles of Rim and Brow. Updated OpenDash Flag box.",
+                PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+            // Installing a profile adds it without selecting it, and the line names that step for each profile
+            // it installed, on the device it went to (voice.md; PanelLeds.SelectIt's form).
+            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated Dash's profile. Installed the profiles of Rim and Brow. Installed OpenDash Flag box. Select \"Rim\" on Fanatec, \"Brow\" and \"OpenDash Flag box\" in SimHub to use them.",
+                PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: Strips("Dash"), installed: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
             // A rig with strips and no screens: no dashboards clause.
-            Assert.Equal("Installed 1 LED profile. Select it on its device in SimHub to use it.",
-                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: 1), "OpenDash Flag box"));
+            Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec in SimHub to use it.",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim")), "OpenDash Flag box"));
             Assert.Equal("The 2 dashboards you edited were left alone.",
                 PanelUpdates.ReinstallSummary(0, 2, false, Tally(), "OpenDash Flag box"));
-            Assert.Equal("The dashboard you edited was left alone. Updated 1 LED profile.",
-                PanelUpdates.ReinstallSummary(0, 1, false, Tally(updated: 1), "OpenDash Flag box"));
+            Assert.Equal("The dashboard you edited was left alone. Updated Rim's profile.",
+                PanelUpdates.ReinstallSummary(0, 1, false, Tally(updated: Strips("Rim")), "OpenDash Flag box"));
             Assert.Equal("There was nothing to reinstall.", PanelUpdates.ReinstallSummary(0, 0, false, Tally(), "OpenDash Flag box"));
             Assert.True(Tally().Ok);
-            Assert.True(Tally(updated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate).Ok);
+            Assert.True(Tally(updated: Strips("Rim"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate).Ok);
+        }
+
+        /// <summary>A device that lists only its maker's profiles hides the one just installed until the driver
+        /// turns that off, so the note comes before the select step it stands in the way of, as on the LEDs and
+        /// Matrix pages, and the line is not said in the ordinary ink.</summary>
+        [Fact]
+        public void What_an_install_reports_about_the_device_is_said_before_the_select_step()
+        {
+            var tally = Tally(installed: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote);
+            Assert.Equal(FlagBoxInstallPlan.BuiltInModeNote, tally.Note);
+            Assert.Equal("Installed Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed. Select \"Rim\" on Fanatec in SimHub to use it.",
+                PanelUpdates.ReinstallSummary(0, 0, false, tally, "OpenDash Flag box"));
+            Assert.False(tally.Ok);
+            Assert.False(tally.Failed);
+            Assert.Equal("Updated Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed.",
+                PanelUpdates.LightsSaid(Tally(updated: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote), "OpenDash Flag box"));
+            // A failed write's note is not an install's: there is nothing listed to select.
+            var failed = new UpdatesLightsTally();
+            failed.Strip("Rim", "Fanatec", FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.Failed, Note = FlagBoxInstallPlan.BuiltInModeNote });
+            Assert.Null(failed.Note);
+        }
+
+        /// <summary>A light row's Update says what it did as the LEDs and Matrix pages' Update does, and nothing
+        /// when it found nothing left to write.</summary>
+        [Fact]
+        public void A_light_row_s_update_says_what_it_did()
+        {
+            Assert.Equal("Updated Rim's profile.", PanelUpdates.LightsSaid(Tally(updated: Strips("Rim")), "OpenDash Flag box"));
+            Assert.Equal("Could not update Rim's profile. See SimHub's log.", PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim")), "OpenDash Flag box"));
+            Assert.Equal("Updated OpenDash Flag box.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+            Assert.Equal("Could not update OpenDash Flag box. See SimHub's log.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
+            Assert.Equal("SimHub does not list Rim's device. Choose one under SimHub device on the LEDs page.", PanelUpdates.LightsSaid(Tally(noDevice: Strips("Rim")), "OpenDash Flag box"));
+            Assert.Null(PanelUpdates.LightsSaid(Tally(), "OpenDash Flag box"));
+            Assert.Null(PanelUpdates.LightsSaid(null, "OpenDash Flag box"));
         }
 
         [Fact]
-        public void A_profile_that_could_not_be_written_is_said_with_where_to_look_and_the_step_still_said()
+        public void A_profile_that_could_not_be_written_is_said_by_name_with_where_to_look()
         {
-            var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: 1, notUpdated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box");
-            Assert.Equal("Reinstalled 2 dashboards. Close and reopen your dashboards to see them. Updated 1 LED profile. 1 LED profile could not be updated. OpenDash Flag box could not be updated. See SimHub's log.", line);
-            Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it. 2 LED profiles could not be updated. 3 LED profiles could not be installed. See SimHub's log.",
-                PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: 2, notInstalled: 3), "OpenDash Flag box"));
-            Assert.Equal("OpenDash Flag box could not be installed. See SimHub's log.",
+            var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: Strips("Rim"), notUpdated: Strips("Dash"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box");
+            Assert.Equal("Reinstalled 2 dashboards. Close and reopen your dashboards to see them. Updated Rim's profile. Could not update Dash's profile. Could not update OpenDash Flag box. See SimHub's log.", line);
+            Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it. Could not update the profiles of Rim and Dash. Could not install the profiles of Brow, Pit and Top. See SimHub's log.",
+                PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: Strips("Rim", "Dash"), notInstalled: Strips("Brow", "Pit", "Top")), "OpenDash Flag box"));
+            Assert.Equal("Could not install OpenDash Flag box. See SimHub's log.",
                 PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
             // A blank name is the profile's own.
             Assert.Equal("Updated " + FlagBoxProfile.ProfileName + ".",
                 PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), " "));
-            Assert.False(Tally(notUpdated: 1).Ok);
-            Assert.False(Tally(notInstalled: 1).Ok);
+            Assert.False(Tally(notUpdated: Strips("Rim")).Ok);
+            Assert.False(Tally(notInstalled: Strips("Rim")).Ok);
             Assert.False(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed).Ok);
             // The reason is in SimHub's log, and the line says where rather than repeating it (voice.md).
             Assert.Equal("The reinstall did not finish. See SimHub's log.", PanelUpdates.ReinstallFailed);
         }
 
-        /// <summary>Two strips of one shape are two strips: one rewritten and one whose device has gone is
-        /// one updated and one that could not be, not two failures.</summary>
+        /// <summary>A strip left out for want of a device is named with the step, after the failures and their
+        /// log, and never pointed at the log: nothing was written, and the reason is the step.</summary>
+        [Fact]
+        public void A_strip_left_out_for_want_of_a_device_is_named_with_the_step_not_the_log()
+        {
+            Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec in SimHub to use it. SimHub does not list the devices of Dash and Brow. Choose them under SimHub device on the LEDs page.",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim"), noDevice: Strips("Dash", "Brow")), "OpenDash Flag box"));
+            Assert.Equal("Could not update Rim's profile. See SimHub's log. SimHub does not list Dash's device. Choose one under SimHub device on the LEDs page.",
+                PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim"), noDevice: Strips("Dash")), "OpenDash Flag box"));
+            var tally = Tally(noDevice: Strips("Dash"));
+            Assert.False(tally.Ok);
+            Assert.False(tally.Failed);
+            Assert.Null(PanelUpdates.NoDeviceSaid(new string[0]));
+        }
+
+        /// <summary>Two strips of one shape are two strips: one rewritten and one that could not be are one
+        /// updated and one that could not be, not two failures.</summary>
         [Fact]
         public void A_run_is_counted_strip_by_strip()
         {
             var tally = new UpdatesLightsTally();
-            tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate);
-            tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed);
+            tally.Strip("Rim", "Arduino", FlagBoxInstallState.Outdated, Wrote);
+            tally.Strip("Rim 2", "Arduino", FlagBoxInstallState.Outdated, Refused);
+            Assert.Equal(new[] { "Rim" }, tally.Updated);
+            Assert.Equal(new[] { "Rim 2" }, tally.NotUpdated);
             Assert.Equal(1, tally.StripsUpdated);
             Assert.Equal(1, tally.StripsNotUpdated);
             Assert.Equal(0, tally.StripsInstalled);
@@ -745,11 +887,12 @@ namespace OpenDashPlugin.Tests
                 Held(gone, FlagBoxInstallState.NotInstalled),
             };
 
-            Assert.Equal(new[] { rim }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(rim))).Select(e => e.Key));
+            Func<LedBar, bool> all = bar => true;
+            Assert.Equal(new[] { rim }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(rim)), all).Select(e => e.Key));
             // A current strip's row has no Update, and a key that names it writes nothing.
-            Assert.Empty(PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(brow))));
-            Assert.Equal(new[] { rim, dash, gone }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.ReinstallWrites).Select(e => e.Key));
-            Assert.Empty(PanelUpdates.StripsToWrite(census, false, PanelUpdates.ReinstallWrites));
+            Assert.Empty(PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(brow)), all));
+            Assert.Equal(new[] { rim, dash, gone }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.ReinstallWrites, all).Select(e => e.Key));
+            Assert.Empty(PanelUpdates.StripsToWrite(census, false, PanelUpdates.ReinstallWrites, all));
 
             // Keyed by namespace, so two strips of one shape are two keys.
             Assert.Equal("LedRim", PanelUpdates.StripKey(rim));
@@ -757,15 +900,22 @@ namespace OpenDashPlugin.Tests
             Assert.NotEqual(PanelUpdates.StripKey(rim), PanelUpdates.StripKey(dash));
         }
 
-        /// <summary>A strip with no profile in this build is reported as such, one whose device SimHub no longer
-        /// has is a failure and not a write, and the rest are written.</summary>
+        /// <summary>A strip whose device SimHub does not list is left out rather than written: installing takes
+        /// its copy out of every device first, so a write there would remove a strip that still lights. The
+        /// press names it instead of failing it.</summary>
         [Fact]
-        public void A_strip_the_press_may_not_write_is_reported_rather_than_written()
+        public void A_strip_on_a_device_SimHub_does_not_list_is_left_out_rather_than_written()
         {
-            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelUpdates.Unwritable(false, false).State);
-            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelUpdates.Unwritable(false, true).State);
-            Assert.Equal(FlagBoxInstallState.Failed, PanelUpdates.Unwritable(true, false).State);
-            Assert.Null(PanelUpdates.Unwritable(true, true));
+            var rim = Strip("Rim", "LedRim");
+            var dash = Strip("Dash", "LedDash");
+            var current = Strip("Brow", "LedBrow");
+            var census = new[] { Held(rim, FlagBoxInstallState.Outdated), Held(dash, FlagBoxInstallState.NotInstalled), Held(current, FlagBoxInstallState.UpToDate) };
+            Func<LedBar, bool> listed = bar => bar != dash && bar != current;
+            Assert.Equal(new[] { rim }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.ReinstallWrites, listed).Select(e => e.Key));
+            Assert.Equal(new[] { dash }, PanelUpdates.StripsWithoutDevice(census, true, PanelUpdates.ReinstallWrites, listed));
+            // Only the strips the rule picks: a current one is never written, device or not.
+            Assert.DoesNotContain(current, PanelUpdates.StripsWithoutDevice(census, true, PanelUpdates.ReinstallWrites, listed));
+            Assert.Empty(PanelUpdates.StripsWithoutDevice(census, false, PanelUpdates.ReinstallWrites, listed));
         }
 
         /// <summary>
@@ -809,10 +959,23 @@ namespace OpenDashPlugin.Tests
         {
             var code = PageCode();
             Assert.Contains("UpdatesWriteStrips(PanelUpdates.ReinstallWrites, out tally);", code);
-            Assert.Contains("UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out ignored);", code);
-            Assert.Contains("PanelUpdates.StripsToWrite(BarCensus(embedded, out reachable), reachable, wanted)", code);
-            Assert.Contains("PanelUpdates.Unwritable(", code);
+            Assert.Contains("UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out said);", code);
+            Assert.Contains("var census = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);", code);
+            Assert.Contains("PanelUpdates.StripsToWrite(census, reachable, wanted, listed)", code);
+            Assert.Contains("PanelUpdates.StripsWithoutDevice(census, reachable, wanted, listed)", code);
+            Assert.Contains("var after = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);", code);
             Assert.Contains("return PanelUpdates.AfterWrite(after, reachable, written);", code);
+            // The table and the support report read the census through the same rule, so neither says a strip
+            // this build has no profile for is older or current.
+            Assert.Contains("return PanelUpdates.StripPlans(census, reachable, embedded.Keys);", code);
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(code, @"PanelUpdates\.StripPlans\(BarCensus\(").Count);
+            // A row's press is drawn from its row, whose rule is the device's as well as the state's.
+            Assert.Contains("PanelUpdates.StripRow(s.Key.Name, s.Value, PanelUpdates.DeviceListed(devices, s.Key))", code);
+            Assert.Contains("own(PanelUpdates.StripRow(bar.Name, current, PanelUpdates.DeviceListed(devices, bar)));", code);
+            Assert.Contains("PanelUpdates.TableHasPress(lightRows)", code);
+            // Each press says what it did, after what needs fixing has been asked again.
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(code, @"RefreshSidebar\(\);\s*UpdatesSay\(said\);").Count);
+            Assert.Contains("said.FlagBox(drawn.State, result);", code);
             Assert.Contains("PanelUpdates.BringsFlagBoxForward(", code);
             // The method and its two callers, the row's Update and Reinstall everything: no third press
             // writes strips by a rule of its own.
