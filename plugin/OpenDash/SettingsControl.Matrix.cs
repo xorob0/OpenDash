@@ -80,10 +80,11 @@ namespace OpenDashPlugin
             var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));
             Border selectedCard = null;
             var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);
+            // The profile on the title's line; under the title the by-hand import, only when SimHub's matrix
+            // settings could not be reached (the shell's, which Matrix and Updates both draw); the cards; and
+            // the selected matrix.
             return PageLayout(PanelMatrix.Title,
                 Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile),
-                // The by-hand import, only when SimHub's matrix settings could not be reached: the shell's, which
-                // Matrix and Updates both draw.
                 PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null,
                 Ui.Anchor(cards, PanelMatrix.AnchorPanels),
                 slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));
@@ -579,9 +580,9 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            // The artboard's '·' for an unranked layer, drawn rather than typed so no text box holds a lone glyph.
             if (rank == string.Empty)
             {
-                // The artboard's '·', drawn rather than typed so no text box holds a lone glyph.
                 var dot = new Ellipse
                 {
                     Width = PanelMatrix.UnrankedDotSize,

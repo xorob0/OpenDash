@@ -301,6 +301,10 @@ namespace OpenDashPlugin.Tests
                 "var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line); if (PanelMatrix.ProfileHasButton(state)) {",
                 "if (plugin.FlagBoxJson == null) return null;",
                 "var hover = PanelMatrix.ProfileLineTooltip(state, plan == null ? null : plan.EmbeddedVersion, Settings.MatrixPanels().ToList()); if (hover != null) row.ToolTip = hover;",
+                // The state and the version the line is drawn in are both the plan's, read as the line is built.
+                "private FrameworkElement BuildMatrixProfile(FlagBoxPlan plan) { var state = PanelMatrix.StateOf(plan); var version = plan == null ? null : plan.InstalledVersion;",
+                // The line sits on the right of the title's line.
+                "row.HorizontalAlignment = HorizontalAlignment.Right; return row; }",
             })
             {
                 Assert.Contains(pin, flat);
@@ -422,6 +426,13 @@ namespace OpenDashPlugin.Tests
                 "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));",
                 "var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)); if (said != null) Say(said);",
                 "var shown = facts == null ? null : facts.Shown; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);",
+                // Each card and the fix box read their own matrix's facts, and the rename compares the stored name
+                // before the press with the one after it, never the typed one.
+                "var facts = MatrixFacts(m); var shown = facts == null ? null : facts.Shown;",
+                "var facts = MatrixFacts(m); if (facts != null && facts.Shown == false)",
+                "var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); Settings.RenameMatrixPanel(matrix, name.Text);",
+                // The add tile's hover while it adds.
+                "if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot())) { add.ToolTip = PanelMatrix.AddTooltip; } else { add.IsEnabled = false;",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
                 "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; AutomationProperties.SetName(card, name); cards.Add(card);",
                 "var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));",
@@ -451,6 +462,11 @@ namespace OpenDashPlugin.Tests
             {
                 // The page: every matrix's card, the selected one handed its picture, and the add tile.
                 "return PageLayout(PanelMatrix.Title,",
+                // The page's order: the profile on the title's line, the by-hand import under the title, the
+                // cards, then the selected matrix.
+                "return PageLayout(PanelMatrix.Title, Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile), "
+                    + "PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null, "
+                    + "Ui.Anchor(cards, PanelMatrix.AnchorPanels), slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));",
                 "var panels = Settings.MatrixPanels().ToList();",
                 "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
                 "if (m == selected) selectedPicture(picture);",
@@ -482,6 +498,7 @@ namespace OpenDashPlugin.Tests
                 // The chips: cleared and drawn again on every press, each added, drawn once as the column is
                 // built, and the keyboard's focus kept on the chip it was on.
                 "chips.Children.Clear();",
+                "{ if (chips.Children[i].IsKeyboardFocusWithin) focused = i; }",
                 "chips.Children.Add(chip); }",
                 "if (focused >= 0 && focused < chips.Children.Count) chips.Children[focused].Focus();",
                 "drawChips(); var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chipGroup);",
@@ -489,9 +506,13 @@ namespace OpenDashPlugin.Tests
                 // The repaint: the fresh lamps into the picture already on the page, the card's included.
                 "var fresh = Ui.Matrix(cells, style, MatrixDim()); var lamps = fresh.Child; fresh.Child = null; picture.Child = lamps;",
                 "if (cardPicture != null) MatrixRepaint(cardPicture,",
+                // The repaint reads the settings of the matrix it is drawn for.
+                "Action repaint = () => { var options = PanelMatrix.OptionsFor(Settings, m); MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);",
                 "return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);",
                 // The priority list's own words and greyed rows.
                 "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary)",
+                // The greyed caption carries the artboard's SOON tag after its words.
+                "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary), Ui.SoonTag(PanelSoon.PriorityOrder));",
                 "var head = Ui.Row(Ui.Heading(PanelMatrix.PriorityTitle), Ui.Soon(reorder, PanelSoon.PriorityOrder));",
                 "idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(false, null)), PanelSoon.RpmColourForEverything)); var idleLayer",
                 // Each helper adds what it is given: a layer its rows, a layer's line its name, number or dot,
@@ -500,6 +521,10 @@ namespace OpenDashPlugin.Tests
                 "titleLine.Children.Add(name); var words = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center }; words.Children.Add(titleLine);",
                 "line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(line); }",
                 "grid.Children.Add(cell); }",
+                // Idle display is unranked, drawn with the dot; a ranked layer with its number; the device row
+                // with neither.
+                "if (rank == string.Empty) { var dot = new Ellipse {",
+                "else if (rank != null) { var number =",
                 "grid.Children.Add(number); }",
                 "Grid.SetColumn(words, 1); grid.Children.Add(words);",
                 "Grid.SetColumn(link, 2); grid.Children.Add(link); }",
@@ -520,6 +545,9 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(pin, flat);
             }
+            // Both helpers carry their parts, so Ui.Soon appends the SOON tag after a greyed row's name (#363,
+            // #371).
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("Child = grid, Tag = new RowParts(titleLine, control), };")).Count);
             // Each helper's two adds of a caption line: the layer's and the option's, and the option's own line.
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("titleLine.Children.Add(name);")).Count);
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("words.Children.Add(line);")).Count);
@@ -780,6 +808,8 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelMatrix.CarLine(true, null, false, false, true));
             Assert.Null(PanelMatrix.CarLine(true, null, false, true, true));
             Assert.Null(PanelMatrix.CarLine(true, " ", true, true, true));
+            // SimHub's padding round a car's name is not drawn.
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, "  " + car + " ", true, true, true));
             Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, true, false));
             Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, false, false));
             Assert.Null(PanelMatrix.CarLine(true, car, true, true, false));
@@ -1007,9 +1037,31 @@ namespace OpenDashPlugin.Tests
                 "var thresholds = Ui.LinkButton(PanelMatrix.ThresholdsLink);",
                 "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.PreviewColumnWidth) }); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.BodyGap) });",
                 "previewColumn.Element.MaxWidth = PanelMatrix.PreviewColumnWidth;",
+                // The responsive rules: the priority list takes the rest of the width beside the preview, and
+                // stacked, the preview column keeps to the left rather than centring.
+                "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.PreviewColumnWidth) }); "
+                    + "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.BodyGap) }); "
+                    + "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });",
+                "previewColumn.Element.VerticalAlignment = VerticalAlignment.Top; priority.VerticalAlignment = VerticalAlignment.Top;",
+                "previewColumn.Element.MaxWidth = PanelMatrix.PreviewColumnWidth; previewColumn.Element.HorizontalAlignment = HorizontalAlignment.Left;",
+                // The rule over the selected matrix and over each layer, and the preview's inset frame.
+                "return new Border { BorderBrush = Ui.Brush(Theme.Rule), BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0), "
+                    + "Padding = new Thickness(0, PanelMatrix.SectionPaddingTop, 0, 0), Child = Ui.VStack(PanelMatrix.SectionGap, parts.ToArray()), };",
+                "return new Border { BorderBrush = Ui.Brush(Theme.Rule), BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0), Child = stack, };",
+                "Padding = new Thickness(PanelMatrix.PreviewFramePadding), Background = Ui.Brush(Theme.SurfaceInset), BorderBrush = Ui.Brush(Theme.Rule), "
+                    + "BorderThickness = new Thickness(PanelMetrics.BorderWeight), CornerRadius = new CornerRadius(Theme.Radius), Child = preview, };",
+                "carLine.TextWrapping = TextWrapping.Wrap;",
+                // A layer's line: rank, words that take the rest, link and control; an option's: words and control.
+                "grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); "
+                    + "grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });",
+                "grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.Children.Add(words);",
+                "control.VerticalAlignment = VerticalAlignment.Center; control.HorizontalAlignment = HorizontalAlignment.Right; control.Margin = new Thickness(PanelMatrix.LayerGap, 0, 0, 0); Grid.SetColumn(control, 3);",
+                "control.VerticalAlignment = VerticalAlignment.Center; control.HorizontalAlignment = HorizontalAlignment.Right; control.Margin = new Thickness(PanelMatrix.OptionGap, 0, 0, 0); Grid.SetColumn(control, 1);",
                 "Padding = new Thickness(0, PanelMatrix.SectionPaddingTop, 0, 0), Child = Ui.VStack(PanelMatrix.SectionGap, parts.ToArray()),",
                 "Padding = new Thickness(PanelMatrix.PreviewFramePadding),",
                 "chip.Margin = new Thickness(0, 0, PanelMatrix.ChipGap, PanelMatrix.ChipGap);",
+                "chip.Padding = new Thickness(PanelKit.ChipPaddingXLights, 0, PanelKit.ChipPaddingXLights, 0);",
+                "fix.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);",
                 "var cell = new Border { Width = PanelMatrix.RankWidth, Margin = new Thickness(0, 0, PanelMatrix.LayerGap, 0), Child = dot };",
                 "var number = Ui.Text(rank, PanelMatrix.RankSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data); number.Width = PanelMatrix.RankWidth;",
                 "var name = Ui.Text(title, PanelShell.RowTitleSize, FontWeights.Medium, Theme.TextPrimary);",
@@ -1041,6 +1093,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle), PanelMatrix.IdleDisplayTitle,", matrix);
             Assert.Contains("Width = PanelMatrix.UnrankedDotSize,", matrix);
             Assert.Contains("words.Margin = new Thickness(PanelMatrix.OptionIndent, 0, 0, 0);", matrix);
+            Assert.Contains("else { words.Margin = new Thickness(PanelMatrix.OptionIndent, 0, 0, 0); }", FlatSource());
             Assert.Contains("Padding = new Thickness(PanelMatrix.OptionIndent, PanelMatrix.OptionPaddingY, 0, PanelMatrix.OptionPaddingY),", matrix);
             // The selected matrix's name wraps inside its column rather than trimming, and its number wraps
             // under it.
@@ -1119,6 +1172,26 @@ namespace OpenDashPlugin.Tests
                 PanelMatrix.CarShiftPointsTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
                 PanelMatrix.RedlineFlashTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
             }, PanelMatrix.Search.Select(entry => entry.Label + " -> " + entry.Route.Anchor));
+            // Each entry's keywords, the old row names among them ("race flags", "pit status", "car warnings",
+            // "slide in", "at rest"), so a search in the words the panel used to use lands on the row that
+            // replaced it.
+            Assert.Equal(new[]
+            {
+                FlagBoxProfile.ProfileName + ": flag box profile, install, reinstall, matrix profile, 8x8",
+                "Add a matrix: your matrices, new, 8x8, flag box, pillar, panel, panels",
+                "Priority: order, layers, takes over",
+                "Flags: race flags, yellow, blue",
+                "Critical flags only: chequer, white, green",
+                "Pit lane: limiter, speeding, pit status",
+                "Spotter: cars alongside",
+                "Mounting side: left, right, both",
+                "Spotter bar animation: slide in",
+                "Warnings: fuel, oil, water, car warnings",
+                "Idle display: at rest, gear, dark",
+                "Shift colours: gear, revs",
+                "Car-specific shift points: lovely, car data, car-specific, thresholds",
+                "Redline flash: gear, shift",
+            }, PanelMatrix.Search.Select(entry => entry.Label + ": " + string.Join(", ", entry.Keywords)));
             // And the page wraps each of those parts in its anchor.
             var flat = FlatSource();
             foreach (var wrap in new[]
