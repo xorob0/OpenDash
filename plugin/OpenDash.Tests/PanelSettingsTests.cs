@@ -224,6 +224,12 @@ namespace OpenDashPlugin.Tests
         /// Rig scenario "Try" opens; the greyed four are the registry's own titles, so a row and its search hit
         /// cannot drift apart.
         /// </summary>
+        /// <remarks>
+        /// A live row's ticks are today's surfaces as #512 sets them out, not the artboard's mock: low fuel
+        /// reaches the screens, the strips' car lamp and the matrix, and oil and water only the matrix, whose
+        /// warning glyphs are the one thing that reads their thresholds. A greyed row's ticks are the
+        /// artboard's, for #512 to decide.
+        /// </remarks>
         [Fact]
         public void The_alert_table_is_the_artboards()
         {
@@ -232,9 +238,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "under", "over", "over", "over", "", "at", "under" }, PanelSettings.Alerts.Select(a => a.Op));
             Assert.Equal(new[] { "laps", null, null, "%", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
             Assert.False(PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).HasThreshold);
-            Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSettings.LowFuelTitle).Surfaces);
-            Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSettings.OilTempTitle).Surfaces);
+            Assert.Equal(new[] { true, true, true, false }, PanelSettings.Alert(PanelSettings.LowFuelTitle).Surfaces);
+            Assert.Equal(new[] { false, false, true, false }, PanelSettings.Alert(PanelSettings.OilTempTitle).Surfaces);
+            Assert.Equal(new[] { false, false, true, false }, PanelSettings.Alert(PanelSettings.WaterTempTitle).Surfaces);
+            Assert.Equal(new[] { true, false, false, true }, PanelSettings.Alert(PanelSoon.TyreWear.Title).Surfaces);
             Assert.Equal(new[] { true, true, true, true }, PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).Surfaces);
+            Assert.Equal(new[] { true, false, false, true }, PanelSettings.Alert(PanelSoon.Incidents.Title).Surfaces);
+            Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title).Surfaces);
+            // What a greyed row's box shows, faded: the artboard's examples, and nothing where it draws a dash.
+            Assert.Equal(new string[] { null, null, null, "70", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
             Assert.Equal(new[] { PanelSoon.TyreWear, PanelSoon.PitWindowOpen, PanelSoon.Incidents, PanelSoon.HybridBatteryLow }.Select(s => s.Title),
                 PanelSettings.Alerts.Where(a => !a.Live).Select(a => a.Title));
             Assert.Null(PanelSettings.Alert("Nothing"));

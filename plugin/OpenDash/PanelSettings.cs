@@ -262,15 +262,22 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The table's rows, in the artboard's order: the three the rig warns at today, then the four that
-        /// are coming. The live rows' columns say where each shows today -- a screen's fuel and warning cards
-        /// and the matrix's warning glyphs, never the strips, and in every session -- and the greyed rows'
-        /// columns are the artboard's.
+        /// are coming.
         /// </summary>
+        /// <remarks>
+        /// A tick on a live row reads as a fact, so the live rows' columns are where each shows today, as #512
+        /// sets them out, and not the artboard's mock ticks. Low fuel is on every surface: the screens' fuel
+        /// card and band D telltale, the strips' car lamp and fuel centre (LightsLowFuelLaps is the number
+        /// this row writes, and the strip effect is on by default), and the matrix's warning glyph. Oil and
+        /// water are the matrix's alone: no screen reads either threshold, and the screens' engine telltale
+        /// lights from the sim's own warning bits. All of them warn in every session. The greyed rows'
+        /// columns are the artboard's, which is what #512 is to decide.
+        /// </remarks>
         public static readonly IReadOnlyList<SettingsAlert> Alerts = new[]
         {
-            new SettingsAlert(LowFuelTitle, Under, LapsUnit, null, true, false, true, false, PanelEmulation.LowFuel),
-            new SettingsAlert(OilTempTitle, Over, null, null, true, false, true, false, PanelEmulation.Oil),
-            new SettingsAlert(WaterTempTitle, Over, null, null, true, false, true, false, PanelEmulation.Water),
+            new SettingsAlert(LowFuelTitle, Under, LapsUnit, null, true, true, true, false, PanelEmulation.LowFuel),
+            new SettingsAlert(OilTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Oil),
+            new SettingsAlert(WaterTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Water),
             new SettingsAlert(PanelSoon.TyreWear.Title, Over, "%", "70", true, false, false, true, null),
             new SettingsAlert(PanelSoon.PitWindowOpen.Title, string.Empty, string.Empty, null, true, true, true, true, null),
             new SettingsAlert(PanelSoon.Incidents.Title, At, "x", "12", true, false, false, true, null),
