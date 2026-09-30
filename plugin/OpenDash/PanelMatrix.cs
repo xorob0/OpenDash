@@ -113,11 +113,25 @@ namespace OpenDashPlugin
             return state != FlagBoxInstallState.NotEmbedded && state != FlagBoxInstallState.Unavailable;
         }
 
-        /// <summary>The press's tooltip in the state it is drawn for: Install adds a profile beside the
-        /// driver's own, and Update and Reinstall replace the copy in SimHub, which is the cost they carry.</summary>
-        public static string ProfileTooltip(FlagBoxInstallState state)
+        /// <summary>
+        /// The press's tooltip in the state it is drawn for: Install adds a profile beside the driver's own,
+        /// and Update and Reinstall replace the copy in SimHub, which is the cost they carry. After a failed
+        /// press the line says Install failed and offers Install, but SimHub may still hold the copy the
+        /// press was made over, and pressing again removes it and adds the embedded one (FlagBoxInstaller),
+        /// the driver's edits with it; so the failed state is warned as the state the press was made in
+        /// (<paramref name="pressedFrom"/>, see <see cref="PressedFrom"/>) would be.
+        /// </summary>
+        public static string ProfileTooltip(FlagBoxInstallState state, FlagBoxInstallState pressedFrom)
         {
-            return InSimHub(state) ? FlagBoxInstallPlan.Replaces : InstallTooltip;
+            var held = state == FlagBoxInstallState.Failed ? pressedFrom : state;
+            return InSimHub(held) ? FlagBoxInstallPlan.Replaces : InstallTooltip;
+        }
+
+        /// <summary>The state a press is made in, for the tooltip after it fails: the line's own state, or,
+        /// when the line already says Install failed, the state the failed press before it was made in.</summary>
+        public static FlagBoxInstallState PressedFrom(FlagBoxInstallState state, FlagBoxInstallState failedFrom)
+        {
+            return state == FlagBoxInstallState.Failed ? failedFrom : state;
         }
 
         public const string InstallTooltip = "Adds OpenDash's profile to SimHub. Your own profiles are never changed.";
@@ -129,22 +143,32 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is said once the press has run, or null when the line above already says it all. A first
-        /// install adds the profile and does not select it, so the sentence names that step. Update says it
-        /// updated an older copy, and Reinstall, over a copy already current, says it reinstalled: one verb per
-        /// press (ruling 67). The name follows the verb unquoted, as on the other pages.
+        /// What is said once the press has run, as one message in the order the driver acts on it, or null
+        /// when the line above already says it all. The verb first, one per press (ruling 67): Installed,
+        /// Updated over an older copy, Reinstalled over a current one, the name unquoted after it as on the
+        /// other pages. Then the installer's note when it has one (FlagBoxInstallPlan.BuiltInModeNote), which
+        /// has to be done before the profile can be selected at all, and makes the message caution rather
+        /// than information, as the LEDs page says the same note. Then, after a first install, which adds the
+        /// profile and does not select it, the select step in the form <see cref="StepsLeft"/> gives it
+        /// (<see cref="SelectStep"/>): for the one matrix, for each of several, and none on a rig with none.
         /// </summary>
-        public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState after, string profile)
+        public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState after, string profile, string note, IList<int> panels)
         {
             switch (after)
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
-                    if (before == FlagBoxInstallState.Outdated) return PanelMessage.Info("Updated " + profile + ".");
-                    if (before == FlagBoxInstallState.UpToDate) return PanelMessage.Info("Reinstalled " + profile + ".");
-                    return PanelMessage.Info("Installed " + profile + ". Select it on " + YourDevice + ".");
+                    var verb = before == FlagBoxInstallState.Outdated ? "Updated "
+                        : before == FlagBoxInstallState.UpToDate ? "Reinstalled " : "Installed ";
+                    var parts = new List<string> { verb + profile + "." };
+                    var noted = !string.IsNullOrWhiteSpace(note);
+                    if (noted) parts.Add(note.Trim());
+                    var first = before != FlagBoxInstallState.Outdated && before != FlagBoxInstallState.UpToDate;
+                    var select = first ? SelectStep(panels) : null;
+                    if (select != null) parts.Add(select);
+                    return new PanelMessage(string.Join(" ", parts), noted ? PanelTone.Caution : PanelTone.Info);
                 case FlagBoxInstallState.Unavailable:
-                    return PanelMessage.Caution(Unreachable + " Import the profile by hand.");
+                    return PanelMessage.Caution(Unreachable + " Import " + profile + " by hand " + FromTheTop + ".");
                 case FlagBoxInstallState.NotEmbedded:
                     return null;
                 default:
@@ -152,23 +176,39 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// The select step after a first install, in <see cref="StepsLeft"/>'s form: on the one matrix's
+        /// device with its content number; on each matrix's device when the rig has several, each with its
+        /// own number; and nothing on a rig with none, which has no device to name.
+        /// </summary>
+        public static string SelectStep(IList<int> panels)
+        {
+            if (panels == null || panels.Count == 0) return null;
+            if (panels.Count == 1) return "Select it on " + YourDevice + ContentStep(panels[0]);
+            return "Select it on " + EachDevice + " and set " + ContentField + " to the matrix's number.";
+        }
+
+        /// <summary>Where the select step is taken when the rig has several matrices.</summary>
+        public const string EachDevice = "each matrix's device in SimHub";
+
         /// <summary>SimHub's matrix settings out of reach, worded as the by-hand import under the title's line
         /// words it (FlagBoxInstallPlan.Summary), so the page says one thing about one state.</summary>
         public const string Unreachable = "SimHub's matrix settings are not available.";
 
         /// <summary>
-        /// The hover on the title's line: what the version on it means, in one sentence, and nothing where the
-        /// line or the by-hand import under it already says it all (no profile in this build, SimHub's matrix
-        /// settings out of reach). What a press replaces is the press's own tooltip.
+        /// The hover on the title's line: in one sentence what the line cannot show, and nothing where the
+        /// line, its press or the by-hand import under it already says it all (Not installed, whose press says
+        /// what Install does; no profile in this build; SimHub's matrix settings out of reach). What a press
+        /// replaces is the press's own tooltip.
         /// </summary>
         public static string ProfileLineTooltip(FlagBoxInstallState state, string installedVersion, string embeddedVersion)
         {
             switch (state)
             {
-                case FlagBoxInstallState.NotInstalled:
-                    return "SimHub does not have this profile yet.";
                 case FlagBoxInstallState.UpToDate:
-                    return "SimHub has the version this build carries.";
+                    // The dot and the version already say it is current: the hover gives the one step the
+                    // line cannot show, which FlagBoxInstallPlan.Summary carried.
+                    return UpToDateHover;
                 case FlagBoxInstallState.Outdated:
                     return "SimHub has " + (installedVersion ?? "an older version") + ", and this build carries "
                         + (embeddedVersion ?? "a newer one") + ".";
@@ -178,6 +218,9 @@ namespace OpenDashPlugin
                     return null;
             }
         }
+
+        /// <summary>The hover over a current profile: the step left once it is in SimHub.</summary>
+        public const string UpToDateHover = "Select it on " + YourDevice + " to use it.";
 
         public const double ProfileDotSize = 7;
         public const double ProfileGap = 10;
@@ -346,12 +389,19 @@ namespace OpenDashPlugin
             return string.Equals(before, after, StringComparison.Ordinal) ? null : Renamed(after);
         }
 
-        /// <summary>What is said after a removal: the step it leaves, which is a device that now shows nothing.
-        /// SimHub's field is "Matrix content", spelt as everywhere on this page.</summary>
+        /// <summary>What is said after a removal: the step it leaves, which is a device that now shows nothing.</summary>
         public static string Removed(string name, int matrix)
         {
-            return "Removed " + name + ". A device set to Matrix content " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
+            return "Removed " + name + ". A device set to " + ContentField + " " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
         }
+
+        /// <summary>
+        /// The device's field that picks which matrix it draws, spelt as SimHub labels it (ruling 69): the
+        /// localisation key ArduinoHardwareSettings_Label_RGBMatrixContent in SimHub.Plugins.dll and the same
+        /// string in SimHubWPF.exe read "RGB Matrix content", and docs/flag-box.md tells drivers to set it by
+        /// that name. Matrix.dc.html's "Matrix content: 2" names a field SimHub does not have.
+        /// </summary>
+        public const string ContentField = "RGB Matrix content";
 
         public const string NameTitle = "Name";
 
@@ -370,11 +420,12 @@ namespace OpenDashPlugin
         /// <summary>The name box's width in the sheets.</summary>
         public const double NameWidth = 280;
 
-        /// <summary>What the add sheet says above the name: the content number the matrix will be, then the
-        /// steps left, as <see cref="PanelAdded"/> says them once it exists.</summary>
+        /// <summary>What the add sheet says above the name: the steps left, as <see cref="PanelAdded"/> says them
+        /// once it exists. The content number is in them, and the name box under it opens on it, so the
+        /// caption does not say it a third time.</summary>
         public static string AddPanelCaption(int matrix, string profile, FlagBoxInstallState state)
         {
-            return "It will be matrix " + matrix.ToString(CultureInfo.InvariantCulture) + ". " + StepsLeft(matrix, profile, state);
+            return StepsLeft(matrix, profile, state);
         }
 
         /// <summary>
@@ -394,7 +445,7 @@ namespace OpenDashPlugin
         /// </summary>
         private static string StepsLeft(int matrix, string profile, FlagBoxInstallState state)
         {
-            var content = " and set Matrix content to " + matrix.ToString(CultureInfo.InvariantCulture) + ".";
+            var content = ContentStep(matrix);
             switch (state)
             {
                 case FlagBoxInstallState.UpToDate:
@@ -403,11 +454,20 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotEmbedded:
                     return NoProfile;
                 case FlagBoxInstallState.Unavailable:
-                    return "Import " + profile + " by hand from the top of this page, then select it on " + YourDevice + content;
+                    return "Import " + profile + " by hand " + FromTheTop + ", then select it on " + YourDevice + content;
                 default:
                     return "Install " + profile + " at the top of this page, then select it on " + YourDevice + content;
             }
         }
+
+        /// <summary>The content step that closes every select step: " and set RGB Matrix content to 2."</summary>
+        private static string ContentStep(int matrix)
+        {
+            return " and set " + ContentField + " to " + matrix.ToString(CultureInfo.InvariantCulture) + ".";
+        }
+
+        /// <summary>Where the by-hand import is, in the one form the page says it.</summary>
+        private const string FromTheTop = "from the top of this page";
 
         /// <summary>Where the select step is taken, in the one form the page says it.</summary>
         public const string YourDevice = "your matrix's device in SimHub";
@@ -435,7 +495,7 @@ namespace OpenDashPlugin
             {
                 new[] { PanelAttention.DevicesCrumb, YourMatrixCrumb },
                 new[] { "Profile: " + profile },
-                new[] { "Matrix content: " + matrix.ToString(CultureInfo.InvariantCulture) },
+                new[] { ContentField + ": " + matrix.ToString(CultureInfo.InvariantCulture) },
             };
         }
 

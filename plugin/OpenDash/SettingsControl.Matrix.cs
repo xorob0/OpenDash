@@ -43,6 +43,10 @@ namespace OpenDashPlugin
         private FlagBoxPlan matrixFailed;
         private IList<PanelIssue> matrixFailedAsked;
 
+        /// <summary>The state the failed press was made in, which the press offered after it is warned as
+        /// (PanelMatrix.ProfileTooltip): SimHub may still hold the copy that press was made over.</summary>
+        private FlagBoxInstallState matrixFailedFrom = FlagBoxInstallState.NotInstalled;
+
         private FlagBoxPlan MatrixPlan()
         {
             if (plugin.FlagBoxJson == null) return null;
@@ -106,18 +110,20 @@ namespace OpenDashPlugin
                 var primary = action.Style == PanelButton.Primary;
                 var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);
                 if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);
-                button.ToolTip = PanelMatrix.ProfileTooltip(state);
+                button.ToolTip = PanelMatrix.ProfileTooltip(state, matrixFailedFrom);
                 button.Click += (sender, args) =>
                 {
+                    var from = PanelMatrix.PressedFrom(state, matrixFailedFrom);
                     var result = InstallFlagBox();
                     // Asked again on the redraw, unless it failed, which asking again cannot see.
                     matrixFailed = PanelMatrix.KeepsPressResult(result.State) ? result : null;
                     matrixFailedAsked = null;
+                    matrixFailedFrom = from;
                     // Redraw asks what needs fixing again, so the sidebar's dot and Home move with it.
                     Redraw();
-                    var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());
+                    // One message, the installer's note inside it in the order it has to be done.
+                    var said = PanelMatrix.InstallSaid(from, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList());
                     if (said != null) Say(said);
-                    if (!string.IsNullOrEmpty(result.Note)) Say(PanelMessage.Info(result.Note));
                 };
                 row.Children.Add(button);
             }
