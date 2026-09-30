@@ -163,8 +163,10 @@ namespace OpenDashPlugin
 
         // --- Rows: stacking ---------------------------------------------------------------------------
 
-        /// <summary>Below this much content a row's control goes under its title rather than beside it: the
-        /// driver names' four examples beside their title need about 500.</summary>
+        /// <summary>Below this much content a row's control goes under its title rather than beside it. The
+        /// widest row is the greyed Colour vision: its four options beside its title and Soon tag need about
+        /// 510, measured with Barlow's advances, so 560 clears it by about 50. Next are Colours and Theme at
+        /// about 410 and the driver names' four examples at about 430.</summary>
         public const double StackControlsBelow = 560;
 
         /// <summary>Between a title and the control stacked under it.</summary>

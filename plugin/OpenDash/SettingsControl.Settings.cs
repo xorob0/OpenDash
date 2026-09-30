@@ -292,7 +292,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
-        /// (PanelSettings.StacksControls): four worked examples of a name beside their title need about 500.
+        /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510.
         /// </summary>
         private Border SettingsFit(Border row)
         {

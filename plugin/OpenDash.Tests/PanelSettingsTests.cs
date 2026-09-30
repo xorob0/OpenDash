@@ -424,9 +424,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// Below 560 of content a control goes under its title: the driver names' four examples, the widest
-        /// control on the page, need about 500 beside their title. Never a test of Narrow, which is about the
-        /// sidebar and not the room.
+        /// Below 560 of content a control goes under its title: the widest row, the greyed Colour vision with
+        /// its four options, title and Soon tag, needs about 510, and 560 clears it by about 50. Never a test
+        /// of Narrow, which is about the sidebar and not the room.
         /// </summary>
         [Fact]
         public void A_control_goes_under_its_title_only_where_the_two_do_not_fit()
