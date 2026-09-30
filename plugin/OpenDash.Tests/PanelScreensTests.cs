@@ -385,9 +385,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A zone's list: the ticked pages in the zone's order with the first marked, then under Show all the
-        /// rest; the last ticked page locked; Energy, Damage and Track rivals said to be empty in iRacing and
-        /// still tickable (rulings 29 and 30).
+        /// A zone's list: the ticked pages in the zone's cycle from the page it opens on, which is the First,
+        /// then under Show all the rest; the last ticked page locked; Energy, Damage and Track rivals said to
+        /// be empty in iRacing and still tickable (rulings 29 and 30).
         /// </summary>
         [Fact]
         public void A_zones_list_is_its_ticked_pages_in_order_and_the_first_is_where_it_opens()
@@ -396,23 +396,29 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             settings.SetOrder("A", new[] { 2, 0, 1, 3 });
             settings.SetPageEnabled("A", 1, false);
+            // The order's head is 2, but the zone opens on 0: the cycle is read from there, and wraps.
+            Assert.Equal(0, settings.Start("A"));
             var rows = PanelScreens.ZoneRows(settings, "A", false);
-            Assert.Equal(new[] { 2, 0, 3 }, rows.Select(r => r.Page));
+            Assert.Equal(new[] { 0, 3, 2 }, rows.Select(r => r.Page));
             Assert.Equal(new[] { true, false, false }, rows.Select(r => r.First));
             Assert.All(rows, r => Assert.True(r.Ticked));
             Assert.All(rows, r => Assert.False(r.Locked));
-            Assert.Equal(2, PanelScreens.FirstTicked(settings, "A"));
+            Assert.Equal(settings.Start("A"), PanelScreens.FirstTicked(settings, "A"));
 
             var all = PanelScreens.ZoneRows(settings, "A", true);
-            Assert.Equal(new[] { 2, 0, 3, 1 }, all.Select(r => r.Page));
+            Assert.Equal(new[] { 0, 3, 2, 1 }, all.Select(r => r.Page));
             Assert.False(all[3].Ticked);
             Assert.Equal("Gear alone", all[3].Name);
 
+            // Unticking the start moves it on to the next ticked page in the cycle, which the list then draws first.
             settings.SetPageEnabled("A", 0, false);
+            Assert.Equal(3, settings.Start("A"));
+            Assert.Equal(3, PanelScreens.ZoneRows(settings, "A", false)[0].Page);
             settings.SetPageEnabled("A", 3, false);
             var one = PanelScreens.ZoneRows(settings, "A", false);
             Assert.Single(one);
             Assert.True(one[0].Locked);
+            Assert.Equal(settings.Start("A"), one[0].Page);
             Assert.Equal("A zone keeps at least one page.", PanelScreens.LastPageTooltip);
 
             var zoneB = PanelScreens.ZoneRows(settings, "B", true);
@@ -426,8 +432,46 @@ namespace OpenDashPlugin.Tests
                 new[] { PanelScreens.ShowAll, PanelScreens.OnlyTicked, PanelScreens.AllPages, PanelScreens.NoPages, PanelScreens.DragHint, PanelScreens.FirstTag, PanelScreens.NotInIracing, PanelScreens.ClassOnlyTitle, PanelScreens.NextPageTitle, PanelScreens.PreviousPageTitle });
         }
 
+        /// <summary>
+        /// The picture and the list name the page the dash opens on. A default face's zone C opens on
+        /// Relative while its stored order begins at Lap times; drawing the order's head called Lap times
+        /// First, and the first tick in the zone then wrote it into the start and the running zone.
+        /// </summary>
+        [Fact]
+        public void A_zone_is_drawn_opening_on_its_start_and_a_tick_does_not_move_it()
+        {
+            var settings = new FaceSettings();
+            settings.Normalise();
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                Assert.Equal(settings.Start(letter), PanelScreens.FirstTicked(settings, letter));
+                Assert.Equal(settings.Start(letter), PanelScreens.ZoneRows(settings, letter, false)[0].Page);
+                Assert.True(PanelScreens.ZoneRows(settings, letter, true)[0].First);
+            }
+            Assert.Equal(14, settings.Start("C"));
+            Assert.Equal("Relative", FacePages.NameOf("C", PanelScreens.FirstTicked(settings, "C")));
+
+            // Unticking a page other than the first leaves the start, and the page the zone is showing, alone.
+            settings.Cycle("C");
+            var showing = settings.Zone("C");
+            var energy = FacePages.For("C").First(p => p.Id == "energy").Number;
+            settings.SetPageEnabled("C", energy, false);
+            Assert.Equal(14, settings.Start("C"));
+            Assert.Equal(showing, settings.Zone("C"));
+            settings.SetPageEnabled("C", energy, true);
+            Assert.Equal(14, settings.Start("C"));
+
+            // None keeps the page the zone opens on, and All leaves the start where it was.
+            PanelScreens.SetEveryPage(settings, "C", false);
+            Assert.Equal(new[] { 14 }, PanelScreens.ZoneRows(settings, "C", false).Select(r => r.Page));
+            PanelScreens.SetEveryPage(settings, "C", true);
+            Assert.Equal(14, settings.Start("C"));
+            Assert.Equal(FacePages.For("C").Count, PanelScreens.ZoneRows(settings, "C", false).Count);
+        }
+
         /// <summary>A drag in the list moves the page it drew, and every page the list did not draw keeps its
-        /// place after them, so the zone's order stays whole.</summary>
+        /// place after them, so the zone's order stays whole; the order is written from the first ticked page,
+        /// and the start moves only when the drag put another page first.</summary>
         [Fact]
         public void A_drag_in_the_list_reorders_the_zone_and_keeps_its_order_whole()
         {
@@ -436,10 +480,25 @@ namespace OpenDashPlugin.Tests
             settings.SetPageEnabled("A", 1, false);
             // Drawn: 0, 2, 3 (1 is not ticked). Drag the last to the top.
             Assert.Equal(new[] { 3, 0, 2, 1 }, PanelScreens.Reordered(settings, "A", false, 2, 0));
-            // Drawn under Show all: 0, 2, 3, 1. Drag the unticked page to the top.
-            Assert.Equal(new[] { 1, 0, 2, 3 }, PanelScreens.Reordered(settings, "A", true, 3, 0));
-            settings.SetOrder("A", PanelScreens.Reordered(settings, "A", false, 2, 0));
-            Assert.Equal(3, PanelScreens.FirstTicked(settings, "A"));
+            // Drawn under Show all: 0, 2, 3, 1. An unticked page dragged over the ticked ones cannot open the
+            // zone, so the order is still written from the first ticked page and 1 lands before it in the cycle.
+            Assert.Equal(new[] { 0, 2, 3, 1 }, PanelScreens.Reordered(settings, "A", true, 3, 0));
+
+            // A drag that keeps the first page first leaves the start and the running zone where they are.
+            settings.Cycle("A");
+            var showing = settings.Zone("A");
+            PanelScreens.Reorder(settings, "A", false, 1, 2);
+            Assert.Equal(new[] { 0, 3, 2 }, PanelScreens.ZoneRows(settings, "A", false).Select(r => r.Page));
+            Assert.Equal(0, settings.Start("A"));
+            Assert.Equal(showing, settings.Zone("A"));
+
+            // One that puts another page first makes it the start, and the order's head.
+            PanelScreens.Reorder(settings, "A", false, 2, 0);
+            Assert.Equal(2, settings.Start("A"));
+            Assert.Equal(2, PanelScreens.FirstTicked(settings, "A"));
+            Assert.Equal(2, settings.Order("A")[0]);
+            Assert.Equal(new[] { 2, 0, 3 }, PanelScreens.ZoneRows(settings, "A", false).Select(r => r.Page));
+
             var whole = PanelScreens.Reordered(settings, "B", false, 0, 5);
             Assert.Equal(FacePages.For("B").Count, whole.Length);
             Assert.Equal(whole.Length, whole.Distinct().Count());

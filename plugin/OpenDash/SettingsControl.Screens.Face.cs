@@ -443,8 +443,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A zone: its pages in the order it cycles, each ticked into the cycle or not and dragged into place,
-        /// the first ticked marked First because it is the page the zone opens on; then the class filter where
+        /// A zone: its pages in the order it cycles from the page it opens on, which is drawn first and marked
+        /// First, each ticked into the cycle or not and dragged into place; then the class filter where
         /// the zone lists cars, and the two buttons that page it.
         /// </summary>
         private FrameworkElement BuildZoneAside(ScreenInstance screen, string letter, Action redraw)
@@ -457,10 +457,12 @@ namespace OpenDashPlugin
             head.Children.Add(count);
             head.Children.Add(Ui.Heading(PanelFacePlan.ZoneLabel(letter)));
 
+            // A tick or an untick leaves the start where it is unless it unticked the start itself, which
+            // FaceSettings moves on to the next ticked page; a drag moves it only when it puts another page
+            // first (ruling 29). Never a SetStart per press: that would put the running zone back on its first
+            // page every time a box was ticked.
             Action settle = () =>
             {
-                // The zone opens on its first ticked page, whatever moved (ruling 29).
-                face.SetStart(letter, PanelScreens.FirstTicked(face, letter));
                 Save(screen);
                 redraw();
             };
@@ -477,7 +479,7 @@ namespace OpenDashPlugin
             }
             var list = Ui.Reorderable(rows, (from, to) =>
             {
-                face.SetOrder(letter, PanelScreens.Reordered(face, letter, showAll, from, to));
+                PanelScreens.Reorder(face, letter, showAll, from, to);
                 settle();
             });
             list.Margin = new Thickness(-8, 0, -8, 0);
@@ -494,8 +496,8 @@ namespace OpenDashPlugin
                     screensShowAll = !screensShowAll;
                     redraw();
                 }),
-                ScreensLink("screens.all", PanelScreens.AllPages, () => { SetEveryPage(face, letter, true); settle(); }),
-                ScreensLink("screens.none", PanelScreens.NoPages, () => { SetEveryPage(face, letter, false); settle(); }));
+                ScreensLink("screens.all", PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true); settle(); }),
+                ScreensLink("screens.none", PanelScreens.NoPages, () => { PanelScreens.SetEveryPage(face, letter, false); settle(); }));
             var hint = Ui.HStack(6, Ui.Text(PanelScreens.DragHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary), Ui.NewTag());
             var foot = ScreensAsideLine(links, hint);
 
@@ -600,23 +602,6 @@ namespace OpenDashPlugin
             };
             button.Click += (sender, args) => click();
             return button;
-        }
-
-        /// <summary>None leaves the page the zone opens on ticked, because a zone with an empty cycle has
-        /// nothing to draw; the settings object refuses it and the list follows what it decided.</summary>
-        private static void SetEveryPage(FaceSettings face, string letter, bool enabled)
-        {
-            var pages = FacePages.For(letter);
-            if (enabled)
-            {
-                for (var i = 0; i < pages.Count; i++) face.SetPageEnabled(letter, pages[i].Number, true);
-                return;
-            }
-            var keep = PanelScreens.FirstTicked(face, letter);
-            for (var i = 0; i < pages.Count; i++)
-            {
-                if (pages[i].Number != keep) face.SetPageEnabled(letter, pages[i].Number, false);
-            }
         }
     }
 }

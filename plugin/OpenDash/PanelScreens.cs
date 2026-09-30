@@ -40,7 +40,7 @@ namespace OpenDashPlugin
         /// <summary>In the zone's cycle.</summary>
         public bool Ticked { get; private set; }
 
-        /// <summary>The first ticked page in the zone's order, which is the page it opens on.</summary>
+        /// <summary>The page the zone opens on (its Start), which the list draws first.</summary>
         public bool First { get; private set; }
 
         /// <summary>A page iRacing publishes nothing for; still tickable, since other sims fill it.</summary>
@@ -291,15 +291,40 @@ namespace OpenDashPlugin
             return on + " of " + pages.Count;
         }
 
-        /// <summary>The first ticked page in the zone's order: the page it opens on (ruling 29).</summary>
+        /// <summary>
+        /// The page a zone opens on, which the list draws first and tags First (ruling 29): the zone's
+        /// Start, the setting the dash reads, and never simply the first ticked page of its stored order.
+        /// </summary>
+        /// <remarks>
+        /// A default face's zone C opens on Relative, page 14, while its stored order begins at Lap times; a
+        /// list that took the order's head drew Lap times as First, and its first tick then wrote Lap times
+        /// into the start. A start the mask has turned off, which only a file nothing has normalised can
+        /// hold, reads forward in the zone's order as Normalise would move it.
+        /// </remarks>
         public static int FirstTicked(FaceSettings settings, string letter)
         {
-            if (settings == null) return 0;
-            foreach (var page in settings.Order(letter))
-            {
-                if (settings.PageEnabled(letter, page)) return page;
-            }
-            return settings.Start(letter);
+            var face = settings ?? new FaceSettings();
+            var start = face.Start(letter);
+            if (face.PageEnabled(letter, start)) return start;
+            return Contract.FirstEnabledInOrder(start, face.Mask(letter), face.Order(letter));
+        }
+
+        /// <summary>
+        /// The zone's order read from the page it opens on: the cycle wraps, so this is the same cycle its
+        /// button steps through, begun where a session begins.
+        /// </summary>
+        public static int[] CycleFromStart(FaceSettings settings, string letter)
+        {
+            var order = settings == null ? Contract.NormaliseOrder(null, FacePages.For(letter).Count) : settings.Order(letter);
+            return Rotated(order, FirstTicked(settings, letter));
+        }
+
+        /// <summary>An order turned so that <paramref name="head"/> leads it; the cycle it describes is the same.</summary>
+        private static int[] Rotated(int[] order, int head)
+        {
+            var at = Array.IndexOf(order, head);
+            if (at <= 0) return order;
+            return order.Skip(at).Concat(order.Take(at)).ToArray();
         }
 
         /// <summary>The line under a zone of the picture: the button that advances it, "No button" when none
@@ -336,13 +361,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A zone's pages in the order the list draws them: the ticked ones in the zone's order, then, with
-        /// Show all, the others in the same order.
+        /// A zone's pages in the order the list draws them: the ticked ones in the zone's cycle from the page
+        /// it opens on, which is therefore the First, then, with Show all, the others in the same order.
         /// </summary>
         public static IReadOnlyList<ZoneRow> ZoneRows(FaceSettings settings, string letter, bool showAll)
         {
-            var pages = FacePages.For(letter);
-            var order = settings == null ? Contract.NormaliseOrder(null, pages.Count) : settings.Order(letter);
+            var order = CycleFromStart(settings, letter);
             var ticked = order.Where(page => settings != null && settings.PageEnabled(letter, page)).ToList();
             var rows = new List<ZoneRow>();
             for (var i = 0; i < ticked.Count; i++)
@@ -361,18 +385,52 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The zone's whole order after a row of the list was dragged from one place to another: the rows as
-        /// drawn, moved, and every page the list did not draw after them in the order it had.
+        /// drawn, moved, then every page the list did not draw in the cycle's order, turned so that its head
+        /// is the first ticked page -- the page the zone will open on.
         /// </summary>
         public static int[] Reordered(FaceSettings settings, string letter, bool showAll, int from, int to)
         {
             var drawn = ZoneRows(settings, letter, showAll).Select(row => row.Page).ToList();
             var moved = PanelReorder.Move(drawn, from, to).ToList();
-            var order = settings == null ? Contract.NormaliseOrder(null, FacePages.For(letter).Count) : settings.Order(letter);
-            foreach (var page in order)
+            foreach (var page in CycleFromStart(settings, letter))
             {
                 if (!moved.Contains(page)) moved.Add(page);
             }
-            return moved.ToArray();
+            var order = moved.ToArray();
+            var first = order.FirstOrDefault(page => settings != null && settings.PageEnabled(letter, page));
+            return Rotated(order, first);
+        }
+
+        /// <summary>
+        /// Applies a drag to the zone: its new order, and its start where the drag put another page first.
+        /// </summary>
+        /// <remarks>
+        /// The start is written only when it moves, because FaceSettings.SetStart puts the running zone on it
+        /// too: a drag that leaves the first page where it was must not snap the dash in front of the driver
+        /// back to it.
+        /// </remarks>
+        public static void Reorder(FaceSettings settings, string letter, bool showAll, int from, int to)
+        {
+            if (settings == null) return;
+            var order = Reordered(settings, letter, showAll, from, to);
+            settings.SetOrder(letter, order);
+            var first = order.FirstOrDefault(page => settings.PageEnabled(letter, page));
+            if (first != settings.Start(letter)) settings.SetStart(letter, first);
+        }
+
+        /// <summary>
+        /// All ticks every page; None unticks every page but the one the zone opens on, because a zone with an
+        /// empty cycle has nothing to draw. Neither moves the start.
+        /// </summary>
+        public static void SetEveryPage(FaceSettings settings, string letter, bool enabled)
+        {
+            if (settings == null) return;
+            var pages = FacePages.For(letter);
+            var keep = FirstTicked(settings, letter);
+            for (var i = 0; i < pages.Count; i++)
+            {
+                if (enabled || pages[i].Number != keep) settings.SetPageEnabled(letter, pages[i].Number, enabled);
+            }
         }
 
         /// <summary>Whether a zone lists, under Show all, the two modules B and C are waiting for (Circle
