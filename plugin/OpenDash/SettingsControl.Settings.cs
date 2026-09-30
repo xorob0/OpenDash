@@ -550,8 +550,11 @@ namespace OpenDashPlugin
             return PageSection(null, true, PanelKit.SectionHeadingGapSettings, heading, Ui.CardBox(grid, 0), folded);
         }
 
-        /// <summary>The table's head: the column names in the label face, the greyed ones with their Soon tag
-        /// under the name, and a rule under the row.</summary>
+        /// <summary>
+        /// The table's head: the column names in the label face and a rule under the row. The four surface
+        /// columns' names carry their Soon tag under the name and #512 in their hover, and are not faded: the
+        /// artboard's th draws them in the full label ink, where 0.45 of it would barely read on the card.
+        /// </summary>
         private static void SettingsAlertHeader(Grid grid, int row, bool surfaces)
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -574,7 +577,10 @@ namespace OpenDashPlugin
                     // A star column is not sized by its content, so it is held to its heading's width.
                     head.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     grid.ColumnDefinitions[column].MinWidth = Math.Ceiling(head.DesiredSize.Width) + 2 * PanelSettings.AlertCellPaddingX;
-                    SettingsAlertCell(grid, row, column++, head, PanelSoon.AlertDisplay, true);
+                    var cell = SettingsAlertCell(grid, row, column++, head, null, true);
+                    cell.ToolTip = PanelSoon.AlertDisplay.Tip;
+                    // So a search for "Alert display" still lands on the table's head.
+                    Ui.Anchor(cell, PanelSoon.AlertDisplay.Anchor);
                 }
             }
         }
@@ -645,20 +651,23 @@ namespace OpenDashPlugin
             SettingsAlertCell(grid, row, column, tryIt ?? new Border(), soon, false, HorizontalAlignment.Right);
         }
 
-        private static void SettingsAlertCell(Grid grid, int row, int column, FrameworkElement content, SoonItem soon, bool centred, HorizontalAlignment align = HorizontalAlignment.Left)
+        private static Border SettingsAlertCell(Grid grid, int row, int column, FrameworkElement content, SoonItem soon, bool centred, HorizontalAlignment align = HorizontalAlignment.Left)
         {
             content.VerticalAlignment = VerticalAlignment.Center;
             if (centred) content.HorizontalAlignment = HorizontalAlignment.Center;
             else if (align == HorizontalAlignment.Right) content.HorizontalAlignment = HorizontalAlignment.Right;
-            FrameworkElement cell = new Border
+            var cell = new Border
             {
                 Padding = new Thickness(PanelSettings.AlertCellPaddingX, PanelSettings.AlertCellPaddingY, PanelSettings.AlertCellPaddingX, PanelSettings.AlertCellPaddingY),
+                // The whole cell answers the pointer, so a hover shows anywhere in it.
+                Background = Brushes.Transparent,
                 Child = content,
             };
             if (soon != null) cell = Ui.Soon(cell, soon);
             Grid.SetRow(cell, row);
             Grid.SetColumn(cell, column);
             grid.Children.Add(cell);
+            return cell;
         }
 
         /// <summary>The rule under a row of the table, across every column and behind the cells.</summary>

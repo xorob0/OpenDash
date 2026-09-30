@@ -362,6 +362,12 @@ namespace OpenDashPlugin.Tests
             // titles every checkbox "Coming soon · #512".
             Assert.Contains("SettingsAlertCell(grid, row, column++, SettingsCheck(on), PanelSoon.AlertDisplay, true);", page);
             Assert.DoesNotContain("soon ?? PanelSoon.AlertDisplay", page);
+            // The surface columns' names are not faded, as the artboard's th is not: the hover and the anchor
+            // are set on the cell rather than by a Soon wrapper.
+            Assert.Contains("var cell = SettingsAlertCell(grid, row, column++, head, null, true);", page);
+            Assert.Contains("cell.ToolTip = PanelSoon.AlertDisplay.Tip;", page);
+            Assert.Contains("Ui.Anchor(cell, PanelSoon.AlertDisplay.Anchor);", page);
+            Assert.DoesNotContain("SettingsAlertCell(grid, row, column++, head, PanelSoon.AlertDisplay, true);", page);
         }
 
         /// <summary>The artboard's th width: the names take 30% of the table and the surface columns share the
