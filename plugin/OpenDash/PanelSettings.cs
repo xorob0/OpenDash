@@ -471,10 +471,26 @@ namespace OpenDashPlugin
             return percent.ToString(CultureInfo.InvariantCulture) + "%";
         }
 
-        /// <summary>The preview's strip: 3·9·3 under a yellow, so the ends and the revs both show the dim.</summary>
+        /// <summary>The preview's strip: 3·9·3, a yellow on both ends, so the ends and the revs both show the
+        /// dim.</summary>
         public const int PreviewEnds = 3;
-        public const int PreviewCentre = 9;
         public const string PreviewStripScenario = PanelEmulation.Yellow;
+
+        /// <summary>The preview's centre, the artboard's: the revs near the top, three green, three amber, one
+        /// red and two unlit. Its own frame rather than a scenario's, whose revs stop short of the red.</summary>
+        public static string[] PreviewCentre()
+        {
+            return new[] { Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage3, null, null };
+        }
+
+        /// <summary>The preview's strip: the yellow's ends from PanelEmulation, around the artboard's centre.</summary>
+        public static string[][] PreviewStripFrame()
+        {
+            var centre = PreviewCentre();
+            var frame = PanelEmulation.StripFrame(PreviewEnds, centre.Length, PreviewStripScenario);
+            frame[1] = centre;
+            return frame;
+        }
 
         /// <summary>The preview's matrix: the gear, at the revs a car is driven at.</summary>
         public const string PreviewMatrixScenario = PanelEmulation.Mid;

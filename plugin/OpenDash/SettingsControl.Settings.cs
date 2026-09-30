@@ -746,7 +746,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement SettingsLighting()
         {
-            var strip = Ui.Strip(PanelEmulation.StripFrame(PanelSettings.PreviewEnds, PanelSettings.PreviewCentre, PanelSettings.PreviewStripScenario), PanelSettings.PreviewStrip);
+            var strip = Ui.Strip(PanelSettings.PreviewStripFrame(), PanelSettings.PreviewStrip);
             var matrix = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelSettings.PreviewMatrixScenario, PanelSettings.PreviewMatrixOptions()), PanelSettings.PreviewMatrix);
             var percent = Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
             percent.Width = PanelSettings.PreviewPercentWidth;

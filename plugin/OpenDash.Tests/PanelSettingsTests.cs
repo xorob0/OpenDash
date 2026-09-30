@@ -766,13 +766,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OnLighting(repaint);", page);
         }
 
-        /// <summary>The artboard's preview: a 3·9·3 strip of 20 px LEDs under a yellow, and the gear on an 8x8
-        /// of 9 px cells.</summary>
+        /// <summary>The artboard's preview: a 3·9·3 strip of 20 px LEDs, a yellow on the ends and the revs in the
+        /// centre -- three green, three amber, one red, two unlit -- and the gear on an 8x8 of 9 px cells.</summary>
         [Fact]
         public void The_preview_is_drawn_at_the_artboards_sizes()
         {
             Assert.Equal(3, PanelSettings.PreviewEnds);
-            Assert.Equal(9, PanelSettings.PreviewCentre);
             Assert.Equal(PanelEmulation.Yellow, PanelSettings.PreviewStripScenario);
             Assert.Equal(PanelEmulation.Mid, PanelSettings.PreviewMatrixScenario);
             Assert.Equal("gear", PanelSettings.PreviewMatrixOptions().Rest);
@@ -797,9 +796,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(56, PanelSettings.PreviewPercentWidth);
             Assert.Equal(320, PanelSettings.SliderWidth);
             // The ends are the flag and the centre the revs, so both show the dim.
-            var frame = PanelEmulation.StripFrame(PanelSettings.PreviewEnds, PanelSettings.PreviewCentre, PanelSettings.PreviewStripScenario);
-            Assert.All(frame[0], led => Assert.Equal(Theme.FlagYellow, led));
-            Assert.Contains(frame[1], led => led == Theme.ShiftStage1);
+            var frame = PanelSettings.PreviewStripFrame();
+            Assert.Equal(3, frame.Length);
+            Assert.Equal(new[] { Theme.FlagYellow, Theme.FlagYellow, Theme.FlagYellow }, frame[0]);
+            Assert.Equal(new[] { Theme.FlagYellow, Theme.FlagYellow, Theme.FlagYellow }, frame[2]);
+            Assert.Equal(new[] { Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage3, null, null }, frame[1]);
+            Assert.Contains("var strip = Ui.Strip(PanelSettings.PreviewStripFrame(), PanelSettings.PreviewStrip);", page);
+            Assert.Contains("var matrix = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelSettings.PreviewMatrixScenario, PanelSettings.PreviewMatrixOptions()), PanelSettings.PreviewMatrix);", page);
         }
 
         /// <summary>The night-mode button's chip opens the binding's own row on Shortcuts, at the .key size.</summary>
