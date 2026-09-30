@@ -169,6 +169,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(14, PanelUpdates.NotesPaddingTop);
             Assert.Equal(18, PanelUpdates.NotesPaddingBottom);
             Assert.Equal(8, PanelUpdates.NotesGap);
+            Assert.Equal(4, PanelUpdates.YouHaveGap);
+            Assert.Equal(1, PanelUpdates.YouHaveBaseline);
+            var code = PageCode();
+            Assert.Contains("Ui.HStack(PanelUpdates.YouHaveGap,", code);
+            Assert.Contains("have.Margin = new Thickness(PanelUpdates.CardHeadingGap, 0, 0, PanelUpdates.YouHaveBaseline);", code);
         }
 
         /// <summary>A press sits beside its words while there is room for both, and under them below that,
@@ -325,18 +330,75 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("PanelUpdates.AppliesWhenAnswered(waiting, updateStatus.State, UpdatesPending())", code);
         }
 
+        /// <summary>Download and Check now carry no hover: the button and the card's heading already say what
+        /// Download fetches, and the row's caption and the button say what Check now asks (voice.md: where the
+        /// control already says it, say nothing).</summary>
         [Fact]
-        public void The_card_and_the_check_row_say_what_their_presses_do()
+        public void Download_and_Check_now_carry_no_hover_that_repeats_them()
         {
-            Assert.Equal("Downloads OpenDash 0.5.1.", PanelUpdates.DownloadTooltip("0.5.1"));
-            Assert.Equal("Asks GitHub for the newest release now.", PanelUpdates.CheckNowTooltip);
+            var code = PageCode();
+            Assert.DoesNotContain("updatesDownload.ToolTip", code);
+            Assert.DoesNotContain("updatesCheckNow.ToolTip", code);
         }
 
         [Fact]
         public void The_check_row_is_drawn_at_the_artboard_s_numbers()
         {
-            Assert.Equal(14, PanelKit.RowPaddingYUpdates);
             Assert.Equal(12, PanelUpdates.CheckControlsGap);
+            Assert.Equal(520, PanelUpdates.CheckLineWidth);
+            var code = PageCode();
+            // The artboard's .row at its own 14 and with no rule over it, held to the kit's number.
+            Assert.Contains("row.Padding = new Thickness(0, PanelKit.RowPaddingYUpdates, 0, PanelKit.RowPaddingYUpdates);", code);
+            Assert.Contains("row.BorderThickness = new Thickness(0);", code);
+            Assert.Contains("updatesLastChecked = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);", code);
+            Assert.Contains("updatesCheckLine = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);", code);
+            Assert.Contains("Ui.HStack(PanelUpdates.CheckControlsGap, updatesCheckNow, toggle)", code);
+        }
+
+        /// <summary>"Last checked today" is said against now, so the page redraws it every second it shows: a
+        /// page left open past midnight would otherwise go on saying "today" of yesterday's check.</summary>
+        [Fact]
+        public void The_last_check_is_kept_true_while_the_page_stays_open()
+        {
+            var code = PageCode();
+            var tick = code.IndexOf("OnTick(() =>", StringComparison.Ordinal);
+            Assert.True(tick >= 0);
+            Assert.Contains("updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);", code.Substring(tick, 300));
+        }
+
+        /// <summary>The read the page takes once per visit is dropped when the panel leaves the screen, since
+        /// the return rebuilds the page and is not a Go: a dashboard edited in Dash Studio meanwhile is read
+        /// again, rather than the kept card offering a copy that Put mine back then finds it may not restore.
+        /// Through the control's own event, and let go of with the build.</summary>
+        [Fact]
+        public void The_page_reads_the_disk_again_after_the_panel_was_away()
+        {
+            var code = PageCode();
+            Assert.Contains("RoutedEventHandler away = (sender, args) => updatesRead = false;", code);
+            Assert.Contains("Unloaded += away;", code);
+            Assert.Contains("OnDrop(() => Unloaded -= away);", code);
+            Assert.Contains("OnLeave(\"Updates.read\", () => updatesRead = false);", code);
+        }
+
+        /// <summary>
+        /// A download's completion is posted to the interface thread, never waited on from the pool: End runs
+        /// on that thread and waits for the run (UpdateService.WaitForIdle), so a synchronous Invoke inside
+        /// the counted work hung SimHub's close for the whole grace. The yes to replacing edited dashboards on
+        /// restart is set before the run counts as finished, so End's save keeps it when the completion does
+        /// not run.
+        /// </summary>
+        [Fact]
+        public void A_download_s_completion_never_waits_on_the_thread_that_waits_for_it()
+        {
+            var code = PageCode();
+            var apply = code.Substring(code.IndexOf("private void ApplyUpdate()", StringComparison.Ordinal));
+            apply = apply.Substring(0, apply.IndexOf("private async void OfferRestart(", StringComparison.Ordinal));
+            Assert.DoesNotContain("Dispatcher.Invoke(", apply);
+            var work = apply.IndexOf("var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);", StringComparison.Ordinal);
+            var consent = apply.IndexOf("if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;", StringComparison.Ordinal);
+            var posted = apply.IndexOf("Dispatcher.BeginInvoke(new Action(() =>", work, StringComparison.Ordinal);
+            Assert.True(work >= 0 && consent > work && posted > consent, "the consent is set on the pool thread before the completion is posted");
+            Assert.Contains("}, new SimHubInstallLog(), mustFinish: true);", apply);
         }
 
         // --- In SimHub --------------------------------------------------------------------------------
@@ -1138,6 +1200,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Logs", PanelUpdates.LogFolder);
             Assert.Equal("SimHub.txt", PanelUpdates.LogFile);
             Assert.Equal(8, PanelUpdates.SupportButtonGap);
+            Assert.Equal(8, PanelUpdates.NewTagGap);
+            Assert.Contains("press.Content = Ui.HStack(PanelUpdates.NewTagGap,", PageCode());
             Assert.Equal(12, PanelUpdates.SupportCaptionSize);
             Assert.Equal("SimHubWPF.exe", PanelUpdates.SimHubExe);
         }

@@ -288,6 +288,11 @@ namespace OpenDashPlugin
         public const double CardTextGap = 6;
         public const double CardHeadingGap = 12;
         public const double CardVersionSize = 15;
+
+        /// <summary>"You have" and its numeral 4 apart, the pair set 1 above the heading's bottom so the words
+        /// sit on the heading's baseline.</summary>
+        public const double YouHaveGap = 4;
+        public const double YouHaveBaseline = 1;
         public const double NotesPaddingTop = 14;
         public const double NotesPaddingBottom = 18;
         public const double NotesGap = 8;
@@ -313,6 +318,10 @@ namespace OpenDashPlugin
 
         /// <summary>The artboard's .row: 14 above and below, with the Check now press 12 from the switch.</summary>
         public const double CheckControlsGap = 12;
+
+        /// <summary>The measure of the check row's two lines under its caption: when the last check answered,
+        /// and checking or the answer to a press.</summary>
+        public const double CheckLineWidth = 520;
 
         /// <summary>
         /// When the last check answered: "Last checked today, 09:12", "Last checked yesterday, 18:40",
@@ -396,14 +405,6 @@ namespace OpenDashPlugin
         public static bool CheckNowEnabled(bool checksOn, bool applying, UpdateState state)
         {
             return checksOn && !applying && state != UpdateState.Checking;
-        }
-
-        public const string CheckNowTooltip = "Asks GitHub for the newest release now.";
-
-        /// <summary>Download's tooltip: "Downloads OpenDash 0.5.1."</summary>
-        public static string DownloadTooltip(string version)
-        {
-            return "Downloads " + Heading(version) + ".";
         }
 
         /// <summary>
@@ -1222,6 +1223,9 @@ namespace OpenDashPlugin
         }
 
         public const double SupportButtonGap = 8;
+
+        /// <summary>The gap between a Support press's words and its NEW tag.</summary>
+        public const double NewTagGap = 8;
         public const double SupportCaptionSize = 12;
 
         public const string ReportCopied = "Support report copied. Paste it into your issue.";

@@ -120,6 +120,18 @@ namespace OpenDashPlugin
                 updatesRead = true;
             }
             OnLeave("Updates.read", () => updatesRead = false);
+            // Leaving the panel for another of SimHub's pages is not a Go, and the return rebuilds the page
+            // rather than entering it: the read is dropped with the panel, so a dashboard edited in Dash
+            // Studio meanwhile is read again rather than offered from what the page read before.
+            RoutedEventHandler away = (sender, args) => updatesRead = false;
+            Unloaded += away;
+            OnDrop(() => Unloaded -= away);
+            // "Last checked today" is said against now, and a page left open past midnight must not go on
+            // saying it of yesterday's check. A settings read and a format, which WPF ignores when unchanged.
+            OnTick(() =>
+            {
+                if (updatesLastChecked != null) updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);
+            });
             var kept = UpdatesKeptCard(updatesWidth);
             updatesPage = PageLayout(PanelUpdates.Title, null,
                 Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin),
@@ -285,7 +297,7 @@ namespace OpenDashPlugin
         private static Button UpdatesSupportPress(string label)
         {
             var press = Ui.Button(label, PanelButtonKind.Outline);
-            if (PanelUpdates.IsNew(label)) press.Content = Ui.HStack(8, Ui.Text(label, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
+            if (PanelUpdates.IsNew(label)) press.Content = Ui.HStack(PanelUpdates.NewTagGap, Ui.Text(label, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
             return press;
         }
 

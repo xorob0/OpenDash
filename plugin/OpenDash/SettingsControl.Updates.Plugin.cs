@@ -67,11 +67,11 @@ namespace OpenDashPlugin
             var installed = plugin.RigVersion;
             if (PanelUpdates.ShowsYouHave(installed))
             {
-                var have = Ui.HStack(4,
+                var have = Ui.HStack(PanelUpdates.YouHaveGap,
                     Ui.Text(PanelUpdates.YouHave, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary),
                     Ui.Numeral(installed, PanelUpdates.CardVersionSize, Theme.TextPrimary));
                 have.VerticalAlignment = VerticalAlignment.Bottom;
-                have.Margin = new Thickness(PanelUpdates.CardHeadingGap, 0, 0, 1);
+                have.Margin = new Thickness(PanelUpdates.CardHeadingGap, 0, 0, PanelUpdates.YouHaveBaseline);
                 headLine.Children.Add(have);
             }
 
@@ -92,7 +92,6 @@ namespace OpenDashPlugin
             {
                 updatesDownload = Ui.Button(null, PanelButtonKind.Primary);
                 updatesDownload.MinWidth = ButtonMinWidth;
-                updatesDownload.ToolTip = PanelUpdates.DownloadTooltip(latest);
                 updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
                 updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));
                 updatesDownload.Click += (sender, args) => ApplyUpdate();
@@ -181,7 +180,6 @@ namespace OpenDashPlugin
             });
 
             updatesCheckNow = Ui.Button(PanelUpdates.CheckNow, PanelButtonKind.Outline, PanelButtonSize.Small);
-            updatesCheckNow.ToolTip = PanelUpdates.CheckNowTooltip;
             updatesCheckNow.Click += (sender, args) => Check(manual: true);
 
             var row = Ui.SettingRow(PanelUpdates.CheckTitle, Ui.HStack(PanelUpdates.CheckControlsGap, updatesCheckNow, toggle), UpdateWording.CheckCaption);
@@ -189,8 +187,8 @@ namespace OpenDashPlugin
             row.Padding = new Thickness(0, PanelKit.RowPaddingYUpdates, 0, PanelKit.RowPaddingYUpdates);
             row.BorderThickness = new Thickness(0);
 
-            updatesLastChecked = Ui.Caption(string.Empty, 520);
-            updatesCheckLine = Ui.Caption(string.Empty, 520);
+            updatesLastChecked = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);
+            updatesCheckLine = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);
             // Added to the row's stack after it was built, so each takes the caption's gap itself.
             updatesLastChecked.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
             updatesCheckLine.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
@@ -424,7 +422,14 @@ namespace OpenDashPlugin
             UpdateService.InBackground(() =>
             {
                 var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
-                Dispatcher.Invoke(() =>
+                // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
+                // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
+                // SimHub closing mid-download saves it in End even though the completion below never runs.
+                if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
+                // Posted, not Invoked: End runs on the interface thread and waits there for this run
+                // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
+                // and SimHub's close would hang the whole grace and then report an install that had finished.
+                Dispatcher.BeginInvoke(new Action(() =>
                 {
                     applying = false;
                     applyingLine = null;
@@ -434,9 +439,6 @@ namespace OpenDashPlugin
                     // anything is saved. Nothing is rewritten where the title already reads that way.
                     var titles = new SimHubInstallLog();
                     foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
-                    // The yes to replacing edited dashboards is spent by the next start, not by this run, when
-                    // the dashboards come inside the plugin; it is saved with the rest just below.
-                    if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
                     // The record is written in memory by the installer and saved here, on the UI thread, which is
                     // the moment it is safe to serialise the settings.
                     Save();
@@ -462,7 +464,7 @@ namespace OpenDashPlugin
                     // The one thing the run cannot do for itself. Asked here rather than before the download,
                     // because until the assembly is staged there is nothing for a restart to put in place.
                     if (outcome.PluginStaged) OfferRestart(release.Version);
-                });
+                }));
             }, new SimHubInstallLog(), mustFinish: true);
         }
 
