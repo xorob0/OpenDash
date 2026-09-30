@@ -66,7 +66,7 @@ namespace OpenDashPlugin
             var rows = Ui.Rows(
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FirstModuleTitle, first), PanelScreens.AnchorFirstModule),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag()), PanelScreens.AnchorFlagDisplay),
-                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(glance, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace))), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), glance, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace))), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
                 Ui.Anchor(BuildCompanionPaging(), PanelScreens.AnchorPaging));
             return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
         }
@@ -100,7 +100,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>One module (.mod): its tick and its name on the base ground, and "Not in iRacing" beside the
-        /// three iRacing publishes nothing for. The description is its hover.</summary>
+        /// three iRacing publishes nothing for. The description is its hover, and a press anywhere on it
+        /// ticks it.</summary>
         private FrameworkElement BuildModuleCell(ScreenInstance screen, Module module, Action redraw)
         {
             var index = module.Number - 1;
@@ -111,6 +112,7 @@ namespace OpenDashPlugin
                 Margin = new Thickness(0, 0, 10, 0),
                 Uid = "screens.module." + module.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
+            System.Windows.Automation.AutomationProperties.SetName(box, module.Name);
             Action<bool> ticked = on =>
             {
                 if (screen.Modules == null || index >= screen.Modules.Length) return;
@@ -121,6 +123,8 @@ namespace OpenDashPlugin
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);
             var line = new DockPanel { LastChildFill = true };
+            // The whole module is the tick's label, as the artboard's .mod is a label.
+            ScreensLabelFor(line, box);
             DockPanel.SetDock(box, Dock.Left);
             line.Children.Add(box);
             if (PanelScreens.IsNotInIracing(module.Id))

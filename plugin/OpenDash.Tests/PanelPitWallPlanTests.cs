@@ -1,5 +1,5 @@
-// PanelPitWallPlanTests.cs: the three page miniatures the Rig tab draws, held against the canvas the way
-// PanelFacePlanTests holds the face's own picture.
+// PanelPitWallPlanTests.cs: the pit wall picture the Screens page draws -- one page at a time, the one "Page
+// on screen" picks -- held against the canvas the way PanelFacePlanTests holds the face's own picture.
 //
 // The picture and the sentences beside it disagreed before PanelPitWallPlan existed: the Tower page
 // stacked C above D and drew the wide zone down the left, while the row beside it read "Tower page, lower
@@ -72,6 +72,21 @@ namespace OpenDashPlugin.Tests
             // Beside the picture: the zone list's card, 24 away, as the artboard draws it.
             Assert.Equal(300, PanelPitWallPlan.ListWidth);
             Assert.Equal(24, PanelPitWallPlan.ListGap);
+        }
+
+        /// <summary>The picture takes its column, frame included: beside the list the column is the content
+        /// less the list and the gap, stacked it is the content, never below the least; the page inside is the
+        /// column less the frame, so the rule is not drawn 2 px past the column and clipped.</summary>
+        [Fact]
+        public void The_picture_and_its_frame_fit_the_column()
+        {
+            Assert.Equal(PanelShell.ContentMax - 324, PanelPitWallPlan.PictureWidthFor(PanelShell.ContentMax, true));
+            Assert.Equal(544, PanelPitWallPlan.PictureWidthFor(544, false));
+            Assert.Equal(PanelPitWallPlan.PictureLeast, PanelPitWallPlan.PictureWidthFor(300, true));
+            Assert.Equal(120, PanelPitWallPlan.PictureLeast);
+            Assert.Equal(1, PanelPitWallPlan.Frame);
+            Assert.Equal(542, PanelPitWallPlan.CanvasWidth(544));
+            Assert.Equal(PanelPitWallPlan.PictureWidthFor(900, true), PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.PictureWidthFor(900, true)) + 2 * PanelPitWallPlan.Frame);
         }
 
         /// <summary>The three pages, in the order the picture draws them.</summary>

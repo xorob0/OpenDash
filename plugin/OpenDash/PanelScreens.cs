@@ -484,6 +484,23 @@ namespace OpenDashPlugin
             return string.IsNullOrEmpty(words) ? words : char.ToLowerInvariant(words[0]) + words.Substring(1);
         }
 
+        /// <summary>The least a row's title and caption keep beside a line of controls.</summary>
+        public const double RowTitleLeast = 140;
+
+        /// <summary>
+        /// The widest a line of controls may be in a row of a column <paramref name="column"/> wide, past
+        /// which the controls wrap under each other.
+        /// </summary>
+        /// <remarks>
+        /// A row puts its control in an Auto column, which WPF measures at infinite width, so a WrapPanel
+        /// there never wraps unless it is told how wide it may be; unwrapped, a face's Quick glance needs
+        /// about 400 px, and on a narrow column the title beside it was squeezed to a word a line.
+        /// </remarks>
+        public static double ControlsWidth(double column)
+        {
+            return Math.Max(0, column - PanelShell.RowGap - RowTitleLeast);
+        }
+
         // --- The quick glance ---------------------------------------------------------------------------
 
         /// <summary>The zones a face's glance can borrow, in Contract.FaceZoneLetters order.</summary>

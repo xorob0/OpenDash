@@ -44,6 +44,26 @@ namespace OpenDashPlugin
 
         public const double ListGap = 24;
 
+        /// <summary>The rule around the picture, inside the width the column gives it.</summary>
+        public const double Frame = 1;
+
+        /// <summary>The narrowest the picture is drawn, however narrow the column.</summary>
+        public const double PictureLeast = 120;
+
+        /// <summary>The width the picture takes on a page <paramref name="content"/> wide, its frame included:
+        /// beside the zone list in two columns, the whole width stacked.</summary>
+        public static double PictureWidthFor(double content, bool twoColumns)
+        {
+            return Math.Max(PictureLeast, twoColumns ? content - ListWidth - ListGap : content);
+        }
+
+        /// <summary>The page itself inside a picture <paramref name="outer"/> wide: the frame is drawn inside
+        /// the column, not beside it, or the column clips the picture's right edge.</summary>
+        public static double CanvasWidth(double outer)
+        {
+            return outer - 2 * Frame;
+        }
+
         /// <summary>The web view address box, as the artboard draws it.</summary>
         public const double AddressWidth = 320;
 

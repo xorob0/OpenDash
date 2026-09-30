@@ -526,6 +526,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(whole.Length, whole.Distinct().Count());
         }
 
+        /// <summary>A row's controls wrap before the title beside them is squeezed below its least: a row measures
+        /// its control unbounded, so the wrap is given the column less the gap and the title's room.</summary>
+        [Fact]
+        public void A_rows_controls_wrap_before_its_title_is_squeezed()
+        {
+            Assert.Equal(140, PanelScreens.RowTitleLeast);
+            Assert.Equal(420 - PanelShell.RowGap - 140, PanelScreens.ControlsWidth(420));
+            Assert.Equal(0, PanelScreens.ControlsWidth(100));
+        }
+
         /// <summary>The quick glance is picked zone first, then only the pages that zone carries (ruling 32); a
         /// new zone keeps the page where it has it and opens on its first otherwise.</summary>
         [Fact]

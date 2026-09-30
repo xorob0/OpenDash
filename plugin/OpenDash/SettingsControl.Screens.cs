@@ -144,11 +144,15 @@ namespace OpenDashPlugin
         {
             var title = Ui.SubHeading(screen.Name);
             title.TextTrimming = TextTrimming.CharacterEllipsis;
+            title.TextWrapping = TextWrapping.NoWrap;
+            title.ToolTip = screen.Name;
             var facts = Ui.Prose(PanelScreens.Facts(screen));
             facts.TextWrapping = TextWrapping.NoWrap;
             facts.VerticalAlignment = VerticalAlignment.Bottom;
             facts.Margin = new Thickness(0, 0, 0, 3);
-            var name = Ui.HStack(12, title, facts);
+            var name = new ScreensNameLine(12) { VerticalAlignment = VerticalAlignment.Center };
+            name.Children.Add(title);
+            name.Children.Add(facts);
 
             var edit = Ui.Button(PanelScreens.EditButton, PanelButtonKind.Outline, PanelButtonSize.Small);
             edit.ToolTip = PanelScreens.EditTooltip;
@@ -177,6 +181,43 @@ namespace OpenDashPlugin
             name.VerticalAlignment = VerticalAlignment.Center;
             row.Children.Add(name);
             return row;
+        }
+
+        /// <summary>
+        /// A screen's name and the facts after it, the facts always whole: the name is measured at what the
+        /// line leaves it, so a long one is cut short with an ellipsis rather than pushing the facts out of
+        /// sight. Ui.HStack measures every child unbounded, so a name there never trimmed.
+        /// </summary>
+        private sealed class ScreensNameLine : Panel
+        {
+            private readonly double gap;
+
+            public ScreensNameLine(double gap)
+            {
+                this.gap = gap;
+            }
+
+            protected override Size MeasureOverride(Size available)
+            {
+                if (InternalChildren.Count < 2) return new Size(0, 0);
+                var title = InternalChildren[0];
+                var facts = InternalChildren[1];
+                facts.Measure(new Size(double.PositiveInfinity, available.Height));
+                var room = double.IsInfinity(available.Width) ? double.PositiveInfinity : Math.Max(0, available.Width - facts.DesiredSize.Width - gap);
+                title.Measure(new Size(room, available.Height));
+                return new Size(title.DesiredSize.Width + gap + facts.DesiredSize.Width, Math.Max(title.DesiredSize.Height, facts.DesiredSize.Height));
+            }
+
+            protected override Size ArrangeOverride(Size final)
+            {
+                if (InternalChildren.Count < 2) return final;
+                var title = InternalChildren[0];
+                var facts = InternalChildren[1];
+                var titleWidth = Math.Min(title.DesiredSize.Width, Math.Max(0, final.Width - facts.DesiredSize.Width - gap));
+                title.Arrange(new Rect(0, 0, titleWidth, final.Height));
+                facts.Arrange(new Rect(titleWidth + gap, 0, facts.DesiredSize.Width, final.Height));
+                return final;
+            }
         }
 
         /// <summary>

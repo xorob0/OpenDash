@@ -44,15 +44,21 @@ namespace OpenDashPlugin
         /// what the border and the padding share.</summary>
         public const double BandLeast = 36;
 
+        /// <summary>The line height of the panel's fonts, as a multiple of their size: Barlow and openDash
+        /// Display set USE_TYPO_METRICS, and their typo metrics come to 1.2.</summary>
+        public const double LineHeight = 1.2;
+
         /// <summary>
-        /// The least a zone cell can be: its padding above and below, the letter and count, the first page
-        /// and the button line under it, six apart.
+        /// The least a zone cell can be: its border and padding above and below, the letter and count, the
+        /// first page and the button line under it, six apart.
         /// </summary>
         /// <remarks>
-        /// 9 + 18 + 6 + 19 + 6 + 16 + 9, rounded up: the tightest box on the page. The reference face scales
-        /// past it at every width a picture is drawn at beside the aside, so it binds only on a narrow page.
+        /// 1 + 9 + 21.6 + 6 + 18 + 6 + 14.4 + 9 + 1, which is 86: each line at <see cref="LineHeight"/> of its
+        /// size, not at its size, or the page line is squeezed and its descenders cut. It binds wherever a
+        /// face's own body scales to less, which for the reference face is any picture narrower than about
+        /// 530 px of rows: a narrow page, or the stacked picture of a phone-width one.
         /// </remarks>
-        public const double CellLeast = 84;
+        public const double CellLeast = 86;
 
         /// <summary>A cell is padded 9 above and below and 10 at the sides (the artboard's .zone).</summary>
         public const double CellPaddingX = 10;
@@ -94,6 +100,43 @@ namespace OpenDashPlugin
         {
             return Math.Max(0, twoColumns ? content - AsideWidth - AsideGap : content);
         }
+
+        /// <summary>The least the picture's column can be beside the aside: the artboard's own, 896 less the
+        /// aside and the gap. Narrower, the rows under the picture have no room for a title beside their
+        /// controls, and the aside goes under the picture.</summary>
+        public const double ColumnLeast = 556;
+
+        /// <summary>Whether the aside stands beside the picture: the page has two columns, and the picture's
+        /// column is still as wide as the artboard's.</summary>
+        public static bool SideBySide(double content, bool twoColumns)
+        {
+            return twoColumns && PictureWidthFor(content, true) >= ColumnLeast;
+        }
+
+        /// <summary>The tallest the picture is drawn, frame included: a portrait face as wide as the column is
+        /// taller than SimHub's window, and would push the rows and the aside out of sight.</summary>
+        public const double MaxHeight = 420;
+
+        /// <summary>
+        /// The width the picture is drawn at in a column <paramref name="outer"/> wide: the column, or less
+        /// where the face at that width would stand taller than <see cref="MaxHeight"/>.
+        /// </summary>
+        /// <remarks>
+        /// A portrait face whose rows are at their least is still taller than the cap (three cells of
+        /// <see cref="CellLeast"/>), so the width stops shrinking where the height stops falling.
+        /// </remarks>
+        public static double FitWidth(Contract.FaceSize face, double outer)
+        {
+            var width = Math.Floor(Math.Max(0, outer));
+            var frame = 2 * (Inset + Frame);
+            var cap = Math.Max(MaxHeight, For(face, 1).Height + frame);
+            while (width > frame + 1 && For(face, RowsWidth(width)).Height + frame > cap) width--;
+            return width;
+        }
+
+        /// <summary>The widest a binding chip is drawn in the zone aside, cut short past it: what leaves
+        /// "Previous page" and its NEW tag their 131 px of the aside's 282.</summary>
+        public const double AsideChipMax = 136;
 
         /// <summary>The rev strip's segments: twenty, 3 apart, inside 3 by 5 of padding.</summary>
         public const int RevSegments = 20;

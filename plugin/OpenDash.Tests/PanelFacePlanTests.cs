@@ -14,10 +14,17 @@ namespace OpenDashPlugin.Tests
     {
         private static Contract.FaceSize Reference { get { return Contract.ReferenceFace; } }
 
-        /// <summary>The plan of the 1920 x 480 face at the width the canvas draws it: 844 across, its rows
-        /// 21, 24, 138 and 36, and its zones 334, 165 and 335 across, 5 apart.</summary>
+        /// <summary>
+        /// The 1920 x 480 face's own proportions at 844 across, the width For(face) takes when nothing says
+        /// otherwise: its rows 21, 24, 138 and 36, and its zones 334, 165 and 335 across, 5 apart.
+        /// </summary>
+        /// <remarks>
+        /// Not the width the page draws: Screens.dc.html puts the picture in a 556 px column, and the page in
+        /// its column beside the aside (see the next test). 844 is the width the old pane's body gave it, kept
+        /// as the default so every face's proportions are held at one width.
+        /// </remarks>
         [Fact]
-        public void The_reference_face_is_the_picture_the_canvas_draws()
+        public void The_reference_face_keeps_its_own_proportions_at_844()
         {
             var plan = PanelFacePlan.For(Reference);
             Assert.Equal(844, PanelFacePlan.PictureWidth);
@@ -55,6 +62,74 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelFacePlan.BandLeast, narrow.Band);
         }
 
+        /// <summary>
+        /// The reference face as the page draws it beside the aside on the widest page: a picture 772 wide,
+        /// rows 754 across, 18, 24, 123 and 36 high, zones 298, 147 and 299 across.
+        /// </summary>
+        [Fact]
+        public void The_reference_face_is_drawn_beside_the_aside_at_754()
+        {
+            var outer = PanelFacePlan.FitWidth(Reference, PanelFacePlan.PictureWidthFor(PanelShell.ContentMax, true));
+            Assert.Equal(772, outer);
+            var plan = PanelFacePlan.For(Reference, PanelFacePlan.RowsWidth(outer));
+            Assert.Equal(754, plan.Width);
+            Assert.Equal(18, plan.RevBar);
+            Assert.Equal(24, plan.Bar);
+            Assert.Equal(123, plan.Body);
+            Assert.Equal(36, plan.Band);
+            Assert.Equal(new double[] { 298, 147, 299 }, plan.Cells);
+        }
+
+        /// <summary>
+        /// The aside stands beside the picture only while the picture's column is the artboard's 556 (896 less
+        /// the aside and the gap): narrower, the rows under the picture had no room for their titles, and the
+        /// zone cells fell to their least.
+        /// </summary>
+        [Fact]
+        public void The_aside_stands_beside_the_picture_while_the_column_is_the_artboards()
+        {
+            Assert.Equal(556, PanelFacePlan.ColumnLeast);
+            Assert.Equal(896 - PanelFacePlan.AsideWidth - PanelFacePlan.AsideGap, PanelFacePlan.ColumnLeast);
+            Assert.False(PanelFacePlan.SideBySide(PanelShell.TwoColumnFrom, true));
+            Assert.False(PanelFacePlan.SideBySide(895, true));
+            Assert.True(PanelFacePlan.SideBySide(896, true));
+            Assert.True(PanelFacePlan.SideBySide(PanelShell.ContentMax, true));
+            Assert.False(PanelFacePlan.SideBySide(PanelShell.ContentMax, false));
+            // Beside the aside, the reference face's cells scale past their least at every width.
+            var least = PanelFacePlan.For(Reference, PanelFacePlan.RowsWidth(PanelFacePlan.ColumnLeast));
+            Assert.True(least.Body > PanelFacePlan.CellLeast, "the reference face's body is " + least.Body + " at the least column");
+        }
+
+        /// <summary>
+        /// No face's picture stands taller than the cap, however wide its column: the portrait face at the
+        /// column's width was 891 px tall beside the aside and pushed the rows off the page. Where a face at
+        /// its least is taller than the cap, it is drawn at its least.
+        /// </summary>
+        [Fact]
+        public void A_picture_is_never_taller_than_the_page_can_show()
+        {
+            var frame = 2 * (PanelFacePlan.Inset + PanelFacePlan.Frame);
+            foreach (var face in Contract.FaceSizes)
+            {
+                foreach (var column in new double[] { 360, 544, 772, 1112 })
+                {
+                    var outer = PanelFacePlan.FitWidth(face, column);
+                    Assert.True(outer <= column, face + " is drawn " + outer + " wide in a column of " + column);
+                    var height = PanelFacePlan.For(face, PanelFacePlan.RowsWidth(outer)).Height + frame;
+                    var least = PanelFacePlan.For(face, 1).Height + frame;
+                    Assert.True(height <= Math.Max(PanelFacePlan.MaxHeight, least), face + " stands " + height + " tall in a column of " + column);
+                    if (outer < column)
+                    {
+                        var wider = PanelFacePlan.For(face, PanelFacePlan.RowsWidth(outer + 1)).Height + frame;
+                        Assert.True(wider > Math.Max(PanelFacePlan.MaxHeight, least), face + " could be drawn wider than " + outer);
+                    }
+                }
+            }
+            var portrait = Contract.FaceSizes.Single(f => f.Body == Contract.FaceBody.Column);
+            Assert.True(PanelFacePlan.FitWidth(portrait, 772) < 772);
+            Assert.Equal(420, PanelFacePlan.MaxHeight);
+        }
+
         /// <summary>The picture's frame and the cells' insides, as Screens.dc.html draws them: an 8 px inset
         /// inside a 1 px rule, parts 5 apart, a zone padded 9 by 10 with its lines 6 apart, the accent's 2 px
         /// edge on the part the aside shows, and the aside itself 316 wide, 24 from the picture.</summary>
@@ -77,6 +152,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelFacePlan.SelectedEdge);
             Assert.Equal(316, PanelFacePlan.AsideWidth);
             Assert.Equal(24, PanelFacePlan.AsideGap);
+            // A binding chip in the aside is cut short where it would take "Previous page" and its NEW tag's
+            // 131 px of the aside's 282 inside its rule and padding, 12 apart.
+            Assert.Equal(136, PanelFacePlan.AsideChipMax);
+            Assert.True(PanelFacePlan.AsideWidth - 2 * PanelMetrics.BorderWeight - 2 * 16 - PanelFacePlan.AsideChipMax - 12 >= 131);
         }
 
         /// <summary>The rev strip is twenty segments of a mid-range shift, and dark when the rev bar is off.</summary>
@@ -101,10 +180,14 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(16, PanelFacePlan.RevBarLeast);
             Assert.Equal(36, PanelFacePlan.BandLeast);
-            Assert.Equal(84, PanelFacePlan.CellLeast);
+            Assert.Equal(86, PanelFacePlan.CellLeast);
             Assert.Equal(Theme.ControlHeightSm, PanelFacePlan.BarLeast);
-            // A zone's three lines and its padding fit the least.
-            Assert.True(2 * PanelFacePlan.CellPaddingY + PanelFacePlan.LetterSize + PanelFacePlan.PageSize + PanelFacePlan.ButtonLineSize + 2 * PanelFacePlan.CellGap <= PanelFacePlan.CellLeast);
+            // A zone's three lines at their line height, the gaps, its padding and its border fit the least:
+            // font sizes alone came to 75 and let the page line be squeezed and its descenders cut.
+            Assert.Equal(1.2, PanelFacePlan.LineHeight);
+            var lines = PanelFacePlan.LineHeight * (PanelFacePlan.LetterSize + PanelFacePlan.PageSize + PanelFacePlan.ButtonLineSize);
+            var cell = lines + 2 * PanelFacePlan.CellGap + 2 * PanelFacePlan.CellPaddingY + 2 * PanelMetrics.BorderWeight;
+            Assert.Equal(PanelFacePlan.CellLeast, Math.Ceiling(cell));
 
             foreach (var face in Contract.FaceSizes)
             {

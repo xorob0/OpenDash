@@ -59,12 +59,15 @@ namespace OpenDashPlugin
                 redraw();
             };
 
-            var twoColumns = TwoColumns;
-            var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.PictureWidthFor(ContentWidth, twoColumns), key, pick), PanelScreens.AnchorZones);
+            // Beside the aside only while the picture's column is as wide as the artboard's, and the picture
+            // no taller than the page can show beside its rows.
+            var sideBySide = PanelFacePlan.SideBySide(ContentWidth, TwoColumns);
+            var column = PanelFacePlan.PictureWidthFor(ContentWidth, sideBySide);
+            var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.FitWidth(face, column), key, pick), PanelScreens.AnchorZones);
             var aside = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
-            var rows = BuildFaceRows(screen, redraw);
+            var rows = BuildFaceRows(screen, redraw, column);
 
-            if (!twoColumns) return Ui.VStack(16, picture, aside, rows);
+            if (!sideBySide) return Ui.VStack(16, picture, aside, rows);
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideGap) });
@@ -79,7 +82,7 @@ namespace OpenDashPlugin
 
         // --- The rows under the picture -----------------------------------------------------------------
 
-        private FrameworkElement BuildFaceRows(ScreenInstance screen, Action redraw)
+        private FrameworkElement BuildFaceRows(ScreenInstance screen, Action redraw, double column)
         {
             var ns = screen.Namespace;
             // The screen's own rev bar: off redraws the face without the well, and the strip above goes dark.
@@ -106,7 +109,7 @@ namespace OpenDashPlugin
                 Ui.Anchor(Ui.SettingRow(PanelScreens.RevBarTitle, revBar), PanelScreens.AnchorRevBar),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption), PanelScreens.AnchorLapReview),
-                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw, column), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
             };
             var clash = PanelScreens.PageClash(screen.Face);
             if (clash.Length > 0) rows.Add(BuildScreensWarning(clash));
@@ -129,7 +132,7 @@ namespace OpenDashPlugin
         /// Two choices in the order a driver makes them, and the second offers only the pages the first zone
         /// carries (ruling 32). The value stays zone × 100 + page.
         /// </remarks>
-        private FrameworkElement BuildFaceGlance(ScreenInstance screen, Action redraw)
+        private FrameworkElement BuildFaceGlance(ScreenInstance screen, Action redraw, double column)
         {
             var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
             var zoneIndex = Contract.QuickGlanceZone(glance);
@@ -148,13 +151,14 @@ namespace OpenDashPlugin
                 redraw();
             }, 150);
             page.Uid = "screens.glance.page";
-            return ScreensWrap(zone, page, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
+            return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }
 
-        /// <summary>Controls that sit side by side and wrap under each other on a narrow page, 8 apart.</summary>
-        private static FrameworkElement ScreensWrap(params FrameworkElement[] controls)
+        /// <summary>Controls that sit side by side and wrap under each other past <paramref name="maxWidth"/>,
+        /// 8 apart: a row measures its control at infinite width, so the wrap is told how wide it may be.</summary>
+        private static FrameworkElement ScreensWrap(double maxWidth, params FrameworkElement[] controls)
         {
-            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, MaxWidth = maxWidth };
             foreach (var control in controls)
             {
                 control.Margin = new Thickness(8, 2, 0, 2);
@@ -517,14 +521,15 @@ namespace OpenDashPlugin
             }
             var previous = Ui.HStack(8, Ui.Text(PanelScreens.PreviousPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.NewTag());
             stack.Children.Add(ScreensRuled(Ui.VStack(10,
-                ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter))),
-                ScreensAsideLine(previous, BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter))))));
+                ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), ScreensAsideChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)))),
+                ScreensAsideLine(previous, ScreensAsideChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)))))));
             return stack;
         }
 
         /// <summary>One page of the zone list: its tick, its name, and First or Not in iRacing after it. The
         /// last ticked page cannot be unticked, since a zone with no pages draws nothing: its tick stays
-        /// answering, the settings refuse the untick, and the redraw puts the tick back.</summary>
+        /// answering, the settings refuse the untick, and the redraw puts the tick back. The whole row is the
+        /// tick's label, as the artboard's .pg is a label.</summary>
         private static FrameworkElement BuildZonePageRow(ZoneRow row, Action<bool> ticked)
         {
             var box = new CheckBox
@@ -535,9 +540,11 @@ namespace OpenDashPlugin
                 ToolTip = row.Locked ? PanelScreens.LastPageTooltip : row.Name,
                 Uid = "screens.page." + row.Page,
             };
+            System.Windows.Automation.AutomationProperties.SetName(box, row.Name);
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);
             var line = new DockPanel { LastChildFill = true, Height = 32 };
+            ScreensLabelFor(line, box);
             DockPanel.SetDock(box, Dock.Left);
             line.Children.Add(box);
             if (row.First)
@@ -559,6 +566,46 @@ namespace OpenDashPlugin
             var name = ScreensCellText(row.Name, Theme.SizeBody, FontWeights.Normal, row.Ticked ? Theme.TextPrimary : Theme.TextSecondary);
             line.Children.Add(name);
             return line;
+        }
+
+        /// <summary>
+        /// Makes a press anywhere on <paramref name="row"/> toggle <paramref name="box"/>, as a label wrapped
+        /// round a checkbox does; a press on the box itself is the box's own.
+        /// </summary>
+        /// <remarks>
+        /// On a release that ends a press on the same row, as the segmented option chooses: the press takes
+        /// the mouse, so a click that closed a flyout or a sheet's dim over the row does not tick it.
+        /// </remarks>
+        private static void ScreensLabelFor(Panel row, CheckBox box)
+        {
+            row.Background = Brushes.Transparent;
+            row.Cursor = Cursors.Hand;
+            row.MouseLeftButtonDown += (sender, args) =>
+            {
+                var source = args.OriginalSource as DependencyObject;
+                if (source != null && (ReferenceEquals(source, box) || box.IsAncestorOf(source))) return;
+                if (row.CaptureMouse()) args.Handled = true;
+            };
+            row.MouseLeftButtonUp += (sender, args) =>
+            {
+                if (!row.IsMouseCaptured) return;
+                row.ReleaseMouseCapture();
+                args.Handled = true;
+                var at = args.GetPosition(row);
+                if (at.X < 0 || at.Y < 0 || at.X > row.ActualWidth || at.Y > row.ActualHeight) return;
+                box.IsChecked = box.IsChecked != true;
+            };
+        }
+
+        /// <summary>A binding chip in the zone aside, cut short at <see cref="PanelFacePlan.AsideChipMax"/> so
+        /// a long device name leaves the words beside it their room.</summary>
+        private static FrameworkElement ScreensAsideChip(FrameworkElement chip)
+        {
+            chip.MaxWidth = PanelFacePlan.AsideChipMax;
+            var button = chip as ContentControl;
+            var label = button == null ? null : button.Content as TextBlock;
+            if (label != null) label.TextTrimming = TextTrimming.CharacterEllipsis;
+            return chip;
         }
 
         /// <summary>A page not built yet, greyed in the list under Show all, beside the grip's room.</summary>

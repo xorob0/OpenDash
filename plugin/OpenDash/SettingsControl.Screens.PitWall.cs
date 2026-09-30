@@ -77,8 +77,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page, Action redraw)
         {
             var twoColumns = TwoColumns;
-            var width = twoColumns ? ContentWidth - PanelPitWallPlan.ListWidth - PanelPitWallPlan.ListGap : ContentWidth;
-            var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], Math.Max(120, width)), PanelScreens.AnchorZones);
+            var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], PanelPitWallPlan.PictureWidthFor(ContentWidth, twoColumns)), PanelScreens.AnchorZones);
             var list = BuildPitWallZoneList(screen, page, redraw);
             if (!twoColumns) return Ui.VStack(16, picture, list);
             var grid = new Grid();
@@ -93,15 +92,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// One page, drawn at the rectangles PanelPitWallPlan gives it scaled to the width.
+        /// One page, drawn at the rectangles PanelPitWallPlan gives it scaled to the width inside its frame:
+        /// the picture is <paramref name="outer"/> wide with its rule, never 2 px past its column.
         /// </summary>
         /// <remarks>
         /// A Canvas rather than a Grid because the three pages have three shapes and only one of them is a
         /// table: the Tower page puts a wide zone across the top of its right half and two zones side by
         /// side under it, which no arrangement of star rows and columns draws.
         /// </remarks>
-        private FrameworkElement BuildPitWallPicture(ScreenInstance screen, PanelPitWallPlan.Page page, double width)
+        private FrameworkElement BuildPitWallPicture(ScreenInstance screen, PanelPitWallPlan.Page page, double outer)
         {
+            var width = PanelPitWallPlan.CanvasWidth(outer);
             var canvas = new Canvas
             {
                 Width = width,
@@ -124,16 +125,19 @@ namespace OpenDashPlugin
                     CornerRadius = new CornerRadius(Theme.Radius),
                     Padding = new Thickness(8, 6, 8, 6),
                     Child = Ui.VStack(0, name, what),
-                    ToolTip = PanelPitWallPlan.ZoneDescription(slot),
                 };
+                // The fixed Board and Tower have no zone and so no place to describe; an empty hover is a box.
+                var tip = PanelPitWallPlan.ZoneDescription(slot);
+                if (!string.IsNullOrEmpty(tip)) box.ToolTip = tip;
                 Canvas.SetLeft(box, panel.X);
                 Canvas.SetTop(box, panel.Y);
                 canvas.Children.Add(box);
             }
             return new Border
             {
+                Width = outer,
                 BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                BorderThickness = new Thickness(PanelPitWallPlan.Frame),
                 CornerRadius = new CornerRadius(Theme.Radius),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = canvas,
@@ -187,7 +191,7 @@ namespace OpenDashPlugin
                 choice.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
                 choices.Add(choice);
             }
-            return ScreensWrap(choices.ToArray());
+            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), choices.ToArray());
         }
 
         /// <summary>
@@ -213,7 +217,7 @@ namespace OpenDashPlugin
                 redraw();
             }, 150);
             pages.Uid = "screens.pitwall.glance.page";
-            return ScreensWrap(zone, pages, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
+            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), zone, pages, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }
 
         /// <summary>
