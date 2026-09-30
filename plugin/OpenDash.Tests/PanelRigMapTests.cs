@@ -2,6 +2,7 @@
 // and after a driver drags them, and what each tile shows under a scenario.
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Xunit;
 
@@ -53,6 +54,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(506, PanelSoon.RealHardware.Ticket);
             Assert.Equal(new[] { PanelSoon.RealHardware }, PanelRigMap.SoonDrawn);
             Assert.Equal("Leaderboard", PanelRigMap.BoardLabel);
+            // The artboard's <section aria-label="What to emulate">.
+            Assert.Equal("What to emulate", PanelRigMap.ScenariosName);
             // The chips are the voice's words: "Pit limiter" and the temperatures by name.
             Assert.Equal(new[] { "Flags", "Spotter", "Pit lane", "Warnings", "Revs" }, PanelEmulation.Groups.Select(g => g.Title));
             Assert.Equal(new[] { "Green", "Yellow", "Blue", "White", "Black", "Chequered", "Red", "Car left", "Car right", "Both sides", "Pit limiter", "Speeding", "Low fuel", "Oil temperature", "Water temperature", "Idle", "Mid revs", "Shift point" },
@@ -130,6 +133,70 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelRigMap.Search.Skip(3), e => Assert.Equal(PanelRigMap.AnchorScenarios, e.Route.Anchor));
             Assert.Equal(PanelSettings.NightModeTitle, PanelRigMap.Search[1].Label);
             Assert.DoesNotContain(PanelRigMap.Search, e => e.Label == PanelRigMap.RealHardwareTitle);
+            // The words a driver types for each, which a search that finds the label alone would lose.
+            Assert.Equal(new[] { "rig layout", "map", "arrange", "tiles", "emulate" }, PanelRigMap.Search[0].Keywords);
+            Assert.Equal(new[] { "dark", "dim" }, PanelRigMap.Search[1].Keywords);
+            Assert.Equal(new[] { "arrange", "tiles", "rig layout" }, PanelRigMap.Search[2].Keywords);
+            Assert.Equal(new[] { "emulate", "test", "yellow", "blue", "chequered" }, PanelRigMap.Search[3].Keywords);
+            Assert.Equal(new[] { "emulate", "car left", "car right" }, PanelRigMap.Search[4].Keywords);
+            Assert.Equal(new[] { "emulate", "limiter", "speeding" }, PanelRigMap.Search[5].Keywords);
+            Assert.Equal(new[] { "emulate", "fuel", "oil", "water" }, PanelRigMap.Search[6].Keywords);
+            Assert.Equal(new[] { "emulate", "shift point", "rpm" }, PanelRigMap.Search[7].Keywords);
+        }
+
+        /// <summary>The body of one method of the Rig page, comments stripped, up to its closing brace.</summary>
+        private static string RigMethod(string signature)
+        {
+            var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
+            var start = page.IndexOf(signature, StringComparison.Ordinal);
+            Assert.True(start >= 0, signature);
+            var end = page.IndexOf("\n        }\n", start, StringComparison.Ordinal);
+            Assert.True(end > start, signature);
+            return page.Substring(start, end - start);
+        }
+
+        private static void InOrder(string text, params string[] parts)
+        {
+            var at = 0;
+            foreach (var part in parts)
+            {
+                var found = text.IndexOf(part, at, StringComparison.Ordinal);
+                Assert.True(found >= 0, "missing, or out of order: " + part);
+                at = found + part.Length;
+            }
+        }
+
+        /// <remarks>
+        /// The page's writes, held as text as the other pages hold theirs: a drop that is never saved, or a
+        /// Reset layout that writes nothing, would otherwise pass every check. A drop is saved on the drop
+        /// rather than in End(), since SimHub is force-killed on the VM; a screen is saved with Save(screen),
+        /// which keeps a migrated screen; and a chip repaints in place and rebuilds nothing.
+        /// </remarks>
+        [Fact]
+        public void The_rig_page_keeps_a_drop_and_a_reset_and_a_chip_rebuilds_nothing()
+        {
+            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePosition(Settings, tile, left, top);", "PanelRigMap.ScreenOf(Settings, tile)", "Save(screen);", "Save();");
+            InOrder(RigMethod("private void RigResetLayout("), "PanelRigMap.ClearLayout(Settings);", "Save();", "Redraw();");
+
+            var tile = RigMethod("private RigTileView BuildRigTile(");
+            InOrder(tile, "thumb.DragCompleted +=", "RigPlace(root,", "RigDrop(tile, root);", "};");
+            InOrder(tile, "thumb.KeyUp +=", "RigDrop(tile, root);", "};");
+            InOrder(tile, "thumb.LostKeyboardFocus +=", "RigDrop(tile, root);", "};");
+            // The arrow keys move a tile and leave the save to the key coming up.
+            var keyDown = tile.Substring(tile.IndexOf("thumb.KeyDown +=", StringComparison.Ordinal));
+            keyDown = keyDown.Substring(0, keyDown.IndexOf("};", StringComparison.Ordinal));
+            Assert.DoesNotContain("RigDrop(", keyDown);
+            Assert.DoesNotContain("Save(", keyDown);
+            // A press does not scroll the page to the tile under it.
+            InOrder(tile, "root.RequestBringIntoView +=", "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
+
+            var pick = RigMethod("private void RigPick(");
+            InOrder(pick, "Select(PanelPage.Rig, id);", "view.Paint(id);");
+            Assert.DoesNotContain("RebuildPage(", pick);
+            Assert.DoesNotContain("Redraw(", pick);
+            Assert.DoesNotContain("Save(", pick);
+
+            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);");
         }
 
         [Fact]
@@ -505,6 +572,18 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_screen_tile_is_the_screen_a_drop_keeps()
+        {
+            var settings = Rig();
+            var tiles = PanelRigMap.Tiles(settings).ToDictionary(t => t.Id);
+            Assert.Same(settings.ScreenByNamespace("Rim"), PanelRigMap.ScreenOf(settings, tiles["Rim"]));
+            Assert.Same(settings.ScreenByNamespace("Slots480x480"), PanelRigMap.ScreenOf(settings, tiles["Slots480x480"]));
+            Assert.Null(PanelRigMap.ScreenOf(settings, tiles["led:LedWheelRim"]));
+            Assert.Null(PanelRigMap.ScreenOf(settings, tiles["matrix:1"]));
+            Assert.Null(PanelRigMap.ScreenOf(null, tiles["Rim"]));
+        }
+
+        [Fact]
         public void A_negative_saved_place_is_no_place()
         {
             var settings = Rig();
@@ -580,15 +659,27 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelRigMap.FaceColumn(screen));
             Assert.Equal("Fuel", PanelRigMap.FaceBandIdle(screen));
 
-            // The page a zone is on now, not the one it opens on.
+            // The page a zone is on now, not the one it opens on; the page reads FaceState on its clock and
+            // repaints the tile when a wheel button moves one.
             screen.Face = new FaceSettings();
             screen.Face.Normalise();
+            var before = PanelRigMap.FaceState(screen);
             screen.Face.Zones[0] = 2;
             screen.Face.Zones[3] = 3;
+            Assert.NotEqual(before, PanelRigMap.FaceState(screen));
+            Assert.Equal("2," + screen.Face.Zone("B") + "," + screen.Face.Zone("C") + ",3", PanelRigMap.FaceState(screen));
             zones = PanelRigMap.FaceZones(screen);
             Assert.Equal("Speed", zones[1].Text);
             Assert.False(zones[1].Gear);
             Assert.Equal("Tyres", PanelRigMap.FaceBandIdle(screen));
+            Assert.Equal(string.Empty, PanelRigMap.FaceState(null));
+
+            // Zone A's "Gear alone" is the gear too.
+            screen.Face.Zones[0] = 1;
+            Assert.Equal("gearAlone", FacePages.IdOf("A", 1));
+            zones = PanelRigMap.FaceZones(screen);
+            Assert.True(zones[1].Gear);
+            Assert.Equal("4", zones[1].Text);
 
             var tall = Screen(Contract.KindFace, "Tall", "Tall", 600, 686);
             Assert.True(PanelRigMap.FaceColumn(tall));

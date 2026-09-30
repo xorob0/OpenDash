@@ -308,6 +308,9 @@ namespace OpenDashPlugin
 
         // --- The scenario chips ---------------------------------------------------------------------
 
+        /// <summary>What assistive technology calls the chips, as the artboard's section does.</summary>
+        public const string ScenariosName = "What to emulate";
+
         /// <summary>Between groups across and down, under a group's title, and between two chips.</summary>
         public const double GroupGapX = 32;
         public const double GroupGapY = 18;
@@ -876,6 +879,13 @@ namespace OpenDashPlugin
             return any;
         }
 
+        /// <summary>The screen a tile draws, or null for a strip, a matrix, or a screen the rig no longer has.</summary>
+        public static ScreenInstance ScreenOf(OpenDashSettings settings, RigTile tile)
+        {
+            if (settings == null || tile == null || tile.Kind == RigTileKind.Strip || tile.Kind == RigTileKind.Matrix) return null;
+            return settings.ScreenByNamespace(tile.Key);
+        }
+
         /// <summary>The matrix slot a tile draws, as an index into the four-slot arrays, or -1.</summary>
         private static int MatrixIndex(RigTile tile)
         {
@@ -985,9 +995,26 @@ namespace OpenDashPlugin
             return zones;
         }
 
+        /// <summary>Zone A's two pages that are the gear: FacePages.ZoneA's "Gear, speed, revs" and "Gear alone".</summary>
         private static bool IsGearPage(string id)
         {
             return id == "gearSpeedRevs" || id == "gearAlone";
+        }
+
+        /// <summary>
+        /// The pages a face's four zones are on now, as one value that changes when any of them does.
+        /// </summary>
+        /// <remarks>
+        /// FaceSettings.Zones is live state: a wheel button's zone cycle and the quick glance move it with no
+        /// save and no rebuild. The page reads this on its clock and repaints a face's tile when it changes, so
+        /// the zones are named for the page they are on rather than the one they were on when the page was built.
+        /// Property reads only.
+        /// </remarks>
+        public static string FaceState(ScreenInstance screen)
+        {
+            var face = screen == null ? null : screen.Face;
+            if (face == null) return string.Empty;
+            return face.Zone("A") + "," + face.Zone("B") + "," + face.Zone("C") + "," + face.Zone("D");
         }
 
         /// <summary>Whether a face stacks its zones down rather than across, as the 600 x 686 does.</summary>

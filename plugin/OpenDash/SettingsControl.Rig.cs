@@ -240,6 +240,18 @@ namespace OpenDashPlugin
             var host = new Border { Width = tile.Width, Height = tile.Height, HorizontalAlignment = HorizontalAlignment.Left };
             Action<string> paint = id => host.Child = BuildRigPicture(tile, id);
             paint(scenario);
+            if (tile.Kind == RigTileKind.Face)
+            {
+                // A wheel button pages a face's zones without a save or a rebuild, so the clock looks.
+                var seen = PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key));
+                OnTick(() =>
+                {
+                    var now = PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key));
+                    if (now == seen) return;
+                    seen = now;
+                    paint(rigScenario);
+                });
+            }
 
             var body = new StackPanel { Orientation = Orientation.Vertical };
             body.Children.Add(nameLine);
@@ -252,6 +264,8 @@ namespace OpenDashPlugin
                 Focusable = true,
                 IsTabStop = true,
                 FocusVisualStyle = Ui.FocusRing(),
+                // The whole name, where the line above the picture trims it; the Thumb is what the pointer is on.
+                ToolTip = tile.Name,
             };
             AutomationProperties.SetName(thumb, tile.Name);
 
@@ -260,6 +274,13 @@ namespace OpenDashPlugin
             root.Children.Add(thumb);
             Canvas.SetLeft(root, tile.X);
             Canvas.SetTop(root, tile.Y);
+            // The Thumb is focusable for the arrow keys, so a press focuses it, and focus brings a tile into view
+            // after the Thumb has taken its grip: a tile half out of view would scroll the page and jump that far
+            // on the first move. Only the keyboard's focus scrolls to a tile.
+            root.RequestBringIntoView += (sender, args) =>
+            {
+                if (Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
+            };
 
             var moved = false;
             thumb.DragStarted += (sender, args) =>
@@ -278,8 +299,12 @@ namespace OpenDashPlugin
             thumb.DragCompleted += (sender, args) =>
             {
                 if (!moved) return;
-                RigDrop(tile, root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
+                RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
+                RigDrop(tile, root);
             };
+            // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
+            // the key comes up (or focus leaves first), rather than on every repeat.
+            var unsaved = false;
             thumb.KeyDown += (sender, args) =>
             {
                 double dx = 0, dy = 0;
@@ -293,21 +318,46 @@ namespace OpenDashPlugin
                 }
                 args.Handled = true;
                 Panel.SetZIndex(root, ++rigTopZ);
-                RigDrop(tile, root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent);
+                if (RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) unsaved = true;
+            };
+            thumb.KeyUp += (sender, args) =>
+            {
+                if (!unsaved) return;
+                unsaved = false;
+                RigDrop(tile, root);
+            };
+            thumb.LostKeyboardFocus += (sender, args) =>
+            {
+                if (!unsaved) return;
+                unsaved = false;
+                RigDrop(tile, root);
             };
 
             return new RigTileView(tile, root, paint);
         }
 
-        /// <summary>Puts a dropped tile on the nearest step of the grid inside the canvas and keeps it there.</summary>
-        private void RigDrop(RigTile tile, FrameworkElement root, double x, double y, RigExtent extent)
+        /// <summary>Puts a tile on the nearest step of the grid inside the canvas, the place it will be kept at.
+        /// Returns whether that moved it.</summary>
+        private static bool RigPlace(FrameworkElement root, double x, double y, RigExtent extent)
         {
             var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);
             var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);
+            var moved = left != Canvas.GetLeft(root) || top != Canvas.GetTop(root);
             Canvas.SetLeft(root, left);
             Canvas.SetTop(root, top);
+            return moved;
+        }
+
+        /// <summary>Keeps where a tile is, in its own settings. Arranging a screen is setting it up, so a screen
+        /// is saved with Save(screen), which keeps a migrated screen as Home's list asks.</summary>
+        private void RigDrop(RigTile tile, FrameworkElement root)
+        {
+            var left = Canvas.GetLeft(root);
+            var top = Canvas.GetTop(root);
             PanelRigMap.SavePosition(Settings, tile, left, top);
-            Save();
+            var screen = PanelRigMap.ScreenOf(Settings, tile);
+            if (screen != null) Save(screen);
+            else Save();
         }
 
         /// <summary>The Thumb over a tile: nothing to see, so the tile shows through and the drag is the tile's.
@@ -611,6 +661,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildRigScenarios(IList<RigTileView> views)
         {
             var host = new Border();
+            AutomationProperties.SetName(host, PanelRigMap.ScenariosName);
             RigDrawChips(host, views, null);
             return host;
         }
