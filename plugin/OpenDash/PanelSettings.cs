@@ -230,8 +230,9 @@ namespace OpenDashPlugin
         public const string FlagsInPitLaneTitle = "Flags in the pit lane";
 
         /// <summary>What #504 will offer, greyed until then: whether a yellow is shown for the whole track or
-        /// only for the driver's own sector.</summary>
-        public static readonly string[] YellowFlagLabels = { "Whole track", "Your sector" };
+        /// only for the driver's own sector. The artboard's words, which #504 names too: rewording them is
+        /// one of its acceptance items, so the row keeps them until it settles them.</summary>
+        public static readonly string[] YellowFlagLabels = { "Whole track", "My sector only" };
 
         // --- Alerts ------------------------------------------------------------------------------------
 
@@ -341,9 +342,10 @@ namespace OpenDashPlugin
         // --- Lighting ----------------------------------------------------------------------------------
 
         public const string BrightnessTitle = "Brightness";
+        /// <summary>The one thing the row cannot say. The artboard draws both sliders bare, and the night one
+        /// stays bare: "used while night mode is on" would only say its label again (docs/design/voice.md).</summary>
         public const string BrightnessCaption = "SimHub's device brightness applies on top.";
         public const string NightBrightnessTitle = "Night brightness";
-        public const string NightBrightnessCaption = "Used while night mode is on.";
         public const string NightModeTitle = "Night mode";
 
         /// <summary>The row whose chip opens the night-mode binding on Shortcuts. Not a search label: the

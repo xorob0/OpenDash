@@ -3,10 +3,10 @@
 //
 // Apart from SettingsControl.Settings.cs for the reason PanelLights.cs is apart from
 // SettingsControl.Lights.cs: the page is WPF and the net8.0 test project cannot compile a line of it, so
-// copy a test can hold has to live where it can reach. Some rows here say something the canvas does not,
-// on purpose -- the Position row's sentences, the driver and team name rows, the delta reference's third
-// segment, the whole of the delta precision row and the clock row -- and a constant with a test on it is
-// the only way that stays a decision rather than a drift.
+// copy a test can hold has to live where it can reach. Some rows here say something the Settings artboard
+// does not, on purpose -- the Position row's sentences, the captions under the rows it draws bare, and the
+// whole of the clock row -- and a constant with a test on it is the only way that stays a decision rather
+// than a drift.
 // Pure: no WPF types.
 namespace OpenDashPlugin
 {
@@ -71,12 +71,11 @@ namespace OpenDashPlugin
         /// <remarks>
         /// "Last lap" is the canvas's own name for that lap, the one the Last lap card and the Lap times
         /// page draw, so the row names a lap the driver has already seen a time for rather than
-        /// inventing a word for it. The canvas draws this row with the first two segments only; the
-        /// third is one it does not carry yet (#322).
+        /// inventing a word for it. The Settings artboard draws all three segments (#322).
         /// </remarks>
         public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
 
-        /// <summary>The row under the delta reference, which the canvas does not draw at all (#322).</summary>
+        /// <summary>The row under the delta reference, as the Settings artboard draws it (#322).</summary>
         public const string DeltaPrecisionTitle = "Delta precision";
 
         /// <summary>What each answer is for, which is the one thing the two words cannot say.</summary>

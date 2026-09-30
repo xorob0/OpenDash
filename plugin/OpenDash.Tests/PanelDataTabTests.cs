@@ -115,9 +115,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <remarks>
-        /// A row the canvas does not draw (#322), so its words are held here rather than to the canvas.
-        /// The labels are words and not worked examples: a numeral on the panel is drawn in Barlow, and the
-        /// canvas keeps numerals to Barlow Condensed.
+        /// The Settings artboard draws the row bare (#322); its caption is the build's, so its words are held
+        /// here. The labels are words and not worked examples, as the artboard's are: a numeral on the panel
+        /// is drawn in Barlow, and the canvas keeps numerals to Barlow Condensed.
         /// </remarks>
         [Fact]
         public void The_delta_precision_row_names_both_precisions_in_words()

@@ -683,7 +683,7 @@ namespace OpenDashPlugin
             return PageSection(PanelSettings.LightingTitle, true, PanelKit.SectionHeadingGapSettings,
                 card,
                 SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),
-                SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, PanelSettings.NightBrightnessCaption, nightBrightness)),
+                SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),
                 Ui.Row(PanelSettings.NightModeTitle, null, nightMode),
                 Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)),
                 Ui.SoonRow(PanelSoon.SimTimeOfDay),

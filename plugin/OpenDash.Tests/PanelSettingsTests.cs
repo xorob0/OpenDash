@@ -40,7 +40,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Brightness", PanelSettings.BrightnessTitle);
             Assert.Equal("SimHub's device brightness applies on top.", PanelSettings.BrightnessCaption);
             Assert.Equal("Night brightness", PanelSettings.NightBrightnessTitle);
-            Assert.Equal("Used while night mode is on.", PanelSettings.NightBrightnessCaption);
+            // The night slider is drawn bare, as the artboard draws it: a caption would name it again.
+            Assert.Contains("Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)", Page());
             Assert.Equal("Night mode", PanelSettings.NightModeTitle);
             Assert.Equal("Night mode button", PanelSettings.NightModeButtonTitle);
             Assert.Equal("Preview", PanelSettings.PreviewTitle);
@@ -48,13 +49,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "day", "night" }, PanelSettings.PreviewValues);
         }
 
-        /// <summary>The greyed rows' words, which say what the tickets will build: the artboard's, as noun phrases
-        /// and without the fragments ("then Pressure", "My sector only").</summary>
+        /// <summary>The greyed rows' words, which say what the tickets will build: the artboard's, with the tyre
+        /// display's "then Pressure" as a bare "Pressure", since the two buttons side by side say the order.
+        /// The yellow flags keep "My sector only", which #504 names and is to settle.</summary>
         [Fact]
         public void The_greyed_rows_say_what_is_coming()
         {
             Assert.Equal(new[] { "Temperature", "Pressure" }, PanelSettings.TyreDisplayLabels);
-            Assert.Equal(new[] { "Whole track", "Your sector" }, PanelSettings.YellowFlagLabels);
+            Assert.Equal(new[] { "Whole track", "My sector only" }, PanelSettings.YellowFlagLabels);
             Assert.Equal(new[] { "Dark", "Light", "OLED black", "High contrast" }, PanelSettings.ThemeLabels);
             Assert.Equal(new[] { "Standard", "Deuteranopia", "Protanopia", "Tritanopia" }, PanelSettings.ColourVisionLabels);
             Assert.Equal(new[] { "As designed", "Darker", "Lighter", "Warmer" }, PanelSettings.ColoursLabels);
@@ -69,7 +71,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_caption_is_a_sentence()
         {
-            foreach (var caption in new[] { PanelSettings.UnitsCaption, PanelSettings.TemperatureCaption, PanelSettings.BrightnessCaption, PanelSettings.NightBrightnessCaption })
+            foreach (var caption in new[] { PanelSettings.UnitsCaption, PanelSettings.TemperatureCaption, PanelSettings.BrightnessCaption })
             {
                 Assert.EndsWith(".", caption, StringComparison.Ordinal);
             }
