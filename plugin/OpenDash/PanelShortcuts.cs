@@ -44,6 +44,18 @@ namespace OpenDashPlugin
         public const string Tap = "Tap";
         public const string Hold = "Hold";
 
+        /// <summary>
+        /// Whether a row draws its press word: while nothing is bound on it, and always on a held row. Once a
+        /// row is bound, SimHub's editor prints each binding's own press type beside it, and that is the
+        /// statement: a zone bound as a long press would otherwise read "Tap" beside SimHub's LongPress, and
+        /// where the control already says it the panel says nothing. A held row keeps "Hold", because the
+        /// plugin holds its glance whatever press type SimHub shows (#435), which its caption says.
+        /// </summary>
+        public static bool ShowsPress(RowState row, bool hold)
+        {
+            return hold || row != RowState.Bound;
+        }
+
         /// <summary>A zone's row, and the name BuildBinder's fallback text gives the action when SimHub's editor
         /// cannot be drawn, in the same words: "Band D · next page", "Rim · Band D · previous page". SimHub's
         /// editor itself is given <see cref="EditorName"/>.</summary>

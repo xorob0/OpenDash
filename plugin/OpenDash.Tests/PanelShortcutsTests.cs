@@ -59,6 +59,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_row_says_its_press_until_simhubs_editor_says_it_and_a_hold_always()
+        {
+            // Not bound, greyed or not read: the row's own "Tap" is the only word on the press.
+            foreach (var state in new[] { PanelShortcuts.RowState.NotBound, PanelShortcuts.RowState.Greyed, PanelShortcuts.RowState.Unread })
+            {
+                Assert.True(PanelShortcuts.ShowsPress(state, false));
+                Assert.True(PanelShortcuts.ShowsPress(state, true));
+            }
+            // Bound: SimHub's editor prints the binding's press type, which a tapped row's word could contradict.
+            Assert.False(PanelShortcuts.ShowsPress(PanelShortcuts.RowState.Bound, false));
+            // A held glance is held whatever press type SimHub shows (#435), so "Hold" stays.
+            Assert.True(PanelShortcuts.ShowsPress(PanelShortcuts.RowState.Bound, true));
+        }
+
+        [Fact]
         public void A_row_is_greyed_unread_bound_or_not_bound()
         {
             Assert.Equal(PanelShortcuts.RowState.Greyed, PanelShortcuts.StateOf(false, null));
@@ -893,9 +908,11 @@ namespace OpenDashPlugin.Tests
 
             // The rows as the model gives them: its label and press, the New tag where the model says, the
             // greyed rows by the registry's titles, and each card's line beside its name.
-            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, tags);", code);
+            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, out press, tags);", code);
+
+            Assert.Contains("if (row.Press != null) row.Press.Visibility = PanelShortcuts.ShowsPress(states[row], row.IsHold) ? Visibility.Visible : Visibility.Hidden;", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
-            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot);", code);
+            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot, out press);", code);
             Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);
@@ -935,8 +952,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("row.Slot.BorderBrush = marked ? Ui.Brush(Theme.CautionDeep) : null;", mark);
             var slot = Between(code, "slot = new Border\n", "};");
             Assert.Contains("BorderThickness = new Thickness(PanelMetrics.BorderWeight),", slot);
-            Assert.Contains("Slot = slot, Bindable = true, Place = place, Does = binding.Does", code);
-            Assert.Contains("Slot = slot, Bindable = false", code);
+            // Each row's state as the reads and the marks use it: a live row bindable, placed on its screen's
+            // card (so two screens' uses of one action stay apart) and saying what it does; a greyed row not.
+            Assert.Contains("group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Slot = slot, Press = press, IsHold = binding.IsHold, Bindable = true, Place = place, Does = binding.Does });", code);
+            Assert.Contains("group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Slot = slot, Press = press, Bindable = false });", code);
             // A binding's presses come off SimHub's mapping by the name of its press type.
             Assert.Contains("PanelShortcuts.FiresOn(mapping.PressType.ToString())", code);
 

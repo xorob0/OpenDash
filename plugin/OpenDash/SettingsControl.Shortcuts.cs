@@ -5,7 +5,7 @@
 // the driver to Controls and events to find an action's name; SimHub draws "Click to configure" or each
 // binding with its press type, and Change, Clear and Add on hover, in a slot of fixed width that every row
 // gives it, with its own name column dropped. Around it the page draws what the artboard adds: the press each action
-// answers to, a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
+// answers to (until a binding's own press type says it, PanelShortcuts.ShowsPress), a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
 // things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
 // cleared, here or anywhere SimHub reports it (ShortcutsFollowSimHub), and are hidden when SimHub's mappings
 // cannot be read. PanelShortcuts decides the rows, the words and
@@ -52,6 +52,9 @@ namespace OpenDashPlugin
             public FrameworkElement Shown;
             /// <summary>The binder's slot, outlined in caution while a clash line names the row.</summary>
             public Border Slot;
+            /// <summary>The press word, drawn while the row is not bound, and always on a held row.</summary>
+            public TextBlock Press;
+            public bool IsHold;
             public bool Bindable;
             public string Place;
             public string Does;
@@ -416,9 +419,10 @@ namespace OpenDashPlugin
             if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;
             var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];
             Border slot;
-            var row = ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, tags);
+            TextBlock press;
+            var row = ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, out press, tags);
             Ui.Anchor(row, PanelBindings.Anchor(binding.Action));
-            group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Slot = slot, Bindable = true, Place = place, Does = binding.Does });
+            group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Slot = slot, Press = press, IsHold = binding.IsHold, Bindable = true, Place = place, Does = binding.Does });
             group.Body.Children.Add(row);
         }
 
@@ -432,9 +436,10 @@ namespace OpenDashPlugin
             var chip = Ui.BindingChip(Ui.NotBound, false, key: true);
             chip.HorizontalAlignment = HorizontalAlignment.Left;
             Border slot;
-            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot);
+            TextBlock press;
+            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot, out press);
             var shown = Ui.Soon(row, item);
-            group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Slot = slot, Bindable = false });
+            group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Slot = slot, Press = press, Bindable = false });
             group.Body.Children.Add(shown);
         }
 
@@ -447,7 +452,7 @@ namespace OpenDashPlugin
         /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name. The
         /// slot is handed back for the clash mark: it always keeps a border's room, empty until a clash line
         /// names the row, so marking a row moves nothing in it.</remarks>
-        private static Border ShortcutsRow(string label, string press, FrameworkElement control, ShortcutsLayout layout, FrameworkElement caption, out Border slot, params FrameworkElement[] tags)
+        private static Border ShortcutsRow(string label, string press, FrameworkElement control, ShortcutsLayout layout, FrameworkElement caption, out Border slot, out TextBlock pressText, params FrameworkElement[] tags)
         {
             slot = null;
             var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -469,7 +474,7 @@ namespace OpenDashPlugin
                 caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);
                 left.Children.Add(caption);
             }
-            var pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+            pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
             pressText.VerticalAlignment = VerticalAlignment.Center;
             pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);
 
@@ -613,7 +618,9 @@ namespace OpenDashPlugin
                 var firstShown = true;
                 foreach (var row in group.Rows)
                 {
-                    var shows = PanelShortcuts.Shows(chosen, states[row]);
+                    // The column keeps its width, so a row with no press word still lines up with the others.
+                if (row.Press != null) row.Press.Visibility = PanelShortcuts.ShowsPress(states[row], row.IsHold) ? Visibility.Visible : Visibility.Hidden;
+                var shows = PanelShortcuts.Shows(chosen, states[row]);
                     row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
                     if (!shows) continue;
                     row.Row.BorderThickness = new Thickness(0, PanelShortcuts.RuleAbove(firstShown, group.HasLead) ? PanelMetrics.BorderWeight : 0, 0, 0);
