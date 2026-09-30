@@ -20,7 +20,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Redline flash", PanelMatrix.RedlineFlashTitle);
             // Shift points, not thresholds, which is the settings model's word; and "Car's own", the
             // qualifier the LEDs page's #369 switch gives the same tables.
-            Assert.Equal("Car's own shift points", PanelMatrix.CarShiftPointsTitle);
+            Assert.Equal("Car-specific shift points", PanelMatrix.CarShiftPointsTitle);
             Assert.StartsWith("Car's own", PanelLeds.CarRevLightsTitle, StringComparison.Ordinal);
             Assert.DoesNotContain("threshold", PanelMatrix.CarShiftPointsTitle, StringComparison.OrdinalIgnoreCase);
             // Nothing about a fallback the row cannot name, and no "table", which is internal vocabulary.

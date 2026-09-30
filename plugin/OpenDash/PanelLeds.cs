@@ -34,7 +34,10 @@ namespace OpenDashPlugin
         public const string CentreDisplayTitle = "Centre display";
         public const string FlagAnimationTitle = "Flag animation";
         public const string SpotterTitle = "Full-strip spotter";
-        public const string MirrorFitTitle = "Car shift light width";
+        /// <summary>The width row, in the noun the rest of the page uses for the car's own lights: "rev
+        /// lights", as the #369 switch and the row's own caption say. It was "Car shift light width", two
+        /// nouns for one thing in one row.</summary>
+        public const string MirrorFitTitle = "Rev light width";
 
         /// <summary>The #369 switch: the car's own rev lights, or the plain ladder.</summary>
         public const string CarRevLightsTitle = "Car's own rev lights";

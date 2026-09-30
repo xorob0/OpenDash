@@ -24,10 +24,10 @@ namespace OpenDashPlugin
         public const string RedlineFlashTitle = "Redline flash";
 
         /// <summary>The digit's colours following the car's own shift lights: "shift points", as voice.md's
-        /// rulings name them; "thresholds" is the settings model's word, not the driver's. "Car's own", the
-        /// qualifier the LEDs page's #369 switch uses for the same tables, so one source reads one way on
-        /// both pages (docs/design/plugin.md records the choice).</summary>
-        public const string CarShiftPointsTitle = "Car's own shift points";
+        /// rulings name them, since "thresholds" is the settings model's word and not the driver's; and
+        /// "Car-specific", the name voice.md gives the car's own tables, which is also what Lovely Sim Racing
+        /// calls the tables behind them, so a driver who met them there recognises the word.</summary>
+        public const string CarShiftPointsTitle = "Car-specific shift points";
         public const string CarShiftPointsCaption = "Colours change where this car's own lights do.";
 
         /// <summary>The section over the profile's panels, and the rows each panel has for what it shows.</summary>

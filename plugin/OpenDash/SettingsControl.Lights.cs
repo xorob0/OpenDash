@@ -1,4 +1,4 @@
-// SettingsControl.Lights.cs: the LEDs page -- one group per strip, adding one, the car shift light width and
+// SettingsControl.Lights.cs: the LEDs page -- one group per strip, adding one, the rev light width and
 // the car light tables. The file keeps its name because PanelLedBarFormTests reads the Add LEDs form here.
 //
 // Re-hosted by the #503 foundation from the old Lights tab's strip section, so every control keeps working

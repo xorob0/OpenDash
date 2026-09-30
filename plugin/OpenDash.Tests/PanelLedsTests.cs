@@ -18,7 +18,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Centre display", PanelLeds.CentreDisplayTitle);
             Assert.Equal("Flag animation", PanelLeds.FlagAnimationTitle);
             Assert.Equal("Full-strip spotter", PanelLeds.SpotterTitle);
-            Assert.Equal("Car shift light width", PanelLeds.MirrorFitTitle);
+            Assert.Equal("Rev light width", PanelLeds.MirrorFitTitle);
             Assert.Equal("Only for a strip using the car's own rev lights.", PanelLeds.MirrorFitCaption);
             Assert.Equal("Every strip", PanelLeds.EveryStripTitle);
             foreach (var title in new[] { PanelLeds.CarRevLightsTitle, PanelLeds.CentreDisplayTitle, PanelLeds.FlagAnimationTitle, PanelLeds.SpotterTitle, PanelLeds.MirrorFitTitle })

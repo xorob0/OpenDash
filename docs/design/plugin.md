@@ -15,7 +15,7 @@ a pit wall are configured apart ([ADR 0017](../decisions/0017-a-screen-is-an-ins
 | **Home** | what needs fixing, what each device is showing, brightness and night mode |
 | **Rig** | every screen, strip and matrix as a tile, painted with a flag, a car alongside, the pit lane, a warning or the revs |
 | **Screens** | the screen cards, the selected screen's own pane, and the Add, Edit, Remove and Duplicate sheets |
-| **LEDs** | one group per strip, the Add LEDs sheet, the car shift light width and the car tables |
+| **LEDs** | one group per strip, the Add LEDs sheet, the rev light width and the car tables |
 | **Matrix** | the flag box profile in the header, one group per matrix panel |
 | **Shortcuts** | every wheel button and key: each screen's zones and quick glance, and the rig's night mode and brightness |
 | **Settings** | what is the same everywhere: race data, flags, alerts and lighting |
@@ -28,7 +28,7 @@ a pit wall are configured apart ([ADR 0017](../decisions/0017-a-screen-is-an-ins
 | Rig: the screen cards and each screen's pane | Screens |
 | Rig: a face's Wheel buttons, the three quick-glance binders | Shortcuts (the glance's page stays on Screens, with a chip that opens its binding) |
 | Data | Settings, Race data |
-| Lights: the strips, the car tables, the car shift light width | LEDs |
+| Lights: the strips, the car tables, the rev light width | LEDs |
 | Lights: the matrix panels | Matrix |
 | Lights: brightness, night mode, the alert thresholds | Settings, and Home's quick controls |
 | Install: the flag box row | Matrix's header (and still listed on Updates) |
@@ -40,8 +40,9 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
 
 - **The mark is Ui.Mark(), `media/logo.svg`**, not the artboard's three rising bars, which
   [brand.md](brand.md) rejected.
-- **Eyebrows, tags and nav labels are sentence case**, since brand.md is taking the uppercase transform
-  away; the artboard's capitals are the transform's, not the text's.
+- **Eyebrows, tags and nav labels are sentence case**, because [brand.md](brand.md) says a label is in
+  sentence case. The artboards type NEW and SOON in capitals, with no transform on `.new` or `.soontag`, so
+  the build departs from their text there, not only from a transform.
 - **The live card's eyebrow is one trimming line without tracking.** WPF has no letter spacing, and the
   tracked eyebrow is a block per glyph, which cannot trim; "Live · Assetto Corsa Competizione" is wider
   than the card's 151 px.
@@ -56,17 +57,23 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
 - **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the
   plugin does not bundle.
 - **Voice replacements**: greyed rows are noun phrases ("Rig test", "Alert dismissal", "RPM colour for
-  everything", "Alert display"); the Matrix row is "Car's own shift points", not thresholds, and takes the
-  qualifier of the LEDs page's #369 switch, "Car's own rev lights", so the car's tables read one way on
-  both pages (voice.md settled "Car-specific" for a value in a chooser, which needed a head noun; a title
-  has one); a page is named as "the Screens page" wherever copy sends a driver to one.
+  everything", "Alert display"); the Matrix row is "Car-specific shift points", not thresholds, in the name
+  voice.md gives the car's own tables, which is also Lovely Sim Racing's name for them; a page is named as
+  "the Screens page" wherever copy sends a driver to one. The LEDs page's #369 switch still reads "Car's own
+  rev lights", which the review's ruling kept from the artboard's "Use the car's own rev lights"; whether
+  it too becomes "Car-specific" is the author's to settle.
 - **Two groups carry two words each, as the artboards do**, and are left for the author to settle since
   the canvas is theirs: the rig's night mode and brightness are "Lights" on Shortcuts (its rig group) and
   "Lighting" on Settings (its section), and Updates says "Lights" for the LED profiles; low fuel, oil and
   water are "Warnings" on Rig (its scenario group), "Alerts" on Settings and "Car warnings" on a Matrix
   panel. voice.md's one-word-per-thing rule would pick one noun per group.
-- **Every artboard string the pages draw today and word differently**, so that nobody comparing the two
-  changes it back. The pages still to be rebuilt add their own rows as they land:
+- **The deliberate voice departures the pages draw today**, so that nobody comparing the two changes one
+  back. This is not every string that differs: the pages still to be rebuilt draw inherited words the
+  artboards replace (on LEDs "Fill the strip | True size" for "Stretch to fit | Actual size" and "LED
+  device" for "SimHub device", on Matrix "Add a matrix panel" for "Add a matrix", on Screens "Revbar" for
+  "Rev bar" and "Rev ring" and "Band D" for "In band D", on Updates "Reinstall" for "Repair everything"),
+  and those are the rebuild's to change rather than departures to keep. Each page adds its own rows as it
+  lands:
 
   | artboard | build | why |
   |---|---|---|
@@ -83,6 +90,8 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   | Screens: "Show the last lap after the line" | "Lap review" | a label is a noun phrase, not a sentence |
   | Screens: the round block's cards | headed "Cards", the artboard's noun | never the settings model's "Slots" |
   | LEDs: "Use the car's own rev lights" | "Car's own rev lights" | a switch names the thing (#369) |
+  | LEDs: "Width", under "Every strip" | "Rev light width" | one noun for the car's lights across the row and its caption, and a search result that says which width |
+  | Matrix: "The car's own shift points" | "Car-specific shift points" | voice.md's name for the car's tables |
   | LEDs: "Centre shows" | "Centre display" | voice.md's own example |
   | LEDs: "Flags animated" | "Flag animation" | a label is a noun phrase |
   | LEDs: "Spotter uses the whole strip" | "Full-strip spotter" | voice.md's example of a switch labelled as a sentence |
