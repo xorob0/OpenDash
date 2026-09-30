@@ -73,11 +73,12 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.cap on the canvas: Barlow 13, text.secondary, line height 1.45, wrapping at the 620 px
-        /// a section's own caption is given. A caption inside a settings row is narrower and says so, the
-        /// row capping its whole text column. The cap is what keeps the page readable once it fills a
-        /// window wider than the canvas: prose that runs the width of a desk is a line nobody finishes.</summary>
-        public static TextBlock Caption(string text, double maxWidth = 620)
+        /// <summary>.cap on the canvas: Barlow 13, text.secondary, line height 1.45, wrapping at
+        /// PanelShell.ProseMaxWidth, the 620 px a section's own caption is given, and set against the left
+        /// edge. A caption inside a settings row is narrower and says so, the row capping its whole text
+        /// column. The cap is what keeps the page readable now the column fills the window: prose that runs
+        /// the width of a desk is a line nobody finishes.</summary>
+        public static TextBlock Caption(string text, double maxWidth = PanelShell.ProseMaxWidth)
         {
             var block = Text(text, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
             block.TextWrapping = TextWrapping.Wrap;
