@@ -4,7 +4,7 @@
 // Each binding is SimHub's own ControlsEditor (BuildBinder), so a button is bound here rather than by sending
 // the driver to Controls and events to find an action's name; SimHub draws "Click to configure" or each
 // binding with its press type, and Change, Clear and Add on hover, in a slot of fixed width that every row
-// gives it. Around it the page draws what the artboard adds: the press each action
+// gives it, with its own name column dropped. Around it the page draws what the artboard adds: the press each action
 // answers to, a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
 // things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
 // cleared, and are hidden when SimHub's mappings cannot be read. PanelShortcuts decides the rows, the words and
@@ -304,10 +304,14 @@ namespace OpenDashPlugin
         /// caption under the name. Anchored at the binding, where every other page's chip lands.</summary>
         private static void ShortcutsBinding(ShortcutsGroupState group, string place, PanelShortcuts.Binding binding, FrameworkElement editor, FrameworkElement caption, ShortcutsLayout layout)
         {
-            // SimHub's editor fills the row's binder slot, and its own name column says nothing: the row's name
-            // beside it already does, and a second copy wrapped in its 2* column squeezed its bindings.
+            // SimHub's editor fills the row's binder slot, and its own name column goes: the row's name beside it
+            // already says what it binds, and the column's 2* share, empty or not, squeezed the bindings.
             var control = editor as ControlsEditor;
-            if (control != null) control.FriendlyName = PanelShortcuts.EditorName;
+            if (control != null)
+            {
+                control.FriendlyName = PanelShortcuts.EditorName;
+                control.Loaded += (sender, args) => ShortcutsDropNameColumn(control);
+            }
             var fallback = editor as TextBlock;
             if (fallback != null) fallback.TextWrapping = TextWrapping.Wrap;
             if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -321,7 +325,8 @@ namespace OpenDashPlugin
         /// <summary>A greyed row: the registry's entry, tapped, and a Not bound key that nothing answers.</summary>
         private static void ShortcutsSoon(ShortcutsGroupState group, SoonItem item, ShortcutsLayout layout)
         {
-            // The key sits at the slot's left, where the artboard's .key starts in every row.
+            // The key sits at the slot's left, where the artboard's .key starts in every row, and where SimHub's
+            // bindings start once its name column is dropped.
             var chip = Ui.BindingChip(Ui.NotBound, false, key: true);
             chip.HorizontalAlignment = HorizontalAlignment.Left;
             var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);
@@ -374,6 +379,9 @@ namespace OpenDashPlugin
                 // border's Margin to the control's, so a margin set on the editor is drawn twice.
                 control.Margin = new Thickness(0);
                 control.VerticalAlignment = VerticalAlignment.Center;
+                // BuildBinder's floor gives way to a slot narrower than it, so SimHub's template is laid out in
+                // the room it has, its Change and Clear included, rather than clipped at the slot's edge.
+                control.MinWidth = Math.Min(control.MinWidth, layout.Binder);
                 var slot = new Border { Child = control, Width = layout.Binder, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
                 if (layout.Stacks)
                 {
@@ -399,6 +407,36 @@ namespace OpenDashPlugin
                 Child = grid,
                 Tag = new RowParts(nameLine, control),
             };
+        }
+
+        /// <summary>
+        /// Drops the name column from SimHub's editor, so its bindings have the whole slot and start at its
+        /// left. SimHub 9.12.6's template (themes/generic.baml) is a Border "brd" around a Grid of two star
+        /// columns, 2* and 3*: the name alone in the first, "Click to configure" and the bindings in the
+        /// second. A star column keeps its share when its content is empty, so an empty name still took two
+        /// fifths of the slot and left the bindings the rest, clipping a bound key. Only a template of that
+        /// shape is touched; any other keeps its column, empty, as before.
+        /// </summary>
+        private static void ShortcutsDropNameColumn(ControlsEditor editor)
+        {
+            try
+            {
+                editor.ApplyTemplate();
+                var border = editor.Template == null ? null : editor.Template.FindName("brd", editor) as Border;
+                var grid = border == null ? null : border.Child as Grid;
+                if (grid == null || grid.ColumnDefinitions.Count != 2) return;
+                if (!grid.ColumnDefinitions[0].Width.IsStar || !grid.ColumnDefinitions[1].Width.IsStar) return;
+                var named = grid.Children.OfType<UIElement>().Where(child => Grid.GetColumn(child) == 0).ToList();
+                if (named.Any(child => !(child is TextBlock) && !(child is Label))) return;
+                if (named.Any(child => Grid.GetColumnSpan(child) != 1)) return;
+                // The name goes too, so its line no longer sets the editor's height.
+                foreach (var child in named) child.Visibility = Visibility.Collapsed;
+                grid.ColumnDefinitions[0].Width = new GridLength(0);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not drop the name column of SimHub's binding editor: " + ex.Message);
+            }
         }
 
         /// <summary>

@@ -426,17 +426,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(14, PanelShortcuts.RowNameSize);
             Assert.Equal(8, PanelShortcuts.TagGap);
             Assert.Equal(90, PanelShortcuts.PressWidth);
-            // The glance's caption 4 under its name, and a stacked binder 8 under the name and the press.
-            Assert.Equal(4, PanelShortcuts.CaptionGap);
-            Assert.Equal(8, PanelShortcuts.StackGap);
-            Assert.Equal(160, PanelShortcuts.NameMinWidth);
-            Assert.Equal(260, PanelShortcuts.BinderMinWidth);
-            Assert.Equal(300, PanelShortcuts.BinderWidth);
+            // The binder's slot: the artboard's 260 binder, 16 of gap and 120 of buttons after it.
+            Assert.Equal(260 + 16 + 120, PanelShortcuts.BinderWidth);
             // The header: 8 from the title to the caption, the filter's 30 px bar on the caption's foot.
             Assert.Equal(8, PanelShortcuts.IntroGap);
             Assert.Equal(11, PanelShortcuts.FilterRaise);
-            // Under the caption when the header stacks: the artboard's 12 px header gap.
-            Assert.Equal(12, PanelShortcuts.FilterGapStacked);
             Assert.Equal(14, PanelKit.SegmentedPaddingShortcuts);
             // The external line and the role=status line.
             Assert.Equal(16, PanelShortcuts.LeadPaddingX);
@@ -451,37 +445,76 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(8, PanelShortcuts.BannerStackGap);
         }
 
+        /// <summary>The page's own numbers, where the artboard has none: it draws no stacked row, no glance
+        /// caption, no stacked header and no floor under SimHub's editor.</summary>
+        [Fact]
+        public void Its_own_geometry_where_the_artboard_has_none()
+        {
+            // The glance's caption 4 under its name, and a stacked binder 8 under the name and the press.
+            Assert.Equal(4, PanelShortcuts.CaptionGap);
+            Assert.Equal(8, PanelShortcuts.StackGap);
+            // The least a name keeps beside the press and the binder before the binder moves under it.
+            Assert.Equal(160, PanelShortcuts.NameMinWidth);
+            // BuildBinder's floor under SimHub's editor, wherever it is drawn.
+            Assert.Equal(260, PanelShortcuts.BinderMinWidth);
+            // The filter's gap under the caption when the header stacks, which the artboard's never does (its
+            // header's own gap, beside the caption, is 24).
+            Assert.Equal(12, PanelShortcuts.FilterGapStacked);
+        }
+
         [Fact]
         public void A_row_puts_its_binder_under_its_name_only_where_the_three_cannot_sit_side_by_side()
         {
-            // 2 of card rules, 32 of padding, 160 of name, 16 + 90 + 16 + 300 of press and binder.
-            Assert.Equal(616, PanelShortcuts.RowStackBelow);
+            // 2 of card rules, 32 of padding, 160 of name, 16 + 90 + 16 + 396 of press and binder.
+            Assert.Equal(712, PanelShortcuts.RowStackBelow);
             Assert.Equal(PanelShortcuts.RowStackBelow, 2 + 2 * PanelShortcuts.RowPaddingX + PanelShortcuts.NameMinWidth
                 + PanelShortcuts.RowGap + PanelShortcuts.PressWidth + PanelShortcuts.RowGap + PanelShortcuts.BinderWidth);
             Assert.False(PanelShortcuts.RowStacks(PanelShell.ContentMax));
-            // The rail's content at the narrowest full-sidebar width, where TwoColumns is still false.
-            Assert.False(PanelShortcuts.RowStacks(679));
-            Assert.False(PanelShortcuts.RowStacks(616));
-            Assert.True(PanelShortcuts.RowStacks(615));
+            Assert.False(PanelShortcuts.RowStacks(712));
+            Assert.True(PanelShortcuts.RowStacks(711));
+            // The rail's content at the narrowest full-sidebar width: the binder goes under the name there.
+            Assert.True(PanelShortcuts.RowStacks(679));
             Assert.True(PanelShortcuts.RowStacks(400));
         }
 
         [Fact]
         public void Every_row_gives_simhubs_editor_one_slot_of_fixed_width()
         {
-            // SimHub's editor is never given less than BuildBinder's floor, so the slot is no narrower.
+            // Beside the name the slot is never narrower than BuildBinder's floor.
             Assert.True(PanelShortcuts.BinderWidth >= PanelShortcuts.BinderMinWidth);
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
             Assert.Contains("MinWidth = " + PanelShortcuts.BinderMinWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }", shell);
             // Beside the name, the same slot on every row, whatever the content's width.
             Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, false));
             Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShell.ContentMax, false));
-            // Under it, no wider than the row inside its padding.
-            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(600, true));
+            // Under it, the whole row inside its padding, which may be less than the floor: the row lowers the
+            // editor's MinWidth to the slot there, so SimHub's template is laid out in it rather than clipped.
+            Assert.Equal(566, PanelShortcuts.BinderSlot(600, true));
+            Assert.Equal(677, PanelShortcuts.BinderSlot(711, true));
             Assert.Equal(266, PanelShortcuts.BinderSlot(300, true));
             Assert.Equal(0, PanelShortcuts.BinderSlot(20, true));
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.Contains("control.MinWidth = Math.Min(control.MinWidth, layout.Binder);", code);
             // SimHub's editor draws no name of its own: the row's beside it says what it binds.
             Assert.Empty(PanelShortcuts.EditorName);
+        }
+
+        /// <summary>
+        /// SimHub's editor loses its 2* name column, so its bindings have the whole slot: its template's shape
+        /// is checked before it is touched, and the name is collapsed with its column, so its line no longer
+        /// sets the row's height.
+        /// </summary>
+        [Fact]
+        public void Simhubs_editor_gives_its_bindings_the_whole_slot()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.Contains("control.Loaded += (sender, args) => ShortcutsDropNameColumn(control);", code);
+            var drop = Between(code, "private static void ShortcutsDropNameColumn(", "catch (Exception ex)");
+            Assert.Contains("editor.Template.FindName(\"brd\", editor) as Border;", drop);
+            Assert.Contains("if (grid == null || grid.ColumnDefinitions.Count != 2) return;", drop);
+            Assert.Contains("if (!grid.ColumnDefinitions[0].Width.IsStar || !grid.ColumnDefinitions[1].Width.IsStar) return;", drop);
+            Assert.Contains("foreach (var child in named) child.Visibility = Visibility.Collapsed;", drop);
+            Assert.Contains("grid.ColumnDefinitions[0].Width = new GridLength(0);", drop);
         }
 
         [Fact]

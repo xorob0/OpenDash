@@ -528,16 +528,20 @@ namespace OpenDashPlugin
         public const double BinderMinWidth = 260;
 
         /// <summary>
-        /// The slot every row gives SimHub's editor, fixed so that the press and the binder line up down a card.
-        /// The artboard's binder column is 260, but SimHub's editor is not the artboard's binder: its template
-        /// splits its width 2* to 3* between a name and its bindings, each binding a 58 px press type then the
-        /// plugin and the input, so a bound wheel button needs more than 260 gives it. Not yet measured on the
-        /// VM; the page gives the editor no name (<see cref="EditorName"/>), so the 3* share is all it uses.
+        /// The slot every row gives SimHub's editor, fixed so that the press and the binder line up down a card:
+        /// the room Shortcuts.dc.html gives its binder and the buttons after it, 260 + 16 + 120. SimHub's
+        /// editor is not the artboard's binder: each binding is a 58 px press type, the plugin and the input in
+        /// a StackPanel that never wraps, so a bound key or wheel button is clipped in a slot too narrow for
+        /// it. The page drops the editor's own name column (SettingsControl.ShortcutsDropNameColumn), so the
+        /// bindings have the whole slot. Not yet measured on the VM: a bound Keyboard F9 and a bound Fanatec
+        /// button are to be measured in it before this is settled.
         /// </summary>
-        public const double BinderWidth = 300;
+        public const double BinderWidth = 260 + 16 + 120;
 
         /// <summary>The name SimHub's editor draws in its own 2* column. None: the row's name, beside it, already
-        /// says what it binds. BuildBinder's fallback text still uses the binding's BinderName.</summary>
+        /// says what it binds, and the page drops the column where SimHub's template has the shape 9.12.6 draws;
+        /// where it has another, the column stays and is empty. BuildBinder's fallback text still uses the
+        /// binding's BinderName.</summary>
         public const string EditorName = "";
 
         /// <summary>The least a row's name is left beside the press and the binder before the binder moves
@@ -579,12 +583,14 @@ namespace OpenDashPlugin
         /// <summary>The card's border, left and right.</summary>
         private const double CardRules = 2;
 
-        /// <summary>The width of the binder's slot: <see cref="BinderWidth"/> beside the name, and under it no
-        /// wider than the row has inside its padding.</summary>
+        /// <summary>The width of the binder's slot: <see cref="BinderWidth"/> beside the name, and under it the
+        /// whole of what the row has inside its padding. Where that is less than BuildBinder's
+        /// <see cref="BinderMinWidth"/>, the row lowers the editor's MinWidth to the slot, so SimHub lays its
+        /// template out in the room it has rather than being clipped at the slot's edge.</summary>
         public static double BinderSlot(double contentWidth, bool stacks)
         {
             if (!stacks) return BinderWidth;
-            return Math.Max(0, Math.Min(BinderWidth, contentWidth - CardRules - 2 * RowPaddingX));
+            return Math.Max(0, contentWidth - CardRules - 2 * RowPaddingX);
         }
 
         // --- Search -------------------------------------------------------------------------------------
