@@ -88,6 +88,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3, PanelRigMap.ScreenGap);
             Assert.Equal(3, PanelRigMap.ScreenRadius);
             Assert.Equal(20, PanelRigMap.RevSegments);
+            Assert.Equal(1, PanelRigMap.RevRadius);
+            Assert.Equal(12, PanelRigMap.EmptyGap);
+            Assert.Equal(44, PanelRigMap.HintClear);
+            Assert.Equal(8, PanelRigMap.CompanionStripHeight);
+            Assert.Equal(2, PanelRigMap.RingOutline);
             Assert.Equal(9, PanelRigMap.RevRowHeight);
             Assert.Equal(2, PanelRigMap.RevGap);
             Assert.Equal(2, PanelRigMap.RevPadX);
@@ -614,18 +619,181 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_face_follows_its_own_rev_bar_and_the_round_the_rigs()
+        {
+            var settings = Rig();
+            settings.SetRevBar(Contract.RevBarShift);
+            var main = settings.ScreenByNamespace("MainDash");
+            Assert.Equal(PanelEmulation.Revs(20, PanelEmulation.Shift), PanelRigMap.FaceRevs(PanelEmulation.Shift, settings, main));
+            // The face's own Revbar off: its strip is unlit while the rig's is on.
+            settings.SetScreenRevBar("MainDash", Contract.RevBarOff);
+            Assert.All(PanelRigMap.FaceRevs(PanelEmulation.Shift, settings, main), led => Assert.Null(led));
+            Assert.Equal(PanelEmulation.Revs(20, PanelEmulation.Shift), PanelRigMap.FaceRevs(PanelEmulation.Shift, settings, settings.ScreenByNamespace("Rim")));
+            Assert.Equal(Theme.ShiftStage3, PanelRigMap.RingFor(PanelEmulation.Shift, settings).Hex);
+            // The rig's off: the round's ring goes dark, and a face with no Revbar of its own follows it.
+            settings.SetRevBar(Contract.RevBarOff);
+            Assert.Equal(Theme.SurfaceRaised, PanelRigMap.RingFor(PanelEmulation.Shift, settings).Hex);
+            Assert.All(PanelRigMap.FaceRevs(PanelEmulation.Shift, settings, settings.ScreenByNamespace("Rim")), led => Assert.Null(led));
+            // A face the rig no longer has follows the rig.
+            Assert.Equal(Contract.RevBarOff, PanelRigMap.FaceRevBar(settings, null));
+        }
+
+        [Fact]
+        public void A_round_faces_ring_is_its_flag_ring_while_a_flag_is_picked()
+        {
+            var yellow = PanelRigMap.RingFor(PanelEmulation.Yellow, Contract.RevBarShift);
+            Assert.Equal(Theme.FlagYellow, yellow.Hex);
+            Assert.Equal(PanelRigMap.RingThickness, yellow.Thickness);
+            Assert.False(yellow.Chequer);
+            // Even with the rev ring off: the flag ring is not the revs.
+            Assert.Equal(Theme.FlagBlue, PanelRigMap.RingFor(PanelEmulation.Blue, Contract.RevBarOff).Hex);
+            // The black flag an outline in the text colour, the chequer as checks.
+            var black = PanelRigMap.RingFor(PanelEmulation.Black, Contract.RevBarShift);
+            Assert.Equal(Theme.TextPrimary, black.Hex);
+            Assert.Equal(PanelRigMap.RingOutline, black.Thickness);
+            Assert.True(PanelRigMap.RingFor(PanelEmulation.Chequer, Contract.RevBarShift).Chequer);
+            // Anything else is the revs.
+            Assert.Equal(Theme.ShiftStage1, PanelRigMap.RingFor(PanelEmulation.Limiter, Contract.RevBarShift).Hex);
+            Assert.Equal(Theme.ShiftStage3, PanelRigMap.RingFor(PanelEmulation.Shift, Contract.RevBarShift).Hex);
+        }
+
+        [Fact]
         public void A_flag_fills_the_phone_and_nothing_else_does()
         {
-            Assert.Equal(Theme.FlagYellow, PanelRigMap.CompanionBand(PanelEmulation.Yellow).FillHex);
-            Assert.Equal("YELLOW", PanelRigMap.CompanionBand(PanelEmulation.Yellow).Text);
-            Assert.True(PanelRigMap.CompanionBand(PanelEmulation.Black).Outlined);
-            Assert.True(PanelRigMap.CompanionBand(PanelEmulation.Chequer).Chequer);
-            Assert.False(PanelRigMap.CompanionBand(PanelEmulation.Limiter).Alert);
-            Assert.False(PanelRigMap.CompanionBand(PanelEmulation.CarLeft).Alert);
+            var full = PanelRigMap.FlagFormatFull;
+            Assert.Equal(Theme.FlagYellow, PanelRigMap.CompanionBand(PanelEmulation.Yellow, full).FillHex);
+            Assert.Equal("YELLOW", PanelRigMap.CompanionBand(PanelEmulation.Yellow, full).Text);
+            // The full-screen block's one word, never the band's "WHITE · LAST LAP".
+            Assert.Equal("WHITE", PanelRigMap.CompanionBand(PanelEmulation.White, full).Text);
+            Assert.True(PanelRigMap.CompanionBand(PanelEmulation.Black, full).Outlined);
+            Assert.True(PanelRigMap.CompanionBand(PanelEmulation.Chequer, full).Chequer);
+            Assert.Null(PanelRigMap.CompanionBand(PanelEmulation.Chequer, full).Text);
+            Assert.False(PanelRigMap.CompanionBand(PanelEmulation.Limiter, full).Alert);
+            Assert.False(PanelRigMap.CompanionBand(PanelEmulation.CarLeft, full).Alert);
             var phone = Screen(Contract.KindCompanion, "Companion", "Phone", 850, 480);
             Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(phone));
             phone.CompanionStart = 3;
             Assert.Equal(Modules.All[3].Name, PanelRigMap.CompanionIdle(phone));
+        }
+
+        [Fact]
+        public void The_block_names_a_flag_as_the_dashs_full_screen_block_does()
+        {
+            Assert.Equal(new[] { "GREEN", "YELLOW", "BLUE", "WHITE", "BLACK", null, "RED" },
+                new[] { PanelEmulation.Green, PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.White, PanelEmulation.Black, PanelEmulation.Chequer, PanelEmulation.Red }.Select(PanelRigMap.BlockName));
+            Assert.Null(PanelRigMap.BlockName(PanelEmulation.Limiter));
+            Assert.False(PanelRigMap.BlockFor(PanelEmulation.Limiter).Alert);
+            Assert.Equal(Theme.FlagWhite, PanelRigMap.BlockFor(PanelEmulation.White).FillHex);
+        }
+
+        [Fact]
+        public void Each_screen_draws_a_flag_by_its_own_flag_format()
+        {
+            // The formats are the contract's own.
+            Assert.Equal(new[] { PanelRigMap.FlagFormatBand, PanelRigMap.FlagFormatFull }, Contract.FlagFormats);
+            Assert.Equal(new[] { PanelRigMap.FlagFormatOff, PanelRigMap.FlagFormatBand, PanelRigMap.FlagFormatFull }, Contract.CompanionFlagFormats);
+
+            var settings = Rig();
+            var main = settings.ScreenByNamespace("MainDash");
+            var wall = settings.ScreenByNamespace("PitWall");
+            var phone = settings.ScreenByNamespace("Companion");
+            var yellow = PanelEmulation.Yellow;
+
+            // A face: on band D by default; over zones B, A and C in full, band D left to its page.
+            Assert.Equal(PanelRigMap.FlagFormatBand, PanelRigMap.FaceFlagFormat(settings, main));
+            Assert.Equal("YELLOW", PanelRigMap.FaceBandFor(yellow, PanelRigMap.FaceFlagFormat(settings, main)).Text);
+            Assert.False(PanelRigMap.FaceBlockFor(yellow, PanelRigMap.FaceFlagFormat(settings, main)).Alert);
+            main.FlagFormat = PanelRigMap.FlagFormatFull;
+            Assert.False(PanelRigMap.FaceBandFor(yellow, PanelRigMap.FaceFlagFormat(settings, main)).Alert);
+            Assert.Equal("YELLOW", PanelRigMap.FaceBlockFor(yellow, PanelRigMap.FaceFlagFormat(settings, main)).Text);
+            Assert.Equal("WHITE", PanelRigMap.FaceBlockFor(PanelEmulation.White, PanelRigMap.FlagFormatFull).Text);
+            Assert.Equal("WHITE · LAST LAP", PanelRigMap.FaceBandFor(PanelEmulation.White, PanelRigMap.FlagFormatBand).Text);
+            // The limiter is the face's band whatever its flags do.
+            Assert.Equal("Pit limiter", PanelRigMap.FaceBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatFull).Text);
+            Assert.False(PanelRigMap.FaceBlockFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatFull).Alert);
+
+            // A pit wall: a band under its header by default, a block over its body in full, nothing when off.
+            Assert.Equal(PanelRigMap.FlagFormatBand, PanelRigMap.PitWallFlagFormat(settings, wall));
+            Assert.Equal("YELLOW", PanelRigMap.PitWallBandFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Text);
+            Assert.False(PanelRigMap.PitWallBlockFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
+            wall.PitWallFlagFormat = PanelRigMap.FlagFormatFull;
+            Assert.False(PanelRigMap.PitWallBandFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
+            Assert.Equal("YELLOW", PanelRigMap.PitWallBlockFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Text);
+            wall.PitWallFlagFormat = PanelRigMap.FlagFormatOff;
+            Assert.False(PanelRigMap.PitWallBandFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
+            Assert.False(PanelRigMap.PitWallBlockFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
+            // The pit wall's band is a flag strip: the limiter, a face's alone, leaves it on its page.
+            Assert.False(PanelRigMap.PitWallBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand).Alert);
+            Assert.Equal("Race", PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand), PanelRigMap.PitWallBandIdle(wall)).Words);
+
+            // A phone: filled by default; a colour-only strip at its foot as a band; nothing when off.
+            Assert.Equal(PanelRigMap.FlagFormatFull, PanelRigMap.CompanionFlagFormat(settings, phone));
+            Assert.True(PanelRigMap.CompanionBand(yellow, PanelRigMap.CompanionFlagFormat(settings, phone)).Alert);
+            Assert.False(PanelRigMap.CompanionStrip(yellow, PanelRigMap.CompanionFlagFormat(settings, phone)).Alert);
+            phone.CompanionFlagFormat = PanelRigMap.FlagFormatBand;
+            Assert.False(PanelRigMap.CompanionBand(yellow, PanelRigMap.CompanionFlagFormat(settings, phone)).Alert);
+            var strip = PanelRigMap.StripPaint(PanelRigMap.CompanionStrip(yellow, PanelRigMap.CompanionFlagFormat(settings, phone)));
+            Assert.Equal(Theme.FlagYellow, strip.FillHex);
+            Assert.Null(strip.Words);
+            phone.CompanionFlagFormat = PanelRigMap.FlagFormatOff;
+            Assert.False(PanelRigMap.CompanionBand(yellow, PanelRigMap.CompanionFlagFormat(settings, phone)).Alert);
+            Assert.Null(PanelRigMap.StripPaint(PanelRigMap.CompanionStrip(yellow, PanelRigMap.CompanionFlagFormat(settings, phone))));
+
+            // A screen the rig no longer has takes the contract's defaults.
+            Assert.Equal(Contract.DefaultFlagFormat, PanelRigMap.FaceFlagFormat(settings, null));
+            Assert.Equal(Contract.DefaultPitWallFlagFormat, PanelRigMap.PitWallFlagFormat(settings, null));
+            Assert.Equal(Contract.DefaultCompanionFlagFormat, PanelRigMap.CompanionFlagFormat(settings, null));
+        }
+
+        [Fact]
+        public void A_band_a_block_and_a_phone_are_painted_as_the_dash_paints_them()
+        {
+            // A band nothing takes: its page on the zone ground, tracked.
+            var idle = PanelRigMap.BandPaint(FaceBand.Idle, "Fuel");
+            Assert.Equal("Fuel", idle.Words);
+            Assert.Equal(Theme.SurfaceZone, idle.FillHex);
+            Assert.Equal(Theme.TextSecondary, idle.InkHex);
+            Assert.Null(idle.BorderHex);
+            Assert.True(idle.Tracked);
+            // A flag on its colour.
+            var yellow = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Yellow), "Fuel");
+            Assert.Equal("YELLOW", yellow.Words);
+            Assert.Equal(Theme.FlagYellow, yellow.FillHex);
+            Assert.Equal(Theme.OnFlag, yellow.InkHex);
+            Assert.Null(yellow.BorderHex);
+            // The black flag an outline of its colour on the base ground.
+            var black = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Black), "Fuel");
+            Assert.Equal("BLACK", black.Words);
+            Assert.Equal(Theme.SurfaceBase, black.FillHex);
+            Assert.Equal(Theme.FlagBlack, black.BorderHex);
+            Assert.Equal(PanelRigMap.BandOutline, black.BorderWidth);
+            // The chequer says nothing.
+            var chequer = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Chequer), "Fuel");
+            Assert.True(chequer.Chequer);
+            Assert.Null(chequer.Words);
+            Assert.Null(chequer.FillHex);
+
+            // A phone nothing takes: the module it opens on, wrapped, on the inset ground inside its border.
+            var phone = PanelRigMap.CompanionPaint(FaceBand.Idle, "Timing");
+            Assert.Equal("Timing", phone.Words);
+            Assert.False(phone.Tracked);
+            Assert.Equal(Theme.SurfaceInset, phone.FillHex);
+            Assert.Equal(Theme.Border, phone.BorderHex);
+            // A flag over it, its one word tracked; the black flag a 3 px outline; the chequer with no word.
+            var white = PanelRigMap.CompanionPaint(PanelRigMap.BlockFor(PanelEmulation.White), "Timing");
+            Assert.Equal("WHITE", white.Words);
+            Assert.True(white.Tracked);
+            Assert.Equal(Theme.FlagWhite, white.FillHex);
+            var outlined = PanelRigMap.CompanionPaint(PanelRigMap.BlockFor(PanelEmulation.Black), "Timing");
+            Assert.Equal(Theme.FlagBlack, outlined.BorderHex);
+            Assert.Equal(PanelRigMap.CompanionOutline, outlined.BorderWidth);
+            Assert.Equal(Theme.SurfaceBase, outlined.FillHex);
+            var chequered = PanelRigMap.CompanionPaint(PanelRigMap.BlockFor(PanelEmulation.Chequer), "Timing");
+            Assert.True(chequered.Chequer);
+            Assert.Null(chequered.Words);
+
+            // A strip nothing takes is not drawn.
+            Assert.Null(PanelRigMap.StripPaint(FaceBand.Idle));
         }
 
         [Fact]
@@ -713,7 +881,49 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("dark", matrix.Rest);
             Assert.False(matrix.Spotter);
             Assert.Equal(settings.MatrixGearBands(1), matrix.Bands);
-            Assert.Equal(settings.MatrixFlags(1), matrix.Flags);
+            Assert.Equal(settings.MatrixGearCarLadder(1), matrix.CarLadder);
+            Assert.True(matrix.Flags);
+            Assert.True(matrix.Pit);
+            Assert.True(matrix.Warnings);
+
+            // Each family its own switch, off where the panel's is: none is read from another.
+            settings.FlagBoxPit[0] = false;
+            settings.FlagBoxWarnings[0] = true;
+            settings.FlagBoxFlags[0] = false;
+            matrix = PanelRigMap.MatrixOptionsFor(settings, 1);
+            Assert.False(matrix.Pit);
+            Assert.True(matrix.Warnings);
+            Assert.False(matrix.Flags);
+            settings.FlagBoxPit[0] = true;
+            settings.FlagBoxWarnings[0] = false;
+            matrix = PanelRigMap.MatrixOptionsFor(settings, 1);
+            Assert.True(matrix.Pit);
+            Assert.False(matrix.Warnings);
+            // The second slot is its own.
+            Assert.True(PanelRigMap.MatrixOptionsFor(settings, 2).Flags);
+        }
+
+        [Fact]
+        public void A_matrix_on_critical_flags_only_does_not_show_the_flags_that_are_news()
+        {
+            var settings = Rig();
+            Assert.True(PanelRigMap.MatrixOptionsFor(settings, 1, PanelEmulation.Green).Flags);
+            settings.FlagBoxMatrixCriticalOnly[0] = true;
+            // flags.ts's critical four still show; green, white and the chequer do not.
+            foreach (var id in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Black, PanelEmulation.Red })
+            {
+                Assert.True(PanelRigMap.CriticalFlag(id), id);
+                Assert.True(PanelRigMap.MatrixOptionsFor(settings, 1, id).Flags, id);
+            }
+            foreach (var id in new[] { PanelEmulation.Green, PanelEmulation.White, PanelEmulation.Chequer })
+            {
+                Assert.False(PanelRigMap.CriticalFlag(id), id);
+                Assert.False(PanelRigMap.MatrixOptionsFor(settings, 1, id).Flags, id);
+                Assert.NotEqual(id == PanelEmulation.Chequer ? "chequered" : id, PanelEmulation.GlyphFor(id, PanelRigMap.MatrixOptionsFor(settings, 1, id)));
+            }
+            // The other panel, and a scenario that is not a flag, are untouched.
+            Assert.True(PanelRigMap.MatrixOptionsFor(settings, 2, PanelEmulation.Green).Flags);
+            Assert.True(PanelRigMap.MatrixOptionsFor(settings, 1, PanelEmulation.Mid).Flags);
         }
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a

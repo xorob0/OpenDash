@@ -89,6 +89,58 @@ namespace OpenDashPlugin
         public double Height { get; private set; }
     }
 
+    /// <summary>
+    /// How a band, a block over a screen's body, a strip or a phone is painted: its words, its ground or the
+    /// chequer, the words' ink, an outline, and whether the words are tracked.
+    /// </summary>
+    public sealed class RigPaint
+    {
+        public RigPaint(string words, string fillHex, bool chequer, string inkHex, string borderHex, double borderWidth, bool tracked)
+        {
+            Words = words;
+            FillHex = fillHex;
+            Chequer = chequer;
+            InkHex = inkHex;
+            BorderHex = borderHex;
+            BorderWidth = borderWidth;
+            Tracked = tracked;
+        }
+
+        /// <summary>What it says, or null for none: the chequer and a strip say nothing.</summary>
+        public string Words { get; private set; }
+
+        /// <summary>The ground, or null for the chequer.</summary>
+        public string FillHex { get; private set; }
+
+        public bool Chequer { get; private set; }
+        public string InkHex { get; private set; }
+
+        /// <summary>The outline's colour, or null for none.</summary>
+        public string BorderHex { get; private set; }
+
+        public double BorderWidth { get; private set; }
+
+        /// <summary>Drawn tracked, which cannot wrap; untracked words wrap.</summary>
+        public bool Tracked { get; private set; }
+    }
+
+    /// <summary>A round face's ring: its colour, or the chequer, and how thick it is drawn.</summary>
+    public sealed class RigRing
+    {
+        public RigRing(string hex, double thickness, bool chequer)
+        {
+            Hex = hex;
+            Thickness = thickness;
+            Chequer = chequer;
+        }
+
+        /// <summary>The ring's colour, or null for the chequer.</summary>
+        public string Hex { get; private set; }
+
+        public double Thickness { get; private set; }
+        public bool Chequer { get; private set; }
+    }
+
     /// <summary>One of a face's three body zones: its letter, what it shows, and its share of the body.</summary>
     public sealed class RigZone
     {
@@ -150,8 +202,9 @@ namespace OpenDashPlugin
 
         public const string ResetLayout = "Reset layout";
 
-        /// <summary>The canvas of a rig with nothing on it, beside a press that goes to Screens.</summary>
+        /// <summary>The canvas of a rig with nothing on it, beside a press that goes to Screens, 12 from it.</summary>
         public const string Empty = "Nothing on the rig yet.";
+        public const double EmptyGap = 12;
 
         /// <summary>The greyed switch in the header (#506), by its registry title; search finds it through
         /// PanelSoon rather than an entry of this page's own. The artboard's "Light the real hardware" is an
@@ -207,8 +260,10 @@ namespace OpenDashPlugin
         public const double ScreenGap = 3;
         public const double ScreenRadius = 3;
 
-        /// <summary>A face's rev strip: twenty segments, 9 high, 2 apart, on the base ground 1 down and 2 in.</summary>
+        /// <summary>A face's rev strip: twenty segments, 9 high, 2 apart, corners of 1, on the base ground 1
+        /// down and 2 in.</summary>
         public const int RevSegments = 20;
+        public const double RevRadius = 1;
         public const double RevRowHeight = 9;
         public const double RevGap = 2;
         public const double RevPadX = 2;
@@ -234,12 +289,21 @@ namespace OpenDashPlugin
         public const double PitWallBandHeight = 16;
         public const double PitWallCellPadding = 4;
 
+        /// <summary>A phone's corners and words; a flag's name on it is tracked as the artboard's .12em, and
+        /// the module it opens on wraps untracked, since a tracked run cannot.</summary>
         public const double CompanionRadius = 6;
         public const double CompanionTextSize = 9;
         public const double CompanionTracking = 0.12;
 
-        /// <summary>A round face's ring, and the gear inside it.</summary>
+        /// <summary>A phone's flag strip, when it draws its flags as one: the colour alone, as the nano's
+        /// 12 px strip at its foot, thicker here so it can be seen at the tile's scale, and inset by the
+        /// phone's padding so it stays inside the corners.</summary>
+        public const double CompanionStripHeight = 8;
+
+        /// <summary>A round face's ring, and the gear inside it; the black flag's ring is an outline, as the
+        /// dash's 3 px ring in the text colour is.</summary>
         public const double RingThickness = 6;
+        public const double RingOutline = 2;
         public const double RoundGearSize = 44;
 
         // --- The scenario chips ---------------------------------------------------------------------
@@ -866,21 +930,38 @@ namespace OpenDashPlugin
             return options;
         }
 
-        /// <summary>What a matrix panel is set to that changes its picture: its side, its idle display and
-        /// its bands, and which families it shows.</summary>
-        public static MatrixOptions MatrixOptionsFor(OpenDashSettings settings, int slot)
+        /// <summary>
+        /// What a matrix panel is set to that changes its picture under a scenario: its side, its idle display
+        /// and its bands, and which families it shows -- its flags only for a flag it would show.
+        /// </summary>
+        /// <remarks>
+        /// A panel set to critical flags only (FlagBoxMatrix&lt;N&gt;CriticalOnly) does not show green, white or
+        /// the chequer, which flags.ts marks as news rather than instructions, and shows its rest display
+        /// instead. MatrixOptions has no switch for it, so the flags are turned off for the scenario that the
+        /// panel would not show.
+        /// </remarks>
+        public static MatrixOptions MatrixOptionsFor(OpenDashSettings settings, int slot, string scenarioId = null)
         {
+            var flags = settings.MatrixFlags(slot);
+            if (flags && PanelEmulation.IsFlag(scenarioId) && settings.MatrixCriticalOnly(slot) && !CriticalFlag(scenarioId)) flags = false;
             return new MatrixOptions
             {
                 Side = settings.MatrixSide(slot),
                 Rest = settings.MatrixRest(slot),
                 Bands = settings.MatrixGearBands(slot),
                 CarLadder = settings.MatrixGearCarLadder(slot),
-                Flags = settings.MatrixFlags(slot),
+                Flags = flags,
                 Pit = settings.MatrixPit(slot),
                 Spotter = settings.MatrixSpotter(slot),
                 Warnings = settings.MatrixWarnings(slot),
             };
+        }
+
+        /// <summary>Whether a flag scenario is one flags.ts marks critical: yellow, blue, black and red. Green,
+        /// white and the chequer are not.</summary>
+        public static bool CriticalFlag(string scenarioId)
+        {
+            return scenarioId == PanelEmulation.Yellow || scenarioId == PanelEmulation.Blue || scenarioId == PanelEmulation.Black || scenarioId == PanelEmulation.Red;
         }
 
         /// <summary>
@@ -950,18 +1031,188 @@ namespace OpenDashPlugin
             return PanelEmulation.Revs(RevSegments, scenarioId);
         }
 
-        /// <summary>A round face's ring under a scenario: the revs' colour, and unlit where the rig's rev
-        /// ring is off.</summary>
+        /// <summary>A face's rev strip under a scenario, by that face's own Revbar, or the rig's for a face the
+        /// rig no longer has. The page reads it here rather than spelling the setting, so the Screens page's
+        /// Rev bar row stays the one control PanelDataTabTests finds for it.</summary>
+        public static string[] FaceRevs(string scenarioId, OpenDashSettings settings, ScreenInstance screen)
+        {
+            return FaceRevs(scenarioId, FaceRevBar(settings, screen));
+        }
+
+        public static string FaceRevBar(OpenDashSettings settings, ScreenInstance screen)
+        {
+            if (settings == null) return Contract.DefaultRevBar;
+            return screen == null ? settings.RevBarMode() : settings.ScreenRevBar(screen.Namespace);
+        }
+
+        /// <summary>A round face's ring under the revs: their colour, and unlit where the rig's rev ring is off.</summary>
         public static string RingColour(string scenarioId, string revBarMode)
         {
             return revBarMode == Contract.RevBarOff ? Theme.SurfaceRaised : PanelEmulation.RingColour(scenarioId);
         }
 
-        /// <summary>What fills a phone under a scenario: a flag takes the whole of it, as the artboard draws,
-        /// and nothing else does.</summary>
-        public static FaceBand CompanionBand(string scenarioId)
+        /// <summary>
+        /// A round face's ring under a scenario: the flag's ring while a flag is picked, and otherwise the revs'
+        /// colour by the rig's rev ring.
+        /// </summary>
+        /// <remarks>
+        /// The dash's round face draws its flags as a 12 px ring round its rim (components/flagRing.ts), the
+        /// black flag as a 3 px ring in the text colour and the chequer as checks, and its revs as a separate
+        /// arc over the top. The artboard models the one ring as the revs, which left a flag chip changing
+        /// nothing on a round face.
+        /// </remarks>
+        public static RigRing RingFor(string scenarioId, string revBarMode)
         {
-            return PanelEmulation.IsFlag(scenarioId) ? PanelEmulation.Band(scenarioId) : FaceBand.Idle;
+            if (scenarioId == PanelEmulation.Chequer) return new RigRing(null, RingThickness, true);
+            if (scenarioId == PanelEmulation.Black) return new RigRing(Theme.TextPrimary, RingOutline, false);
+            if (PanelEmulation.IsFlag(scenarioId)) return new RigRing(PanelEmulation.FlagColour(scenarioId), RingThickness, false);
+            return new RigRing(RingColour(scenarioId, revBarMode), RingThickness, false);
+        }
+
+        public static RigRing RingFor(string scenarioId, OpenDashSettings settings)
+        {
+            return RingFor(scenarioId, settings == null ? Contract.DefaultRevBar : settings.RevBarMode());
+        }
+
+        // --- Flags on the screens --------------------------------------------------------------------
+
+        /// <summary>The flag formats a screen can be set to: Contract.FlagFormats for a face, which has no
+        /// off, and Contract.CompanionFlagFormats for a phone and a pit wall.</summary>
+        public const string FlagFormatOff = "off";
+        public const string FlagFormatBand = "band";
+        public const string FlagFormatFull = "full";
+
+        public static string FaceFlagFormat(OpenDashSettings settings, ScreenInstance screen)
+        {
+            return settings == null || screen == null ? Contract.DefaultFlagFormat : settings.ScreenFlagFormat(screen.Namespace);
+        }
+
+        public static string PitWallFlagFormat(OpenDashSettings settings, ScreenInstance screen)
+        {
+            return settings == null || screen == null ? Contract.DefaultPitWallFlagFormat : settings.ScreenPitWallFlagFormat(screen.Namespace);
+        }
+
+        public static string CompanionFlagFormat(OpenDashSettings settings, ScreenInstance screen)
+        {
+            return settings == null || screen == null ? Contract.DefaultCompanionFlagFormat : settings.ScreenCompanionFlagFormat(screen.Namespace);
+        }
+
+        /// <summary>
+        /// A face's band D under a scenario: the flag where the face draws its flags on the band, the pit
+        /// limiter, and otherwise its own page. A face whose flags fill the screen leaves band D to its page
+        /// and puts the flag over its zones (<see cref="FaceBlockFor"/>), as zones/face.ts does.
+        /// </summary>
+        public static FaceBand FaceBandFor(string scenarioId, string flagFormat)
+        {
+            if (PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatFull) return FaceBand.Idle;
+            return PanelEmulation.Band(scenarioId);
+        }
+
+        /// <summary>What covers a face's zones B, A and C: the flag's block where the face draws its flags full
+        /// screen, and nothing otherwise.</summary>
+        public static FaceBand FaceBlockFor(string scenarioId, string flagFormat)
+        {
+            return flagFormat == FlagFormatFull ? BlockFor(scenarioId) : FaceBand.Idle;
+        }
+
+        /// <summary>
+        /// A pit wall's band under its header: the flag where the pit wall draws its flags as a band, and
+        /// otherwise the page it is on.
+        /// </summary>
+        /// <remarks>
+        /// Flags only: the pit wall's band is a flag strip of the alert catalogue, which has no limiter, and
+        /// the dash draws the pit family only on a face. PanelEmulation.Band is a face's.
+        /// </remarks>
+        public static FaceBand PitWallBandFor(string scenarioId, string flagFormat)
+        {
+            return PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatBand ? PanelEmulation.Band(scenarioId) : FaceBand.Idle;
+        }
+
+        /// <summary>What covers a pit wall's body, under its header: the flag's block where it draws its flags
+        /// full screen, and nothing otherwise.</summary>
+        public static FaceBand PitWallBlockFor(string scenarioId, string flagFormat)
+        {
+            return flagFormat == FlagFormatFull ? BlockFor(scenarioId) : FaceBand.Idle;
+        }
+
+        /// <summary>What fills a phone under a scenario: a flag's block where the phone draws its flags full
+        /// screen, which is its default, as the artboard fills it; nothing else does.</summary>
+        public static FaceBand CompanionBand(string scenarioId, string flagFormat)
+        {
+            return flagFormat == FlagFormatFull ? BlockFor(scenarioId) : FaceBand.Idle;
+        }
+
+        /// <summary>A phone's strip at its foot: the flag's colour where it draws its flags as a band, and
+        /// nothing otherwise.</summary>
+        public static FaceBand CompanionStrip(string scenarioId, string flagFormat)
+        {
+            return PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatBand ? PanelEmulation.Band(scenarioId) : FaceBand.Idle;
+        }
+
+        /// <summary>A flag as the dash's full-screen block draws it: the band's colours and one word, the
+        /// block's own name for the flag, and the chequer unnamed.</summary>
+        public static FaceBand BlockFor(string scenarioId)
+        {
+            if (!PanelEmulation.IsFlag(scenarioId)) return FaceBand.Idle;
+            var band = PanelEmulation.Band(scenarioId);
+            return new FaceBand(band.FillHex, BlockName(scenarioId), band.TextHex, band.Outlined, band.Chequer);
+        }
+
+        /// <summary>
+        /// The one word the full-screen block writes for a flag, as BLOCK_NAMES in components/flagFull.ts:
+        /// "WHITE" where the band says "WHITE · LAST LAP", since the white band has no short form. Null for
+        /// the chequer, which the block does not name, and for anything that is not a flag.
+        /// </summary>
+        public static string BlockName(string scenarioId)
+        {
+            switch (scenarioId)
+            {
+                case PanelEmulation.Green: return "GREEN";
+                case PanelEmulation.Yellow: return "YELLOW";
+                case PanelEmulation.Blue: return "BLUE";
+                case PanelEmulation.White: return "WHITE";
+                case PanelEmulation.Black: return "BLACK";
+                case PanelEmulation.Red: return "RED";
+                default: return null;
+            }
+        }
+
+        // --- How a band, a block and a phone are painted -----------------------------------------------
+
+        /// <summary>
+        /// A band or a block: the chequer with no words, the black flag as an outline of its colour on the base
+        /// ground, any other flag or the limiter on its colour, and a band nothing takes on the zone ground with
+        /// <paramref name="idle"/>, the page it is on. The words are tracked.
+        /// </summary>
+        public static RigPaint BandPaint(FaceBand band, string idle)
+        {
+            band = band ?? FaceBand.Idle;
+            if (band.Chequer) return new RigPaint(null, null, true, band.TextHex, null, 0, false);
+            if (!band.Alert) return new RigPaint(idle ?? string.Empty, Theme.SurfaceZone, false, Theme.TextSecondary, null, 0, true);
+            if (band.Outlined) return new RigPaint(band.Text, Theme.SurfaceBase, false, band.TextHex, band.FillHex, BandOutline, true);
+            return new RigPaint(band.Text, band.FillHex, false, band.TextHex, null, 0, true);
+        }
+
+        /// <summary>A strip: a band's colours with no words, or null where nothing takes it.</summary>
+        public static RigPaint StripPaint(FaceBand strip)
+        {
+            if (strip == null || !strip.Alert) return null;
+            var paint = BandPaint(strip, null);
+            return new RigPaint(null, paint.FillHex, paint.Chequer, paint.InkHex, paint.BorderHex, paint.BorderWidth, false);
+        }
+
+        /// <summary>
+        /// A phone: the flag over the whole of it, its one word tracked, or the module it opens on, wrapped;
+        /// the black flag as a <see cref="CompanionOutline"/> of its colour on the base ground, and otherwise
+        /// the screen's border.
+        /// </summary>
+        public static RigPaint CompanionPaint(FaceBand full, string idle)
+        {
+            full = full ?? FaceBand.Idle;
+            if (full.Chequer) return new RigPaint(null, null, true, full.TextHex, Theme.Border, PanelMetrics.BorderWeight, false);
+            if (!full.Alert) return new RigPaint(idle ?? string.Empty, Theme.SurfaceInset, false, Theme.TextSecondary, Theme.Border, PanelMetrics.BorderWeight, false);
+            if (full.Outlined) return new RigPaint(full.Text, Theme.SurfaceBase, false, full.TextHex, full.FillHex, CompanionOutline, true);
+            return new RigPaint(full.Text, full.FillHex, false, full.TextHex, Theme.Border, PanelMetrics.BorderWeight, true);
         }
 
         /// <summary>What a phone says when no flag takes it: the module it opens on.</summary>

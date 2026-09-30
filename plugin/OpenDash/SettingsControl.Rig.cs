@@ -155,7 +155,7 @@ namespace OpenDashPlugin
             {
                 var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);
                 screensPress.Click += (sender, args) => Go(PanelPage.Screens);
-                var empty = Ui.HStack(12, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
+                var empty = Ui.HStack(PanelRigMap.EmptyGap, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
                 Canvas.SetLeft(empty, PanelRigMap.LayoutMargin);
                 Canvas.SetTop(empty, PanelRigMap.LayoutMargin);
                 canvas.Children.Add(empty);
@@ -346,7 +346,7 @@ namespace OpenDashPlugin
                     var frame = PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, PanelRigMap.StripOptionsFor(bar));
                     return Ui.Strip(frame, StripStyle.Rig, RigLights());
                 case RigTileKind.Matrix:
-                    var options = PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile));
+                    var options = PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario);
                     return Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Rig, RigLights());
                 case RigTileKind.Round:
                     return RigRound(tile, scenario);
@@ -377,20 +377,21 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A face: its rev strip across the top, its three zones on the pages they are on, and its band, in
-        /// the dash's own words for the scenario.
+        /// the dash's own words for the scenario; a flag goes on the band or over the zones by the face's own
+        /// flag format.
         /// </summary>
         private FrameworkElement RigFace(RigTile tile, ScreenInstance screen, string scenario)
         {
             var dock = new DockPanel { LastChildFill = true };
 
-            var revs = PanelRigMap.FaceRevs(scenario, screen == null ? Settings.RevBarMode() : Settings.ScreenRevBar(screen.Namespace));
+            var revs = PanelRigMap.FaceRevs(scenario, Settings, screen);
             var segments = new UniformGrid { Rows = 1, Columns = revs.Length };
             foreach (var led in revs)
             {
                 segments.Children.Add(new Border
                 {
                     Margin = new Thickness(PanelRigMap.RevGap / 2, 0, PanelRigMap.RevGap / 2, 0),
-                    CornerRadius = new CornerRadius(1),
+                    CornerRadius = new CornerRadius(PanelRigMap.RevRadius),
                     Background = Ui.Brush(led ?? Theme.SurfaceRaised),
                 });
             }
@@ -405,7 +406,9 @@ namespace OpenDashPlugin
             DockPanel.SetDock(revRow, Dock.Top);
             dock.Children.Add(revRow);
 
-            var band = RigBand(PanelEmulation.Band(scenario), PanelRigMap.FaceBandIdle(screen), PanelRigMap.BandHeight(tile.Height));
+            var format = PanelRigMap.FaceFlagFormat(Settings, screen);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), PanelRigMap.FaceBandIdle(screen)));
+            band.Height = PanelRigMap.BandHeight(tile.Height);
             band.Margin = new Thickness(0, PanelRigMap.ScreenGap, 0, 0);
             DockPanel.SetDock(band, Dock.Bottom);
             dock.Children.Add(band);
@@ -442,16 +445,29 @@ namespace OpenDashPlugin
                 else Grid.SetColumn(cell, i);
                 zones.Children.Add(cell);
             }
-            dock.Children.Add(zones);
+            dock.Children.Add(RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format)));
 
             return RigScreenFrame(tile, dock);
         }
 
-        /// <summary>A pit wall: its band on top, and the panels of the page it is on, each named.</summary>
+        /// <summary>A screen's body, and over it the flag's block when the screen draws its flags full screen.</summary>
+        private static UIElement RigCovered(UIElement body, FaceBand block)
+        {
+            if (block == null || !block.Alert) return body;
+            var grid = new Grid();
+            grid.Children.Add(body);
+            grid.Children.Add(RigBand(PanelRigMap.BandPaint(block, null)));
+            return grid;
+        }
+
+        /// <summary>A pit wall: its band on top, and the panels of the page it is on, each named; a flag goes on
+        /// the band or over the panels by the pit wall's own flag format, and nowhere when that is off.</summary>
         private FrameworkElement RigPitWall(RigTile tile, ScreenInstance screen, string scenario)
         {
             var dock = new DockPanel { LastChildFill = true };
-            var band = RigBand(PanelEmulation.Band(scenario), PanelRigMap.PitWallBandIdle(screen), PanelRigMap.PitWallBandHeight);
+            var format = PanelRigMap.PitWallFlagFormat(Settings, screen);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), PanelRigMap.PitWallBandIdle(screen)));
+            band.Height = PanelRigMap.PitWallBandHeight;
             band.Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap);
             DockPanel.SetDock(band, Dock.Top);
             dock.Children.Add(band);
@@ -476,47 +492,50 @@ namespace OpenDashPlugin
                 Canvas.SetTop(box, Math.Floor(cell.Y * bodyHeight));
                 body.Children.Add(box);
             }
-            dock.Children.Add(body);
+            dock.Children.Add(RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format)));
             return RigScreenFrame(tile, dock);
         }
 
-        /// <summary>A phone: the module it opens on, or the flag over the whole of it.</summary>
-        private static FrameworkElement RigCompanion(RigTile tile, ScreenInstance screen, string scenario)
+        /// <summary>A phone: the module it opens on, the flag over the whole of it, or the flag's strip at its
+        /// foot, by the phone's own flag format.</summary>
+        private FrameworkElement RigCompanion(RigTile tile, ScreenInstance screen, string scenario)
         {
-            var band = PanelRigMap.CompanionBand(scenario);
-            var words = band.Alert ? band.Text : PanelRigMap.CompanionIdle(screen);
-            var ink = band.Alert ? band.TextHex : Theme.TextSecondary;
-            Brush ground = Ui.Brush(Theme.SurfaceInset);
-            if (band.Chequer) ground = RigChequer;
-            else if (band.Outlined) ground = Ui.Brush(Theme.SurfaceBase);
-            else if (band.Alert) ground = Ui.Brush(band.FillHex);
-            var text = Ui.Text(words ?? string.Empty, PanelRigMap.CompanionTextSize, FontWeights.SemiBold, ink);
-            text.TextWrapping = TextWrapping.Wrap;
-            text.TextAlignment = TextAlignment.Center;
-            text.HorizontalAlignment = HorizontalAlignment.Center;
-            text.VerticalAlignment = VerticalAlignment.Center;
-            text.Margin = new Thickness(PanelRigMap.ScreenPadding);
-            return new Border
+            var format = PanelRigMap.CompanionFlagFormat(Settings, screen);
+            var paint = PanelRigMap.CompanionPaint(PanelRigMap.CompanionBand(scenario, format), PanelRigMap.CompanionIdle(screen));
+            var phone = RigPainted(paint, PanelRigMap.CompanionTextSize, PanelRigMap.CompanionTracking);
+            phone.Width = tile.Width;
+            phone.Height = tile.Height;
+            phone.CornerRadius = new CornerRadius(PanelRigMap.CompanionRadius);
+            var words = phone.Child as FrameworkElement;
+            if (words != null) words.Margin = new Thickness(PanelRigMap.ScreenPadding);
+
+            var strip = PanelRigMap.StripPaint(PanelRigMap.CompanionStrip(scenario, format));
+            if (strip != null)
             {
-                Width = tile.Width,
-                Height = tile.Height,
-                CornerRadius = new CornerRadius(PanelRigMap.CompanionRadius),
-                Background = ground,
-                BorderBrush = Ui.Brush(band.Outlined ? band.FillHex : Theme.Border),
-                BorderThickness = new Thickness(band.Outlined ? PanelRigMap.CompanionOutline : PanelMetrics.BorderWeight),
-                Child = text,
-            };
+                var bar = RigBand(strip);
+                bar.Height = PanelRigMap.CompanionStripHeight;
+                bar.Margin = new Thickness(PanelRigMap.ScreenPadding, 0, PanelRigMap.ScreenPadding, PanelRigMap.ScreenPadding);
+                var dock = new DockPanel { LastChildFill = true };
+                DockPanel.SetDock(bar, Dock.Bottom);
+                dock.Children.Add(bar);
+                phone.Child = null;
+                if (words != null) dock.Children.Add(words);
+                phone.Child = dock;
+            }
+            return phone;
         }
 
-        /// <summary>A round face: its ring in the revs' colour, and the gear inside it.</summary>
+        /// <summary>A round face: its ring, in the flag's colour while a flag is picked and the revs' colour
+        /// otherwise, and the gear inside it.</summary>
         private FrameworkElement RigRound(RigTile tile, string scenario)
         {
+            var ring = PanelRigMap.RingFor(scenario, Settings);
             var grid = new Grid { Width = tile.Width, Height = tile.Height };
             grid.Children.Add(new Ellipse
             {
                 Fill = Ui.Brush(Theme.SurfaceInset),
-                Stroke = Ui.Brush(PanelRigMap.RingColour(scenario, Settings.RevBarMode())),
-                StrokeThickness = PanelRigMap.RingThickness,
+                Stroke = ring.Chequer ? RigChequer : Ui.Brush(ring.Hex),
+                StrokeThickness = ring.Thickness,
             });
             var gear = Ui.Text(PanelEmulation.Gear, PanelRigMap.RoundGearSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
             gear.HorizontalAlignment = HorizontalAlignment.Center;
@@ -525,36 +544,34 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>A band: the flag's or the pit lane's colour and words when a scenario takes it, an outline
-        /// for the black flag, the chequer with no words, and otherwise the page it is on.</summary>
-        private static Border RigBand(FaceBand band, string idle, double height)
+        /// <summary>A band, a block or a strip as PanelRigMap paints it, in the band's words.</summary>
+        private static Border RigBand(RigPaint paint)
         {
-            var box = new Border { Height = height, ClipToBounds = true };
-            if (band.Chequer)
+            return RigPainted(paint, PanelRigMap.BandTextSize, PanelRigMap.BandTracking);
+        }
+
+        /// <summary>What PanelRigMap's paint says, drawn: the ground or the chequer, the outline, and the words
+        /// tracked, or wrapped where they are not.</summary>
+        private static Border RigPainted(RigPaint paint, double textSize, double tracking)
+        {
+            var box = new Border { ClipToBounds = true };
+            if (paint.Chequer) box.Background = RigChequer;
+            else if (paint.FillHex != null) box.Background = Ui.Brush(paint.FillHex);
+            if (paint.BorderHex != null)
             {
-                box.Background = RigChequer;
-                return box;
+                box.BorderBrush = Ui.Brush(paint.BorderHex);
+                box.BorderThickness = new Thickness(paint.BorderWidth);
             }
-            string words, ink;
-            if (band.Alert)
-            {
-                words = band.Text ?? string.Empty;
-                ink = band.TextHex;
-                if (band.Outlined)
-                {
-                    box.Background = Ui.Brush(Theme.SurfaceBase);
-                    box.BorderBrush = Ui.Brush(band.FillHex);
-                    box.BorderThickness = new Thickness(PanelRigMap.BandOutline);
-                }
-                else box.Background = Ui.Brush(band.FillHex);
-            }
+            if (string.IsNullOrEmpty(paint.Words)) return box;
+            FrameworkElement text;
+            if (paint.Tracked) text = Ui.Tracked(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex, tracking);
             else
             {
-                words = idle ?? string.Empty;
-                ink = Theme.TextSecondary;
-                box.Background = Ui.Brush(Theme.SurfaceZone);
+                var block = Ui.Text(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex);
+                block.TextWrapping = TextWrapping.Wrap;
+                block.TextAlignment = TextAlignment.Center;
+                text = block;
             }
-            var text = Ui.Tracked(words, PanelRigMap.BandTextSize, FontWeights.SemiBold, ink, PanelRigMap.BandTracking);
             text.HorizontalAlignment = HorizontalAlignment.Center;
             text.VerticalAlignment = VerticalAlignment.Center;
             box.Child = text;
