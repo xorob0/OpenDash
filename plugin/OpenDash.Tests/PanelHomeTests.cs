@@ -152,11 +152,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(HomePress.CheckAgain, PanelHome.Press(Issue(PanelAttention.StripUnselected + "x", PanelPage.Leds, null, PanelIssueAction.CheckAgain)));
         }
 
+        /// <summary>A press is a row's trailing action and sits beside its text wherever the text keeps 300 of
+        /// room beside the widest press, the rail's widths included; it goes under the text only narrower.</summary>
         [Fact]
-        public void The_press_sits_beside_the_text_only_where_two_blocks_fit()
+        public void The_press_sits_beside_the_text_wherever_the_text_keeps_its_room()
         {
-            Assert.True(PanelHome.PressBeside(true));
-            Assert.False(PanelHome.PressBeside(false));
+            Assert.Equal(200, PanelHome.PressMaxWidth);
+            Assert.Equal(300, PanelHome.PressTextMinWidth);
+            Assert.Equal(600, PanelHome.PressBesideFrom);
+            Assert.Equal(PanelHome.PressBesideFrom,
+                PanelHome.IssuePaddingX * 2 + PanelHome.IconWell + PanelHome.IconGap + PanelHome.IconGap + PanelHome.PressMaxWidth + PanelHome.PressTextMinWidth);
+            Assert.True(PanelHome.PressBeside(600));
+            Assert.False(PanelHome.PressBeside(599));
+            // The rail's content, from a control of 760 with a scroll bar, keeps its presses beside, as the
+            // full sidebar's does.
+            Assert.Equal(PanelLayout.Rail, PanelShell.Layout(760));
+            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(760, false, 17)));
+            Assert.True(PanelHome.PressBeside(PanelShell.TwoColumnFrom));
+            Assert.True(PanelHome.PressBeside(1112));
+            Assert.False(PanelHome.PressBeside(400));
         }
 
         private static AttentionStrip Brow(FlagBoxInstallState? profile, bool? selected, string device = "Wheel")
@@ -826,13 +840,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("new Thickness(0, PanelHome.EmptyRigGap, 0, 0)", code);
         }
 
-        /// <summary>The presses sit beside their text and the quick controls side by side only on TwoColumns,
-        /// never on !Narrow; a stacked press hangs its row's icon from the top.</summary>
+        /// <summary>The quick controls sit side by side only on TwoColumns, never on !Narrow; an issue's press
+        /// sits beside its text by the content's width; a stacked press hangs its row's icon from the top.</summary>
         [Fact]
         public void The_page_asks_TwoColumns_for_columns()
         {
             var code = PageCode();
-            Assert.Contains("var beside = PanelHome.PressBeside(TwoColumns);", code);
+            // An issue's press asks the content's width, since it is a row's trailing action and not a second block.
+            Assert.Contains("var beside = PanelHome.PressBeside(ContentWidth);", code);
             Assert.Contains("var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;", code);
             Assert.Contains("var beside = TwoColumns;", code);
             Assert.DoesNotContain("!Narrow", code);
@@ -840,8 +855,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A long name wraps beside its size, which is docked first and never cut, as the artboard's
-        /// name does; a long press label trims, whole on hover; and a line with nothing to say takes its gap
-        /// with it.</summary>
+        /// name does; a long press label trims, at PressMaxWidth beside the text, with no hover that repeats
+        /// it; and a line with nothing to say takes its gap with it.</summary>
         [Fact]
         public void A_long_name_wraps_beside_its_size_and_an_empty_line_takes_its_gap()
         {
@@ -850,7 +865,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DockPanel.SetDock(figure, Dock.Right); dock.Children.Add(figure);", code);
             Assert.Contains("title.TextWrapping = TextWrapping.Wrap; title.VerticalAlignment = VerticalAlignment.Center; dock.Children.Add(title);", code);
             Assert.DoesNotContain("title.TextTrimming", code);
-            Assert.Contains("press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis }; press.ToolTip = issue.ActionLabel;", code);
+            Assert.Contains("press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis }; press.Click += (sender, args) => HomeAct(issue);", code);
+            Assert.DoesNotContain("press.ToolTip", code);
+            Assert.Contains("if (beside) { press.VerticalAlignment = align; press.MaxWidth = PanelHome.PressMaxWidth; press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0); DockPanel.SetDock(press, Dock.Right); dock.Children.Add(press); dock.Children.Add(text); } else { press.HorizontalAlignment = HorizontalAlignment.Left; press.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(press); dock.Children.Add(text); }", code);
             Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
             Assert.Contains("text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;", code);

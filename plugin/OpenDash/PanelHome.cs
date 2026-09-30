@@ -170,11 +170,24 @@ namespace OpenDashPlugin
                 })));
         }
 
-        /// <summary>Whether an issue's press sits beside its text. Where two blocks do not fit side by side it
-        /// goes under the text, so a narrow panel does not squeeze the sentence into a column of words.</summary>
-        public static bool PressBeside(bool twoColumns)
+        /// <summary>The widest an issue's press is drawn beside its text: "Open " and a name the driver typed,
+        /// which nothing caps, trims there rather than taking the title's room. Every fixed label, "Install it
+        /// again" the longest, fits whole.</summary>
+        public const double PressMaxWidth = 200;
+
+        /// <summary>The narrowest text column a press beside it may leave: under that the sentence becomes a
+        /// column of words, and the press goes under the text instead.</summary>
+        public const double PressTextMinWidth = 300;
+
+        /// <summary>The content width from which an issue's press sits beside its text: the row's padding, the
+        /// icon well and its gap, the press's gap and its widest, and the text column's narrowest.</summary>
+        public const double PressBesideFrom = IssuePaddingX * 2 + IconWell + IconGap + IconGap + PressMaxWidth + PressTextMinWidth;
+
+        /// <summary>Whether an issue's press sits beside its text, as a row's trailing action does at any width
+        /// the text column keeps its room, the rail's included; where it would not, it goes under the text.</summary>
+        public static bool PressBeside(double contentWidth)
         {
-            return twoColumns;
+            return contentWidth >= PressBesideFrom;
         }
 
         /// <summary>

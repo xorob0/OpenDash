@@ -91,7 +91,7 @@ namespace OpenDashPlugin
             // is stacked under its text, whose icon would otherwise sit beside the press. A one-line row with its
             // press beside it is centred on its title and detail.
             var hasSteps = issue.Steps.Count > 0;
-            var beside = PanelHome.PressBeside(TwoColumns);
+            var beside = PanelHome.PressBeside(ContentWidth);
             var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;
 
             var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize);
@@ -126,11 +126,11 @@ namespace OpenDashPlugin
             }
 
             var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);
-            // "Open " and a name the driver typed, which nothing caps: the label trims, whole on hover, so a
-            // stacked press shrinks to its column rather than losing its end and its right border. The title
-            // above it wraps, and is where the whole name is read.
+            // "Open " and a name the driver typed, which nothing caps: the label trims, at PressMaxWidth beside
+            // the text and at its column under it, rather than losing its end and its right border or taking
+            // the title's room. No hover: the title, which wraps, is where the whole name is read, and a hover
+            // that repeats the label says nothing (voice.md).
             press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis };
-            press.ToolTip = issue.ActionLabel;
             press.Click += (sender, args) => HomeAct(issue);
 
             var dock = new DockPanel { LastChildFill = true };
@@ -139,6 +139,7 @@ namespace OpenDashPlugin
             if (beside)
             {
                 press.VerticalAlignment = align;
+                press.MaxWidth = PanelHome.PressMaxWidth;
                 press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0);
                 DockPanel.SetDock(press, Dock.Right);
                 dock.Children.Add(press);
