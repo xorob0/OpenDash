@@ -40,7 +40,7 @@ namespace OpenDashPlugin
 
         /// <summary>The z-order the last tile picked up was raised to, so the tile in the hand is on top.</summary>
         /// <remarks>
-        /// Only while it is in the hand: Panel.ZIndex reorders the canvas's visual children as well as its
+        /// Only while it is in the pointer's hand: Panel.ZIndex reorders the canvas's visual children as well as its
         /// drawing, and keyboard navigation and the shell's FocusPath walk the visual children. A tile left
         /// raised moved to the end of the Tab order, and after a rebuild focus was restored by its raised
         /// index to another tile, which the next arrow key moved and saved. RigLower puts it back.
@@ -71,6 +71,11 @@ namespace OpenDashPlugin
         {
             public double Width { get; set; }
             public double Height { get; set; }
+
+            /// <summary>Whether this build is still the page's. A rebuild removes the tile that has the focus
+            /// or the pointer's capture, and WPF raises LostKeyboardFocus or a cancelled DragCompleted on it
+            /// afterwards: a save from there wrote the discarded build's places over the new build's.</summary>
+            public bool Live { get; set; }
         }
 
         private FrameworkElement BuildRigPage(PanelRoute to)
@@ -158,7 +163,8 @@ namespace OpenDashPlugin
             // layouts and heights as the bar came and went, and its height brought the bar back.
             var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
             var plan = PanelRigMap.Plan(Settings, width);
-            var extent = new RigExtent { Width = plan.Width, Height = plan.Height };
+            var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };
+            OnDrop(() => extent.Live = false);
             var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
             // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
             // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
@@ -291,9 +297,12 @@ namespace OpenDashPlugin
             };
 
             var moved = false;
+            double startLeft = 0, startTop = 0;
             thumb.DragStarted += (sender, args) =>
             {
                 moved = false;
+                startLeft = Canvas.GetLeft(root);
+                startTop = Canvas.GetTop(root);
                 Panel.SetZIndex(root, ++rigTopZ);
             };
             thumb.DragDelta += (sender, args) =>
@@ -303,16 +312,26 @@ namespace OpenDashPlugin
                 Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
                 Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
             };
-            // Saved on the drop, never in End(): SimHub is force-killed on the VM.
+            // Saved on the drop, never in End(): SimHub is force-killed on the VM. A drag that is cancelled --
+            // the capture lost, or the build replaced under it -- is no drop: the tile goes back.
             thumb.DragCompleted += (sender, args) =>
             {
                 RigLower(root);
+                if (!extent.Live) return;
+                if (args.Canceled)
+                {
+                    Canvas.SetLeft(root, startLeft);
+                    Canvas.SetTop(root, startTop);
+                    return;
+                }
                 if (!moved) return;
                 RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
                 RigDrop(tile, views);
             };
             // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
-            // the key comes up (or focus leaves first), rather than on every repeat.
+            // the key comes up (or focus leaves first), rather than on every repeat. The key does not raise
+            // the tile: a raised tile is last among the canvas's children, and a rebuild while the key is held
+            // restored focus by that index to another tile, which the next repeat moved and saved.
             var unsaved = false;
             thumb.KeyDown += (sender, args) =>
             {
@@ -326,7 +345,7 @@ namespace OpenDashPlugin
                     default: return;
                 }
                 args.Handled = true;
-                Panel.SetZIndex(root, ++rigTopZ);
+                if (!extent.Live) return;
                 if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;
                 unsaved = true;
                 // WPF does not scroll to a focused element that moves; the left button is up, so the guard
@@ -336,6 +355,7 @@ namespace OpenDashPlugin
             thumb.KeyUp += (sender, args) =>
             {
                 RigLower(root);
+                if (!extent.Live) return;
                 if (!unsaved) return;
                 unsaved = false;
                 RigDrop(tile, views);
@@ -343,6 +363,7 @@ namespace OpenDashPlugin
             thumb.LostKeyboardFocus += (sender, args) =>
             {
                 RigLower(root);
+                if (!extent.Live) return;
                 if (!unsaved) return;
                 unsaved = false;
                 RigDrop(tile, views);

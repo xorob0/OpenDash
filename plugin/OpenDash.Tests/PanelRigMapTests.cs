@@ -186,8 +186,11 @@ namespace OpenDashPlugin.Tests
             InOrder(Handler(tile, "thumb.KeyUp +="), "RigLower(root);", "if (!unsaved) return;");
             InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "RigLower(root);", "if (!unsaved) return;");
             Assert.Contains("root.ClearValue(Panel.ZIndexProperty);", RigMethod("private static void RigLower("));
-            // A tile an arrow key moves is scrolled to, since WPF does not follow a focused element that moves.
-            InOrder(Handler(tile, "thumb.KeyDown +="), "Panel.SetZIndex(root, ++rigTopZ);", "RigPlace(root,", "unsaved = true;", "root.BringIntoView();");
+            // A tile an arrow key moves is scrolled to, since WPF does not follow a focused element that moves;
+            // the key never raises it, so a rebuild while it is held restores focus to the same tile.
+            InOrder(Handler(tile, "thumb.KeyDown +="), "RigPlace(root,", "unsaved = true;", "root.BringIntoView();");
+            Assert.DoesNotContain("SetZIndex", Handler(tile, "thumb.KeyDown +="));
+            Assert.Equal(1, tile.Split("Panel.SetZIndex(").Length - 1);
         }
 
         private static void InOrder(string text, params string[] parts)
@@ -221,7 +224,8 @@ namespace OpenDashPlugin.Tests
             InOrder(canvas,
                 "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
                 "var plan = PanelRigMap.Plan(Settings, width);",
-                "var extent = new RigExtent { Width = plan.Width, Height = plan.Height };",
+                "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };",
+                "OnDrop(() => extent.Live = false);",
                 "var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
                 "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
                 "var tiles = plan.Tiles;",
@@ -241,7 +245,10 @@ namespace OpenDashPlugin.Tests
             var delta = Handler(tile, "thumb.DragDelta +=");
             InOrder(delta, "moved = true;", "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)", "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)");
             InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
-            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.DragStarted +="), "startLeft = Canvas.GetLeft(root);", "startTop = Canvas.GetTop(root);");
+            // A build that has been replaced writes nothing: the shell drops it before the new one is built.
+            InOrder(canvas, "Live = true };", "OnDrop(() => extent.Live = false);");
             // The arrow keys move a tile a grid step, and leave the save to the key coming up, or to focus
             // leaving first; a key that moved nothing saves nothing.
             var keyDown = Handler(tile, "thumb.KeyDown +=");
@@ -256,8 +263,9 @@ namespace OpenDashPlugin.Tests
                 "unsaved = true;");
             Assert.DoesNotContain("RigDrop(", keyDown);
             Assert.DoesNotContain("Save(", keyDown);
-            InOrder(Handler(tile, "thumb.KeyUp +="), "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
-            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.KeyUp +="), "if (!extent.Live) return;", "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "if (!extent.Live) return;", "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            InOrder(keyDown, "if (!extent.Live) return;", "RigPlace(");
             // A drop lands on the grid inside the canvas, where the next build draws it (bbd059f).
             var place = RigMethod("private static bool RigPlace(");
             InOrder(place, "var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);", "var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);");
