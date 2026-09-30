@@ -308,8 +308,10 @@ namespace OpenDashPlugin
 
         // --- The scenario chips ---------------------------------------------------------------------
 
-        /// <summary>What assistive technology calls the chips, as the artboard's section does.</summary>
-        public const string ScenariosName = "What to emulate";
+        /// <summary>What assistive technology calls the chips' section. The artboard's aria-label is "What to
+        /// emulate", a wh-clause posing as a heading; a heading is a noun (voice.md), and "Emulation" is the
+        /// word search already finds the chips by.</summary>
+        public const string ScenariosName = "Emulation";
 
         /// <summary>Between groups across and down, under a group's title, and between two chips.</summary>
         public const double GroupGapX = 32;
@@ -924,6 +926,21 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// What a tile's Thumb says to a pointer and to a screen reader: the tile's whole name, and the
+        /// sidebar's <see cref="PanelNav.WarnTooltip"/> after it when the tile wears the warning dot, in the
+        /// form the rail's tooltip adds it (<see cref="PanelNav.RailTooltip"/>).
+        /// </summary>
+        /// <remarks>
+        /// The Thumb lies over the whole tile, dot included, so the dot can carry no tooltip of its own, and a
+        /// dot that says nothing leaves the trouble to colour alone.
+        /// </remarks>
+        public static string TileLabel(RigTile tile, bool warns)
+        {
+            var name = tile == null ? string.Empty : tile.Name ?? string.Empty;
+            return warns ? name + " · " + PanelNav.WarnTooltip : name;
+        }
+
         /// <summary>What a strip is set to that changes its picture.</summary>
         public static StripOptions StripOptionsFor(LedBar bar)
         {
@@ -1029,14 +1046,6 @@ namespace OpenDashPlugin
             return size ?? Contract.ReferenceFace;
         }
 
-        /// <summary>What a face's band says when no scenario takes it: the name of the page band D is on.</summary>
-        public static string FaceBandIdle(ScreenInstance screen)
-        {
-            var face = screen == null ? null : screen.Face;
-            var page = face == null ? Contract.DefaultFaceZonePages[Array.IndexOf(Contract.FaceZoneLetters, "D")] : face.Zone("D");
-            return FacePages.NameOf("D", page);
-        }
-
         /// <summary>A face's band's height: <see cref="BandRatio"/> of the face, never under <see cref="BandMinHeight"/>.</summary>
         public static double BandHeight(double faceHeight)
         {
@@ -1126,8 +1135,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A face's band D under a scenario: the flag where the face draws its flags on the band, the pit
-        /// limiter, and otherwise its own page. A face whose flags fill the screen leaves band D to its page
-        /// and puts the flag over its zones (<see cref="FaceBlockFor"/>), as zones/face.ts does.
+        /// limiter, and otherwise nothing. A face whose flags fill the screen leaves band D to its page and
+        /// puts the flag over its zones (<see cref="FaceBlockFor"/>), as zones/face.ts does.
         /// </summary>
         public static FaceBand FaceBandFor(string scenarioId, string flagFormat)
         {
@@ -1144,7 +1153,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A pit wall's band under its header: the flag where the pit wall draws its flags as a band, and
-        /// otherwise the page it is on.
+        /// otherwise nothing.
         /// </summary>
         /// <remarks>
         /// Flags only: the pit wall's band is a flag strip of the alert catalogue, which has no limiter, and
@@ -1207,26 +1216,90 @@ namespace OpenDashPlugin
         // --- How a band, a block and a phone are painted -----------------------------------------------
 
         /// <summary>
-        /// A band or a block: the chequer with no words, the black flag as an outline of its colour on the base
-        /// ground, any other flag or the limiter on its colour, and a band nothing takes on the zone ground with
-        /// <paramref name="idle"/>, the page it is on. The words are tracked.
+        /// A band or a block <paramref name="width"/> across inside its screen's frame: the chequer with no
+        /// words, the black flag as an outline of its colour on the base ground, any other flag or the limiter
+        /// on its colour, and a band nothing takes as the zone ground with no words. The words are tracked, and
+        /// shortened to their first part where the whole does not fit (<see cref="BandWords"/>).
         /// </summary>
-        public static RigPaint BandPaint(FaceBand band, string idle)
+        /// <remarks>
+        /// At rest the band is drawn empty, as docs/design/plugin.md records: the artboard's "Fuel · 12.4 L"
+        /// is a value the panel does not have, and the page's name there was the panel talking to itself.
+        /// </remarks>
+        public static RigPaint BandPaint(FaceBand band, double width)
         {
             band = band ?? FaceBand.Idle;
             if (band.Chequer) return new RigPaint(null, null, true, band.TextHex, null, 0, false);
-            if (!band.Alert) return new RigPaint(idle ?? string.Empty, Theme.SurfaceZone, false, Theme.TextSecondary, null, 0, true);
-            if (band.Outlined) return new RigPaint(band.Text, Theme.SurfaceBase, false, band.TextHex, band.FillHex, BandOutline, true);
-            return new RigPaint(band.Text, band.FillHex, false, band.TextHex, null, 0, true);
+            if (!band.Alert) return new RigPaint(null, Theme.SurfaceZone, false, Theme.TextSecondary, null, 0, true);
+            var words = BandWords(band.Text, width);
+            if (band.Outlined) return new RigPaint(words, Theme.SurfaceBase, false, band.TextHex, band.FillHex, BandOutline, true);
+            return new RigPaint(words, band.FillHex, false, band.TextHex, null, 0, true);
         }
 
         /// <summary>A strip: a band's colours with no words, or null where nothing takes it.</summary>
         public static RigPaint StripPaint(FaceBand strip)
         {
             if (strip == null || !strip.Alert) return null;
-            var paint = BandPaint(strip, null);
+            var paint = BandPaint(strip, double.PositiveInfinity);
             return new RigPaint(null, paint.FillHex, paint.Chequer, paint.InkHex, paint.BorderHex, paint.BorderWidth, false);
         }
+
+        /// <summary>The room inside a screen's frame across a tile <paramref name="tileWidth"/> wide: what its
+        /// band, its block and its body have.</summary>
+        public static double ScreenInner(double tileWidth)
+        {
+            return Math.Max(0, tileWidth - 2 * (ScreenPadding + PanelMetrics.BorderWeight));
+        }
+
+        /// <summary>
+        /// A band's words where they fit <paramref name="width"/> at the band's size and tracking, and
+        /// otherwise their first part: "WHITE" where "WHITE · LAST LAP" does not fit, which is the word the
+        /// dash's own full-screen block writes. Ui.Tracked cannot trim or wrap, so a run that does not fit is
+        /// cut at both ends.
+        /// </summary>
+        public static string BandWords(string words, double width)
+        {
+            if (string.IsNullOrEmpty(words) || TrackedWidth(words, BandTextSize, BandTracking) <= width) return words;
+            var cut = words.IndexOf(" · ", StringComparison.Ordinal);
+            return cut > 0 ? words.Substring(0, cut) : words;
+        }
+
+        /// <summary>
+        /// How wide Ui.Tracked draws a run: each glyph its own box, whole pixels up, and the tracking after
+        /// every one of them, the last included.
+        /// </summary>
+        /// <remarks>
+        /// The advances are Barlow Bold's, from packages/dash/src/design/advances.ts: the band is drawn in
+        /// SemiBold, which is narrower, so a run measured here is never wider on screen. A character the table
+        /// does not carry is measured as its widest, the W.
+        /// </remarks>
+        public static double TrackedWidth(string text, double size, double tracking)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            var spacing = Math.Round(size * tracking, 2);
+            var width = 0.0;
+            foreach (var character in text)
+            {
+                double advance;
+                if (!BoldAdvances.TryGetValue(character, out advance)) advance = BoldWidest;
+                width += Math.Ceiling(advance * size) + spacing;
+            }
+            return width;
+        }
+
+        private const double BoldWidest = 0.877;
+
+        private static readonly IReadOnlyDictionary<char, double> BoldAdvances = new Dictionary<char, double>
+        {
+            { ' ', 0.2 }, { '·', 0.235 },
+            { 'A', 0.671 }, { 'B', 0.62 }, { 'C', 0.608 }, { 'D', 0.618 }, { 'E', 0.584 }, { 'F', 0.56 }, { 'G', 0.612 },
+            { 'H', 0.628 }, { 'I', 0.263 }, { 'J', 0.583 }, { 'K', 0.626 }, { 'L', 0.572 }, { 'M', 0.715 }, { 'N', 0.665 },
+            { 'O', 0.621 }, { 'P', 0.597 }, { 'Q', 0.593 }, { 'R', 0.614 }, { 'S', 0.595 }, { 'T', 0.585 }, { 'U', 0.629 },
+            { 'V', 0.622 }, { 'W', 0.877 }, { 'X', 0.631 }, { 'Y', 0.617 }, { 'Z', 0.557 },
+            { 'a', 0.528 }, { 'b', 0.566 }, { 'c', 0.537 }, { 'd', 0.566 }, { 'e', 0.546 }, { 'f', 0.387 }, { 'g', 0.556 },
+            { 'h', 0.547 }, { 'i', 0.255 }, { 'j', 0.254 }, { 'k', 0.533 }, { 'l', 0.244 }, { 'm', 0.835 }, { 'n', 0.547 },
+            { 'o', 0.557 }, { 'p', 0.568 }, { 'q', 0.568 }, { 'r', 0.383 }, { 's', 0.502 }, { 't', 0.38 }, { 'u', 0.545 },
+            { 'v', 0.52 }, { 'w', 0.783 }, { 'x', 0.538 }, { 'y', 0.504 }, { 'z', 0.46 },
+        };
 
         /// <summary>
         /// A phone: the flag over the whole of it, its one word tracked, or the module it opens on, wrapped;
@@ -1254,7 +1327,7 @@ namespace OpenDashPlugin
         public const string BoardLabel = "Leaderboard";
 
         /// <summary>The portrait pit wall's one page, by the name its zones' settings carry
-        /// (Contract.PitWallZoneSlots' "Portrait"), which its band shows when no flag takes it.</summary>
+        /// (Contract.PitWallZoneSlots' "Portrait"). A key, never drawn: the driver never sees it as a page.</summary>
         public const string PortraitPage = "Portrait";
 
         /// <summary>The portrait page under its header, as fractions: the board takes the first 800 of 1856
@@ -1328,15 +1401,6 @@ namespace OpenDashPlugin
         {
             var f = value / span;
             return f < 0 ? 0 : f > 1 ? 1 : f;
-        }
-
-        /// <summary>What a pit wall's band says when no scenario takes it: the page it is on, which is
-        /// <see cref="PortraitPage"/> on the portrait pit wall.</summary>
-        public static string PitWallBandIdle(ScreenInstance screen)
-        {
-            if (PitWallPortrait(screen)) return PortraitPage;
-            var index = Contract.NormalisePitWallPage(screen == null ? Contract.DefaultPitWallPage : screen.PitWallPage);
-            return Contract.PitWallPageNames[index];
         }
     }
 }

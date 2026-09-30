@@ -54,8 +54,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(506, PanelSoon.RealHardware.Ticket);
             Assert.Equal(new[] { PanelSoon.RealHardware }, PanelRigMap.SoonDrawn);
             Assert.Equal("Leaderboard", PanelRigMap.BoardLabel);
-            // The artboard's <section aria-label="What to emulate">.
-            Assert.Equal("What to emulate", PanelRigMap.ScenariosName);
+            // The artboard's <section aria-label="What to emulate"> is a wh-clause posing as a heading; a
+            // heading is a noun (voice.md), and search already finds the chips by "emulate".
+            Assert.Equal("Emulation", PanelRigMap.ScenariosName);
+            Assert.DoesNotContain(new[] { "What", "Where", "How", "Which", "When", "Who", "Why" }, w => PanelRigMap.ScenariosName.StartsWith(w + " ", StringComparison.Ordinal));
             // The chips are the voice's words: "Pit limiter" and the temperatures by name.
             Assert.Equal(new[] { "Flags", "Spotter", "Pit lane", "Warnings", "Revs" }, PanelEmulation.Groups.Select(g => g.Title));
             Assert.Equal(new[] { "Green", "Yellow", "Blue", "White", "Black", "Chequered", "Red", "Car left", "Car right", "Both sides", "Pit limiter", "Speeding", "Low fuel", "Oil temperature", "Water temperature", "Idle", "Mid revs", "Shift point" },
@@ -657,7 +659,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FacePages.NameOf("C", Contract.DefaultFaceZonePages[2]), zones[2].Text);
             Assert.Equal(new double[] { 469, 340, 469 }, zones.Select(z => z.Weight));
             Assert.False(PanelRigMap.FaceColumn(screen));
-            Assert.Equal("Fuel", PanelRigMap.FaceBandIdle(screen));
 
             // The page a zone is on now, not the one it opens on; the page reads FaceState on its clock and
             // repaints the tile when a wheel button moves one.
@@ -671,7 +672,6 @@ namespace OpenDashPlugin.Tests
             zones = PanelRigMap.FaceZones(screen);
             Assert.Equal("Speed", zones[1].Text);
             Assert.False(zones[1].Gear);
-            Assert.Equal("Tyres", PanelRigMap.FaceBandIdle(screen));
             Assert.Equal(string.Empty, PanelRigMap.FaceState(null));
 
             // Zone A's "Gear alone" is the gear too.
@@ -813,9 +813,9 @@ namespace OpenDashPlugin.Tests
             wall.PitWallFlagFormat = PanelRigMap.FlagFormatOff;
             Assert.False(PanelRigMap.PitWallBandFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
             Assert.False(PanelRigMap.PitWallBlockFor(yellow, PanelRigMap.PitWallFlagFormat(settings, wall)).Alert);
-            // The pit wall's band is a flag strip: the limiter, a face's alone, leaves it on its page.
+            // The pit wall's band is a flag strip: the limiter, a face's alone, leaves it empty.
             Assert.False(PanelRigMap.PitWallBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand).Alert);
-            Assert.Equal("Race", PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand), PanelRigMap.PitWallBandIdle(wall)).Words);
+            Assert.Null(PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand), 230).Words);
 
             // A phone: filled by default; a colour-only strip at its foot as a band; nothing when off.
             Assert.Equal(PanelRigMap.FlagFormatFull, PanelRigMap.CompanionFlagFormat(settings, phone));
@@ -839,27 +839,28 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_band_a_block_and_a_phone_are_painted_as_the_dash_paints_them()
         {
-            // A band nothing takes: its page on the zone ground, tracked.
-            var idle = PanelRigMap.BandPaint(FaceBand.Idle, "Fuel");
-            Assert.Equal("Fuel", idle.Words);
+            // A band nothing takes: the zone ground, drawn empty at rest, as docs/design/plugin.md records
+            // against the artboard's "Fuel · 12.4 L" -- never a value, never the page's name, never "Band D".
+            var idle = PanelRigMap.BandPaint(FaceBand.Idle, 290);
+            Assert.Null(idle.Words);
             Assert.Equal(Theme.SurfaceZone, idle.FillHex);
             Assert.Equal(Theme.TextSecondary, idle.InkHex);
             Assert.Null(idle.BorderHex);
-            Assert.True(idle.Tracked);
+            Assert.Null(PanelRigMap.BandPaint(null, 290).Words);
             // A flag on its colour.
-            var yellow = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Yellow), "Fuel");
+            var yellow = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Yellow), 290);
             Assert.Equal("YELLOW", yellow.Words);
             Assert.Equal(Theme.FlagYellow, yellow.FillHex);
             Assert.Equal(Theme.OnFlag, yellow.InkHex);
             Assert.Null(yellow.BorderHex);
             // The black flag an outline of its colour on the base ground.
-            var black = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Black), "Fuel");
+            var black = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Black), 290);
             Assert.Equal("BLACK", black.Words);
             Assert.Equal(Theme.SurfaceBase, black.FillHex);
             Assert.Equal(Theme.FlagBlack, black.BorderHex);
             Assert.Equal(PanelRigMap.BandOutline, black.BorderWidth);
             // The chequer says nothing.
-            var chequer = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Chequer), "Fuel");
+            var chequer = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Chequer), 290);
             Assert.True(chequer.Chequer);
             Assert.Null(chequer.Words);
             Assert.Null(chequer.FillHex);
@@ -888,6 +889,63 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_bands_words_fit_the_band_of_every_screen_they_are_drawn_on()
+        {
+            // "WHITE · LAST LAP" is 16 glyphs; tracked at 10 px it is wider than a portrait pit wall's band.
+            Assert.Equal(PanelRigMap.TrackedWidth("WHITE", 10, 0.14) + PanelRigMap.TrackedWidth(" · LAST LAP", 10, 0.14), PanelRigMap.TrackedWidth("WHITE · LAST LAP", 10, 0.14), 6);
+            Assert.InRange(PanelRigMap.TrackedWidth("WHITE · LAST LAP", 10, 0.14), 100, 115);
+            Assert.Equal(0, PanelRigMap.TrackedWidth(null, 10, 0.14));
+            Assert.Equal(75 - 10, PanelRigMap.ScreenInner(75));
+            Assert.Equal("WHITE · LAST LAP", PanelRigMap.BandWords("WHITE · LAST LAP", 290));
+            Assert.Equal("WHITE", PanelRigMap.BandWords("WHITE · LAST LAP", 65));
+            Assert.Equal(PanelRigMap.BlockName(PanelEmulation.White), PanelRigMap.BandWords("WHITE · LAST LAP", 65));
+
+            // Every screen's tile the rig can draw: each face size, both pit walls, both phones.
+            var widths = new List<double>();
+            foreach (var size in Contract.FaceSizes)
+            {
+                double w, h;
+                PanelRigMap.FaceTileSize(size.Width, size.Height, out w, out h);
+                widths.Add(w);
+            }
+            foreach (var screen in new[] { new[] { 1920, 1080 }, new[] { 1080, 1920 }, new[] { 850, 480 }, new[] { 480, 850 } })
+            {
+                double w, h;
+                PanelRigMap.SecondScreenTileSize(false, screen[0], screen[1], out w, out h);
+                widths.Add(w);
+            }
+            Assert.Contains(75.0, widths);
+            foreach (var width in widths)
+            {
+                var inner = PanelRigMap.ScreenInner(width);
+                foreach (var scenario in PanelEmulation.Scenarios().Select(s => s.Id))
+                {
+                    var faces = new[] { PanelRigMap.FlagFormatBand, PanelRigMap.FlagFormatFull };
+                    var drawn = faces.SelectMany(f => new[] { PanelRigMap.FaceBandFor(scenario, f), PanelRigMap.FaceBlockFor(scenario, f), PanelRigMap.PitWallBandFor(scenario, f), PanelRigMap.PitWallBlockFor(scenario, f) });
+                    foreach (var band in drawn)
+                    {
+                        var words = PanelRigMap.BandPaint(band, inner).Words;
+                        if (words == null) continue;
+                        Assert.True(PanelRigMap.TrackedWidth(words, PanelRigMap.BandTextSize, PanelRigMap.BandTracking) <= inner, width + " " + scenario + ": " + words);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void A_tile_that_wears_the_warning_dot_says_so_in_words()
+        {
+            var tile = PanelRigMap.Tiles(Rig()).Single(t => t.Id == "led:LedDashBrow");
+            Assert.Equal("Dash brow", PanelRigMap.TileLabel(tile, false));
+            // The sidebar's words for its dot, in the form the rail adds them.
+            Assert.Equal("Dash brow · Needs attention", PanelRigMap.TileLabel(tile, true));
+            Assert.Equal("Dash brow · " + PanelNav.WarnTooltip, PanelRigMap.TileLabel(tile, true));
+            Assert.Equal(string.Empty, PanelRigMap.TileLabel(null, false));
+            var thumb = RigMethod("private RigTileView BuildRigTile(");
+            InOrder(thumb, "ToolTip = PanelRigMap.TileLabel(tile, warns),", "AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));");
+        }
+
+        [Fact]
         public void A_pit_wall_shows_the_page_it_is_on_with_each_zone_named_for_its_page()
         {
             var wall = Screen(Contract.KindPitWall, "PitWall", "Pit wall", 1920, 1080);
@@ -900,13 +958,11 @@ namespace OpenDashPlugin.Tests
             Assert.True(cells[1].X > cells[0].X + cells[0].Width);
             Assert.True(cells[2].Y > cells[1].Y);
             Assert.All(cells, c => Assert.True(c.X + c.Width <= 1 && c.Y + c.Height <= 1));
-            Assert.Equal("Race", PanelRigMap.PitWallBandIdle(wall));
 
             wall.SetZonePage("RaceA", 5);
             Assert.Equal("Leaderboard", PanelRigMap.PitWallCells(wall)[1].Text);
             wall.PitWallPage = 1;
             Assert.Equal(new[] { "Tower", ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
-            Assert.Equal("Tower", PanelRigMap.PitWallBandIdle(wall));
             Assert.False(PanelRigMap.PitWallPortrait(wall));
         }
 
@@ -917,8 +973,7 @@ namespace OpenDashPlugin.Tests
             // Its page is not one of the landscape three, whatever PitWallPage says.
             wall.PitWallPage = 1;
             Assert.True(PanelRigMap.PitWallPortrait(wall));
-            Assert.Equal("Portrait", PanelRigMap.PitWallBandIdle(wall));
-            Assert.DoesNotContain(PanelRigMap.PitWallBandIdle(wall), Contract.PitWallPageNames);
+            // "Portrait" is the settings' key for its zones, and never drawn.
             Assert.Contains(Contract.PitWallZoneSlots, s => s.Page == PanelRigMap.PortraitPage && !s.Landscape);
 
             var cells = PanelRigMap.PitWallCells(wall);

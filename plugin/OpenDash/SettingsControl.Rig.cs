@@ -264,10 +264,11 @@ namespace OpenDashPlugin
                 Focusable = true,
                 IsTabStop = true,
                 FocusVisualStyle = Ui.FocusRing(),
-                // The whole name, where the line above the picture trims it; the Thumb is what the pointer is on.
-                ToolTip = tile.Name,
+                // The whole name, where the line above the picture trims it, and what the dot means; the Thumb
+                // is what the pointer is on, the dot included.
+                ToolTip = PanelRigMap.TileLabel(tile, warns),
             };
-            AutomationProperties.SetName(thumb, tile.Name);
+            AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));
 
             var root = new Grid { Width = PanelRigMap.FootprintWidth(tile), Height = PanelRigMap.FootprintHeight(tile) };
             root.Children.Add(body);
@@ -457,7 +458,8 @@ namespace OpenDashPlugin
             dock.Children.Add(revRow);
 
             var format = PanelRigMap.FaceFlagFormat(Settings, screen);
-            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), PanelRigMap.FaceBandIdle(screen)));
+            var inner = PanelRigMap.ScreenInner(tile.Width);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner));
             band.Height = PanelRigMap.BandHeight(tile.Height);
             band.Margin = new Thickness(0, PanelRigMap.ScreenGap, 0, 0);
             DockPanel.SetDock(band, Dock.Bottom);
@@ -495,18 +497,18 @@ namespace OpenDashPlugin
                 else Grid.SetColumn(cell, i);
                 zones.Children.Add(cell);
             }
-            dock.Children.Add(RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format)));
+            dock.Children.Add(RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner));
 
             return RigScreenFrame(tile, dock);
         }
 
         /// <summary>A screen's body, and over it the flag's block when the screen draws its flags full screen.</summary>
-        private static UIElement RigCovered(UIElement body, FaceBand block)
+        private static UIElement RigCovered(UIElement body, FaceBand block, double width)
         {
             if (block == null || !block.Alert) return body;
             var grid = new Grid();
             grid.Children.Add(body);
-            grid.Children.Add(RigBand(PanelRigMap.BandPaint(block, null)));
+            grid.Children.Add(RigBand(PanelRigMap.BandPaint(block, width)));
             return grid;
         }
 
@@ -516,15 +518,15 @@ namespace OpenDashPlugin
         {
             var dock = new DockPanel { LastChildFill = true };
             var format = PanelRigMap.PitWallFlagFormat(Settings, screen);
-            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), PanelRigMap.PitWallBandIdle(screen)));
+            var inner = PanelRigMap.ScreenInner(tile.Width);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), inner));
             band.Height = PanelRigMap.PitWallBandHeight;
             band.Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap);
             DockPanel.SetDock(band, Dock.Top);
             dock.Children.Add(band);
 
-            var inner = 2 * (PanelRigMap.ScreenPadding + PanelMetrics.BorderWeight);
-            var bodyWidth = tile.Width - inner;
-            var bodyHeight = tile.Height - inner - PanelRigMap.PitWallBandHeight - PanelRigMap.ScreenGap;
+            var bodyWidth = inner;
+            var bodyHeight = tile.Height - 2 * (PanelRigMap.ScreenPadding + PanelMetrics.BorderWeight) - PanelRigMap.PitWallBandHeight - PanelRigMap.ScreenGap;
             var body = new Canvas { Width = bodyWidth, Height = bodyHeight, ClipToBounds = true };
             foreach (var cell in PanelRigMap.PitWallCells(screen))
             {
@@ -542,7 +544,7 @@ namespace OpenDashPlugin
                 Canvas.SetTop(box, Math.Floor(cell.Y * bodyHeight));
                 body.Children.Add(box);
             }
-            dock.Children.Add(RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format)));
+            dock.Children.Add(RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format), inner));
             return RigScreenFrame(tile, dock);
         }
 
