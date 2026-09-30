@@ -12,6 +12,7 @@
 // lives where PanelFacePlanTests can hold it against the canvas. Pure: no WPF types.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenDashPlugin
 {
@@ -123,8 +124,8 @@ namespace OpenDashPlugin
         /// where the face at that width would stand taller than <see cref="MaxHeight"/>.
         /// </summary>
         /// <remarks>
-        /// A portrait face whose rows are at their least is still taller than the cap (three cells of
-        /// <see cref="CellLeast"/>), so the width stops shrinking where the height stops falling.
+        /// A portrait face whose rows are at their least is still taller than the cap (three cells of at
+        /// least <see cref="CellLeast"/> each), so the width stops shrinking where the height stops falling.
         /// </remarks>
         public static double FitWidth(Contract.FaceSize face, double outer)
         {
@@ -167,11 +168,28 @@ namespace OpenDashPlugin
             HasBar = face.HasBar;
             RevBar = Row(face.RevBarHeight, scale, RevBarLeast);
             Bar = face.HasBar ? Row(face.BarHeight, scale, BarLeast) : 0;
-            var cells = face.Parts.Length;
-            Body = Row(face.BodyHeight, scale, Stacked ? cells * CellLeast + (cells - 1) * Seam : CellLeast);
+            Body = Stacked
+                ? StackedBody(Row(face.BodyHeight, scale, face.Parts.Length * CellLeast + (face.Parts.Length - 1) * Seam), face.Parts)
+                : Row(face.BodyHeight, scale, CellLeast);
             Band = Row(face.BandHeight, scale, BandLeast);
             Letters = face.BodyOrder;
             Cells = Split(Stacked ? Body : width, face.Parts);
+        }
+
+        /// <summary>
+        /// A stacked body of at least <paramref name="body"/>, grown until every one of its cells is at
+        /// <see cref="CellLeast"/> or more.
+        /// </summary>
+        /// <remarks>
+        /// The body is split in proportion to the face's own parts, so a floor of three leasts laid end to
+        /// end is not a floor for each cell: the 600 x 686 face's parts are 234, 160 and 150, and a body of
+        /// 268 or 306 split that way drew zone C 71 or 82 px tall, cutting its page line's descenders. The
+        /// cells are held as Split draws them, rounding included, at whatever width the body scales to.
+        /// </remarks>
+        private static double StackedBody(double body, int[] parts)
+        {
+            while (Split(body, parts).Min() < CellLeast) body++;
+            return body;
         }
 
         /// <summary>The picture of one face at <see cref="PictureWidth"/>.</summary>

@@ -5,6 +5,7 @@
 // picture whose rows are four constants rather than the face's own rectangles is caught here rather than
 // on the VM, where the only way to see it is to open the panel and measure it.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -247,18 +248,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(plan.RevBar + PanelFacePlan.Seam + plan.Body + PanelFacePlan.Seam + plan.Band, plan.Height);
         }
 
-        /// <summary>The portrait stacks its zones, so each of the three has to be a cell in its own right
-        /// rather than a third of one.</summary>
+        /// <summary>
+        /// Every zone cell holds its three lines at every width the page draws the picture: the picture
+        /// fitted to its column (FitWidth), in the column beside the aside and in the whole page stacked.
+        /// </summary>
+        /// <remarks>
+        /// The portrait stacks its zones, so each of the three has to be a cell in its own right rather than
+        /// a share of one. This test held For(portrait) at 844, a width the page stopped drawing when the
+        /// height cap came in, while the 600 x 686 face was drawn at 355 with zone C at 82 px.
+        /// </remarks>
         [Fact]
         public void A_portrait_face_stacks_three_cells_that_each_hold_their_controls()
         {
             var portrait = Contract.FaceSizes.Single(f => f.Body == Contract.FaceBody.Column);
-            var plan = PanelFacePlan.For(portrait);
-            Assert.True(plan.Stacked);
-            Assert.Equal(new[] { "A", "B", "C" }, plan.Letters);
-            foreach (var cell in plan.Cells)
+            Assert.True(PanelFacePlan.For(portrait).Stacked);
+            Assert.Equal(new[] { "A", "B", "C" }, PanelFacePlan.For(portrait).Letters);
+
+            var columns = new List<double>();
+            foreach (var content in new double[] { 300, 360, 544, 556, 772, 896, 1112 })
             {
-                Assert.True(cell >= PanelFacePlan.CellLeast, portrait + " stacks a cell of " + cell);
+                columns.Add(PanelFacePlan.PictureWidthFor(content, false));
+                if (PanelFacePlan.SideBySide(content, true)) columns.Add(PanelFacePlan.PictureWidthFor(content, true));
+            }
+            columns.AddRange(new double[] { 556, 772 });
+            foreach (var face in Contract.FaceSizes)
+            {
+                foreach (var column in columns)
+                {
+                    var plan = PanelFacePlan.For(face, PanelFacePlan.RowsWidth(PanelFacePlan.FitWidth(face, column)));
+                    if (plan.Stacked)
+                    {
+                        foreach (var cell in plan.Cells) Assert.True(cell >= PanelFacePlan.CellLeast, face + " stacks a cell of " + cell + " in a column of " + column);
+                        Assert.Equal(plan.Body, plan.Cells.Sum() + (plan.Cells.Length - 1) * PanelFacePlan.Seam);
+                    }
+                    else
+                    {
+                        Assert.True(plan.Body >= PanelFacePlan.CellLeast, face + " draws a body of " + plan.Body + " in a column of " + column);
+                    }
+                }
             }
         }
 
