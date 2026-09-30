@@ -916,6 +916,18 @@ namespace OpenDashPlugin.Tests
             var code = PageCode();
             // The fix rows, ruled apart, in the card.
             Assert.Contains("var row = HomeIssueRow(issues[i], beside); if (i > 0) { row.BorderBrush = Ui.Brush(Theme.Rule); row.BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0); } rows.Children.Add(row); } return Ui.CardBox(rows, 0);", code);
+            // An issue row: the icon in its 32 px well on the caution's tint, docked left of the text, the title
+            // first in the text, and the whole row padded in its border.
+            Assert.Contains("var well = new Border { Width = PanelHome.IconWell, Height = PanelHome.IconWell, CornerRadius = new CornerRadius(Theme.Radius), Background = Ui.Tint(Theme.Caution, PanelHome.IconTint), VerticalAlignment = align, Margin = new Thickness(0, 0, PanelHome.IconGap, 0), Child = icon, };", code);
+            Assert.Contains("DockPanel.SetDock(well, Dock.Left); dock.Children.Add(well);", code);
+            Assert.Contains("title.TextWrapping = TextWrapping.Wrap; text.Children.Add(title);", code);
+            Assert.Contains("return new Border { Padding = new Thickness(PanelHome.IssuePaddingX, PanelHome.IssuePaddingY, PanelHome.IssuePaddingX, PanelHome.IssuePaddingY), Child = dock };", code);
+            // A Right now card's head: its page's name, and the Open link docked right of it.
+            Assert.Contains("DockPanel.SetDock(open, Dock.Right); headDock.Children.Add(open); headDock.Children.Add(eyebrow);", code);
+            Assert.Contains("Child = headDock,", code);
+            // A device row carries what it was given, and a strip's shape sits beside its name.
+            Assert.Contains("var row = new Button { Content = content,", code);
+            Assert.Contains("DockPanel.SetDock(meta, Dock.Right); top.Children.Add(meta);", code);
             // A Right now card: its head, then its page's empty state or its rows.
             Assert.Contains("stack.Children.Add(head); if (rows.Count == 0) { var none = Ui.Prose(PanelHome.EmptyLine(empty), PanelHome.DetailSize); none.Margin = new Thickness(PanelHome.RowPaddingX, 0, PanelHome.RowPaddingX, PanelHome.RowPaddingY + PanelHome.CardHeadPaddingBottom); stack.Children.Add(none); } foreach (var row in rows) stack.Children.Add(row); return Ui.CardBox(stack, 0);", code);
             // Each screen's row on its card, painted before the first tick.
