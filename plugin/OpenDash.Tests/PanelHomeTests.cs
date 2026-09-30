@@ -215,7 +215,6 @@ namespace OpenDashPlugin.Tests
                 PanelHome.CheckedAgain(before, none, Brow(null, true)),
                 PanelHome.CheckedAgain(before, none, Brow(null, null)),
                 PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Unavailable, null)),
-                PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotEmbedded, null)),
                 PanelHome.CheckedAgain(before, none, null),
                 PanelHome.CheckedAgain(null, none, null),
             };
@@ -226,10 +225,17 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(PanelTone.Caution, message.Tone);
             });
 
-            // SimHub answered, and has no such device to read the selection from: the LEDs page's fact, and its
-            // step, where it is taken, in the "SimHub device" of that page and never the old "LED device".
+            // SimHub answered, and this build carries no profile for the strip: not a read that failed, and said
+            // as the LEDs page says it, whatever the device.
+            var unshipped = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotEmbedded, null));
+            Assert.Equal("Checked again. This build ships no profile for Dash brow.", unshipped.Text);
+            Assert.Equal(PanelTone.Caution, unshipped.Tone);
+            Assert.Equal(unshipped.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotEmbedded, true, null)).Text);
+
+            // SimHub answered, and has no such device to read the selection from: the LEDs page's one phrase for
+            // it, and its step, where it is taken, never the old "LED device".
             var gone = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null, null));
-            Assert.Equal("SimHub does not list Dash brow's device. Choose one on the LEDs page.", gone.Text);
+            Assert.Equal("Dash brow's device is not in SimHub. Choose one on the LEDs page.", gone.Text);
             Assert.Equal(PanelTone.Caution, gone.Tone);
             // Removing the device takes its profiles with it, so the profile reads as not installed too; the
             // device comes first, since the LEDs page has no Install for a strip whose device is not listed.
@@ -238,7 +244,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(gone.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, true, null)).Text);
             // The device is there and its selection could not be read, which is logged.
             var unread = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null));
-            Assert.Equal("Dash brow's selection could not be read. See SimHub's log.", unread.Text);
+            Assert.Equal("Could not read whether Dash brow's profile is selected. See SimHub's log.", unread.Text);
             Assert.Equal(PanelTone.Caution, unread.Tone);
             // A read of "not selected" with no issue left says so rather than calling it fixed, in the caution's ink.
             var notSelected = PanelHome.CheckedAgain(null, none, Brow(FlagBoxInstallState.UpToDate, false));
@@ -249,11 +255,13 @@ namespace OpenDashPlugin.Tests
             var blank = new AttentionStrip { Name = " ", Namespace = "LedBar1", DeviceName = "Wheel", Profile = FlagBoxInstallState.UpToDate, Selected = true };
             Assert.Equal("Checked again. This strip's profile is selected.", PanelHome.CheckedAgain(before, none, blank).Text);
             blank.Selected = null;
-            Assert.Equal("This strip's selection could not be read. See SimHub's log.", PanelHome.CheckedAgain(before, none, blank).Text);
+            Assert.Equal("Could not read whether this strip's profile is selected. See SimHub's log.", PanelHome.CheckedAgain(before, none, blank).Text);
             blank.Profile = FlagBoxInstallState.NotInstalled;
             Assert.Equal("This strip's profile is not installed. Install it on the LEDs page.", PanelHome.CheckedAgain(before, none, blank).Text);
             blank.DeviceName = null;
-            Assert.Equal("SimHub does not list this strip's device. Choose one on the LEDs page.", PanelHome.CheckedAgain(before, none, blank).Text);
+            Assert.Equal("This strip's device is not in SimHub. Choose one on the LEDs page.", PanelHome.CheckedAgain(before, none, blank).Text);
+            blank.Profile = FlagBoxInstallState.NotEmbedded;
+            Assert.Equal("Checked again. This build ships no profile for this strip.", PanelHome.CheckedAgain(before, none, blank).Text);
             blank.Name = " Dash brow ";
             blank.DeviceName = "Wheel";
             blank.Profile = FlagBoxInstallState.UpToDate;
@@ -463,6 +471,21 @@ namespace OpenDashPlugin.Tests
             if (cards != null) Assert.Equal(PanelHome.RestartToLoad, (string)cards.GetValue(null));
             Assert.Null(typeof(PanelHome).GetField("Missing"));
             Assert.Null(typeof(PanelHome).GetField("NotInSimHubYet"));
+        }
+
+        /// <summary>
+        /// Check again states a device SimHub does not list and a profile the build does not carry in the LEDs
+        /// page's own phrases: the moment PanelLeds carries them, they are the ones Home's sentences are built on.
+        /// </summary>
+        [Fact]
+        public void Check_again_says_a_strips_facts_as_the_LEDs_page_does()
+        {
+            const string fact = "'s device is not in SimHub.";
+            Assert.StartsWith(fact + " ", PanelHome.CheckedNoDevice);
+            var listed = typeof(PanelLeds).GetField("DeviceNotListed");
+            if (listed != null) Assert.StartsWith("This strip" + fact + " ", (string)listed.GetValue(null));
+            var shipped = typeof(PanelLeds).GetField("NoProfileForStrip");
+            if (shipped != null) Assert.Equal(PanelHome.CheckedNoProfile + "this strip.", (string)shipped.GetValue(null));
         }
 
         /// <summary>
