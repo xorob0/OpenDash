@@ -339,15 +339,123 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(string.Empty, PanelLeds.FrameKey(null));
         }
 
-        /// <summary>The labels sit under the Viewbox in columns weighted as the groups are at the preview's
-        /// 30 px LEDs 6 apart, 22 between groups: a 3/9/3 is 566 wide.</summary>
+        /// <summary>The preview's groups at its 30 px LEDs 6 apart, 22 between groups, which the labels are placed
+        /// under: a 3/9/3 is 566 wide.</summary>
         [Fact]
-        public void The_preview_labels_are_laid_in_the_groups_own_proportions()
+        public void The_preview_columns_are_the_groups_at_the_previews_size()
         {
             Assert.Equal(new double[] { 102, 22, 318, 22, 102 }, PanelLeds.PreviewColumns(3, 9));
             Assert.Equal(566, PanelLeds.PreviewColumns(3, 9).Sum());
             Assert.Equal(new double[] { 894 }, PanelLeds.PreviewColumns(0, 25));
             Assert.Equal(PanelLeds.PreviewLabels(3, 9).Length * 2 - 1, PanelLeds.PreviewColumns(3, 9).Length);
+        }
+
+        /// <summary>
+        /// Every label under the preview stays in the room and clear of its neighbours, under its own group, for
+        /// every shape the build embeds, at full size and as the Viewbox shrinks it to the narrow column: a
+        /// label is never cut, which is the rule textFit.test.ts holds the dash to.
+        /// </summary>
+        /// <remarks>
+        /// Measured as the panel draws an eyebrow, 11 px with the label tracking after every glyph, in Barlow Bold's
+        /// advances from packages/dash/src/design/advances.ts: the panel draws SemiBold, which the table does not
+        /// carry and Bold is at least as wide as. The shapes are every ends and centre the embedded profiles have
+        /// (0 to 5 at each end, 4 to 14 in a centre between ends, up to 25 in a bare run).
+        /// </remarks>
+        [Fact]
+        public void Every_preview_label_fits_under_its_group()
+        {
+            var bold = Advances("BarlowBold");
+            double Width(string text) => text.Sum(ch => (bold.TryGetValue(ch, out var em) ? em : 0.75) * PanelShell.EyebrowSize + Math.Round(PanelShell.EyebrowSize * Theme.TrackingLabel, 2));
+            // The 1-LED end the review measured: wider than its group, so a cell as wide as the group cuts it.
+            Assert.True(Width("Right · 1") > PanelLeds.PreviewColumns(1, 4)[0]);
+
+            var shapes = new List<(int, int)>();
+            for (var ends = 1; ends <= 5; ends++) for (var centre = 4; centre <= 14; centre++) shapes.Add((ends, centre));
+            for (var centre = 1; centre <= 25; centre++) shapes.Add((0, centre));
+            foreach (var (ends, centre) in shapes)
+            {
+                var columns = PanelLeds.PreviewColumns(ends, centre);
+                var labels = PanelLeds.PreviewLabels(ends, centre);
+                var widths = labels.Select(Width).ToArray();
+                // Full size (in no less room than the narrowest tried), the narrow column's inside (527 less the
+                // preview's 22 each side and its border), and narrower still.
+                foreach (var room in new[] { Math.Max(columns.Sum(), 360), 700, 481, 400, 360 })
+                {
+                    var lefts = PanelLeds.PreviewLabelLefts(columns, widths, room);
+                    var scale = Math.Min(1, room / columns.Sum());
+                    var offset = Math.Max(0, (room - columns.Sum() * scale) / 2);
+                    var x = 0.0;
+                    for (var i = 0; i < labels.Length; i++)
+                    {
+                        var shape = ends + "-" + centre + "-" + ends + " at " + room + ": " + labels[i];
+                        Assert.True(lefts[i] >= 0 && lefts[i] + widths[i] <= room + 1e-9, shape + " leaves the room");
+                        if (i > 0) Assert.True(lefts[i - 1] + widths[i - 1] + 4 <= lefts[i], shape + " meets the label before it");
+                        // Under its own group: the label and the group overlap.
+                        var groupLeft = offset + x * scale;
+                        var groupRight = offset + (x + columns[2 * i]) * scale;
+                        Assert.True(lefts[i] < groupRight && lefts[i] + widths[i] > groupLeft, shape + " is not under its group");
+                        x += columns[2 * i] + (2 * i + 1 < columns.Length ? columns[2 * i + 1] : 0);
+                    }
+                }
+            }
+            // The page places the labels by this rule, in one cell as wide as the preview, not a column each.
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("PanelLeds.PreviewLabelLefts(columns, widths, room)", leds);
+        }
+
+        [Fact]
+        public void A_label_is_centred_under_its_group_and_moved_in_at_the_edge()
+        {
+            var columns = PanelLeds.PreviewColumns(3, 9);
+            // At full size a 40 wide label under the 102 wide left end starts 31 in.
+            Assert.Equal(new[] { 31.0, 283.0 - 30, 566 - 102 / 2.0 - 20 }, PanelLeds.PreviewLabelLefts(columns, new[] { 40.0, 60, 40 }, 566));
+            // A label wider than its end at the room's edge is moved in, never out.
+            Assert.Equal(0.0, PanelLeds.PreviewLabelLefts(PanelLeds.PreviewColumns(1, 4), new[] { 50.0, 60, 50 }, 242)[0]);
+            Assert.Equal(192.0, PanelLeds.PreviewLabelLefts(PanelLeds.PreviewColumns(1, 4), new[] { 50.0, 60, 50 }, 242)[2]);
+            // In more room than the preview needs, it is centred as the Viewbox is.
+            Assert.Equal(131.0 + 283 - 30, PanelLeds.PreviewLabelLefts(columns, new[] { 40.0, 60, 40 }, 828)[1]);
+        }
+
+        /// <summary>The advances of one face in packages/dash/src/design/advances.ts, by character.</summary>
+        private static Dictionary<char, double> Advances(string face)
+        {
+            var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "design", "advances.ts"));
+            var start = source.IndexOf("const " + face + ":", StringComparison.Ordinal);
+            Assert.True(start >= 0, face + " is not in advances.ts");
+            var open = source.IndexOf('{', start);
+            var close = source.IndexOf("};", open, StringComparison.Ordinal);
+            var table = new Dictionary<char, double>();
+            var entry = new System.Text.RegularExpressions.Regex(@"'((?:\\.|[^'\\])+)': ([0-9.]+)");
+            foreach (System.Text.RegularExpressions.Match m in entry.Matches(source.Substring(open, close - open)))
+            {
+                var key = System.Text.RegularExpressions.Regex.Unescape(m.Groups[1].Value);
+                table[key[0]] = double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            Assert.True(table.Count > 90);
+            return table;
+        }
+
+        /// <summary>The Viewbox draws the preview and the card as they are, so a centre that does not show the
+        /// revs is at rest at the shift point and half way: the profile never draws the revs there.</summary>
+        [Fact]
+        public void A_centre_that_is_not_the_revs_is_at_rest_at_a_rev_moment()
+        {
+            var options = PanelLeds.OptionsFor(false, null);
+            Assert.True(PanelLeds.CentreShowsRevs("rpm"));
+            Assert.True(PanelLeds.CentreShowsRevs(null));
+            Assert.False(PanelLeds.CentreShowsRevs("fuel"));
+            Assert.False(PanelLeds.CentreShowsRevs("brake"));
+            var shift = PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, options, false, null, false);
+            Assert.All(shift[1], c => Assert.Null(c));
+            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift, options), PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, options, false, null, true));
+            Assert.All(PanelLeds.CardFrame("0-15-0", options, false)[0], c => Assert.Null(c));
+            Assert.Contains(PanelLeds.CardFrame("0-15-0", options, true)[0], c => c != null);
+            // Not a rev moment: the effect is drawn as the emulation draws it.
+            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, options), PanelLeds.PreviewFrame(PanelEmulation.Yellow, 0, 15, options, false, null, false));
+            Assert.True(PanelLeds.IsRevMoment(PanelEmulation.Mid));
+            Assert.False(PanelLeds.IsRevMoment(PanelEmulation.CarLeft));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Equal(2, Occurrences(leds, "PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))"));
         }
 
         [Fact]

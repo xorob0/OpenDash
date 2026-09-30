@@ -42,9 +42,9 @@ namespace OpenDashPlugin
 
         private string ledsScenarioFor;
 
-        /// <summary>Each card's re-dim, by strip, so the strip's own Brightness can re-dim its card at night
-        /// as well as the preview. Filled by the build and dropped with it.</summary>
-        private readonly Dictionary<string, Action> ledsCardRedims = new Dictionary<string, Action>(StringComparer.Ordinal);
+        /// <summary>Each card's repaint, by strip, so a switch, a Centre display pick or the strip's own
+        /// Brightness below paints its card as well as the preview. Filled by the build and dropped with it.</summary>
+        private readonly Dictionary<string, Action> ledsCardRepaints = new Dictionary<string, Action>(StringComparer.Ordinal);
 
         /// <summary>Set by a pick in the SimHub device picker, which redraws the whole page from inside the
         /// picker's list: the next build hands keyboard focus to the picker drawn in its place, since focus sat
@@ -53,12 +53,12 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
-            ledsCardRedims.Clear();
+            ledsCardRepaints.Clear();
             OnDrop(() =>
             {
                 carTablesButton = null;
                 carTablesLine = null;
-                ledsCardRedims.Clear();
+                ledsCardRepaints.Clear();
             });
             var bars = Settings.LedBarList().Where(bar => bar != null).ToList();
             var current = LedsSelectedBar(bars);
@@ -101,18 +101,23 @@ namespace OpenDashPlugin
                 var facts = StripFacts(ns);
                 var profile = facts == null ? null : facts.Profile;
                 var selected = facts == null ? null : facts.Selected;
-                var picture = Ui.Strip(PanelLeds.CardFrame(bar.Shape, LedsOptions(bar)), StripStyle.Card, LedsDim(ns));
-                Action redim = () => Ui.Redim(picture, LedsDim(ns));
-                ledsCardRedims[ns] = redim;
-                OnLighting(redim);
                 // A longer strip than the card holds at 9 px shrinks to it rather than being cut at its edge.
                 var fitted = new Viewbox
                 {
                     Stretch = Stretch.Uniform,
                     StretchDirection = StretchDirection.DownOnly,
                     HorizontalAlignment = HorizontalAlignment.Left,
-                    Child = picture,
                 };
+                Border picture = null;
+                Action paint = () =>
+                {
+                    var live = Settings.LedBarByNamespace(ns) ?? bar;
+                    picture = Ui.Strip(PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))), StripStyle.Card, LedsDim(ns));
+                    fitted.Child = picture;
+                };
+                paint();
+                ledsCardRepaints[ns] = paint;
+                OnLighting(() => Ui.Redim(picture, LedsDim(ns)));
                 cards.Add(Ui.StripCard(
                     bar.Name,
                     PanelLeds.ShapeDots(bar.Shape),
@@ -147,8 +152,15 @@ namespace OpenDashPlugin
             IList<string> declined;
             var targets = LedTargets.All(out declined);
 
-            Action redrawPreview;
-            var preview = LedsPreview(bar, out redrawPreview);
+            Action redrawOnlyPreview;
+            var preview = LedsPreview(bar, out redrawOnlyPreview);
+            // What changes the preview changes the strip's card above it too.
+            Action redrawPreview = () =>
+            {
+                redrawOnlyPreview();
+                Action repaintCard;
+                if (ledsCardRepaints.TryGetValue(ns, out repaintCard)) repaintCard();
+            };
             var parts = new List<UIElement> { LedsHeader(bar) };
             var fix = LedsFix(bar);
             if (fix != null) parts.Add(fix);
@@ -326,18 +338,31 @@ namespace OpenDashPlugin
             var preview = new Border { Child = row, Padding = new Thickness(0, 12, 0, 0) };
             var fit = new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = preview, HorizontalAlignment = HorizontalAlignment.Center };
 
+            // Each label has its whole width in one cell as wide as the preview, placed under its group by
+            // PanelLeds.PreviewLabelLefts whenever the room changes: a cell as wide as a 1-LED end would cut it.
             var columns = PanelLeds.PreviewColumns(ends, centre);
-            var labels = PanelLeds.PreviewLabels(ends, centre);
-            var names = new Grid { MaxWidth = columns.Sum(), HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0, 10, 0, 2) };
-            for (var c = 0; c < columns.Length; c++)
+            var names = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0, 10, 0, 2) };
+            var labels = new List<FrameworkElement>();
+            foreach (var text in PanelLeds.PreviewLabels(ends, centre))
             {
-                names.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(columns[c], GridUnitType.Star) });
-                if (c % 2 == 1) continue;
-                var label = Ui.Eyebrow(c / 2 < labels.Length ? labels[c / 2] : string.Empty);
-                label.HorizontalAlignment = HorizontalAlignment.Center;
-                Grid.SetColumn(label, c);
+                var label = Ui.Eyebrow(text);
+                label.HorizontalAlignment = HorizontalAlignment.Left;
+                labels.Add(label);
                 names.Children.Add(label);
             }
+            Action place = () =>
+            {
+                var room = names.ActualWidth;
+                if (room <= 0) return;
+                var widths = labels.Select(label =>
+                {
+                    label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    return label.DesiredSize.Width - label.Margin.Left - label.Margin.Right;
+                }).ToArray();
+                var lefts = PanelLeds.PreviewLabelLefts(columns, widths, room);
+                for (var i = 0; i < labels.Count; i++) labels[i].Margin = new Thickness(lefts[i], 0, 0, 0);
+            };
+            names.SizeChanged += (sender, args) => place();
 
             string drawn = null;
             Action draw = () =>
@@ -345,7 +370,8 @@ namespace OpenDashPlugin
                 var live = Settings.LedBarByNamespace(ns) ?? bar;
                 var lights = plugin.CarLights;
                 var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));
-                var frame = PanelLeds.PreviewFrame(ledsScenario, ends, centre, LedsOptions(live), running, running ? lights.Run(centre) : null);
+                var frame = PanelLeds.PreviewFrame(ledsScenario, ends, centre, LedsOptions(live), running, running ? lights.Run(centre) : null,
+                    PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)));
                 var key = PanelLeds.FrameKey(frame);
                 if (key == drawn) return;
                 drawn = key;
@@ -581,10 +607,8 @@ namespace OpenDashPlugin
                 {
                     Settings.SetBarBrightness(ns, PanelLeds.BrightnessValue(i));
                     Save();
+                    // At night the preview and the card are drawn at the lower of this and the night brightness.
                     redrawPreview();
-                    // At night the card is drawn at the lower of this and the night brightness, too.
-                    Action redimCard;
-                    if (ledsCardRedims.TryGetValue(ns, out redimCard)) redimCard();
                     drawBrightness(true);
                 }, 160);
                 if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));

@@ -258,8 +258,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The preview's columns at its natural size, left to right: each group's width at the preview's LEDs
-        /// and the gap between groups. The labels are laid in these as weights, outside the Viewbox that
-        /// shrinks the LEDs, so they line up under their groups at any scale and stay at their own size.
+        /// and the gap between groups. The labels are placed under these, outside the Viewbox that shrinks the
+        /// LEDs, so they line up under their groups at any scale and stay at their own size.
         /// </summary>
         public static double[] PreviewColumns(int ends, int centre)
         {
@@ -267,6 +267,39 @@ namespace OpenDashPlugin
             Func<int, double> group = n => n <= 0 ? 0 : 2 * style.PadX + n * style.Led + (n - 1) * style.Gap;
             if (ends <= 0) return new[] { group(centre) };
             return new[] { group(ends), PreviewGroupGap, group(centre), PreviewGroupGap, group(ends) };
+        }
+
+        /// <summary>
+        /// Where each label under the preview starts, given the room the preview has and each label's own
+        /// width: centred under its group as the Viewbox draws it (shrunk to the room, never grown, and centred
+        /// in it), and kept inside the room.
+        /// </summary>
+        /// <remarks>
+        /// Each label is given its whole width rather than a cell as wide as its group: a 1-LED end is 30 px wide
+        /// at the preview's size and "Right · 1" is about 50, and a Grid column clips what it cannot hold. An end
+        /// label wider than its group reaches into the gap beside it, and one at the edge of the room is moved in
+        /// rather than cut. PanelLedsTests holds every shape the build embeds to labels that stay in the room and
+        /// never meet, at full size and at the narrow column.
+        /// </remarks>
+        public static double[] PreviewLabelLefts(double[] columns, double[] labelWidths, double room)
+        {
+            var natural = columns.Sum();
+            var scale = natural <= 0 || room >= natural ? 1 : room / natural;
+            var offset = Math.Max(0, (room - natural * scale) / 2);
+            var lefts = new double[labelWidths.Length];
+            var x = 0.0;
+            for (int c = 0, g = 0; c < columns.Length; c++)
+            {
+                if (c % 2 == 0 && g < lefts.Length)
+                {
+                    var width = labelWidths[g];
+                    var middle = offset + (x + columns[c] / 2) * scale;
+                    lefts[g] = Math.Max(0, Math.Min(middle - width / 2, room - width));
+                    g++;
+                }
+                x += columns[c];
+            }
+            return lefts;
         }
 
         /// <summary>Whether a tick redraws the preview: only while Live is pressed, since every other chip is a
@@ -321,19 +354,49 @@ namespace OpenDashPlugin
         /// draws: the car's lights are loaded and the strip uses them. Otherwise it is the strip at rest, since a
         /// picture of lights that are not lit is worse than none. Every other chip is PanelEmulation's rules.
         /// </remarks>
-        public static string[][] PreviewFrame(string scenario, int ends, int centre, StripOptions options, bool live, string packed)
+        public static string[][] PreviewFrame(string scenario, int ends, int centre, StripOptions options, bool live, string packed, bool centreShowsRevs = true)
         {
             if (scenario == LiveScenario || PanelEmulation.Find(scenario) == null)
             {
                 return live ? PanelEmulation.LiveFrame(packed, ends, centre) : PanelEmulation.StripFrame(ends, centre, PanelEmulation.Idle, options);
             }
-            return PanelEmulation.StripFrame(ends, centre, scenario, options);
+            return CentreAtRest(PanelEmulation.StripFrame(ends, centre, scenario, options), scenario, centreShowsRevs);
         }
 
-        /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on.</summary>
-        public static string[][] CardFrame(string shapeId, StripOptions options)
+        /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on, in a centre that
+        /// shows them.</summary>
+        public static string[][] CardFrame(string shapeId, StripOptions options, bool centreShowsRevs = true)
         {
-            return PanelEmulation.StripFrame(Ends(shapeId), Centre(shapeId), PanelEmulation.Mid, options);
+            return CentreAtRest(PanelEmulation.StripFrame(Ends(shapeId), Centre(shapeId), PanelEmulation.Mid, options), PanelEmulation.Mid, centreShowsRevs);
+        }
+
+        /// <summary>Whether a strip's centre shows the revs (Centre display on RPM), which is the only centre the
+        /// profile draws the rev ladder in.</summary>
+        public static bool CentreShowsRevs(string centre)
+        {
+            return Contract.NormaliseLedCentre(centre) == Contract.DefaultLedCentre;
+        }
+
+        /// <summary>A moment that is the revs alone: the shift point, half way, and idle.</summary>
+        public static bool IsRevMoment(string scenario)
+        {
+            return scenario == PanelEmulation.Shift || scenario == PanelEmulation.Mid || scenario == PanelEmulation.Idle;
+        }
+
+        /// <summary>
+        /// A rev moment on a strip whose centre shows the brake, the pedals or the fuel: the centre at rest,
+        /// since the profile never draws the revs there. Its brake or fuel is not the moment's to draw.
+        /// </summary>
+        /// <remarks>
+        /// Only the rev moments: under a flag, a car alongside or the limiter, PanelEmulation.StripFrame draws
+        /// the revs under the effect in every centre, which is the emulation's to change (it is frozen here).
+        /// </remarks>
+        private static string[][] CentreAtRest(string[][] frame, string scenario, bool centreShowsRevs)
+        {
+            if (centreShowsRevs || !IsRevMoment(scenario) || frame == null || frame.Length == 0) return frame;
+            var middle = frame.Length == 3 ? 1 : 0;
+            frame[middle] = new string[frame[middle] == null ? 0 : frame[middle].Length];
+            return frame;
         }
 
         /// <summary>
