@@ -99,7 +99,7 @@ namespace OpenDashPlugin
             }
             var lights = BuildShortcutsLights(layout);
             var alerts = BuildShortcutsAlerts(layout);
-            var groups = screens.Concat(new[] { lights, alerts }).ToList();
+            var groups = PanelShortcuts.CardOrder(screens, lights, alerts);
 
             if (screens.Count > 0) Ui.Anchor(screens[0].Card, PanelShortcuts.AnchorScreens);
             Ui.Anchor(lights.Card, PanelShortcuts.AnchorRig);
@@ -462,18 +462,16 @@ namespace OpenDashPlugin
             var anyShown = false;
             foreach (var group in groups)
             {
-                var ruled = group.HasLead;
-                var groupShown = false;
+                var firstShown = true;
                 foreach (var row in group.Rows)
                 {
                     var shows = PanelShortcuts.Shows(chosen, states[row]);
                     row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
                     if (!shows) continue;
-                    // The header draws a rule under itself, so the first row under it draws none of its own.
-                    row.Row.BorderThickness = new Thickness(0, ruled ? PanelMetrics.BorderWeight : 0, 0, 0);
-                    ruled = true;
-                    groupShown = true;
+                    row.Row.BorderThickness = new Thickness(0, PanelShortcuts.RuleAbove(firstShown, group.HasLead) ? PanelMetrics.BorderWeight : 0, 0, 0);
+                    firstShown = false;
                 }
+                var groupShown = PanelShortcuts.CardShows(group.Rows.Select(row => states[row]), chosen);
                 group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;
                 anyShown |= groupShown;
                 var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable);
@@ -494,7 +492,7 @@ namespace OpenDashPlugin
             }
             banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            var emptyText = anyShown ? null : PanelShortcuts.FilterEmpty(chosen);
+            var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);
             empty.Text = emptyText ?? string.Empty;
             empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;
         }

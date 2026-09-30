@@ -275,6 +275,32 @@ namespace OpenDashPlugin
             return Array.IndexOf(FilterValues, chosen) >= 0 ? chosen : FilterAll;
         }
 
+        /// <summary>The cards in the page's order: the screens', then Lights, then Alerts.</summary>
+        public static IList<T> CardOrder<T>(IEnumerable<T> screens, T lights, T alerts)
+        {
+            return (screens ?? Enumerable.Empty<T>()).Concat(new[] { lights, alerts }).ToList();
+        }
+
+        /// <summary>Whether a card shows under the filter: only with a row to show, never as a header alone.</summary>
+        public static bool CardShows(IEnumerable<RowState> rows, string filter)
+        {
+            return (rows ?? Enumerable.Empty<RowState>()).Any(row => Shows(filter, row));
+        }
+
+        /// <summary>Whether a shown row draws the rule above it: every one but the first under its card's
+        /// header, which draws a rule under itself, unless a line (the companion's paging) sits between.</summary>
+        public static bool RuleAbove(bool firstShown, bool hasLead)
+        {
+            return !firstShown || hasLead;
+        }
+
+        /// <summary>The line under the cards: what <see cref="FilterEmpty"/> says, and only when the filter
+        /// leaves no row on the page.</summary>
+        public static string EmptyLine(string filter, bool anyShown)
+        {
+            return anyShown ? null : FilterEmpty(filter);
+        }
+
         /// <summary>What the page says when the filter leaves no row: null under All, which always has one.</summary>
         public static string FilterEmpty(string filter)
         {

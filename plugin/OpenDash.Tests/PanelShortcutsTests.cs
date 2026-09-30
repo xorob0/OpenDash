@@ -238,6 +238,36 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Every shortcut is bound.", PanelShortcuts.FilterEmpty(PanelShortcuts.FilterNotBound));
         }
 
+        [Fact]
+        public void The_filter_leaves_a_card_only_with_a_row_and_says_so_only_when_the_page_is_empty()
+        {
+            // The screens' cards, then Lights, then Alerts.
+            Assert.Equal(new[] { "Main dash", "Rim", "Lights", "Alerts" }, PanelShortcuts.CardOrder(new[] { "Main dash", "Rim" }, "Lights", "Alerts"));
+            Assert.Equal(new[] { "Lights", "Alerts" }, PanelShortcuts.CardOrder(new string[0], "Lights", "Alerts"));
+
+            // A card with no row to show is not drawn as a header alone.
+            Assert.True(PanelShortcuts.CardShows(new[] { NotBound, Bound }, PanelShortcuts.FilterBound));
+            Assert.False(PanelShortcuts.CardShows(new[] { NotBound, NotBound }, PanelShortcuts.FilterBound));
+            Assert.False(PanelShortcuts.CardShows(new[] { Greyed }, PanelShortcuts.FilterBound));
+            Assert.True(PanelShortcuts.CardShows(new[] { Greyed }, PanelShortcuts.FilterNotBound));
+            Assert.False(PanelShortcuts.CardShows(new[] { Bound }, PanelShortcuts.FilterNotBound));
+            Assert.False(PanelShortcuts.CardShows(new PanelShortcuts.RowState[0], PanelShortcuts.FilterAll));
+
+            // The header rules itself off, so the first row under it draws no rule, unless the companion's
+            // paging line sits between them; every later row draws one.
+            Assert.False(PanelShortcuts.RuleAbove(true, false));
+            Assert.True(PanelShortcuts.RuleAbove(true, true));
+            Assert.True(PanelShortcuts.RuleAbove(false, false));
+            Assert.True(PanelShortcuts.RuleAbove(false, true));
+
+            // The empty line only when no row shows: never under rows it would contradict.
+            Assert.Null(PanelShortcuts.EmptyLine(PanelShortcuts.FilterBound, true));
+            Assert.Null(PanelShortcuts.EmptyLine(PanelShortcuts.FilterNotBound, true));
+            Assert.Null(PanelShortcuts.EmptyLine(PanelShortcuts.FilterAll, false));
+            Assert.Equal("Nothing is bound yet.", PanelShortcuts.EmptyLine(PanelShortcuts.FilterBound, false));
+            Assert.Equal("Every shortcut is bound.", PanelShortcuts.EmptyLine(PanelShortcuts.FilterNotBound, false));
+        }
+
         private static PanelShortcuts.BindingUse Use(string trigger, string place, string does, PanelShortcuts.Fires fires = PanelShortcuts.Fires.OnEveryPress)
         {
             return new PanelShortcuts.BindingUse(trigger, place, does, fires);
@@ -575,6 +605,27 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OnDrop(detach);", body);
         }
 
+        /// <summary>
+        /// The half of the watch that takes it up: a mapping's trigger or press type changed in place (the
+        /// short and long press split turns on the press type), a model whose Triggers is replaced, and a model
+        /// replaced, which SimHub 9.12.6's ControlsEditor_Loaded does before the driver can press Add, so the
+        /// watch is taken up again on Loaded and on Model. The names are SimHub.Plugins.dll's, and
+        /// PanelObligationsTests.A_glance_rebound_in_place_is_held_again pins the same for HoldWhilePressed.
+        /// Every live row on every card is watched.
+        /// </summary>
+        [Fact]
+        public void The_bindings_watch_is_taken_up_on_every_row_whenever_the_editor_or_its_model_moves()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            var body = code.Substring(code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal));
+            Assert.Contains("args.PropertyName == \"Trigger\" || args.PropertyName == \"PressType\"", Between(body, "mappingChanged = (sender, args) =>", "};"));
+            Assert.Contains("args.PropertyName != \"Triggers\"", Between(body, "modelChanged = (sender, args) =>", "};"));
+            Assert.Contains("args.PropertyName == \"Model\") attach();", body);
+            Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "return ShortcutsTitleTagged(");
+            Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);", page);
+        }
+
         private static string Between(string text, string from, string to)
         {
             var start = text.IndexOf(from, StringComparison.Ordinal);
@@ -582,6 +633,49 @@ namespace OpenDashPlugin.Tests
             var end = text.IndexOf(to, start, StringComparison.Ordinal);
             Assert.True(end > start, to);
             return text.Substring(start, end - start);
+        }
+
+        /// <summary>
+        /// Each card's builder wires its rows as the model gives them: the screen's name as the place, so that two
+        /// screens' uses of one action stay apart in the clash line; SimHub's editor for every live row, which
+        /// is what the counts, the filter and the clash line read; each kind's own glance caption; and the kind
+        /// dispatch, which alone gives a round screen no card.
+        /// </summary>
+        [Fact]
+        public void Each_card_wires_its_rows_to_its_screen_and_its_own_glance()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            var face = Between(code, "private ShortcutsGroupState BuildShortcutsFace(", "return group;");
+            Assert.Contains("foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name))", face);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", face);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);", face);
+            var wall = Between(code, "private ShortcutsGroupState BuildShortcutsPitWall(", "return group;");
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);", wall);
+            var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);", companion);
+            var lights = Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;");
+            Assert.Contains("foreach (var binding in PanelShortcuts.LightsBindings())", lights);
+            Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", lights);
+
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights(layout);");
+            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
+            Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
+        }
+
+        /// <summary>The model's geometry is what the view draws with: the header's gaps, the crumbs' gap, the
+        /// card name's ellipsis and the editor filling its slot.</summary>
+        [Fact]
+        public void The_page_draws_at_the_models_geometry()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.Contains("filter.Margin = new Thickness(PanelShell.RowGap, -PanelShortcuts.FilterRaise, 0, 0);", code);
+            Assert.Contains("filter.Margin = new Thickness(0, PanelShortcuts.FilterGapStacked, 0, 0);", code);
+            Assert.Contains("header.Margin = new Thickness(0, PanelShortcuts.IntroGap - PanelShell.SectionGapFor(PanelPage.Shortcuts), 0, 0);", code);
+            Assert.Contains("crumbs.Margin = new Thickness(0, PanelShortcuts.LeadGap, 0, 0);", code);
+            Assert.Contains("name.TextTrimming = TextTrimming.CharacterEllipsis;", Between(code, "private static ShortcutsGroupState ShortcutsCard(", "return new ShortcutsGroupState"));
+            Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
+            Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
+            Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
         }
 
         /// <summary>
@@ -663,9 +757,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable);", code);
             Assert.Contains("if (readable)\n", code.Replace("\r\n", "\n"));
             Assert.Contains("foreach (var clash in PanelShortcuts.Clashes(all))", code);
-            Assert.Contains("PanelShortcuts.FilterEmpty(chosen)", code);
             // A binding's presses come off SimHub's mapping by the name of its press type.
             Assert.Contains("PanelShortcuts.FiresOn(mapping.PressType.ToString())", code);
+
+            // What the filter leaves on screen, each the model's: the cards' order, a card only with a row, the
+            // rule above a row, and the empty line only when no row shows.
+            Assert.Contains("var groups = PanelShortcuts.CardOrder(screens, lights, alerts);", code);
+            Assert.Contains("var groupShown = PanelShortcuts.CardShows(group.Rows.Select(row => states[row]), chosen);", code);
+            Assert.Contains("group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;", code);
+            Assert.Contains("row.Row.BorderThickness = new Thickness(0, PanelShortcuts.RuleAbove(firstShown, group.HasLead) ? PanelMetrics.BorderWeight : 0, 0, 0);", code);
+            Assert.Contains("var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);", code);
 
             // The anchor puts the filter back to All on the first build after the page is opened, and never on
             // a rebuild in place, which keeps the route and its anchor: OnLeave runs on Go alone.
