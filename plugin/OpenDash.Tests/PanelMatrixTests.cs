@@ -846,7 +846,11 @@ namespace OpenDashPlugin.Tests
             var gear = new MatrixOptions { Rest = "gear" };
             var dark = new MatrixOptions { Rest = "dark" };
             Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.IdleScenario, gear));
-            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.RevsScenario, gear));
+            // The revs chip with Shift colours on is the one picture that differs from the idle display's, and
+            // is named for what it draws; the idle display is not.
+            Assert.Equal("Gear 4 in the first shift colour", PanelMatrix.PreviewAlt(PanelMatrix.RevsScenario, bandsOn));
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.IdleScenario, bandsOn));
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.RevsScenario, bandsOff));
             Assert.Equal("Dark", PanelMatrix.PreviewAlt(PanelMatrix.IdleScenario, dark));
             Assert.Equal(new[] { "Yellow flag", "Blue flag", "Pit limiter frame", "Car on the left", "Fuel pump", "Chequered flag" },
                 PanelMatrix.PreviewScenarios.Skip(2).Select(id => PanelMatrix.PreviewAlt(id, gear)));

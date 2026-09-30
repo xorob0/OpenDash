@@ -555,10 +555,14 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What the preview draws, for a screen reader (the artboard's role=img alt text): the scenario the
-        /// matrix is drawn in, as <see cref="DrawnScenario"/> leaves it, and at rest the gear or nothing.
+        /// matrix is drawn in, as <see cref="DrawnScenario"/> leaves it, and at rest the gear or nothing. The
+        /// revs chip with Shift colours on draws the gear in its first shift colour, which is the one picture
+        /// that tells it from the idle display, so it is named for that; with the switch off it draws the
+        /// idle display's white gear and is named as it is.
         /// </summary>
         public static string PreviewAlt(string drawn, MatrixOptions options)
         {
+            if (drawn == RevsScenario && options != null && options.Bands && ShowsGearRows(options.Rest)) return PreviewRevs;
             switch (drawn)
             {
                 case PanelEmulation.Yellow: return "Yellow flag";
@@ -574,6 +578,9 @@ namespace OpenDashPlugin
 
         /// <summary>The preview's alt text when the idle display rests dark.</summary>
         public const string PreviewDark = "Dark";
+
+        /// <summary>The preview's alt text under the revs chip with Shift colours on.</summary>
+        public const string PreviewRevs = "Gear " + PanelEmulation.Gear + " in the first shift colour";
 
         /// <summary>A chip's label: the Rig page's word for the scenario, and the idle display by its row's name.</summary>
         public static string PreviewLabel(string scenarioId)
