@@ -220,11 +220,43 @@ namespace OpenDashPlugin
         /// <summary>The foot's heading: a noun, not "What happens next".</summary>
         public const string NextStepsTitle = "Next steps";
 
-        /// <summary>The foot's step, built from the name in the box as it is typed: SimHub lists the dashboard
-        /// under it.</summary>
+        /// <summary>The foot's step, built from the name the screen will be added under (<see cref="NameFor"/>):
+        /// SimHub lists the dashboard under it.</summary>
         public static string NextStep(string name)
         {
             return "Restart SimHub, then assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
+        }
+
+        /// <summary>
+        /// The name Add gives the screen for what is in the box: the box trimmed, or the size when it is empty,
+        /// made distinct from every name on the rig -- what OpenDashSettings.AddScreen does with it.
+        /// </summary>
+        /// <remarks>
+        /// The foot names this and not the box: a rig that already has a Rim adds "Rim (2)", and a cleared box
+        /// adds "850 × 480", so a step built from the box sent the driver to assign another screen's
+        /// dashboard, or one called "".
+        /// </remarks>
+        public static string NameFor(string typed, PackageEntry entry, IEnumerable<string> rig)
+        {
+            var wanted = string.IsNullOrWhiteSpace(typed) ? (entry == null ? string.Empty : entry.SizeLabel) : typed.Trim();
+            return PackageCatalogue.UniqueName(wanted, rig);
+        }
+
+        /// <summary>
+        /// Whether the name in the box is the driver's, after it changed: what they type while the box has the
+        /// keyboard counts, and emptying it gives the box back to the defaults; a default the sheet wrote while
+        /// the keyboard was elsewhere leaves the answer as it was.
+        /// </summary>
+        public static bool Typed(bool wasTyped, bool byDriver, string text)
+        {
+            return byDriver ? (text ?? string.Empty).Trim().Length > 0 : wasTyped;
+        }
+
+        /// <summary>What the box says after a kind or a size is picked: the driver's own name kept, never
+        /// overwritten, and otherwise the new package's default made distinct on the rig.</summary>
+        public static string FilledName(string current, bool typed, PackageEntry entry, IEnumerable<string> rig)
+        {
+            return typed ? current : PackageCatalogue.UniqueName(DefaultName(entry), rig);
         }
 
         public const string AddTooltip = "Creates the screen and installs its dashboard.";

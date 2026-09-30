@@ -427,12 +427,14 @@ namespace OpenDashPlugin
             var name = Ui.Input(string.Empty);
             name.HorizontalAlignment = HorizontalAlignment.Stretch;
             var note = Ui.Prose(string.Empty);
-            var nextStep = Ui.Prose(PanelAddScreen.NextStep(string.Empty));
+            var nextStep = Ui.Prose(string.Empty);
+            // The foot names what Add will call the screen, which is not always what the box says.
+            Action refreshStep = () => nextStep.Text = PanelAddScreen.NextStep(PanelAddScreen.NameFor(name.Text, entry, Settings.RigScreens().Select(s => s.Name)));
             name.TextChanged += (sender, args) =>
             {
                 // Only what the driver types counts as theirs: a default the sheet filled in is not.
-                if (name.IsKeyboardFocusWithin) typed = name.Text.Trim().Length > 0;
-                nextStep.Text = PanelAddScreen.NextStep(name.Text);
+                typed = PanelAddScreen.Typed(typed, name.IsKeyboardFocusWithin, name.Text);
+                refreshStep();
             };
 
             var kindsHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
@@ -442,8 +444,8 @@ namespace OpenDashPlugin
             {
                 // Only while the driver has not typed one of their own: a default that overwrites what
                 // somebody has just written is worse than no default at all.
-                if (typed) return;
-                name.Text = PackageCatalogue.UniqueName(PanelAddScreen.DefaultName(entry), Settings.RigScreens().Select(s => s.Name));
+                name.Text = PanelAddScreen.FilledName(name.Text, typed, entry, Settings.RigScreens().Select(s => s.Name));
+                refreshStep();
             };
             Action refreshNote = () =>
             {

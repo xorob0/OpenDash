@@ -125,6 +125,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("  Rim "));
             // The same step the line after Add says, so the foot and the message cannot disagree.
             Assert.EndsWith(PanelAddScreen.NextStep("Rim"), PanelAddScreen.Added("Rim", "Rim"));
+
+            // The foot names what Add will call the screen: the rig's settings name a taken name apart and
+            // give an empty box the size, and NameFor says the same before the press.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var rim = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            settings.AddScreen(rim, "Rim");
+            var names = settings.RigScreens().Select(s => s.Name).ToList();
+            Assert.Equal("Rim (2)", PanelAddScreen.NameFor(" Rim ", rim, names));
+            Assert.Equal(settings.AddScreen(rim, " Rim ").Name, PanelAddScreen.NameFor(" Rim ", rim, names));
+            names = settings.RigScreens().Select(s => s.Name).ToList();
+            Assert.Equal("850 × 480", PanelAddScreen.NameFor("  ", rim, names));
+            Assert.Equal(settings.AddScreen(rim, "  ").Name, PanelAddScreen.NameFor("  ", rim, names));
+            Assert.Equal("Restart SimHub, then assign \"Rim (3)\" to this display in Dash Studio.",
+                PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, settings.RigScreens().Select(s => s.Name))));
+            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, null)));
             Assert.Equal("Add screen", PanelAddScreen.AddButton);
             Assert.Equal("Creates the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
             Assert.Equal("Cancel", PanelAddScreen.CancelButton);
@@ -222,13 +238,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "800 round", "480 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)));
         }
 
-        /// <summary>The name box opens on something a driver would recognise, not on a resource name.</summary>
+        /// <summary>The name box opens on something a driver would recognise, not on a resource name, and a
+        /// name the driver typed is never overwritten by the default of the next kind or size picked.</summary>
         [Fact]
         public void The_name_is_filled_in_with_the_package_the_design_names_or_with_its_size()
         {
             Assert.Equal("Rim", PanelAddScreen.DefaultName(Package("OpenDash 850x480", Contract.KindFace, 850, 480)));
             Assert.Equal("1280 × 720", PanelAddScreen.DefaultName(Package("OpenDash 1280x720", Contract.KindFace, 1280, 720)));
             Assert.Equal(string.Empty, PanelAddScreen.DefaultName(null));
+
+            var rim = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            var big = Package("OpenDash 1280x720", Contract.KindFace, 1280, 720);
+            // A default fills the box, distinct on the rig, while nothing is typed.
+            Assert.Equal("Rim (2)", PanelAddScreen.FilledName("1280 × 720", false, rim, new[] { "Rim" }));
+            // What the driver typed stays whatever is picked after it.
+            Assert.Equal("Wheel", PanelAddScreen.FilledName("Wheel", true, big, new[] { "Rim" }));
+            // Typing makes the box theirs, emptying it gives it back, and a default written from elsewhere
+            // changes nothing.
+            Assert.True(PanelAddScreen.Typed(false, true, "Wheel"));
+            Assert.False(PanelAddScreen.Typed(true, true, "   "));
+            Assert.True(PanelAddScreen.Typed(true, false, "Rim"));
+            Assert.False(PanelAddScreen.Typed(false, false, "Rim"));
         }
 
         /// <summary>The second screen at a size is the case worth saying out loud: it is the whole of
