@@ -46,6 +46,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildScreensPage(PanelRoute to)
         {
             var rig = Settings.RigScreens();
+            // The dashboards' versions are read again for this build, and not for an editor's redraw in it.
+            screensVersions.Clear();
             // A route to a row opens a screen that draws it, and the zone and list state the row needs, before
             // the page is built: the shell scrolls to the anchor once it is. Only on the way in, never on a
             // rebuild, which keeps the same route and would take the driver back to it after every press.
@@ -322,9 +324,28 @@ namespace OpenDashPlugin
             return Ui.Anchor(block, PanelScreens.AnchorDetails);
         }
 
-        /// <summary>The version the screen's dashboard says it is, read when Details is opened: the disk is
-        /// asked only then.</summary>
+        /// <summary>The versions Details has read in this build of the page, by namespace.</summary>
+        private readonly Dictionary<string, string> screensVersions = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The version the screen's dashboard says it is, read from its sidecar the first time Details is
+        /// drawn open in a build of the page and kept for the rest of it.
+        /// </summary>
+        /// <remarks>
+        /// A face draws Details inside its editor, which redraws itself after every tick, drag and pick while
+        /// Details is open; without the cache each of those asked the disk again on SimHub's UI thread. A
+        /// page build -- Go, Redraw, a card pressed -- reads it afresh.
+        /// </remarks>
         private string ScreensInstalledVersion(ScreenInstance screen)
+        {
+            string version;
+            if (screensVersions.TryGetValue(screen.Namespace ?? string.Empty, out version)) return version;
+            version = ScreensReadVersion(screen);
+            screensVersions[screen.Namespace ?? string.Empty] = version;
+            return version;
+        }
+
+        private string ScreensReadVersion(ScreenInstance screen)
         {
             try
             {
