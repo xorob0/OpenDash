@@ -30,6 +30,15 @@ namespace OpenDashPlugin
         /// <summary>The filter chosen on Shortcuts, kept for the session so that a rebuild keeps it.</summary>
         private string shortcutsFilter = PanelShortcuts.FilterAll;
 
+        /// <summary>
+        /// Whether the next build of Shortcuts is the first since the page was opened, when an anchor puts the
+        /// filter back to All. A rebuild in place (a resize, the rail, coming back to the panel, Redraw) builds
+        /// the same route with its anchor still on it, and must keep what the driver chose since; OnLeave runs
+        /// on every Go and never on a rebuild, so it sets this again. A route cannot tell the two apart by
+        /// reference, since a search hit re-uses its entry's route.
+        /// </summary>
+        private bool shortcutsLanding = true;
+
         /// <summary>One row the page drew: its action, SimHub's editor (or the fallback text), the bordered row
         /// and the element that shows or hides it (a greyed row's Soon wrapper).</summary>
         private sealed class ShortcutsRowState
@@ -44,7 +53,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>One card: its rows, the host of its count, and whether a line sits between its header and
-        /// its first row (the companion's paging), which decides whether that row draws its rule.</summary>
+        /// its first row (the companion's paging), which decides whether that row draws its rule, and leaves
+        /// the card without a count, as the artboard's external card has none.</summary>
         private sealed class ShortcutsGroupState
         {
             public FrameworkElement Card;
@@ -56,7 +66,12 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildShortcutsPage(PanelRoute to)
         {
-            shortcutsFilter = PanelShortcuts.FilterFor(shortcutsFilter, to == null ? null : to.Anchor, true);
+            if (shortcutsLanding)
+            {
+                shortcutsFilter = PanelShortcuts.FilterFor(shortcutsFilter, to == null ? null : to.Anchor, true);
+                shortcutsLanding = false;
+            }
+            OnLeave("Shortcuts.filterLanding", () => shortcutsLanding = true);
             var stacks = PanelShortcuts.RowStacks(ContentWidth);
 
             var screens = new List<ShortcutsGroupState>();
@@ -344,42 +359,33 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Reads every editor's triggers and redraws what depends on them: the filter's rows and cards, each
-        /// card's count, the clash lines and the empty line. When any live row cannot be read, the filter, the
-        /// counts and the clash lines are hidden and every row shows: a count that is sometimes wrong would be
-        /// worse than none.
+        /// Reads every editor's bindings and redraws what depends on them: the filter's rows and cards, each
+        /// card's count, the clash lines and the empty line. PanelShortcuts decides each: a row's state, whether
+        /// the page is readable, what the filter shows, each count and each clash. When any live row cannot be
+        /// read, the filter, the counts and the clash lines are hidden and every row shows.
         /// </summary>
         private void ShortcutsEvaluate(IList<ShortcutsGroupState> groups, FrameworkElement filter, StackPanel banner, TextBlock empty)
         {
-            var triggers = new Dictionary<ShortcutsRowState, IList<PanelShortcuts.BindingUse>>();
-            var readable = true;
-            foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Bindable))
+            var uses = new Dictionary<ShortcutsRowState, IList<PanelShortcuts.BindingUse>>();
+            var states = new Dictionary<ShortcutsRowState, PanelShortcuts.RowState>();
+            foreach (var row in groups.SelectMany(group => group.Rows))
             {
-                var read = ShortcutsUses(row);
-                if (read == null) readable = false;
-                triggers[row] = read;
+                var read = row.Bindable ? ShortcutsUses(row) : null;
+                uses[row] = read;
+                states[row] = PanelShortcuts.StateOf(row.Bindable, read == null ? (int?)null : read.Count);
             }
+            var readable = PanelShortcuts.Readable(states.Values);
             var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);
             filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;
 
             var anyShown = false;
             foreach (var group in groups)
             {
-                var bound = 0;
-                var total = 0;
                 var ruled = group.HasLead;
                 var groupShown = false;
                 foreach (var row in group.Rows)
                 {
-                    var isBound = false;
-                    if (row.Bindable)
-                    {
-                        total++;
-                        var read = triggers[row];
-                        isBound = read != null && read.Count > 0;
-                        if (isBound) bound++;
-                    }
-                    var shows = PanelShortcuts.Shows(chosen, row.Bindable, isBound);
+                    var shows = PanelShortcuts.Shows(chosen, states[row]);
                     row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
                     if (!shows) continue;
                     // The header draws a rule under itself, so the first row under it draws none of its own.
@@ -389,7 +395,7 @@ namespace OpenDashPlugin
                 }
                 group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;
                 anyShown |= groupShown;
-                var count = readable ? PanelShortcuts.Count(bound, total) : null;
+                var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable, group.HasLead);
                 group.CountHost.Child = count == null ? null : Ui.Numeral(count, PanelShortcuts.CountSize, Theme.TextSecondary);
                 group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
             }
@@ -397,15 +403,8 @@ namespace OpenDashPlugin
             banner.Children.Clear();
             if (readable)
             {
-                var uses = new List<PanelShortcuts.BindingUse>();
-                foreach (var group in groups)
-                {
-                    foreach (var row in group.Rows.Where(row => row.Bindable))
-                    {
-                        uses.AddRange(triggers[row]);
-                    }
-                }
-                foreach (var clash in PanelShortcuts.Clashes(uses))
+                var all = groups.SelectMany(group => group.Rows).Where(row => row.Bindable).SelectMany(row => uses[row]);
+                foreach (var clash in PanelShortcuts.Clashes(all))
                 {
                     var line = ShortcutsClashLine(clash);
                     if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);

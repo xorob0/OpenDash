@@ -153,11 +153,48 @@ namespace OpenDashPlugin
             return name + Join + width.ToString(CultureInfo.InvariantCulture) + " × " + height.ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>A card's count, "3 of 6": how many of its rows are bound. Null for a card with nothing to
-        /// bind, whose greyed rows are not counted, since no press could ever complete the count.</summary>
-        public static string Count(int bound, int total)
+        /// <summary>What a row is, for the filter and its card's count: greyed (it cannot be bound yet), not
+        /// read (SimHub's mappings could not be read for it), not bound, or bound.</summary>
+        public enum RowState
         {
+            Greyed,
+            Unread,
+            NotBound,
+            Bound,
+        }
+
+        /// <summary>A row's state from whether it can be bound and how many bindings were read for it, null
+        /// when none could be.</summary>
+        public static RowState StateOf(bool bindable, int? bindings)
+        {
+            if (!bindable) return RowState.Greyed;
+            if (bindings == null) return RowState.Unread;
+            return bindings.Value > 0 ? RowState.Bound : RowState.NotBound;
+        }
+
+        /// <summary>
+        /// Whether the page shows what it read: the filter, the counts and the clash line. Not when any row
+        /// could not be read, as ruled: a count that is sometimes wrong would be worse than none.
+        /// </summary>
+        public static bool Readable(IEnumerable<RowState> rows)
+        {
+            return (rows ?? Enumerable.Empty<RowState>()).All(row => row != RowState.Unread);
+        }
+
+        /// <summary>
+        /// A card's count, "3 of 6": how many of the rows it can bind are bound. Null when the page is not
+        /// <see cref="Readable"/>; for a card with nothing to bind; and for a card SimHub pages (the
+        /// companion's), which Shortcuts.dc.html leaves without a count, since its paging is bound elsewhere.
+        /// </summary>
+        /// <remarks>Greyed rows are not counted, since no press could ever complete the count: the artboard
+        /// counts them ("1 of 4" on Lights, "0 of 1" on Alerts), and this departure waits on a ruling.</remarks>
+        public static string CardCount(IEnumerable<RowState> rows, bool readable, bool pagedBySimHub)
+        {
+            if (!readable || pagedBySimHub) return null;
+            var list = (rows ?? Enumerable.Empty<RowState>()).ToList();
+            var total = list.Count(row => row != RowState.Greyed);
             if (total <= 0) return null;
+            var bound = list.Count(row => row == RowState.Bound);
             return bound.ToString(CultureInfo.InvariantCulture) + " of " + total.ToString(CultureInfo.InvariantCulture);
         }
 
@@ -184,20 +221,22 @@ namespace OpenDashPlugin
         public static readonly string[] FilterLabels = { "All", "Bound", PanelBindings.NotBound };
 
         /// <summary>
-        /// Whether a row shows under the filter. A greyed row cannot be bound, so it is neither a binding
-        /// nor one still to make, and shows under All alone.
+        /// Whether a row shows under the filter. A greyed row is not bound, and its chip says so, so it shows
+        /// under Not bound as well as All, where its Soon tag says why; that keeps "Every shortcut is bound."
+        /// true. A row not read shows under All alone, and FilterFor gives All whenever one is.
         /// </summary>
-        public static bool Shows(string filter, bool bindable, bool bound)
+        public static bool Shows(string filter, RowState row)
         {
-            if (filter == FilterBound) return bindable && bound;
-            if (filter == FilterNotBound) return bindable && !bound;
+            if (filter == FilterBound) return row == RowState.Bound;
+            if (filter == FilterNotBound) return row == RowState.NotBound || row == RowState.Greyed;
             return true;
         }
 
         /// <summary>
         /// The filter a build draws: the one chosen earlier in the session, unless the page was opened on a
         /// row (a binding chip's press, a search hit), which the filter must not hide, or SimHub's mappings
-        /// cannot be read, when there is no filter at all.
+        /// cannot be read, when there is no filter at all. The page asks with the anchor on the first build
+        /// after it is opened alone: a rebuild in place keeps the route, anchor and all, and the choice.
         /// </summary>
         public static string FilterFor(string chosen, string anchor, bool readable)
         {

@@ -43,11 +43,43 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_card_counts_its_bound_rows_and_a_card_of_greyed_rows_counts_nothing()
+        public void A_row_is_greyed_unread_bound_or_not_bound()
         {
-            Assert.Equal("3 of 6", PanelShortcuts.Count(3, 6));
-            Assert.Equal("0 of 3", PanelShortcuts.Count(0, 3));
-            Assert.Null(PanelShortcuts.Count(0, 0));
+            Assert.Equal(PanelShortcuts.RowState.Greyed, PanelShortcuts.StateOf(false, null));
+            Assert.Equal(PanelShortcuts.RowState.Greyed, PanelShortcuts.StateOf(false, 2));
+            Assert.Equal(PanelShortcuts.RowState.Unread, PanelShortcuts.StateOf(true, null));
+            Assert.Equal(PanelShortcuts.RowState.NotBound, PanelShortcuts.StateOf(true, 0));
+            Assert.Equal(PanelShortcuts.RowState.Bound, PanelShortcuts.StateOf(true, 1));
+        }
+
+        private static readonly PanelShortcuts.RowState Greyed = PanelShortcuts.RowState.Greyed;
+        private static readonly PanelShortcuts.RowState Unread = PanelShortcuts.RowState.Unread;
+        private static readonly PanelShortcuts.RowState NotBound = PanelShortcuts.RowState.NotBound;
+        private static readonly PanelShortcuts.RowState Bound = PanelShortcuts.RowState.Bound;
+
+        [Fact]
+        public void A_card_counts_its_bound_rows_out_of_those_it_can_bind()
+        {
+            Assert.Equal("3 of 6", PanelShortcuts.CardCount(new[] { Bound, Bound, Bound, NotBound, NotBound, NotBound }, true, false));
+            // Greyed rows are left out of the total: Lights with night mode bound reads "1 of 3", not the
+            // artboard's "1 of 4" (a departure awaiting a ruling), and Alerts, all greyed, has no count.
+            Assert.Equal("1 of 3", PanelShortcuts.CardCount(new[] { Bound, NotBound, NotBound, Greyed }, true, false));
+            Assert.Null(PanelShortcuts.CardCount(new[] { Greyed }, true, false));
+            Assert.Null(PanelShortcuts.CardCount(new PanelShortcuts.RowState[0], true, false));
+        }
+
+        [Fact]
+        public void A_card_has_no_count_when_simhub_pages_it_or_nothing_can_be_read()
+        {
+            // The companion's card, whose paging SimHub binds: the artboard's external card has no count.
+            Assert.Null(PanelShortcuts.CardCount(new[] { Bound }, true, true));
+            Assert.Null(PanelShortcuts.CardCount(new[] { NotBound }, true, true));
+            // Ruling 60: when any row cannot be read, no card counts, and neither the filter nor the clash
+            // line is drawn.
+            Assert.Null(PanelShortcuts.CardCount(new[] { Bound, NotBound }, false, false));
+            Assert.True(PanelShortcuts.Readable(new[] { Bound, NotBound, Greyed }));
+            Assert.True(PanelShortcuts.Readable(new PanelShortcuts.RowState[0]));
+            Assert.False(PanelShortcuts.Readable(new[] { Bound, Unread, Greyed }));
         }
 
         [Fact]
@@ -138,25 +170,27 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_filter_shows_all_bound_or_not_bound_and_a_greyed_row_only_under_all()
+        public void The_filter_shows_all_bound_or_not_bound_and_a_greyed_row_is_not_bound()
         {
             Assert.Equal(new[] { "All", "Bound", "Not bound" }, PanelShortcuts.FilterLabels);
             Assert.Equal(PanelShortcuts.FilterValues.Length, PanelShortcuts.FilterLabels.Length);
             Assert.Equal(PanelBindings.NotBound, PanelShortcuts.FilterLabels[2]);
 
-            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, true, true));
-            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, true, false));
-            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, false, false));
-            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterBound, true, true));
-            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterBound, true, false));
-            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterBound, false, false));
-            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, true, true));
-            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, true, false));
-            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, false, false));
+            foreach (var row in new[] { Greyed, Unread, NotBound, Bound }) Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, row));
+            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterBound, Bound));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterBound, NotBound));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterBound, Greyed));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterBound, Unread));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, Bound));
+            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, NotBound));
+            // A greyed row is not bound, and its chip says so: Not bound shows it, so that "Every shortcut is
+            // bound." cannot be said while the Rig test and the alert's dismissal are still to come.
+            Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, Greyed));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterNotBound, Unread));
         }
 
         [Fact]
-        public void The_filter_never_hides_the_row_the_page_was_opened_on_and_is_gone_when_nothing_can_be_read()
+        public void The_filter_goes_to_all_for_a_row_the_page_was_opened_on_and_when_nothing_can_be_read()
         {
             Assert.Equal(PanelShortcuts.FilterBound, PanelShortcuts.FilterFor(PanelShortcuts.FilterBound, null, true));
             Assert.Equal(PanelShortcuts.FilterAll, PanelShortcuts.FilterFor(PanelShortcuts.FilterBound, PanelBindings.Anchor("BrightnessUp"), true));
@@ -401,6 +435,27 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("padding: PanelKit.SegmentedPaddingShortcuts", code);
             // Columns follow the room a row has, never the sidebar's state.
             Assert.DoesNotContain("!Narrow", code);
+
+            // What the model decides from the bindings read, each drawn through it: the row's state, the
+            // page's readability, the filter, the counts (and none for the companion), and ruling 60's three
+            // hides when a row cannot be read.
+            Assert.Contains("states[row] = PanelShortcuts.StateOf(row.Bindable, read == null ? (int?)null : read.Count);", code);
+            Assert.Contains("var readable = PanelShortcuts.Readable(states.Values);", code);
+            Assert.Contains("var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);", code);
+            Assert.Contains("filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;", code);
+            Assert.Contains("PanelShortcuts.Shows(chosen, states[row])", code);
+            Assert.Contains("var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable, group.HasLead);", code);
+            Assert.Contains("if (readable)\n", code.Replace("\r\n", "\n"));
+            Assert.Contains("foreach (var clash in PanelShortcuts.Clashes(all))", code);
+            Assert.Contains("PanelShortcuts.FilterEmpty(chosen)", code);
+            // A binding's presses come off SimHub's mapping by the name of its press type.
+            Assert.Contains("PanelShortcuts.FiresOn(mapping.PressType.ToString())", code);
+
+            // The anchor puts the filter back to All on the first build after the page is opened, and never on
+            // a rebuild in place, which keeps the route and its anchor: OnLeave runs on Go alone.
+            var landing = Regex.Match(code, @"if \(shortcutsLanding\)\s*\{\s*shortcutsFilter = PanelShortcuts\.FilterFor\(shortcutsFilter, to == null \? null : to\.Anchor, true\);\s*shortcutsLanding = false;\s*\}\s*OnLeave\(""Shortcuts\.filterLanding"", \(\) => shortcutsLanding = true\);");
+            Assert.True(landing.Success, "the filter's reset for an anchor is not gated on the page's first build");
+            Assert.Single(Regex.Matches(code, @"PanelShortcuts\.FilterFor\(shortcutsFilter, to"));
         }
     }
 }
