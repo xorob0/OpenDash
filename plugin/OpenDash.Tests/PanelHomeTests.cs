@@ -958,8 +958,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, () => Open(PanelPage.Matrix, id));", code);
             Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
-            // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last.
-            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); Dispatcher.BeginInvoke(new Action(() => ShowAddScreen()), DispatcherPriority.Input); });", code);
+            // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last, and
+            // only while the Screens build it follows is showing: a press handled first drops that build.
+            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); var dropped = false; OnDrop(() => dropped = true); Dispatcher.BeginInvoke(new Action(() => { if (!dropped) ShowAddScreen(); }), DispatcherPriority.Input); });", code);
+            Assert.Single(Regex.Matches(code, @"ShowAddScreen\(\)"));
             // The shell's route is its own, not a hook: Home never reads it.
             Assert.DoesNotContain("route.", code);
             Assert.DoesNotContain("Go(PanelPage.Screens); ShowAddScreen();", code);

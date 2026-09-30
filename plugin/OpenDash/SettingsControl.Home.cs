@@ -216,9 +216,16 @@ namespace OpenDashPlugin
                 Go(PanelPage.Screens);
                 // Go puts focus on the Screens page's first control at Loaded. The sheet opens after that, at
                 // Input, so its own focus (queued at Normal as it opens) lands last and inside the sheet, and
-                // the opener it remembers is a control still on screen. Nothing queued before it navigates,
-                // and the shell's timers run at Background, after it, so the page is still Screens.
-                Dispatcher.BeginInvoke(new Action(() => ShowAddScreen()), DispatcherPriority.Input);
+                // the opener it remembers is a control still on screen. Input is a background priority, run
+                // only when no input is pending, so a sidebar press made while Screens was building is handled
+                // first: the sheet belongs to the Screens build it follows, through that build's own OnDrop,
+                // which a Go or a rebuild runs, and does not open over whatever page the press went to.
+                var dropped = false;
+                OnDrop(() => dropped = true);
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!dropped) ShowAddScreen();
+                }), DispatcherPriority.Input);
             });
             var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize);
             line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0);
