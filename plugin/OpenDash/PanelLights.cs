@@ -100,7 +100,13 @@ namespace OpenDashPlugin
         public static string NotOffered(System.Collections.Generic.IList<string> names)
         {
             if (names == null || names.Count == 0) return null;
-            return NameList(names) + (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach. See SimHub's log.";
+            return NameList(names) + Unreachable(names);
+        }
+
+        /// <summary>What the devices passed over have, and where the reason is.</summary>
+        private static string Unreachable(System.Collections.Generic.IList<string> names)
+        {
+            return (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach. See SimHub's log.";
         }
 
         /// <summary>At most this many names are spelled out before the rest are counted.</summary>
@@ -112,15 +118,16 @@ namespace OpenDashPlugin
         /// <remarks>
         /// With no device offered, <see cref="NoDevices"/> would be wrong: it says there is no LED device
         /// in SimHub while the wheel is there in SimHub's list, which is the report this answers. The
-        /// sentence naming the device replaces it. With one or more offered, it follows whatever the row
-        /// already said.
+        /// sentence naming the device replaces it. With one offered, the device it goes to and the ones
+        /// passed over are one sentence, so the caption stays at voice.md's two: "Goes to Arduino RGB LEDs,
+        /// not Rim, which has no LEDs OpenDash can reach. See SimHub's log."
         /// </remarks>
         public static string DeviceRowCaption(int offered, string caption, System.Collections.Generic.IList<string> declined)
         {
             var passed = NotOffered(declined);
             if (passed == null) return offered == 0 ? NoDevices : caption;
             if (offered == 0 || string.IsNullOrEmpty(caption)) return passed;
-            return caption + " " + passed;
+            return caption.Trim().TrimEnd('.') + ", not " + NameList(declined) + ", which" + Unreachable(declined);
         }
 
         private static string NameList(System.Collections.Generic.IList<string> names)

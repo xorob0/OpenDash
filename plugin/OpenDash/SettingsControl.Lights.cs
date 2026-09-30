@@ -205,8 +205,8 @@ namespace OpenDashPlugin
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            left.Margin = new Thickness(0, 0, 20, 0);
-            right.Margin = new Thickness(20, 0, 0, 0);
+            left.Margin = new Thickness(0, 0, PanelLeds.ColumnGap / 2, 0);
+            right.Margin = new Thickness(PanelLeds.ColumnGap / 2, 0, 0, 0);
             left.VerticalAlignment = VerticalAlignment.Top;
             right.VerticalAlignment = VerticalAlignment.Top;
             Grid.SetColumn(left, 0);
@@ -583,7 +583,7 @@ namespace OpenDashPlugin
         private FrameworkElement LedsThisStrip(LedBar bar, IList<LedTarget> targets, IList<string> declined, Action redrawPreview)
         {
             var ns = bar.Namespace;
-            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value));
+            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), PanelLeds.DevicePickerWidth(ContentWidth, TwoColumns), value => MoveLedBar(ns, value));
             if (ledsFocusDevice)
             {
                 ledsFocusDevice = false;
@@ -831,53 +831,29 @@ namespace OpenDashPlugin
         // --- The strip's device and its presses -------------------------------------------------------------------
 
         /// <summary>
-        /// The device picker: which of SimHub's LED devices a strip's profile goes to.
+        /// The device picker: which of SimHub's LED devices a strip's profile goes to, as PanelLeds.DeviceRow
+        /// decides it from SimHub's devices, the strip's own and the devices passed over.
         /// </summary>
         /// <remarks>
-        /// Three shapes rather than always a drop-down. A rig with one LED device has nothing to choose
-        /// and is told where the profile went; a rig with none is told why there is nowhere for it to go,
-        /// which is a thing about the rig rather than a failure; and only a rig with two or more is asked.
-        ///
-        /// A strip pointed at a device SimHub no longer has keeps its own entry at the top of the list,
-        /// labelled as gone. Dropping it would silently re-point the strip at whatever sorted first, which
-        /// is the class of bug this whole picker exists to close.
-        ///
-        /// A device SimHub has and OpenDash did not offer is named under the row in every shape, with
-        /// the reason in SimHub's log: a wheel missing from the picker with nothing said about it is how
-        /// #437 was reported, and the line would have answered it.
+        /// A device SimHub has and OpenDash did not offer is named under the row in every shape, with the
+        /// reason in SimHub's log: a wheel missing from the picker with nothing said about it is how #437 was
+        /// reported, and the line would have answered it.
         /// </remarks>
-        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, Action<string> chosen)
+        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, double pickerWidth, Action<string> chosen)
         {
-            if (targets.Count == 0)
-            {
-                return LedsRow(PanelLights.BarDeviceTitle, null, PanelLights.DeviceRowCaption(0, null, declined));
-            }
-
-            var ids = targets.Select(t => t.Id).ToList();
-            var labels = targets.Select(t => t.Connected ? t.Name : t.Name + PanelLights.DeviceOffline).ToList();
-            var known = ids.Contains(current, StringComparer.Ordinal);
-            if (!known)
-            {
-                ids.Insert(0, current);
-                labels.Insert(0, PanelLights.DeviceGone);
-            }
-
-            if (targets.Count == 1 && known)
-            {
-                return LedsRow(PanelLights.BarDeviceTitle, null,
-                    PanelLights.DeviceRowCaption(targets.Count, PanelLights.OneDevice(labels[0]), declined));
-            }
-
-            var index = ids.FindIndex(id => string.Equals(id, current, StringComparison.Ordinal));
-            var picker = Ui.ChoiceButton(labels.ToArray(), index, i =>
+            var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);
+            if (!row.HasPicker) return LedsRow(PanelLights.BarDeviceTitle, null, row.Caption);
+            var ids = row.Ids;
+            var labels = row.Labels;
+            var picker = Ui.ChoiceButton(labels.ToArray(), row.Selected, i =>
             {
                 if (!string.Equals(ids[i], current, StringComparison.Ordinal)) chosen(ids[i]);
-            }, 160);
-            // Bounded, so a long device name trims inside the button rather than crushing the row's title or
-            // running out of its column; the whole name is the hover.
-            picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;
-            if (index >= 0) picker.ToolTip = labels[index];
-            return LedsRow(PanelLights.BarDeviceTitle, picker, PanelLights.DeviceRowCaption(targets.Count, PanelLights.BarDeviceCaption, declined));
+            }, PanelLeds.DevicePickerMinWidth);
+            // Bounded by the room the row has, so a long device name trims inside the button rather than crushing
+            // the row's title or running out of its column; the whole name is the hover.
+            picker.MaxWidth = pickerWidth;
+            if (row.Selected >= 0) picker.ToolTip = labels[row.Selected];
+            return LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);
         }
 
         /// <summary>

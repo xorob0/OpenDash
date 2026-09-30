@@ -924,7 +924,9 @@ namespace OpenDashPlugin.Tests
                 "Ui.Switch(Settings.BarSpotterWhole(ns),",
                 "PanelLeds.CentreIndex(Settings.BarCentre(ns))",
                 "BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,",
-                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value))",
+                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), PanelLeds.DevicePickerWidth(ContentWidth, TwoColumns), value => MoveLedBar(ns, value))",
+                "var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);",
+                "picker.MaxWidth = pickerWidth;",
                 "link.Click += (sender, args) => Go(PanelPage.Rig);",
                 "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
             })
@@ -1012,6 +1014,67 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(260, PanelLeds.DevicePickerMaxWidth);
             Assert.Equal(520, PanelLeds.CaptionMaxWidth);
+        }
+
+        /// <summary>
+        /// The picker takes at most half the room its row has, so "SimHub device" and the caption under it keep
+        /// the other half: where two columns first fit (760 of content, a column of 360) a fixed 260 left the
+        /// title 80 px, less than the 97.5 it needs at 15 px Medium.
+        /// </summary>
+        [Fact]
+        public void The_device_picker_leaves_the_row_its_title()
+        {
+            Assert.Equal(40, PanelLeds.ColumnGap);
+            Assert.Equal(170, PanelLeds.DevicePickerWidth(760, true));
+            Assert.Equal(260, PanelLeds.DevicePickerWidth(1600, true));
+            Assert.Equal(193, PanelLeds.DevicePickerWidth(406, false));
+            Assert.Equal(PanelLeds.DevicePickerMinWidth, PanelLeds.DevicePickerWidth(200, false));
+            var medium = Advances("BarlowMedium");
+            var title = PanelLights.BarDeviceTitle.Sum(ch => medium.TryGetValue(ch, out var em) ? em : 0.75) * 15;
+            foreach (var (content, two) in new[] { (760.0, true), (1000.0, true), (1600.0, true), (406.0, false), (527.0, false), (744.0, false) })
+            {
+                var column = two ? (content - PanelLeds.ColumnGap) / 2 : content;
+                var left = column - PanelKit.RowGapLeds - PanelLeds.DevicePickerWidth(content, two);
+                Assert.True(left >= title, "at " + content + " the title has " + left + " for " + title);
+            }
+        }
+
+        /// <summary>
+        /// The SimHub device row's shapes, decided by PanelLeds.DeviceRow: no device says so, one device the strip
+        /// is on says where it goes and draws no picker, a strip on a device SimHub does not list keeps its own
+        /// entry first and selected, even beside one device, and a device SimHub is not talking to says so.
+        /// </summary>
+        [Fact]
+        public void The_device_row_says_where_the_profile_goes_and_asks_only_where_there_is_a_choice()
+        {
+            var wheel = new LedDeviceEntry("wheel", "Fanatec CSL Elite", true);
+            var arduino = new LedDeviceEntry(LedBar.ArduinoDevice, "Arduino RGB LEDs", true);
+            var unplugged = new LedDeviceEntry("hub", "Button hub", false);
+
+            var none = PanelLeds.DeviceRow(new LedDeviceEntry[0], LedBar.ArduinoDevice, null);
+            Assert.False(none.HasPicker);
+            Assert.Equal(PanelLights.NoDevices, none.Caption);
+            Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", PanelLeds.DeviceRow(null, "wheel", new[] { "Rim" }).Caption);
+
+            var one = PanelLeds.DeviceRow(new[] { wheel }, "wheel", null);
+            Assert.False(one.HasPicker);
+            Assert.Equal("Goes to Fanatec CSL Elite.", one.Caption);
+            Assert.Equal("Goes to Button hub (not connected).", PanelLeds.DeviceRow(new[] { unplugged }, "hub", null).Caption);
+
+            // The strip's own device, gone from SimHub: first and selected, never the device that sorted first.
+            var gone = PanelLeds.DeviceRow(new[] { wheel }, "old", null);
+            Assert.True(gone.HasPicker);
+            Assert.Equal(new[] { "old", "wheel" }, gone.Ids);
+            Assert.Equal(new[] { PanelLights.DeviceGone, "Fanatec CSL Elite" }, gone.Labels);
+            Assert.Equal(0, gone.Selected);
+            Assert.Null(gone.Caption);
+
+            var two = PanelLeds.DeviceRow(new[] { arduino, unplugged }, "hub", new[] { "Rim" });
+            Assert.True(two.HasPicker);
+            Assert.Equal(new[] { LedBar.ArduinoDevice, "hub" }, two.Ids);
+            Assert.Equal(new[] { "Arduino RGB LEDs", "Button hub (not connected)" }, two.Labels);
+            Assert.Equal(1, two.Selected);
+            Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", two.Caption);
         }
 
         [Fact]

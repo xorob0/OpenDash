@@ -41,6 +41,53 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>One of SimHub's LED devices as the SimHub device row reads it: LedTarget's three facts, without
+    /// the SimHub type behind them.</summary>
+    public sealed class LedDeviceEntry
+    {
+        public LedDeviceEntry(string id, string name, bool connected)
+        {
+            Id = id;
+            Name = name;
+            Connected = connected;
+        }
+
+        public string Id { get; private set; }
+
+        public string Name { get; private set; }
+
+        public bool Connected { get; private set; }
+    }
+
+    /// <summary>What the SimHub device row draws: a caption, and a picker's entries where it has one.</summary>
+    public sealed class LedDeviceRow
+    {
+        public LedDeviceRow(string caption, IList<string> ids, IList<string> labels, int selected)
+        {
+            Caption = caption;
+            Ids = ids;
+            Labels = labels;
+            Selected = selected;
+        }
+
+        /// <summary>The line under the row's title, or null.</summary>
+        public string Caption { get; private set; }
+
+        /// <summary>The device each entry picks, or null where the row has no picker.</summary>
+        public IList<string> Ids { get; private set; }
+
+        /// <summary>What each entry says, in the order of <see cref="Ids"/>.</summary>
+        public IList<string> Labels { get; private set; }
+
+        /// <summary>The entry the picker opens on, the strip's own device.</summary>
+        public int Selected { get; private set; }
+
+        public bool HasPicker
+        {
+            get { return Ids != null; }
+        }
+    }
+
     public static class PanelLeds
     {
         public const string Title = "LEDs";
@@ -525,6 +572,56 @@ namespace OpenDashPlugin
         /// <summary>The widest the SimHub device picker is drawn, so a long device name trims inside it rather
         /// than crushing the row's title; the full name is its tooltip.</summary>
         public const double DevicePickerMaxWidth = 260;
+
+        /// <summary>The narrowest the picker is bounded to, its own minimum width.</summary>
+        public const double DevicePickerMinWidth = 160;
+
+        /// <summary>The gap between the rev lights and This strip where the two sit side by side.</summary>
+        public const double ColumnGap = 40;
+
+        /// <summary>
+        /// The widest the picker is drawn in the room its row has: at most half of it, beside the row's gap,
+        /// so the title and the caption keep the other half, and never wider than <see cref="DevicePickerMaxWidth"/>.
+        /// </summary>
+        /// <remarks>
+        /// The row sits in one of two columns where they fit, and those start at 360 wide: a fixed 260 there left
+        /// "SimHub device" 80 px and broke it onto two lines.
+        /// </remarks>
+        public static double DevicePickerWidth(double contentWidth, bool twoColumns)
+        {
+            var column = twoColumns ? (contentWidth - ColumnGap) / 2 : contentWidth;
+            return Math.Min(DevicePickerMaxWidth, Math.Max(DevicePickerMinWidth, (column - PanelKit.RowGapLeds) / 2));
+        }
+
+        /// <summary>
+        /// The SimHub device row: which of SimHub's LED devices a strip's profile goes to.
+        /// </summary>
+        /// <remarks>
+        /// Three shapes rather than always a picker. A rig with no LED device is told why there is nowhere for the
+        /// profile to go; a rig with one that the strip is on is told where it went; any other is asked. A strip
+        /// pointed at a device SimHub does not list keeps its own entry, first and selected, labelled as gone, even
+        /// beside a single device: dropping it would silently re-point the strip at whatever sorted first, which is
+        /// the class of bug the picker exists to close. A device SimHub is not talking to says so beside its name.
+        /// </remarks>
+        public static LedDeviceRow DeviceRow(IList<LedDeviceEntry> devices, string current, IList<string> declined)
+        {
+            var listed = (devices ?? new LedDeviceEntry[0]).Where(device => device != null).ToList();
+            if (listed.Count == 0) return new LedDeviceRow(PanelLights.DeviceRowCaption(0, null, declined), null, null, -1);
+            var ids = listed.Select(device => device.Id).ToList();
+            var labels = listed.Select(device => device.Connected ? device.Name : device.Name + PanelLights.DeviceOffline).ToList();
+            var known = ids.Contains(current, StringComparer.Ordinal);
+            if (!known)
+            {
+                ids.Insert(0, current);
+                labels.Insert(0, PanelLights.DeviceGone);
+            }
+            if (listed.Count == 1 && known)
+            {
+                return new LedDeviceRow(PanelLights.DeviceRowCaption(1, PanelLights.OneDevice(labels[0]), declined), null, null, -1);
+            }
+            var index = ids.FindIndex(id => string.Equals(id, current, StringComparison.Ordinal));
+            return new LedDeviceRow(PanelLights.DeviceRowCaption(listed.Count, PanelLights.BarDeviceCaption, declined), ids, labels, index);
+        }
 
         public const string CentreDisplayTitle = "Centre display";
 

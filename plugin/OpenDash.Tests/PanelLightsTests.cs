@@ -306,9 +306,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", none);
             Assert.DoesNotContain(PanelLights.NoDevices, none);
 
-            // Something offered as well: the name follows what the row said, or stands alone.
-            Assert.Equal("Goes to Arduino RGB LEDs. Rim has no LEDs OpenDash can reach. See SimHub's log.",
+            // Something offered as well: one device and the ones passed over are one sentence, so the caption
+            // stays at voice.md's ceiling of two; beside a picker the name stands alone.
+            Assert.Equal("Goes to Arduino RGB LEDs, not Rim, which has no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.DeviceRowCaption(1, "Goes to Arduino RGB LEDs.", new[] { "Rim" }));
+            Assert.Equal("Goes to Arduino RGB LEDs, not Rim and Hub, which have no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLights.DeviceRowCaption(1, "Goes to Arduino RGB LEDs.", new[] { "Rim", "Hub" }));
             Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.DeviceRowCaption(2, PanelLights.BarDeviceCaption, new[] { "Rim" }));
         }
