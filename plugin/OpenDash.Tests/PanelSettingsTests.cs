@@ -318,7 +318,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Low fuel", "Oil temperature", "Water temperature", "Tyre wear", "Pit window open", "Incidents", "Hybrid battery low" }, PanelSettings.Alerts.Select(a => a.Title));
             Assert.Equal(new[] { PanelEmulation.LowFuel, PanelEmulation.Oil, PanelEmulation.Water, null, null, null, null }, PanelSettings.Alerts.Select(a => a.ScenarioId));
             Assert.Equal(new[] { "under", "over", "over", "over", "", "at", "under" }, PanelSettings.Alerts.Select(a => a.Op));
-            Assert.Equal(new[] { "laps", null, null, "%", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
+            Assert.Equal(new[] { "laps", null, null, "", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
+            // A unit drawn alone is a word: a bare glyph slips past the icon guard, which reads only literals,
+            // so the tyre wear's '%' is drawn inside its value, as the panel draws every percentage.
+            Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.Matches(@"[\p{L}\p{Nd}]", a.Unit));
             Assert.False(PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).HasThreshold);
             Assert.Equal(new[] { true, true, true, false }, PanelSettings.Alert(PanelSettings.LowFuelTitle).Surfaces);
             Assert.Equal(new[] { false, false, true, false }, PanelSettings.Alert(PanelSettings.OilTempTitle).Surfaces);
@@ -329,7 +332,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title).Surfaces);
             // What a greyed row's box holds, faded with the row: the artboard's values, and nothing where it
             // draws a dash. The value is the box's text in the field's ink, not a placeholder in the label ink.
-            Assert.Equal(new string[] { null, null, null, "70", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
+            Assert.Equal(new string[] { null, null, null, "70%", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
             Assert.Contains("when.Add(box ?? SettingsNumberField(alert.Example ?? string.Empty));", Page());
             Assert.Equal(new[] { PanelSoon.TyreWear, PanelSoon.PitWindowOpen, PanelSoon.Incidents, PanelSoon.HybridBatteryLow }.Select(s => s.Title),
                 PanelSettings.Alerts.Where(a => !a.Live).Select(a => a.Title));
