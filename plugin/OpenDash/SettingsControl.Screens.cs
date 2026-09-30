@@ -123,7 +123,7 @@ namespace OpenDashPlugin
             {
                 var captured = screen;
                 var state = ScreensStateOf(captured);
-                var thumb = Ui.Thumb(captured.IsSlots ? "round" : captured.Kind, captured.Width, captured.Height);
+                var thumb = Ui.Thumb(PanelScreens.ThumbKind(captured), captured.Width, captured.Height);
                 cards.Add(Ui.DeviceCard(
                     thumb,
                     captured.Name,

@@ -303,6 +303,52 @@ namespace OpenDashPlugin.Tests
             var gone = new ScreenInstance { Kind = Contract.KindPitWall, Name = "Wall" };
             Assert.Equal("Pit wall", PanelScreens.Facts(gone));
             Assert.Equal(string.Empty, PanelScreens.Facts(null));
+
+            // A card face a migration left at a rectangular size is not called round, nor drawn as a ring, nor
+            // given a disc: its editor draws its rows alone, and its rev row names the bar it draws.
+            var legacy = new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480, Name = "Round" };
+            Assert.Equal("Card face", PanelScreens.CardMeta(legacy));
+            Assert.Equal("Card face · 1280 × 480", PanelScreens.Facts(legacy));
+            Assert.False(PanelScreens.IsRound(legacy));
+            Assert.True(PanelScreens.IsRound(round));
+            Assert.Equal("round", PanelScreens.ThumbKind(round));
+            Assert.Equal(Contract.KindSlots, PanelScreens.ThumbKind(legacy));
+            Assert.Equal(Contract.KindFace, PanelScreens.ThumbKind(rim));
+            Assert.True(PanelScreens.DrawsDisc(round));
+            Assert.False(PanelScreens.DrawsDisc(legacy));
+            Assert.False(PanelScreens.DrawsDisc(new ScreenInstance { Kind = Contract.KindSlots, Width = 850, Height = 480 }));
+            Assert.Equal(PanelScreens.RevRingTitle, PanelScreens.RevRingTitleFor(round));
+            Assert.Equal(PanelScreens.RevBarTitle, PanelScreens.RevRingTitleFor(legacy));
+            var page = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("Ui.Thumb(PanelScreens.ThumbKind(captured)", page);
+            var roundEditor = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
+            Assert.Contains("PanelScreens.DrawsDisc(screen)", roundEditor);
+        }
+
+        /// <summary>
+        /// The slots each card face reads are its layout's, as the build writes them into each package's
+        /// description ("1280 x 480, 8 slots"), read here from the snapshot the build's test records.
+        /// </summary>
+        [Fact]
+        public void A_card_face_reads_the_slots_its_layout_has()
+        {
+            var snapshot = System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "test", "__snapshots__", "snapshots.test.ts.snap");
+            var text = System.IO.File.ReadAllText(snapshot);
+            var found = new Dictionary<string, int>();
+            foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(text,
+                "\"Description\": \"(?:\\d+ x \\d+, )?(\\d+) slots(?:, round)?\",\\s*\"Author\": \"[^\"]*\",\\s*\"Width\": (\\d+),\\s*\"Height\": (\\d+)"))
+            {
+                found[match.Groups[2].Value + "x" + match.Groups[3].Value] = int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            Assert.Equal(10, found.Count);
+            Assert.Equal(found.OrderBy(p => p.Key, System.StringComparer.Ordinal), PanelScreens.CardsReadBySize.OrderBy(p => p.Key, System.StringComparer.Ordinal));
+            foreach (var pair in found)
+            {
+                var size = pair.Key.Split('x');
+                var screen = new ScreenInstance { Kind = Contract.KindSlots, Width = int.Parse(size[0], System.Globalization.CultureInfo.InvariantCulture), Height = int.Parse(size[1], System.Globalization.CultureInfo.InvariantCulture) };
+                Assert.Equal(pair.Value, PanelScreens.CardsRead(screen));
+                Assert.True(pair.Value <= Contract.SlotCount);
+            }
         }
 
         /// <summary>The header's presses and the remove sheet: what removing costs, and the bound buttons
@@ -733,7 +779,9 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelScreens.CompanionPagingCrumbs, crumb => Assert.Contains(crumb, PanelCopy.CompanionPaging));
             Assert.Equal(2, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
             Assert.Equal(6, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
-            Assert.Equal(Contract.SlotCount, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 }));
+            // A migrated 1280 x 480 card face reads its layout's eight, and a size no layout has all twelve.
+            Assert.Equal(8, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 }));
+            Assert.Equal(Contract.SlotCount, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 1024, Height = 600 }));
             Assert.Equal("Card 1", PanelScreens.CardLabel(1));
 
             // A 480 round reads two cards, so the line is about those two and says "Card", as its rows do. The

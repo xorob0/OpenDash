@@ -53,8 +53,8 @@ namespace OpenDashPlugin
             var head = list.Children.Count > 0 ? list.Children[0] as Border : null;
             if (head != null) head.BorderThickness = new Thickness(0);
 
-            // A legacy card face reads all twelve slots, which do not fit on the disc: its rows alone.
-            if (!PanelRoundPlan.OnDisc(read)) return list;
+            // A rectangular card face a migration left is not a disc: its rows alone.
+            if (!PanelScreens.DrawsDisc(screen)) return list;
             var picture = BuildRoundPicture(read);
             if (!TwoColumns) return Ui.VStack(16, picture, list);
             var grid = new Grid();
@@ -83,7 +83,7 @@ namespace OpenDashPlugin
                 Settings.SetRevBar(value);
                 ScreensSave(screen);
             });
-            return Ui.SettingRow(caption: PanelScreens.RigRevBarCaption, title: PanelScreens.RevRingTitle, control: control);
+            return Ui.SettingRow(caption: PanelScreens.RigRevBarCaption, title: PanelScreens.RevRingTitleFor(screen), control: control);
         }
 
         /// <summary>The disc, with the cards it carries in the order the package reads them: stacked for two,

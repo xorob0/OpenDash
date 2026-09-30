@@ -168,7 +168,7 @@ namespace OpenDashPlugin
         /// <summary>The kind under a card's name, as Screens.dc.html writes it: the header carries the size.</summary>
         public static string CardMeta(ScreenInstance screen)
         {
-            return screen == null ? string.Empty : PanelAddScreen.KindName(screen.Kind);
+            return screen == null ? string.Empty : KindOf(screen);
         }
 
         /// <summary>"Face · 1280 × 480" beside the selected screen's name; the kind alone when its package is
@@ -176,8 +176,37 @@ namespace OpenDashPlugin
         public static string Facts(ScreenInstance screen)
         {
             if (screen == null) return string.Empty;
-            var kind = PanelAddScreen.KindName(screen.Kind);
+            var kind = KindOf(screen);
             return screen.Width > 0 && screen.Height > 0 ? kind + " · " + screen.SizeLabel : kind;
+        }
+
+        /// <summary>A card face that is not round: the rectangular "OpenDash slots WxH" faces a migration can
+        /// bring onto a rig, which read the shared cards as a round screen does.</summary>
+        public const string CardFace = "Card face";
+
+        /// <summary>Whether the screen is a round one: a card face as tall as it is wide.</summary>
+        public static bool IsRound(ScreenInstance screen)
+        {
+            return screen != null && screen.IsSlots && screen.Width > 0 && screen.Width == screen.Height;
+        }
+
+        /// <summary>
+        /// The screen's kind as the card and the header name it: PanelAddScreen.KindName, except a card face
+        /// that is not round, which is not called "Round".
+        /// </summary>
+        public static string KindOf(ScreenInstance screen)
+        {
+            if (screen == null) return string.Empty;
+            if (screen.IsSlots && !IsRound(screen)) return CardFace;
+            return PanelAddScreen.KindName(screen.Kind);
+        }
+
+        /// <summary>The kind a card's picture is drawn as (Ui.Thumb): a ring for a round screen only, and a
+        /// rectangular card face at its own proportions, as its editor draws no disc.</summary>
+        public static string ThumbKind(ScreenInstance screen)
+        {
+            if (screen == null) return string.Empty;
+            return IsRound(screen) ? "round" : screen.Kind;
         }
 
         // --- The header's presses -----------------------------------------------------------------------
@@ -802,6 +831,13 @@ namespace OpenDashPlugin
         /// <summary>The round screen's rev ring, which is the rig-wide rev bar.</summary>
         public const string RevRingTitle = "Rev ring";
 
+        /// <summary>The rig-wide rev row's title on this card face: a ring on a round screen, and the rev bar
+        /// a rectangular card face draws across its top.</summary>
+        public static string RevRingTitleFor(ScreenInstance screen)
+        {
+            return screen == null || IsRound(screen) ? RevRingTitle : RevBarTitle;
+        }
+
         /// <summary>The round pane's search label, drawn as its Card rows.</summary>
         public const string CardsTitle = "Cards";
 
@@ -813,15 +849,45 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// How many slots the screen's package reads: the 480 round two, the 800 round six, and a card face
-        /// of any other size all twelve.
+        /// How many slots each card face's layout reads, by its size: packages/dash/src/layouts, which writes
+        /// the count into each package's description ("1280 x 480, 8 slots"). PanelScreensTests holds this
+        /// table to the descriptions the build's snapshot records.
         /// </summary>
+        public static readonly IReadOnlyDictionary<string, int> CardsReadBySize = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            { "1920x480", 12 },
+            { "1280x480", 8 },
+            { "1280x400", 8 },
+            { "850x480", 6 },
+            { "800x480", 6 },
+            { "1280x720", 12 },
+            { "800x286", 4 },
+            { "600x686", 6 },
+            { "480x480", 2 },
+            { "800x800", 6 },
+        };
+
+        /// <summary>
+        /// How many slots the screen's package reads: the 480 round two, the 800 round six, and a rectangular
+        /// card face what its layout reads -- eight at 1280 x 480, not twelve. A size no layout has reads all
+        /// twelve, the most any can.
+        /// </summary>
+        /// <remarks>
+        /// Every rectangular face read twelve here, so its editor drew twelve Card rows, warned of clashes in
+        /// slots the screen never draws (the fault the 480 round had), and Details named Slot01 to Slot12.
+        /// </remarks>
         public static int CardsRead(ScreenInstance screen)
         {
             if (screen == null) return Contract.SlotCount;
-            if (screen.Width == 480 && screen.Height == 480) return 2;
-            if (screen.Width == 800 && screen.Height == 800) return 6;
-            return Contract.SlotCount;
+            int read;
+            return CardsReadBySize.TryGetValue(screen.Width + "x" + screen.Height, out read) ? read : Contract.SlotCount;
+        }
+
+        /// <summary>Whether the round screen's editor draws the disc with its cards on it: a round screen whose
+        /// cards fit the disc. A rectangular card face is drawn as its rows alone, as it is not a disc.</summary>
+        public static bool DrawsDisc(ScreenInstance screen)
+        {
+            return IsRound(screen) && PanelRoundPlan.OnDisc(CardsRead(screen));
         }
 
         /// <summary>
