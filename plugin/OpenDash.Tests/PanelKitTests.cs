@@ -132,6 +132,41 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(5, MatrixStyle.Card.Cell);
         }
 
+        /// <summary>
+        /// Where one page's artboard draws a shared control at other numbers than the kit's, the number is
+        /// named here and the page passes or sets it, rather than the kit fitting one artboard and the others
+        /// typing theirs. Matrix's .seg is 28 high; Screens pads options 13 and Shortcuts 14; LEDs' and
+        /// Matrix's .chip pad 12 and their .fix 16; LEDs' .row gap is 20 and Updates' .row pads 14; Settings'
+        /// h2 is 19 with 12 under, and its &lt;main&gt; ends 40 down.
+        /// </summary>
+        [Fact]
+        public void A_page_draws_a_shared_control_at_its_own_artboards_numbers()
+        {
+            Assert.Equal(28, PanelKit.SegmentedHeightMatrix);
+            Assert.Equal(13, PanelKit.SegmentedPaddingScreens);
+            Assert.Equal(14, PanelKit.SegmentedPaddingShortcuts);
+            Assert.Equal(12, PanelKit.ChipPaddingXLights);
+            Assert.Equal(20, PanelKit.RowGapLeds);
+            Assert.Equal(14, PanelKit.RowPaddingYUpdates);
+            Assert.Equal(16, PanelKit.FixPaddingYLights);
+            Assert.Equal(14, PanelKit.SectionHeadingGap);
+            Assert.Equal(12, PanelKit.SectionHeadingGapSettings);
+            Assert.Equal(19, PanelShell.HeadingLargeSize);
+            Assert.Equal(40, PanelShell.MainPaddingBottomFor(PanelPage.Settings));
+            Assert.Equal(32, PanelShell.MainPaddingBottomFor(PanelPage.Leds));
+
+            var root = Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var segmented = RepoPaths.Code(Path.Combine(root, "Segmented.cs"));
+            Assert.Contains("public const double BarHeight = 30;", segmented);
+            Assert.Contains("public const double OptionPadding = 12;", segmented);
+            Assert.Contains("double height = BarHeight, double padding = OptionPadding", segmented);
+            Assert.Contains("Height = height;", segmented);
+            Assert.Contains("text.Margin = new Thickness(optionPadding, 0, optionPadding, 0);", segmented);
+            var shell = RepoPaths.Code(Path.Combine(root, "SettingsControl.cs"));
+            Assert.Contains("private static FrameworkElement PageSection(string heading, bool large, double gapBelow, params UIElement[] children)", shell);
+            Assert.Contains("PanelShell.MainPaddingBottomFor(route.Page)", shell);
+        }
+
         [Fact]
         public void The_chips_are_the_artboards_chip_and_key()
         {

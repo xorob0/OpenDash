@@ -1,5 +1,6 @@
 // Segmented.cs: the two-to-four-way choice the redesign's artboards call .seg: a 30 px bar inside a one pixel
-// ui.border at radius 2, each option padded 12 in 13 px Medium and secondary ink, the chosen one on the
+// ui.border at radius 2 (Matrix's is 28), each option padded 12 (Screens' 13, Shortcuts' 14) in 13 px Medium
+// and secondary ink, the chosen one on the
 // raised ground in primary ink with a 2 px accent line along its foot. An option can be drawn and not
 // offered (Settings' "Yellow flags" scope, #504), in the dim ink with a tooltip of its own.
 using System;
@@ -14,9 +15,12 @@ namespace OpenDashPlugin
 {
     internal sealed class Segmented : Border
     {
-        /// <summary>The bar's height, which every artboard draws at 30.</summary>
+        /// <summary>The bar's height where a page passes none: Rig, Settings, LEDs, Screens and Shortcuts draw
+        /// 30. Matrix.dc.html's .seg is 28 and passes PanelKit.SegmentedHeightMatrix.</summary>
         public const double BarHeight = 30;
 
+        /// <summary>Each option's padding either side where a page passes none, 12; Screens.dc.html pads 13
+        /// and Shortcuts.dc.html 14 (PanelKit.SegmentedPaddingScreens and SegmentedPaddingShortcuts).</summary>
         public const double OptionPadding = 12;
         public const double OptionTextSize = 13;
         public const double Underline = 2;
@@ -68,15 +72,19 @@ namespace OpenDashPlugin
         private readonly List<Cell> cells = new List<Cell>();
         private readonly List<string> values = new List<string>();
         private string selected;
+        private readonly double optionPadding;
 
         public event Action<string> Changed;
 
-        public Segmented(IEnumerable<Option> options, string selectedValue)
+        /// <param name="height">The bar's height: <see cref="BarHeight"/>, or the page's artboard's.</param>
+        /// <param name="padding">Each option's padding either side: <see cref="OptionPadding"/>, or the page's.</param>
+        public Segmented(IEnumerable<Option> options, string selectedValue, double height = BarHeight, double padding = OptionPadding)
         {
+            optionPadding = padding;
             BorderBrush = Ui.Brush(Theme.Border);
             BorderThickness = new Thickness(1);
             CornerRadius = new CornerRadius(Theme.Radius);
-            Height = BarHeight;
+            Height = height;
             HorizontalAlignment = HorizontalAlignment.Right;
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
@@ -131,7 +139,7 @@ namespace OpenDashPlugin
         {
             var corners = new CornerRadius(first ? 1 : 0, last ? 1 : 0, last ? 1 : 0, first ? 1 : 0);
             var text = Ui.Text(option.Label, OptionTextSize, FontWeights.Medium, Theme.TextSecondary);
-            text.Margin = new Thickness(OptionPadding, 0, OptionPadding, 0);
+            text.Margin = new Thickness(optionPadding, 0, optionPadding, 0);
             if (option.MinWidth > 0) text.HorizontalAlignment = HorizontalAlignment.Center;
             var line = new Rectangle { Height = Underline, VerticalAlignment = VerticalAlignment.Bottom, Fill = System.Windows.Media.Brushes.Transparent, IsHitTestVisible = false };
             var ring = new Border

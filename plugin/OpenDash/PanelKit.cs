@@ -82,6 +82,38 @@ namespace OpenDashPlugin
         public const double StripAddIcon = 18;
         public const double MatrixAddIcon = 16;
 
+        // --- One artboard's number where another's is the kit's -----------------------------------------
+        //
+        // The kit draws each control at the numbers most artboards give it. Where one page's artboard draws it
+        // otherwise, the page passes or sets that page's number from here rather than typing it: Segmented
+        // and PageSection take theirs as arguments, and a page sets the rest on the element the kit returns --
+        // a Chip's Padding, a SettingRow's Padding (the Border) or its control's Margin.Left (the gap, which
+        // SettingRow adds to that margin), a FixBox's Padding. Nothing else about the element is a page's.
+
+        /// <summary>Matrix.dc.html's .seg button{height:28px}; every other artboard's is 30.</summary>
+        public const double SegmentedHeightMatrix = 28;
+
+        /// <summary>Screens.dc.html's .seg button{padding:0 13px} and Shortcuts.dc.html's {padding:0 14px};
+        /// the rest pad 12.</summary>
+        public const double SegmentedPaddingScreens = 13;
+        public const double SegmentedPaddingShortcuts = 14;
+
+        /// <summary>Leds.dc.html's and Matrix.dc.html's .chip{padding:0 12px}; Rig's is 11.</summary>
+        public const double ChipPaddingXLights = 12;
+
+        /// <summary>Leds.dc.html's .row{gap:20px}, and Updates.dc.html's .row{padding:14px 0}; the rest are
+        /// 24 and 12 (PanelShell.RowGap, RowPaddingY).</summary>
+        public const double RowGapLeds = 20;
+        public const double RowPaddingYUpdates = 14;
+
+        /// <summary>Leds.dc.html's and Matrix.dc.html's .fix{padding:16px 18px}; Screens' is 14.</summary>
+        public const double FixPaddingYLights = 16;
+
+        /// <summary>A section's heading and what is under it: 17 with 14 under, the kit's; Settings.dc.html's
+        /// h2 is 19 (PanelShell.HeadingLargeSize) with 12 under.</summary>
+        public const double SectionHeadingGap = 14;
+        public const double SectionHeadingGapSettings = 12;
+
         // --- Chips ---------------------------------------------------------------------------------------
 
         /// <summary>Rig's .chip: 30 high and 11 in, the word at 13/500, a 10 px swatch 6 before it.</summary>

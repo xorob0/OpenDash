@@ -288,7 +288,7 @@ namespace OpenDashPlugin
         private void ApplyLayout()
         {
             var pad = PanelShell.MainPaddingX(layout);
-            mainFrame.Padding = new Thickness(pad, PanelShell.MainPaddingTop, pad, PanelShell.MainPaddingBottom);
+            mainFrame.Padding = new Thickness(pad, PanelShell.MainPaddingTop, pad, PanelShell.MainPaddingBottomFor(route.Page));
             mainColumn.MaxWidth = WidePage(route.Page) ? double.PositiveInfinity : PanelShell.ContentMax + 2 * pad;
             sidebarHost.Width = PanelShell.SidebarWidthFor(layout);
             sheetLayer.Margin = new Thickness(PanelShell.SidebarWidthFor(layout), 0, 0, 0);
@@ -753,14 +753,22 @@ namespace OpenDashPlugin
             return stack;
         }
 
-        /// <summary>A section of a page: its heading, and what is under it 14 below.</summary>
+        /// <summary>A section of a page: its heading at 17, and what is under it 14 below.</summary>
         private static FrameworkElement PageSection(string heading, params UIElement[] children)
+        {
+            return PageSection(heading, false, PanelKit.SectionHeadingGap, children);
+        }
+
+        /// <summary>A section of a page with its artboard's own heading: at 19 when <paramref name="large"/>,
+        /// and <paramref name="gapBelow"/> over what is under it. Settings.dc.html's h2 is 19 with 12 under
+        /// (PanelKit.SectionHeadingGapSettings).</summary>
+        private static FrameworkElement PageSection(string heading, bool large, double gapBelow, params UIElement[] children)
         {
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             if (!string.IsNullOrEmpty(heading))
             {
-                var title = Ui.Heading(heading);
-                title.Margin = new Thickness(0, 0, 0, 14);
+                var title = Ui.Heading(heading, large);
+                title.Margin = new Thickness(0, 0, 0, gapBelow);
                 stack.Children.Add(title);
             }
             foreach (var child in children)
@@ -811,10 +819,12 @@ namespace OpenDashPlugin
             return Ui.Switch(isOn, changed);
         }
 
-        private static Segmented BuildSegmented(string[] values, string[] labels, string selected, Action<string> changed)
+        /// <summary>A segmented choice at the kit's numbers, or at a page's (PanelKit.SegmentedHeightMatrix,
+        /// SegmentedPaddingScreens, SegmentedPaddingShortcuts). The labels are positional.</summary>
+        private static Segmented BuildSegmented(string[] values, string[] labels, string selected, Action<string> changed, double height = Segmented.BarHeight, double padding = Segmented.OptionPadding)
         {
             var options = values.Select((value, i) => new Segmented.Option(value, labels[i]));
-            var control = new Segmented(options, selected);
+            var control = new Segmented(options, selected, height, padding);
             control.Changed += changed;
             return control;
         }

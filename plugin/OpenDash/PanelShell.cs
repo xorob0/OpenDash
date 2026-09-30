@@ -286,6 +286,15 @@ namespace OpenDashPlugin
         public const double MainPaddingTop = 36;
         public const double MainPaddingBottom = 32;
 
+        /// <summary>The main column's padding under a page: 32 on every artboard but Settings.dc.html's,
+        /// whose &lt;main&gt; is "36px 44px 40px".</summary>
+        public const double MainPaddingBottomSettings = 40;
+
+        public static double MainPaddingBottomFor(PanelPage page)
+        {
+            return page == PanelPage.Settings ? MainPaddingBottomSettings : MainPaddingBottom;
+        }
+
         /// <summary>What a page's content grows to and not past. The Rig page may opt out, since its canvas
         /// is a drawing of the rig and is better for the room.</summary>
         public const double ContentMax = 1112;
