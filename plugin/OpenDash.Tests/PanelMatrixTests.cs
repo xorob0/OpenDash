@@ -229,6 +229,24 @@ namespace OpenDashPlugin.Tests
             var status = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs"));
             Assert.Contains("issues = PanelAttention.Find(attentionFacts);", status);
             Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
+            // The line as drawn: the state in the dot's ink (ProfileRow's StateHex is not drawn on this page, the
+            // dot carries the state), the name as SimHub lists it, the press only where there is one to offer,
+            // the message after it, and the hover.
+            foreach (var pin in new[]
+            {
+                "slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));",
+                "Fill = Ui.Brush(PanelLightRows.DotHex(state)),",
+                "Width = PanelMatrix.ProfileDotSize, Height = PanelMatrix.ProfileDotSize,",
+                "var line = Ui.Text(PanelMatrix.ProfileLine(FlagBoxName(), state, version), Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);",
+                "var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line); if (PanelMatrix.ProfileHasButton(state)) {",
+                "if (plugin.FlagBoxJson == null) return null;",
+                "var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName()); if (said != null) Say(said); if (!string.IsNullOrEmpty(result.Note)) Say(PanelMessage.Info(result.Note));",
+                "var hover = PanelMatrix.ProfileLineTooltip(state, version, plan == null ? null : plan.EmbeddedVersion); if (hover != null) row.ToolTip = hover;",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            Assert.DoesNotContain("StateHex", matrix);
             // A page that asks SimHub while it is built repaints its lighting in place.
             Assert.DoesNotContain("DrawsLighting()", matrix);
             Assert.Contains("OnLighting(() => Ui.Redim(preview,", matrix);
@@ -324,10 +342,29 @@ namespace OpenDashPlugin.Tests
                 // The segmented controls, each with its own labels.
                 "BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>",
                 "BuildSegmented(Contract.FlagBoxRests, PanelMatrix.RestLabels, rest, value =>",
+                // The chips, each pressed only when it is the one drawn, and a press moves the preview to it.
+                // The add press saves at once and selects the new matrix; each sheet draws its body.
+                // The cards: which matrix the page opens on, a card never claiming what nothing read, and the
+                // empty state only on an empty rig.
+                "var device = MatrixLayer(Ui.Soon( MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.SimHubDevice));",
+                "foreach (var id in PanelMatrix.PreviewScenarios) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
+                "var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario);",
+                "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
+                "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
+                "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
+                "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption), SheetFooter(null, cancel, remove));",
+                "var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)); if (said != null) Say(said);",
+                "var shown = facts == null ? null : facts.Shown; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);",
+                "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
+                "cards.Add(Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }));",
+                "var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));",
+                "if (panels.Count > 0) return grid; return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
             })
             {
                 Assert.Contains(pin, flat);
             }
+            // Every sheet's Cancel closes it.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("cancel.Click += (sender, args) => CloseSheet();")).Count);
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(matrix, @"\}, PanelKit\.SegmentedHeightMatrix\);").Count);
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.Button\(PanelMatrix\.Cancel, PanelButtonKind\.Ghost, PanelButtonSize\.Large\)").Count);
         }
@@ -468,6 +505,46 @@ namespace OpenDashPlugin.Tests
             // Two columns only when the shell says they fit.
             Assert.Contains("if (TwoColumns)", matrix);
             Assert.DoesNotContain("!Narrow", matrix);
+        }
+
+        /// <summary>
+        /// Every control on the priority list, from its row's title through the setting it shows and the one its
+        /// lambda writes, each as one statement: a row that showed or wrote another row's setting, lost its
+        /// control, its caption or its link, or a layer that dropped an option would each fail here.
+        /// </summary>
+        [Fact]
+        public void Every_control_is_drawn_with_the_setting_it_reads_and_writes()
+        {
+            var flat = FlatSource();
+            foreach (var pin in new[]
+            {
+                "var flags = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.FlagsTitle), PanelMatrix.FlagsTitle, null, null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[i] = on; Save(); repaint(); })), MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, null, BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint(); })));",
+                "var pit = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, null, null, BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[i] = on; Save(); repaint(); })));",
+                "var side = BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value => { Settings.FlagBoxSide[i] = value; Save(); RebuildPage(); }, PanelKit.SegmentedHeightMatrix);",
+                "var spotter = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.SpotterTitle), PanelMatrix.SpotterTitle, null, null, BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[i] = on; Save(); repaint(); })), MatrixOption(PanelMatrix.MountingSideTitle, null, side), Ui.Anchor(MatrixOption(PanelMatrix.SpotterAnimationTitle, PanelMatrix.SpotterAnimationCaption, BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation));",
+                "var warnings = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.WarningsTitle), PanelMatrix.WarningsTitle, PanelMatrix.WarningsCaption, thresholds, BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[i] = on; Save(); repaint(); })));",
+                "var rest = Settings.MatrixRest(m); var bands = Settings.MatrixGearBands(m); var restChoice = BuildSegmented(Contract.FlagBoxRests, PanelMatrix.RestLabels, rest, value => { Settings.SetMatrixRest(m, value); Save(); RebuildPage(); }, PanelKit.SegmentedHeightMatrix);",
+                "var idle = new List<UIElement> { MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle), PanelMatrix.IdleDisplayTitle, null, null, restChoice) };",
+                "if (PanelMatrix.ShowsGearRows(rest)) { idle.Add(MatrixOption(PanelMatrix.ShiftColoursTitle, null, BuildToggle(bands, on => { Settings.FlagBoxMatrixGearBands[i] = on; Save(); RebuildPage(); }))); }",
+                "if (PanelMatrix.ShowsCarShiftPoints(rest, bands)) {",
+                "idle.Add(MatrixOption(PanelMatrix.CarShiftPointsTitle, null, BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[i] = on; Save(); readCar(); }), carLine));",
+                "if (PanelMatrix.ShowsRedlineFlash(rest, bands)) { idle.Add(MatrixOption(PanelMatrix.RedlineFlashTitle, null, BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[i] = on; Save(); }))); }",
+                "var idleLayer = MatrixLayer(idle.ToArray());",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            // Each toggle writes exactly one setting, and each setting is written by exactly one toggle.
+            foreach (var write in new[]
+            {
+                "Settings.FlagBoxFlags[i] = on;", "Settings.FlagBoxMatrixCriticalOnly[i] = on;", "Settings.FlagBoxPit[i] = on;",
+                "Settings.FlagBoxSpotter[i] = on;", "Settings.FlagBoxSpotterAnimation = on;", "Settings.FlagBoxWarnings[i] = on;",
+                "Settings.FlagBoxMatrixGearBands[i] = on;", "Settings.FlagBoxMatrixGearCarLadder[i] = on;", "Settings.FlagBoxMatrixGearBlink[i] = on;",
+            })
+            {
+                Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(write)));
+            }
+            Assert.Equal(9, System.Text.RegularExpressions.Regex.Matches(flat, @"BuildToggle\(").Count);
         }
 
         [Fact]
@@ -680,6 +757,43 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(14, PanelMatrix.RankWidth);
             Assert.Equal(20, PanelMatrix.SectionPaddingTop);
             Assert.Equal(18, PanelMatrix.SectionGap);
+            // And each where it is drawn.
+            var flatNumbers = FlatSource();
+            foreach (var pin in new[]
+            {
+                "if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);",
+                "var slotCaption = PanelMatrix.SlotCaption(name, m); if (slotCaption != null) {",
+                "slot.Margin = new Thickness(PanelMatrix.HeaderGap, 0, 0, PanelMatrix.SlotCaptionLift);",
+                "var rename = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Outline, PanelButtonSize.Small); rename.ToolTip = PanelMatrix.RenameTooltip; rename.Click += (sender, args) => ShowRenameMatrix(m);",
+                "var remove = Ui.Button(PanelMatrix.Remove, PanelButtonKind.GhostDanger, PanelButtonSize.Small); remove.ToolTip = PanelMatrix.RemoveTooltip; remove.Click += (sender, args) => ShowRemoveMatrix(m);",
+                "var head = Ui.Row(heading, Ui.HStack(PanelMatrix.ActionGap, rename, remove));",
+                "var fix = Ui.FixBox(PanelMatrix.FixTitle(m), null, PanelMatrix.FixSteps(m, FlagBoxName()), check);",
+                "var all = Ui.LinkButton(PanelMatrix.AllDevices);",
+                "var thresholds = Ui.LinkButton(PanelMatrix.ThresholdsLink);",
+                "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.PreviewColumnWidth) }); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.BodyGap) });",
+                "previewColumn.Element.MaxWidth = PanelMatrix.PreviewColumnWidth;",
+                "Padding = new Thickness(0, PanelMatrix.SectionPaddingTop, 0, 0), Child = Ui.VStack(PanelMatrix.SectionGap, parts.ToArray()),",
+                "Padding = new Thickness(PanelMatrix.PreviewFramePadding),",
+                "chip.Margin = new Thickness(0, 0, PanelMatrix.ChipGap, PanelMatrix.ChipGap);",
+                "var cell = new Border { Width = PanelMatrix.RankWidth, Margin = new Thickness(0, 0, PanelMatrix.LayerGap, 0), Child = dot };",
+                "var number = Ui.Text(rank, PanelMatrix.RankSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data); number.Width = PanelMatrix.RankWidth;",
+                "var name = Ui.Text(title, PanelShell.RowTitleSize, FontWeights.Medium, Theme.TextPrimary);",
+                "var line = Ui.Text(caption, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.TextSecondary);",
+                "var name = Ui.Text(title, PanelMatrix.OptionTextSize, FontWeights.Normal, Theme.TextPrimary);",
+                "var under = Ui.Text(caption, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.TextSecondary);",
+                "control.Margin = new Thickness(PanelMatrix.OptionGap, 0, 0, 0);",
+                "var carLine = Ui.Text(string.Empty, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.StatusUpToDate);",
+                "link.Margin = new Thickness(PanelMatrix.LayerGap, 0, PanelMatrix.ThresholdsGap, 0);",
+                "Padding = new Thickness(0, PanelMatrix.LayerPaddingY, 0, PanelMatrix.LayerPaddingY),",
+                "head.Margin = new Thickness(0, 0, 0, PanelMatrix.PriorityHeadGap);",
+                "Ui.HStack(PanelMatrix.ReorderGap,",
+                "line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0);",
+                "Ui.VStack(PanelMatrix.StackedGap, previewColumn.Element, priority)",
+                "var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);",
+            })
+            {
+                Assert.Contains(pin, flatNumbers);
+            }
             var matrix = MatrixSource();
             Assert.Contains("MatrixStyle.Preview", matrix);
             // The New tag has the frame's own line, over it and clear of the lamps, never after the Rig link.
