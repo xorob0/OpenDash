@@ -7,7 +7,8 @@
 // PanelDataTabTests hold them; this file only draws. Every control writes its setting at once and saves.
 // The page draws night mode and both brightnesses as controls, so it calls DrawsLighting and is built again
 // when either moves, the wheel's buttons included; the one thing it reads of SimHub while building is its
-// units, which are settings.
+// units, which are settings, and it reads them again when the panel's window comes back from SimHub's own
+// Settings window, where they are changed.
 //
 // The delta's two rows stay adjacent Ui.Row calls: PanelDataTabTests holds that the precision row sits
 // directly under the reference it qualifies (#322).
@@ -55,7 +56,38 @@ namespace OpenDashPlugin
             };
             var all = new List<UIElement> { SettingsIndex(sections, to) };
             all.AddRange(sections);
-            return PageLayout(PanelSettings.Title, null, all.ToArray());
+            var page = PageLayout(PanelSettings.Title, null, all.ToArray());
+            SettingsFollowUnits(page, units);
+            return page;
+        }
+
+        /// <summary>
+        /// Builds the page again when SimHub's units have moved since it was drawn. SimHub's Settings, where
+        /// the Units row sends the driver, opens as a window of its own and applies the units when it closes;
+        /// nothing unloads or resizes the panel meanwhile, so without this the Units line, the unit after both
+        /// temperatures and their defaults would stay the old ones while the matrix compares in the new.
+        /// </summary>
+        private void SettingsFollowUnits(FrameworkElement page, string[] drawn)
+        {
+            Window window = null;
+            var dropped = false;
+            EventHandler activated = (sender, args) =>
+            {
+                if (!dropped && PanelSettings.UnitsMoved(drawn, SettingsUnitNames())) RebuildPage();
+            };
+            RoutedEventHandler loaded = (sender, args) =>
+            {
+                if (dropped || window != null) return;
+                window = Window.GetWindow(page);
+                if (window != null) window.Activated += activated;
+            };
+            page.Loaded += loaded;
+            OnDrop(() =>
+            {
+                dropped = true;
+                page.Loaded -= loaded;
+                if (window != null) window.Activated -= activated;
+            });
         }
 
         // --- On this page -----------------------------------------------------------------------------
@@ -373,7 +405,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// SimHub's four units, as the enum names GameReaderCommon spells them, or nulls where SimHub cannot be
-        /// asked. A read of SimHub's own settings, which a build that draws the lighting may make.
+        /// asked. A read of SimHub's own settings, which a build that draws the lighting may make, and which
+        /// SettingsFollowUnits makes again when the panel's window is activated -- never on the tick.
         /// </summary>
         private string[] SettingsUnitNames()
         {

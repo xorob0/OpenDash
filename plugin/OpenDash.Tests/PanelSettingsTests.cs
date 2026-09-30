@@ -302,6 +302,28 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// SimHub's Settings is a window of its own and applies the units when it closes, and nothing else
+        /// rebuilds the page then: the page reads them again when the panel's window is activated, and is
+        /// drawn again only when one moved, so a driver never types a threshold against a stale unit.
+        /// </summary>
+        [Fact]
+        public void The_page_is_drawn_again_when_simhubs_units_move()
+        {
+            var metric = new[] { "Kmh", "Celcius", "Bar", "Liters" };
+            Assert.False(PanelSettings.UnitsMoved(metric, new[] { "Kmh", "Celcius", "Bar", "Liters" }));
+            Assert.True(PanelSettings.UnitsMoved(metric, new[] { "Kmh", "Fahrenheit", "Bar", "Liters" }));
+            Assert.True(PanelSettings.UnitsMoved(new string[4], metric));
+            Assert.False(PanelSettings.UnitsMoved(new string[4], new string[4]));
+            Assert.True(PanelSettings.UnitsMoved(metric, null));
+            var page = Page();
+            Assert.Contains("SettingsFollowUnits(page, units);", page);
+            Assert.Contains("window = Window.GetWindow(page);", page);
+            Assert.Contains("if (window != null) window.Activated += activated;", page);
+            Assert.Contains("if (!dropped && PanelSettings.UnitsMoved(drawn, SettingsUnitNames())) RebuildPage();", page);
+            Assert.Contains("if (window != null) window.Activated -= activated;", page);
+        }
+
+        /// <summary>
         /// The table's rows in the artboard's order, the live three first, with where each shows today and the
         /// Rig scenario "Try" opens; the greyed four are the registry's own titles, so a row and its search hit
         /// cannot drift apart.
