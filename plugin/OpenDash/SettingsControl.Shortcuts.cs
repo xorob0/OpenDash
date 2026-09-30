@@ -94,9 +94,10 @@ namespace OpenDashPlugin
             {
                 if (screen == null) continue;
                 if (screen.IsFace) screens.Add(BuildShortcutsFace(screen, layout));
-                else if (screen.IsPitWall) screens.Add(BuildShortcutsPitWall(screen, layout));
+                else if (screen.IsPitWall && PanelShortcuts.PitWallGlances(screen.Width, screen.Height)) screens.Add(BuildShortcutsPitWall(screen, layout));
                 else if (screen.IsCompanion) screens.Add(BuildShortcutsCompanion(screen, layout));
-                // A round screen cycles nothing, so it has no card.
+                // A round screen cycles nothing, and a portrait pit wall has no zone a glance can swap, so
+                // neither has a card.
             }
             var lights = BuildShortcutsLights(layout);
             var alerts = BuildShortcutsAlerts(layout);
@@ -216,8 +217,8 @@ namespace OpenDashPlugin
             return group;
         }
 
-        /// <summary>A pit wall's card: the glance and nothing else. A key beside the monitor is the likelier
-        /// gesture, since nobody drives a pit wall.</summary>
+        /// <summary>A landscape pit wall's card: the glance and nothing else. A key beside the monitor is the
+        /// likelier gesture, since nobody drives a pit wall.</summary>
         private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);

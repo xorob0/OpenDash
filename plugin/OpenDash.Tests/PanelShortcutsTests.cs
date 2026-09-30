@@ -160,6 +160,22 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_portrait_pit_wall_has_no_glance_row_and_so_no_card()
+        {
+            // The glance borrows a landscape zone; the portrait package draws only its own four, so a held
+            // key there would change nothing, and the page offers no binding for it.
+            Assert.All(Contract.GlanceZoneSlots(), slot => Assert.True(slot.Landscape));
+            Assert.True(PanelShortcuts.PitWallGlances(1920, 1080));
+            Assert.False(PanelShortcuts.PitWallGlances(1080, 1920));
+            // Square is not taller than wide, as the Screens page's Height > Width test reads it.
+            Assert.True(PanelShortcuts.PitWallGlances(1080, 1080));
+            // A wall whose package is gone has no size, and keeps the row it had.
+            Assert.True(PanelShortcuts.PitWallGlances(0, 0));
+            Assert.True(PanelShortcuts.PitWallGlances(0, 1920));
+            Assert.True(PanelShortcuts.PitWallGlances(1080, 0));
+        }
+
+        [Fact]
         public void A_companions_glance_is_new_and_a_face_or_pit_walls_is_not()
         {
             // v0.3.0-rc.7 registers no companion action (its CompanionActionNames is empty); the glance came
@@ -681,7 +697,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", lights);
 
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights(layout);");
-            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
+            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallGlances\(screen\.Width, screen\.Height\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
             Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
         }
 

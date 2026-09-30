@@ -135,6 +135,18 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether a pit wall has a glance row, and so a card: not when it stands in portrait, taller than it
+        /// is wide, as the Screens page tells the two apart. The glance swaps the page of one of the
+        /// landscape zones (Contract.GlanceZoneSlots, ScreenInstance.BeginQuickGlance), and the portrait
+        /// package draws only its own four, so a held key would change nothing on screen. A wall whose
+        /// size is not known keeps the row.
+        /// </summary>
+        public static bool PitWallGlances(int width, int height)
+        {
+            return height <= width || width <= 0 || height <= 0;
+        }
+
+        /// <summary>
         /// The Lights card's live rows: night mode, and brightness up and down. All three are new: no released
         /// plugin registers any of them (v0.3.0-rc.7 has none), and New marks what the shipped plugin cannot
         /// do, as ruled for Delta precision and Clock. Shortcuts.dc.html draws Night mode untagged.
