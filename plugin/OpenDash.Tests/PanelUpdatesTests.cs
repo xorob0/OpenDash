@@ -804,7 +804,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_on_a_device_SimHub_does_not_list_says_the_step_and_offers_no_press()
         {
-            const string step = "SimHub does not list this strip's device. Choose one under SimHub device on the LEDs page.";
+            const string step = "This strip's device is not in SimHub. Choose one under SimHub device on the LEDs page.";
             Assert.Equal(step, PanelUpdates.DeviceNotListed);
             var older = PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Outdated, InstalledVersion = "0.4.2", EmbeddedVersion = "0.5.0" }, deviceListed: false);
             Assert.Equal("Update available", older.State);
@@ -912,7 +912,7 @@ namespace OpenDashPlugin.Tests
 
             var none = PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null);
             Assert.False(none.OffersUpdate);
-            Assert.Equal("Reinstall everything installs it, then select it on your device.", none.Tooltip);
+            Assert.Equal("Reinstall everything installs it, then select it on your matrix's device in SimHub.", none.Tooltip);
 
             var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
             Assert.Equal("Unknown", unreachable.State);
@@ -960,34 +960,41 @@ namespace OpenDashPlugin.Tests
 
         private static string[] Strips(params string[] names) => names;
 
+        /// <summary>A rig with one matrix, number 1.</summary>
+        private static readonly IList<int> Matrix1 = new[] { 1 };
+
         [Fact]
         public void Reinstall_everything_says_what_it_wrote_and_the_step_left()
         {
             Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it.",
-                PanelUpdates.ReinstallSummary(1, 0, false, Tally(), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(1, 0, false, Tally(), "OpenDash Flag box", Matrix1));
             Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it.",
-                PanelUpdates.ReinstallSummary(1, 0, true, null, "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(1, 0, true, null, "OpenDash Flag box", Matrix1));
             // Several dashboards take the plural step, so "it" never points at one the line has not named.
             Assert.Equal("Reinstalled 3 dashboards. Close and reopen your dashboards to see them.",
-                PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box", Matrix1));
             Assert.Equal("Reinstalled 3 dashboards. Restart SimHub to see them.",
-                PanelUpdates.ReinstallSummary(3, 0, true, Tally(), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(3, 0, true, Tally(), "OpenDash Flag box", Matrix1));
             // The step follows the dashboards, so it points at them and not at the last profile named, and each
             // profile is named as SimHub lists it, in the LEDs and Matrix pages' words.
             Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen your dashboards to see them. Updated the profiles of Rim and Brow. Updated OpenDash Flag box.",
-                PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box", Matrix1));
             // Installing a profile adds it without selecting it, and the line names that step for each profile
             // it installed, on the device it went to (voice.md; PanelLeds.SelectIt's form).
-            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated Dash's profile. Installed the profiles of Rim and Brow. Installed OpenDash Flag box. Select \"Rim\" on Fanatec, \"Brow\" and \"OpenDash Flag box\" in SimHub to use them.",
-                PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: Strips("Dash"), installed: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+            // The flag box's step is the Matrix page's: on the matrix's device, with its content number.
+            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated Dash's profile. Installed the profiles of Rim and Brow. Installed OpenDash Flag box. Select \"Rim\" on Fanatec and \"Brow\" in SimHub to use them. Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 1.",
+                PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: Strips("Dash"), installed: Strips("Rim", "Brow"), flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box", Matrix1));
             // A rig with strips and no screens: no dashboards clause.
             Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec in SimHub to use it.",
-                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim")), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim")), "OpenDash Flag box", Matrix1));
             Assert.Equal("The 2 dashboards you edited were left alone.",
-                PanelUpdates.ReinstallSummary(0, 2, false, Tally(), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(0, 2, false, Tally(), "OpenDash Flag box", Matrix1));
             Assert.Equal("The dashboard you edited was left alone. Updated Rim's profile.",
-                PanelUpdates.ReinstallSummary(0, 1, false, Tally(updated: Strips("Rim")), "OpenDash Flag box"));
-            Assert.Equal("There was nothing to reinstall.", PanelUpdates.ReinstallSummary(0, 0, false, Tally(), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(0, 1, false, Tally(updated: Strips("Rim")), "OpenDash Flag box", Matrix1));
+            Assert.Equal("There was nothing to reinstall.", PanelUpdates.ReinstallSummary(0, 0, false, Tally(), "OpenDash Flag box", Matrix1));
+            // Several dashboards replaced and several left alone.
+            Assert.Equal("Reinstalled 3 dashboards. The 2 you edited were left alone. Close and reopen your dashboards to see them.",
+                PanelUpdates.ReinstallSummary(3, 2, false, Tally(), "OpenDash Flag box", Matrix1));
             Assert.True(Tally().Ok);
             Assert.True(Tally(updated: Strips("Rim"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate).Ok);
         }
@@ -1001,11 +1008,11 @@ namespace OpenDashPlugin.Tests
             var tally = Tally(installed: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote);
             Assert.Equal(FlagBoxInstallPlan.BuiltInModeNote, tally.Note);
             Assert.Equal("Installed Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed. Select \"Rim\" on Fanatec in SimHub to use it.",
-                PanelUpdates.ReinstallSummary(0, 0, false, tally, "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(0, 0, false, tally, "OpenDash Flag box", Matrix1));
             Assert.False(tally.Ok);
             Assert.False(tally.Failed);
             Assert.Equal("Updated Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed.",
-                PanelUpdates.LightsSaid(Tally(updated: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote), "OpenDash Flag box"));
+                PanelUpdates.LightsSaid(Tally(updated: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote), "OpenDash Flag box", Matrix1));
             // A failed write's note is not an install's: there is nothing listed to select.
             var failed = new UpdatesLightsTally();
             failed.Strip("Rim", "Fanatec", FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.Failed, Note = FlagBoxInstallPlan.BuiltInModeNote });
@@ -1017,27 +1024,36 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_light_row_s_update_says_what_it_did()
         {
-            Assert.Equal("Updated Rim's profile.", PanelUpdates.LightsSaid(Tally(updated: Strips("Rim")), "OpenDash Flag box"));
-            Assert.Equal("Could not update Rim's profile. See SimHub's log.", PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim")), "OpenDash Flag box"));
-            Assert.Equal("Updated OpenDash Flag box.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
-            Assert.Equal("Could not update OpenDash Flag box. See SimHub's log.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
-            Assert.Equal("SimHub does not list Rim's device. Choose one under SimHub device on the LEDs page.", PanelUpdates.LightsSaid(Tally(noDevice: Strips("Rim")), "OpenDash Flag box"));
-            Assert.Null(PanelUpdates.LightsSaid(Tally(), "OpenDash Flag box"));
-            Assert.Null(PanelUpdates.LightsSaid(null, "OpenDash Flag box"));
+            Assert.Equal("Updated Rim's profile.", PanelUpdates.LightsSaid(Tally(updated: Strips("Rim")), "OpenDash Flag box", Matrix1));
+            Assert.Equal("Could not update Rim's profile. See SimHub's log.", PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim")), "OpenDash Flag box", Matrix1));
+            Assert.Equal("Updated OpenDash Flag box.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box", Matrix1));
+            Assert.Equal("Could not update OpenDash Flag box. See SimHub's log.", PanelUpdates.LightsSaid(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box", Matrix1));
+            Assert.Equal("Rim's device is not in SimHub. Choose one under SimHub device on the LEDs page.", PanelUpdates.LightsSaid(Tally(noDevice: Strips("Rim")), "OpenDash Flag box", Matrix1));
+            // The flag box installed by its row: the Matrix page's step, on the one matrix's device or on each
+            // of several, and none on a rig with no matrix to name.
+            var installed = Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate);
+            Assert.Equal("Installed OpenDash Flag box. Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2.",
+                PanelUpdates.LightsSaid(installed, "OpenDash Flag box", new[] { 2 }));
+            Assert.Equal("Installed OpenDash Flag box. Select \"OpenDash Flag box\" on each matrix's device in SimHub and set RGB Matrix content to the matrix's number.",
+                PanelUpdates.LightsSaid(installed, "OpenDash Flag box", new[] { 1, 2 }));
+            Assert.Equal("Installed OpenDash Flag box.", PanelUpdates.LightsSaid(installed, "OpenDash Flag box", new int[0]));
+            Assert.Equal("RGB Matrix content", PanelUpdates.MatrixContentField);
+            Assert.Null(PanelUpdates.LightsSaid(Tally(), "OpenDash Flag box", Matrix1));
+            Assert.Null(PanelUpdates.LightsSaid(null, "OpenDash Flag box", Matrix1));
         }
 
         [Fact]
         public void A_profile_that_could_not_be_written_is_said_by_name_with_where_to_look()
         {
-            var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: Strips("Rim"), notUpdated: Strips("Dash"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box");
+            var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: Strips("Rim"), notUpdated: Strips("Dash"), flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box", Matrix1);
             Assert.Equal("Reinstalled 2 dashboards. Close and reopen your dashboards to see them. Updated Rim's profile. Could not update Dash's profile. Could not update OpenDash Flag box. See SimHub's log.", line);
             Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it. Could not update the profiles of Rim and Dash. Could not install the profiles of Brow, Pit and Top. See SimHub's log.",
-                PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: Strips("Rim", "Dash"), notInstalled: Strips("Brow", "Pit", "Top")), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: Strips("Rim", "Dash"), notInstalled: Strips("Brow", "Pit", "Top")), "OpenDash Flag box", Matrix1));
             Assert.Equal("Could not install OpenDash Flag box. See SimHub's log.",
-                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box", Matrix1));
             // A blank name is the profile's own.
             Assert.Equal("Updated " + FlagBoxProfile.ProfileName + ".",
-                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), " "));
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), " ", Matrix1));
             Assert.False(Tally(notUpdated: Strips("Rim")).Ok);
             Assert.False(Tally(notInstalled: Strips("Rim")).Ok);
             Assert.False(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed).Ok);
@@ -1050,10 +1066,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_left_out_for_want_of_a_device_is_named_with_the_step_not_the_log()
         {
-            Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec in SimHub to use it. SimHub does not list the devices of Dash and Brow. Choose them under SimHub device on the LEDs page.",
-                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim"), noDevice: Strips("Dash", "Brow")), "OpenDash Flag box"));
-            Assert.Equal("Could not update Rim's profile. See SimHub's log. SimHub does not list Dash's device. Choose one under SimHub device on the LEDs page.",
-                PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim"), noDevice: Strips("Dash")), "OpenDash Flag box"));
+            Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec in SimHub to use it. The devices of Dash and Brow are not in SimHub. Choose them under SimHub device on the LEDs page.",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: Strips("Rim"), noDevice: Strips("Dash", "Brow")), "OpenDash Flag box", Matrix1));
+            Assert.Equal("Could not update Rim's profile. See SimHub's log. Dash's device is not in SimHub. Choose one under SimHub device on the LEDs page.",
+                PanelUpdates.LightsSaid(Tally(notUpdated: Strips("Rim"), noDevice: Strips("Dash")), "OpenDash Flag box", Matrix1));
             var tally = Tally(noDevice: Strips("Dash"));
             Assert.False(tally.Ok);
             Assert.False(tally.Failed);

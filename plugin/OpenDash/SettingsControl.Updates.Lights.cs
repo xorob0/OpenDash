@@ -143,7 +143,7 @@ namespace OpenDashPlugin
         /// the press found nothing left to write.</summary>
         private void UpdatesSay(UpdatesLightsTally said)
         {
-            var line = PanelUpdates.LightsSaid(said, FlagBoxName());
+            var line = PanelUpdates.LightsSaid(said, FlagBoxName(), Settings.MatrixPanels().ToList());
             if (line != null) Say(line, said.Ok);
         }
 

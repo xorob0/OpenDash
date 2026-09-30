@@ -601,7 +601,7 @@ namespace OpenDashPlugin
             Save();
             Redraw();
             if (failure != null) Say(PanelUpdates.ReinstallFailed, false);
-            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName()), lights.Ok);
+            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName(), Settings.MatrixPanels().ToList()), lights.Ok);
         }
     }
 }

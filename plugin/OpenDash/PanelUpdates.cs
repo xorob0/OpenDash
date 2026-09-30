@@ -748,9 +748,10 @@ namespace OpenDashPlugin
             return state == FlagBoxInstallState.Outdated || state == FlagBoxInstallState.NotInstalled || state == FlagBoxInstallState.Failed;
         }
 
-        /// <summary>A strip whose SimHub device is not listed, in the LEDs page's words (PanelLeds.DeviceNotListed)
-        /// and with the page named, since the field it points at is not on this one.</summary>
-        public const string DeviceNotListed = "SimHub does not list this strip's device. Choose one under SimHub device on the LEDs page.";
+        /// <summary>A strip whose SimHub device is not listed, in the LEDs page's one phrase for a device SimHub
+        /// lacks (PanelLeds.DeviceNotListed, whose picker names the state "Device not in SimHub"), with the page
+        /// named, since the field it points at is not on this one.</summary>
+        public const string DeviceNotListed = "This strip's device is not in SimHub. Choose one under SimHub device on the LEDs page.";
 
         /// <summary>
         /// The strips' plans as the table and the presses read them: Unavailable for every strip while SimHub's
@@ -897,15 +898,42 @@ namespace OpenDashPlugin
             }
         }
 
-        public const string FlagBoxNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on your device.";
+        /// <summary>A missing flag box profile's hover: the press on this page that installs it, and where the
+        /// select step is taken, in the Matrix page's words (PanelMatrix.YourDevice).</summary>
+        public const string FlagBoxNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on " + MatrixDevice + ".";
+
+        /// <summary>Where the flag box's select step is taken, as the Matrix page says it: the device that
+        /// draws a matrix, and on a rig with several, each one's.</summary>
+        public const string MatrixDevice = "your matrix's device in SimHub";
+        public const string EachMatrixDevice = "each matrix's device in SimHub";
+
+        /// <summary>The device's field that picks which matrix it draws, spelt as SimHub labels it (ruling 69,
+        /// PanelMatrix.ContentField).</summary>
+        public const string MatrixContentField = "RGB Matrix content";
+
+        /// <summary>
+        /// The flag box's select step after it is installed, in the Matrix page's form (PanelMatrix.SelectStep):
+        /// 'Select "OpenDash Flag box" on your matrix's device in SimHub and set RGB Matrix content to 2.', on
+        /// each matrix's device with the matrix's number on a rig with several, and nothing on a rig with none,
+        /// which has no device to name. Said apart from the strips' step, since a matrix's device also needs
+        /// its content number, which a strip's does not.
+        /// </summary>
+        /// <param name="matrices">The rig's matrix numbers (OpenDashSettings.MatrixPanels).</param>
+        public static string FlagBoxSelect(string name, IList<int> matrices)
+        {
+            if (matrices == null || matrices.Count == 0) return null;
+            var quoted = "Select \"" + name + "\" on ";
+            if (matrices.Count == 1) return quoted + MatrixDevice + " and set " + MatrixContentField + " to " + matrices[0].ToString(CultureInfo.InvariantCulture) + ".";
+            return quoted + EachMatrixDevice + " and set " + MatrixContentField + " to the matrix's number.";
+        }
 
         /// <summary>
         /// The step after profiles are installed, in the one form the LEDs page says it (PanelLeds.SelectIt):
         /// 'Select "Rim" on Fanatec in SimHub to use it.', and for several 'Select "Rim" on Fanatec and
         /// "OpenDash Flag box" in SimHub to use them.' Installing adds a profile to its device's list without
         /// selecting it, and each is named with the device it went to, since after the run every row reads
-        /// "Up to date" and nothing on the page says which were installed. A device SimHub gives no name for,
-        /// and the flag box's, is left out rather than guessed.
+        /// "Up to date" and nothing on the page says which were installed. A device SimHub gives no name for is
+        /// left out rather than guessed. The flag box's step is <see cref="FlagBoxSelect"/>'s.
         /// </summary>
         public static string SelectIt(IList<KeyValuePair<string, string>> installed)
         {
@@ -1060,7 +1088,8 @@ namespace OpenDashPlugin
         /// <param name="wroteFonts">Whether a font went into DashFonts, which only a restart shows.</param>
         /// <param name="lights">What the run did to each light profile it wrote.</param>
         /// <param name="flagBoxName">The flag box profile's name in SimHub.</param>
-        public static string ReinstallSummary(int replaced, int held, bool wroteFonts, UpdatesLightsTally lights, string flagBoxName)
+        /// <param name="matrices">The rig's matrix numbers, which the flag box's select step names.</param>
+        public static string ReinstallSummary(int replaced, int held, bool wroteFonts, UpdatesLightsTally lights, string flagBoxName, IList<int> matrices)
         {
             var line = new List<string>();
             if (replaced > 0)
@@ -1073,7 +1102,7 @@ namespace OpenDashPlugin
             }
             else if (held == 1) line.Add("The dashboard you edited was left alone.");
             else if (held > 1) line.Add("The " + held + " dashboards you edited were left alone.");
-            var profiles = LightsSaid(lights, flagBoxName);
+            var profiles = LightsSaid(lights, flagBoxName, matrices);
             if (profiles != null) line.Add(profiles);
             return line.Count == 0 ? NothingToReinstall : string.Join(" ", line);
         }
@@ -1086,7 +1115,7 @@ namespace OpenDashPlugin
         /// OpenDash does not take, in the order they are done), then what could not be written and where to
         /// look, and last each strip left out for want of a device. A light row's Update says it too.
         /// </summary>
-        public static string LightsSaid(UpdatesLightsTally lights, string flagBoxName)
+        public static string LightsSaid(UpdatesLightsTally lights, string flagBoxName, IList<int> matrices)
         {
             if (lights == null) return null;
             var name = string.IsNullOrWhiteSpace(flagBoxName) ? FlagBoxProfile.ProfileName : flagBoxName.Trim();
@@ -1096,10 +1125,10 @@ namespace OpenDashPlugin
             Profiles(line, "Installed", lights.Installed.Select(pair => pair.Key).ToList());
             if (flagBoxOk) line.Add((lights.FlagBoxWasOlder ? "Updated " : "Installed ") + name + ".");
             if (lights.Note != null) line.Add(lights.Note);
-            var select = new List<KeyValuePair<string, string>>(lights.Installed);
-            if (flagBoxOk && !lights.FlagBoxWasOlder) select.Add(new KeyValuePair<string, string>(name, null));
-            var step = SelectIt(select);
+            var step = SelectIt(lights.Installed.ToList());
             if (step != null) line.Add(step);
+            var flagBoxStep = flagBoxOk && !lights.FlagBoxWasOlder ? FlagBoxSelect(name, matrices) : null;
+            if (flagBoxStep != null) line.Add(flagBoxStep);
             Profiles(line, "Could not update", lights.NotUpdated);
             Profiles(line, "Could not install", lights.NotInstalled);
             if (lights.FlagBoxAfter.HasValue && !flagBoxOk) line.Add((lights.FlagBoxWasOlder ? "Could not update " : "Could not install ") + name + ".");
@@ -1125,8 +1154,8 @@ namespace OpenDashPlugin
             var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).ToList();
             if (list.Count == 0) return null;
             return list.Count == 1
-                ? "SimHub does not list " + list[0] + "'s device. Choose one under SimHub device on the LEDs page."
-                : "SimHub does not list the devices of " + And(list) + ". Choose them under SimHub device on the LEDs page.";
+                ? list[0] + "'s device is not in SimHub. Choose one under SimHub device on the LEDs page."
+                : "The devices of " + And(list) + " are not in SimHub. Choose them under SimHub device on the LEDs page.";
         }
 
         /// <summary>A run that wrote nothing and had nothing to leave alone: a rig with no dashboard and every
