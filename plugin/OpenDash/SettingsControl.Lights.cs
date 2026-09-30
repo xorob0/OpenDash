@@ -32,6 +32,10 @@ namespace OpenDashPlugin
 
         private TextBlock carTablesLine;
 
+        /// <summary>The last failure to read the tables written to SimHub's log, so a page drawn again does not
+        /// write it again.</summary>
+        private static string carTablesLogged;
+
         /// <summary>Whether the car tables are downloading, held outside the build so a rebuild meanwhile draws
         /// the button disabled and the line saying so rather than a press that looks ready.</summary>
         private bool carTablesDownloading;
@@ -782,9 +786,16 @@ namespace OpenDashPlugin
         {
             if (carTablesLine == null) return;
             var service = plugin.CarLights;
-            // The status gives the copy's age, which is all staleness says: nothing refetches on its own, and
-            // the button beside it already reads Update.
-            var line = PanelLights.CarTablesLine(service.Status);
+            var status = service.Status;
+            // A failure to read is said in the row's words, so its reason goes to the log, once for each.
+            if (PanelLights.CarTablesUnread(status) && !string.Equals(status, carTablesLogged, StringComparison.Ordinal))
+            {
+                carTablesLogged = status;
+                Log.Warn("Lovely Car Data could not be read: " + status);
+            }
+            // Whether the copy is over a week old is worked out as the row is drawn: the status is written only
+            // when the tables are read, so the age it gives stands still while SimHub runs.
+            var line = PanelLights.CarTablesLine(status, service.Stale(DateTime.UtcNow));
             carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
             if (carTablesButton != null)
             {

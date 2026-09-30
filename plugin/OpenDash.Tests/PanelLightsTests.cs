@@ -207,20 +207,61 @@ namespace OpenDashPlugin.Tests
                 PanelLights.BarAdded("Rim", "Wheel", FlagBoxInstallPlan.BuiltInModeNote));
         }
 
-        /// <summary>The status line is the status: it gives the copy's age and the button beside it reads Update,
-        /// so a stale note would say the age twice and describe the button.</summary>
+        /// <summary>
+        /// The status line is CarLightService's status, and the stale note after it as a sentence of its own
+        /// where the copy is over a week old (ruling 51). The page works the note out as it draws the row, since
+        /// the status's own age is written only when the tables are read.
+        /// </summary>
         [Fact]
-        public void The_status_line_gives_the_age_once()
+        public void The_stale_note_follows_the_status_as_a_sentence_of_its_own()
         {
-            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago"));
-            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout)",
-                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout) "));
-            Assert.Equal(string.Empty, PanelLights.CarTablesLine(null));
+            Assert.Equal("Over a week old. Press Update for a newer copy.", PanelLights.CarTablesStale);
+            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
+            Assert.Equal("84 cars, updated 9 days ago. Over a week old. Press Update for a newer copy.",
+                PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
+            // Frozen at "just now" by a SimHub left running a week: the note is what says so.
+            Assert.Equal("84 cars, updated just now. Over a week old. Press Update for a newer copy.",
+                PanelLights.CarTablesLine("84 cars, updated just now", true));
+            // Tables with no fetch stamp give no age at all, and are stale by CarLightLibrary.IsStale.
+            Assert.Equal("84 cars. Over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars", true));
+            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout). Over a week old. Press Update for a newer copy.",
+                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout) ", true));
+            Assert.Equal("Not downloaded yet.", PanelLights.CarTablesLine("Not downloaded yet.", false));
+            Assert.Equal(PanelLights.CarTablesStale, PanelLights.CarTablesLine(null, true));
+            Assert.Equal(string.Empty, PanelLights.CarTablesLine(null, false));
             Assert.Equal("Update", PanelLights.CarTablesButton(84));
             Assert.Equal("Download", PanelLights.CarTablesButton(0));
+            // The page asks the service as it draws the row, with the clock of the moment.
+            var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("PanelLights.CarTablesLine(status, service.Stale(DateTime.UtcNow))", leds);
             // The one row that fetches the tables names both things that read them.
             Assert.Equal("Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, about 400 KB, so your car is never disclosed.",
                 PanelLights.CarTablesCaption);
+        }
+
+        /// <summary>
+        /// CarLightService's lowercase states, which name the tables by the retired noun and one of which carries
+        /// an exception's message, are said in the row's words, and a failure points at the log the page writes.
+        /// </summary>
+        [Fact]
+        public void The_services_own_states_are_said_in_the_rows_words()
+        {
+            Assert.Equal("Loading…", PanelLights.CarTablesLoading);
+            Assert.Equal("Could not read Lovely Car Data. See SimHub's log.", PanelLights.CarTablesUnreadable);
+            Assert.Equal(PanelLights.CarTablesLoading, PanelLights.CarTablesLine(new CarLightService(null, System.IO.Path.GetTempPath()).Status, false));
+            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine("could not read the car light tables: Access to the path is denied.", true));
+            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine("the car light tables could not be loaded", false));
+            Assert.True(PanelLights.CarTablesUnread("could not read the car light tables: boom"));
+            Assert.False(PanelLights.CarTablesUnread("84 cars"));
+            Assert.False(PanelLights.CarTablesUnread(null));
+            // The words matched are CarLightService's own: a reword there has to move them here.
+            var service = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "CarLightService.cs"));
+            Assert.Contains("status = \"" + PanelLights.ServiceNotLoaded + "\";", service);
+            Assert.Contains("status = \"" + PanelLights.ServiceUnreadPrefix + ": \" + e.Message;", service);
+            Assert.Contains("status = \"" + PanelLights.ServiceUnloaded + "\";", service);
+            // The reason is written to the log, once for each failure, so the line has something behind it.
+            var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("Log.Warn(\"Lovely Car Data could not be read: \" + status);", leds);
         }
 
         [Theory]

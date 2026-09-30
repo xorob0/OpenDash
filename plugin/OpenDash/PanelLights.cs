@@ -357,13 +357,49 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The row's status line: CarLightService's status as it stands. It gives the copy's age ("84 cars,
-        /// updated 9 days ago"), and the button beside it reads Update, so a note that the copy is old said the
-        /// age twice and described the button.
+        /// Said after the status once the copy on disk is over a week old (CarLightService.Stale), which is
+        /// worked out as the row is drawn: the status is written when the tables are read, at start and after a
+        /// download, so its age can be days behind a SimHub left running.
         /// </summary>
-        public static string CarTablesLine(string status)
+        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
+
+        /// <summary>Said while the tables are still being read at start, which a page opened at once can see.</summary>
+        public const string CarTablesLoading = "Loading…";
+
+        /// <summary>Said where the tables on disk could not be read. The reason is in SimHub's log, where the
+        /// page writes it, since an exception's message is not the panel's to show.</summary>
+        public const string CarTablesUnreadable = "Could not read Lovely Car Data. See SimHub's log.";
+
+        /// <summary>CarLightService's status before the start's read has finished, as it writes it.</summary>
+        public const string ServiceNotLoaded = "not loaded";
+
+        /// <summary>The start of CarLightService's status where reading the folder threw, as it writes it.</summary>
+        public const string ServiceUnreadPrefix = "could not read the car light tables";
+
+        /// <summary>CarLightService's status where the read at start threw, as it writes it.</summary>
+        public const string ServiceUnloaded = "the car light tables could not be loaded";
+
+        /// <summary>Whether CarLightService's status is one of its two failures to read the tables, which the
+        /// row says in its own words and the page writes to the log.</summary>
+        public static bool CarTablesUnread(string status)
         {
-            return (status ?? string.Empty).Trim();
+            var said = (status ?? string.Empty).Trim();
+            return said.StartsWith(ServiceUnreadPrefix, StringComparison.Ordinal) || said == ServiceUnloaded;
+        }
+
+        /// <summary>
+        /// The row's status line: CarLightService's status, and a sentence saying the copy is over a week old
+        /// where it is. The service's lowercase states, which name the tables by the noun the row retired and
+        /// carry an exception's message, are said in the row's own words.
+        /// </summary>
+        public static string CarTablesLine(string status, bool stale)
+        {
+            var said = (status ?? string.Empty).Trim();
+            if (said == ServiceNotLoaded) return CarTablesLoading;
+            if (CarTablesUnread(said)) return CarTablesUnreadable;
+            if (!stale) return said;
+            if (said.Length == 0) return CarTablesStale;
+            return said + (said.EndsWith(".", StringComparison.Ordinal) ? " " : ". ") + CarTablesStale;
         }
 
         /// <summary>The heading over the panels a driver has added.</summary>
