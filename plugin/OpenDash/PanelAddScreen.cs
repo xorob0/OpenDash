@@ -128,6 +128,13 @@ namespace OpenDashPlugin
 
         public const string ReinstallButton = "Reinstall";
 
+        public const string ReinstallTooltip = "Writes this screen's dashboard into SimHub again.";
+
+        public const string SaveTooltip = "Applies the name and the size, and writes the dashboard.";
+
+        /// <summary>The edit sheet's Cancel, which has nothing to add and so does not say "adding".</summary>
+        public const string EditCancelTooltip = "Goes back without changing anything.";
+
         /// <summary>
         /// What the caption says instead once this screen's folder has been edited.
         /// </summary>

@@ -126,7 +126,9 @@ namespace OpenDashPlugin.Tests
             // The same step the line after Add says, so the foot and the message cannot disagree.
             Assert.EndsWith(PanelAddScreen.NextStep("Rim"), PanelAddScreen.Added("Rim", "Rim"));
             Assert.Equal("Add screen", PanelAddScreen.AddButton);
+            Assert.Equal("Creates the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
             Assert.Equal("Cancel", PanelAddScreen.CancelButton);
+            Assert.Equal("Goes back without adding anything.", PanelAddScreen.CancelTooltip);
             Assert.Equal("This build ships no dashboards.", PanelAddScreen.NothingToAdd);
         }
 
@@ -264,6 +266,20 @@ namespace OpenDashPlugin.Tests
             // In the user's terms rather than in the settings model's: the promise is that the rig
             // survives an edit, and the property names behind it are not something a driver acts on.
             Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.EditCaption);
+            // The edit sheet's rows and presses, each in the words it is drawn in.
+            Assert.Equal("Edit", PanelAddScreen.EditTitle);
+            Assert.Equal("Name", PanelAddScreen.NameTitle);
+            Assert.Equal("Also shown in SimHub's dashboard list.", PanelAddScreen.NameCaption);
+            Assert.Equal("Screen size", PanelAddScreen.SizeTitle);
+            Assert.Equal("Orientation", PanelAddScreen.OrientationTitle);
+            Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
+            Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
+            Assert.Equal("Writes this screen's dashboard into SimHub again.", PanelAddScreen.ReinstallTooltip);
+            Assert.Equal("Save", PanelAddScreen.SaveButton);
+            Assert.Equal("Applies the name and the size, and writes the dashboard.", PanelAddScreen.SaveTooltip);
+            Assert.Equal("Goes back without changing anything.", PanelAddScreen.EditCancelTooltip);
+            Assert.Equal("Added Rim, but its dashboard could not be installed: disk full", PanelAddScreen.AddFailed("Rim", "disk full"));
+            Assert.Equal("Could not resize Rim: disk full", PanelAddScreen.ResizeFailed("Rim", "disk full"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }

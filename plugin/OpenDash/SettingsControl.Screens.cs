@@ -189,7 +189,7 @@ namespace OpenDashPlugin
             {
                 case ScreenState.Missing:
                     var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
-                    write.ToolTip = "Puts this screen's dashboard back into SimHub.";
+                    write.ToolTip = PanelScreens.InstallAgainTooltip;
                     write.Click += (sender, args) => InstallScreenAgain(screen);
                     return Ui.FixBox(PanelScreens.MissingTitle, PanelAttention.MissingDetail, null, write);
                 case ScreenState.Restart:
@@ -583,7 +583,7 @@ namespace OpenDashPlugin
             var edited = Edited(screen);
             var reinstall = Ui.Button(PanelAddScreen.ReinstallButton, PanelButtonKind.Outline, PanelButtonSize.Small);
             reinstall.MinWidth = ButtonMinWidth;
-            reinstall.ToolTip = "Writes this screen's dashboard into SimHub again.";
+            reinstall.ToolTip = PanelAddScreen.ReinstallTooltip;
             reinstall.Click += (sender, args) => ReinstallScreen(screen);
             var reinstallRow = Ui.SettingRow(
                 PanelAddScreen.ReinstallTitle,
@@ -592,10 +592,10 @@ namespace OpenDashPlugin
 
             var save = Ui.Button(PanelAddScreen.SaveButton, PanelButtonKind.Primary, PanelButtonSize.Large);
             save.MinWidth = ButtonMinWidth;
-            save.ToolTip = "Applies the name and the size, and writes the dashboard.";
+            save.ToolTip = PanelAddScreen.SaveTooltip;
             save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);
             var cancel = Ui.Button(PanelAddScreen.CancelButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
-            cancel.ToolTip = "Goes back without changing anything.";
+            cancel.ToolTip = PanelAddScreen.EditCancelTooltip;
             cancel.Click += (sender, args) => CloseSheet();
 
             var rows = new List<UIElement> { Ui.SettingRow(PanelAddScreen.NameTitle, name, PanelAddScreen.NameCaption) };

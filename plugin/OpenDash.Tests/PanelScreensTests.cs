@@ -235,6 +235,13 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(PanelScreens.Search, entry => entry.Label == label);
             }
+            // The rows' titles, which the panes draw and search lists by the same constants.
+            Assert.Equal("Zones", PanelScreens.ZonesTitle);
+            Assert.Equal("Modules", PanelScreens.ModulesTitle);
+            Assert.Equal("First module", PanelScreens.FirstModuleTitle);
+            Assert.Equal("Next module", PanelScreens.NextModuleTitle);
+            // The round pane's heading is the artboard's noun, never the settings model's "Slots".
+            Assert.Equal("Cards", PanelScreens.CardsTitle);
             // "slots" still finds the round screen's cards, and "revbar" the rev bar.
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && System.Array.IndexOf(entry.Keywords, "revbar") >= 0);
@@ -270,6 +277,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
             Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
             Assert.Equal("Install it again", PanelAttention.InstallAgain);
+            Assert.Equal("Puts this screen's dashboard back into SimHub.", PanelScreens.InstallAgainTooltip);
         }
 
         /// <summary>A card says the kind, and the header beside the name says the kind and the size.</summary>
@@ -298,6 +306,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Duplicate", PanelScreens.DuplicateButton);
             Assert.Equal("Remove", PanelScreens.RemoveButton);
             Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.Equal("Change this screen's name or size, or install its dashboard again.", PanelScreens.EditTooltip);
+            Assert.Equal("Removes this screen, its settings and its dashboard.", PanelScreens.RemoveTooltip);
+            Assert.Equal("Leaves this screen alone.", PanelScreens.KeepTooltip);
             Assert.Equal("Remove Rim", PanelScreens.RemoveTitle("Rim"));
             Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.", PanelScreens.RemoveBody(true));
             Assert.Equal("Removes the screen, its dashboard and its settings.", PanelScreens.RemoveBody(false));
@@ -556,6 +567,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.IsPortrait(new ScreenInstance { Width = 1920, Height = 1080 }));
             Assert.Equal("Portrait layout", PanelScreens.PortraitTitle);
             Assert.Equal("Web view address", PanelScreens.WebViewTitle);
+            Assert.Equal("http or https only.", PanelScreens.WebViewEmptyTooltip);
         }
 
         /// <summary>A companion's count, and a round screen's cards: one per slot its package reads.</summary>
@@ -566,6 +578,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("18 of 21", PanelScreens.ModuleCount(modules));
             Assert.Equal("0 of 21", PanelScreens.ModuleCount(null));
             Assert.Equal(Modules.All.Select(m => m.Name), PanelScreens.ModuleNames());
+            // A module's hover is its number and what it shows.
+            Assert.Equal("01 · " + Modules.All[0].Description, PanelScreens.ModuleTooltip(Modules.All[0]));
+            Assert.Equal("21 · " + Modules.All[20].Description, PanelScreens.ModuleTooltip(Modules.All[20]));
+            Assert.Equal(string.Empty, PanelScreens.ModuleTooltip(null));
             Assert.Equal(new[] { "Controls and events", "NextScreen" }, PanelScreens.CompanionPagingCrumbs);
             Assert.All(PanelScreens.CompanionPagingCrumbs, crumb => Assert.Contains(crumb, PanelCopy.CompanionPaging));
             Assert.Equal(2, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));

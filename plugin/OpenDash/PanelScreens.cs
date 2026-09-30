@@ -91,6 +91,9 @@ namespace OpenDashPlugin
         /// <summary>The fix box under a screen whose dashboard is gone; its detail is PanelAttention.MissingDetail.</summary>
         public const string MissingTitle = "This screen's dashboard is missing from SimHub";
 
+        /// <summary>The hover of the fix box's PanelAttention.InstallAgain.</summary>
+        public const string InstallAgainTooltip = "Puts this screen's dashboard back into SimHub.";
+
         /// <summary>The step after the restart, under <see cref="RestartToLoad"/>: SimHub lists the dashboard
         /// under the screen's name, so that is the name to look for.</summary>
         public static string RestartDetail(string name)
@@ -573,6 +576,13 @@ namespace OpenDashPlugin
         public static string[] ModuleNames()
         {
             return Modules.All.Select(module => module.Name).ToArray();
+        }
+
+        /// <summary>A module's hover in the grid: its number and what it shows, "07 · ...".</summary>
+        public static string ModuleTooltip(Module module)
+        {
+            if (module == null) return string.Empty;
+            return module.Number.ToString("00", System.Globalization.CultureInfo.InvariantCulture) + " · " + module.Description;
         }
 
         /// <summary>Where a wheel button that pages the companion is bound, after the device is opened.</summary>

@@ -117,7 +117,7 @@ namespace OpenDashPlugin
                 Background = Ui.Brush(Theme.SurfaceBase),
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Child = line,
-                ToolTip = module.Number.ToString("00") + " · " + module.Description,
+                ToolTip = PanelScreens.ModuleTooltip(module),
             };
         }
 
