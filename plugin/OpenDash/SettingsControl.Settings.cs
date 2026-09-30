@@ -803,7 +803,8 @@ namespace OpenDashPlugin
                 SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),
                 SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),
                 Ui.Row(PanelSettings.NightModeTitle, null, nightMode),
-                SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction))),
+                // SimHub's trigger name sets the chip's width, so the row stacks like the sliders above it.
+                SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))),
                 Ui.SoonRow(PanelSoon.SimTimeOfDay),
                 Ui.SoonRow(PanelSoon.ScreenDimming));
         }

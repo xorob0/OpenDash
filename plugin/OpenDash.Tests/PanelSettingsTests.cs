@@ -562,6 +562,8 @@ namespace OpenDashPlugin.Tests
         {
             var page = Page();
             Assert.Contains("SettingsBindingKey(Contract.ToggleNightModeAction)", page);
+            // The chip is as wide as SimHub's name for the trigger, so below 560 it goes under its title.
+            Assert.Contains("SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle,", page);
             Assert.Contains("Go(PanelPage.Shortcuts, PanelBindings.Anchor(action))", page);
             Assert.Contains(Contract.ToggleNightModeAction, Contract.RigActionNames());
         }
