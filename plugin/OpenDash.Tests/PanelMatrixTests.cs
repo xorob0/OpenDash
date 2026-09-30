@@ -119,6 +119,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { FlagBoxInstallState.Outdated },
                 pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
             Assert.Equal(PanelMatrix.Update, outdated.Button);
+            // Every state carries its ink, though the line is drawn in the dot's colour: the dot's colour is read
+            // off a row's ink, and the page hands it to Ui.Brush, which throws on a null one, so a state left
+            // without an ink would fail the whole page.
+            Assert.Equal(Theme.StatusUpToDate, outdated.StateHex);
+            Assert.Equal(Theme.StatusUpToDate, current.StateHex);
+            Assert.Equal(Theme.StatusFailed, PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).StateHex);
+            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).StateHex);
+            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.Unavailable, null).StateHex);
+            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.NotEmbedded, null).StateHex);
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                Assert.Matches("^#[0-9A-F]{6}$", PanelLightRows.DotHex(state));
+            }
+            Assert.Contains("Fill = Ui.Brush(PanelLightRows.DotHex(state)),", MatrixSource());
 
             // The state a plan reads as, the by-hand import, and the failure the page keeps.
             Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelMatrix.StateOf(null));

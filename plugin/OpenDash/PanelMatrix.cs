@@ -36,7 +36,9 @@ namespace OpenDashPlugin
         /// What the flag box profile's line says after the profile's name, and the press beside it. The
         /// Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither page rewords
         /// a state for the other. The state is the version SimHub holds, since the name already says which
-        /// profile it is: "OpenDash Flag box · 0.5.0".
+        /// profile it is: "OpenDash Flag box · 0.5.0". Every state carries its ink, though the line is drawn in
+        /// the dot's colour rather than in it: the dot's colour is read off a row's ink (PanelLightRows.DotHex),
+        /// and a state left without one would leave the dot without a colour.
         /// </summary>
         public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
         {
