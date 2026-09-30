@@ -53,6 +53,8 @@ namespace OpenDashPlugin
             var head = list.Children.Count > 0 ? list.Children[0] as Border : null;
             if (head != null) head.BorderThickness = new Thickness(0);
 
+            // A legacy card face reads all twelve slots, which do not fit on the disc: its rows alone.
+            if (!PanelRoundPlan.OnDisc(read)) return list;
             var picture = BuildRoundPicture(read);
             if (!TwoColumns) return Ui.VStack(16, picture, list);
             var grid = new Grid();
@@ -109,10 +111,11 @@ namespace OpenDashPlugin
                 label.HorizontalAlignment = HorizontalAlignment.Center;
                 var name = ScreensCellText(Cards.All[Math.Max(0, Math.Min(Cards.All.Count - 1, Settings.Slot(slot)))].DisplayName, Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
                 name.HorizontalAlignment = HorizontalAlignment.Center;
-                name.Margin = new Thickness(0, 4, 0, 0);
+                name.Margin = new Thickness(0, PanelRoundPlan.CardLineGap, 0, 0);
                 var cell = new Border
                 {
                     Width = cellWidth,
+                    Height = PanelRoundPlan.CardHeight,
                     Background = Ui.Brush(Theme.SurfaceZone),
                     BorderBrush = Ui.Brush(Theme.Rule),
                     BorderThickness = new Thickness(PanelMetrics.BorderWeight),

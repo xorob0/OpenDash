@@ -360,8 +360,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The round screen's disc, as Screens.dc.html draws it: 240 across, 32 from the rows, its cards 6
-        /// apart and padded 6 by 7, one column of 140 for two cards and two of 88 for six or twelve, every
-        /// column of cards inside the disc.
+        /// apart and padded 6 by 7, one column of 140 for two cards and two of 84 for six, every corner of
+        /// every card inside the disc; twelve cards are not drawn on it at all.
         /// </summary>
         [Fact]
         public void A_round_screens_picture_is_the_artboards_disc()
@@ -375,11 +375,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelRoundPlan.Columns(6));
             Assert.Equal(2, PanelRoundPlan.Columns(Contract.SlotCount));
             Assert.Equal(140, PanelRoundPlan.CardWidth(1));
-            Assert.Equal(88, PanelRoundPlan.CardWidth(2));
-            foreach (var columns in new[] { 1, 2 })
+            Assert.Equal(84, PanelRoundPlan.CardWidth(2));
+            // A card is its rule, its padding and its two lines at their line height.
+            var lines = PanelFacePlan.LineHeight * (PanelShell.EyebrowSize + Theme.SizeBody);
+            Assert.Equal(PanelRoundPlan.CardHeight, Math.Ceiling(2 * PanelMetrics.BorderWeight + 2 * PanelRoundPlan.CardPaddingY + lines + PanelRoundPlan.CardLineGap));
+
+            // Every corner of the block of cards, which the picture centres on the disc, lies inside it.
+            var radius = PanelRoundPlan.PictureSize / 2;
+            foreach (var read in new[] { 2, 6 })
             {
-                Assert.True(columns * PanelRoundPlan.CardWidth(columns) + (columns - 1) * PanelRoundPlan.CardGap < PanelRoundPlan.PictureSize);
+                Assert.True(PanelRoundPlan.OnDisc(read));
+                var columns = PanelRoundPlan.Columns(read);
+                var rows = (read + columns - 1) / columns;
+                var width = columns * PanelRoundPlan.CardWidth(columns) + (columns - 1) * PanelRoundPlan.CardGap;
+                var height = rows * PanelRoundPlan.CardHeight + (rows - 1) * PanelRoundPlan.CardGap;
+                Assert.True(height < PanelRoundPlan.PictureSize, read + " cards stand " + height + " tall");
+                var corner = Math.Sqrt(width * width / 4 + height * height / 4);
+                Assert.True(corner <= radius, read + " cards put a corner " + corner + " from the disc's centre");
             }
+            // Twelve, on a card face of another size, stand taller than the disc, so the rows are drawn alone.
+            Assert.False(PanelRoundPlan.OnDisc(Contract.SlotCount));
+            Assert.Equal(PanelRoundPlan.MostOnDisc, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
         }
 
         /// <summary>A companion's section binds one action of OpenDash's, the held glance: its paging is

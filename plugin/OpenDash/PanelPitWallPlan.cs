@@ -318,17 +318,35 @@ namespace OpenDashPlugin
 
         public const double CardPaddingY = 7;
 
-        /// <summary>The cards stand in one column for two, and in two columns of three for six or more.</summary>
+        /// <summary>Between a card's label and the card it shows.</summary>
+        public const double CardLineGap = 4;
+
+        /// <summary>A card's height: its rule, its padding, the 11 px label and the 14 px card name at
+        /// PanelFacePlan.LineHeight, and the gap between them.</summary>
+        public const double CardHeight = 50;
+
+        /// <summary>The most cards the disc carries: the 800 round's six. A card face of another size reads
+        /// all twelve slots, which stand taller than the disc in any arrangement of these cards, so it is
+        /// drawn as its rows alone.</summary>
+        public const int MostOnDisc = 6;
+
+        /// <summary>Whether the disc is drawn with the cards on it.</summary>
+        public static bool OnDisc(int read)
+        {
+            return read > 0 && read <= MostOnDisc;
+        }
+
+        /// <summary>The cards stand in one column for two, and in two columns of three for six.</summary>
         public static int Columns(int read)
         {
             return read > 2 ? 2 : 1;
         }
 
-        /// <summary>A card's width: 140 alone in its column, 88 beside another, which keeps two of them and
-        /// their gap inside the disc's chord at the height they are drawn.</summary>
+        /// <summary>A card's width: 140 alone in its column, 84 beside another, which keeps every corner of
+        /// the three rows of two inside the disc (88 put the top row's corners 2 px past it).</summary>
         public static double CardWidth(int columns)
         {
-            return columns == 1 ? 140 : 88;
+            return columns == 1 ? 140 : 84;
         }
     }
 
