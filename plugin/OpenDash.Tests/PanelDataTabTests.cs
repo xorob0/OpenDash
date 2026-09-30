@@ -57,6 +57,26 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Blue flag detail", PanelDataTab.BlueFlagTitle);
             // The three values are the control's to show; the caption says only what the row is about.
             Assert.Equal("What shows next to a blue flag.", PanelDataTab.BlueFlagCaption);
+            Assert.Equal(new[] { "Nothing", "Class", "Position and class" }, PanelDataTab.BlueFlagLabels);
+            Assert.Equal(Contract.BlueFlagDetails.Length, PanelDataTab.BlueFlagLabels.Length);
+            Assert.Contains("BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels,", string.Concat(RepoPaths.SettingsControlCode()));
+        }
+
+        /// <remarks>
+        /// "Class" and not the artboard's "In class": the pinned caption begins with the word, and a value in
+        /// a chooser is a name rather than a fragment (docs/design/voice.md).
+        /// </remarks>
+        [Fact]
+        public void The_position_and_session_rows_name_every_value_the_contract_declares()
+        {
+            Assert.Equal(new[] { "Overall", "Class" }, PanelDataTab.PositionLabels);
+            Assert.Equal(Contract.PositionModes.Length, PanelDataTab.PositionLabels.Length);
+            Assert.StartsWith(PanelDataTab.PositionLabels[1], PanelDataTab.PositionCaption, StringComparison.Ordinal);
+            Assert.Equal(new[] { "Auto", "Laps", "Time" }, PanelDataTab.SessionLabels);
+            Assert.Equal(Contract.SessionProgressModes.Length, PanelDataTab.SessionLabels.Length);
+            var source = string.Concat(RepoPaths.SettingsControlCode());
+            Assert.Contains("BuildSegmented(Contract.PositionModes, PanelDataTab.PositionLabels,", source);
+            Assert.Contains("BuildSegmented(Contract.SessionProgressModes, PanelDataTab.SessionLabels,", source);
         }
 
         /// <remarks>

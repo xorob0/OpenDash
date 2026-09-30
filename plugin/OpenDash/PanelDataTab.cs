@@ -59,6 +59,10 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PositionCaption = "Class also shows only your own class in lists. A zone can ask for that on its own.";
 
+        /// <summary>One label per mode, in the contract's order. "Class" rather than the artboard's "In class":
+        /// the caption begins with the word, and a value in a chooser is a name.</summary>
+        public static readonly string[] PositionLabels = { "Overall", "Class" };
+
         public const string DeltaTitle = "Delta reference";
 
         public const string DeltaCaption = "Which lap the delta compares against.";
@@ -98,9 +102,15 @@ namespace OpenDashPlugin
 
         public const string SessionCaption = "Auto picks laps or time to suit the session.";
 
+        /// <summary>One label per mode, in the contract's order.</summary>
+        public static readonly string[] SessionLabels = { "Auto", "Laps", "Time" };
+
         public const string BlueFlagTitle = "Blue flag detail";
 
         public const string BlueFlagCaption = "What shows next to a blue flag.";
+
+        /// <summary>One label per detail, in the contract's order.</summary>
+        public static readonly string[] BlueFlagLabels = { "Nothing", "Class", "Position and class" };
 
         public const string DriverNameTitle = "Driver names";
 
