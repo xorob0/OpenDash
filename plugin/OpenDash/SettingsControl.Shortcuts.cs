@@ -348,10 +348,11 @@ namespace OpenDashPlugin
         private static ShortcutsGroupState ShortcutsCard(string title, string detail, FrameworkElement lead)
         {
             // A wrap panel, so the name is measured at the header's width (a horizontal stack panel measured it
-            // at infinity, and the ellipsis never came): a long name ends in one, and the kind and size go
-            // under it rather than past the count.
+            // at infinity): a long name wraps, as the artboard's .gh lets its title shrink and wrap, and the
+            // kind and size go under it rather than past the count. Never an ellipsis: the name is all that
+            // tells two faces' cards apart, and "... (left)" and "... (right)" cut short read alike.
             var name = Ui.Text(title ?? string.Empty, PanelShortcuts.GroupTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
-            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            name.TextWrapping = TextWrapping.Wrap;
             name.VerticalAlignment = VerticalAlignment.Center;
             var titleLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             titleLine.Children.Add(name);

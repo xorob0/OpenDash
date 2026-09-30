@@ -762,7 +762,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The model's geometry is what the view draws with: the header's gaps, the crumbs' gap, the
-        /// card name's ellipsis and the editor filling its slot.</summary>
+        /// card name wrapping at the header's width and the editor filling its slot.</summary>
         [Fact]
         public void The_page_draws_at_the_models_geometry()
         {
@@ -771,7 +771,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("filter.Margin = new Thickness(0, PanelShortcuts.FilterGapStacked, 0, 0);", code);
             Assert.Contains("header.Margin = new Thickness(0, PanelShortcuts.IntroGap - PanelShell.SectionGapFor(PanelPage.Shortcuts), 0, 0);", code);
             Assert.Contains("crumbs.Margin = new Thickness(0, PanelShortcuts.LeadGap, 0, 0);", code);
-            Assert.Contains("name.TextTrimming = TextTrimming.CharacterEllipsis;", Between(code, "private static ShortcutsGroupState ShortcutsCard(", "return new ShortcutsGroupState"));
+            var card = Between(code, "private static ShortcutsGroupState ShortcutsCard(", "return new ShortcutsGroupState");
+            Assert.Contains("name.TextWrapping = TextWrapping.Wrap;", card);
+            Assert.DoesNotContain("TextTrimming", card);
             Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
             Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
@@ -849,7 +851,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + layout.Binder) }", code);
             Assert.DoesNotContain("GridLength.Auto });\n                    control", code.Replace("\r\n", "\n"));
             Assert.Contains("control.FriendlyName = PanelShortcuts.EditorName;", code);
-            // A card's name is measured at the header's width, so a long one ends in an ellipsis.
+            // A card's name is measured at the header's width, so a long one wraps there.
             Assert.Contains("var titleLine = new WrapPanel", code);
 
             // What the model decides from the bindings read, each drawn through it: the row's state, the
