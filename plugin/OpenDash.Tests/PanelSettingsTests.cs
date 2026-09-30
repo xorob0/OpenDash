@@ -546,13 +546,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("", PanelSettings.ThresholdText(0));
             Assert.Equal("130", PanelSettings.ThresholdText(130));
 
-            Assert.Equal(0, PanelSettings.ParseThreshold("", 130, 999));
-            Assert.Equal(0, PanelSettings.ParseThreshold("  ", 130, 999));
-            Assert.Equal(0, PanelSettings.ParseThreshold(null, 130, 999));
-            Assert.Equal(125, PanelSettings.ParseThreshold(" 125 ", 130, 999));
-            Assert.Equal(130, PanelSettings.ParseThreshold("hot", 130, 999));
-            Assert.Equal(999, PanelSettings.ParseThreshold("5000", 130, 999));
-            Assert.Equal(0, PanelSettings.ParseThreshold("-4", 130, 999));
+            var max = PanelSettings.TemperatureMax;
+            Assert.Equal(0, PanelSettings.ParseThreshold("", 130, max));
+            Assert.Equal(0, PanelSettings.ParseThreshold("  ", 130, max));
+            Assert.Equal(0, PanelSettings.ParseThreshold(null, 130, max));
+            Assert.Equal(125, PanelSettings.ParseThreshold(" 125 ", 130, max));
+            Assert.Equal(130, PanelSettings.ParseThreshold("hot", 130, max));
+            Assert.Equal(max, PanelSettings.ParseThreshold("5000", 130, max));
+            Assert.Equal(0, PanelSettings.ParseThreshold("-4", 130, max));
+
+            // The boxes' clamps: two digits of laps, and three of temperature, which holds every unit's own
+            // default -- a Kelvin rig types 393 for its oil, and a Fahrenheit rig 248 -- without a word.
+            Assert.Equal(99, PanelSettings.LowFuelMax);
+            Assert.Equal(999, PanelSettings.TemperatureMax);
+            Assert.All(Contract.DefaultOilTemp.Values.Concat(Contract.DefaultWaterTemp.Values), value => Assert.InRange(value, 1, PanelSettings.TemperatureMax));
+            Assert.InRange(Contract.DefaultFlagBoxLowFuelLaps, 1, PanelSettings.LowFuelMax);
 
             var page = Page();
             Assert.Contains("Settings.SetLightsOilTemp(v); Save();", page);
