@@ -640,11 +640,9 @@ namespace OpenDashPlugin
             else if (count > 1) line.Append(" " + count + " LED profiles could not be " + participle + ".");
         }
 
-        /// <summary>What Reinstall everything says when the dashboards could not be written.</summary>
-        public static string ReinstallFailed(string reason)
-        {
-            return "The reinstall did not finish: " + reason;
-        }
+        /// <summary>What Reinstall everything says when the dashboards could not be written. The reason is in
+        /// SimHub's log, and the line says so rather than repeating it (voice.md).</summary>
+        public const string ReinstallFailed = "The reinstall did not finish. See SimHub's log.";
 
         // --- The kept copy --------------------------------------------------------------------------
 
@@ -723,16 +721,47 @@ namespace OpenDashPlugin
 
         public const string ReportCopied = "Support report copied. Paste it into your issue.";
 
-        public static string ReportFailed(string reason)
-        {
-            return "Could not copy the support report: " + reason;
-        }
+        /// <summary>The clipboard would not take the report: another program holding it open is the usual
+        /// reason, and it passes.</summary>
+        public const string ReportFailed = "Could not copy the support report. Try again.";
+
+        /// <summary>The report could not be put together at all; the reason is in SimHub's log.</summary>
+        public const string ReportNotWritten = "Could not write the support report. See SimHub's log.";
 
         public const string LogMissing = "SimHub has not written a log yet.";
 
-        public static string LogFailed(string reason)
+        /// <summary>Open the log could not open the folder, named rather than the exception's words.</summary>
+        public static string LogFailed(string folder)
         {
-            return "Could not open SimHub's log folder: " + reason;
+            return "Could not open " + folder + ".";
+        }
+
+        // --- The support report's lines -----------------------------------------------------------------
+
+        /// <summary>A screen as the report names it: "Face, 1280 × 480".</summary>
+        public static string ScreenDetail(string kind, int width, int height)
+        {
+            return PanelAddScreen.KindName(kind) + ", " + width + " × " + height;
+        }
+
+        /// <summary>A strip as the report names it: "3/9/3 Fanatec on fanatec-1", or the shape alone when it
+        /// names no device.</summary>
+        public static string StripDetail(string shape, string device)
+        {
+            return (shape ?? string.Empty) + (string.IsNullOrWhiteSpace(device) ? string.Empty : " on " + device.Trim());
+        }
+
+        /// <summary>A matrix as the report names it: "Matrix 1".</summary>
+        public static string MatrixName(int matrix)
+        {
+            return "Matrix " + matrix.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>The car tables as the report says them: "Ready (412 cars, fetched 2026-09-28)".</summary>
+        public static string CarTables(string status, int cars, DateTime? fetched)
+        {
+            return (status ?? "unknown") + " (" + (cars == 1 ? "1 car" : cars.ToString(CultureInfo.InvariantCulture) + " cars")
+                + (fetched.HasValue ? ", fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty) + ")";
         }
 
         /// <summary>Where SimHub writes its log, under its own folder: Logs\SimHub.txt is the current one and

@@ -222,6 +222,8 @@ namespace OpenDashPlugin
             copy.Click += (sender, args) => UpdatesCopyReport();
 
             var log = Ui.Button(PanelUpdates.OpenLog, PanelButtonKind.Outline);
+            // No press opened SimHub's log before this page, so it is new too, for the same one release.
+            log.Content = Ui.HStack(8, Ui.Text(PanelUpdates.OpenLog, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
             log.Click += (sender, args) => UpdatesOpenLog();
 
             var issue = Ui.Button(PanelUpdates.ReportIssue, PanelButtonKind.Outline);
@@ -261,7 +263,7 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Writing the support report failed", ex);
-                Say(PanelUpdates.ReportFailed(ex.Message), false);
+                Say(PanelUpdates.ReportNotWritten, false);
                 return;
             }
             try
@@ -272,7 +274,7 @@ namespace OpenDashPlugin
             {
                 // Another program holding the clipboard open is the usual reason, and it passes.
                 Log.Warn("Putting the support report on the clipboard failed: " + ex.Message);
-                Say(PanelUpdates.ReportFailed(ex.Message), false);
+                Say(PanelUpdates.ReportFailed, false);
                 return;
             }
             Say(PanelUpdates.ReportCopied);
@@ -288,7 +290,7 @@ namespace OpenDashPlugin
             var log = UpdatesLogTail(root);
             plugin.Installer.Refresh();
             var screens = UpdatesDashboardRows()
-                .Select(pair => new UpdatesReportItem(pair.Value.Name, pair.Key.Kind + " " + pair.Key.Width + "x" + pair.Key.Height, pair.Value.Version, pair.Value.State))
+                .Select(pair => new UpdatesReportItem(pair.Value.Name, PanelUpdates.ScreenDetail(pair.Key.Kind, pair.Key.Width, pair.Key.Height), pair.Value.Version, pair.Value.State))
                 .ToList();
 
             var strips = new List<UpdatesReportItem>();
@@ -300,13 +302,13 @@ namespace OpenDashPlugin
                 foreach (var entry in census)
                 {
                     var row = PanelUpdates.StripRow(entry.Key.Name, reachable ? entry.Value : new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
-                    var detail = PanelLightRows.ShapeLabel(entry.Key.ProfileShapeId) + (string.IsNullOrWhiteSpace(entry.Key.Device) ? string.Empty : " on " + entry.Key.Device);
+                    var detail = PanelUpdates.StripDetail(PanelLightRows.ShapeLabel(entry.Key.ProfileShapeId), entry.Key.Device);
                     strips.Add(new UpdatesReportItem(row.Name, detail, row.Version, row.State));
                 }
             }
 
             var matrices = Settings.MatrixPanels()
-                .Select(m => new UpdatesReportItem("Matrix " + m, Settings.MatrixName(m), null, null))
+                .Select(m => new UpdatesReportItem(PanelUpdates.MatrixName(m), Settings.MatrixName(m), null, null))
                 .ToList();
             UpdatesReportItem flagBox = null;
             if (matrices.Count > 0 && plugin.FlagBoxJson != null)
@@ -316,9 +318,7 @@ namespace OpenDashPlugin
             }
 
             var cars = plugin.CarLights;
-            var carTables = cars == null
-                ? null
-                : cars.Status + " (" + cars.CarCount + " cars" + (cars.FetchedAt.HasValue ? ", fetched " + cars.FetchedAt.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : string.Empty) + ")";
+            var carTables = cars == null ? null : PanelUpdates.CarTables(cars.Status, cars.CarCount, cars.FetchedAt);
 
             return new UpdatesReportInput
             {
@@ -398,7 +398,7 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Warn("Opening SimHub's log folder failed: " + ex.Message);
-                Say(PanelUpdates.LogFailed(ex.Message), false);
+                Say(PanelUpdates.LogFailed(folder), false);
             }
         }
     }

@@ -38,6 +38,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Nothing yet. Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
         }
 
+        /// <summary>The names a label may capitalise after its first word.</summary>
+        private static readonly HashSet<string> Names = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "OpenDash", "SimHub", "GitHub", "MIT", "Main",
+        };
+
         [Fact]
         public void No_label_is_a_question_a_contraction_or_the_artboard_s_spelling()
         {
@@ -48,6 +54,7 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.PutMineBack, PanelUpdates.SupportTitle, PanelUpdates.CopyReport, PanelUpdates.OpenLog,
                 PanelUpdates.ReportIssue, PanelUpdates.ReadGuide, PanelUpdates.RestartNote, PanelUpdates.SupportCaption,
                 PanelUpdates.Heading("0.5.1"), PanelUpdates.KeptTitle(new[] { "Main dash" }), PanelUpdates.KeptCaption(1),
+                PanelUpdates.Licence,
             };
             foreach (var label in labels)
             {
@@ -58,6 +65,14 @@ namespace OpenDashPlugin.Tests
                 Assert.DoesNotContain("Repair", label);
                 // Sentence case: the first letter is a capital and no other word is, bar the names.
                 Assert.True(char.IsUpper(label[0]), label);
+                foreach (var sentence in label.Split(new[] { ". " }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    foreach (var word in sentence.Split(' ').Skip(1))
+                    {
+                        if (word.Length == 0 || !char.IsUpper(word[0])) continue;
+                        Assert.True(Names.Contains(word.TrimEnd('.', ',')), label + ": " + word);
+                    }
+                }
             }
             Assert.Equal("Check for updates", PanelUpdates.CheckTitle);
             Assert.DoesNotContain("once a day", PanelUpdates.CheckTitle);
@@ -512,7 +527,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(Tally(notUpdated: 1).Ok);
             Assert.False(Tally(notInstalled: 1).Ok);
             Assert.False(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed).Ok);
-            Assert.Equal("The reinstall did not finish: disk full", PanelUpdates.ReinstallFailed("disk full"));
+            // The reason is in SimHub's log, and the line says where rather than repeating it (voice.md).
+            Assert.Equal("The reinstall did not finish. See SimHub's log.", PanelUpdates.ReinstallFailed);
         }
 
         /// <summary>Two strips of one shape are two strips: one rewritten and one whose device has gone is
@@ -608,9 +624,10 @@ namespace OpenDashPlugin.Tests
         public void Support_says_what_happened_after_a_press()
         {
             Assert.Equal("Support report copied. Paste it into your issue.", PanelUpdates.ReportCopied);
-            Assert.Equal("Could not copy the support report: busy", PanelUpdates.ReportFailed("busy"));
+            Assert.Equal("Could not copy the support report. Try again.", PanelUpdates.ReportFailed);
+            Assert.Equal("Could not write the support report. See SimHub's log.", PanelUpdates.ReportNotWritten);
             Assert.Equal("SimHub has not written a log yet.", PanelUpdates.LogMissing);
-            Assert.Equal("Could not open SimHub's log folder: denied", PanelUpdates.LogFailed("denied"));
+            Assert.Equal(@"Could not open C:\SimHub\Logs.", PanelUpdates.LogFailed(@"C:\SimHub\Logs"));
             Assert.Equal("Logs", PanelUpdates.LogFolder);
             Assert.Equal("SimHub.txt", PanelUpdates.LogFile);
             Assert.Equal(8, PanelUpdates.SupportButtonGap);
@@ -639,6 +656,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelUpdates.Tail(lines, 2).Count);
         }
 
+        /// <summary>What marks a log line as OpenDash's is the prefix Log writes: a renamed prefix would
+        /// otherwise empty the report's log section without a word.</summary>
+        [Fact]
+        public void The_log_marker_is_the_prefix_the_plugin_logs_with()
+        {
+            var log = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Log.cs"));
+            Assert.Contains("public const string Prefix = \"" + PanelUpdates.LogMarker + " \";", log);
+        }
+
+        [Fact]
+        public void The_report_names_each_thing_as_the_panel_does()
+        {
+            Assert.Equal("Face, 1280 × 480", PanelUpdates.ScreenDetail(Contract.KindFace, 1280, 480));
+            Assert.Equal("Pit wall, 1920 × 1080", PanelUpdates.ScreenDetail(Contract.KindPitWall, 1920, 1080));
+            Assert.Equal("3/9/3 Fanatec on fanatec-1", PanelUpdates.StripDetail("3/9/3 Fanatec", "fanatec-1"));
+            Assert.Equal("3/9/3 Fanatec", PanelUpdates.StripDetail("3/9/3 Fanatec", " "));
+            Assert.Equal("Matrix 2", PanelUpdates.MatrixName(2));
+            Assert.Equal("Ready (412 cars, fetched 2026-09-28)", PanelUpdates.CarTables("Ready", 412, new DateTime(2026, 9, 28, 7, 0, 0, DateTimeKind.Utc)));
+            Assert.Equal("Not fetched (1 car)", PanelUpdates.CarTables("Not fetched", 1, null));
+        }
+
         [Fact]
         public void The_report_carries_the_versions_the_rig_and_the_log_and_nothing_else()
         {
@@ -654,33 +692,46 @@ namespace OpenDashPlugin.Tests
                 LastCheckedTicks = new DateTime(2026, 9, 30, 9, 12, 0, DateTimeKind.Utc).Ticks,
                 UpdateLine = "Version 0.5.2 is available. You have 0.5.0.",
                 RestartPending = true,
-                Screens = new[] { new UpdatesReportItem("Rim", "face 850x480", "0.5.0", "Up to date") },
+                Screens = new[] { new UpdatesReportItem("Rim", PanelUpdates.ScreenDetail(Contract.KindFace, 850, 480), "0.5.0", "Up to date") },
                 Strips = new[] { new UpdatesReportItem("Wheel rim", "3/9/3 Fanatec on fanatec-1", "0.4.2", "Update available") },
                 Matrices = new[] { new UpdatesReportItem("Matrix 1", "Flag box", null, null) },
                 FlagBox = new UpdatesReportItem("OpenDash Flag box", null, "0.5.0", "Up to date"),
                 CarTables = "Ready (412 cars)",
                 Log = new[] { "INFO [OpenDash] one", "WARN [OpenDash] two" },
             });
-            var lines = report.Replace("\r\n", "\n").Split('\n');
-            Assert.Equal("OpenDash support report", lines[0]);
-            Assert.Contains("Written 2026-09-30 14:05 UTC", lines);
-            Assert.Contains("OpenDash plugin: 0.5.1", lines);
-            Assert.Contains("Dashboards on the rig: 0.5.0", lines);
-            Assert.Contains(@"SimHub: 9.12.6, in C:\Program Files (x86)\SimHub", lines);
-            Assert.Contains("Windows: Microsoft Windows NT 10.0.19045.0", lines);
-            Assert.Contains("Update check: on. Last checked today, 09:12 (UTC).", lines);
-            Assert.Contains("Update status: Version 0.5.2 is available. You have 0.5.0.", lines);
-            Assert.Contains("Update status: " + UpdateWording.RestartLater, lines);
-            Assert.Contains("Screens (1)", lines);
-            Assert.Contains("- Rim (face 850x480): Up to date, 0.5.0", lines);
-            Assert.Contains("LED strips (1)", lines);
-            Assert.Contains("- Wheel rim (3/9/3 Fanatec on fanatec-1): Update available, 0.4.2", lines);
-            Assert.Contains("Matrices (1)", lines);
-            Assert.Contains("- Matrix 1 (Flag box)", lines);
-            Assert.Contains("Flag box profile: OpenDash Flag box: Up to date, 0.5.0", lines);
-            Assert.Contains("Car tables: Ready (412 cars)", lines);
-            Assert.Contains("SimHub's log, the last 2 OpenDash lines:", lines);
-            Assert.Equal("WARN [OpenDash] two", lines.Last(line => line.Length > 0));
+            // The whole report, line for line: the caption promises what it holds, and a line added to it (a
+            // setting, a path of the driver's) is one this test has to be changed to allow.
+            Assert.Equal(new[]
+            {
+                "OpenDash support report",
+                "Written 2026-09-30 14:05 UTC",
+                "",
+                "OpenDash plugin: 0.5.1",
+                "Dashboards on the rig: 0.5.0",
+                @"SimHub: 9.12.6, in C:\Program Files (x86)\SimHub",
+                "Windows: Microsoft Windows NT 10.0.19045.0",
+                "Update check: on. Last checked today, 09:12 (UTC).",
+                "Update status: Version 0.5.2 is available. You have 0.5.0.",
+                "Update status: " + UpdateWording.RestartLater,
+                "",
+                "Screens (1)",
+                "- Rim (Face, 850 × 480): Up to date, 0.5.0",
+                "",
+                "LED strips (1)",
+                "- Wheel rim (3/9/3 Fanatec on fanatec-1): Update available, 0.4.2",
+                "",
+                "Matrices (1)",
+                "- Matrix 1 (Flag box)",
+                "",
+                "Flag box profile: OpenDash Flag box: Up to date, 0.5.0",
+                "",
+                "Car tables: Ready (412 cars)",
+                "",
+                "SimHub's log, the last 2 OpenDash lines:",
+                "INFO [OpenDash] one",
+                "WARN [OpenDash] two",
+                "",
+            }, report.Replace("\r\n", "\n").Split('\n'));
         }
 
         [Fact]
@@ -693,6 +744,18 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("Flag box profile", report);
             Assert.Contains("SimHub's log, the last 0 OpenDash lines:", report);
             Assert.NotNull(PanelUpdates.Report(null));
+        }
+
+        /// <summary>One primary per page: the Updates page's one accented press is the update card's Download,
+        /// and nothing else it draws is (PanelCopyTests holds the table's pairings to none).</summary>
+        [Fact]
+        public void The_page_draws_one_primary_and_it_is_Download()
+        {
+            var code = string.Concat(RepoPaths.SettingsControlSources()
+                .Where(p => System.IO.Path.GetFileName(p).StartsWith("SettingsControl.Updates", StringComparison.Ordinal))
+                .Select(RepoPaths.Code));
+            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(code, @"PanelButtonKind\.Primary").Count);
+            Assert.Contains("updatesDownload = Ui.Button(null, PanelButtonKind.Primary);", code);
         }
 
         // --- Search -----------------------------------------------------------------------------------

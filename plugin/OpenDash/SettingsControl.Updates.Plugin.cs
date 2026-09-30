@@ -550,7 +550,7 @@ namespace OpenDashPlugin
             var lights = failure == null ? UpdatesBringLightsForward() : null;
             Save();
             Redraw();
-            if (failure != null) Say(PanelUpdates.ReinstallFailed(failure), false);
+            if (failure != null) Say(PanelUpdates.ReinstallFailed, false);
             else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName()), lights.Ok);
         }
     }
