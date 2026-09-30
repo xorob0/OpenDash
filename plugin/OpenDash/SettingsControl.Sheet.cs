@@ -156,12 +156,11 @@ namespace OpenDashPlugin
             return dock;
         }
 
-        /// <summary>Sizes the sheet and lays its right edge on the main column's, so on a wide window it opens
-        /// beside the cards rather than at the far edge of the control.</summary>
+        /// <summary>Sizes the sheet, which lies against the main column's right edge: the control's own, since
+        /// the column fills the control.</summary>
         private void SizeSheet()
         {
             sheetPanel.Width = PanelShell.SheetWidth(controlWidth);
-            sheetPanel.Margin = new Thickness(0, 0, PanelShell.SheetRightGap(controlWidth, WidePage(route.Page)), 0);
         }
 
         /// <summary>Closes the sheet, if one is open, and gives focus back to what opened it when that is

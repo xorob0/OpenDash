@@ -29,12 +29,14 @@ namespace OpenDashPlugin
         public const string IssuesUrl = "https://github.com/xorob0/OpenDash/issues";
 
         /// <summary>
-        /// The measure a caption, a picture of a face or the live preview is drawn against inside a page.
+        /// The measure a line the panel says, a long caption or the live preview is drawn against inside a
+        /// page.
         /// </summary>
         /// <remarks>
-        /// A ceiling rather than a width: the main column grows to PanelShell.ContentMax and what stretches
-        /// simply stretches, but a line of prose and a preview keep this, which is the room the artboards
-        /// give them at their 1200 px width.
+        /// A ceiling rather than a width: the main column fills whatever SimHub gives the panel and what
+        /// stretches simply stretches, but a line of prose and a preview keep this, which is the room the
+        /// artboards give them at their 1200 px width. A caption keeps PanelShell.ProseMaxWidth unless it
+        /// asks for this.
         /// </remarks>
         private const double BodyWidth = 880;
 
@@ -60,12 +62,9 @@ namespace OpenDashPlugin
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
         };
+        /// <summary>The main column: every pixel right of the sidebar, with no ceiling and nothing centred. Only
+        /// prose keeps a measure of its own (PanelShell.ProseMaxWidth).</summary>
         private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Stretch };
-
-        /// <summary>The main column's one grid column, which carries the ceiling: a star column with a
-        /// MaxWidth stretches up to it and then stays beside the sidebar, where a Stretch element with a
-        /// MaxWidth of its own is centred in whatever is left.</summary>
-        private readonly ColumnDefinition mainColumn = new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) };
         private readonly StackPanel messageHost = new StackPanel { Orientation = Orientation.Vertical };
         private readonly ContentControl pageHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch, Focusable = false, IsTabStop = false };
 
@@ -193,10 +192,7 @@ namespace OpenDashPlugin
             column.Children.Add(messageHost);
             column.Children.Add(pageHost);
             mainFrame.Child = column;
-            var holder = new Grid();
-            holder.ColumnDefinitions.Add(mainColumn);
-            holder.Children.Add(mainFrame);
-            mainScroll.Content = holder;
+            mainScroll.Content = mainFrame;
 
             DockPanel.SetDock(sidebarHost, Dock.Left);
             frame.Children.Add(sidebarHost);
@@ -221,7 +217,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Follows the control's width: the sidebar, the gutter and the ceiling change at once. The sidebar is
+        /// Follows the control's width: the sidebar and the gutter change at once. The sidebar is
         /// drawn again when it changes between labels and a rail, and the page when the room it was built for
         /// has moved -- its columns, or its width, which a picture or the Rig canvas is sized from -- once the
         /// window has stopped moving. A card grid decides its columns as it is measured.
@@ -289,15 +285,8 @@ namespace OpenDashPlugin
         {
             var pad = PanelShell.MainPaddingX(layout);
             mainFrame.Padding = new Thickness(pad, PanelShell.MainPaddingTop, pad, PanelShell.MainPaddingBottomFor(route.Page));
-            mainColumn.MaxWidth = WidePage(route.Page) ? double.PositiveInfinity : PanelShell.ContentMax + 2 * pad;
             sidebarHost.Width = PanelShell.SidebarWidthFor(layout);
             sheetLayer.Margin = new Thickness(PanelShell.SidebarWidthFor(layout), 0, 0, 0);
-        }
-
-        /// <summary>The Rig page draws the rig and is better for the room, so it takes the whole column.</summary>
-        private static bool WidePage(PanelPage page)
-        {
-            return page == PanelPage.Rig;
         }
 
         // --- The hooks a page reaches the shell through -------------------------------------------------
@@ -325,15 +314,16 @@ namespace OpenDashPlugin
         // registering the same key again replaces the action rather than adding a second, so an undo runs
         // once however many times the page was built since the last Go; OnTick(action) is called every
         // second while showing; OnUpdate(checking, answered) hears the update check. Layout: PageLayout,
-        // PageSection, ContentWidth (less the scroll bar), Narrow (the rail: the sidebar is icons) and
+        // PageSection, ContentWidth (the whole column right of the sidebar less the gutters and the scroll
+        // bar, with no ceiling: the page fills it, rows and grids stretch, and only prose keeps
+        // PanelShell.ProseMaxWidth), Narrow (the rail: the sidebar is icons) and
         // TwoColumns (the only test for laying two blocks side by side: the full sidebar and at least
         // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit -- from 1000 to
         // about 1080 px the sidebar is full and the content is 679 to 759 -- so a page lays blocks side by
         // side only when TwoColumns is true and stacks them otherwise, never testing !Narrow), all read while
         // building -- the shell rebuilds the page when any of them moves, so anything a page has in flight
         // (a download, a press it is waiting on) lives in a field outside the build and the next build draws
-        // it from there. WidePage(page) is the shell's list of pages that take the whole column rather than
-        // stop at PanelShell.ContentMax (Rig alone: Rig is wide already, and there is no PanelShell.Wide).
+        // it from there. Every page takes the whole column, so no page is wider than another.
         // Lines: Say. Sheets: ShowSheet(title, body, footer,
         // closed), SheetFooter, CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
@@ -613,9 +603,10 @@ namespace OpenDashPlugin
             Go(new PanelRoute(page, anchor));
         }
 
-        /// <summary>The room a page has for its content at the width the panel is now, less the room the main
-        /// column's scroll bar takes when the page is taller than the window.</summary>
-        private double ContentWidth => PanelShell.ContentWidth(controlWidth, WidePage(route.Page), SystemParameters.VerticalScrollBarWidth);
+        /// <summary>The room a page has for its content at the width the panel is now: the whole column right of
+        /// the sidebar, less the gutters and the room the main column's scroll bar takes when the page is
+        /// taller than the window. It has no ceiling.</summary>
+        private double ContentWidth => PanelShell.ContentWidth(controlWidth, SystemParameters.VerticalScrollBarWidth);
 
         /// <summary>Whether the sidebar is a rail of icons. It says nothing about columns: between 1000 and
         /// 1080 px the sidebar is full and Narrow is false, yet there is not the room for two blocks side by

@@ -103,14 +103,41 @@ namespace OpenDashPlugin
             return Tracked(text, PanelShell.EyebrowSize, FontWeights.SemiBold, hex, Theme.TrackingLabel);
         }
 
-        /// <summary>A line of prose at a size and ink, wrapping.</summary>
+        /// <summary>A line of prose at a size and ink, wrapping at PanelShell.ProseMaxWidth against the left
+        /// edge, as a caption does: the column has no ceiling, and a paragraph does.</summary>
+        /// <remarks>Left rather than stretched, because a stretched element narrower than its slot is centred
+        /// in it. A caller that wants another measure sets MaxWidth after.</remarks>
         public static TextBlock Prose(string text, double size = Theme.SizeSmall, string hex = Theme.TextSecondary)
         {
             var block = Text(text, size, FontWeights.Normal, hex);
             block.TextWrapping = TextWrapping.Wrap;
             block.LineHeight = Math.Round(size * 1.45, 1);
             block.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+            block.MaxWidth = PanelShell.ProseMaxWidth;
+            block.HorizontalAlignment = HorizontalAlignment.Left;
             return block;
+        }
+
+        /// <summary>
+        /// A picture drawn at a fixed size -- a face's zones, a round face's slots, the pit wall's pages --
+        /// that shrinks to the column when the column is narrower and never grows past its own size, set
+        /// against the left edge.
+        /// </summary>
+        /// <remarks>
+        /// The column fills the window, so it is as narrow as the rail and a 20 px gutter leave it; a
+        /// picture wider than that was clipped at the right. Scaled as a whole, controls included, which is
+        /// what a picture of a thing is for; a page that can lay the picture out to the width instead should.
+        /// </remarks>
+        public static FrameworkElement FitWidth(FrameworkElement picture)
+        {
+            return new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Child = picture,
+            };
         }
 
         // --- Icons on the twenty unit box -------------------------------------------------------------
@@ -1278,6 +1305,9 @@ namespace OpenDashPlugin
         /// A grid of cards that takes as many columns as fit (PanelShell.Columns), with the gap between them
         /// and every card in a row as tall as the tallest.
         /// </summary>
+        /// <param name="max">The most columns the page lays its cards in: the artboard's own count (Screens 6,
+        /// LEDs 4, Matrix 4, Home 3). The column has no ceiling, so once the columns are all in use the cards
+        /// stretch to fill the row rather than a seventh being added.</param>
         /// <remarks>
         /// A panel of its own rather than a UniformGrid with its Columns reset on SizeChanged: the count is
         /// decided at measure time from the width it is offered, so a resize never lays it out twice, and a

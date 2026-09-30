@@ -136,33 +136,67 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Compact));
         }
 
+        /// <summary>
+        /// The column takes all the width SimHub gives the panel. The artboards are drawn 1200 wide as a
+        /// frame, not as a maximum: at 1200 the column is their 896, and past it the column keeps growing,
+        /// left-aligned beside the sidebar, with nothing centred and no ceiling.
+        /// </summary>
         [Fact]
-        public void The_content_grows_to_its_ceiling_and_no_further_unless_it_is_the_rig()
+        public void The_content_takes_the_whole_width_right_of_the_sidebar()
         {
-            // 1200: the artboard's own width, 1200 - 216 - 88.
+            // 1200: the artboard's own frame, 1200 - 216 - 88.
             Assert.Equal(896, PanelShell.ContentWidth(1200));
-            // 3840: capped.
-            Assert.Equal(1112, PanelShell.ContentWidth(3840));
-            Assert.Equal(3840 - 216 - 88, PanelShell.ContentWidth(3840, wide: true));
+            // 3840: no ceiling. The 1112 the foundation capped at left two thirds of a 4K window empty.
+            Assert.Equal(3840 - 216 - 88, PanelShell.ContentWidth(3840));
             // 900: the rail and a 32 gutter.
             Assert.Equal(900 - 56 - 64, PanelShell.ContentWidth(900));
             // 700: the rail and a 20 gutter.
             Assert.Equal(700 - 56 - 40, PanelShell.ContentWidth(700));
             Assert.Equal(0, PanelShell.ContentWidth(10));
-            // The main column's scroll bar comes out of the room wherever the room is under the ceiling:
-            // a 1100 px window has 1100 - 216 - 88 - 17, and a 3840 one is still capped.
-            Assert.Equal(1100 - 216 - 88 - 17, PanelShell.ContentWidth(1100, false, 17));
-            Assert.Equal(1112, PanelShell.ContentWidth(3840, false, 17));
-            Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, true, 17));
+            // The main column's scroll bar comes out of the room at every width.
+            Assert.Equal(1100 - 216 - 88 - 17, PanelShell.ContentWidth(1100, 17));
+            Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, 17));
+        }
+
+        /// <summary>Nothing in the shell holds the column back or centres it: no MaxWidth on the main column,
+        /// no page that is wider than the rest.</summary>
+        [Fact]
+        public void The_shell_neither_caps_nor_centres_the_column()
+        {
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
+            Assert.Contains("mainScroll.Content = mainFrame;", shell);
+            Assert.Contains("new Border { HorizontalAlignment = HorizontalAlignment.Stretch }", shell);
+            Assert.DoesNotContain("MaxWidth", shell);
+            Assert.DoesNotContain("WidePage", shell);
+            Assert.Null(typeof(PanelShell).GetField("ContentMax"));
         }
 
         [Fact]
-        public void Two_columns_only_beside_the_full_sidebar_and_with_the_room()
+        public void Two_columns_beside_the_full_sidebar_wherever_there_is_the_room()
         {
             Assert.True(PanelShell.TwoColumns(PanelLayout.Full, 760));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Full, 759));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Rail, 900));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Compact, 900));
+            // With no ceiling it holds from about 1080 px up, a 4K window included, scroll bar and all.
+            Assert.False(PanelShell.TwoColumns(PanelShell.Layout(1000), PanelShell.ContentWidth(1000, 17)));
+            Assert.True(PanelShell.TwoColumns(PanelShell.Layout(1200), PanelShell.ContentWidth(1200, 17)));
+            Assert.True(PanelShell.TwoColumns(PanelShell.Layout(3840), PanelShell.ContentWidth(3840, 17)));
+        }
+
+        /// <summary>Only prose keeps a measure: a caption or a paragraph wraps at .cap's 620 however wide the
+        /// column, set against its left edge.</summary>
+        [Fact]
+        public void Prose_keeps_a_readable_measure()
+        {
+            Assert.Equal(620, PanelShell.ProseMaxWidth);
+            string Code(string name) => RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", name));
+            Assert.Contains("public static TextBlock Caption(string text, double maxWidth = PanelShell.ProseMaxWidth)", Code("Widgets.cs"));
+            var kit = Code("Widgets.Kit.cs");
+            var prose = kit.Substring(kit.IndexOf("public static TextBlock Prose(", StringComparison.Ordinal));
+            prose = prose.Substring(0, prose.IndexOf("return block;", StringComparison.Ordinal));
+            Assert.Contains("block.MaxWidth = PanelShell.ProseMaxWidth;", prose);
+            Assert.Contains("block.HorizontalAlignment = HorizontalAlignment.Left;", prose);
         }
 
         [Theory]
@@ -171,6 +205,8 @@ namespace OpenDashPlugin.Tests
         [InlineData(700, 240, 16, 3, PanelLayout.Full, 2)]
         [InlineData(200, 240, 16, 3, PanelLayout.Full, 1)]
         [InlineData(4000, 240, 16, 3, PanelLayout.Full, 3)]
+        // Screens' six at a 4K column: every column in use, the cards stretching to fill the row.
+        [InlineData(3840 - 216 - 88 - 17, 138, 10, 6, PanelLayout.Full, 6)]
         // The narrowest layout holds two whatever the room.
         [InlineData(4000, 100, 16, 6, PanelLayout.Compact, 2)]
         [InlineData(0, 100, 16, 6, PanelLayout.Full, 1)]
@@ -237,18 +273,14 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_sheet_lies_against_the_main_column_and_not_the_far_edge()
+        public void A_sheet_lies_against_the_right_edge_of_the_column_which_is_the_controls()
         {
-            // The column stops at 216 + 1112 + 2 x 44 = 1416; a sheet on a wider control stands in by the rest.
-            Assert.Equal(0, PanelShell.SheetRightGap(1200));
-            Assert.Equal(0, PanelShell.SheetRightGap(1416));
-            Assert.Equal(1600 - 1416, PanelShell.SheetRightGap(1600));
-            Assert.Equal(3840 - 1416, PanelShell.SheetRightGap(3840));
-            // Rig takes the whole column, so its sheet keeps the control's edge.
-            Assert.Equal(0, PanelShell.SheetRightGap(3840, wide: true));
-            Assert.Equal(0, PanelShell.SheetRightGap(700));
+            // The column fills the control, so the sheet docks right with nothing standing it in, at 4K too.
+            Assert.Null(typeof(PanelShell).GetMethod("SheetRightGap"));
+            Assert.Equal(560, PanelShell.SheetWidth(3840));
             var sheet = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Sheet.cs"));
-            Assert.Contains("PanelShell.SheetRightGap(controlWidth, WidePage(route.Page))", sheet);
+            Assert.Contains("sheetPanel.HorizontalAlignment = HorizontalAlignment.Right;", sheet);
+            Assert.DoesNotContain("sheetPanel.Margin", sheet);
         }
 
         [Fact]
@@ -366,8 +398,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(64, PanelShell.NumberInputWidth);
             Assert.Equal(8, PanelShell.NumberInputPaddingX);
             Assert.Equal(15, PanelShell.NumberInputTextSize);
-            // The main column's ceiling, and the room two columns need.
-            Assert.Equal(1112, PanelShell.ContentMax);
+            // The room two columns need. The main column has no ceiling; the artboards' 1200 is a frame.
             Assert.Equal(760, PanelShell.TwoColumnFrom);
         }
 

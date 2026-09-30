@@ -300,12 +300,21 @@ namespace OpenDashPlugin
             return page == PanelPage.Settings ? MainPaddingBottomSettings : MainPaddingBottom;
         }
 
-        /// <summary>What a page's content grows to and not past. The Rig page may opt out, since its canvas
-        /// is a drawing of the rig and is better for the room.</summary>
-        public const double ContentMax = 1112;
+        /// <summary>
+        /// The measure a caption or a paragraph wraps at, however wide the column: .cap's 620 on the
+        /// artboards. The column itself has no ceiling -- it takes every pixel SimHub gives the panel, and
+        /// rows, tables and card grids stretch to its right edge -- so prose is the one thing held to a
+        /// readable line, since a sentence that runs the width of a desk is a line nobody finishes.
+        /// </summary>
+        /// <remarks>
+        /// The artboards are drawn 1200 wide as a frame, not as a maximum: at 1200 the column is their 896,
+        /// and past it the column keeps growing and nothing is centred.
+        /// </remarks>
+        public const double ProseMaxWidth = 620;
 
         /// <summary>Whether a page may lay its blocks side by side: only beside the full sidebar and only
-        /// where the content has at least this much room.</summary>
+        /// where the content has at least this much room. With no ceiling on the column this holds at every
+        /// full-sidebar width from about 1080 px up, a 4K window included.</summary>
         public const double TwoColumnFrom = 760;
 
         /// <summary>The gap between a page's sections on Home, whose &lt;main&gt; Main.dc.html lays out at 28, and
@@ -336,17 +345,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The room a page has to lay out in, for a control of that width, less <paramref name="scrollBar"/>:
-        /// the main column's vertical scroll bar, which takes its width from the column whenever the page is
-        /// taller than the window, and which the shell always leaves room for rather than rebuild the page
-        /// each time the bar comes and goes.
+        /// The room a page has to lay out in, for a control of that width: everything right of the sidebar
+        /// less the gutters and <paramref name="scrollBar"/>, the main column's vertical scroll bar, which
+        /// takes its width from the column whenever the page is taller than the window, and which the shell
+        /// always leaves room for rather than rebuild the page each time the bar comes and goes. There is no
+        /// ceiling: at 3840 px the column is 3840 - 216 - 88 wide, less the bar, and the page fills it.
         /// </summary>
-        public static double ContentWidth(double controlWidth, bool wide = false, double scrollBar = 0)
+        public static double ContentWidth(double controlWidth, double scrollBar = 0)
         {
             var layout = Layout(controlWidth);
             var room = controlWidth - SidebarWidthFor(layout) - 2 * MainPaddingX(layout) - Math.Max(0, scrollBar);
-            if (room < 0) room = 0;
-            return wide ? room : Math.Min(room, ContentMax);
+            return room < 0 ? 0 : room;
         }
 
         /// <summary>How long a resize waits for the window to stop moving before the page is rebuilt.</summary>
@@ -378,8 +387,9 @@ namespace OpenDashPlugin
 
         // --- The sheet -----------------------------------------------------------------------------------
 
-        /// <summary>A sheet is this wide beside the cards, and takes the whole main column below
-        /// <see cref="SheetFullFrom"/>.</summary>
+        /// <summary>A sheet is this wide, docked against the right edge of the main column -- which is the
+        /// control's own right edge, since the column fills the control -- and takes the whole main column
+        /// below <see cref="SheetFullFrom"/>.</summary>
         public const double SheetWidthMax = 560;
         public const double SheetFullFrom = 900;
         public const double SheetPaddingX = 28;
@@ -403,20 +413,6 @@ namespace OpenDashPlugin
             if (column < 0) column = 0;
             if (controlWidth < SheetFullFrom) return column;
             return Math.Min(SheetWidthMax, column);
-        }
-
-        /// <summary>
-        /// How far the sheet's right edge stands in from the control's: the room right of the main column,
-        /// which stops at <see cref="ContentMax"/> and its gutters unless the page is wide. The sheet opens
-        /// beside the cards, so at 3840 px it lies against the column's edge near 1416 and not 1860 px away
-        /// at the control's.
-        /// </summary>
-        public static double SheetRightGap(double controlWidth, bool wide = false)
-        {
-            if (wide) return 0;
-            var layout = Layout(controlWidth);
-            var gap = controlWidth - SidebarWidthFor(layout) - (ContentMax + 2 * MainPaddingX(layout));
-            return gap > 0 ? gap : 0;
         }
 
         // --- What the pages share -----------------------------------------------------------------------

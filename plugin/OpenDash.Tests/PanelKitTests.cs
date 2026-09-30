@@ -40,8 +40,8 @@ namespace OpenDashPlugin.Tests
         public void The_card_grid_holds_the_artboards_six_at_its_own_width()
         {
             Assert.Equal(138, PanelKit.CardMinWidth);
-            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 17), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
-            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 0), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, 17), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, 0), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
         }
 
         /// <summary>
