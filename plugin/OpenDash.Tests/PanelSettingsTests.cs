@@ -288,6 +288,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(300, PanelSettings.SliderWidthFor(300));
         }
 
+        /// <summary>
+        /// The page asks the rules above where it draws: the stacking rule in SettingsFit and on the rows sized
+        /// for it, the fold on the table's surface columns and its folded row, the slider width, and Try on
+        /// the live rows alone (ruling 66). The rules are pure and tested on their own; this holds the calls.
+        /// </summary>
+        [Fact]
+        public void The_page_asks_the_layout_rules_where_it_draws()
+        {
+            var page = Page();
+            Assert.Contains("if (!PanelSettings.StacksControls(ContentWidth)) return row;", page);
+            Assert.Contains("SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", page);
+            Assert.Contains("var surfaces = PanelSettings.AlertSurfacesFit(ContentWidth);", page);
+            Assert.Matches(@"if \(surfaces\)\s*\{\s*foreach \(var on in alert\.Surfaces\)", page);
+            Assert.Matches(@"if \(!surfaces\)\s*\{\s*(//[^\n]*\s*)*folded = Ui\.Soon\(Ui\.SettingRow\(PanelSoon\.AlertDisplay\.Title, null\), PanelSoon\.AlertDisplay\);", page);
+            Assert.Matches(@"if \(alert\.Live\)\s*\{\s*var link = Ui\.LinkButton\(PanelSettings\.TryLabel\);", page);
+            Assert.Contains("brightness.Width = PanelSettings.SliderWidthFor(ContentWidth);", page);
+            Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidth);", page);
+        }
+
         [Fact]
         public void The_units_line_reads_simhubs_own_names()
         {
