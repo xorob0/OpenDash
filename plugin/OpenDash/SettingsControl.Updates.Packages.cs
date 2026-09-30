@@ -20,6 +20,9 @@ namespace OpenDashPlugin
         {
             var versionWidth = PanelUpdates.VersionWidth(width);
             var rows = new StackPanel { Orientation = Orientation.Vertical };
+            // Every row is a grid of its own, and the press column is as wide in all of them as in the widest,
+            // so a row with an Update press keeps its version and state under the head's.
+            Grid.SetIsSharedSizeScope(rows, true);
             rows.Children.Add(UpdatesTableHead(versionWidth));
             foreach (var pair in UpdatesDashboardRows())
             {
@@ -83,14 +86,15 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(versionWidth) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelUpdates.TableStateWidth) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "UpdatesPress" });
             return grid;
         }
 
         private static void UpdatesPlace(Grid grid, FrameworkElement element, int column, double versionWidth)
         {
             // The gap sits before each column but the first; a hidden version column takes no gap either.
-            var gap = column == 0 || (column == 1 && versionWidth <= 0) ? 0 : PanelUpdates.TableGap;
+            // The press column carries its gap on the press itself, so a row without one takes no room.
+            var gap = column == 0 || column == 3 || (column == 1 && versionWidth <= 0) ? 0 : PanelUpdates.TableGap;
             element.Margin = new Thickness(gap, 0, 0, 0);
             element.VerticalAlignment = VerticalAlignment.Center;
             if (column == 1 && versionWidth <= 0) element.Visibility = Visibility.Collapsed;

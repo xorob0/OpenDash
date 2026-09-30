@@ -59,6 +59,7 @@ namespace OpenDashPlugin
         {
             var button = Ui.Button(PanelCopy.LightRow(FlagBoxInstallState.Outdated, null).Button, PanelButtonKind.Outline, PanelButtonSize.Small);
             button.ToolTip = "Replaces the copy in SimHub with this version.";
+            button.Margin = new Thickness(PanelUpdates.TableGap, 0, 0, 0);
             return button;
         }
 
