@@ -121,7 +121,9 @@ namespace OpenDashPlugin
                 };
                 row.Children.Add(button);
             }
-            row.ToolTip = FlagBoxInstallPlan.Summary(plan ?? new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, plugin.FlagBox?.Path);
+            // Nothing to hover where the line, or the by-hand import under it, already says it all.
+            var hover = PanelMatrix.ProfileLineTooltip(state, version, plan == null ? null : plan.EmbeddedVersion);
+            if (hover != null) row.ToolTip = hover;
             row.HorizontalAlignment = HorizontalAlignment.Right;
             return row;
         }
@@ -139,10 +141,11 @@ namespace OpenDashPlugin
                 var m = matrix;
                 var facts = MatrixFacts(m);
                 var shown = facts == null ? null : facts.Shown;
+                var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);
                 var picture = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());
                 OnLighting(() => Ui.Redim(picture, MatrixDim()));
                 if (m == selected) selectedPicture(picture);
-                cards.Add(Ui.MatrixCard(picture, PanelMatrix.NameOf(Settings.MatrixName(m), m), PanelMatrix.CardLine(m, Settings.MatrixSide(m), shown),
+                cards.Add(Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown),
                     PanelMatrix.CardLineHex(shown), m == selected, () =>
                     {
                         Select(PanelPage.Matrix, PanelMatrix.SlotId(m));
