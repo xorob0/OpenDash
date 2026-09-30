@@ -124,6 +124,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(24, PanelRigMap.LayoutMargin);
             Assert.Equal(28, PanelRigMap.LayoutGap);
             Assert.Equal(8, PanelRigMap.LayoutGapMin);
+            // The dash's portrait page (screens/pitwall.ts): the board 800 of the 1856 px body, the zones
+            // from 912, and the gutter between them.
+            Assert.Equal(0.43, PanelRigMap.PortraitBoardShare);
+            Assert.Equal(0.49, PanelRigMap.PortraitZonesTop);
+            Assert.Equal(0.02, PanelRigMap.PortraitCellGap);
+            Assert.Equal(Math.Round(800.0 / 1856, 2), PanelRigMap.PortraitBoardShare);
+            Assert.Equal(Math.Round(912.0 / 1856, 2), PanelRigMap.PortraitZonesTop);
         }
 
         [Fact]
@@ -198,33 +205,101 @@ namespace OpenDashPlugin.Tests
         /// The page's writes, held as text as the other pages hold theirs: a drop that is never saved, or a
         /// Reset layout that writes nothing, would otherwise pass every check. A drop is saved on the drop
         /// rather than in End(), since SimHub is force-killed on the VM; a screen is saved with Save(screen),
-        /// which keeps a migrated screen; and a chip repaints in place and rebuilds nothing.
+        /// which keeps a migrated screen; and a chip repaints in place and rebuilds nothing. Each handler is
+        /// cut out before it is searched, so the handler below it cannot meet its pin.
         /// </remarks>
         [Fact]
         public void The_rig_page_keeps_a_drop_and_a_reset_and_a_chip_rebuilds_nothing()
         {
             InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePlaces(Settings, views.Select(", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
             InOrder(RigMethod("private void RigResetLayout("), "PanelRigMap.ClearLayout(Settings);", "Save();", "Redraw();");
+            // Reset layout is what the header's press does.
+            Assert.Contains("reset.Click += (sender, args) => RigResetLayout();", RigMethod("private FrameworkElement BuildRigHeader("));
 
             var tile = RigMethod("private RigTileView BuildRigTile(");
-            InOrder(tile, "thumb.DragCompleted +=", "RigPlace(root,", "RigDrop(tile, views);", "};");
-            InOrder(tile, "thumb.KeyUp +=", "RigDrop(tile, views);", "};");
-            InOrder(tile, "thumb.LostKeyboardFocus +=", "RigDrop(tile, views);", "};");
-            // The arrow keys move a tile and leave the save to the key coming up.
-            var keyDown = tile.Substring(tile.IndexOf("thumb.KeyDown +=", StringComparison.Ordinal));
-            keyDown = keyDown.Substring(0, keyDown.IndexOf("};", StringComparison.Ordinal));
+            // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
+            // the tile following the default.
+            var delta = Handler(tile, "thumb.DragDelta +=");
+            InOrder(delta, "moved = true;", "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)", "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)");
+            InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
+            // The arrow keys move a tile a grid step, and leave the save to the key coming up, or to focus
+            // leaving first; a key that moved nothing saves nothing.
+            var keyDown = Handler(tile, "thumb.KeyDown +=");
+            InOrder(keyDown,
+                "case Key.Left: dx = -PanelRigMap.GridStep; break;",
+                "case Key.Right: dx = PanelRigMap.GridStep; break;",
+                "case Key.Up: dy = -PanelRigMap.GridStep; break;",
+                "case Key.Down: dy = PanelRigMap.GridStep; break;",
+                "default: return;",
+                "args.Handled = true;",
+                "if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;",
+                "unsaved = true;");
             Assert.DoesNotContain("RigDrop(", keyDown);
             Assert.DoesNotContain("Save(", keyDown);
+            InOrder(Handler(tile, "thumb.KeyUp +="), "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            // A drop lands on the grid inside the canvas, where the next build draws it (bbd059f).
+            var place = RigMethod("private static bool RigPlace(");
+            InOrder(place, "var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);", "var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);");
+            Assert.DoesNotContain("Snap(", place);
             // A press does not scroll the page to the tile under it.
-            InOrder(tile, "root.RequestBringIntoView +=", "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
+            InOrder(Handler(tile, "root.RequestBringIntoView +="), "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
+            // A wheel button pages a face's zones with no save and no rebuild, so the clock repaints it.
+            InOrder(tile, "if (tile.Kind == RigTileKind.Face)", "OnTick(", "PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key))", "if (now == seen) return;", "paint(rigScenario);");
+            // The warning dot is Home's list's.
+            Assert.Contains("var warns = PanelRigMap.Warns(tile, issues);", tile);
 
             var pick = RigMethod("private void RigPick(");
             InOrder(pick, "Select(PanelPage.Rig, id);", "view.Paint(id);");
             Assert.DoesNotContain("RebuildPage(", pick);
             Assert.DoesNotContain("Redraw(", pick);
             Assert.DoesNotContain("Save(", pick);
+            // And a chip is what picks it.
+            Assert.Contains("() => RigPick(host, views, id)", RigMethod("private void RigDrawChips("));
 
             InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);");
+        }
+
+        /// <remarks>
+        /// Rulings the page alone carries out: the model functions are tested, and these hold that the page
+        /// calls them. Each was a mutation that left every other check green.
+        /// </remarks>
+        [Fact]
+        public void The_rig_page_paints_each_tile_from_its_own_settings_and_lights_nothing_real()
+        {
+            // The lights dim at night (ruling 22), and the header's night switch follows a wheel's press.
+            Assert.Contains("return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);", RigMethod("private double RigLights("));
+            InOrder(RigMethod("private FrameworkElement BuildRigPage("), "DrawsLighting();", "BuildRigHeader()");
+
+            // A strip from its shape, its switches and its centre; a matrix from its slot, critical flags only
+            // included, which needs the scenario.
+            var picture = RigMethod("private FrameworkElement BuildRigPicture(");
+            InOrder(picture,
+                "PanelRigMap.StripPicture(PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, PanelRigMap.StripOptionsFor(bar)), PanelRigMap.StripCentreDisplay(Settings, bar))",
+                "Ui.Strip(frame, StripStyle.Rig, RigLights())",
+                "PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario)",
+                "Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Rig, RigLights())");
+
+            // A screen's flag by its own flag format: on the band, or over the body.
+            var face = RigMethod("private FrameworkElement RigFace(");
+            InOrder(face, "PanelRigMap.FaceFlagFormat(Settings, screen)", "PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner)", "RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner)");
+            Assert.Contains("PanelRigMap.FaceRevs(scenario, Settings, screen)", face);
+            var wall = RigMethod("private FrameworkElement RigPitWall(");
+            InOrder(wall, "PanelRigMap.PitWallFlagFormat(Settings, screen)", "PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), inner)", "PanelRigMap.PitWallCells(screen)", "RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format), inner)");
+            InOrder(RigMethod("private FrameworkElement RigCompanion("), "PanelRigMap.CompanionFlagFormat(Settings, screen)", "PanelRigMap.CompanionBand(scenario, format)", "PanelRigMap.CompanionStrip(scenario, format)");
+
+            // Real hardware (#506) is drawn greyed, a switch with no handler, and nothing on the page
+            // installs or writes to a device: the page emulates.
+            var header = RigMethod("private FrameworkElement BuildRigHeader(");
+            InOrder(header, "var real = PanelSoon.RealHardware;", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), Ui.Switch(false, null)), real)");
+            var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
+            foreach (var write in new[] { "InstallBar(", "ReinstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
+
+            // The page's own words: its title and New tag, the canvas's hint, and the empty rig.
+            InOrder(header, "Ui.PageTitle(PanelRigMap.Title), Ui.NewTag()");
+            var canvas = RigMethod("private FrameworkElement BuildRigCanvas(");
+            InOrder(canvas, "Ui.Prose(PanelRigMap.Empty,", "Ui.Text(PanelRigMap.CanvasHint,");
         }
 
         [Fact]
@@ -1161,6 +1236,13 @@ namespace OpenDashPlugin.Tests
             }, cells.Select(c => c.Text));
             // The board across the top, then A and B side by side, C and D under them.
             Assert.Equal(new[] { 0.0, 0, 1 }, new[] { cells[0].X, cells[0].Y, cells[0].Width });
+            Assert.Equal(0.43, cells[0].Height);
+            Assert.Equal(0.49, cells[1].Y);
+            Assert.Equal(0.49, cells[2].Y);
+            Assert.Equal(0.49, cells[1].Width, 9);
+            Assert.Equal(0.51, cells[2].X, 9);
+            Assert.Equal(0.245, cells[1].Height, 9);
+            Assert.Equal(0.755, cells[3].Y, 9);
             Assert.True(cells[1].Y > cells[0].Y + cells[0].Height);
             Assert.Equal(cells[1].Y, cells[2].Y);
             Assert.True(cells[2].X > cells[1].X + cells[1].Width);
