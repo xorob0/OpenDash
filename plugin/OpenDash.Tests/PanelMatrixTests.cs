@@ -118,6 +118,7 @@ namespace OpenDashPlugin.Tests
             var pressable = new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed };
             Assert.Equal(new[] { FlagBoxInstallState.Outdated },
                 pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
+            Assert.Equal(PanelMatrix.Update, outdated.Button);
 
             // The state a plan reads as, the by-hand import, and the failure the page keeps.
             Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelMatrix.StateOf(null));
@@ -183,17 +184,38 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotEmbedded, "x", null, one));
 
             // The hover on the title's line: one sentence, and none where the line or the import says it all.
-            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotEmbedded, null, null));
-            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Unavailable, null, "0.5.0"));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotEmbedded, null, one));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Unavailable, "0.5.0", one));
             // Not installed: the line says it, and the press's tooltip says what Install does.
-            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotInstalled, null, "0.5.0"));
-            // Up to date: the dot and the version say it; the hover gives the step the line cannot show.
-            Assert.Equal("Select it on your matrix's device in SimHub to use it.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "0.5.0"));
-            Assert.Equal("SimHub has 0.4.0, and this build carries 0.5.0.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, "0.4.0", "0.5.0"));
-            Assert.Equal("SimHub's log says why the last install failed.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Failed, null, "0.5.0"));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotInstalled, "0.5.0", one));
+            // Up to date: the dot and the version say it; the hover gives the select step the line cannot
+            // show, in the one form the message after a first install gives it: for the one matrix with its
+            // number, for each of several, and none on a rig with no matrix to name.
+            Assert.Equal("Select it on your matrix's device in SimHub and set RGB Matrix content to 2.",
+                PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", one));
+            Assert.Equal("Select it on each matrix's device in SimHub and set RGB Matrix content to the matrix's number.",
+                PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", several));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", none));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", null));
+            foreach (var rig in new[] { one, several, none })
+            {
+                var installed = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, rig).Text;
+                var hover = PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", rig);
+                Assert.Equal(PanelMatrix.SelectStep(rig), hover);
+                Assert.Equal("Installed OpenDash Flag box." + (hover == null ? string.Empty : " " + hover), installed);
+            }
+            // Outdated and failed, in the Updates page's words for the same profile in the same state: the line
+            // already shows the version SimHub has, and already says the install failed.
+            Assert.Equal("Update brings it to 0.5.0.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, "0.5.0", one));
+            Assert.Equal("Update brings it to 0.5.0.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " 0.5.0 ", one));
+            // FlagBoxInstallPlan.Decide reads Outdated whenever the versions differ, one of them missing included.
+            Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, null, one));
+            Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " ", one));
+            Assert.Equal("See SimHub's log.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Failed, "0.5.0", one));
+            Assert.Equal("See SimHub's log.", PanelMatrix.SeeLog);
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
-                var hover = PanelMatrix.ProfileLineTooltip(state, "0.4.0", "0.5.0");
+                var hover = PanelMatrix.ProfileLineTooltip(state, "0.5.0", one);
                 if (hover == null) continue;
                 Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, hover);
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(hover, @"\.(\s|$)"));
@@ -278,7 +300,7 @@ namespace OpenDashPlugin.Tests
                 "var line = Ui.Text(PanelMatrix.ProfileLine(FlagBoxName(), state, version), Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);",
                 "var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line); if (PanelMatrix.ProfileHasButton(state)) {",
                 "if (plugin.FlagBoxJson == null) return null;",
-                "var hover = PanelMatrix.ProfileLineTooltip(state, version, plan == null ? null : plan.EmbeddedVersion); if (hover != null) row.ToolTip = hover;",
+                "var hover = PanelMatrix.ProfileLineTooltip(state, plan == null ? null : plan.EmbeddedVersion, Settings.MatrixPanels().ToList()); if (hover != null) row.ToolTip = hover;",
             })
             {
                 Assert.Contains(pin, flat);

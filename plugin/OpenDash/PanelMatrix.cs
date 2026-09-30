@@ -44,7 +44,7 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(installed, Theme.StatusUpToDate, "Update", PanelButton.Primary);
+                    return new RowAction(installed, Theme.StatusUpToDate, Update, PanelButton.Primary);
                 case FlagBoxInstallState.UpToDate:
                     return new RowAction(installed, Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
@@ -53,6 +53,9 @@ namespace OpenDashPlugin
                     return new RowAction(PanelCopy.NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
             }
         }
+
+        /// <summary>The press over an older profile, which its hover names (<see cref="UpdateBringsItTo"/>).</summary>
+        public const string Update = "Update";
 
         /// <summary>The state of a profile SimHub holds whose version it does not say.</summary>
         public const string Installed = "Installed";
@@ -161,7 +164,7 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotEmbedded:
                     return null;
                 default:
-                    return PanelMessage.Danger("Could not install " + profile + ". See SimHub's log.");
+                    return PanelMessage.Danger("Could not install " + profile + ". " + SeeLog);
             }
         }
 
@@ -188,28 +191,42 @@ namespace OpenDashPlugin
         /// The hover on the title's line: in one sentence what the line cannot show, and nothing where the
         /// line, its press or the by-hand import under it already says it all (Not installed, whose press says
         /// what Install does; no profile in this build; SimHub's matrix settings out of reach). What a press
-        /// replaces is the press's own tooltip.
+        /// replaces is the press's own tooltip. The words are the Updates page's for the same profile in the
+        /// same state (PanelUpdates.UpdateBringsItTo and LightFailed on that branch), so one profile is never
+        /// hovered two ways on two pages.
         /// </summary>
-        public static string ProfileLineTooltip(FlagBoxInstallState state, string installedVersion, string embeddedVersion)
+        /// <param name="panels">The rig's matrices: a current profile's hover is the select step, in the one
+        /// form the page says it (<see cref="SelectStep"/>), and none on a rig with no matrix to name.</param>
+        public static string ProfileLineTooltip(FlagBoxInstallState state, string embeddedVersion, IList<int> panels)
         {
             switch (state)
             {
                 case FlagBoxInstallState.UpToDate:
                     // The dot and the version already say it is current: the hover gives the one step the
                     // line cannot show, which FlagBoxInstallPlan.Summary carried.
-                    return UpToDateHover;
+                    return SelectStep(panels);
                 case FlagBoxInstallState.Outdated:
-                    return "SimHub has " + (installedVersion ?? "an older version") + ", and this build carries "
-                        + (embeddedVersion ?? "a newer one") + ".";
+                    // The line already shows the version SimHub has: the hover names the one the press brings.
+                    return UpdateBringsItTo(embeddedVersion);
                 case FlagBoxInstallState.Failed:
-                    return "SimHub's log says why the last install failed.";
+                    // The line already says the install failed: the hover says where to look.
+                    return SeeLog;
                 default:
                     return null;
             }
         }
 
-        /// <summary>The hover over a current profile: the step left once it is in SimHub.</summary>
-        public const string UpToDateHover = "Select it on " + YourDevice + " to use it.";
+        /// <summary>An older profile's hover, naming the version its Update brings: "Update brings it to
+        /// 0.5.0.", and "Update brings it up to date." when this build does not say its version.</summary>
+        public static string UpdateBringsItTo(string embeddedVersion)
+        {
+            return string.IsNullOrWhiteSpace(embeddedVersion)
+                ? Update + " brings it up to date."
+                : Update + " brings it to " + embeddedVersion.Trim() + ".";
+        }
+
+        /// <summary>A failed install's hover, and the close of the message after one: where to look.</summary>
+        public const string SeeLog = "See SimHub's log.";
 
         public const double ProfileDotSize = 7;
         public const double ProfileGap = 10;

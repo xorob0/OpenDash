@@ -136,7 +136,7 @@ namespace OpenDashPlugin
                 row.Children.Add(button);
             }
             // Nothing to hover where the line, or the by-hand import under it, already says it all.
-            var hover = PanelMatrix.ProfileLineTooltip(state, version, plan == null ? null : plan.EmbeddedVersion);
+            var hover = PanelMatrix.ProfileLineTooltip(state, plan == null ? null : plan.EmbeddedVersion, Settings.MatrixPanels().ToList());
             if (hover != null) row.ToolTip = hover;
             row.HorizontalAlignment = HorizontalAlignment.Right;
             return row;
