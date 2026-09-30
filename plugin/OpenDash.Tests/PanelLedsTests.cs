@@ -547,11 +547,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_car_line_says_whether_Lovely_Car_Data_has_the_car_and_nothing_otherwise()
         {
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true, true, true));
-            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false, true, true));
-            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false, true, true));
-            Assert.Null(PanelLeds.CarLine(true, null, false, true, true));
-            Assert.Null(PanelLeds.CarLine(true, " ", true, true, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true, true, false, true));
+            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false, true, false, true));
+            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false, true, false, true));
+            Assert.Null(PanelLeds.CarLine(true, null, false, true, false, true));
+            Assert.Null(PanelLeds.CarLine(true, " ", true, true, false, true));
             Assert.True(PanelLeds.CarLineGood(true, true));
             Assert.False(PanelLeds.CarLineGood(false, true));
             Assert.Equal(Theme.StatusUpToDate, PanelLeds.CarLineHex(true));
@@ -564,15 +564,37 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void With_no_tables_the_car_line_says_they_are_missing_rather_than_the_car()
         {
-            Assert.Equal("Lovely Car Data is not downloaded yet. Download it under Every strip.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, true));
-            Assert.Null(PanelLeds.CarLine(true, null, false, false, true));
-            Assert.Null(PanelLeds.CarLine(true, " ", false, false, true));
-            Assert.Null(PanelLeds.CarLine(false, "Porsche 911 GT3 R (992)", false, false, true));
+            Assert.Equal("Lovely Car Data is not downloaded yet. Download it under Every strip.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, true, true));
+            Assert.Null(PanelLeds.CarLine(true, null, false, false, true, true));
+            Assert.Null(PanelLeds.CarLine(true, " ", false, false, true, true));
+            Assert.Null(PanelLeds.CarLine(false, "Porsche 911 GT3 R (992)", false, false, true, true));
             Assert.False(PanelLeds.CarLineGood(true, false));
             Assert.Contains(PanelLights.CarTablesTitle, PanelLeds.CarTablesMissing);
             Assert.Contains(PanelLeds.EveryStripTitle, PanelLeds.CarTablesMissing);
             Assert.True(PanelLeds.TablesLoaded(84));
             Assert.False(PanelLeds.TablesLoaded(0));
+        }
+
+        /// <summary>
+        /// No tables read is not the same as none downloaded: while the start's read is running the row says
+        /// "Loading…", and where the copy on disk could not be read it says so, and in neither is it true that the
+        /// tables were never downloaded, so the car line says nothing.
+        /// </summary>
+        [Fact]
+        public void The_car_line_says_the_tables_are_missing_only_where_none_were_downloaded()
+        {
+            Assert.True(PanelLeds.TablesMissing(0, PanelLights.CarTablesNone));
+            // A download that did not answer leaves them missing all the same.
+            Assert.True(PanelLeds.TablesMissing(0, PanelLights.CarTablesNone + " " + PanelLights.CarTablesFailed("timeout")));
+            Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceNotLoaded));
+            Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceUnreadPrefix + ": Access to the path is denied."));
+            Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceUnloaded));
+            Assert.False(PanelLeds.TablesMissing(84, "84 cars, updated just now"));
+            Assert.False(PanelLeds.TablesMissing(0, null));
+            const string car = "Porsche 911 GT3 R (992)";
+            Assert.Null(PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.ServiceNotLoaded), true));
+            Assert.Null(PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.ServiceUnloaded), true));
+            Assert.Equal(PanelLeds.CarTablesMissing, PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.CarTablesNone), true));
         }
 
         /// <summary>The plugin reads iRacing's tables alone, so in any other game a car the archive does carry
@@ -588,9 +610,9 @@ namespace OpenDashPlugin.Tests
         public void The_car_line_speaks_only_in_the_game_the_tables_cover(string game, bool covered)
         {
             Assert.Equal(covered, PanelLeds.TablesCoverGame(game));
-            var said = PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, true, PanelLeds.TablesCoverGame(game));
+            var said = PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, true, false, PanelLeds.TablesCoverGame(game));
             Assert.Equal(covered ? "Porsche 911 GT3 R (992) is not in Lovely Car Data." : null, said);
-            Assert.Equal(covered ? PanelLeds.CarTablesMissing : null, PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, PanelLeds.TablesCoverGame(game)));
+            Assert.Equal(covered ? PanelLeds.CarTablesMissing : null, PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false, true, PanelLeds.TablesCoverGame(game)));
         }
 
         [Fact]
@@ -1048,7 +1070,8 @@ namespace OpenDashPlugin.Tests
                 "width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;",
                 // Ruling 48: the car line only while the switch is on, in the game the tables cover.
                 "var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));",
-                "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, PanelLeds.TablesCoverGame(live.GameName))",
+                "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName))",
+                "var missing = PanelLeds.TablesMissing(plugin.CarLights.CarCount, plugin.CarLights.Status);",
                 // Ruling 49: Live draws the car's run only where the profile does.
                 "var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));",
                 // The fix box, for a profile SimHub holds and has not selected.

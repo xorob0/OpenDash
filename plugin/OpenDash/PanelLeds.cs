@@ -545,16 +545,28 @@ namespace OpenDashPlugin
         /// instead, and where the row that fetches it is. The plugin reads only iRacing's tables
         /// (CarLightLibrary), so in any other game every car would read as missing, which the greyed row for
         /// the other sims' car data already says is not read yet: there the line says nothing.
+        ///
+        /// <para>With no tables read, it says they are missing only where none were ever downloaded
+        /// (<paramref name="tablesMissing"/>): while the start's read is still running, or where the copy on disk
+        /// could not be read, the row below says "Loading…" or "Could not read", and a line saying they were never
+        /// downloaded would contradict it, and be false.</para>
         /// </remarks>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesCoverGame)
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)
         {
             if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
-            if (!tablesLoaded) return CarTablesMissing;
+            if (!tablesLoaded) return tablesMissing ? CarTablesMissing : null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
         }
 
-        /// <summary>The car line while a car is loaded and no tables are on disk.</summary>
+        /// <summary>The car line while a car is loaded and no tables were ever downloaded.</summary>
         public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it under Every strip.";
+
+        /// <summary>Whether no tables were ever downloaded: none read, and the service says so, rather than that
+        /// it is still reading them or could not read the copy on disk.</summary>
+        public static bool TablesMissing(int carCount, string status)
+        {
+            return carCount <= 0 && (status ?? string.Empty).Trim().StartsWith(PanelLights.CarTablesNone, StringComparison.Ordinal);
+        }
 
         /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing", "IRacing").</summary>
         public const string TablesGame = "iRacing";

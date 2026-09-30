@@ -208,32 +208,83 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The status line is CarLightService's status, and the stale note after it as a sentence of its own
-        /// where the copy is over a week old (ruling 51). The page works the note out as it draws the row, since
-        /// the status's own age is written only when the tables are read.
+        /// The status line is CarLightService's status, with "over a week old" in place of its age where the copy
+        /// is (ruling 51), so the age is never given twice and "updated just now" never sits beside the note. The
+        /// page works the note out as it draws the row, since the status's own age is written only when the
+        /// tables are read.
         /// </summary>
         [Fact]
-        public void The_stale_note_follows_the_status_as_a_sentence_of_its_own()
+        public void The_stale_note_takes_the_place_of_the_age()
         {
-            Assert.Equal("Over a week old. Press Update for a newer copy.", PanelLights.CarTablesStale);
+            Assert.Equal(", over a week old", PanelLights.CarTablesStaleAge);
+            Assert.Equal("Press Update for a newer copy.", PanelLights.CarTablesUpdateStep);
             Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
-            Assert.Equal("84 cars, updated 9 days ago. Over a week old. Press Update for a newer copy.",
-                PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
-            // Frozen at "just now" by a SimHub left running a week: the note is what says so.
-            Assert.Equal("84 cars, updated just now. Over a week old. Press Update for a newer copy.",
-                PanelLights.CarTablesLine("84 cars, updated just now", true));
-            // Tables with no fetch stamp give no age at all, and are stale by CarLightLibrary.IsStale.
-            Assert.Equal("84 cars. Over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars", true));
-            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout). Over a week old. Press Update for a newer copy.",
-                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout) ", true));
+            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
+            // Frozen at "just now" by a SimHub left running a week: the note replaces it rather than contradicting it.
+            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated just now", true));
+            // Tables with no fetch stamp give no age, and are stale by CarLightLibrary.IsStale only because nothing
+            // says when they came: offered the Update, never called over a week old.
+            Assert.Equal("84 cars. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars", true));
+            Assert.Equal("1 car, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("1 car, updated yesterday", true));
             Assert.Equal("Not downloaded yet.", PanelLights.CarTablesLine("Not downloaded yet.", false));
-            Assert.Equal(PanelLights.CarTablesStale, PanelLights.CarTablesLine(null, true));
+            Assert.Equal(string.Empty, PanelLights.CarTablesLine(null, true));
             Assert.Equal(string.Empty, PanelLights.CarTablesLine(null, false));
+            // Held to what CarLightService.Describe writes, so a reword there moves this.
+            var now = new System.DateTime(2026, 9, 30, 12, 0, 0, System.DateTimeKind.Utc);
+            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, null), true));
+            Assert.Equal("84 cars. Press Update for a newer copy.", PanelLights.CarTablesLine(CarLightService.Describe(84, null, now, null), true));
+        }
+
+        /// <summary>
+        /// A download that did not answer is said in voice.md's failure form, never with the fetch's own message in
+        /// a bracketed aside or after a colon: with no copy, what failed and the log, where the page writes the
+        /// reason; beside a copy that works, what failed and what the driver still has, as "Could not reach
+        /// GitHub. You have 0.3.0-rc.4." has it.
+        /// </summary>
+        [Fact]
+        public void A_download_that_did_not_answer_is_said_in_the_rows_words()
+        {
+            Assert.Equal("Could not download Lovely Car Data. See SimHub's log.", PanelLights.CarTablesDownloadFailed);
+            Assert.Equal("Could not download a newer copy.", PanelLights.CarTablesNewerFailed);
+            var now = new System.DateTime(2026, 9, 30, 12, 0, 0, System.DateTimeKind.Utc);
+            var failed = CarLightRefresh.Failed("Unable to connect to the remote server", 84);
+            var none = CarLightService.Describe(0, null, now, CarLightRefresh.Failed("The remote name could not be resolved: 'codeload.github.com'", 0));
+            Assert.Equal(PanelLights.CarTablesDownloadFailed, PanelLights.CarTablesLine(none, false));
+            Assert.Equal("Could not download a newer copy. You have 84 cars, updated 9 days ago.",
+                PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, failed), false));
+            Assert.Equal("Could not download a newer copy. You have 84 cars, over a week old.",
+                PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, failed), true));
+            foreach (var status in new[] { none, CarLightService.Describe(84, now.AddDays(-9), now, failed) })
+            {
+                Assert.True(PanelLights.CarTablesDownloadDidNotAnswer(status));
+                Assert.DoesNotContain("remote", PanelLights.CarTablesLine(status, false));
+                Assert.DoesNotContain("(", PanelLights.CarTablesLine(status, true));
+            }
+            Assert.False(PanelLights.CarTablesDownloadDidNotAnswer(PanelLights.CarTablesNone));
+            Assert.False(PanelLights.CarTablesDownloadDidNotAnswer("84 cars, updated just now"));
+            Assert.False(PanelLights.CarTablesDownloadDidNotAnswer(null));
+            // The words matched are CarLightService's own: a reword there has to move them here.
+            var service = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "CarLightService.cs"));
+            Assert.Contains("line += \"" + PanelLights.ServiceAge, service);
+            Assert.Contains("line += \"" + PanelLights.ServiceFailedTail, service);
+            // The reason goes to the log, since the row no longer shows it.
+            var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("if (PanelLights.CarTablesDownloadDidNotAnswer(status)) Log.Warn(\"Lovely Car Data could not be downloaded: \" + status);", leds);
+        }
+
+        [Fact]
+        public void The_car_tables_button_and_caption_are_pinned()
+        {
             Assert.Equal("Update", PanelLights.CarTablesButton(84));
             Assert.Equal("Download", PanelLights.CarTablesButton(0));
             // The page asks the service as it draws the row, with the clock of the moment.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             Assert.Contains("PanelLights.CarTablesLine(status, service.Stale(DateTime.UtcNow))", leds);
+            // The start reads the tables on a thread of its own: a tick draws the row again once the status or the
+            // count it was drawn from moves, and only then, since the stale check reads the folder.
+            Assert.Contains("carTablesDrawn = CarTablesKey();", leds);
+            Assert.Contains("if (carTablesLine == null || carTablesDownloading) return;", leds);
+            Assert.Contains("if (!string.Equals(CarTablesKey(), carTablesDrawn, StringComparison.Ordinal)) RefreshCarTables();", leds);
             // The one row that fetches the tables names both things that read them.
             Assert.Equal("Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, about 400 KB, so your car is never disclosed.",
                 PanelLights.CarTablesCaption);

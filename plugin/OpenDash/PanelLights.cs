@@ -359,11 +359,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Said after the status once the copy on disk is over a week old (CarLightService.Stale), which is
-        /// worked out as the row is drawn: the status is written when the tables are read, at start and after a
-        /// download, so its age can be days behind a SimHub left running.
+        /// Said in place of the status's ", updated ..." once the copy on disk is over a week old
+        /// (CarLightService.Stale), which is worked out as the row is drawn: the status is written when the tables
+        /// are read, at start and after a download, so its age can be days behind a SimHub left running. In place
+        /// of it rather than after it, so the line never gives the age twice or says "updated just now" beside
+        /// "over a week old".
         /// </summary>
-        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
+        public const string CarTablesStaleAge = ", over a week old";
+
+        /// <summary>The step a copy over a week old is offered, after the count.</summary>
+        public const string CarTablesUpdateStep = "Press Update for a newer copy.";
+
+        /// <summary>A download that did not answer, with no copy on disk: voice.md's failure form, with the reason
+        /// in SimHub's log, where the page writes it, rather than the fetch's own message on the panel.</summary>
+        public const string CarTablesDownloadFailed = "Could not download Lovely Car Data. See SimHub's log.";
+
+        /// <summary>A download that did not answer beside a copy that works, said as voice.md's "Could not reach
+        /// GitHub. You have 0.3.0-rc.4." is: what failed, then what the driver still has.</summary>
+        public const string CarTablesNewerFailed = "Could not download a newer copy.";
 
         /// <summary>Said while the tables are still being read at start, which a page opened at once can see.</summary>
         public const string CarTablesLoading = "Loading…";
@@ -381,6 +394,14 @@ namespace OpenDashPlugin
         /// <summary>CarLightService's status where the read at start threw, as it writes it.</summary>
         public const string ServiceUnloaded = "the car light tables could not be loaded";
 
+        /// <summary>The age clause of CarLightService's status ("84 cars, updated 9 days ago"), as Describe
+        /// writes it.</summary>
+        public const string ServiceAge = ", updated ";
+
+        /// <summary>The tail CarLightService's status carries after a download that did not answer beside a
+        /// copy that works, as Describe writes it, with the fetch's own message after it.</summary>
+        public const string ServiceFailedTail = " (last download failed: ";
+
         /// <summary>Whether CarLightService's status is one of its two failures to read the tables, which the
         /// row says in its own words and the page writes to the log.</summary>
         public static bool CarTablesUnread(string status)
@@ -390,18 +411,40 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The row's status line: CarLightService's status, and a sentence saying the copy is over a week old
-        /// where it is. The service's lowercase states, which name the tables by the noun the row retired and
-        /// carry an exception's message, are said in the row's own words.
+        /// The row's status line: CarLightService's status, with "over a week old" in place of its age where the
+        /// copy is. The service's lowercase states, which name the tables by the noun the row retired and carry an
+        /// exception's message, and its two failed downloads, which carry the fetch's message, are said in the
+        /// row's own words; the page writes the reasons to SimHub's log.
         /// </summary>
         public static string CarTablesLine(string status, bool stale)
         {
             var said = (status ?? string.Empty).Trim();
             if (said == ServiceNotLoaded) return CarTablesLoading;
             if (CarTablesUnread(said)) return CarTablesUnreadable;
-            if (!stale) return said;
-            if (said.Length == 0) return CarTablesStale;
-            return said + (said.EndsWith(".", StringComparison.Ordinal) ? " " : ". ") + CarTablesStale;
+            if (said.StartsWith(CarTablesNone, StringComparison.Ordinal))
+            {
+                // "Not downloaded yet. Download failed: <reason>." where a download did not answer.
+                return said.Length > CarTablesNone.Length ? CarTablesDownloadFailed : CarTablesNone;
+            }
+            var failedAt = said.IndexOf(ServiceFailedTail, StringComparison.Ordinal);
+            var failed = failedAt >= 0;
+            if (failed) said = said.Substring(0, failedAt).TrimEnd();
+            if (said.Length == 0) return string.Empty;
+            var agedAt = said.IndexOf(ServiceAge, StringComparison.Ordinal);
+            // Over a week old replaces the age; a copy with no fetch stamp has no age to replace, and is stale
+            // only because nothing says when it came, so it is not called over a week old.
+            var copy = !stale ? said : agedAt >= 0 ? said.Substring(0, agedAt) + CarTablesStaleAge : said;
+            if (failed) return CarTablesNewerFailed + " You have " + copy + ".";
+            return stale ? copy + ". " + CarTablesUpdateStep : copy;
+        }
+
+        /// <summary>Whether CarLightService's status says a download did not answer, with a copy on disk or
+        /// without: the page writes its reason to SimHub's log, since the row says only that it failed.</summary>
+        public static bool CarTablesDownloadDidNotAnswer(string status)
+        {
+            var said = (status ?? string.Empty).Trim();
+            return said.IndexOf(ServiceFailedTail, StringComparison.Ordinal) >= 0
+                || (said.StartsWith(CarTablesNone, StringComparison.Ordinal) && said.Length > CarTablesNone.Length);
         }
 
         /// <summary>The heading over the panels a driver has added.</summary>

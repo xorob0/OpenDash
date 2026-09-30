@@ -41,6 +41,10 @@ namespace OpenDashPlugin
         /// the button disabled and the line saying so rather than a press that looks ready.</summary>
         private bool carTablesDownloading;
 
+        /// <summary>What the car tables' row was last drawn from, the service's status and its count of cars, so
+        /// a tick redraws the row only when the start's read or a download moved them.</summary>
+        private string carTablesDrawn;
+
         /// <summary>The preview chip pressed, and the strip it was pressed for: held outside the build so a
         /// rebuild keeps it, and back to Live when another strip is selected.</summary>
         private string ledsScenario = PanelLeds.LiveScenario;
@@ -552,8 +556,9 @@ namespace OpenDashPlugin
                 width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;
                 var live = plugin.Live ?? LiveStatus.None;
                 var loaded = PanelLeds.TablesLoaded(plugin.CarLights.CarCount);
+                var missing = PanelLeds.TablesMissing(plugin.CarLights.CarCount, plugin.CarLights.Status);
                 var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);
-                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, PanelLeds.TablesCoverGame(live.GameName));
+                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName));
                 carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
                 var key = line + "|" + known;
                 if (line == null || key == shown) return;
@@ -824,7 +829,21 @@ namespace OpenDashPlugin
                 left.Children.Add(LedsCaptionLine(PanelLights.CarTablesAttribution));
             }
             RefreshCarTables();
+            // The start reads the tables on a thread of its own, so a page opened before it lands would say
+            // "Loading…" beside Download until something drew it again, while the car line above read the tables.
+            // Each tick compares two properties; the row, and the stale check's read of the folder, only on a change.
+            OnTick(() =>
+            {
+                if (carTablesLine == null || carTablesDownloading) return;
+                if (!string.Equals(CarTablesKey(), carTablesDrawn, StringComparison.Ordinal)) RefreshCarTables();
+            });
             return row;
+        }
+
+        /// <summary>What the car tables' row is drawn from: the service's status and its count of cars.</summary>
+        private string CarTablesKey()
+        {
+            return plugin.CarLights.Status + "|" + plugin.CarLights.CarCount.ToString(CultureInfo.InvariantCulture);
         }
 
         /// <summary>A line under a row's title, capped at the width the kit gives a row's caption.</summary>
@@ -842,6 +861,7 @@ namespace OpenDashPlugin
         {
             if (carTablesLine == null) return;
             var service = plugin.CarLights;
+            carTablesDrawn = CarTablesKey();
             var status = service.Status;
             // A failure to read is said in the row's words, so its reason goes to the log, once for each.
             if (PanelLights.CarTablesUnread(status) && !string.Equals(status, carTablesLogged, StringComparison.Ordinal))
@@ -876,6 +896,11 @@ namespace OpenDashPlugin
             UpdateService.InBackground(() =>
             {
                 plugin.CarLights.Download(DateTime.UtcNow);
+                // The row says only that the download failed, so its reason goes to the log. The service keeps
+                // the fetch's message in its status, with a copy on disk or without, and not in what Download
+                // returns when a copy still works; a copy it could not read is logged as the row is drawn.
+                var status = plugin.CarLights.Status;
+                if (PanelLights.CarTablesDownloadDidNotAnswer(status)) Log.Warn("Lovely Car Data could not be downloaded: " + status);
                 Dispatcher.Invoke(() =>
                 {
                     carTablesDownloading = false;
