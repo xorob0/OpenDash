@@ -370,13 +370,42 @@ namespace OpenDashPlugin
             return string.IsNullOrEmpty(kind) ? string.Empty : " · " + kind;
         }
 
-        /// <summary>The table with no row under its head: an empty rig, which points at the page that adds one.</summary>
-        public const string NothingInSimHub = "Nothing yet. Add a screen on the Screens page.";
+        /// <summary>The table with no row under its head: an empty rig, in the one phrase the panel has for
+        /// it (PanelScreens.NoScreens), pointing at the page that adds one.</summary>
+        public const string NothingInSimHub = PanelScreens.NoScreens + ". Add a screen on the Screens page.";
 
         public const string UpToDate = "Up to date";
         public const string UpdateAvailable = "Update available";
-        public const string Missing = "Missing";
-        public const string WaitingForRestart = "Waiting for a restart";
+
+        /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
+        /// row would otherwise read as if Reinstall everything could write it.</summary>
+        public const string NoDashboards = "This build of OpenDash ships no dashboards.";
+
+        /// <summary>Under the table when the installer's last read or write of a folder failed.</summary>
+        public const string InstallerFailed = "OpenDash could not read or write a dashboard. See SimHub's log.";
+
+        /// <summary>
+        /// The sentences under the table, in order: what this build ships and what the installer could not
+        /// do, then the light profiles' own (uncovered 24): OpenDash never installs one on its own, a build
+        /// with none for the rig's strips, and SimHub's LED settings out of reach.
+        /// </summary>
+        /// <param name="shipsDashboards">DashboardInstaller.HasEmbeddedPackage.</param>
+        /// <param name="installerError">DashboardInstaller.LastError.</param>
+        /// <param name="rowFailed">Whether a dashboard row already says "Install failed", which the
+        /// installer's error would repeat.</param>
+        /// <param name="hasStrips">Whether the rig has a strip.</param>
+        /// <param name="shipsProfiles">Whether this build embeds any strip profile.</param>
+        /// <param name="stripsReachable">Whether SimHub's LED settings could be read.</param>
+        public static IList<string> TableNotes(bool shipsDashboards, string installerError, bool rowFailed, bool hasStrips, bool shipsProfiles, bool stripsReachable)
+        {
+            var notes = new List<string>();
+            if (!shipsDashboards) notes.Add(NoDashboards);
+            else if (!string.IsNullOrWhiteSpace(installerError) && !rowFailed) notes.Add(InstallerFailed);
+            notes.Add(PanelLightRows.SectionCaption);
+            if (hasStrips && !shipsProfiles) notes.Add(PanelLightRows.NoProfiles);
+            else if (hasStrips && !stripsReachable) notes.Add(PanelLightRows.Unavailable);
+            return notes;
+        }
 
         /// <summary>The artboard's .f: a name column that takes the rest, 110 for the version and 150 for
         /// the state, 16 apart, padded 11 by 16; the head row pads 12 on top.</summary>
@@ -400,14 +429,26 @@ namespace OpenDashPlugin
         public const double ReinstallLineGap = 14;
 
         /// <summary>
-        /// Below this much content the version column goes and the name keeps its room: the three fixed
-        /// columns take 324 of it before a row has a name.
+        /// Below this much content the version column goes and the name keeps its room: the row's padding and
+        /// the two fixed columns with their gaps take 324 of it (16 + 16 + 110 + 16 + 150 + 16) before a row
+        /// has a name.
         /// </summary>
         public const double TableVersionFrom = 480;
 
+        /// <summary>The version's own width, the artboard's 110, or 0 where the column goes.</summary>
         public static double VersionWidth(double contentWidth)
         {
             return contentWidth >= TableVersionFrom ? TableVersionWidth : 0;
+        }
+
+        /// <summary>
+        /// A fixed column's width in the grid: its content's width and the 16 before it, since the artboard's
+        /// gap is outside its 110 and 150 and each cell sits 16 in from its column's left edge. A hidden
+        /// column takes no gap either.
+        /// </summary>
+        public static double ColumnWidth(double contentWidth)
+        {
+            return contentWidth > 0 ? contentWidth + TableGap : 0;
         }
 
         /// <summary>A version as the table writes it: empty for none, "Unknown" for a copy with no readable
@@ -422,32 +463,42 @@ namespace OpenDashPlugin
         /// <summary>
         /// A rig dashboard's row.
         /// </summary>
-        /// <param name="name">The screen's name, which is the Title SimHub lists it under.</param>
-        /// <param name="package">What the installer last found for the screen's folder, or null.</param>
+        /// <param name="screen">The screen, whose name is the Title SimHub lists it under.</param>
+        /// <param name="package">What the installer last found for the screen's folder, or null when this
+        /// build ships no package for it: DashboardInstaller.Plan leaves such a folder exactly as it is, so
+        /// Reinstall everything does not write it.</param>
         /// <param name="installed">Whether the folder is in DashTemplates, or null when unknown.</param>
         /// <param name="waitsForRestart">Whether SimHub has yet to load it (ScreenFacts.AddedSinceStart).</param>
         /// <remarks>
-        /// A failure outranks everything; then a folder that has gone, which is what Home calls a missing
-        /// screen; then one SimHub has not loaded yet, known only when the shell's facts say so; then the
-        /// installer's own status.
+        /// A failure outranks everything; then a folder that has gone, in Home's and the Screens card's word
+        /// and ink; then one SimHub has not loaded yet, in the Screens card's phrase, known only when the
+        /// shell's facts say so; then the installer's own status. A screen this build ships nothing for is
+        /// said from the facts alone, with a tooltip that says why no press here changes it.
         /// </remarks>
-        public static UpdatesRow DashboardRow(string name, PackageStatus package, bool? installed, bool? waitsForRestart)
+        public static UpdatesRow DashboardRow(ScreenInstance screen, PackageStatus package, bool? installed, bool? waitsForRestart)
         {
+            var name = screen == null ? string.Empty : screen.Name;
             var version = VersionText(package == null ? null : package.InstalledVersion);
-            if (package != null && package.Status == InstallStatus.Failed)
+            if (package == null)
+            {
+                var shipsNo = ShipsNo(screen);
+                if (installed == false) return Row(name, DashboardKind, string.Empty, PanelScreens.Missing, Theme.StatusFailed, shipsNo);
+                if (installed == true) return Row(name, DashboardKind, string.Empty, PanelScreens.InSimHub, Theme.TextLabel, shipsNo);
+                return Row(name, DashboardKind, string.Empty, PanelCopy.NotInstalled, Theme.TextLabel, shipsNo);
+            }
+            if (package.Status == InstallStatus.Failed)
             {
                 return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, "Install failed. See SimHub's log.");
             }
             if (installed == false)
             {
-                return Row(name, DashboardKind, string.Empty, Missing, Theme.StatusUpdateAvailable, "SimHub does not have this dashboard. Reinstall everything writes it again.");
+                return Row(name, DashboardKind, string.Empty, PanelScreens.Missing, Theme.StatusFailed, MissingTooltip(name));
             }
             if (waitsForRestart == true)
             {
-                return Row(name, DashboardKind, version, WaitingForRestart, Theme.StatusUpdateAvailable, "Restart SimHub to see it in the dashboard list.");
+                return Row(name, DashboardKind, version, PanelScreens.NotInSimHubYet, Theme.Caution, RestartStep(name));
             }
-            var status = package == null ? InstallStatus.NotInstalled : package.Status;
-            switch (status)
+            switch (package.Status)
             {
                 case InstallStatus.UpToDate:
                     return Row(name, DashboardKind, version, UpToDate, Theme.StatusUpToDate, null);
@@ -455,8 +506,30 @@ namespace OpenDashPlugin
                     return Row(name, DashboardKind, version, UpdateAvailable, Theme.StatusUpdateAvailable,
                         package.HeldBack || package.Edited ? EditedTooltip : BringsItTo(package.EmbeddedVersion));
                 default:
-                    return Row(name, DashboardKind, version, PanelCopy.NotInstalled, Theme.TextLabel, "Reinstall everything writes it.");
+                    return Row(name, DashboardKind, version, PanelCopy.NotInstalled, Theme.TextLabel, NotInstalledTooltip);
             }
+        }
+
+        /// <summary>A missing dashboard's tooltip, in Home's words for the same state.</summary>
+        public static string MissingTooltip(string name)
+        {
+            return name + "'s dashboard is missing from SimHub. " + PanelConfirmation.ReinstallLabel + " installs it again.";
+        }
+
+        /// <summary>A dashboard SimHub has not loaded yet: the one step, as Home and the Screens fix box say it.</summary>
+        public static string RestartStep(string name)
+        {
+            return "Restart SimHub, then assign \"" + name + "\" to this display in Dash Studio.";
+        }
+
+        public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";
+
+        /// <summary>"This build of OpenDash ships no 1280 × 480 face." for a screen whose package this build
+        /// does not carry.</summary>
+        public static string ShipsNo(ScreenInstance screen)
+        {
+            if (screen == null) return NoDashboards;
+            return "This build of OpenDash ships no " + screen.SizeLabel + " " + PanelAddScreen.KindName(screen.Kind).ToLowerInvariant() + ".";
         }
 
         public const string EditedTooltip = "You have edited it, so OpenDash left it alone. " + PanelConfirmation.ReinstallLabel + " replaces it.";

@@ -27,10 +27,12 @@ namespace OpenDashPlugin
             // so a row with an Update press keeps its version and state under the head's.
             Grid.SetIsSharedSizeScope(rows, true);
             rows.Children.Add(UpdatesTableHead(versionWidth));
+            var rowFailed = false;
             foreach (var pair in UpdatesDashboardRows())
             {
                 Action<UpdatesRow> paint;
                 rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));
+                rowFailed |= pair.Value.State == PanelCopy.InstallFailed;
             }
             bool stripsReachable;
             FlagBoxPlan flagBoxPlan;
@@ -44,8 +46,10 @@ namespace OpenDashPlugin
             else Ui.Anchor(table, PanelUpdates.AnchorLights);
 
             var children = new List<UIElement> { table };
-            children.Add(UpdatesNote(PanelLightRows.SectionCaption));
-            if (!stripsReachable) children.Add(UpdatesNote(PanelLightRows.Unavailable));
+            var hasStrips = Settings.LedBarList().Any(bar => bar != null && bar.ProfileShapeId != null);
+            var notes = PanelUpdates.TableNotes(plugin.Installer.HasEmbeddedPackage, plugin.Installer.LastError, rowFailed,
+                hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);
+            foreach (var note in notes) children.Add(UpdatesNote(note));
             // The by-hand route for the flag box, only when the matrix driver cannot be reached at all.
             if (flagBoxPlan != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable)
             {
@@ -77,7 +81,7 @@ namespace OpenDashPlugin
                 if (screen == null) continue;
                 var package = packages.FirstOrDefault(p => string.Equals(p.FolderName, screen.Folder, StringComparison.OrdinalIgnoreCase));
                 var facts = ScreenFacts(screen.Namespace);
-                var row = PanelUpdates.DashboardRow(screen.Name, package, facts == null ? null : facts.Installed, facts == null ? null : facts.AddedSinceStart);
+                var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed, facts == null ? null : facts.AddedSinceStart);
                 rows.Add(new KeyValuePair<ScreenInstance, UpdatesRow>(screen, row));
             }
             return rows;
@@ -88,8 +92,10 @@ namespace OpenDashPlugin
         {
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(versionWidth) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelUpdates.TableStateWidth) });
+            // Each fixed column is its content's width and the 16 before it, which each cell's left margin
+            // takes (UpdatesPlace), so the version sits at 110 and the state at 150 as the artboard's do.
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelUpdates.ColumnWidth(versionWidth)) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth)) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = "UpdatesPress" });
             return grid;
         }
@@ -154,10 +160,26 @@ namespace OpenDashPlugin
             var version = Ui.Text(row.Version, PanelUpdates.TableVersionSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
             UpdatesPlace(grid, version, 1, versionWidth);
 
-            var dot = new Ellipse { Width = PanelUpdates.TableDot, Height = PanelUpdates.TableDot, VerticalAlignment = VerticalAlignment.Center };
+            var dot = new Ellipse
+            {
+                Width = PanelUpdates.TableDot,
+                Height = PanelUpdates.TableDot,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, PanelUpdates.TableDotGap, 0),
+            };
             var state = Ui.Text(row.State, PanelUpdates.TableStateSize, FontWeights.Normal, row.StateHex);
             state.TextWrapping = TextWrapping.Wrap;
-            UpdatesPlace(grid, Ui.HStack(PanelUpdates.TableDotGap, dot, state), 2, versionWidth);
+            state.VerticalAlignment = VerticalAlignment.Center;
+            // A grid rather than a stack, so the words have the cell's width left after the dot and a state too
+            // long for it wraps instead of being clipped.
+            var cell = new Grid();
+            cell.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            cell.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(dot, 0);
+            Grid.SetColumn(state, 1);
+            cell.Children.Add(dot);
+            cell.Children.Add(state);
+            UpdatesPlace(grid, cell, 2, versionWidth);
 
             if (actionHost != null) UpdatesPlace(grid, actionHost, 3, versionWidth);
 

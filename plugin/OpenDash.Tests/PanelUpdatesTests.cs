@@ -35,7 +35,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Read the guide", PanelUpdates.ReadGuide);
             Assert.Equal("Versions, devices and the last 200 log lines, copied to paste. Nothing is sent.", PanelUpdates.SupportCaption);
             Assert.Equal("OpenDash is free software under the MIT licence.", PanelUpdates.Licence);
-            Assert.Equal("Nothing yet. Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
+            Assert.Equal("No screens yet. Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
         }
 
         /// <summary>The names a label may capitalise after its first word.</summary>
@@ -300,6 +300,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_version_column_goes_before_the_name_runs_out_of_room()
         {
+            // The gap is outside each fixed column's own width, as the artboard's grid gap is.
+            Assert.Equal(126, PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth));
+            Assert.Equal(166, PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
+            Assert.Equal(0, PanelUpdates.ColumnWidth(0));
+            Assert.Equal(324, 2 * PanelUpdates.TableRowPaddingX + PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth) + PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
             Assert.Equal(110, PanelUpdates.VersionWidth(PanelShell.ContentMax));
             Assert.Equal(110, PanelUpdates.VersionWidth(480));
             Assert.Equal(0, PanelUpdates.VersionWidth(479));
@@ -324,64 +329,112 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(string.Empty, PanelUpdates.VersionText(" "));
         }
 
-        private static PackageStatus Package(InstallStatus status, string version = "0.5.0", bool edited = false)
+        private static PackageStatus Package(InstallStatus status, string version = "0.5.0", bool edited = false, bool? heldBack = null)
         {
-            return new PackageStatus { FolderName = "OpenDash Rim", Status = status, InstalledVersion = version, Edited = edited, HeldBack = edited };
+            return new PackageStatus { FolderName = "OpenDash Rim", Status = status, InstalledVersion = version, EmbeddedVersion = "0.5.0", Edited = edited, HeldBack = heldBack ?? edited };
         }
+
+        private static readonly ScreenInstance Rim = new ScreenInstance { Name = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash Rim" };
 
         [Fact]
         public void A_dashboard_row_says_its_state_in_the_install_words()
         {
-            var current = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpToDate), true, false);
+            var current = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, false);
             Assert.Equal("Rim", current.Name);
             Assert.Equal("dashboard", current.Kind);
             Assert.Equal("0.5.0", current.Version);
             Assert.Equal("Up to date", current.State);
             Assert.Equal(Theme.StatusUpToDate, current.StateHex);
             Assert.Equal(Theme.StatusUpToDate, current.DotHex);
+            Assert.Null(current.Tooltip);
             Assert.False(current.OffersUpdate);
 
-            var older = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpdateAvailable, "0.4.2"), true, false);
+            var older = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2"), true, false);
             Assert.Equal("Update available", older.State);
             Assert.Equal(Theme.StatusUpdateAvailable, older.StateHex);
             Assert.Equal("0.4.2", older.Version);
+            Assert.Equal("Reinstall everything brings it to 0.5.0.", older.Tooltip);
 
-            var edited = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpdateAvailable, "0.4.2", true), true, false);
-            Assert.Equal("You have edited it, so OpenDash left it alone. Reinstall everything replaces it.", edited.Tooltip);
-            Assert.Equal("Reinstall everything brings it to 0.5.0.", PanelUpdates.BringsItTo("0.5.0"));
+            const string edited = "You have edited it, so OpenDash left it alone. Reinstall everything replaces it.";
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", true), true, false).Tooltip);
+            // Either fact alone is the driver's work.
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: true, heldBack: false), true, false).Tooltip);
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: false, heldBack: true), true, false).Tooltip);
             Assert.Equal("Reinstall everything brings it up to date.", PanelUpdates.BringsItTo(null));
 
-            var none = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.NotInstalled, null), null, null);
+            var none = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.NotInstalled, null), null, null);
             Assert.Equal("Not installed", none.State);
             Assert.Equal(Theme.TextLabel, none.StateHex);
             Assert.Equal(Theme.StatusNotInstalled, none.DotHex);
             Assert.Equal(string.Empty, none.Version);
-
-            Assert.Equal("Not installed", PanelUpdates.DashboardRow("Rim", null, null, null).State);
+            Assert.Equal("Reinstall everything installs it.", none.Tooltip);
         }
 
         /// <summary>A failure outranks everything, then a folder that has gone, then one SimHub has not loaded
-        /// yet, which is said only when the shell's facts know it.</summary>
+        /// yet, which is said only when the shell's facts know it, each in the words and ink the Screens card
+        /// and Home give the same state.</summary>
         [Fact]
         public void A_dashboard_row_puts_a_failure_then_a_missing_folder_then_a_restart_first()
         {
-            var failed = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.Failed), false, true);
+            var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false, true);
             Assert.Equal("Install failed", failed.State);
             Assert.Equal(Theme.StatusFailed, failed.StateHex);
             Assert.Equal("Install failed. See SimHub's log.", failed.Tooltip);
 
-            var missing = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpToDate), false, true);
+            var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false, true);
+            Assert.Equal(PanelScreens.Missing, missing.State);
             Assert.Equal("Missing", missing.State);
-            Assert.Equal(Theme.StatusUpdateAvailable, missing.StateHex);
+            Assert.Equal(Theme.StatusFailed, missing.StateHex);
             Assert.Equal(string.Empty, missing.Version);
+            Assert.Equal("Rim's dashboard is missing from SimHub. Reinstall everything installs it again.", missing.Tooltip);
 
-            var waiting = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpToDate), true, true);
-            Assert.Equal("Waiting for a restart", waiting.State);
-            Assert.Equal(Theme.StatusUpdateAvailable, waiting.StateHex);
+            var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
+            Assert.Equal(PanelScreens.NotInSimHubYet, waiting.State);
+            Assert.Equal("Not in SimHub yet", waiting.State);
+            Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
+            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", waiting.Tooltip);
 
             // Unknown facts say nothing of a restart.
-            Assert.Equal("Up to date", PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpToDate), null, null).State);
+            Assert.Equal("Up to date", PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), null, null).State);
+        }
+
+        /// <summary>A screen this build ships nothing for is left as it is by the installer, so its row says
+        /// what the facts say and why no press here changes it, rather than "Not installed" with a press that
+        /// would leave it alone.</summary>
+        [Fact]
+        public void A_screen_this_build_ships_nothing_for_says_so()
+        {
+            var inSimHub = PanelUpdates.DashboardRow(Rim, null, true, false);
+            Assert.Equal("In SimHub", inSimHub.State);
+            Assert.Equal("This build of OpenDash ships no 1280 × 480 face.", inSimHub.Tooltip);
+            Assert.Equal(string.Empty, inSimHub.Version);
+            Assert.Equal("Missing", PanelUpdates.DashboardRow(Rim, null, false, false).State);
+            Assert.Equal("Not installed", PanelUpdates.DashboardRow(Rim, null, null, null).State);
+            var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
+            Assert.Equal("This build of OpenDash ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
+        }
+
+        /// <summary>The sentences under the table: what the build ships and what the installer could not do,
+        /// then the light profiles' own, which uncovered 24 puts here.</summary>
+        [Fact]
+        public void The_table_s_notes_say_what_the_build_ships_and_what_could_not_be_read()
+        {
+            Assert.Equal("OpenDash never installs a profile on its own.", PanelLightRows.SectionCaption);
+            Assert.Equal("SimHub's LED settings are not available.", PanelLightRows.Unavailable);
+            Assert.Equal("This build ships no light profiles.", PanelLightRows.NoProfiles);
+
+            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, true, true, true));
+            Assert.Equal(new[] { "This build of OpenDash ships no dashboards.", PanelLightRows.SectionCaption },
+                PanelUpdates.TableNotes(false, "anything", false, false, false, true));
+            Assert.Equal(new[] { "OpenDash could not read or write a dashboard. See SimHub's log.", PanelLightRows.SectionCaption },
+                PanelUpdates.TableNotes(true, "disk full", false, false, true, true));
+            // A row already says "Install failed", and the note would repeat it.
+            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, "disk full", true, false, true, true));
+            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.NoProfiles }, PanelUpdates.TableNotes(true, null, false, true, false, true));
+            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.Unavailable }, PanelUpdates.TableNotes(true, null, false, true, true, false));
+            // No strip, no sentence about strips.
+            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, false, false, false));
         }
 
         [Fact]
