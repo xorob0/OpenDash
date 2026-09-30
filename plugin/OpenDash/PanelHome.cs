@@ -589,9 +589,11 @@ namespace OpenDashPlugin
             // thing to fix" or "3 things to fix" (PanelAttention.Headline), so no one label names it.
             new PanelSearch.Entry(Title, PanelPage.Home, null, "things to fix", "nothing to fix", "attention", "problem", "warning"),
             new PanelSearch.Entry(RightNowTitle, PanelPage.Home, AnchorRightNow, "live", "showing"),
+            // The quick controls' own labels are not entries: Night mode is Settings' (PanelSettings.Search) and
+            // the flags and the spotter are Rig's (PanelRigMap.Search), on the pages that always draw them, where
+            // an empty rig's Home draws no quick controls to land on. The section's name stays, and lands at the
+            // top of an empty rig's page, which is short enough to show it all.
             new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness", "night mode"),
-            new PanelSearch.Entry(PanelSettings.NightModeTitle, PanelPage.Home, AnchorQuickControls, "dark", "dim"),
-            new PanelSearch.Entry(TryTitle, PanelPage.Home, AnchorQuickControls, "try", "emulate", "rig"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one

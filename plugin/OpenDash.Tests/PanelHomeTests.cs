@@ -27,10 +27,12 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == "Things to fix");
         }
 
-        /// <summary>Every section heading and every quick-controls label but the brightness's is found, and lands
-        /// on Home: the brightness's label is whichever brightness is in force, so neither is an entry.</summary>
+        /// <summary>Every section heading is found, and lands on Home. The quick controls' own labels are found on
+        /// the pages that always draw them, since an empty rig's Home draws no quick controls: Night mode on
+        /// Settings, the flags and the spotter on Rig, and the brightness, whose label is whichever brightness
+        /// is in force, on Settings too.</summary>
         [Fact]
-        public void Every_heading_and_label_it_draws_is_searchable()
+        public void Every_heading_it_draws_is_searchable()
         {
             var labels = PanelHome.Search.Select(entry => entry.Label).ToList();
             Assert.Equal(new[]
@@ -38,11 +40,12 @@ namespace OpenDashPlugin.Tests
                 PanelHome.Title,
                 PanelHome.RightNowTitle,
                 PanelHome.QuickControlsTitle,
-                PanelSettings.NightModeTitle,
-                PanelHome.TryTitle,
             }, labels);
             Assert.Equal(labels.Count, labels.Distinct().Count());
-            Assert.All(PanelHome.Search.Skip(3), entry => Assert.Equal(PanelHome.AnchorQuickControls, entry.Route.Anchor));
+            Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == PanelSettings.NightModeTitle || entry.Label == PanelHome.TryTitle);
+            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelSettings.NightModeTitle);
+            Assert.Contains(PanelRigMap.Search, entry => entry.Label == PanelEmulation.FlagsGroup);
+            Assert.Contains(PanelRigMap.Search, entry => entry.Label == PanelEmulation.SpotterGroup);
             // The slider's label is whichever brightness is in force, so neither brightness is a Home entry: a
             // fixed one would land on the other brightness's slider half the time. Settings lists both, and
             // Quick controls carries the word.
@@ -61,8 +64,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "things to fix", "nothing to fix", "attention", "problem", "warning" }, keywords(PanelHome.Title));
             Assert.Equal(new[] { "live", "showing" }, keywords(PanelHome.RightNowTitle));
             Assert.Equal(new[] { "brightness", "night mode" }, keywords(PanelHome.QuickControlsTitle));
-            Assert.Equal(new[] { "dark", "dim" }, keywords(PanelSettings.NightModeTitle));
-            Assert.Equal(new[] { "try", "emulate", "rig" }, keywords(PanelHome.TryTitle));
         }
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
