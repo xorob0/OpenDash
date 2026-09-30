@@ -64,12 +64,6 @@ namespace OpenDashPlugin
             return button;
         }
 
-        /// <summary>The key a strip's plan is held under: its namespace, which its profile's id is made from.</summary>
-        private static string UpdatesBarKey(LedBar bar)
-        {
-            return bar.Namespace ?? bar.Name ?? string.Empty;
-        }
-
         /// <summary>
         /// A strip's row, and its Update press while its profile is older than this build's.
         /// </summary>
@@ -81,7 +75,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement UpdatesStripRow(LedBar bar, FlagBoxPlan plan, double versionWidth, IList<Action<IDictionary<string, FlagBoxPlan>>> painters)
         {
-            var key = UpdatesBarKey(bar);
+            var key = PanelUpdates.StripKey(bar);
             var actionHost = new Border();
             Action<UpdatesRow> paint;
             var element = UpdatesTableRow(PanelUpdates.StripRow(bar.Name, plan), versionWidth, actionHost, out paint);
@@ -89,7 +83,7 @@ namespace OpenDashPlugin
             Func<IDictionary<string, FlagBoxPlan>> update = () =>
             {
                 UpdatesLightsTally ignored;
-                return UpdatesWriteStrips((other, state) => state == FlagBoxInstallState.Outdated && UpdatesBarKey(other) == key, out ignored);
+                return UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out ignored);
             };
             Action<IDictionary<string, FlagBoxPlan>> draw = plans =>
             {
@@ -174,9 +168,10 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The census is read at the press rather than carried from the draw, so what is written is what
-        /// SimHub holds when the button is pressed. A strip whose device SimHub no longer has is left alone
-        /// and reported as failed with the reason in SimHub's log, as UpdateBars does: InstallBar takes the
-        /// strip's copy out of every device first, so running it there would remove a strip that still lights.
+        /// SimHub holds when the button is pressed. Which strips are written, what stands in for one that may
+        /// not be (PanelUpdates.Unwritable: a device SimHub no longer has is a failure with the reason in
+        /// SimHub's log) and what each row is repainted with (PanelUpdates.AfterWrite) are PanelUpdates',
+        /// where they are pinned; this reads SimHub and writes.
         /// </remarks>
         /// <param name="tally">What the writes did, counted per strip.</param>
         private IDictionary<string, FlagBoxPlan> UpdatesWriteStrips(Func<LedBar, FlagBoxInstallState, bool> wanted, out UpdatesLightsTally tally)
@@ -188,37 +183,19 @@ namespace OpenDashPlugin
             var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId).Distinct(StringComparer.Ordinal));
             bool reachable;
             var written = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
-            foreach (var entry in BarCensus(embedded, out reachable))
+            foreach (var entry in PanelUpdates.StripsToWrite(BarCensus(embedded, out reachable), reachable, wanted))
             {
-                if (!reachable || !wanted(entry.Key, entry.Value.State)) continue;
                 var bar = entry.Key;
                 string json;
-                FlagBoxPlan result;
-                if (!embedded.TryGetValue(bar.ProfileShapeId, out json))
-                {
-                    result = new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-                }
-                else if (LedTargets.Find(bar.Device) == null)
-                {
-                    Log.Warn("The profile for " + bar.Name + " was not written: the LED device it names is no longer in SimHub.");
-                    result = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-                }
-                else
-                {
-                    result = InstallBar(bar, json);
-                }
+                var hasJson = embedded.TryGetValue(bar.ProfileShapeId, out json);
+                var result = PanelUpdates.Unwritable(hasJson, hasJson && LedTargets.Find(bar.Device) != null);
+                if (result == null) result = InstallBar(bar, json);
+                else if (result.State == FlagBoxInstallState.Failed) Log.Warn("The profile for " + bar.Name + " was not written: the LED device it names is no longer in SimHub.");
                 tally.Strip(entry.Value.State, result.State);
-                written[UpdatesBarKey(bar)] = result;
+                written[PanelUpdates.StripKey(bar)] = result;
             }
-            foreach (var entry in BarCensus(embedded, out reachable))
-            {
-                var key = UpdatesBarKey(entry.Key);
-                FlagBoxPlan result;
-                if (!reachable) plans[key] = new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
-                else if (written.TryGetValue(key, out result) && result.State != FlagBoxInstallState.UpToDate) plans[key] = result;
-                else plans[key] = entry.Value;
-            }
-            return plans;
+            var after = BarCensus(embedded, out reachable);
+            return PanelUpdates.AfterWrite(after, reachable, written);
         }
 
         /// <summary>
@@ -229,7 +206,7 @@ namespace OpenDashPlugin
         private UpdatesLightsTally UpdatesBringLightsForward()
         {
             UpdatesLightsTally tally;
-            UpdatesWriteStrips((bar, state) => PanelUpdates.BringsForward(state), out tally);
+            UpdatesWriteStrips(PanelUpdates.ReinstallWrites, out tally);
             if (plugin.FlagBoxJson != null)
             {
                 var before = SafePlan().State;

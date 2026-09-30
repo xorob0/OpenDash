@@ -726,6 +726,76 @@ namespace OpenDashPlugin
             return state == FlagBoxInstallState.Outdated || state == FlagBoxInstallState.NotInstalled || state == FlagBoxInstallState.Failed;
         }
 
+        /// <summary>Reinstall everything's choice among the rig's strips, as the press passes it to the write:
+        /// every strip SimHub holds a profile for in a state <see cref="BringsForward"/> writes.</summary>
+        public static bool ReinstallWrites(LedBar bar, FlagBoxInstallState state)
+        {
+            return BringsForward(state);
+        }
+
+        /// <summary>A strip row's Update: that strip alone, and only while its profile is older than this
+        /// build's -- never a current one, which a rewrite could only cost the edits made to it.</summary>
+        public static Func<LedBar, FlagBoxInstallState, bool> RowUpdateWrites(string rowKey)
+        {
+            return (bar, state) => state == FlagBoxInstallState.Outdated && string.Equals(StripKey(bar), rowKey, StringComparison.Ordinal);
+        }
+
+        /// <summary>The key a strip's plan is held under: its namespace, which its profile's id is made from,
+        /// so two strips of one shape are two keys.</summary>
+        public static string StripKey(LedBar bar)
+        {
+            return bar == null ? string.Empty : bar.Namespace ?? bar.Name ?? string.Empty;
+        }
+
+        /// <summary>
+        /// The strips a press writes, in the census's order, each with what SimHub held for it: those
+        /// <paramref name="wanted"/> picks, and none while SimHub's LED settings cannot be read.
+        /// </summary>
+        public static IList<KeyValuePair<LedBar, FlagBoxPlan>> StripsToWrite(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, Func<LedBar, FlagBoxInstallState, bool> wanted)
+        {
+            if (!reachable || wanted == null) return new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            return (census ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
+                .Where(entry => entry.Key != null && entry.Value != null && wanted(entry.Key, entry.Value.State))
+                .ToList();
+        }
+
+        /// <summary>
+        /// What a strip the press picked is reported as when it is not written, or null when it can be: no
+        /// profile in this build for its shape, or a device SimHub no longer has. The second is a failure
+        /// rather than a write, because installing takes the strip's copy out of every device first, and
+        /// running it there would remove a strip that still lights.
+        /// </summary>
+        public static FlagBoxPlan Unwritable(bool embedded, bool deviceFound)
+        {
+            if (!embedded) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            if (!deviceFound) return new FlagBoxPlan { State = FlagBoxInstallState.Failed };
+            return null;
+        }
+
+        /// <summary>
+        /// Every strip's plan after a press, which repaints every strip row: what the write reported for a
+        /// strip it could not bring up to date, so its row says so, and what SimHub now holds for the rest.
+        /// Each row is its own strip's, never its shape's: one plan per shape once made a healthy strip read
+        /// "Install failed" when another strip of that shape could not be written.
+        /// </summary>
+        /// <param name="census">What SimHub holds for each strip, read after the writes.</param>
+        /// <param name="reachable">Whether that read reached SimHub's LED settings.</param>
+        /// <param name="written">What each write reported, by <see cref="StripKey"/>.</param>
+        public static IDictionary<string, FlagBoxPlan> AfterWrite(IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> census, bool reachable, IDictionary<string, FlagBoxPlan> written)
+        {
+            var plans = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
+            foreach (var entry in census ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
+            {
+                if (entry.Key == null) continue;
+                var key = StripKey(entry.Key);
+                FlagBoxPlan result = null;
+                if (!reachable) plans[key] = new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
+                else if (written != null && written.TryGetValue(key, out result) && result != null && result.State != FlagBoxInstallState.UpToDate) plans[key] = result;
+                else plans[key] = entry.Value;
+            }
+            return plans;
+        }
+
         /// <summary>The flag box profile too, but only on a rig with a matrix: the table draws its row only
         /// there, and a run must not report a row the page does not show.</summary>
         public static bool BringsFlagBoxForward(bool hasMatrix, FlagBoxInstallState state)

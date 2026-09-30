@@ -666,6 +666,108 @@ namespace OpenDashPlugin.Tests
             Assert.Null(tally.FlagBoxAfter);
         }
 
+        private static LedBar Strip(string name, string ns, string shape = "3-9-3")
+        {
+            return new LedBar { Name = name, Namespace = ns, Shape = shape, Device = LedBar.ArduinoDevice };
+        }
+
+        private static KeyValuePair<LedBar, FlagBoxPlan> Held(LedBar bar, FlagBoxInstallState state)
+        {
+            return new KeyValuePair<LedBar, FlagBoxPlan>(bar, new FlagBoxPlan { State = state });
+        }
+
+        /// <summary>A row's Update writes its own strip and only while it is older; Reinstall everything writes
+        /// every older, missing or failed strip and never a current one; neither writes while SimHub's LED
+        /// settings cannot be read.</summary>
+        [Fact]
+        public void A_press_writes_the_strips_its_rule_picks_and_none_it_cannot_reach()
+        {
+            var rim = Strip("Rim", "LedRim");
+            var dash = Strip("Dash", "LedDash");
+            var brow = Strip("Brow", "LedBrow", "0-15-0");
+            var gone = Strip("Gone", "LedGone");
+            var census = new[]
+            {
+                Held(rim, FlagBoxInstallState.Outdated),
+                Held(dash, FlagBoxInstallState.Outdated),
+                Held(brow, FlagBoxInstallState.UpToDate),
+                Held(gone, FlagBoxInstallState.NotInstalled),
+            };
+
+            Assert.Equal(new[] { rim }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(rim))).Select(e => e.Key));
+            // A current strip's row has no Update, and a key that names it writes nothing.
+            Assert.Empty(PanelUpdates.StripsToWrite(census, true, PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(brow))));
+            Assert.Equal(new[] { rim, dash, gone }, PanelUpdates.StripsToWrite(census, true, PanelUpdates.ReinstallWrites).Select(e => e.Key));
+            Assert.Empty(PanelUpdates.StripsToWrite(census, false, PanelUpdates.ReinstallWrites));
+
+            // Keyed by namespace, so two strips of one shape are two keys.
+            Assert.Equal("LedRim", PanelUpdates.StripKey(rim));
+            Assert.Equal("Rim", PanelUpdates.StripKey(new LedBar { Name = "Rim" }));
+            Assert.NotEqual(PanelUpdates.StripKey(rim), PanelUpdates.StripKey(dash));
+        }
+
+        /// <summary>A strip with no profile in this build is reported as such, one whose device SimHub no longer
+        /// has is a failure and not a write, and the rest are written.</summary>
+        [Fact]
+        public void A_strip_the_press_may_not_write_is_reported_rather_than_written()
+        {
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelUpdates.Unwritable(false, false).State);
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelUpdates.Unwritable(false, true).State);
+            Assert.Equal(FlagBoxInstallState.Failed, PanelUpdates.Unwritable(true, false).State);
+            Assert.Null(PanelUpdates.Unwritable(true, true));
+        }
+
+        /// <summary>
+        /// Every row is repainted from its own strip after a press (8ff1b54): two strips of one shape, one
+        /// written and one whose device has gone, read up to date and failed, not failed twice. A write that
+        /// succeeded is repainted from what SimHub now holds, and nothing is said as known while SimHub cannot
+        /// be read.
+        /// </summary>
+        [Fact]
+        public void Each_row_is_repainted_from_its_own_strip_after_a_press()
+        {
+            var rim = Strip("Rim", "LedRim");
+            var dash = Strip("Dash", "LedDash");
+            var brow = Strip("Brow", "LedBrow", "0-15-0");
+            var written = new Dictionary<string, FlagBoxPlan>
+            {
+                { "LedRim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" } },
+                { "LedDash", new FlagBoxPlan { State = FlagBoxInstallState.Failed } },
+            };
+            var after = new[]
+            {
+                new KeyValuePair<LedBar, FlagBoxPlan>(rim, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0", EmbeddedVersion = "0.5.0" }),
+                Held(dash, FlagBoxInstallState.Outdated),
+                Held(brow, FlagBoxInstallState.UpToDate),
+            };
+
+            var plans = PanelUpdates.AfterWrite(after, true, written);
+            Assert.Equal(FlagBoxInstallState.UpToDate, plans["LedRim"].State);
+            Assert.Same(after[0].Value, plans["LedRim"]);
+            Assert.Equal(FlagBoxInstallState.Failed, plans["LedDash"].State);
+            Assert.Equal(FlagBoxInstallState.UpToDate, plans["LedBrow"].State);
+
+            Assert.All(PanelUpdates.AfterWrite(after, false, written).Values, plan => Assert.Equal(FlagBoxInstallState.Unavailable, plan.State));
+            Assert.Equal(3, PanelUpdates.AfterWrite(after, true, null).Count);
+        }
+
+        /// <summary>The draw file passes these rules to the write rather than restating them: a lambda there
+        /// would let Reinstall everything rewrite a current profile with every test above green.</summary>
+        [Fact]
+        public void The_presses_write_strips_through_the_pinned_rules()
+        {
+            var code = PageCode();
+            Assert.Contains("UpdatesWriteStrips(PanelUpdates.ReinstallWrites, out tally);", code);
+            Assert.Contains("UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out ignored);", code);
+            Assert.Contains("PanelUpdates.StripsToWrite(BarCensus(embedded, out reachable), reachable, wanted)", code);
+            Assert.Contains("PanelUpdates.Unwritable(", code);
+            Assert.Contains("return PanelUpdates.AfterWrite(after, reachable, written);", code);
+            Assert.Contains("PanelUpdates.BringsFlagBoxForward(", code);
+            // The method and its two callers, the row's Update and Reinstall everything: no third press
+            // writes strips by a rule of its own.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(code, @"UpdatesWriteStrips\(").Count);
+        }
+
         /// <summary>Ruling 70: an older, missing or failed profile is written, a current one never, and the
         /// flag box only on a rig with a matrix, where the table draws its row.</summary>
         [Fact]
