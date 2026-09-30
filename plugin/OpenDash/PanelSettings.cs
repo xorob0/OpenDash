@@ -366,6 +366,14 @@ namespace OpenDashPlugin
             return picked ?? nightMode;
         }
 
+        /// <summary>The driver's pick while it stands: one made under a night mode is let go of once night mode
+        /// moves, whether by the page's switch, the sidebar's or the wheel's button, so every change of night
+        /// mode hands the preview back to it.</summary>
+        public static bool? KeptPick(bool? picked, bool pickedUnder, bool nightMode)
+        {
+            return picked.HasValue && pickedUnder == nightMode ? picked : null;
+        }
+
         /// <summary>How bright the preview draws the lights: the day brightness by day and the night
         /// brightness by night.</summary>
         public static double PreviewLevel(bool night, int dayBrightness, int nightBrightness)

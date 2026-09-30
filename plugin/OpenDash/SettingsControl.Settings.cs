@@ -25,8 +25,11 @@ namespace OpenDashPlugin
     public partial class SettingsControl
     {
         /// <summary>The lighting preview's Day or Night, which writes nothing; null follows night mode. Kept
-        /// outside the build so a rebuild keeps it, and let go of when the page is left.</summary>
+        /// outside the build so a rebuild keeps it, and let go of when the page is left or night mode moves.</summary>
         private bool? settingsPreviewPick;
+
+        /// <summary>The night mode the pick was made under (PanelSettings.KeptPick).</summary>
+        private bool settingsPreviewPickedUnder;
 
         private FrameworkElement BuildSettingsPage(PanelRoute to)
         {
@@ -635,7 +638,13 @@ namespace OpenDashPlugin
             percent.TextAlignment = TextAlignment.Right;
             Typography.SetNumeralAlignment(percent, FontNumeralAlignment.Tabular);
 
-            Func<bool> night = () => PanelSettings.ShowsNight(settingsPreviewPick, Settings.LightsNightMode);
+            // Read on every repaint, and OnLighting repaints on every change of night mode from anywhere, so a
+            // pick is handed back the moment night mode moves, not only when this page's switch is pressed.
+            Func<bool> night = () =>
+            {
+                settingsPreviewPick = PanelSettings.KeptPick(settingsPreviewPick, settingsPreviewPickedUnder, Settings.LightsNightMode);
+                return PanelSettings.ShowsNight(settingsPreviewPick, Settings.LightsNightMode);
+            };
             Action<bool, int, int> paint = (atNight, day, dark) =>
             {
                 var level = PanelSettings.PreviewLevel(atNight, day, dark);
@@ -650,6 +659,7 @@ namespace OpenDashPlugin
             var pick = BuildSegmented(PanelSettings.PreviewValues, PanelSettings.PreviewLabels, night() ? PanelSettings.PreviewNight : PanelSettings.PreviewDay, value =>
             {
                 settingsPreviewPick = value == PanelSettings.PreviewNight;
+                settingsPreviewPickedUnder = Settings.LightsNightMode;
                 repaint();
             });
             var head = new DockPanel { LastChildFill = false };

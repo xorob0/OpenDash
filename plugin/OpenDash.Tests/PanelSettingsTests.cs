@@ -338,9 +338,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("100%", PanelSettings.PreviewPercent(false, 100, 25));
             Assert.Equal("25%", PanelSettings.PreviewPercent(true, 100, 25));
             Assert.Equal("0%", PanelSettings.PreviewPercent(true, 100, -5));
-            // The pick is a field of the page's and the setting is written only by the switch.
+            // A pick stands while night mode stays where it was made, and any move of night mode lets it go.
+            Assert.Equal(false, PanelSettings.KeptPick(false, false, false));
+            Assert.Equal(true, PanelSettings.KeptPick(true, true, true));
+            Assert.Null(PanelSettings.KeptPick(false, false, true));
+            Assert.Null(PanelSettings.KeptPick(true, true, false));
+            Assert.Null(PanelSettings.KeptPick(null, false, false));
+            // The pick is a field of the page's and the setting is written only by the switch. It is let go of
+            // on leaving the page, on the switch's press, and on any change of night mode the repaint hears.
             var page = Page();
             Assert.Contains("settingsPreviewPick = value == PanelSettings.PreviewNight;", page);
+            Assert.Contains("settingsPreviewPickedUnder = Settings.LightsNightMode;", page);
+            Assert.Contains("settingsPreviewPick = PanelSettings.KeptPick(settingsPreviewPick, settingsPreviewPickedUnder, Settings.LightsNightMode);", page);
+            Assert.Contains("OnLeave(\"Settings.previewPick\", () => settingsPreviewPick = null);", page);
+            Assert.Matches(@"settingsPreviewPick = null;\s*Settings\.LightsNightMode = on;", page);
             Assert.Single(Regex.Matches(page, @"Settings\.LightsNightMode = on;"));
             Assert.Contains("if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange();", page);
             Assert.Contains("if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange();", page);
