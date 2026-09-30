@@ -651,6 +651,86 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { PanelSoon.FlagsScreen, PanelSoon.YourDisplays }, PanelScreens.SoonDrawn.Where(item => item.InSheetOnly));
         }
 
+        /// <summary>
+        /// Which kind of screen draws each row a search hit can scroll to. A row is drawn only under a screen
+        /// of its kind, so the route opens the first such screen on the rig when the selected one is not, and
+        /// on a face opens the zone and the whole list the two greyed pages are drawn in.
+        /// </summary>
+        [Fact]
+        public void A_route_to_a_row_opens_a_screen_that_draws_it()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var face = settings.AddScreen(Entry("OpenDash 1280x480", Contract.KindFace, 1280, 480), "Rim");
+            var wall = settings.AddScreen(Entry("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080), "Wall");
+            var portrait = settings.AddScreen(Entry("OpenDash Pit wall portrait", Contract.KindPitWall, 1080, 1920), "Tall wall");
+            var companion = settings.AddScreen(Entry("OpenDash Companion", Contract.KindCompanion, 850, 480), "Phone");
+            var round = settings.AddScreen(Entry("OpenDash 480 round", Contract.KindSlots, 480, 480), "Round");
+            settings.Normalise();
+            var rig = settings.RigScreens();
+            var named = new Dictionary<ScreenInstance, string> { { face, "face" }, { wall, "wall" }, { portrait, "portrait" }, { companion, "companion" }, { round, "round" } };
+            System.Func<string, string> kinds = anchor => string.Join(" ", rig.Where(screen => PanelScreens.Draws(anchor, screen)).Select(screen => named[screen]));
+
+            var expected = new Dictionary<string, string>
+            {
+                { PanelScreens.AnchorCards, "face wall portrait companion round" },
+                { PanelScreens.AnchorDetails, "face wall portrait companion round" },
+                { PanelScreens.AnchorRevBar, "face" },
+                { PanelScreens.AnchorLapReview, "face" },
+                { PanelScreens.AnchorZones, "face" },
+                { PanelScreens.AnchorFlagDisplay, "face wall portrait companion" },
+                { PanelScreens.AnchorGlance, "face wall companion" },
+                { PanelScreens.AnchorClassOnly, "face wall portrait" },
+                { PanelScreens.AnchorPitWallPage, "wall" },
+                { PanelScreens.AnchorWebView, "wall portrait" },
+                { PanelScreens.AnchorPortrait, "portrait" },
+                { PanelScreens.AnchorModules, "companion" },
+                { PanelScreens.AnchorFirstModule, "companion" },
+                { PanelScreens.AnchorPaging, "companion" },
+                { PanelScreens.AnchorSlots, "round" },
+                { PanelScreens.AnchorRevRing, "round" },
+                { PanelSoon.ZonesInsteadOfCards.Anchor, "round" },
+                { PanelSoon.CircleTracker.Anchor, "face" },
+                { PanelSoon.Launch.Anchor, "face" },
+            };
+            foreach (var item in new[] { PanelSoon.RevFill, PanelSoon.SpotterAtRevBarEnds, PanelSoon.PitPageInPitLane, PanelSoon.PopUps, PanelSoon.DeltaEdgeLights, PanelSoon.ScreenCare, PanelSoon.Fit })
+            {
+                expected.Add(item.Anchor, "face");
+            }
+            foreach (var pair in expected) Assert.True(pair.Value == kinds(pair.Key), pair.Key + " is drawn on " + kinds(pair.Key));
+
+            // Every row search can land on is in the map, the greyed ones included; the sheet's are not
+            // searchable.
+            foreach (var entry in PanelScreens.Search) Assert.True(expected.ContainsKey(entry.Route.Anchor), entry.Route.Anchor);
+            foreach (var item in PanelScreens.SoonDrawn.Where(item => !item.InSheetOnly)) Assert.True(expected.ContainsKey(item.Anchor), item.Anchor);
+            Assert.False(PanelScreens.Draws("leds.strips", face));
+
+            // The selected screen stays where it draws the row, and the first that does is opened otherwise.
+            Assert.Same(face, PanelScreens.ScreenFor(PanelScreens.AnchorFlagDisplay, rig, face));
+            Assert.Same(companion, PanelScreens.ScreenFor(PanelScreens.AnchorFlagDisplay, rig, companion));
+            Assert.Same(companion, PanelScreens.ScreenFor(PanelScreens.AnchorModules, rig, face));
+            Assert.Same(portrait, PanelScreens.ScreenFor(PanelScreens.AnchorPortrait, rig, face));
+            Assert.Same(face, PanelScreens.ScreenFor(PanelSoon.Fit.Anchor, rig, round));
+            // A rig with nothing that draws the row keeps its selection, and the route lands on the cards.
+            var faces = new[] { face };
+            Assert.Same(face, PanelScreens.ScreenFor(PanelScreens.AnchorRevRing, faces, face));
+            Assert.Null(PanelScreens.ScreenFor(PanelScreens.AnchorRevRing, new ScreenInstance[0], null));
+
+            // The two greyed pages are drawn in zone B or C under Show all; My class only in B, C or band D.
+            var reference = Contract.ReferenceFace;
+            Assert.True(PanelScreens.ShowsEveryPage(PanelSoon.CircleTracker.Anchor));
+            Assert.True(PanelScreens.ShowsEveryPage(PanelSoon.Launch.Anchor));
+            Assert.False(PanelScreens.ShowsEveryPage(PanelScreens.AnchorZones));
+            Assert.Equal("C", PanelScreens.AsideFor(PanelSoon.CircleTracker.Anchor, null, reference));
+            Assert.Equal("C", PanelScreens.AsideFor(PanelSoon.Launch.Anchor, "A", reference));
+            Assert.Equal("B", PanelScreens.AsideFor(PanelSoon.Launch.Anchor, "B", reference));
+            Assert.Equal("C", PanelScreens.AsideFor(PanelSoon.Launch.Anchor, PanelScreens.BarKey, reference));
+            Assert.Equal("C", PanelScreens.AsideFor(PanelScreens.AnchorClassOnly, "A", reference));
+            Assert.Equal("D", PanelScreens.AsideFor(PanelScreens.AnchorClassOnly, "D", reference));
+            Assert.Equal("A", PanelScreens.AsideFor(PanelScreens.AnchorRevBar, "A", reference));
+            Assert.Null(PanelScreens.AsideFor(PanelScreens.AnchorRevBar, null, reference));
+        }
+
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
         [Fact]

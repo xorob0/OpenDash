@@ -46,6 +46,10 @@ namespace OpenDashPlugin
         private FrameworkElement BuildScreensPage(PanelRoute to)
         {
             var rig = Settings.RigScreens();
+            // A route to a row opens a screen that draws it, and the zone and list state the row needs, before
+            // the page is built: the shell scrolls to the anchor once it is. Only on the way in, never on a
+            // rebuild, which keeps the same route and would take the driver back to it after every press.
+            if (to != null && to.Anchor != null && !rebuilding) ScreensFollow(to.Anchor, rig);
             var sections = new List<UIElement>();
             if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());
             sections.Add(Ui.Anchor(BuildScreenCards(rig), PanelScreens.AnchorCards));
@@ -74,6 +78,23 @@ namespace OpenDashPlugin
             };
             sections.Add(block);
             return PageLayout(PanelScreens.Title, null, sections.ToArray());
+        }
+
+        /// <summary>Selects the screen a route to <paramref name="anchor"/> needs, and on a face opens the
+        /// zone, and the whole list, the row is drawn in.</summary>
+        private void ScreensFollow(string anchor, IReadOnlyList<ScreenInstance> rig)
+        {
+            var current = SelectedScreen;
+            var screen = PanelScreens.ScreenFor(anchor, rig, current);
+            if (screen == null) return;
+            if (!ReferenceEquals(screen, current)) Select(PanelPage.Screens, screen.Namespace);
+            var face = screen.FaceSize;
+            if (face == null) return;
+            string picked;
+            screensFaceAside.TryGetValue(screen.Namespace, out picked);
+            var aside = PanelScreens.AsideFor(anchor, picked, face.Value);
+            if (aside != null && !string.Equals(aside, picked, StringComparison.Ordinal)) screensFaceAside[screen.Namespace] = aside;
+            if (PanelScreens.ShowsEveryPage(anchor)) screensShowAll = true;
         }
 
         /// <summary>

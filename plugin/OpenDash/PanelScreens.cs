@@ -782,6 +782,98 @@ namespace OpenDashPlugin
             PanelSoon.ZonesInsteadOfCards,
         };
 
+        // --- Which screen a route to a row opens ----------------------------------------------------------
+
+        /// <summary>The greyed rows under a face's own rows, in the order Screens.Face draws them.</summary>
+        private static readonly SoonItem[] FaceSoon =
+        {
+            PanelSoon.RevFill,
+            PanelSoon.SpotterAtRevBarEnds,
+            PanelSoon.PitPageInPitLane,
+            PanelSoon.PopUps,
+            PanelSoon.DeltaEdgeLights,
+            PanelSoon.ScreenCare,
+            PanelSoon.Fit,
+        };
+
+        /// <summary>The greyed pages a zone list draws under Show all, in zone B or C.</summary>
+        private static readonly SoonItem[] ZoneListSoon = { PanelSoon.CircleTracker, PanelSoon.Launch };
+
+        /// <summary>
+        /// Whether the editor of <paramref name="screen"/> draws the row <paramref name="anchor"/> names: a row
+        /// is drawn only under a screen of the kind that has it, so a search hit has to open such a screen
+        /// before it can scroll to the row. False for an anchor that is not this page's.
+        /// </summary>
+        public static bool Draws(string anchor, ScreenInstance screen)
+        {
+            if (screen == null || anchor == null) return false;
+            var face = screen.IsFace && screen.FaceSize != null;
+            var landscapeWall = screen.IsPitWall && !IsPortrait(screen);
+            switch (anchor)
+            {
+                case AnchorCards:
+                case AnchorDetails:
+                    return true;
+                case AnchorRevBar:
+                case AnchorLapReview:
+                case AnchorZones:
+                    return face;
+                case AnchorFlagDisplay:
+                    return face || screen.IsPitWall || screen.IsCompanion;
+                case AnchorGlance:
+                    return face || landscapeWall || screen.IsCompanion;
+                case AnchorClassOnly:
+                    return face || screen.IsPitWall;
+                case AnchorPitWallPage:
+                    return landscapeWall;
+                case AnchorWebView:
+                    return screen.IsPitWall;
+                case AnchorPortrait:
+                    return screen.IsPitWall && IsPortrait(screen);
+                case AnchorModules:
+                case AnchorFirstModule:
+                case AnchorPaging:
+                    return screen.IsCompanion;
+                case AnchorSlots:
+                case AnchorRevRing:
+                    return screen.IsSlots;
+            }
+            if (string.Equals(anchor, PanelSoon.ZonesInsteadOfCards.Anchor, StringComparison.Ordinal)) return screen.IsSlots;
+            if (FaceSoon.Concat(ZoneListSoon).Any(item => string.Equals(item.Anchor, anchor, StringComparison.Ordinal))) return face;
+            return false;
+        }
+
+        /// <summary>
+        /// The screen a route to <paramref name="anchor"/> opens: the selected one where it draws the row, the
+        /// first on the rig that does otherwise, and the selected one when none does -- the route then lands
+        /// on the page's top, which is the cards.
+        /// </summary>
+        public static ScreenInstance ScreenFor(string anchor, IEnumerable<ScreenInstance> rig, ScreenInstance selected)
+        {
+            if (anchor == null || Draws(anchor, selected)) return selected;
+            var drawing = rig == null ? null : rig.FirstOrDefault(screen => Draws(anchor, screen));
+            return drawing ?? selected;
+        }
+
+        /// <summary>
+        /// The zone a face's aside has to show for the row <paramref name="anchor"/> names to be drawn:
+        /// B or C for the two greyed pages, a zone with a class filter for My class only, and whatever was
+        /// picked for every other row.
+        /// </summary>
+        public static string AsideFor(string anchor, string picked, Contract.FaceSize face)
+        {
+            var key = AsideKey(picked, face);
+            if (ShowsEveryPage(anchor)) return ListsSoonModules(key) ? key : FirstAside;
+            if (string.Equals(anchor, AnchorClassOnly, StringComparison.Ordinal)) return FacePages.OffersClassFilter(key) ? key : FirstAside;
+            return picked;
+        }
+
+        /// <summary>Whether the row is drawn only under Show all: the two greyed pages of zones B and C.</summary>
+        public static bool ShowsEveryPage(string anchor)
+        {
+            return ZoneListSoon.Any(item => string.Equals(item.Anchor, anchor, StringComparison.Ordinal));
+        }
+
         /// <summary>Search labels this page draws through something other than the constant: the zones as
         /// their letters, and the round screen's cards as one row per slot.</summary>
         public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>
