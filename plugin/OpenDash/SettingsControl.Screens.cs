@@ -43,6 +43,11 @@ namespace OpenDashPlugin
         /// <summary>Whether the Details under a screen's rows are open, for the session.</summary>
         private bool screensDetailsOpen;
 
+        /// <summary>Whether the page has been built since the last Go: a route's anchor is followed by the first
+        /// build after a Go and never by a rebuild in place, which keeps the same route. Cleared by the
+        /// "Screens.follow" leave action, which the shell runs on every Go before it builds.</summary>
+        private bool screensBuiltSinceGo;
+
         private FrameworkElement BuildScreensPage(PanelRoute to)
         {
             var rig = Settings.RigScreens();
@@ -50,8 +55,14 @@ namespace OpenDashPlugin
             screensVersions.Clear();
             // A route to a row opens a screen that draws it, and the zone and list state the row needs, before
             // the page is built: the shell scrolls to the anchor once it is. Only on the way in, never on a
-            // rebuild, which keeps the same route and would take the driver back to it after every press.
-            if (to != null && to.Anchor != null && !rebuilding) ScreensFollow(to.Anchor, rig);
+            // rebuild, which keeps the same route and would take the driver back to it after every press. The
+            // way in is told through OnLeave, which runs on Go only, before the build.
+            if (!screensBuiltSinceGo)
+            {
+                screensBuiltSinceGo = true;
+                OnLeave("Screens.follow", () => screensBuiltSinceGo = false);
+                if (to != null && to.Anchor != null) ScreensFollow(to.Anchor, rig);
+            }
             var sections = new List<UIElement>();
             if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());
             sections.Add(Ui.Anchor(BuildScreenCards(rig), PanelScreens.AnchorCards));
@@ -121,8 +132,10 @@ namespace OpenDashPlugin
                     current != null && ReferenceEquals(current, captured),
                     () =>
                     {
+                        // A selection, not a change to the rig: nothing needs asking again, and the line a
+                        // press left (Added Rim. Restart SimHub...) stays.
                         Select(PanelPage.Screens, captured.Namespace);
-                        Redraw();
+                        RebuildPage();
                     }));
             }
             cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
@@ -370,15 +383,26 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Keeping a screen the migration made can end the line over the cards, the sidebar's warning and
         /// Home's issue, none of which an editor's in-place redraw reaches; ADR 0017 has the line go when it
-        /// stops being true. So the first change to such a screen redraws the whole page, which asks what
-        /// needs fixing again, and every later one only its editor.
+        /// stops being true. So the first change to such a screen (PanelScreens.RebuildsPageAfterSave) also
+        /// asks what needs fixing again and rebuilds the page and the sidebar -- after the press has finished,
+        /// never inside it. A save runs inside the event that raised it, and the web view box saves on
+        /// LostFocus, which fires inside the next press's own focus change: a synchronous rebuild took the
+        /// pressed control out of the tree before it could capture the mouse, so Edit opened no sheet and a
+        /// Page on screen press wrote into the old editor. The editor itself redraws in place first, which
+        /// keeps the keyboard where it was.
         /// </remarks>
         private void ScreensSave(ScreenInstance screen, Action redraw = null)
         {
-            var unclaimed = screen.Unclaimed == true;
+            var rebuilds = PanelScreens.RebuildsPageAfterSave(screen);
             Save(screen);
-            if (unclaimed) Redraw();
-            else if (redraw != null) redraw();
+            if (redraw != null) redraw();
+            if (!rebuilds) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                RefreshAttention();
+                RebuildPage();
+                RefreshSidebar();
+            }), DispatcherPriority.Background);
         }
 
         /// <summary>
@@ -401,6 +425,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private static void ScreensRedraw(ContentControl host, Func<object> build)
         {
+            object drawn;
             string uid = null;
             List<string> named = null;
             List<int> place = null;
@@ -425,10 +450,22 @@ namespace OpenDashPlugin
                 }
                 else
                 {
-                    place = FocusPath(host, Keyboard.FocusedElement as DependencyObject);
+                    place = ScreensFocusPath(host, Keyboard.FocusedElement as DependencyObject);
                 }
             }
-            host.Content = build();
+            // Outside the shell's BuildPage, whose guard draws PanelShell.PageFailed for a page that throws: an
+            // editor redrawn after a press would otherwise throw into SimHub's dispatcher and leave the old
+            // controls answering on screen.
+            try
+            {
+                drawn = build();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Drawing a Screens editor failed", ex);
+                drawn = Ui.Prose(PanelShell.PageFailed, Theme.SizeBody, Theme.Caution);
+            }
+            host.Content = drawn;
             if (!focused) return;
             host.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -454,8 +491,40 @@ namespace OpenDashPlugin
             }), DispatcherPriority.Loaded);
         }
 
-        /// <summary>The deepest control that can take the keyboard along <paramref name="path"/> (FocusPath's
-        /// child indexes) under <paramref name="root"/>, or null where the path leads to none.</summary>
+        /// <summary>
+        /// Where a focused control sits under <paramref name="root"/>, as the child index at each level of the
+        /// visual tree, or null where it is not under it: the page's own walk, so a redraw does not reach into
+        /// the shell's internals.
+        /// </summary>
+        private static List<int> ScreensFocusPath(DependencyObject root, DependencyObject focused)
+        {
+            if (root == null || focused == null) return null;
+            var path = new List<int>();
+            var node = focused;
+            while (node != null && node != root)
+            {
+                var parent = node is Visual ? VisualTreeHelper.GetParent(node) : null;
+                if (parent == null) return null;
+                var index = -1;
+                var count = VisualTreeHelper.GetChildrenCount(parent);
+                for (var i = 0; i < count; i++)
+                {
+                    if (VisualTreeHelper.GetChild(parent, i) == node)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index < 0) return null;
+                path.Insert(0, index);
+                node = parent;
+            }
+            return node == root ? path : null;
+        }
+
+        /// <summary>The deepest control that can take the keyboard along <paramref name="path"/>
+        /// (ScreensFocusPath's child indexes) under <paramref name="root"/>, or null where the path leads to
+        /// none.</summary>
         private static UIElement ScreensAt(DependencyObject root, List<int> path)
         {
             DependencyObject node = root;

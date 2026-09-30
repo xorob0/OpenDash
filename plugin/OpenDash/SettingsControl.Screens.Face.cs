@@ -55,7 +55,7 @@ namespace OpenDashPlugin
             {
                 screensFaceAside[screen.Namespace] = chosen;
                 // A zone picked opens on its ticked pages, as the artboard's does, whatever the last one showed.
-                screensShowAll = false;
+                screensShowAll = PanelScreens.ShowAllAfterPick;
                 redraw();
             };
 
@@ -390,7 +390,7 @@ namespace OpenDashPlugin
                 FocusVisualStyle = Ui.FocusRing(),
                 Template = ScreensZoneTemplate(),
             };
-            System.Windows.Automation.AutomationProperties.SetItemStatus(button, selected ? "pressed" : "not pressed");
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, PanelScreens.ZoneStatus(selected));
             if (pick != null) button.Click += (sender, args) => pick();
             return button;
         }

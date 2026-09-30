@@ -805,6 +805,47 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelScreens.AsideFor(PanelScreens.AnchorRevBar, null, reference));
         }
 
+        /// <summary>
+        /// What a press on the page redraws, decided here and held in the page's sources: a change saved to a
+        /// screen the migration made rebuilds the page after the press, the first one only; a card pressed is a
+        /// selection and rebuilds in place without asking SimHub again or clearing the line a press left; a
+        /// zone picked opens on its ticked pages; and the page follows a route's anchor on the way in through
+        /// OnLeave rather than the shell's own rebuild flag or focus walk, which are not hooks.
+        /// </summary>
+        [Fact]
+        public void A_press_redraws_what_it_changed_and_no_more()
+        {
+            var migrated = new ScreenInstance { Kind = Contract.KindFace, Unclaimed = true };
+            Assert.True(PanelScreens.RebuildsPageAfterSave(migrated));
+            migrated.Keep();
+            Assert.False(PanelScreens.RebuildsPageAfterSave(migrated));
+            Assert.False(PanelScreens.RebuildsPageAfterSave(new ScreenInstance { Kind = Contract.KindFace, Unclaimed = false }));
+            Assert.False(PanelScreens.RebuildsPageAfterSave(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.False(PanelScreens.RebuildsPageAfterSave(null));
+            Assert.False(PanelScreens.ShowAllAfterPick);
+            Assert.Equal("pressed", PanelScreens.ZoneStatus(true));
+            Assert.Equal("not pressed", PanelScreens.ZoneStatus(false));
+
+            var dir = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var page = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.cs"));
+            var face = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.Face.cs"));
+            // The save asks the model before it keeps the screen, redraws the editor, and posts the rest.
+            Assert.Contains("var rebuilds = PanelScreens.RebuildsPageAfterSave(screen);\n            Save(screen);", page.Replace("\r\n", "\n"));
+            Assert.Contains("DispatcherPriority.Background", page);
+            // A card press selects and rebuilds in place.
+            Assert.Contains("Select(PanelPage.Screens, captured.Namespace);\n                        RebuildPage();", page.Replace("\r\n", "\n"));
+            Assert.Contains("OnLeave(\"Screens.follow\"", page);
+            Assert.Contains("screensShowAll = PanelScreens.ShowAllAfterPick;", face);
+            Assert.Contains("PanelScreens.ZoneStatus(selected)", face);
+            foreach (var source in System.IO.Directory.GetFiles(dir, "SettingsControl.Screens*.cs"))
+            {
+                var code = RepoPaths.Code(source);
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\brebuilding\b"), source + " reads the shell's rebuild flag");
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"(?<![A-Za-z])FocusPath\("), source + " calls the shell's FocusPath");
+                Assert.DoesNotContain("\"pressed\"", code);
+            }
+        }
+
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
         [Fact]

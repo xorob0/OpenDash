@@ -140,6 +140,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether a change saved in a screen's editor rebuilds the page as well as the editor: only the first
+        /// change to a screen the migration made, since keeping it can end the line over the cards, the
+        /// sidebar's warning and Home's issue, none of which the editor reaches. Asked before the save, which
+        /// keeps the screen.
+        /// </summary>
+        public static bool RebuildsPageAfterSave(ScreenInstance screen)
+        {
+            return screen != null && screen.Unclaimed == true;
+        }
+
+        /// <summary>
         /// Whether the rig holds a screen the migration made that the driver has neither kept nor removed.
         /// </summary>
         /// <remarks>
@@ -280,6 +291,20 @@ namespace OpenDashPlugin
         /// <summary>Under a zone that no wheel button advances: the Next page chip's own words beside it, one
         /// phrase for the one state rather than the artboard's "No button".</summary>
         public const string NoButton = PanelBindings.NotBound;
+
+        /// <summary>Whether a zone list shows every page after a part of the picture is picked: no, a zone picked
+        /// opens on its ticked pages, as the artboard's does, whatever the last one showed.</summary>
+        public const bool ShowAllAfterPick = false;
+
+        /// <summary>What a screen reader hears of a part of the picture: whether it is the one the aside shows.</summary>
+        public const string ZonePressed = "pressed";
+
+        public const string ZoneNotPressed = "not pressed";
+
+        public static string ZoneStatus(bool selected)
+        {
+            return selected ? ZonePressed : ZoneNotPressed;
+        }
 
         /// <summary>The zone the aside opens on before anything is picked: C, as the artboard's does, on
         /// every face, whichever zone the body draws first.</summary>
