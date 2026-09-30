@@ -74,20 +74,34 @@ namespace OpenDashPlugin
         }
     }
 
-    /// <summary>Every tile of the rig where it is drawn, and how tall the canvas is to hold them.</summary>
+    /// <summary>
+    /// Every tile of the rig where it is drawn, the room the tiles are laid out in, and the scale that room
+    /// is drawn at on the canvas.
+    /// </summary>
     public sealed class RigPlan
     {
-        public RigPlan(IList<RigTile> tiles, double height)
+        public RigPlan(IList<RigTile> tiles, double width, double height, double scale = 1)
         {
             Tiles = tiles;
+            Width = width;
             Height = height;
+            Scale = scale;
         }
 
         public IList<RigTile> Tiles { get; private set; }
 
-        /// <summary><see cref="PanelRigMap.CanvasHeight"/>, or more where the fallback's rows or the tiles
-        /// the driver placed need it.</summary>
+        /// <summary>The room the tiles are laid out in, in their own pixels: the canvas's width, or an
+        /// arrangement's span where that is wider and the whole is drawn at <see cref="Scale"/>. A drag is
+        /// held to it.</summary>
+        public double Width { get; private set; }
+
+        /// <summary>The same room's height: <see cref="PanelRigMap.CanvasHeight"/>, or more where the
+        /// fallback's rows or the tiles the driver placed need it.</summary>
         public double Height { get; private set; }
+
+        /// <summary>What the tiles are drawn at: 1, or less for an arrangement wider than the canvas, which
+        /// is shrunk to fit it rather than set aside. The canvas is <see cref="Height"/> times this high.</summary>
+        public double Scale { get; private set; }
     }
 
     /// <summary>
@@ -512,18 +526,23 @@ namespace OpenDashPlugin
         /// rail or SimHub was resized, and clamped a placed tile onto another at the edge.
         /// </para>
         /// <para>
-        /// The arrangement is drawn where it was kept while it fits the canvas's width. When it does not, it
-        /// moves left as one, never past the canvas's start; and when it is wider than the canvas, the canvas
-        /// draws the default instead, and the arrangement is kept for a window wide enough for it. A tile the
-        /// arrangement does not hold, a device added since, goes in rows under it. The canvas is
-        /// <see cref="CanvasHeight"/> high, or as tall as the arrangement and those rows need, so a rig
-        /// arranged in a narrow window's taller canvas is never clamped onto the foot of a wide one. The
-        /// hint is not kept clear of a placed tile, which may cover it, as it may while it is dragged: a
-        /// canvas grown to clear it would grow again at every drop against the foot.
+        /// The arrangement is drawn where it was kept while it fits the canvas's width. When it passes the
+        /// right edge but is no wider than the canvas, it is centred in the canvas as one. When it is wider
+        /// than the canvas, it is drawn whole and shrunk to the canvas's width, its leftmost tile at the
+        /// edge, rather than replaced by the default: the default in its place was drawn from nothing the
+        /// driver made, and the next drop kept it over the arrangement. A drag on the shrunk arrangement is
+        /// in the tiles' own pixels, so it keeps the arrangement's scale. A tile the arrangement does not
+        /// hold, a device added since, goes in rows under it. The room is <see cref="CanvasHeight"/> high
+        /// on the canvas, or as tall as the arrangement and those rows need, so a rig arranged in a narrow
+        /// window's taller canvas is never clamped onto the foot of a wide one. The hint is not kept clear
+        /// of a placed tile, which may cover it, as it may while it is dragged: a canvas grown to clear it
+        /// would grow again at every drop against the foot.
         /// </para>
         /// <para>
-        /// The page lays the plan out at the width the canvas really has, and holds a drag to that width and
-        /// to this height.
+        /// The page plans once per build, at the width the shell gives the page less the canvas's frame,
+        /// which leaves room for a scroll bar whether or not one is showing, and holds a drag to the plan's
+        /// room. Planning again at the width the canvas has with the bar gone drew two layouts that the bar
+        /// coming and going switched between, and a canvas height that brought the bar back.
         /// </para>
         /// </remarks>
         public static RigPlan Plan(OpenDashSettings settings, double canvasWidth)
@@ -542,31 +561,39 @@ namespace OpenDashPlugin
             {
                 var left = saved.Values.Min(t => t.X);
                 var right = saved.Values.Max(t => t.X + FootprintWidth(t));
-                var shift = right > canvasWidth ? Math.Min(left, Math.Ceiling(right - canvasWidth)) : 0;
-                if (right - shift <= canvasWidth)
+                var span = right - left;
+                double shift = 0, scale = 1, width = canvasWidth;
+                if (right > canvasWidth)
                 {
-                    var foot = saved.Values.Max(t => t.Y + FootprintHeight(t));
-                    var canvasHeight = Math.Max(CanvasHeight, foot);
-                    var rest = tiles.Where(t => !saved.ContainsKey(t.Id)).ToList();
-                    var under = new Dictionary<string, RigTile>(StringComparer.Ordinal);
-                    if (rest.Count > 0)
+                    if (span <= canvasWidth) shift = left - Math.Floor((canvasWidth - span) / 2);
+                    else if (canvasWidth > 0)
                     {
-                        var down = foot + LayoutGap - LayoutMargin;
-                        foreach (var tile in Rows(rest, canvasWidth)) under[tile.Id] = tile.At(Clamp(tile.X, FootprintWidth(tile), canvasWidth), tile.Y + down);
-                        canvasHeight = Math.Max(canvasHeight, under.Values.Max(t => t.Y + FootprintHeight(t)) + HintClear);
+                        shift = left;
+                        scale = canvasWidth / span;
+                        width = span;
                     }
-                    var arranged = tiles.Select(tile =>
-                    {
-                        RigTile at;
-                        if (saved.TryGetValue(tile.Id, out at)) return tile.At(at.X - shift, at.Y);
-                        return under[tile.Id];
-                    }).ToList();
-                    return new RigPlan(arranged, canvasHeight);
                 }
+                var foot = saved.Values.Max(t => t.Y + FootprintHeight(t));
+                var canvasHeight = Math.Max(CanvasHeight / scale, foot);
+                var rest = tiles.Where(t => !saved.ContainsKey(t.Id)).ToList();
+                var under = new Dictionary<string, RigTile>(StringComparer.Ordinal);
+                if (rest.Count > 0)
+                {
+                    var down = foot + LayoutGap - LayoutMargin;
+                    foreach (var tile in Rows(rest, width)) under[tile.Id] = tile.At(Clamp(tile.X, FootprintWidth(tile), width), tile.Y + down);
+                    canvasHeight = Math.Max(canvasHeight, under.Values.Max(t => t.Y + FootprintHeight(t)) + HintClear / scale);
+                }
+                var arranged = tiles.Select(tile =>
+                {
+                    RigTile at;
+                    if (saved.TryGetValue(tile.Id, out at)) return tile.At(at.X - shift, at.Y);
+                    return under[tile.Id];
+                }).ToList();
+                return new RigPlan(arranged, width, canvasHeight, scale);
             }
 
             var placed = defaults.Select(tile => tile.At(Clamp(tile.X, FootprintWidth(tile), canvasWidth), Clamp(tile.Y, FootprintHeight(tile), height))).ToList();
-            return new RigPlan(placed, height);
+            return new RigPlan(placed, canvasWidth, height);
         }
 
         /// <summary>Where the tiles go before anybody has arranged them, on a canvas of

@@ -64,8 +64,9 @@ namespace OpenDashPlugin
             public Action<string> Paint { get; private set; }
         }
 
-        /// <summary>The width and height the tiles were last laid out at, which a drag and a drop are held to,
-        /// so the place a tile is dropped at is the place the next build draws it at.</summary>
+        /// <summary>The room the tiles are laid out in, in their own pixels (RigPlan's Width and Height), which
+        /// a drag and a drop are held to, so the place a tile is dropped at is the place the next build draws
+        /// it at.</summary>
         private sealed class RigExtent
         {
             public double Width { get; set; }
@@ -152,10 +153,16 @@ namespace OpenDashPlugin
         /// tile nobody has moved. Fills <paramref name="views"/> with what the chips repaint.</summary>
         private FrameworkElement BuildRigCanvas(IList<RigTileView> views)
         {
+            // Planned once, at the width the shell gives the page, which leaves room for a scroll bar whether
+            // or not one is showing: a canvas planned again at the width it has with the bar gone switched
+            // layouts and heights as the bar came and went, and its height brought the bar back.
             var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
             var plan = PanelRigMap.Plan(Settings, width);
-            var extent = new RigExtent { Width = width, Height = plan.Height };
-            var canvas = new Canvas { Height = plan.Height, ClipToBounds = true, Background = Ui.DotGrid() };
+            var extent = new RigExtent { Width = plan.Width, Height = plan.Height };
+            var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
+            // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
+            // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
+            var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };
             var tiles = plan.Tiles;
 
             if (tiles.Count == 0)
@@ -175,34 +182,15 @@ namespace OpenDashPlugin
                 Canvas.SetBottom(hint, PanelRigMap.HintBottom);
                 canvas.Children.Add(hint);
             }
+            canvas.Children.Add(layer);
 
             var scenario = rigScenario;
             foreach (var tile in tiles)
             {
                 var view = BuildRigTile(tile, extent, scenario, views);
                 views.Add(view);
-                canvas.Children.Add(view.Element);
+                layer.Children.Add(view.Element);
             }
-
-            // ContentWidth allows for a scroll bar the page may not be showing, so the canvas can be wider than
-            // the width the plan was worked out for. Laid out again at the width it really has, the default is
-            // centred in it and a drag is held to the same edge the next build clamps to.
-            canvas.SizeChanged += (sender, args) =>
-            {
-                var real = canvas.ActualWidth;
-                if (real <= 0 || Math.Abs(real - extent.Width) < 0.5) return;
-                var again = PanelRigMap.Plan(Settings, real);
-                extent.Width = real;
-                extent.Height = again.Height;
-                canvas.Height = again.Height;
-                foreach (var view in views)
-                {
-                    var moved = again.Tiles.FirstOrDefault(t => t.Id == view.Tile.Id);
-                    if (moved == null) continue;
-                    Canvas.SetLeft(view.Element, moved.X);
-                    Canvas.SetTop(view.Element, moved.Y);
-                }
-            };
 
             return new Border
             {
@@ -212,6 +200,18 @@ namespace OpenDashPlugin
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Child = canvas,
             };
+        }
+
+        /// <summary>The dotted ground at the tiles' scale, so a tile dropped on a step of the grid still has
+        /// its corner between four dots when the arrangement is shrunk.</summary>
+        private static Brush RigDots(double scale)
+        {
+            var dots = Ui.DotGrid();
+            if (scale >= 1) return dots;
+            var scaled = dots.Clone();
+            scaled.Transform = new ScaleTransform(scale, scale);
+            scaled.Freeze();
+            return scaled;
         }
 
         /// <summary>

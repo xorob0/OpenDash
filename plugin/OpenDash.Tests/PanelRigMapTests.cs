@@ -211,8 +211,27 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_rig_page_keeps_a_drop_and_a_reset_and_a_chip_rebuilds_nothing()
         {
-            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePlaces(Settings, views.Select(", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
+            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePlaces(Settings, views.Select(view => view.Tile.At(Canvas.GetLeft(view.Element), Canvas.GetTop(view.Element))));", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
             InOrder(RigMethod("private void RigResetLayout("), "PanelRigMap.ClearLayout(Settings);", "Save();", "Redraw();");
+            // The canvas is planned once, at the page's width less its frame, and drawn from that plan: the
+            // tiles' room, which a drag is held to, and the canvas as high as the room at the plan's scale.
+            // Nothing plans it again at the width it has once laid out, which switched layouts and heights as
+            // the scroll bar came and went.
+            var canvas = RigMethod("private FrameworkElement BuildRigCanvas(");
+            InOrder(canvas,
+                "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
+                "var plan = PanelRigMap.Plan(Settings, width);",
+                "var extent = new RigExtent { Width = plan.Width, Height = plan.Height };",
+                "var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
+                "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
+                "var tiles = plan.Tiles;",
+                "canvas.Children.Add(layer);",
+                "BuildRigTile(tile, extent, scenario, views)",
+                "layer.Children.Add(view.Element);");
+            Assert.DoesNotContain("SizeChanged", canvas);
+            Assert.DoesNotContain("ActualWidth", canvas);
+            Assert.Equal(1, canvas.Split("PanelRigMap.Plan(").Length - 1);
+            InOrder(RigMethod("private static Brush RigDots("), "Ui.DotGrid();", "if (scale >= 1) return dots;", "scaled.Transform = new ScaleTransform(scale, scale);");
             // Reset layout is what the header's press does.
             Assert.Contains("reset.Click += (sender, args) => RigResetLayout();", RigMethod("private FrameworkElement BuildRigHeader("));
 
@@ -611,15 +630,15 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A drop as the page makes one: the plan at a width, one tile moved to where DropPosition
-        /// lands it, and every tile kept where it is drawn (SettingsControl.Rig's RigDrop).</summary>
+        /// lands it in the plan's room, and every tile kept where it is drawn (SettingsControl.Rig's RigDrop).</summary>
         private static RigPlan Drop(OpenDashSettings settings, double width, string id, double x, double y)
         {
             var plan = PanelRigMap.Plan(settings, width);
             var tiles = plan.Tiles.Select(t => t.Id != id ? t : t.At(
-                PanelRigMap.DropPosition(x, PanelRigMap.FootprintWidth(t), width),
+                PanelRigMap.DropPosition(x, PanelRigMap.FootprintWidth(t), plan.Width),
                 PanelRigMap.DropPosition(y, PanelRigMap.FootprintHeight(t), plan.Height))).ToList();
             PanelRigMap.SavePlaces(settings, tiles);
-            return new RigPlan(tiles, plan.Height);
+            return new RigPlan(tiles, plan.Width, plan.Height, plan.Scale);
         }
 
         private static bool Overlap(RigTile a, RigTile b)
@@ -643,12 +662,16 @@ namespace OpenDashPlugin.Tests
             return pairs;
         }
 
+        /// <summary>Every tile inside the plan's room, and that room drawn across the canvas's width at the
+        /// plan's scale, never past it, and at least the 580 high on the canvas.</summary>
         private static void Inside(RigPlan plan, double width, string label)
         {
-            Assert.True(plan.Height >= PanelRigMap.CanvasHeight, label);
+            Assert.True(plan.Height * plan.Scale >= PanelRigMap.CanvasHeight - 1e-9, label);
+            Assert.InRange(plan.Scale, 0.0001, 1);
+            Assert.Equal(width, plan.Width * plan.Scale, 6);
             foreach (var tile in plan.Tiles)
             {
-                Assert.True(tile.X >= 0 && tile.X + PanelRigMap.FootprintWidth(tile) <= width, label + " " + tile.Id);
+                Assert.True(tile.X >= 0 && tile.X + PanelRigMap.FootprintWidth(tile) <= plan.Width + 1e-9, label + " " + tile.Id);
                 Assert.True(tile.Y >= 0 && tile.Y + PanelRigMap.FootprintHeight(tile) <= plan.Height, label + " " + tile.Id);
             }
         }
@@ -717,12 +740,13 @@ namespace OpenDashPlugin.Tests
         /// A tile a driver had placed kept absolute pixels while the default re-centred every other for each
         /// width, so an arrangement came apart whenever the sidebar changed to the rail or SimHub was
         /// resized. Arranged at every width, planned at every other: never outside the canvas, and never an
-        /// overlap the arrangement did not have.
+        /// overlap the arrangement did not have. Where it is wider than the canvas it is shrunk to it rather
+        /// than set aside for the default, which the next drop kept over it.
         /// </remarks>
         [Fact]
-        public void An_arranged_rig_keeps_its_shape_at_every_width_it_fits_and_the_default_where_it_does_not()
+        public void An_arranged_rig_keeps_its_shape_at_every_width_and_shrinks_where_it_is_wider()
         {
-            foreach (var arrangedAt in new[] { 542.0, 661, 894, 1100, 1597 })
+            foreach (var arrangedAt in new[] { 542.0, 661, 894, 1100, 1597, 3534 })
             {
                 var settings = Rig();
                 var arranged = PanelRigMap.Plan(settings, arrangedAt);
@@ -731,29 +755,69 @@ namespace OpenDashPlugin.Tests
                 var had = Overlaps(arranged);
                 var kept = ById(arranged);
                 var left = arranged.Tiles.Min(t => t.X);
-                var span = arranged.Tiles.Max(t => t.X + PanelRigMap.FootprintWidth(t)) - left;
+                var right = arranged.Tiles.Max(t => t.X + PanelRigMap.FootprintWidth(t));
+                var span = right - left;
                 for (var width = 400; width <= 1700; width += 7)
                 {
                     var label = arrangedAt + " at " + width;
                     var plan = PanelRigMap.Plan(settings, width);
                     Inside(plan, width, label);
-                    if (span <= width)
+                    // The arrangement as one: every tile moved by the same, and none but left.
+                    Assert.Subset(had, Overlaps(plan));
+                    var dx = ById(plan)["MainDash"].X - kept["MainDash"].X;
+                    Assert.True(dx <= 0, label);
+                    Assert.All(plan.Tiles, t => Assert.Equal(new[] { kept[t.Id].X + dx, kept[t.Id].Y }, new[] { t.X, t.Y }));
+                    if (right <= width)
                     {
-                        // The arrangement as one: every tile moved by the same, and none but left.
-                        Assert.Subset(had, Overlaps(plan));
-                        var dx = ById(plan)["MainDash"].X - kept["MainDash"].X;
-                        Assert.True(dx <= 0, label);
-                        Assert.All(plan.Tiles, t => Assert.Equal(new[] { kept[t.Id].X + dx, kept[t.Id].Y }, new[] { t.X, t.Y }));
+                        // Where it was kept.
+                        Assert.Equal(0, dx);
+                        Assert.Equal(1, plan.Scale);
+                    }
+                    else if (span <= width)
+                    {
+                        // Past the right edge: centred as one, at its own size.
+                        Assert.Equal(1, plan.Scale);
+                        var drawnLeft = plan.Tiles.Min(t => t.X);
+                        Assert.InRange(width - (drawnLeft + span) - drawnLeft, 0, 1);
                     }
                     else
                     {
-                        // Too wide for the arrangement: the default, the arrangement kept for a wider window.
-                        Assert.Equal(PanelRigMap.Plan(Rig(), width).Tiles.Select(t => t.X + "," + t.Y), plan.Tiles.Select(t => t.X + "," + t.Y));
-                        Assert.Empty(Overlaps(plan));
+                        // Wider than the canvas: shrunk to it whole, its leftmost tile at the edge, and kept as
+                        // it was rather than replaced by the default.
+                        Assert.Equal(-left, dx);
+                        Assert.Equal(width / span, plan.Scale, 9);
+                        Assert.Equal(span, plan.Width);
                         Assert.Equal((int)kept["Rim"].X, settings.ScreenByNamespace("Rim").LayoutX);
                     }
                 }
             }
+        }
+
+        [Fact]
+        public void A_drop_on_a_shrunk_arrangement_keeps_the_arrangement()
+        {
+            // Arranged in a 4K window, the two faces side by side; then the window is the artboard's.
+            var settings = Rig();
+            PanelRigMap.SavePlaces(settings, PanelRigMap.Plan(settings, 3534).Tiles);
+            var kept = ById(PanelRigMap.Plan(settings, 3534));
+            var narrow = PanelRigMap.Plan(settings, 877);
+            Assert.True(narrow.Scale < 1);
+            // A nudge of the phone keeps every other tile where the arrangement has it, relative to the rim,
+            // and the phone where it was dropped.
+            var phone = ById(narrow)["Companion"];
+            var dropped = ById(Drop(settings, 877, "Companion", phone.X + 40, phone.Y));
+            var after = ById(PanelRigMap.Plan(settings, 877));
+            foreach (var id in kept.Keys.Where(id => id != "Companion"))
+            {
+                Assert.Equal(kept[id].X - kept["Rim"].X, after[id].X - after["Rim"].X);
+                Assert.Equal(kept[id].Y, after[id].Y);
+            }
+            Assert.Equal(new[] { dropped["Companion"].X, dropped["Companion"].Y }, new[] { after["Companion"].X, after["Companion"].Y });
+            Assert.Equal(phone.X + 40, after["Companion"].X);
+            // Back at 4K it is the arrangement, not the 1200 default pressed into a corner of it.
+            var wide = ById(PanelRigMap.Plan(settings, 3534));
+            Assert.Equal(kept["MainDash"].X - kept["Rim"].X, wide["MainDash"].X - wide["Rim"].X);
+            Assert.Equal(1, PanelRigMap.Plan(settings, 3534).Scale);
         }
 
         [Fact]
