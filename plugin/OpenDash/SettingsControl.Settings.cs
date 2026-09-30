@@ -217,7 +217,7 @@ namespace OpenDashPlugin
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
             chrome.AppendChild(presenter);
-            var label = Ui.Text(text, PanelSettings.IndexLinkTextSize, FontWeights.Medium, Theme.TextSecondary);
+            var label = Ui.Text(text, PanelSettings.IndexLinkTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.IndexLinkFontWeight), Theme.TextSecondary);
             var link = new Button
             {
                 Height = PanelSettings.IndexLinkHeight,
@@ -324,7 +324,7 @@ namespace OpenDashPlugin
             var parts = row.Tag as RowParts;
             if (parts == null || parts.TitleLine == null) return row;
             var tag = Ui.NewTag();
-            tag.Margin = new Thickness(8, 0, 0, 0);
+            tag.Margin = new Thickness(PanelSettings.TitleTagGap, 0, 0, 0);
             tag.VerticalAlignment = VerticalAlignment.Center;
             parts.TitleLine.Children.Add(tag);
             return row;
@@ -478,8 +478,8 @@ namespace OpenDashPlugin
             });
 
             var fuelUnit = PanelSettings.FuelUnit(units[3]) ?? PanelSettings.FuelTargetUnitFallback;
-            var fuelTarget = Ui.HStack(PanelSettings.AlertWhenGap, SettingsNumberField(string.Empty), Ui.Caption(fuelUnit));
-            var tyres = Ui.HStack(6,
+            var fuelTarget = Ui.HStack(PanelSettings.FuelTargetGap, SettingsNumberField(string.Empty), Ui.Caption(fuelUnit));
+            var tyres = Ui.HStack(PanelSettings.TyreButtonGap,
                 Ui.Button(PanelSettings.TyreDisplayLabels[0], PanelButtonKind.Outline, PanelButtonSize.Small),
                 Ui.Button(PanelSettings.TyreDisplayLabels[1], PanelButtonKind.Outline, PanelButtonSize.Small));
 
@@ -570,7 +570,7 @@ namespace OpenDashPlugin
             SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSoon.Incidents.Title), null, null, temperature, surfaces, PanelSoon.Incidents);
             SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title), null, null, temperature, surfaces, PanelSoon.HybridBatteryLow, true);
 
-            var heading = Ui.HStack(10, Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag());
+            var heading = Ui.HStack(PanelSettings.AlertsHeadingTagGap, Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag());
             heading.HorizontalAlignment = HorizontalAlignment.Left;
             heading.Margin = new Thickness(0, 0, 0, PanelKit.SectionHeadingGapSettings);
             FrameworkElement folded = null;
@@ -578,7 +578,7 @@ namespace OpenDashPlugin
             {
                 // Its name alone: SoonRow's default off switch would say that alerts are off, and they are shown.
                 folded = Ui.Soon(Ui.SettingRow(PanelSoon.AlertDisplay.Title, null), PanelSoon.AlertDisplay);
-                folded.Margin = new Thickness(0, PanelSettings.PreviewMarginBottom, 0, 0);
+                folded.Margin = new Thickness(0, PanelSettings.AlertFoldGap, 0, 0);
             }
             return PageSection(null, true, PanelKit.SectionHeadingGapSettings, heading, Ui.CardBox(grid, 0), folded);
         }
@@ -630,7 +630,7 @@ namespace OpenDashPlugin
             if (!last) SettingsAlertRule(grid, row);
             var column = 0;
 
-            var name = Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeights.Medium, Theme.TextPrimary);
+            var name = Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.AlertNameFontWeight), Theme.TextPrimary);
             name.TextWrapping = TextWrapping.Wrap;
             // A greyed name's Soon tag goes under the name when the column is short, as a kit row's title line
             // wraps its tags, rather than being clipped at the cell's edge.
@@ -639,7 +639,7 @@ namespace OpenDashPlugin
             {
                 var line = new WrapPanel { Orientation = Orientation.Horizontal };
                 var tag = Ui.SoonTag(soon);
-                tag.Margin = new Thickness(8, 0, 0, 0);
+                tag.Margin = new Thickness(PanelSettings.TitleTagGap, 0, 0, 0);
                 tag.VerticalAlignment = VerticalAlignment.Center;
                 line.Children.Add(name);
                 line.Children.Add(tag);
@@ -789,7 +789,7 @@ namespace OpenDashPlugin
             var head = new DockPanel { LastChildFill = false };
             // New on the control: the Map is the only artboard that tags the night preview, and a thing new
             // only on the Map carries the tag where it is drawn.
-            var eyebrow = Ui.HStack(8, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag());
+            var eyebrow = Ui.HStack(PanelSettings.TitleTagGap, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag());
             DockPanel.SetDock(eyebrow, Dock.Left);
             DockPanel.SetDock(pick, Dock.Right);
             head.Children.Add(eyebrow);

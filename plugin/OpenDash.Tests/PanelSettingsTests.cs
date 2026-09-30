@@ -280,7 +280,7 @@ namespace OpenDashPlugin.Tests
             var page = Page();
             Assert.Contains("Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag())", page);
             Assert.Contains("Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag()", page);
-            Assert.Contains("Ui.HStack(8, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
+            Assert.Contains("Ui.HStack(PanelSettings.TitleTagGap, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))", page);
@@ -301,6 +301,52 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(20, PanelSettings.IndexJumpMargin);
             var page = Page();
             Assert.Contains("var all = new List<UIElement> { SettingsIndex(sections, to) };", page);
+        }
+
+        /// <summary>
+        /// Every metric the page draws with is PanelSettings', held to Settings.dc.html where the artboard has
+        /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the When cell's gap 8, the
+        /// Units line 14, the preview card's padding 16/18 with gap 16 and 8 under it, the name inputs 150 with
+        /// gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre buttons' 6 and the .idx's 500. The page
+        /// types no gap, padding or weight of its own.
+        /// </summary>
+        [Fact]
+        public void Every_metric_is_the_artboards()
+        {
+            Assert.Equal(12, PanelSettings.AlertCellPaddingX);
+            Assert.Equal(10, PanelSettings.AlertCellPaddingY);
+            Assert.Equal(14, PanelSettings.AlertTextSize);
+            Assert.Equal(500, PanelSettings.AlertNameFontWeight);
+            Assert.Equal(16, PanelSettings.AlertCheck);
+            Assert.Equal(13, PanelSettings.AlertTryTextSize);
+            Assert.Equal(8, PanelSettings.AlertWhenGap);
+            Assert.Equal(14, PanelSettings.UnitsTextSize);
+            Assert.Equal(18, PanelSettings.PreviewPaddingX);
+            Assert.Equal(16, PanelSettings.PreviewPaddingY);
+            Assert.Equal(16, PanelSettings.PreviewGap);
+            Assert.Equal(8, PanelSettings.PreviewMarginBottom);
+            Assert.Equal(150, PanelSettings.NameInputWidth);
+            Assert.Equal(8, PanelSettings.DriverInputGap);
+            Assert.Equal(8, PanelSettings.TitleTagGap);
+            Assert.Equal(10, PanelSettings.AlertsHeadingTagGap);
+            Assert.Equal(6, PanelSettings.TyreButtonGap);
+            Assert.Equal(8, PanelSettings.FuelTargetGap);
+            Assert.Equal(500, PanelSettings.IndexLinkFontWeight);
+            // The build's own, where the artboard has no counterpart: a native tick's box, the tag under a
+            // surface column's name, the gap over a stacked control and over the folded row, and the names'
+            // star weight against each surface column's 1.
+            Assert.Equal(12, PanelSettings.AlertCheckIcon);
+            Assert.Equal(4, PanelSettings.AlertHeaderTagGap);
+            Assert.Equal(10, PanelSettings.StackedControlGap);
+            Assert.Equal(8, PanelSettings.AlertFoldGap);
+            Assert.Equal(3, PanelSettings.AlertNameWeight);
+
+            var page = Page();
+            Assert.DoesNotMatch(@"HStack\(\d", page);
+            Assert.DoesNotMatch(@"new Thickness\(\d+, 0, 0, 0\)", page);
+            Assert.DoesNotContain("FontWeights.Medium", page);
+            Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap,", page);
+            Assert.Contains("folded.Margin = new Thickness(0, PanelSettings.AlertFoldGap, 0, 0);", page);
         }
 
         [Fact]

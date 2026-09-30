@@ -99,6 +99,9 @@ namespace OpenDashPlugin
         public const double IndexLinkPaddingX = 12;
         public const double IndexLinkTextSize = 14;
 
+        /// <summary>The .idx's 500, Medium.</summary>
+        public const int IndexLinkFontWeight = 500;
+
         /// <summary>How far under the top of the view a section's heading may be and still count as the one
         /// being read: the page's own top padding.</summary>
         public const double IndexReadLine = 36;
@@ -164,7 +167,11 @@ namespace OpenDashPlugin
         /// driver names' four examples beside their title need about 500.</summary>
         public const double StackControlsBelow = 560;
 
+        /// <summary>Between a title and the control stacked under it.</summary>
         public const double StackedControlGap = 10;
+
+        /// <summary>Between a title and the New or Soon tag after it: the artboard's .t gap.</summary>
+        public const double TitleTagGap = 8;
 
         public static bool StacksControls(double contentWidth)
         {
@@ -179,6 +186,12 @@ namespace OpenDashPlugin
         public const string UnitsCaption = "Set in SimHub.";
 
         public const double UnitsTextSize = 14;
+
+        /// <summary>The greyed fuel target's box and its unit, 8 apart as the artboard's row.</summary>
+        public const double FuelTargetGap = 8;
+
+        /// <summary>The greyed tyre display's two buttons, 6 apart as the artboard's.</summary>
+        public const double TyreButtonGap = 6;
 
         /// <summary>The fuel target's greyed row (#326) shows the fuel unit; litres when SimHub cannot say.</summary>
         public const string FuelTargetUnitFallback = "L";
@@ -378,6 +391,16 @@ namespace OpenDashPlugin
         public const double AlertCellPaddingX = 12;
         public const double AlertCellPaddingY = 10;
         public const double AlertTextSize = 14;
+
+        /// <summary>The name cell's 500, Medium.</summary>
+        public const int AlertNameFontWeight = 500;
+
+        /// <summary>The Alerts heading and its New tag, 10 apart as the artboard's h2.</summary>
+        public const double AlertsHeadingTagGap = 10;
+
+        /// <summary>Over the "Alert display" row the table folds into, under the card: the build's own, since
+        /// the artboard never folds.</summary>
+        public const double AlertFoldGap = 8;
         public const double AlertWhenGap = 8;
         public const double AlertCheck = 16;
         public const double AlertCheckIcon = 12;
