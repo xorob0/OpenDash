@@ -407,7 +407,7 @@ namespace OpenDashPlugin
         /// <summary>What is said after a removal: the step it leaves, which is a device that now shows nothing.</summary>
         public static string Removed(string name, int matrix)
         {
-            return "Removed " + name + ". A device set to " + ContentField + " " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
+            return "Removed " + name + ". A device with " + ContentField + " set to " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
         }
 
         /// <summary>

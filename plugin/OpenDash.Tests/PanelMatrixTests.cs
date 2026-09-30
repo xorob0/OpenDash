@@ -547,7 +547,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove Left pillar", PanelMatrix.RemoveTitle("Left pillar"));
             Assert.Equal("Removes the matrix and its settings. The flag box profile stays in SimHub.", PanelMatrix.RemoveCaption);
             Assert.Equal("Remove it", PanelMatrix.RemoveConfirm);
-            Assert.Equal("Removed Left pillar. A device set to RGB Matrix content 2 stays dark.", PanelMatrix.Removed("Left pillar", 2));
+            // SimHub's field, set to the number, in the form the rest of the page gives it.
+            Assert.Equal("Removed Left pillar. A device with RGB Matrix content set to 2 stays dark.", PanelMatrix.Removed("Left pillar", 2));
             Assert.Equal("Renamed to Pillar.", PanelMatrix.Renamed("Pillar"));
             // A blank name is ignored by the settings, so the press waits for one and says nothing unchanged.
             Assert.False(PanelMatrix.CanRename(""));
