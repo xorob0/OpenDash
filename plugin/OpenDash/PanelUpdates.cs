@@ -450,10 +450,13 @@ namespace OpenDashPlugin
         /// state word here is: the Screens card says the same states in words that are its page's to change.</summary>
         public const string MissingFromSimHub = "Missing from SimHub";
 
-        /// <summary>A rig dashboard SimHub has not loaded since it was written (ruling 69), in the one phrase
-        /// the Screens card and Home say this state in (PanelScreens.RestartToLoad, PanelHome.RestartToLoad),
-        /// held here so the table does not read another page's constant.</summary>
-        public const string RestartToLoad = "Restart SimHub to load it";
+        /// <summary>
+        /// A rig dashboard SimHub has not loaded since it was written, in ruling 69's words for this table. The
+        /// Screens card and Home say the state as the step, "Restart SimHub to load it", which is 140 px in the
+        /// state's Barlow 13 and wraps its last word alone in the 135 the state cell leaves after its dot:
+        /// the table's state column holds a state, and the step is the row's hover.
+        /// </summary>
+        public const string WaitingForRestart = "Waiting for a restart";
 
         /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
         /// row would otherwise read as if Reinstall everything could write it. Every note about what the build
@@ -512,6 +515,13 @@ namespace OpenDashPlugin
         public const double TableStateSize = 13;
         public const double TableDot = 7;
         public const double TableDotGap = 8;
+
+        /// <summary>
+        /// What the state cell leaves its words after the dot and its gap, 150 - 7 - 8 = 135: every state the
+        /// table writes fits on one line in it, measured in Barlow 13 (PanelUpdatesTests). The widest is
+        /// "Missing from SimHub" at about 119.
+        /// </summary>
+        public const double TableStateRoom = TableStateWidth - TableDot - TableDotGap;
 
         /// <summary>The sections' rhythm on this artboard: 12 under a heading and between what follows it
         /// (the table, its notes, the Reinstall row; the Support presses and their caption), with 14 between
@@ -641,7 +651,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
         /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
-        /// state words are held here (<see cref="MissingFromSimHub"/>, <see cref="RestartToLoad"/>), not read
+        /// state words are held here (<see cref="MissingFromSimHub"/>, <see cref="WaitingForRestart"/>), not read
         /// from another page. A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
         /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
@@ -667,7 +677,7 @@ namespace OpenDashPlugin
             }
             if (waitsForRestart == true)
             {
-                return Row(name, DashboardKind, version, RestartToLoad, Theme.Caution, RestartStep(name));
+                return Row(name, DashboardKind, version, WaitingForRestart, Theme.Caution, AfterRestart(name));
             }
             switch (package.Status)
             {
@@ -685,10 +695,11 @@ namespace OpenDashPlugin
         /// already says it is missing.</summary>
         public const string MissingTooltip = PanelConfirmation.ReinstallLabel + " installs it again.";
 
-        /// <summary>A dashboard SimHub has not loaded yet: the one step, as Home and the Screens fix box say it.</summary>
-        public static string RestartStep(string name)
+        /// <summary>A dashboard SimHub has not loaded yet: the step after the restart the state already names,
+        /// on the dashboard's own display, since the row names a dashboard and no display.</summary>
+        public static string AfterRestart(string name)
         {
-            return "Restart SimHub, then assign \"" + name + "\" to this display in Dash Studio.";
+            return "After the restart, assign \"" + name + "\" to its display in Dash Studio.";
         }
 
         public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";

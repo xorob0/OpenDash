@@ -609,9 +609,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A failure outranks everything, then a folder that has gone, then one SimHub has not loaded
-        /// yet, which is said only when the shell's facts know it. The restart is said in the one phrase the
-        /// Screens card and Home say it in, held here rather than read from their pages, and no hover repeats
-        /// the state beside it.</summary>
+        /// yet, which is said only when the shell's facts know it. The restart is said in ruling 69's words,
+        /// which fit the state column on one line where the Screens card's step does not, and the hover says
+        /// only the step after it, never the state beside it again.</summary>
         [Fact]
         public void A_dashboard_row_puts_a_failure_then_a_missing_folder_then_a_restart_first()
         {
@@ -627,14 +627,47 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
 
             var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            Assert.Equal("Restart SimHub to load it", waiting.State);
-            Assert.Equal("Restart SimHub to load it", PanelUpdates.RestartToLoad);
+            Assert.Equal("Waiting for a restart", waiting.State);
+            Assert.Equal("Waiting for a restart", PanelUpdates.WaitingForRestart);
             Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
-            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", waiting.Tooltip);
+            Assert.Equal("After the restart, assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
+            Assert.DoesNotContain("Restart SimHub", waiting.Tooltip);
+            // One line in the cell: ruling 69's words at about 113 of the 135 the dot leaves them, where the
+            // Screens card's "Restart SimHub to load it" is about 140 and wraps "it" alone.
+            Assert.True(StateWidth(PanelUpdates.WaitingForRestart) <= PanelUpdates.TableStateRoom);
+            Assert.True(StateWidth("Restart SimHub to load it") > PanelUpdates.TableStateRoom, "the measure tells a state that wraps from one that fits");
 
             // Unknown facts say nothing of a restart.
             Assert.Equal("Up to date", PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), null, null).State);
+        }
+
+        /// <summary>
+        /// Every word the State column writes, dashboard and light rows alike, fits the cell on one line: the
+        /// 150 column less the 7 dot and its 8 gap, measured in Barlow Regular 13 from the font the panel
+        /// bundles. A longer state word wraps and makes its row the one taller row of the table.
+        /// </summary>
+        [Fact]
+        public void Every_state_fits_its_cell_on_one_line()
+        {
+            Assert.Equal(135, PanelUpdates.TableStateRoom);
+            var states = new[]
+            {
+                PanelUpdates.UpToDate, PanelUpdates.UpdateAvailable, PanelUpdates.MissingFromSimHub, PanelUpdates.WaitingForRestart,
+                PanelUpdates.Unknown, PanelCopy.Installed, PanelCopy.NotInstalled, PanelCopy.InstallFailed,
+            }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState>().Select(state => PanelCopy.LightRow(state, "0.4.0").State));
+            foreach (var state in states)
+            {
+                var width = StateWidth(state);
+                Assert.True(width <= PanelUpdates.TableStateRoom, "\"" + state + "\" is " + width.ToString("0.0") + " px in a " + PanelUpdates.TableStateRoom + " px cell");
+            }
+        }
+
+        /// <summary>A state's width as the cell draws it: Barlow Regular at the state's 13, off the advances in
+        /// the TTF the panel embeds. Kerning is left out; it moves a word this short by well under a pixel.</summary>
+        private static double StateWidth(string text)
+        {
+            return TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.EmbeddedResources(), "fonts", "Barlow-Regular.ttf")).Width(text, PanelUpdates.TableStateSize);
         }
 
         /// <summary>A screen this build ships nothing for is left as it is by the installer, so its row says
@@ -1393,6 +1426,88 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelPage.Updates, PanelSearch.Find(PanelSearch.All(), "repair").First().Route.Page);
             Assert.Equal(PanelPage.Updates, PanelSearch.Find(PanelSearch.All(), "support report").First().Route.Page);
             Assert.Empty(PanelUpdates.SoonDrawn);
+        }
+    }
+
+    /// <summary>
+    /// The advances of a TrueType font, read from its head, hhea, hmtx and cmap (format 4) tables: enough to
+    /// say how wide a run of text is at a size, which is what a fixed cell has to hold.
+    /// </summary>
+    internal sealed class TrueTypeAdvances
+    {
+        private static readonly Dictionary<string, TrueTypeAdvances> Loaded = new Dictionary<string, TrueTypeAdvances>(StringComparer.Ordinal);
+
+        private readonly double unitsPerEm;
+        private readonly int[] advances;
+        private readonly Dictionary<int, int> glyphs = new Dictionary<int, int>();
+
+        public static TrueTypeAdvances Of(string path)
+        {
+            lock (Loaded)
+            {
+                TrueTypeAdvances font;
+                if (!Loaded.TryGetValue(path, out font)) Loaded[path] = font = new TrueTypeAdvances(System.IO.File.ReadAllBytes(path));
+                return font;
+            }
+        }
+
+        private TrueTypeAdvances(byte[] data)
+        {
+            Func<int, int> u16 = at => (data[at] << 8) | data[at + 1];
+            Func<int, long> u32 = at => ((long)u16(at) << 16) | (long)u16(at + 2);
+            var tables = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < u16(4); i++)
+            {
+                var record = 12 + 16 * i;
+                tables[System.Text.Encoding.ASCII.GetString(data, record, 4)] = (int)u32(record + 8);
+            }
+            unitsPerEm = u16(tables["head"] + 18);
+            var metrics = u16(tables["hhea"] + 34);
+            advances = new int[metrics];
+            for (var i = 0; i < metrics; i++) advances[i] = u16(tables["hmtx"] + 4 * i);
+
+            var cmap = tables["cmap"];
+            for (var i = 0; i < u16(cmap + 2); i++)
+            {
+                var record = cmap + 4 + 8 * i;
+                if (u16(record) != 3 || u16(record + 2) != 1) continue;
+                var sub = cmap + (int)u32(record + 4);
+                if (u16(sub) != 4) continue;
+                var segments = u16(sub + 6) / 2;
+                var ends = sub + 14;
+                var starts = ends + 2 * segments + 2;
+                var deltas = starts + 2 * segments;
+                var offsets = deltas + 2 * segments;
+                for (var s = 0; s < segments; s++)
+                {
+                    int start = u16(starts + 2 * s), end = u16(ends + 2 * s), delta = u16(deltas + 2 * s), offset = u16(offsets + 2 * s);
+                    for (var c = start; c <= end && c != 0xFFFF; c++)
+                    {
+                        int glyph;
+                        if (offset == 0) glyph = (c + delta) & 0xFFFF;
+                        else
+                        {
+                            glyph = u16(offsets + 2 * s + offset + 2 * (c - start));
+                            if (glyph != 0) glyph = (glyph + delta) & 0xFFFF;
+                        }
+                        glyphs[c] = glyph;
+                    }
+                }
+                break;
+            }
+        }
+
+        /// <summary>The width of <paramref name="text"/> at <paramref name="size"/> px.</summary>
+        public double Width(string text, double size)
+        {
+            var units = 0;
+            foreach (var c in text ?? string.Empty)
+            {
+                int glyph;
+                glyphs.TryGetValue(c, out glyph);
+                units += advances[Math.Min(glyph, advances.Length - 1)];
+            }
+            return units * size / unitsPerEm;
         }
     }
 }
