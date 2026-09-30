@@ -391,6 +391,20 @@ namespace OpenDashPlugin
             return Math.Min(SheetWidthMax, column);
         }
 
+        /// <summary>
+        /// How far the sheet's right edge stands in from the control's: the room right of the main column,
+        /// which stops at <see cref="ContentMax"/> and its gutters unless the page is wide. The sheet opens
+        /// beside the cards, so at 3840 px it lies against the column's edge near 1416 and not 1860 px away
+        /// at the control's.
+        /// </summary>
+        public static double SheetRightGap(double controlWidth, bool wide = false)
+        {
+            if (wide) return 0;
+            var layout = Layout(controlWidth);
+            var gap = controlWidth - SidebarWidthFor(layout) - (ContentMax + 2 * MainPaddingX(layout));
+            return gap > 0 ? gap : 0;
+        }
+
         // --- What the pages share -----------------------------------------------------------------------
 
         /// <summary>What a page says in place of itself when drawing it threw.</summary>

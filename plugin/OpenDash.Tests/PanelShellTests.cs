@@ -219,6 +219,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_sheet_lies_against_the_main_column_and_not_the_far_edge()
+        {
+            // The column stops at 216 + 1112 + 2 x 44 = 1416; a sheet on a wider control stands in by the rest.
+            Assert.Equal(0, PanelShell.SheetRightGap(1200));
+            Assert.Equal(0, PanelShell.SheetRightGap(1416));
+            Assert.Equal(1600 - 1416, PanelShell.SheetRightGap(1600));
+            Assert.Equal(3840 - 1416, PanelShell.SheetRightGap(3840));
+            // Rig takes the whole column, so its sheet keeps the control's edge.
+            Assert.Equal(0, PanelShell.SheetRightGap(3840, wide: true));
+            Assert.Equal(0, PanelShell.SheetRightGap(700));
+            var sheet = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Sheet.cs"));
+            Assert.Contains("PanelShell.SheetRightGap(controlWidth, WidePage(route.Page))", sheet);
+        }
+
+        [Fact]
         public void The_items_sit_where_the_sidebar_draws_them()
         {
             // Home: 22 + 21 + 20 + 34 + 14 + 85 + 18 = 214 to its top, 20 more to its centre.

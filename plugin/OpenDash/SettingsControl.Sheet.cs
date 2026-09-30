@@ -2,7 +2,7 @@
 // removing one thing, over a dim laid across the main column.
 //
 // Add, Edit, Remove and Duplicate used to replace the whole tab with their form, so the driver lost sight of
-// the cards they were acting on. A sheet keeps them in view: 560 wide on the right of the main column, or the
+// the cards they were acting on. A sheet keeps them in view: 560 wide at the right edge of the main column, or the
 // whole column below 900 px, with its title and a close button at the top, its body scrolling on its own,
 // and its footer -- usually Cancel and the press -- on the inset ground at the foot. Escape and a click on the
 // dim close it; Go closes it, so a page's Cancel is a Redraw.
@@ -156,9 +156,12 @@ namespace OpenDashPlugin
             return dock;
         }
 
+        /// <summary>Sizes the sheet and lays its right edge on the main column's, so on a wide window it opens
+        /// beside the cards rather than at the far edge of the control.</summary>
         private void SizeSheet()
         {
             sheetPanel.Width = PanelShell.SheetWidth(controlWidth);
+            sheetPanel.Margin = new Thickness(0, 0, PanelShell.SheetRightGap(controlWidth, WidePage(route.Page)), 0);
         }
 
         /// <summary>Closes the sheet, if one is open, and gives focus back to what opened it when that is
