@@ -66,7 +66,11 @@ namespace OpenDashPlugin
             var content = ContentWidthUpTo(PanelFacePlan.ContentMost(face, twoColumns));
             var column = twoColumns ? PanelFacePlan.ColumnFor(face, content) : content;
             var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.FitWidth(face, column), key, pick), PanelScreens.AnchorZones);
-            var aside = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
+            var card = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
+            // Two zones, or a zone and the glance, opening on the same page: said in a line under the aside,
+            // where the zones are listed. Said, and allowed.
+            var clash = PanelScreens.PageClash(screen.Face);
+            FrameworkElement aside = clash.Length > 0 ? Ui.VStack(0, card, BuildScreensWarning(clash)) : card;
             var rows = BuildFaceRows(screen, redraw, column);
 
             if (!twoColumns) return Ui.VStack(16, picture, aside, rows);
@@ -116,8 +120,6 @@ namespace OpenDashPlugin
                 Ui.Anchor(Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption), PanelScreens.AnchorLapReview),
                 Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw, column), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
             };
-            var clash = PanelScreens.PageClash(screen.Face);
-            if (clash.Length > 0) rows.Add(BuildScreensWarning(clash));
             rows.Add(Ui.SoonRow(PanelSoon.RevFill));
             rows.Add(Ui.SoonRow(PanelSoon.SpotterAtRevBarEnds));
             rows.Add(Ui.SoonRow(PanelSoon.PitPageInPitLane));
@@ -150,7 +152,8 @@ namespace OpenDashPlugin
             var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
             {
                 screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
-                // The clash line counts the glance among what shows a page twice, so the editor redraws.
+                // The clash line under the aside counts the glance among what shows a page twice, so the
+                // editor redraws.
                 ScreensSave(screen, redraw);
             }, PanelScreens.GlancePageWidth);
             page.Uid = "screens.glance.page";

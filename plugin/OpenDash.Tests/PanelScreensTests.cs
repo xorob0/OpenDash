@@ -729,7 +729,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.QuickGlanceValue(3, 6), PanelScreens.GlanceWithZone(relative, 3));
             Assert.Equal(new[] { "Race A", "Race B", "Tower A", "Tower B", "Telemetry A", "Telemetry B", "Telemetry C" }, PanelScreens.PitWallGlanceZoneLabels());
 
-            // The clash line under the glance names band D as the picker above it does.
+            // The clash line under the zone aside names band D as the picker does; it is drawn there, where the
+            // zones are listed, and not among the rows under the picture.
+            var editor = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Face.cs"));
+            var rowsAt = editor.IndexOf("private FrameworkElement BuildFaceRows(", System.StringComparison.Ordinal);
+            var clashAt = editor.IndexOf("PanelScreens.PageClash(screen.Face)", System.StringComparison.Ordinal);
+            Assert.True(clashAt > 0 && clashAt < rowsAt, "the clash line is not drawn in the face editor's aside");
+            Assert.Equal(clashAt, editor.LastIndexOf("PanelScreens.PageClash(screen.Face)", System.StringComparison.Ordinal));
+            Assert.Contains("Ui.VStack(0, card, BuildScreensWarning(clash))", editor);
             var face = new FaceSettings();
             face.Normalise();
             Assert.Equal(string.Empty, PanelScreens.PageClash(face));

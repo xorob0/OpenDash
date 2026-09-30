@@ -588,7 +588,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line under the face's rows when two zones, or a zone and the glance, open on the same page:
+        /// The line under the zone aside when two zones, or a zone and the glance, open on the same page:
         /// "Zone C and band D both show the relative.", one line per page, nothing when there is none.
         /// </summary>
         /// <remarks>
