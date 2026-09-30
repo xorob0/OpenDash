@@ -6,6 +6,7 @@
 // reading the files the way PanelIconsTests reads PluginComponents.dc.html.
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -158,17 +159,80 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, 17));
         }
 
-        /// <summary>Nothing in the shell holds the column back or centres it: no MaxWidth on the main column,
-        /// no page that is wider than the rest.</summary>
+        /// <summary>Nothing in the panel holds the column back or centres it: the main column's frame, the hosts
+        /// inside it and the scroll around it are never given a width, a MaxWidth or an alignment other than
+        /// the frame's Stretch, in any of the shell's files, and no page is wider than the rest.</summary>
         [Fact]
         public void The_shell_neither_caps_nor_centres_the_column()
         {
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
             Assert.Contains("mainScroll.Content = mainFrame;", shell);
-            Assert.Contains("new Border { HorizontalAlignment = HorizontalAlignment.Stretch }", shell);
-            Assert.DoesNotContain("MaxWidth", shell);
+            Assert.Contains("private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Stretch };", shell);
             Assert.DoesNotContain("WidePage", shell);
             Assert.Null(typeof(PanelShell).GetField("ContentMax"));
+
+            var code = string.Concat(RepoPaths.SettingsControlCode());
+            const string hosts = @"\b(?:mainFrame|pageHost|messageHost|mainScroll)";
+            // A width or a ceiling set on one of them after it is made.
+            Assert.Empty(Regex.Matches(code, hosts + @"\.(?:Max|Min)?Width\s*=(?!=)"));
+            Assert.Empty(Regex.Matches(code, hosts + @"\.(?:HorizontalAlignment|HorizontalContentAlignment)\s*=(?!=)"));
+            // Or in the initializer it is made with: only the frame's Stretch and the page host's Stretch.
+            foreach (Match made in Regex.Matches(code, hosts + @" = new \w+\s*(?:\([^)]*\))?\s*\{([^}]*)\}"))
+            {
+                var init = made.Groups[1].Value;
+                Assert.DoesNotMatch(@"\b(?:Max|Min)?Width\s*=", init);
+                foreach (Match alignment in Regex.Matches(init, @"\bHorizontal(?:Content)?Alignment\s*=\s*([\w.]+)"))
+                {
+                    Assert.Equal("HorizontalAlignment.Stretch", alignment.Groups[1].Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A resize rebuilds only a page drawn from what moved. With no ceiling the content width follows the
+        /// control pixel for pixel, and rebuilding on every pixel reloaded Screens' live dashboard and walked
+        /// SimHub's devices at every drag of a 4K window.
+        /// </summary>
+        [Fact]
+        public void A_resize_rebuilds_only_a_page_drawn_from_what_moved()
+        {
+            const double bar = 17;
+            const double whole = double.PositiveInfinity;
+            // 3000 to 3840: Rig's canvas read the whole width and is laid out again.
+            Assert.True(PanelShell.RebuildsOnResize(3000, 3840, whole, bar));
+            // A page that never read the width (Home) is left alone: its rows and grids stretch without it.
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 0, bar));
+            // A page that read it only up to the preview's 880 is left alone past it...
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 880, bar));
+            Assert.False(PanelShell.RebuildsOnResize(1300, 3840, 880, bar));
+            // ...and rebuilt below it, where the preview is drawn at the column.
+            Assert.True(PanelShell.RebuildsOnResize(1100, 1180, 880, bar));
+            // Under a pixel is not a move.
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3000.5, whole, bar));
+            // TwoColumns flipping rebuilds a page that read nothing, at about 1081 px...
+            Assert.True(PanelShell.RebuildsOnResize(1050, 1100, 0, bar));
+            // ...and so does the layout, the rail to the full sidebar and the rail to the compact gutter.
+            Assert.True(PanelShell.RebuildsOnResize(900, 1000, 0, bar));
+            Assert.True(PanelShell.RebuildsOnResize(800, 700, 0, bar));
+            Assert.False(PanelShell.RebuildsOnResize(800, 900, 0, bar));
+
+            // The shell asks the rule, reading the width counts only when a build reads it, and a build starts
+            // having read none.
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
+            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);", shell);
+            Assert.Contains("private double ContentWidth => ContentWidthUpTo(double.PositiveInfinity);", shell);
+            Assert.Contains("private bool TwoColumns => PanelShell.TwoColumns(layout, ColumnRoom);", shell);
+            var build = shell.Substring(shell.IndexOf("private FrameworkElement BuildPage(PanelRoute to)", StringComparison.Ordinal));
+            build = build.Substring(0, build.IndexOf("switch (to.Page)", StringComparison.Ordinal));
+            Assert.Contains("builtWidthRead = 0;", build);
+            // Only a page's own build reads ContentWidth: the shell reads ColumnRoom, which does not count, and
+            // names ContentWidth only to declare it.
+            string Code(string name) => RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == name));
+            int Reads(string text) => Regex.Matches(text, @"\bContentWidth\b(?!\s*\()").Count;
+            Assert.Equal(1, Reads(shell));
+            Assert.Equal(0, Reads(Code("SettingsControl.Sheet.cs")));
+            Assert.Equal(0, Reads(Code("SettingsControl.Sidebar.cs")));
+            Assert.Equal(0, Reads(Code("SettingsControl.Messages.cs")));
         }
 
         [Fact]
@@ -184,8 +248,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelShell.TwoColumns(PanelShell.Layout(3840), PanelShell.ContentWidth(3840, 17)));
         }
 
-        /// <summary>Only prose keeps a measure: a caption or a paragraph wraps at .cap's 620 however wide the
-        /// column, set against its left edge.</summary>
+        /// <summary>Prose keeps a measure: a caption or a paragraph wraps at .cap's 620 by default however wide
+        /// the column, set against its left edge.</summary>
         [Fact]
         public void Prose_keeps_a_readable_measure()
         {
