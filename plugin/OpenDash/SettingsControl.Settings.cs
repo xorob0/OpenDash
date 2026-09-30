@@ -498,7 +498,7 @@ namespace OpenDashPlugin
                 Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
                 SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),
                 Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),
-                Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),
+                Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres, PanelSettings.TyreDisplayCaption)), PanelSoon.TyreDisplay),
                 SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));
         }
 
@@ -595,7 +595,7 @@ namespace OpenDashPlugin
             SettingsAlertRule(grid, row);
             var column = 0;
             SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);
-            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);
+            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.WhenColumn), null, false);
             if (surfaces)
             {
                 foreach (var name in PanelSettings.SurfaceColumns)

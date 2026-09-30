@@ -216,12 +216,15 @@ namespace OpenDashPlugin
         public const string FuelTargetUnitFallback = "L";
 
         /// <summary>
-        /// The main and the secondary value a tyre corner will show (#325), greyed until then: the artboard's
-        /// words, whose "then" is the only thing that says the second is secondary rather than a second
-        /// choice. #325 builds the two choosers and settles their words, so the row keeps the artboard's until
-        /// it does, as the yellow flags keep theirs for #504.
+        /// The main and the secondary value a tyre corner will show (#325), greyed until then, in that order.
+        /// Two names: the artboard's "then Pressure" is a fragment in a chooser, which voice.md does not allow
+        /// and which beats artboard copy, and #325 does not own the words as #504 owns the yellow flags'.
         /// </summary>
-        public static readonly string[] TyreDisplayLabels = { "Temperature", "then Pressure" };
+        public static readonly string[] TyreDisplayLabels = { "Temperature", "Pressure" };
+
+        /// <summary>What the order of the two says, which the "then" the artboard put on the second button
+        /// said before.</summary>
+        public const string TyreDisplayCaption = "The first is the main value, the second the secondary.";
 
         public static string SpeedUnit(string simHub)
         {
@@ -307,10 +310,10 @@ namespace OpenDashPlugin
 
         public const string AlertColumn = "Alert";
 
-        /// <summary>What each row warns at. The artboard heads the column "When", which asks the question
-        /// each row answers ("under 2 laps"); voice.md asks a heading to be a noun and a label never to be a
-        /// question, and voice.md beats artboard copy, so the column is named by what it holds.</summary>
-        public const string ThresholdColumn = "Threshold";
+        /// <summary>What each row warns at: the artboard's "When", kept as Updates keeps its "In SimHub" over a
+        /// table column. No noun fits every row: Pit window open is an event with no threshold, so
+        /// "Threshold" would name something one row does not have. Tim may still rule otherwise.</summary>
+        public const string WhenColumn = "When";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
         public static readonly string[] SurfaceColumns = { "Screens", "LEDs", "Matrix", "Races only" };
