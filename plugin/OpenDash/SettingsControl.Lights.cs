@@ -19,6 +19,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -59,6 +60,12 @@ namespace OpenDashPlugin
         /// picker's list: the next build hands keyboard focus to the picker drawn in its place, since focus sat
         /// in the list's popup and nothing else would bring it back into the panel.</summary>
         private bool ledsFocusDevice;
+
+        /// <summary>Set by the Reverse direction switch, which redraws the whole page and then says a line at its
+        /// top: the switch lets go of keyboard focus before the redraw, so the shell hands none back (which would
+        /// scroll the line away again), and the next build hands it to the switch drawn in its place without
+        /// scrolling.</summary>
+        private bool ledsFocusReverse;
 
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
@@ -258,7 +265,7 @@ namespace OpenDashPlugin
             var name = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             name.Children.Add(title);
             name.Children.Add(chip);
-            var blocked = LedsProfileBlocked(bar);
+            var blocked = LedsProfileBlocked(bar, true);
             // Beside the name where two columns fit, and under it where they do not: the state and three or four
             // presses take up to 388 px, which beside the name and its chip ran past a single column.
             var stacked = !TwoColumns;
@@ -269,12 +276,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Why nothing on this page can install the strip's profile, or null: PanelLeds.ProfileBlocked
-        /// over whether the build carries it, whether SimHub lists the strip's device, and what SimHub offers.</summary>
-        private static string LedsProfileBlocked(LedBar bar)
+        /// over whether the build carries it, whether SimHub lists the strip's device, and what SimHub offers, or
+        /// PanelLeds.HeaderBlocked for the line under the header.</summary>
+        private static string LedsProfileBlocked(LedBar bar, bool header = false)
         {
             IList<string> declined;
             var offered = LedTargets.All(out declined).Count;
-            return PanelLeds.ProfileBlocked(EmbeddedProfileOf(bar) != null, LedTargets.Find(bar.Device) != null, offered, declined);
+            var embedded = EmbeddedProfileOf(bar) != null;
+            var listed = LedTargets.Find(bar.Device) != null;
+            return header
+                ? PanelLeds.HeaderBlocked(embedded, listed, offered, declined)
+                : PanelLeds.ProfileBlocked(embedded, listed, offered, declined);
         }
 
         /// <summary>
@@ -504,6 +516,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Lets go of keyboard focus where it is in <paramref name="control"/>, as CommitTyping does before a
+        /// rebuild, and says whether it was: a redraw then hands none back, since the shell's hand-back scrolls the
+        /// control into view and away from the line said at the top.
+        /// </summary>
+        private static bool LedsLetGoOfFocus(UIElement control)
+        {
+            if (control == null || !control.IsKeyboardFocusWithin) return false;
+            var scope = FocusManager.GetFocusScope(control);
+            if (scope != null) FocusManager.SetFocusedElement(scope, null);
+            Keyboard.ClearFocus();
+            return true;
+        }
+
+        /// <summary>
         /// Paints the LEDs of one group drawn by Ui.Strip in place: the preview repaints rather than draws its
         /// groups again, which on a tick would be every LED and label rebuilt each second.
         /// </summary>
@@ -621,7 +647,8 @@ namespace OpenDashPlugin
         private FrameworkElement LedsThisStrip(LedBar bar, IList<LedTarget> targets, IList<string> declined, Action redrawPreview)
         {
             var ns = bar.Namespace;
-            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value));
+            var movable = PanelLeds.DeviceMovable(EmbeddedProfileOf(bar) != null);
+            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), movable, value => MoveLedBar(ns, value));
             if (ledsFocusDevice)
             {
                 ledsFocusDevice = false;
@@ -684,7 +711,23 @@ namespace OpenDashPlugin
             // Only a shape that has a twin wired from the far end: a Fanatec wheel's wiring is its own.
             if (bar.SupportsReversal)
             {
-                var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));
+                ToggleButton reverse = null;
+                reverse = Ui.Switch(Settings.BarReversed(ns), on =>
+                {
+                    ledsFocusReverse = LedsLetGoOfFocus(reverse);
+                    ReverseLedBar(ns, on);
+                    // A press that drew nothing again (the strip gone, the direction already so) hands focus back here.
+                    if (ledsFocusReverse)
+                    {
+                        ledsFocusReverse = false;
+                        LedsFocusLater(() => reverse);
+                    }
+                });
+                if (ledsFocusReverse)
+                {
+                    ledsFocusReverse = false;
+                    LedsFocusLater(() => reverse);
+                }
                 rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));
             }
             rows.Add(Ui.SoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));
@@ -920,7 +963,7 @@ namespace OpenDashPlugin
         /// reason in SimHub's log: a wheel missing from the picker with nothing said about it is how #437 was
         /// reported, and the line would have answered it.
         /// </remarks>
-        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, Action<string> chosen)
+        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, bool movable, Action<string> chosen)
         {
             var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);
             if (!row.HasPicker) return LedsRow(PanelLights.BarDeviceTitle, null, row.Caption);
@@ -934,6 +977,9 @@ namespace OpenDashPlugin
             // the row's title or running out of its column; the whole name is the hover. Set as the row is laid
             // out rather than from the content width, which would have a resize build the page again.
             picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;
+            // Where a pick could only be refused, the picker shows the strip's device and takes no pick: the header
+            // says why.
+            picker.IsEnabled = movable;
             if (row.Selected >= 0) picker.ToolTip = labels[row.Selected];
             var drawn = LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);
             drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);

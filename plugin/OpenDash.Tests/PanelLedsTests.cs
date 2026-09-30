@@ -246,6 +246,32 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The header's line says each reason once: with no SimHub device at all, the SimHub device row's caption
+        /// already says the whole of it, so the header points at that row instead of saying it twice. Every other
+        /// reason is the one ProfileBlocked gives, and a press's line after Reverse or Rename keeps the full reason.
+        /// </summary>
+        [Fact]
+        public void The_header_says_a_reason_the_device_row_says_only_by_pointing_at_it()
+        {
+            Assert.Equal("This strip's profile waits for a SimHub device.", PanelLeds.AwaitsDevice);
+            Assert.Contains(PanelLights.BarDeviceTitle.Substring("SimHub ".Length), PanelLeds.AwaitsDevice);
+            Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, null));
+            Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, new[] { "Rim" }));
+            Assert.NotEqual(PanelLeds.DeviceRow(null, "arduino", null).Caption, PanelLeds.HeaderBlocked(true, false, 0, null));
+            Assert.NotEqual(PanelLeds.DeviceRow(null, "arduino", new[] { "Rim" }).Caption, PanelLeds.HeaderBlocked(true, false, 0, new[] { "Rim" }));
+            Assert.Equal(PanelLeds.DeviceNotListed, PanelLeds.HeaderBlocked(true, false, 1, null));
+            Assert.Equal(PanelLeds.NoProfileForStrip, PanelLeds.HeaderBlocked(false, false, 0, null));
+            Assert.Null(PanelLeds.HeaderBlocked(true, true, 0, null));
+            // Blocked in the header exactly where the presses are.
+            foreach (var embedded in new[] { true, false })
+                foreach (var listed in new[] { true, false })
+                    foreach (var offered in new[] { 0, 1, 2 })
+                        Assert.Equal(PanelLeds.ProfileBlocked(embedded, listed, offered, null) == null, PanelLeds.HeaderBlocked(embedded, listed, offered, null) == null);
+            Assert.True(PanelLeds.DeviceMovable(true));
+            Assert.False(PanelLeds.DeviceMovable(false));
+        }
+
+        /// <summary>
         /// The page's presses go through one guarded install, UpdateBars' own guard, and never straight to
         /// ReinstallBar or InstallBar: read as text because the page is WPF.
         /// </summary>
@@ -262,7 +288,11 @@ namespace OpenDashPlugin.Tests
             // InstallBar is called in two places only: the guard, and a move, which installs on the device just
             // picked from SimHub's own list.
             Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json)"));
-            Assert.Contains("PanelLeds.ProfileBlocked(EmbeddedProfileOf(bar) != null, LedTargets.Find(bar.Device) != null, offered, declined)", leds);
+            Assert.Contains("var embedded = EmbeddedProfileOf(bar) != null;", leds);
+            Assert.Contains("var listed = LedTargets.Find(bar.Device) != null;", leds);
+            Assert.Contains(": PanelLeds.ProfileBlocked(embedded, listed, offered, declined);", leds);
+            Assert.Contains("? PanelLeds.HeaderBlocked(embedded, listed, offered, declined)", leds);
+            Assert.Contains("var blocked = LedsProfileBlocked(bar, true);", leds);
             Assert.Contains("var offered = LedTargets.All(out declined).Count;", leds);
             Assert.Contains("var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;", leds);
         }
@@ -1055,13 +1085,17 @@ namespace OpenDashPlugin.Tests
                 "LedsEffectTile(effect.Label, Settings.BarEffectEnabled(ns, id),",
                 "PanelLeds.BrightnessIndex(Settings.BarBrightness(ns))",
                 "if (bar.SupportsReversal)",
-                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));",
+                "reverse = Ui.Switch(Settings.BarReversed(ns), on =>",
+                "ReverseLedBar(ns, on);",
                 "Ui.Switch(Settings.BarFlagAnimation(ns),",
                 "if (PanelLeds.HasFullStripSpotter(bar.Shape))",
                 "Ui.Switch(Settings.BarSpotterWhole(ns),",
                 "PanelLeds.CentreIndex(Settings.BarCentre(ns))",
                 "BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,",
-                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value))",
+                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), movable, value => MoveLedBar(ns, value))",
+                // A strip whose profile the build does not carry has a picker that takes no pick: the header says why.
+                "var movable = PanelLeds.DeviceMovable(EmbeddedProfileOf(bar) != null);",
+                "picker.IsEnabled = movable;",
                 "var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);",
                 "drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);",
                 "link.Click += (sender, args) => Go(PanelPage.Rig);",
@@ -1388,6 +1422,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("(sender, args) => args.Handled = true", focus);
             // And no control on the page is focused around it.
             Assert.Equal(1, Occurrences(leds, ".Focus()"));
+            // Reverse direction redraws the page and then says a line: the switch lets go of focus first, so the
+            // shell's hand-back (which scrolls) has nothing to hand back, and the rebuilt switch takes it here.
+            var reverse = leds.Substring(leds.IndexOf("reverse = Ui.Switch(Settings.BarReversed(ns), on =>", StringComparison.Ordinal));
+            reverse = reverse.Substring(0, reverse.IndexOf("rows.Add(", StringComparison.Ordinal));
+            Assert.True(reverse.IndexOf("ledsFocusReverse = LedsLetGoOfFocus(reverse);", StringComparison.Ordinal) < reverse.IndexOf("ReverseLedBar(ns, on);", StringComparison.Ordinal));
+            Assert.Equal(2, Occurrences(reverse, "LedsFocusLater(() => reverse);"));
+            var letGo = leds.Substring(leds.IndexOf("private static bool LedsLetGoOfFocus(", StringComparison.Ordinal));
+            letGo = letGo.Substring(0, letGo.IndexOf("return true;", StringComparison.Ordinal));
+            Assert.Contains("FocusManager.SetFocusedElement(scope, null);", letGo);
+            Assert.Contains("Keyboard.ClearFocus();", letGo);
+            // The line after the press is said after the redraw, which is what it has to stay in view of.
+            var press = leds.Substring(leds.IndexOf("private void ReverseLedBar(", StringComparison.Ordinal));
+            press = press.Substring(0, press.IndexOf("private void ShowRenameLedBar(", StringComparison.Ordinal));
+            Assert.True(press.IndexOf("Redraw();", StringComparison.Ordinal) < press.IndexOf("Say(", StringComparison.Ordinal));
         }
 
         /// <summary>

@@ -289,6 +289,31 @@ namespace OpenDashPlugin
         /// <summary>The build carries no profile of the strip's shape: nothing here can install one.</summary>
         public const string NoProfileForStrip = "This build ships no profile for this strip.";
 
+        /// <summary>
+        /// The same, as the line under the header says it: the one state it words apart is no SimHub device at
+        /// all, where the whole reason is the SimHub device row's own caption, and the header points at that row
+        /// rather than saying the sentence a second time.
+        /// </summary>
+        public static string HeaderBlocked(bool embedded, bool deviceListed, int offered, IList<string> declined)
+        {
+            if (embedded && !deviceListed && offered <= 0) return AwaitsDevice;
+            return ProfileBlocked(embedded, deviceListed, offered, declined);
+        }
+
+        /// <summary>The header's line with no SimHub device offered: a pointer at the row that says why.</summary>
+        public const string AwaitsDevice = "This strip's profile waits for a SimHub device.";
+
+        /// <summary>
+        /// Whether the SimHub device picker can be used: not where this build carries no profile of the strip's
+        /// shape, since a move installs that profile on the device picked and there is none to install. The header
+        /// already says why (<see cref="NoProfileForStrip"/>), so the picker is drawn disabled rather than refusing
+        /// every pick with a line after it.
+        /// </summary>
+        public static bool DeviceMovable(bool embedded)
+        {
+            return embedded;
+        }
+
         /// <summary>SimHub does not list the device the strip names and offers another: the one step is the device
         /// row's, whose picker names this state "Device not in SimHub".</summary>
         public const string DeviceNotListed = "This strip's device is not in SimHub. Choose one under SimHub device.";
