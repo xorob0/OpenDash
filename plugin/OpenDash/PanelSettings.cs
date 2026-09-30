@@ -37,9 +37,10 @@ namespace OpenDashPlugin
         /// <summary>The word before the box: "under", "over" or "at". Empty on a row with no threshold.</summary>
         public string Op { get; private set; }
 
-        /// <summary>The unit after the box, or null for a temperature, whose unit is SimHub's. Set as a caption
-        /// after the box as the artboard sets every unit, the tyre wear's "%" as much as "laps" or "°C": a unit
-        /// symbol, not an icon standing in for a drawn path.</summary>
+        /// <summary>The unit after the box, or null for a temperature, whose unit is SimHub's; empty where there is
+        /// none. Drawn alone as a caption, so every unit holds a letter: the tyre wear's percent sign, which
+        /// has none, sits inside its example's "70%" rather than after the box, as the panel joins every
+        /// percentage to its number.</summary>
         public string Unit { get; private set; }
 
         /// <summary>What a greyed row's box holds as its value, in the field's own ink and faded with the row,
@@ -350,7 +351,7 @@ namespace OpenDashPlugin
             new SettingsAlert(LowFuelTitle, Under, LapsUnit, null, true, true, true, false, PanelEmulation.LowFuel),
             new SettingsAlert(OilTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Oil),
             new SettingsAlert(WaterTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Water),
-            new SettingsAlert(PanelSoon.TyreWear.Title, Over, "%", "70", true, false, false, true, null),
+            new SettingsAlert(PanelSoon.TyreWear.Title, Over, string.Empty, "70%", true, false, false, true, null),
             new SettingsAlert(PanelSoon.PitWindowOpen.Title, string.Empty, string.Empty, null, true, true, true, true, null),
             new SettingsAlert(PanelSoon.Incidents.Title, At, "x", "12", true, false, false, true, null),
             new SettingsAlert(PanelSoon.HybridBatteryLow.Title, Under, "V", null, true, false, true, false, null),

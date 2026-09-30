@@ -72,8 +72,9 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// No text the page draws is a glyph alone, the route PanelIconsTests' guard cannot see: that guard reads
         /// only literal arguments, and a constant handed to a hand-built TextBlock passes it. Every public
-        /// string of PanelSettings and PanelDataTab, and every placeholder the page hands SettingsHinted, has a
-        /// letter or a digit in it; the greyed boxes' dash is drawn.
+        /// string of PanelSettings and PanelDataTab, every word, unit and example of the alert table, and every
+        /// placeholder the page hands SettingsHinted, has a letter or a digit in it; the greyed boxes' dash is
+        /// drawn, and the tyre wear's percent sign sits inside its "70%".
         /// </summary>
         [Fact]
         public void No_text_on_the_page_is_a_glyph_alone()
@@ -84,8 +85,13 @@ namespace OpenDashPlugin.Tests
                 .SelectMany(field => field.Value is string ? new[] { field.Name + " = " + (string)field.Value }
                     : field.Value is string[] ? ((string[])field.Value).Select(text => field.Name + "[] = " + text).ToArray()
                     : new string[0])
+                .Concat(PanelSettings.Alerts.SelectMany(alert => new[]
+                {
+                    "Alert.Title = " + alert.Title, "Alert.Op = " + alert.Op, "Alert.Unit = " + alert.Unit, "Alert.Example = " + alert.Example,
+                }))
                 .ToList();
             Assert.Contains("TyreDisplayLabels[] = Pressure", texts);
+            Assert.Contains("Alert.Example = 70%", texts);
             Assert.DoesNotContain(texts, text =>
             {
                 var value = text.Substring(text.IndexOf(" = ", StringComparison.Ordinal) + 3);
@@ -677,11 +683,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Low fuel", "Oil temperature", "Water temperature", "Tyre wear", "Pit window open", "Incidents", "Hybrid battery low" }, PanelSettings.Alerts.Select(a => a.Title));
             Assert.Equal(new[] { PanelEmulation.LowFuel, PanelEmulation.Oil, PanelEmulation.Water, null, null, null, null }, PanelSettings.Alerts.Select(a => a.ScenarioId));
             Assert.Equal(new[] { "under", "over", "over", "over", "", "at", "under" }, PanelSettings.Alerts.Select(a => a.Op));
-            // Every unit after the box, as the artboard sets it: "over [70] %", not "over [70%]".
-            Assert.Equal(new[] { "laps", null, null, "%", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
-            // A unit is a word or a unit symbol; the percent sign is the one symbol without a letter, and it is
-            // a unit set as a caption, as "°C" is, never an icon standing in for a drawn path.
-            Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.True(a.Unit.Any(char.IsLetterOrDigit) || a.Unit == "%", a.Unit));
+            // Every unit the table draws alone after the box has a letter in it. The tyre wear's percent sign
+            // has none, so it sits inside the example, "70%", as the panel joins every percentage to its number
+            // (ruling 10: a glyph is a PanelIcons path or part of a longer literal).
+            Assert.Equal(new[] { "laps", null, null, "", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
+            Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.Matches(@"[\p{L}\p{Nd}]", a.Unit));
             Assert.False(PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).HasThreshold);
             Assert.Equal(new[] { true, true, true, false }, PanelSettings.Alert(PanelSettings.LowFuelTitle).Surfaces);
             Assert.Equal(new[] { false, false, true, false }, PanelSettings.Alert(PanelSettings.OilTempTitle).Surfaces);
@@ -693,7 +699,7 @@ namespace OpenDashPlugin.Tests
             // What a greyed row's box holds, faded with the row: the artboard's values as the box's text in the
             // field's ink, and where it has none, the artboard's dash, drawn as a stroke in the label ink. Pit
             // window open, an event with no word before its box, still draws the box, as the artboard does.
-            Assert.Equal(new string[] { null, null, null, "70", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
+            Assert.Equal(new string[] { null, null, null, "70%", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
             Assert.Equal(8, PanelSettings.NoValueDashWidth);
             Assert.Equal(1.5, PanelSettings.NoValueDashWeight);
             var drawn = Page();
