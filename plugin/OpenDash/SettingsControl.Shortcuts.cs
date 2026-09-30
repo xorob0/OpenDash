@@ -311,7 +311,7 @@ namespace OpenDashPlugin
         /// the glance, which is.</summary>
         private ShortcutsGroupState BuildShortcutsCompanion(ScreenInstance screen, ShortcutsLayout layout)
         {
-            var crumbs = Ui.Crumbs(PanelShortcuts.PagingCrumbs());
+            var crumbs = Ui.Crumbs(PanelShortcuts.PagingCrumbs(screen.Name));
             crumbs.Margin = new Thickness(0, PanelShortcuts.LeadGap, 0, 0);
             var lead = new Border
             {

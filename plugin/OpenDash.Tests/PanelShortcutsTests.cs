@@ -239,11 +239,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_companion_paging_path_is_drawn_as_crumbs()
         {
-            // The artboard's four crumbs, the device a placeholder as PanelAttention's unnamed LED device is:
-            // the screen's name is OpenDash's, not a SimHub device's. The trail starts at Devices, since one
-            // starting at Controls and events reads as SimHub's top-level page, which pages a windowed dash.
-            Assert.Equal(new[] { "Devices", "your companion's device", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs());
-            Assert.Equal(PanelAttention.DevicesCrumb, PanelShortcuts.PagingCrumbs()[0]);
+            // The brief's four crumbs, the screen's name second, as the artboard's "Devices › Phone › ..."
+            // names its card; a companion with no name reads its kind rather than an empty crumb.
+            Assert.Equal(new[] { "Devices", "Phone", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs("Phone"));
+            Assert.Equal(new[] { "Devices", "Garage tablet", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs(" Garage tablet "));
+            Assert.Equal(new[] { "Devices", "Companion", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs("  "));
+            Assert.Equal(new[] { "Devices", "Companion", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs(null));
+            Assert.Equal(PanelAttention.DevicesCrumb, PanelShortcuts.PagingCrumbs("Phone")[0]);
             Assert.Contains("device or window the companion runs on", PanelCopy.CompanionPaging);
             // The crumbs are the path PanelCopy.CompanionPaging names in its sentence.
             Assert.Contains(PanelShortcuts.ControlsAndEventsCrumb, PanelCopy.CompanionPaging);
@@ -798,7 +800,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Caption(PanelCopy.PitWallGlance)", code);
             Assert.Contains("Ui.Caption(PanelCopy.CompanionGlance)", code);
             Assert.Contains("Ui.Caption(PanelCopy.CompanionPaging, BodyWidth)", code);
-            Assert.Contains("Ui.Crumbs(PanelShortcuts.PagingCrumbs())", code);
+            Assert.Contains("Ui.Crumbs(PanelShortcuts.PagingCrumbs(screen.Name))", Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;"));
             Assert.Contains("Ui.Anchor(row, PanelBindings.Anchor(binding.Action));", code);
             Assert.Contains("Ui.Soon(row, item)", code);
             Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", code);

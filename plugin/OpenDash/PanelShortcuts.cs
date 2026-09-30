@@ -247,22 +247,18 @@ namespace OpenDashPlugin
         public const string ControlsAndEventsCrumb = "Controls and events";
         public const string NextScreenCrumb = "NextScreen";
 
-        /// <summary>The crumb that stands for the device the companion runs on, which OpenDash cannot name.</summary>
-        public const string CompanionDeviceCrumb = "your companion's device";
-
         /// <summary>
-        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: Devices, the device the
-        /// companion runs on, its Controls and events, NextScreen. The artboard's "Devices › Phone › Controls
-        /// and events › NextScreen" (and the brief's screen name in the second crumb), with the device
-        /// named by a placeholder, a departure listed for the author to rule on, as PanelAttention names an
-        /// unnamed LED device: the screen's name is OpenDash's, not a SimHub device's, and OpenDash cannot
-        /// tell which device shows it. The trail starts at Devices, as every trail through SimHub's menus
-        /// does, because a trail that started at "Controls and events" would read as SimHub's top-level page,
-        /// whose NextScreen pages a windowed dash, where the sentence above says the binding is the device's.
+        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: the brief's
+        /// Devices › the screen's name › Controls and events › NextScreen, as the artboard draws "Devices ›
+        /// Phone › ...", its card's own name. A companion with no name reads its kind. The screen's name is
+        /// OpenDash's rather than a SimHub device's, and a companion in a window sits under no Devices; the
+        /// sentence above says both ("the device or window the companion runs on"), and the trail's form is
+        /// left to the author's ruling.
         /// </summary>
-        public static string[] PagingCrumbs()
+        public static string[] PagingCrumbs(string screenName)
         {
-            return new[] { PanelAttention.DevicesCrumb, CompanionDeviceCrumb, ControlsAndEventsCrumb, NextScreenCrumb };
+            var name = string.IsNullOrWhiteSpace(screenName) ? PanelAddScreen.KindName(Contract.KindCompanion) : screenName.Trim();
+            return new[] { PanelAttention.DevicesCrumb, name, ControlsAndEventsCrumb, NextScreenCrumb };
         }
 
         // --- The filter ---------------------------------------------------------------------------------
