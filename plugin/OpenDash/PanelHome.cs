@@ -86,7 +86,8 @@ namespace OpenDashPlugin
         public const double StepsGap = 10;
         public const double DetailSize = 13;
 
-        /// <summary>The Right now cards: three to a row where there is the room, none narrower than 280.</summary>
+        /// <summary>The Right now cards: three to a row where there is the room, as the artboard's
+        /// repeat(3, minmax(0, 1fr)) lays them, and none narrower than the brief's 280.</summary>
         public const double CardMinWidth = 280;
         public const double CardGap = 16;
         public const int CardMax = 3;
@@ -160,25 +161,54 @@ namespace OpenDashPlugin
             return twoColumns;
         }
 
-        /// <summary>What Home says after Check again: that the thing is no longer to fix, or, in the caution's
-        /// ink, what still is.</summary>
-        public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after)
+        /// <summary>
+        /// What Home says after Check again, from the issues and the strip's facts as SimHub gave them the second
+        /// time: what is still to fix, in the caution's ink; that the profile is selected, only when SimHub said
+        /// so; what the strip's row now says when the profile is no longer there; and otherwise that SimHub could
+        /// not be asked.
+        /// </summary>
+        /// <remarks>
+        /// An issue also goes from the list when a fact could not be read: the device was unplugged, SimHub's
+        /// LED settings were out of reach, or working the list out failed. Saying "fixed" then would tell a
+        /// driver who changed nothing that the problem is gone, so only a read of Selected == true on an
+        /// installed profile says it.
+        /// </remarks>
+        /// <param name="strip">What was read about the issue's strip the second time, or null.</param>
+        public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after, AttentionStrip strip)
         {
             var still = before == null ? null : PanelAttention.Of(after, before.Id, null);
-            if (still == null) return PanelMessage.Info(CheckedFixed);
-            return PanelMessage.Caution(CheckedStill + still.Title + ".");
+            if (still != null) return PanelMessage.Caution(Checked + still.Title + ".");
+            if (strip == null || string.IsNullOrWhiteSpace(strip.Name)) return PanelMessage.Caution(CheckedUnknown);
+            var name = strip.Name.Trim();
+            var installed = strip.Profile == FlagBoxInstallState.UpToDate || strip.Profile == FlagBoxInstallState.Outdated;
+            if (installed && strip.Selected == true) return PanelMessage.Info(Checked + name + CheckedSelected);
+            if (strip.Profile == FlagBoxInstallState.NotInstalled) return PanelMessage.Caution(Checked + name + CheckedNotInstalled);
+            if (strip.Profile == FlagBoxInstallState.Failed) return PanelMessage.Caution(Checked + name + CheckedFailed);
+            return PanelMessage.Caution(CheckedUnknown);
         }
 
-        public const string CheckedFixed = "Checked again. That is fixed.";
-        public const string CheckedStill = "Checked again. ";
+        public const string Checked = "Checked again. ";
+        public const string CheckedSelected = "'s profile is selected.";
+        public const string CheckedNotInstalled = "'s profile is not installed.";
+        public const string CheckedFailed = "'s profile failed to install.";
+        public const string CheckedUnknown = "Checked again. SimHub could not be asked.";
 
         // --- Right now: screens ----------------------------------------------------------------------------
 
-        /// <summary>A screen's size beside its name, or nothing for one whose package is gone.</summary>
+        /// <summary>A screen's size beside its name, or nothing: for a size nobody knows (a zero Width or
+        /// Height, as a migrated face whose folder named no size has), and for a screen whose name is already
+        /// its size ("1280 × 480", the name an unnamed package's screen is given), which would say it twice.</summary>
         public static string ScreenSize(ScreenInstance screen)
         {
-            return screen == null || screen.Width <= 0 || screen.Height <= 0 ? string.Empty : screen.SizeLabel;
+            if (screen == null || screen.Width <= 0 || screen.Height <= 0) return string.Empty;
+            var size = screen.SizeLabel;
+            return string.Equals((screen.Name ?? string.Empty).Trim(), size, StringComparison.Ordinal) ? string.Empty : size;
         }
+
+        /// <summary>The words for what SimHub is missing, as Main.dc.html's rows say them. Home's own, not the
+        /// Screens page's, which may name its card's states otherwise.</summary>
+        public const string Missing = "Missing";
+        public const string NotInSimHubYet = "Not in SimHub yet";
 
         /// <summary>
         /// A screen's line: what SimHub is missing when something is, in that state's ink, and otherwise what
@@ -188,8 +218,8 @@ namespace OpenDashPlugin
         /// <param name="waitsForRestart">Whether SimHub has not loaded it yet (PanelAttention.ScreenRestart).</param>
         public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed, bool waitsForRestart)
         {
-            if (installed == false) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
-            if (waitsForRestart) return new HomeLine(PanelScreens.NotInSimHubYet, Theme.Caution, Theme.Caution);
+            if (installed == false) return new HomeLine(Missing, Theme.StatusFailed, Theme.StatusFailed);
+            if (waitsForRestart) return new HomeLine(NotInSimHubYet, Theme.Caution, Theme.Caution);
             return new HomeLine(ScreenShows(settings, screen), Theme.TextSecondary, installed == true ? Theme.StatusUpToDate : null);
         }
 
@@ -200,8 +230,8 @@ namespace OpenDashPlugin
         /// A face: the page each zone is on, in the panel's zone order ("Lap times · Gear, speed, revs ·
         /// Leaderboard · Fuel"). A pit wall: its page ("Race page"). A companion: how much of the catalogue its
         /// rotation holds ("12 of 21 modules"), since which module it is on is the phone's own and not
-        /// something OpenDash is told. A card face: its cards, slot by slot. Nothing is made up for a kind the
-        /// panel does not know.
+        /// something OpenDash is told. A card face: the cards its package reads, slot by slot (SlotsRead).
+        /// Nothing is made up for a kind the panel does not know.
         /// </remarks>
         public static string ScreenShows(OpenDashSettings settings, ScreenInstance screen)
         {
@@ -215,9 +245,47 @@ namespace OpenDashPlugin
             }
             if (screen.IsPitWall) return PitWallPage(screen.PitWallPage);
             if (screen.IsCompanion) return ModulesLine(screen.Modules);
-            if (screen.IsSlots) return settings == null ? string.Empty : CardsLine(Enumerable.Range(1, Contract.SlotCount).Select(settings.Slot));
+            if (screen.IsSlots)
+            {
+                var read = SlotsRead(screen.Width, screen.Height);
+                return settings == null || read == 0 ? string.Empty : CardsLine(Enumerable.Range(1, read).Select(settings.Slot));
+            }
             return string.Empty;
         }
+
+        /// <summary>
+        /// How many slots a card face's package reads, by its size: the first that many of the rig's twelve,
+        /// since a face with fewer slots uses the first ones. Nought for a size no package is drawn at, whose
+        /// cards nobody knows.
+        /// </summary>
+        /// <remarks>
+        /// build/manifest.json's slots, which packages/dash/test/e2e.test.ts pins and PanelHomeTests reads
+        /// back from there, so a package that gains a slot fails a test here rather than Home naming a card
+        /// the screen does not draw.
+        /// </remarks>
+        public static int SlotsRead(int width, int height)
+        {
+            foreach (var entry in SlotFaces)
+            {
+                if (entry[0] == width && entry[1] == height) return entry[2];
+            }
+            return 0;
+        }
+
+        /// <summary>Width, height and slots of each card face the build ships.</summary>
+        public static readonly int[][] SlotFaces =
+        {
+            new[] { 1920, 480, 12 },
+            new[] { 1280, 480, 8 },
+            new[] { 1280, 400, 8 },
+            new[] { 850, 480, 6 },
+            new[] { 800, 480, 6 },
+            new[] { 1280, 720, 12 },
+            new[] { 800, 286, 4 },
+            new[] { 600, 686, 6 },
+            new[] { 480, 480, 2 },
+            new[] { 800, 800, 6 },
+        };
 
         public const string Separator = " · ";
 
@@ -244,12 +312,17 @@ namespace OpenDashPlugin
 
         // --- Right now: LEDs -------------------------------------------------------------------------------
 
-        public const string CarLightsLine = "Car's own lights";
-        public const string StripNotInstalled = "Not installed in SimHub";
+        /// <summary>The #369 switch's noun: the car's own rev lights, never just "lights".</summary>
+        public const string CarLightsLine = "Car's own rev lights";
+
+        // A strip's state, in the LEDs cards' words (Leds.dc.html): one word per thing, so a strip reads the
+        // same on Home as on its card. Copied here until the LEDs page's PanelLeds.StateText lands.
+        public const string StripShowing = "Showing";
         public const string StripNotSelected = "Not selected in SimHub";
-        public const string StripHasUpdate = "Profile has an update";
-        public const string StripSelected = "Selected in SimHub";
-        public const string StripInstalled = "Installed in SimHub";
+        public const string StripUpdateAvailable = "Update available";
+        public const string StripInstalled = PanelCopy.Installed;
+        public const string StripNotInstalled = PanelCopy.NotInstalled;
+        public const string StripInstallFailed = PanelCopy.InstallFailed;
 
         /// <summary>The ends and the centre a strip is drawn with. A shape the panel cannot read is drawn as the
         /// Rig page draws it, 3/9/3.</summary>
@@ -259,10 +332,21 @@ namespace OpenDashPlugin
             return parsed == null ? new[] { 3, 9 } : new[] { parsed.Left, parsed.Centre };
         }
 
-        /// <summary>The shape beside a strip's name, as the LEDs page labels it ("3/9/3").</summary>
+        /// <summary>The shape beside a strip's name, as Main.dc.html and the LEDs cards write it: the three counts
+        /// with a spaced dot between them ("3 · 9 · 3"), or the one count of a bare run ("15"). An id this
+        /// cannot read is written as the Updates page writes it.</summary>
         public static string StripShape(LedBar bar)
         {
-            return bar == null || string.IsNullOrEmpty(bar.Shape) ? string.Empty : PanelLightRows.ShapeLabel(bar.Shape);
+            if (bar == null || string.IsNullOrEmpty(bar.Shape)) return string.Empty;
+            var shape = LightShape.Parse(bar.Shape);
+            if (shape == null) return PanelLightRows.ShapeLabel(bar.Shape);
+            if (shape.Bare) return Digits(shape.Centre);
+            return Digits(shape.Left) + Separator + Digits(shape.Centre) + Separator + Digits(shape.Right);
+        }
+
+        private static string Digits(int value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -285,34 +369,48 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A strip's line: what is wrong in SimHub when something is, then the car's own lights while they are
-        /// live, then the profile's state. Nothing at all when SimHub could not be asked.
+        /// A strip's line: the profile that is not in SimHub, then one that is and is not selected, then one
+        /// with an update, then the car's own rev lights while they are live, then the profile's state.
+        /// Nothing at all when SimHub could not be asked or this build carries no profile.
         /// </summary>
+        /// <remarks>
+        /// Amber only where the attention card has a row for it (StripUnselected, StripOutdated), so an amber
+        /// line never sits under "Nothing to fix". A profile that is not installed is the LEDs card's Install
+        /// press, in the secondary ink, and one that failed to install is in the failed ink; neither has a dot.
+        /// The green dot is for a selection SimHub reported, never for one nobody could read.
+        /// </remarks>
         public static HomeLine StripLine(bool live, string carName, FlagBoxInstallState? profile, bool? selected)
         {
-            if (profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed)
-                return new HomeLine(StripNotInstalled, Theme.Caution, Theme.Caution);
+            if (profile == FlagBoxInstallState.NotInstalled) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
+            if (profile == FlagBoxInstallState.Failed) return new HomeLine(StripInstallFailed, Theme.StatusFailed, null);
             var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
             if (installed && selected == false) return new HomeLine(StripNotSelected, Theme.Caution, Theme.Caution);
-            if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripHasUpdate, Theme.Caution, Theme.Caution);
-            var dot = installed ? Theme.StatusUpToDate : null;
+            if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripUpdateAvailable, Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
+            var dot = installed && selected == true ? Theme.StatusUpToDate : null;
             if (live) return new HomeLine(string.IsNullOrWhiteSpace(carName) ? CarLightsLine : CarLightsLine + Separator + carName.Trim(), Theme.TextSecondary, dot);
             if (!installed) return new HomeLine(string.Empty, Theme.TextSecondary, null);
-            return new HomeLine(selected == true ? StripSelected : StripInstalled, Theme.TextSecondary, dot);
+            return new HomeLine(selected == true ? StripShowing : StripInstalled, Theme.TextSecondary, dot);
         }
 
         // --- Right now: matrix -----------------------------------------------------------------------------
 
-        public const string MatrixNotSet = "Not set";
+        /// <summary>The Matrix card's word for a slot no device shows (Matrix.dc.html).</summary>
+        public const string MatrixNotShown = "Not shown in SimHub";
 
-        /// <summary>"Matrix 1 · Gear": the SimHub content number and the idle display, as the Idle display
-        /// control names it; "Matrix 2 · Not set" in the caution's ink when no device shows the slot.</summary>
-        public static HomeLine MatrixLine(int slot, string rest, bool? shown, bool profileHasUpdate)
+        /// <summary>
+        /// "Matrix 1 · Gear": the SimHub content number and the idle display, as the Idle display control
+        /// names it; "Matrix 2 · Not shown in SimHub" in the caution's ink when no device shows the slot. A
+        /// matrix still called by its number drops the number, which its name over the line already says.
+        /// </summary>
+        /// <remarks>
+        /// No dot for the flag box profile's update: the line would not say what the amber meant, and the
+        /// attention card already has the row for it.
+        /// </remarks>
+        public static HomeLine MatrixLine(int slot, string name, string rest, bool? shown)
         {
-            var head = MatrixName(slot) + Separator;
-            if (shown == false) return new HomeLine(head + MatrixNotSet, Theme.Caution, Theme.Caution);
-            var dot = profileHasUpdate ? Theme.Caution : shown == true ? Theme.StatusUpToDate : null;
-            return new HomeLine(head + RestLabel(rest), Theme.TextSecondary, dot);
+            var head = string.Equals((name ?? string.Empty).Trim(), MatrixName(slot), StringComparison.Ordinal) ? string.Empty : MatrixName(slot) + Separator;
+            if (shown == false) return new HomeLine(head + MatrixNotShown, Theme.Caution, Theme.Caution);
+            return new HomeLine(head + RestLabel(rest), Theme.TextSecondary, shown == true ? Theme.StatusUpToDate : null);
         }
 
         /// <summary>"Matrix 2", the name a panel goes by until it is given one, and the head of its line.</summary>

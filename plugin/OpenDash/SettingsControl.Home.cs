@@ -131,7 +131,7 @@ namespace OpenDashPlugin
             {
                 case HomePress.CheckAgain:
                     CheckAgain();
-                    Say(PanelHome.CheckedAgain(issue, issues));
+                    Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject)));
                     return;
                 case HomePress.Reinstall:
                     var screen = Settings.ScreenByNamespace(issue.Subject);
@@ -333,8 +333,8 @@ namespace OpenDashPlugin
         {
             var facts = MatrixFacts(slot);
             var shown = facts == null ? null : facts.Shown;
-            var line = PanelHome.MatrixLine(slot, Settings.MatrixRest(slot), shown,
-                PanelAttention.Has(issues, PanelAttention.FlagBoxOutdated));
+            var title = Settings.MatrixName(slot) ?? PanelHome.MatrixName(slot);
+            var line = PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown);
             IList<string> cells = new string[64];
             if (PanelHome.MatrixDrawsGlyph(shown))
             {
@@ -351,7 +351,7 @@ namespace OpenDashPlugin
             picture.VerticalAlignment = VerticalAlignment.Center;
             picture.Margin = new Thickness(0, 0, PanelHome.RowGap, 0);
 
-            var name = Ui.Text(Settings.MatrixName(slot) ?? PanelHome.MatrixName(slot), PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
+            var name = Ui.Text(title, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
             name.TextTrimming = TextTrimming.CharacterEllipsis;
             var text = Ui.VStack(0, name, HomeLineText(line));
             text.VerticalAlignment = VerticalAlignment.Center;
