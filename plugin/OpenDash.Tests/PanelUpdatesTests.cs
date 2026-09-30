@@ -556,13 +556,42 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Your edited Rim and Main dash were kept", PanelUpdates.KeptTitle(new[] { "Rim", "Main dash" }));
             Assert.Equal("Your edited Rim, Pit wall and Main dash were kept", PanelUpdates.KeptTitle(new[] { "Rim", "Pit wall", "Main dash" }));
             Assert.Equal("Your edited dashboard was kept", PanelUpdates.KeptTitle(new string[0]));
-            Assert.Equal("The last update replaced it. Your copy is still here.", PanelUpdates.KeptCaption(1));
-            Assert.Equal("The last update replaced them. Your copies are still here.", PanelUpdates.KeptCaption(2));
+            // An update, Reinstall everything and the Screens page's reinstall each keep a copy, so the
+            // caption does not say which replaced it.
+            Assert.Equal("OpenDash replaced it. Your copy is still here.", PanelUpdates.KeptCaption(1));
+            Assert.Equal("OpenDash replaced them. Your copies are still here.", PanelUpdates.KeptCaption(2));
             Assert.Equal(18, PanelUpdates.KeptPaddingX);
             Assert.Equal(14, PanelUpdates.KeptPaddingY);
             Assert.Equal(16, PanelUpdates.KeptGap);
             Assert.Equal(3, PanelUpdates.KeptTextGap);
             Assert.Equal(15, PanelUpdates.KeptTitleSize);
+        }
+
+        /// <summary>
+        /// A folder is on the kept card while a copy of edited work is there and the folder in SimHub is not
+        /// the driver's own: Put mine back leaves the copy in place, so once it has run, or the driver edits
+        /// again, the folder drops off the card rather than claiming a replacement that is over, and Put mine
+        /// back never overwrites edits it did not ask about.
+        /// </summary>
+        [Fact]
+        public void The_kept_card_shows_a_copy_only_while_the_folder_in_SimHub_is_not_the_driver_s()
+        {
+            var yours = new[] { @"C:\SimHub\DashTemplates\OpenDash Rim" + PackageExtractor.EditedSuffix + "20260930.zip", @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" };
+            Assert.True(PanelUpdates.ShowsKept(yours, edited: false));
+            Assert.False(PanelUpdates.ShowsKept(yours, edited: true));
+            // The ordinary one-deep backup is not a copy of anybody's work.
+            Assert.False(PanelUpdates.ShowsKept(new[] { @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" }, edited: false));
+            Assert.False(PanelUpdates.ShowsKept(null, edited: false));
+        }
+
+        [Fact]
+        public void A_folder_is_named_as_SimHub_lists_it()
+        {
+            var screens = new[] { new ScreenInstance { Name = "Rim", Folder = "OpenDash Rim" }, new ScreenInstance { Name = " ", Folder = "OpenDash Pit" }, null };
+            Assert.Equal("Rim", PanelUpdates.ScreenName(screens, "opendash rim"));
+            Assert.Equal("OpenDash Pit", PanelUpdates.ScreenName(screens, "OpenDash Pit"));
+            Assert.Equal("OpenDash Other", PanelUpdates.ScreenName(screens, "OpenDash Other"));
+            Assert.Equal("OpenDash Other", PanelUpdates.ScreenName(null, "OpenDash Other"));
         }
 
         [Fact]

@@ -106,6 +106,7 @@ namespace OpenDashPlugin
                 {
                     var button = UpdatesRowPress();
                     button.IsEnabled = !applying;
+                    updatesRunPresses.Add(button);
                     button.Click += (sender, args) =>
                     {
                         if (applying) return;
@@ -150,6 +151,7 @@ namespace OpenDashPlugin
                 {
                     var button = UpdatesRowPress();
                     button.IsEnabled = !applying;
+                    updatesRunPresses.Add(button);
                     button.Click += (sender, args) =>
                     {
                         if (applying) return;

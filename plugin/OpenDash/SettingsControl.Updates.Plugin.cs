@@ -239,6 +239,7 @@ namespace OpenDashPlugin
         {
             if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
+            foreach (var press in updatesRunPresses) press.IsEnabled = false;
             if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction);
         }
 
@@ -308,11 +309,14 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back,
-        /// and this is the press that keeps the promise.
+        /// and this is the press that keeps the promise. It reads the disk first, so a folder edited in Dash
+        /// Studio since the card was drawn is the driver's and is left alone (UpdatesKept): PackageExtractor.Restore
+        /// deletes the folder it restores into and keeps no copy of it.
         /// </remarks>
         private void RestoreKept()
         {
             if (applying) return;
+            plugin.Installer.Refresh();
             var root = plugin.Installer.SimHubRoot;
             var restored = 0;
             foreach (var kept in UpdatesKept())

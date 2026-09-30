@@ -16,7 +16,10 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private FrameworkElement BuildInSimHubSection(double width)
+        /// <param name="keptAnchorHere">Whether Reinstall everything carries AnchorKept too: while no kept card
+        /// is drawn, so search's "Put mine back" lands on the press whose question says what it is rather
+        /// than on nothing.</param>
+        private FrameworkElement BuildInSimHubSection(double width, bool keptAnchorHere)
         {
             var versionWidth = PanelUpdates.VersionWidth(width);
             var rows = new StackPanel { Orientation = Orientation.Vertical };
@@ -50,7 +53,8 @@ namespace OpenDashPlugin
                 fallback.Margin = new Thickness(0, PanelUpdates.SectionGap, 0, 0);
                 children.Add(fallback);
             }
-            children.Add(Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall));
+            var reinstall = Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall);
+            children.Add(keptAnchorHere ? Ui.Anchor(new Border { Child = reinstall }, PanelUpdates.AnchorKept) : reinstall);
             return PageSection(PanelUpdates.InSimHubTitle, false, PanelUpdates.SectionGap, children.ToArray());
         }
 

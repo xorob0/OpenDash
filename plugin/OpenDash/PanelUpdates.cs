@@ -667,11 +667,38 @@ namespace OpenDashPlugin
             return "Your edited " + string.Join(", ", list.Take(list.Count - 1)) + " and " + list[list.Count - 1] + " were kept";
         }
 
+        /// <summary>
+        /// The kept card's caption. It does not name the press that replaced the dashboard: an update, Reinstall
+        /// everything and the Screens page's reinstall each keep a copy, and the card cannot tell which.
+        /// </summary>
         public static string KeptCaption(int count)
         {
             return count > 1
-                ? "The last update replaced them. Your copies are still here."
-                : "The last update replaced it. Your copy is still here.";
+                ? "OpenDash replaced them. Your copies are still here."
+                : "OpenDash replaced it. Your copy is still here.";
+        }
+
+        /// <summary>
+        /// Whether a folder is drawn on the kept card: while a copy kept from edited work is there to put back,
+        /// and only while the folder in SimHub is not the driver's own. Put mine back leaves the copy where it
+        /// was, so a folder already put back, or edited again since, is the driver's and drops off the card;
+        /// the next replacement they agree to brings it back. That also keeps Put mine back from ever
+        /// overwriting a folder that holds edits, which it would do without asking.
+        /// </summary>
+        /// <param name="copies">PackageExtractor.KeptCopies for the folder.</param>
+        /// <param name="edited">Whether the installer finds the folder in SimHub edited (PackageStatus.Edited).</param>
+        public static bool ShowsKept(IEnumerable<string> copies, bool edited)
+        {
+            return !edited && (copies ?? Enumerable.Empty<string>()).Any(path => path != null && path.Contains(PackageExtractor.EditedSuffix));
+        }
+
+        /// <summary>The name SimHub lists a folder under: its screen's, or the folder's own for a folder no
+        /// screen on the rig is written to.</summary>
+        public static string ScreenName(IEnumerable<ScreenInstance> screens, string folder)
+        {
+            var screen = (screens ?? Enumerable.Empty<ScreenInstance>())
+                .FirstOrDefault(s => s != null && string.Equals(s.Folder, folder, StringComparison.OrdinalIgnoreCase));
+            return screen == null || string.IsNullOrWhiteSpace(screen.Name) ? folder : screen.Name;
         }
 
         /// <summary>What Put mine back says when it has run.</summary>
@@ -807,6 +834,8 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(CheckTitle, PanelPage.Updates, AnchorCheck, "update", "github", "release", "version", "download"),
             new PanelSearch.Entry(InSimHubTitle, PanelPage.Updates, AnchorPackages, "dashboards", "profiles", "installed", "version", "flag box"),
             new PanelSearch.Entry(PanelConfirmation.ReinstallLabel, PanelPage.Updates, AnchorReinstall, "repair", "dashboards", "profiles"),
+            // The kept card is there only while a copy is; without it, AnchorKept is on Reinstall everything,
+            // whose question says what Put mine back is.
             new PanelSearch.Entry(PutMineBack, PanelPage.Updates, AnchorKept, "restore", "edited"),
             new PanelSearch.Entry(SupportTitle, PanelPage.Updates, AnchorSupport, "help", "bug"),
             new PanelSearch.Entry(CopyReport, PanelPage.Updates, AnchorSupport, "diagnostics", "log"),

@@ -46,6 +46,10 @@ namespace OpenDashPlugin
 
         private Button updatesReinstall;
 
+        /// <summary>The presses a download holds off besides Reinstall everything and Check now: Put mine
+        /// back and the light rows' Update, drawn after the run started or before it (ShowRun).</summary>
+        private readonly List<Button> updatesRunPresses = new List<Button>();
+
         /// <summary>Reinstall everything's line beside it: its question, when it has one to ask.</summary>
         private TextBlock updatesReinstallLine;
 
@@ -60,6 +64,9 @@ namespace OpenDashPlugin
         /// rather than an offer with live buttons: the line it said and the fraction it last reported.</summary>
         private string applyingLine;
         private double applyingFraction;
+
+        /// <summary>Whether this visit to the page has read the installer's folders from the disk.</summary>
+        private bool updatesRead;
 
         /// <summary>The question Download or Reinstall everything has put on its line, if either has. It
         /// outlives the page, and does not need forgetting with the controls: a question counts only while
@@ -81,6 +88,7 @@ namespace OpenDashPlugin
                 updatesCheckLine = null;
                 updatesReinstall = null;
                 updatesReinstallLine = null;
+                updatesRunPresses.Clear();
             });
             OnLeave("Updates.applyWaiting", () => applyWaiting = false);
             // A check starting holds Check now and Download off and says so, on the card while an offer shows
@@ -88,14 +96,23 @@ namespace OpenDashPlugin
             OnUpdate(UpdatesRefreshCheck, manual => UpdateAnswered());
 
             updatesWidth = ContentWidth;
-            // What the installer says of the rig's folders, read from the disk once per build: the table's
-            // dashboards and the kept card both read it.
-            plugin.Installer.Refresh();
+            // What the installer says of the rig's folders, read from the disk once per visit: the table's
+            // dashboards and the kept card both read it. Not on every build, since a resize or a return to
+            // the panel rebuilds the page, and each read re-hashes every folder on this thread and logs a
+            // line per package into the log the support report carries; every press that writes a folder
+            // reads it again itself.
+            if (!updatesRead)
+            {
+                plugin.Installer.Refresh();
+                updatesRead = true;
+            }
+            OnLeave("Updates.read", () => updatesRead = false);
+            var kept = UpdatesKeptCard(updatesWidth);
             return PageLayout(PanelUpdates.Title, null,
                 Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin),
                 Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck),
-                Ui.Anchor(BuildInSimHubSection(updatesWidth), PanelUpdates.AnchorPackages),
-                UpdatesKeptCard(updatesWidth),
+                Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages),
+                kept,
                 Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));
         }
 
@@ -113,16 +130,18 @@ namespace OpenDashPlugin
         // --- The kept copy ----------------------------------------------------------------------------
 
         /// <summary>
-        /// Every folder an update or a reinstall replaced although somebody had edited it, and whose copy is
-        /// still there to put back, each with the name SimHub lists it under.
+        /// Every folder OpenDash replaced although somebody had edited it, whose copy is still there to put
+        /// back and which is not the driver's own again since (PanelUpdates.ShowsKept), each with the name
+        /// SimHub lists it under. Off what the installer last read of the disk.
         /// </summary>
         private IList<KeyValuePair<string, string>> UpdatesKept()
         {
             var kept = new List<KeyValuePair<string, string>>();
             var root = plugin.Installer.SimHubRoot;
             var screens = Settings.RigScreens();
-            foreach (var folder in plugin.Installer.Packages.Select(p => p.FolderName).Where(f => f != null).Distinct())
+            foreach (var package in plugin.Installer.Packages.Where(p => p.FolderName != null).GroupBy(p => p.FolderName, StringComparer.OrdinalIgnoreCase))
             {
+                var folder = package.Key;
                 IReadOnlyList<string> copies;
                 try
                 {
@@ -133,25 +152,17 @@ namespace OpenDashPlugin
                     Log.Warn("Could not look for a kept copy of " + folder + ": " + ex.Message);
                     continue;
                 }
-                if (!copies.Any(path => path.Contains(PackageExtractor.EditedSuffix))) continue;
-                kept.Add(new KeyValuePair<string, string>(folder, UpdatesScreenName(screens, folder)));
+                if (!PanelUpdates.ShowsKept(copies, package.Any(p => p.Edited))) continue;
+                kept.Add(new KeyValuePair<string, string>(folder, PanelUpdates.ScreenName(screens, folder)));
             }
             return kept;
-        }
-
-        /// <summary>The name SimHub lists a folder under: its screen's, or the folder's own for a folder no
-        /// screen on the rig is written to.</summary>
-        private static string UpdatesScreenName(IEnumerable<ScreenInstance> screens, string folder)
-        {
-            var screen = screens.FirstOrDefault(s => s != null && string.Equals(s.Folder, folder, StringComparison.OrdinalIgnoreCase));
-            return screen == null || string.IsNullOrWhiteSpace(screen.Name) ? folder : screen.Name;
         }
 
         /// <summary>The names of these folders, as the questions before a replacement write them.</summary>
         private IReadOnlyCollection<string> UpdatesNames(IEnumerable<string> folders)
         {
             var screens = Settings.RigScreens();
-            return (folders ?? Enumerable.Empty<string>()).Select(folder => UpdatesScreenName(screens, folder)).ToList();
+            return (folders ?? Enumerable.Empty<string>()).Select(folder => PanelUpdates.ScreenName(screens, folder)).ToList();
         }
 
         /// <summary>The artboard's kept card, present only while a kept copy is there to put back.</summary>
@@ -166,6 +177,7 @@ namespace OpenDashPlugin
             var restore = Ui.Button(PanelUpdates.PutMineBack, PanelButtonKind.Outline, PanelButtonSize.Small);
             restore.Click += (sender, args) => RestoreKept();
             restore.IsEnabled = !applying;
+            updatesRunPresses.Add(restore);
 
             var body = UpdatesBeside(text, restore, PanelUpdates.KeptGap, width);
             var card = Ui.CardBox(body, 0);
@@ -271,6 +283,9 @@ namespace OpenDashPlugin
         private UpdatesReportInput UpdatesReportInput()
         {
             var root = plugin.Installer.SimHubRoot;
+            // The log first: reading the folders logs a line per package, and those lines would push out the
+            // older ones the report exists to carry.
+            var log = UpdatesLogTail(root);
             plugin.Installer.Refresh();
             var screens = UpdatesDashboardRows()
                 .Select(pair => new UpdatesReportItem(pair.Value.Name, pair.Key.Kind + " " + pair.Key.Width + "x" + pair.Key.Height, pair.Value.Version, pair.Value.State))
@@ -322,7 +337,7 @@ namespace OpenDashPlugin
                 Matrices = matrices,
                 FlagBox = flagBox,
                 CarTables = carTables,
-                Log = UpdatesLogTail(root),
+                Log = log,
             };
         }
 
