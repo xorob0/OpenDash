@@ -76,7 +76,7 @@ namespace OpenDashPlugin
             return PageLayout(PanelMatrix.Title,
                 Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile),
                 // The by-hand import, only when SimHub's matrix settings could not be reached.
-                PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null,
+                PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildMatrixImportFallback(plan) : null,
                 Ui.Anchor(cards, PanelMatrix.AnchorPanels),
                 slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));
         }
@@ -126,6 +126,45 @@ namespace OpenDashPlugin
             if (hover != null) row.ToolTip = hover;
             row.HorizontalAlignment = HorizontalAlignment.Right;
             return row;
+        }
+
+        /// <summary>
+        /// The by-hand import (ADR 0013), drawn only when SimHub's matrix settings could not be reached: the
+        /// summary, the press that copies the profile to SimHub's import folder, and the path it was left at.
+        /// The Matrix page's own copy of BuildFlagBoxImportFallback, whose press and 320 px path box sat in a row
+        /// that cannot wrap (555 px) and lost the path box's end below it; here they share a WrapPanel, so the
+        /// box drops under the press in the narrow column. It fills the same fields, so CopyFlagBoxForImport
+        /// writes into it.
+        /// </summary>
+        private FrameworkElement BuildMatrixImportFallback(FlagBoxPlan plan)
+        {
+            OnDrop(() =>
+            {
+                flagBoxLine = null;
+                flagBoxPath = null;
+            });
+            flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
+            var copy = BuildSecondaryButton(PanelMatrix.ImportCopy, PanelMatrix.ImportCopyTooltip);
+            copy.Click += (sender, args) => CopyFlagBoxForImport();
+            copy.Margin = new Thickness(0, 0, PanelMatrix.ImportGap, PanelMatrix.ImportGap);
+            var path = new TextBox
+            {
+                Width = PanelMatrix.ImportPathWidth,
+                IsReadOnly = true,
+                Text = plugin.FlagBox?.Path ?? string.Empty,
+                ToolTip = PanelMatrix.ImportPathTooltip,
+            };
+            Ui.Field(path, Theme.ControlHeightSm);
+            path.Margin = new Thickness(0, 0, 0, PanelMatrix.ImportGap);
+            flagBoxPath = path;
+            var row = new WrapPanel { Orientation = Orientation.Horizontal };
+            row.Children.Add(copy);
+            row.Children.Add(path);
+            // Each child carries the gap under it for when the box wraps; the row gives it back on one line.
+            row.Margin = new Thickness(0, 0, 0, -PanelMatrix.ImportGap);
+            var block = Ui.VStack(PanelMatrix.ImportLineGap, flagBoxLine, row);
+            block.HorizontalAlignment = HorizontalAlignment.Left;
+            return block;
         }
 
         /// <summary>

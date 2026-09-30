@@ -95,6 +95,17 @@ namespace OpenDashPlugin
             return result == FlagBoxInstallState.Failed;
         }
 
+        // The by-hand import under the title's line, copied from BuildFlagBoxImportFallback
+        // (SettingsControl.Profiles.cs, the LEDs and Updates pages' file) with its words and numbers: the
+        // press and the path box 12 apart and 8 under the summary. They wrap here, so the box drops under the
+        // press where the column is narrower than both (223 + 12 + 320 = 555 px).
+        public const string ImportCopy = "Copy to SimHub's import folder";
+        public const string ImportCopyTooltip = "Puts a copy in Documents\\SimHub.";
+        public const string ImportPathTooltip = "Where OpenDash left the profile.";
+        public const double ImportPathWidth = 320;
+        public const double ImportGap = 12;
+        public const double ImportLineGap = 8;
+
         /// <summary>Whether the line offers its press: never when there is no profile to install or nowhere
         /// to put it. The press is left out then rather than drawn disabled.</summary>
         public static bool ProfileHasButton(FlagBoxInstallState state)

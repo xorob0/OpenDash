@@ -193,7 +193,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var primary = action.Style == PanelButton.Primary;", matrix);
             Assert.Contains("primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost", matrix);
             Assert.Contains("button.ToolTip = PanelMatrix.ProfileTooltip(state);", matrix);
-            Assert.Contains("PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null", matrix);
+            Assert.Contains("PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildMatrixImportFallback(plan) : null", matrix);
+            // The by-hand import wraps, so its 320 px path box drops under the press in the narrow column
+            // rather than being cut off: 223 px of press, 12 and 320 is wider than the column below ~668 px.
+            Assert.Contains("var row = new WrapPanel { Orientation = Orientation.Horizontal }; row.Children.Add(copy); row.Children.Add(path);", flat);
+            Assert.Contains("Ui.VStack(PanelMatrix.ImportLineGap, flagBoxLine, row);", flat);
+            Assert.Contains("copy.Click += (sender, args) => CopyFlagBoxForImport();", flat);
+            Assert.Contains("flagBoxPath = path;", flat);
+            Assert.DoesNotContain("BuildFlagBoxImportFallback(plan)", matrix);
+            // Its words are the shared helper's, copied rather than moved (Profiles.cs is not this page's).
+            var profiles = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Profiles.cs"));
+            Assert.Contains("\"" + PanelMatrix.ImportCopy + "\"", profiles);
+            Assert.Contains("\"" + PanelMatrix.ImportPathTooltip + "\"", profiles);
+            Assert.Contains(PanelMatrix.ImportCopyTooltip.Replace("\\", "\\\\"), profiles);
             // The press installs, keeps a failure for the redraw it starts, redraws and says what it did.
             Assert.Contains("var result = InstallFlagBox(); "
                 + "matrixFailed = PanelMatrix.KeepsPressResult(result.State) ? result : null; "
