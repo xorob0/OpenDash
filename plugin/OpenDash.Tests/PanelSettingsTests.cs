@@ -580,7 +580,8 @@ namespace OpenDashPlugin.Tests
         /// been activated again, from that window's Apply, or with a new GameManager on a change of game, and
         /// nothing rebuilds the page then: the page reads them again on its tick and is drawn again only when
         /// one moved, so a driver never types a threshold against a stale unit. A window's Activated would
-        /// read them before SimHub has set them. A failed read is logged once, not once a second.
+        /// read them before SimHub has set them. A failed read is logged once, not once a second. The tick waits
+        /// while a text box has the keyboard, so a rebuild never lands in the middle of a typed threshold.
         /// </summary>
         [Fact]
         public void The_page_is_drawn_again_when_simhubs_units_move()
@@ -592,7 +593,10 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelSettings.UnitsMoved(new string[4], new string[4]));
             Assert.True(PanelSettings.UnitsMoved(metric, null));
             var page = Page();
-            Assert.Contains("OnTick(() => { if (PanelSettings.UnitsMoved(units, SettingsUnitNames())) RebuildPage(); });", page);
+            // Never while a text box has the keyboard: a rebuild would commit the half-typed number and the
+            // restored box would take the rest of it in front of its caret.
+            Assert.Matches(@"OnTick\(\(\) =>\s*\{\s*if \(Keyboard\.FocusedElement is TextBox \|\| !PanelSettings\.UnitsMoved\(units, SettingsUnitNames\(\)\)\) return;\s*RebuildPage\(\);\s*\}\);", page);
+            Assert.Single(Regex.Matches(page, @"RebuildPage\(\)"));
             Assert.DoesNotContain("Activated", page);
             Assert.Contains("if (!settingsUnitsFailed) Log.Warn(\"Reading SimHub's units failed: \" + ex.Message);", page);
             Assert.Contains("settingsUnitsFailed = false;", page);
@@ -923,10 +927,11 @@ namespace OpenDashPlugin.Tests
         public void Each_unit_and_default_goes_where_it_belongs()
         {
             var page = Page();
-            var order = new[] { "units.LocalSpeedUnit", "units.LocalTemperatureUnit", "units.LocalPressureUnit", "units.LocalFuelUnit" }
+            var order = new[] { "units.LocalSpeedUnitString,", "units.LocalTemperatureUnitString,", "units.LocalPressureUnitString,", "units.LocalFuelUnitString," }
                 .Select(read => page.IndexOf(read, StringComparison.Ordinal)).ToList();
             Assert.All(order, index => Assert.True(index >= 0));
             Assert.Equal(order.OrderBy(i => i), order);
+            Assert.DoesNotMatch(@"units\.Local\w+Unit\.ToString\(\)", page);
             Assert.Contains("PanelSettings.UnitsLine(units[0], units[1], units[2], units[3])", page);
             Assert.Contains("var temperature = units[1];", page);
             Assert.Contains("PanelSettings.FuelUnit(units[3])", page);

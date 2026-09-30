@@ -60,9 +60,18 @@ namespace OpenDashPlugin
             // their defaults would stay the old ones while the matrix compares in the new. On the tick, not on
             // SimHub's window coming back: SimHub's Settings, where the Units row sends the driver, activates
             // SimHub's window as it closes and applies the units only after that, from its own Apply, or when a
-            // change of game brings a new GameManager. Four enum reads a second while the panel is on screen,
-            // cleared on every rebuild and on Go.
-            OnTick(() => { if (PanelSettings.UnitsMoved(units, SettingsUnitNames())) RebuildPage(); });
+            // change of game brings a new GameManager. Four string properties a second while the panel is on
+            // screen, cleared on every rebuild and on Go.
+            //
+            // Never while a text box has the keyboard: the driver back from SimHub's Settings is the one most
+            // likely to be typing a temperature in the new unit, and a rebuild then would commit the half-typed
+            // number and hand focus back to a new box with its caret in front of it. The tick after they leave
+            // the box rebuilds, once the box's own LostFocus has saved what they typed.
+            OnTick(() =>
+            {
+                if (Keyboard.FocusedElement is TextBox || !PanelSettings.UnitsMoved(units, SettingsUnitNames())) return;
+                RebuildPage();
+            });
             return PageLayout(PanelSettings.Title, null, all.ToArray());
         }
 
@@ -394,7 +403,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// SimHub's four units, as the enum names GameReaderCommon spells them, or nulls where SimHub cannot be
         /// asked. A read of SimHub's own settings, which a build that draws the lighting may make, and which
-        /// the page's tick makes again every second: four enum properties, nothing that touches a device.
+        /// the page's tick makes again every second: four string properties, nothing that touches a device,
+        /// a profile or the disk.
         /// </summary>
         private string[] SettingsUnitNames()
         {
@@ -403,12 +413,13 @@ namespace OpenDashPlugin
                 var manager = plugin == null ? null : plugin.PluginManager;
                 var game = manager == null ? null : manager.GameManager;
                 var units = game == null ? null : game.GameUnitSettings;
+                // The enum names as strings, which GameUnitSettings' own setters keep in step with the enums.
                 var names = units == null ? new string[4] : new[]
                 {
-                    units.LocalSpeedUnit.ToString(),
-                    units.LocalTemperatureUnit.ToString(),
-                    units.LocalPressureUnit.ToString(),
-                    units.LocalFuelUnit.ToString(),
+                    units.LocalSpeedUnitString,
+                    units.LocalTemperatureUnitString,
+                    units.LocalPressureUnitString,
+                    units.LocalFuelUnitString,
                 };
                 settingsUnitsFailed = false;
                 return names;
