@@ -79,10 +79,13 @@ namespace OpenDashPlugin
         /// to do, the steps in SimHub where there are some, and the one press that helps.</summary>
         private FrameworkElement HomeAttentionCard()
         {
+            // Read once, and only up to where the rows stop changing: past PressBesideFrom every press sits
+            // beside its text, so a resize there leaves the page alone (PanelShell.RebuildsOnResize).
+            var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom));
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             for (var i = 0; i < issues.Count; i++)
             {
-                var row = HomeIssueRow(issues[i]);
+                var row = HomeIssueRow(issues[i], beside);
                 if (i > 0)
                 {
                     row.BorderBrush = Ui.Brush(Theme.Rule);
@@ -93,13 +96,12 @@ namespace OpenDashPlugin
             return Ui.CardBox(rows, 0);
         }
 
-        private Border HomeIssueRow(PanelIssue issue)
+        private Border HomeIssueRow(PanelIssue issue, bool beside)
         {
             // A row with steps hangs from its top, as the artboard's second row does, and so does one whose press
             // is stacked under its text, whose icon would otherwise sit beside the press. A one-line row with its
             // press beside it is centred on its title and detail.
             var hasSteps = issue.Steps.Count > 0;
-            var beside = PanelHome.PressBeside(ContentWidth);
             var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;
 
             var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize);
@@ -388,15 +390,10 @@ namespace OpenDashPlugin
                 name.VerticalAlignment = VerticalAlignment.Center;
                 top.Children.Add(name);
 
-                // Wider strips than the card shrink to it rather than spilling out of it.
-                var host = new Viewbox
-                {
-                    Stretch = Stretch.Uniform,
-                    StretchDirection = StretchDirection.DownOnly,
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                    Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0),
-                    Child = strip.Picture,
-                };
+                // Wider strips than the card shrink to it rather than spilling out of it, and none grows past
+                // its own size in a wide card: the kit's fixed picture, which never grows (Ui.FitWidth).
+                var host = (Viewbox)Ui.FitWidth(strip.Picture);
+                host.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);
                 strip.Host = host;
                 HomePaintStrip(strip);
                 live.Add(strip);

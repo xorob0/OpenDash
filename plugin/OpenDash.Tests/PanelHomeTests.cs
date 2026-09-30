@@ -850,7 +850,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("text.Children.Add(detail);", code);
             Assert.Contains("if (hasSteps) { var steps = Ui.Steps(issue.Steps); steps.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(steps); }", code);
             Assert.Contains("var hasSteps = issue.Steps.Count > 0;", code);
-            Assert.Contains("var row = HomeIssueRow(issues[i]);", code);
+            Assert.Contains("var row = HomeIssueRow(issues[i], beside);", code);
         }
 
         /// <summary>The page draws PanelHome's words and numbers, not the values they are made from.</summary>
@@ -887,7 +887,7 @@ namespace OpenDashPlugin.Tests
         {
             var code = PageCode();
             // The fix rows, ruled apart, in the card.
-            Assert.Contains("var row = HomeIssueRow(issues[i]); if (i > 0) { row.BorderBrush = Ui.Brush(Theme.Rule); row.BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0); } rows.Children.Add(row); } return Ui.CardBox(rows, 0);", code);
+            Assert.Contains("var row = HomeIssueRow(issues[i], beside); if (i > 0) { row.BorderBrush = Ui.Brush(Theme.Rule); row.BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0); } rows.Children.Add(row); } return Ui.CardBox(rows, 0);", code);
             // A Right now card: its head, then its page's empty state or its rows.
             Assert.Contains("stack.Children.Add(head); if (rows.Count == 0) { var none = Ui.Prose(PanelHome.EmptyLine(empty), PanelHome.DetailSize); none.Margin = new Thickness(PanelHome.RowPaddingX, 0, PanelHome.RowPaddingX, PanelHome.RowPaddingY + PanelHome.CardHeadPaddingBottom); stack.Children.Add(none); } foreach (var row in rows) stack.Children.Add(row); return Ui.CardBox(stack, 0);", code);
             // Each screen's row on its card, painted before the first tick.
@@ -895,7 +895,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Restart = restart, Line = HomeLineText(false), Dot = HomeDot(null), }; HomePaintScreen(row);", code);
             Assert.Contains("DockPanel.SetDock(row.Dot, Dock.Right); dock.Children.Add(row.Dot); dock.Children.Add(text);", code);
             // Each strip's picture in its host, painted before the first tick, and repainted on it.
-            Assert.Contains("Child = strip.Picture, }; strip.Host = host; HomePaintStrip(strip); live.Add(strip);", code);
+            // In the kit's fixed picture, which shrinks to the card and never grows past its own size.
+            Assert.Contains("var host = (Viewbox)Ui.FitWidth(strip.Picture); host.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0); strip.Host = host; HomePaintStrip(strip); live.Add(strip);", code);
+            Assert.DoesNotContain("new Viewbox", code);
             Assert.Contains("top.Children.Add(strip.Dot);", code);
             Assert.Contains("top.Children.Add(name);", code);
             // Each matrix's picture, dot and text.
@@ -972,8 +974,14 @@ namespace OpenDashPlugin.Tests
         public void The_page_asks_TwoColumns_for_columns()
         {
             var code = PageCode();
-            // An issue's press asks the content's width, since it is a row's trailing action and not a second block.
-            Assert.Contains("var beside = PanelHome.PressBeside(ContentWidth);", code);
+            // An issue's press asks the content's width, since it is a row's trailing action and not a second
+            // block, read once for the card and only up to PressBesideFrom, past which nothing is drawn
+            // differently: a resize of a wide panel then leaves Home alone (PanelShell.RebuildsOnResize).
+            Assert.Contains("var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom)); var rows = new StackPanel", code);
+            Assert.Single(Regex.Matches(code, @"\bContentWidthUpTo\("));
+            Assert.Empty(Regex.Matches(code, @"\bContentWidth\b(?!\s*\()"));
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, PanelHome.PressBesideFrom, 17));
+            Assert.False(PanelShell.RebuildsOnResize(1300, 1301, PanelHome.PressBesideFrom, 17));
             Assert.Contains("var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;", code);
             Assert.Contains("var beside = TwoColumns;", code);
             Assert.DoesNotContain("!Narrow", code);
