@@ -939,7 +939,7 @@ namespace OpenDashPlugin
             {
                 Log.Warn("The profile for " + bar.Name + " was not moved: this build carries no profile of its shape, " + bar.ProfileShapeId + ".");
                 RebuildPage();
-                Say(PanelMessage.Caution(PanelLights.BarMoveFailed(bar.Name)));
+                Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.NotMoved(bar.Name), PanelLeds.NoProfileForStrip)));
                 return;
             }
             bar.Device = LedBar.NormaliseDevice(device);
@@ -947,7 +947,7 @@ namespace OpenDashPlugin
             var plan = LedsLogged(bar, InstallBar(bar, found.Json));
             var ok = plan.State == FlagBoxInstallState.UpToDate;
             var target = LedTargets.Find(bar.Device);
-            var line = ok ? PanelLeds.Moved(bar.Name, target == null ? null : target.Name, plan.Note) : PanelLights.BarMoveFailed(bar.Name);
+            var line = ok ? PanelLeds.Moved(bar.Name, target == null ? null : target.Name, plan.Note) : PanelLeds.MovedNotInstalled(bar.Name, target == null ? null : target.Name);
             // The strip's device, and so whether its profile is selected, moved with the press: the card, the
             // fix box and the sidebar's dot are drawn again from what SimHub says now.
             RefreshAttention();
@@ -1135,10 +1135,10 @@ namespace OpenDashPlugin
             }
             catch (Exception ex)
             {
-                Log.Warn("The profile for " + name + " could not be taken out of SimHub: " + ex.Message);
+                Log.Warn("The profile for " + name + " could not be removed from SimHub: " + ex.Message);
                 takenOut = null;
             }
-            if (takenOut == false && held) Log.Warn("The profile for " + name + " was not taken out of SimHub: no LED device OpenDash can reach holds it.");
+            if (takenOut == false && held) Log.Warn("The profile for " + name + " was not removed from SimHub: no LED device OpenDash can reach holds it.");
             Settings.RemoveLedBar(ns);
             Save();
             Select(PanelPage.Leds, null);

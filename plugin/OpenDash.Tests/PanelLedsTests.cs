@@ -907,7 +907,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Updates this strip's profile in SimHub.", PanelLeds.UpdateTooltip);
             Assert.Equal("Rename", PanelLeds.RenameButton);
             Assert.Equal("Remove", PanelLeds.RemoveButton);
-            Assert.Equal("Removes this strip and its profile from SimHub.", PanelLeds.RemoveTooltip);
+            // One verb for the act, as Screens' "Removes this screen, its settings and its dashboard." has it.
+            Assert.Equal("Removes this strip, its settings and its profile.", PanelLeds.RemoveTooltip);
             Assert.Equal("Remove it", PanelLeds.RemoveConfirm);
             Assert.Equal("Removes the strip, its settings and its profile in SimHub.", PanelLeds.RemoveBody);
             Assert.Equal("Start", PanelLeds.EachLedStart);
@@ -1234,13 +1235,23 @@ namespace OpenDashPlugin.Tests
             // A move installs the profile fresh on the other device, where it is not selected.
             Assert.Equal("Moved Rim's profile to Arduino RGB LEDs. Select \"Rim\" on Arduino RGB LEDs in SimHub to use it.", PanelLeds.Moved("Rim", "Arduino RGB LEDs"));
             Assert.Equal("Moved Rim's profile. Select \"Rim\" in SimHub to use it.", PanelLeds.Moved("Rim", null));
+            // A move whose install failed has saved the device and taken the old copy out: the line says so, never
+            // that the profile stayed where it was.
+            Assert.Equal("Rim is set to Arduino RGB LEDs, but its profile could not be installed there. See SimHub's log.", PanelLeds.MovedNotInstalled("Rim", "Arduino RGB LEDs"));
+            Assert.Equal("Rim's device is changed, but its profile could not be installed. See SimHub's log.", PanelLeds.MovedNotInstalled("Rim", null));
+            // A move the page could not make, before anything was written, says why rather than the log.
+            Assert.Equal("Could not move Rim's profile. This build ships no profile for this strip.", PanelLeds.WithReason(PanelLeds.NotMoved("Rim"), PanelLeds.NoProfileForStrip));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.NotMoved(bar.Name), PanelLeds.NoProfileForStrip)));", leds);
+            Assert.Contains("var line = ok ? PanelLeds.Moved(bar.Name, target == null ? null : target.Name, plan.Note) : PanelLeds.MovedNotInstalled(bar.Name, target == null ? null : target.Name);", leds);
             Assert.Equal("Renamed to Rim in OpenDash and SimHub.", PanelLeds.Renamed("Rim", true));
             Assert.Equal("Renamed to Rim.", PanelLeds.Renamed("Rim", false));
             // The install takes the old copy out first, so a failure leaves no copy under the old name.
             Assert.Equal("Renamed to Rim, but its profile could not be installed again. See SimHub's log.", PanelLeds.RenameNotInSimHub("Rim"));
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim", true, true));
             Assert.Equal("Reversed Rim.", PanelLeds.ReverseSaid("Rim", true));
-            Assert.Equal("Rim runs in its usual direction again.", PanelLeds.ReverseSaid("Rim", false));
+            // The switch's own word, never "its usual direction", which the panel says nowhere else.
+            Assert.Equal("Rim is no longer reversed.", PanelLeds.ReverseSaid("Rim", false));
         }
 
         /// <summary>A note the install returned is a step the select waits on, so it comes before the select.</summary>
@@ -1261,9 +1272,9 @@ namespace OpenDashPlugin.Tests
         public void A_reverse_says_the_select_where_the_twin_is_new_to_SimHub()
         {
             Assert.Equal("Reversed Rim.", PanelLeds.ReverseSaid("Rim", true, true, "Wheel"));
-            Assert.Equal("Rim runs in its usual direction again.", PanelLeds.ReverseSaid("Rim", false, true, "Wheel"));
+            Assert.Equal("Rim is no longer reversed.", PanelLeds.ReverseSaid("Rim", false, true, "Wheel"));
             Assert.Equal("Reversed Rim. Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.ReverseSaid("Rim", true, false, "Wheel"));
-            Assert.Equal("Rim runs in its usual direction again. Select \"Rim\" in SimHub to use it.", PanelLeds.ReverseSaid("Rim", false, false, null));
+            Assert.Equal("Rim is no longer reversed. Select \"Rim\" in SimHub to use it.", PanelLeds.ReverseSaid("Rim", false, false, null));
             Assert.True(PanelLeds.HeldInSimHub(FlagBoxInstallState.UpToDate));
             Assert.True(PanelLeds.HeldInSimHub(FlagBoxInstallState.Outdated));
             Assert.False(PanelLeds.HeldInSimHub(FlagBoxInstallState.NotInstalled));
@@ -1322,7 +1333,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim", true, true));
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim", false, true));
             Assert.Equal("Removed Rim.", PanelLeds.Removed("Rim", false, false));
-            Assert.Equal("Removed Rim, but its profile could not be taken out of SimHub. See SimHub's log.", PanelLeds.Removed("Rim", true, false));
+            Assert.Equal("Removed Rim, but its profile could not be removed from SimHub. See SimHub's log.", PanelLeds.Removed("Rim", true, false));
             Assert.Equal(PanelLeds.Removed("Rim", true, false), PanelLeds.Removed("Rim", false, null));
             Assert.True(PanelLeds.RemovedCleanly(true, true));
             Assert.True(PanelLeds.RemovedCleanly(false, false));
@@ -1372,8 +1383,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_brightness_pick_says_what_it_set()
         {
-            Assert.Equal("Set Rim's brightness to 60%.", PanelLeds.BrightnessSaid("Rim", 60));
-            Assert.Equal("Rim's brightness follows the rig's.", PanelLeds.BrightnessSaid("Rim", null));
+            // What the strip runs at now: never the fix box's imperative "Set", nor a possessive with no noun.
+            Assert.Equal("Rim runs at 60% brightness.", PanelLeds.BrightnessSaid("Rim", 60));
+            Assert.Equal("Rim runs at the rig's brightness.", PanelLeds.BrightnessSaid("Rim", null));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var pick = leds.Substring(leds.IndexOf("Settings.SetBarBrightness(ns, value);", StringComparison.Ordinal));
             pick = pick.Substring(0, pick.IndexOf("}, 160);", StringComparison.Ordinal));

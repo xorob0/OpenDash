@@ -175,7 +175,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>A strip whose profile could not be installed is sent to SimHub's log (voice.md's failure
         /// form): Updates offers no press for a profile that is not in SimHub, so "See the Updates page" led
-        /// nowhere. A failed move says "move", not "Added". Rename installs the profile again only where SimHub
+        /// nowhere. A failed move is PanelLeds.MovedNotInstalled's, pinned with the LEDs page. Rename installs the profile again only where SimHub
         /// holds it, so its hover promises only the rename, and its sheet promises no "Install the strip
         /// again".</summary>
         [Fact]
@@ -183,7 +183,6 @@ namespace OpenDashPlugin.Tests
         {
             // The log, then the steps left in order: the header's Install, and the restart the strip's settings wait on.
             Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.", PanelLights.BarAddFailed("Rim"));
-            Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
             // Rename reinstalls only where SimHub holds the profile, so the hover promises only the rename.
             Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
             // Nor does the Rename sheet one click later: its footer has no note, since saving reinstalls.

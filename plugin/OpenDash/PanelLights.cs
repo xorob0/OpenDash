@@ -298,12 +298,6 @@ namespace OpenDashPlugin
             return "Added " + name + ", but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.";
         }
 
-        /// <summary>A strip whose profile could not be moved to another device: nothing was added.</summary>
-        public static string BarMoveFailed(string name)
-        {
-            return "Could not move " + name + "'s profile. See SimHub's log.";
-        }
-
         /// <summary>The strip's Rename press. Saving installs the profile again where SimHub holds it, so
         /// SimHub's list carries the new name as well; the tooltip promises only what always happens.</summary>
         public const string RenameBarTooltip = "Renames this strip.";

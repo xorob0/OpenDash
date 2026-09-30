@@ -298,7 +298,9 @@ namespace OpenDashPlugin
 
         public const string RenameButton = "Rename";
         public const string RemoveButton = "Remove";
-        public const string RemoveTooltip = "Removes this strip and its profile from SimHub.";
+        /// <summary>What Remove takes, in the words Screens' Remove uses for a screen: the strip is OpenDash's,
+        /// and only its profile is SimHub's.</summary>
+        public const string RemoveTooltip = "Removes this strip, its settings and its profile.";
         public const string RemoveConfirm = "Remove it";
         public const string RemoveBody = "Removes the strip, its settings and its profile in SimHub.";
 
@@ -699,11 +701,12 @@ namespace OpenDashPlugin
 
         public const string ReverseTitle = "Reverse direction";
 
-        /// <summary>The line after a Brightness pick (ruling 50: every press says what it did): the strip's own
-        /// value, or the rig's again.</summary>
+        /// <summary>The line after a Brightness pick (ruling 50: every press says what it did): what the strip
+        /// runs at now, its own value or the rig's. A statement rather than "Set ...", which reads as the fix box's
+        /// imperative, and never a possessive with no noun after it.</summary>
         public static string BrightnessSaid(string name, int? value)
         {
-            return value.HasValue ? "Set " + name + "'s brightness to " + Percent(value.Value) + "." : name + "'s brightness follows the rig's.";
+            return value.HasValue ? name + " runs at " + Percent(value.Value) + " brightness." : name + " runs at the rig's brightness.";
         }
 
         /// <summary>The greyed "Each LED in turn" row's press (#434).</summary>
@@ -1042,6 +1045,25 @@ namespace OpenDashPlugin
             return Steps(moved, note, SelectIt(name, device));
         }
 
+        /// <summary>
+        /// A device pick whose install failed. The device was saved before the install, and the install takes the
+        /// old copy out of every device first, so the strip is on the new device with no profile there: the line
+        /// says that, and the header then offers Install.
+        /// </summary>
+        public static string MovedNotInstalled(string name, string device)
+        {
+            return string.IsNullOrWhiteSpace(device)
+                ? name + "'s device is changed, but its profile could not be installed. See SimHub's log."
+                : name + " is set to " + device + ", but its profile could not be installed there. See SimHub's log.";
+        }
+
+        /// <summary>A device pick the page could not follow, before anything was written: the reason
+        /// (<see cref="WithReason"/>) follows it.</summary>
+        public static string NotMoved(string name)
+        {
+            return "Could not move " + name + "'s profile.";
+        }
+
         /// <summary>A rename, which installs the profile again so SimHub's list carries the new name.</summary>
         public static string Renamed(string name, bool inSimHub)
         {
@@ -1092,7 +1114,7 @@ namespace OpenDashPlugin
         public static string Removed(string name, bool heldInSimHub, bool? takenOut)
         {
             if (takenOut == true) return "Removed " + name + " and its profile.";
-            if (!RemovedCleanly(heldInSimHub, takenOut)) return "Removed " + name + ", but its profile could not be taken out of SimHub. See SimHub's log.";
+            if (!RemovedCleanly(heldInSimHub, takenOut)) return "Removed " + name + ", but its profile could not be removed from SimHub. See SimHub's log.";
             return "Removed " + name + ".";
         }
 
@@ -1105,7 +1127,7 @@ namespace OpenDashPlugin
 
         public static string ReverseSaid(string name, bool reversed)
         {
-            return reversed ? "Reversed " + name + "." : name + " runs in its usual direction again.";
+            return reversed ? "Reversed " + name + "." : name + " is no longer reversed.";
         }
 
         /// <summary>
