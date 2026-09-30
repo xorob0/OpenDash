@@ -423,7 +423,7 @@ namespace OpenDashPlugin.Tests
                 "var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)); if (said != null) Say(said);",
                 "var shown = facts == null ? null : facts.Shown; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
-                "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; cards.Add(card);",
+                "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; AutomationProperties.SetName(card, name); cards.Add(card);",
                 "var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));",
                 "if (panels.Count > 0) return grid; return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
             })
@@ -454,7 +454,7 @@ namespace OpenDashPlugin.Tests
                 "var panels = Settings.MatrixPanels().ToList();",
                 "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
                 "if (m == selected) selectedPicture(picture);",
-                "cards.Add(add); var grid = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray());",
+                "cards.Add(add); var grid = new MatrixNamed(AutomationControlType.Group) { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };",
                 "ToolTipService.SetShowOnDisabled(add, true);",
                 "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
                 // The title's line: the version SimHub holds, the press for the line's own state, clicked, and
@@ -484,7 +484,7 @@ namespace OpenDashPlugin.Tests
                 "chips.Children.Clear();",
                 "chips.Children.Add(chip); }",
                 "if (focused >= 0 && focused < chips.Children.Count) chips.Children[focused].Focus();",
-                "drawChips(); var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips);",
+                "drawChips(); var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chipGroup);",
                 "return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);",
                 // The repaint: the fresh lamps into the picture already on the page, the card's included.
                 "var fresh = Ui.Matrix(cells, style, MatrixDim()); var lamps = fresh.Child; fresh.Child = null; picture.Child = lamps;",
@@ -943,10 +943,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
             Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario))", source);
-            // The preview is named for what it draws, when it is built and on every repaint.
-            Assert.Contains("AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));", source);
-            Assert.Contains("AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));", source);
-            Assert.Contains("AutomationProperties.SetName(chips, PanelMatrix.PreviewChipsName);", source);
+            // The preview is named for what it draws, when it is built and on every repaint, on its frame: the
+            // one element there that a screen reader is told about, as an image.
+            var flatSource = FlatSource();
+            Assert.Contains("var frame = new MatrixNamed(AutomationControlType.Image) {", flatSource);
+            Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));", flatSource);
+            Assert.Contains("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));", source);
+            Assert.Contains("var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips }; AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", flatSource);
             foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
                 "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })
             {
@@ -1030,7 +1033,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("MatrixStyle.Preview", matrix);
             // The New tag has the frame's own line, over it and clear of the lamps, never after the Rig link.
             Assert.Contains("var tagged = Ui.VStack(PanelMatrix.NewTagGap, tag, frame);", matrix);
-            Assert.Contains("Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips)", matrix);
+            Assert.Contains("Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chipGroup)", matrix);
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.NewTag\(\)"));
             Assert.DoesNotContain("all, Ui.NewTag()", matrix);
             Assert.Contains("Child = preview,", matrix);
@@ -1045,6 +1048,39 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var title = Ui.SubHeading(name);", matrix);
             Assert.Contains("title.TextTrimming = TextTrimming.None; title.TextWrapping = TextWrapping.Wrap;", FlatSource());
             Assert.DoesNotContain("new StackPanel { Orientation = Orientation.Horizontal }", matrix);
+        }
+
+        /// <summary>
+        /// Every name the page gives a screen reader lands on something WPF tells it about: a Button, a switch,
+        /// or the page's own MatrixNamed, which gives a border a peer. A Border, a WrapPanel or the card grid's
+        /// panel has none, so a name set on one is never heard.
+        /// </summary>
+        [Fact]
+        public void Every_name_for_a_screen_reader_is_set_where_one_is_heard()
+        {
+            var flat = FlatSource();
+            var targets = System.Text.RegularExpressions.Regex.Matches(flat, @"AutomationProperties\.SetName\((\w+),")
+                .Cast<System.Text.RegularExpressions.Match>().Select(match => match.Groups[1].Value).ToList();
+            Assert.Equal(new[] { "add", "card", "chipGroup", "control", "frame", "grid" }, targets.Distinct().OrderBy(t => t, StringComparer.Ordinal));
+            foreach (var pin in new[]
+            {
+                // The peer: a border told about as the control type it is given.
+                "private sealed class MatrixNamed : Border",
+                "protected override AutomationPeer OnCreateAutomationPeer() { return new Peer(this, type); }",
+                "private sealed class Peer : FrameworkElementAutomationPeer",
+                "protected override AutomationControlType GetAutomationControlTypeCore() { return type; }",
+                // The cards' group, each card by its name and the add tile by its words.
+                "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
+                "AutomationProperties.SetName(add, PanelMatrix.AddPanel);",
+                "card.ToolTip = name; AutomationProperties.SetName(card, name);",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            // Each switch, and the greyed device press, by its row's name, in both helpers.
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("if (control is ButtonBase) AutomationProperties.SetName(control, title);")).Count);
+            Assert.DoesNotContain("SetName(preview,", flat);
+            Assert.DoesNotContain("SetName(chips,", flat);
         }
 
         [Fact]

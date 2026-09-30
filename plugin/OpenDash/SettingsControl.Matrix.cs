@@ -12,7 +12,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Shapes;
 
@@ -165,11 +167,14 @@ namespace OpenDashPlugin
                         Select(PanelPage.Matrix, PanelMatrix.SlotId(m));
                         RebuildPage();
                     });
-                // The card trims a long name to its column; the hover gives it whole.
+                // The card trims a long name to its column; the hover gives it whole. A screen reader is told
+                // the name too, since the card's content is a picture and two lines, which it cannot read.
                 card.ToolTip = name;
+                AutomationProperties.SetName(card, name);
                 cards.Add(card);
             }
             var add = Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon, ShowAddMatrix, PanelMatrix.AddCount(panels.Count));
+            AutomationProperties.SetName(add, PanelMatrix.AddPanel);
             if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot()))
             {
                 add.ToolTip = PanelMatrix.AddTooltip;
@@ -180,8 +185,10 @@ namespace OpenDashPlugin
                 add.ToolTip = PanelMatrix.AllInUse;
                 ToolTipService.SetShowOnDisabled(add, true);
             }
+            // The artboard's tablist "Your matrices", as a group a screen reader is told about: the grid itself
+            // is a panel, which it never sees.
             cards.Add(add);
-            var grid = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray());
+            var grid = new MatrixNamed(AutomationControlType.Group) { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };
             AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);
             if (panels.Count > 0) return grid;
             // An empty rig names the emptiness beside the one press there is.
@@ -281,18 +288,58 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// A border a screen reader is told about, as the control type it is given: WPF gives a Border, a
+        /// WrapPanel or a custom panel no automation peer, so a name set on one is never heard. The artboard's
+        /// role=img preview, its "Your matrices" and its chip group are these.
+        /// </summary>
+        private sealed class MatrixNamed : Border
+        {
+            private readonly AutomationControlType type;
+
+            public MatrixNamed(AutomationControlType type)
+            {
+                this.type = type;
+            }
+
+            protected override AutomationPeer OnCreateAutomationPeer()
+            {
+                return new Peer(this, type);
+            }
+
+            private sealed class Peer : FrameworkElementAutomationPeer
+            {
+                private readonly AutomationControlType type;
+
+                public Peer(MatrixNamed owner, AutomationControlType type) : base(owner)
+                {
+                    this.type = type;
+                }
+
+                protected override AutomationControlType GetAutomationControlTypeCore()
+                {
+                    return type;
+                }
+
+                protected override string GetClassNameCore()
+                {
+                    return "Border";
+                }
+            }
+        }
+
+        /// <summary>
         /// The 8x8 at the size of the real thing's cells under its New tag, what it shows under the chip chosen
-        /// (named for a screen reader as the artboard's alt text), the link to every device at once, and the
-        /// chips. A chip repaints the picture and the chips in place.
+        /// (its frame named for a screen reader as the artboard's alt text), the link to every device at once,
+        /// and the chips. A chip repaints the picture and the chips in place.
         /// </summary>
         private MatrixPreviewColumn BuildMatrixPreview(int matrix, Border cardPicture)
         {
             var m = matrix;
             var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
-            AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
-            var frame = new Border
+            // The frame is the picture a screen reader is told about, the artboard's role=img.
+            var frame = new MatrixNamed(AutomationControlType.Image)
             {
                 Padding = new Thickness(PanelMatrix.PreviewFramePadding),
                 Background = Ui.Brush(Theme.SurfaceInset),
@@ -301,6 +348,7 @@ namespace OpenDashPlugin
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Child = preview,
             };
+            AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));
 
             var all = Ui.LinkButton(PanelMatrix.AllDevices);
             all.FontSize = Theme.SizeSmall;
@@ -315,13 +363,14 @@ namespace OpenDashPlugin
             var tagged = Ui.VStack(PanelMatrix.NewTagGap, tag, frame);
 
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
-            AutomationProperties.SetName(chips, PanelMatrix.PreviewChipsName);
+            var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips };
+            AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);
             Action drawChips = null;
             Action repaint = () =>
             {
                 var options = PanelMatrix.OptionsFor(Settings, m);
                 MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);
-                AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));
+                AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));
                 if (cardPicture != null) MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);
             };
             drawChips = () =>
@@ -350,7 +399,7 @@ namespace OpenDashPlugin
             };
             drawChips();
 
-            var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips);
+            var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chipGroup);
             return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);
         }
 
@@ -567,6 +616,9 @@ namespace OpenDashPlugin
             }
             if (control != null)
             {
+                // A switch has no words of its own and the greyed device press says only its verb: each is
+                // named for a screen reader by its row, as the artboard's aria-labels name them.
+                if (control is ButtonBase) AutomationProperties.SetName(control, title);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 control.HorizontalAlignment = HorizontalAlignment.Right;
                 control.Margin = new Thickness(PanelMatrix.LayerGap, 0, 0, 0);
@@ -612,6 +664,8 @@ namespace OpenDashPlugin
             grid.Children.Add(words);
             if (control != null)
             {
+                // Named by its row, as a layer's switch is.
+                if (control is ButtonBase) AutomationProperties.SetName(control, title);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 control.HorizontalAlignment = HorizontalAlignment.Right;
                 control.Margin = new Thickness(PanelMatrix.OptionGap, 0, 0, 0);
