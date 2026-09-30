@@ -460,8 +460,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// Every live control writes its own setting and nothing else, and saves: a control that reads one
-        /// setting and writes another, or writes nothing, would otherwise pass every other test on the page.
+        /// Every live control reads and writes its own setting and nothing else, and saves: a control that
+        /// reads one setting and writes another, or writes nothing, would otherwise pass every other test on
+        /// the page.
         /// </summary>
         [Fact]
         public void Every_live_control_writes_its_own_setting_and_saves()
@@ -495,6 +496,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("BuildSegmented(Contract.DriverNameFormats, PanelDataTab.DriverNameLabels, Settings.DriverNameFormat,", page);
             Assert.Contains("BuildSegmented(Contract.ClockFormats, PanelDataTab.ClockLabels, Settings.ClockFormat,", page);
             Assert.Contains("BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels, Settings.BlueFlagDetail,", page);
+            // The low fuel box, both sliders and Try read what they write: the stored threshold, each its own
+            // brightness, and the row's own scenario.
+            Assert.Contains("Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax,", page);
+            Assert.Contains("var scenario = alert.ScenarioId;", page);
+            var day = page.IndexOf("var brightness = Ui.Slider(Settings.LightsBrightness,", StringComparison.Ordinal);
+            var night = page.IndexOf("var nightBrightness = Ui.Slider(Settings.LightsNightBrightness,", StringComparison.Ordinal);
+            Assert.True(day >= 0 && night > day);
+            // Each slider's drag repaints the preview with its own brightness, and only while the preview
+            // shows the time of day it sets.
+            var dayPreview = page.IndexOf("v => { if (!night()) paint(false, v, Settings.LightsNightBrightness); }", StringComparison.Ordinal);
+            var nightPreview = page.IndexOf("v => { if (night()) paint(true, Settings.LightsBrightness, v); }", StringComparison.Ordinal);
+            Assert.True(dayPreview > day && dayPreview < night, "the day slider's preview");
+            Assert.True(nightPreview > night, "the night slider's preview");
+
             // The preview's Day and Night write nothing and save nothing.
             var pick = Handler(page, "BuildSegmented(PanelSettings.PreviewValues,");
             Assert.Empty(Writes(pick));
