@@ -89,6 +89,8 @@ namespace OpenDashPlugin.Tests
         /// A glance re-bound through SimHub's Change command is corrected too. Change edits the mapping in
         /// place (trigger.PressType = pressType in 9.12.6) and the Triggers collection does not move, so the
         /// correction watches each mapping's own PropertyChanged, and the model's for a replaced collection.
+        /// Those mappings are SimHub's for the session, so the watch is let go of when the editor is unloaded:
+        /// a handler left on one kept every discarded Shortcuts page alive until SimHub closed.
         /// </summary>
         [Fact]
         public void A_glance_rebound_in_place_is_held_again()
@@ -102,6 +104,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("args.PropertyName == \"PressType\"", body);
             Assert.Contains("watched.PropertyChanged += modelChanged;", body);
             Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
+            // SimHub's mappings outlive the editor, so the watch is let go of when the editor leaves the tree.
+            Assert.Contains("editor.Unloaded += (sender, args) => detach();", body);
+            var detach = body.Substring(body.IndexOf("Action detach = () =>", StringComparison.Ordinal));
+            detach = detach.Substring(0, detach.IndexOf("};", StringComparison.Ordinal));
+            Assert.Contains("mapping.PropertyChanged -= pressTypeChanged;", detach);
+            Assert.Contains("watchedMappings.Clear();", detach);
+            Assert.Contains("watchedTriggers.CollectionChanged -= collectionChanged;", detach);
+            Assert.Contains("watchedTriggers = null;", detach);
+            Assert.Contains("watched.PropertyChanged -= modelChanged;", detach);
+            Assert.Contains("watched = null;", detach);
         }
 
         /// <summary>

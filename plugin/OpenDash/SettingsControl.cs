@@ -986,11 +986,27 @@ namespace OpenDashPlugin
                 if (watched != null) watched.PropertyChanged += modelChanged;
                 rewatchTriggers();
             };
+            // The mappings are SimHub's for the whole session (ControlsEditorModel's Triggers is a new
+            // collection over PluginManager's own InputActionMapping), and a mapping's PropertyChanged holds
+            // its handlers strongly. A handler left on one after the editor has gone kept the editor, and the
+            // whole page it sat on, alive until SimHub closed, and ran once more per discarded page on every
+            // press type change; so the watch is let go of whenever the editor leaves the tree, and Loaded
+            // (or the next Model) takes it up again.
+            Action detach = () =>
+            {
+                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= pressTypeChanged;
+                watchedMappings.Clear();
+                if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
+                watchedTriggers = null;
+                if (watched != null) watched.PropertyChanged -= modelChanged;
+                watched = null;
+            };
             editor.PropertyChanged += (sender, args) =>
             {
                 if (args.PropertyName == null || args.PropertyName == "Model") attach();
             };
             editor.Loaded += (sender, args) => attach();
+            editor.Unloaded += (sender, args) => detach();
             attach();
         }
 
