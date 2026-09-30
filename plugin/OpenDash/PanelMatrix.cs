@@ -657,23 +657,37 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line under Car-specific shift points, saying what the LEDs page's does (PanelLeds.CarLine on the
-        /// LEDs branch) in this page's words: while the switch is on, that the tables are not downloaded when
-        /// they are not, and where the download is, since this page has none; else, with a car loaded, whether
-        /// the tables have measured it, which says whether the gear takes the car's own points or falls back to
-        /// openDash's. No line while the switch is off, or with the tables on disk and no car loaded.
+        /// The line under Car-specific shift points, which says what the LEDs page's line under its car switch
+        /// says (PanelLeds.CarLine on the LEDs branch) and in the same cases: only while the switch is on and a
+        /// car is loaded in a game the tables cover. Then, with no tables on disk, that they are not downloaded
+        /// and where the download is, since this page has none; else whether the tables have measured the
+        /// car, which says whether the gear takes the car's own points or falls back to openDash's. Null
+        /// otherwise, since then there is nothing true to say: the plugin reads iRacing's tables alone
+        /// (CarLightLibrary), so in any other game every car would read as missing from a dataset that may well
+        /// measure it, and a download sent for from there could never apply.
         /// </summary>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded)
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesCoverGame)
         {
-            if (!on) return null;
+            if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
             if (!tablesLoaded) return CarTablesMissing;
-            if (string.IsNullOrWhiteSpace(car)) return null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
         }
 
         /// <summary>The car line with no tables on disk: the tables are downloaded on the LEDs page only
-        /// (ADR 0018), under the section every strip shares.</summary>
-        public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it on the LEDs page, under Every strip.";
+        /// (ADR 0018), under the section every strip shares, named here by that page's own constants.</summary>
+        public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it on the "
+            + PanelLeds.Title + " page, under " + PanelLeds.EveryStripTitle + ".";
+
+        /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing",
+        /// "IRacing"). PanelLeds.TablesGame on the LEDs branch; this page calls that once LEDs lands.</summary>
+        public const string TablesGame = "iRacing";
+
+        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone, tested as the LEDs
+        /// page tests it (PanelLeds.TablesCoverGame on the LEDs branch).</summary>
+        public static bool TablesCoverGame(string game)
+        {
+            return game != null && string.Equals(game.Trim(), TablesGame, StringComparison.OrdinalIgnoreCase);
+        }
 
         /// <summary>Whether the car line is the good news, in green, rather than something to act on, in
         /// caution: only a car the downloaded tables have measured.</summary>

@@ -593,35 +593,63 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The line under Car-specific shift points says what LEDs says (PanelLeds.CarLine), and only
-        /// while the switch is on: with no tables on disk it says so and where the download is, rather than that
-        /// the car is missing from them.</summary>
+        /// while the switch is on and a car is loaded in the game the tables cover: with no tables on disk it
+        /// says so and where the download is, rather than that the car is missing from them; in any other game,
+        /// or with no car, it says nothing.</summary>
         [Fact]
         public void The_car_line_follows_its_switch_and_says_whether_the_tables_have_the_car()
         {
             const string car = "Porsche 911 GT3 R (992)";
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, car, true, true));
-            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, car, false, true));
-            // A fresh install: a new matrix has the switch on, and the tables arrive only from the LEDs page.
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, car, true, true, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, car, false, true, true));
+            // A fresh install: a new matrix has the switch on, and the tables arrive only from the LEDs page,
+            // named by that page's own constants.
             Assert.Equal("Lovely Car Data is not downloaded yet. Download it on the LEDs page, under Every strip.", PanelMatrix.CarTablesMissing);
-            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, car, false, false));
-            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, null, false, false));
-            Assert.Null(PanelMatrix.CarLine(false, car, true, true));
-            Assert.Null(PanelMatrix.CarLine(false, car, false, true));
-            Assert.Null(PanelMatrix.CarLine(false, car, false, false));
-            Assert.Null(PanelMatrix.CarLine(true, null, false, true));
-            Assert.Null(PanelMatrix.CarLine(true, " ", true, true));
+            Assert.Contains(PanelLeds.Title + " page", PanelMatrix.CarTablesMissing);
+            Assert.Contains("under " + PanelLeds.EveryStripTitle + ".", PanelMatrix.CarTablesMissing);
+            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, car, false, false, true));
+            // No car loaded, or a game whose tables the plugin does not read: nothing, tables or not.
+            Assert.Null(PanelMatrix.CarLine(true, null, false, false, true));
+            Assert.Null(PanelMatrix.CarLine(true, null, false, true, true));
+            Assert.Null(PanelMatrix.CarLine(true, " ", true, true, true));
+            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, true, false));
+            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, false, false));
+            Assert.Null(PanelMatrix.CarLine(true, car, true, true, false));
+            // The switch off: nothing.
+            Assert.Null(PanelMatrix.CarLine(false, car, true, true, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, true, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, false, true));
+            // The game the tables cover, as SimHub names it or codes it.
+            Assert.True(PanelMatrix.TablesCoverGame("iRacing"));
+            Assert.True(PanelMatrix.TablesCoverGame("IRacing"));
+            Assert.True(PanelMatrix.TablesCoverGame(" iRacing "));
+            Assert.False(PanelMatrix.TablesCoverGame("Assetto Corsa Competizione"));
+            Assert.False(PanelMatrix.TablesCoverGame("LMU"));
+            Assert.False(PanelMatrix.TablesCoverGame(null));
+            Assert.False(PanelMatrix.TablesCoverGame(string.Empty));
             Assert.True(PanelMatrix.CarLineGood(true, true));
             Assert.False(PanelMatrix.CarLineGood(false, true));
             Assert.False(PanelMatrix.CarLineGood(false, false));
             Assert.False(PanelMatrix.CarLineGood(true, false));
             Assert.Equal(Theme.StatusUpToDate, PanelMatrix.CarLineHex(true));
             Assert.Equal(Theme.Caution, PanelMatrix.CarLineHex(false));
+            // The read, whole: one snapshot of SimHub's report, the tables asked with its own id, and the line
+            // shown, worded and inked from what was read; read once as the page is built and on every tick.
+            Assert.Contains("Action readCar = () => { "
+                + "var live = plugin.Live ?? LiveStatus.None; "
+                + "var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null; "
+                + "var tables = plugin.CarLights.CarCount > 0; "
+                + "var covers = PanelMatrix.TablesCoverGame(live.GameName); "
+                + "var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, covers); "
+                + "carLine.Text = text ?? string.Empty; "
+                + "carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables))); "
+                + "carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible; "
+                + "}; readCar(); OnTick(readCar);", FlatSource());
             var matrix = MatrixSource();
-            Assert.Contains("var tables = plugin.CarLights.CarCount > 0;", matrix);
-            Assert.Contains("PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables)", matrix);
-            Assert.Contains("carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables)));", matrix);
+            // SimHub's live report is read once a tick: the second read LiveCarHasTable makes is not taken.
+            Assert.DoesNotContain("LiveCarHasTable", matrix);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"plugin\.Live\b"));
             Assert.Contains("Settings.FlagBoxMatrixGearCarLadder[i] = on; Save(); readCar();", matrix);
-            Assert.Contains("OnTick(readCar);", matrix);
         }
 
         [Fact]

@@ -458,15 +458,18 @@ namespace OpenDashPlugin
             if (PanelMatrix.ShowsCarShiftPoints(rest, bands))
             {
                 // Whether the tables are downloaded and have the car in the session, while the switch is on;
-                // read on the tick, from properties only, and again when the switch moves.
+                // read on the tick, from properties only, and again when the switch moves. One snapshot of what
+                // SimHub last reported: the car's name, its game and its id all come from it, so a car change on
+                // the data thread between two reads can never pair one car's name with another's answer.
                 var carLine = Ui.Text(string.Empty, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.StatusUpToDate);
                 carLine.TextWrapping = TextWrapping.Wrap;
                 Action readCar = () =>
                 {
                     var live = plugin.Live ?? LiveStatus.None;
-                    var known = plugin.LiveCarHasTable;
+                    var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null;
                     var tables = plugin.CarLights.CarCount > 0;
-                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables);
+                    var covers = PanelMatrix.TablesCoverGame(live.GameName);
+                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, covers);
                     carLine.Text = text ?? string.Empty;
                     carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables)));
                     carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible;
