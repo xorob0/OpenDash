@@ -353,18 +353,24 @@ namespace OpenDashPlugin
         //   Screens    SettingsControl.Screens*.cs (.Screens, .Screens.Face, .Screens.Round,
         //              .Screens.PitWall, .Screens.Companion); PanelScreens.cs, PanelAddScreen.cs,
         //              PanelFacePlan.cs, PanelPitWallPlan.cs, PanelReorder.cs
-        //   LEDs       SettingsControl.Lights.cs; PanelLeds.cs
+        //   LEDs       SettingsControl.Lights.cs; PanelLeds.cs; PanelLights.cs (see below)
         //   Matrix     SettingsControl.Matrix.cs; PanelMatrix.cs
         //   Shortcuts  SettingsControl.Shortcuts.cs; PanelShortcuts.cs
         //   Settings   SettingsControl.Settings.cs; PanelSettings.cs, PanelDataTab.cs
         //   Updates    SettingsControl.Updates*.cs (.Updates, .Updates.Plugin, .Updates.Packages,
         //              .Updates.Lights); PanelUpdates.cs, PanelPackageRow.cs, PanelLightRows.cs,
         //              PanelConfirmation.cs
-        //   shared     PanelCopy.cs and PanelLights.cs hold words several pages draw. Neither has per-page
-        //              regions: a page adds the constants it needs and changes only constants its own page
-        //              alone draws, never one another page reads. PanelCopy.LightRow is the Updates page's
-        //              (the Matrix header draws PanelMatrix.ProfileRow); the empty states are the pages'
-        //              own (PanelScreens.NoScreens, PanelLeds.NoStrips, PanelMatrix.NoPanels).
+        //   shared     PanelCopy.cs holds words several pages draw. It has no per-page regions: a page adds
+        //              the constants it needs and changes only constants its own page alone draws, never one
+        //              another page reads. PanelCopy.LightRow is the Updates page's (the Matrix header draws
+        //              PanelMatrix.ProfileRow); the empty states are the pages' own (PanelScreens.NoScreens,
+        //              PanelLeds.NoStrips, PanelMatrix.NoPanels).
+        //   PanelLights.cs is the LEDs page's to edit, so two agents never edit it at once. The Matrix page
+        //              draws some of its words today (PanelsTitle, AddPanel, PanelAdded and the rest); it
+        //              copies the ones it draws into PanelMatrix.cs and rewords its copy there. What the shell
+        //              reads keeps its name: BarSides (Profiles), CarTablesCaption (OpenDash.cs),
+        //              CarTablesFailed and CarTablesNone (CarLightService), NoDevices (LedDeviceSurvey), and
+        //              whatever SettingsControl.Matrix.cs still reads until Matrix has its copy.
         //   shell      everything else: SettingsControl.cs and its other partials (.Sidebar, .Sheet, .Status,
         //              .Live, .Messages, .Preview, .Bindings, .Profiles), Widgets*.cs, Segmented.cs,
         //              PanelShell.cs, PanelKit.cs, PanelNav.cs, PanelAttention.cs, PanelSearch.cs,

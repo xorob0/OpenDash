@@ -247,7 +247,12 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A capture script mirrors this to click a page without reading the tree, which is why it is a
         /// function of the geometry rather than a measurement. The rail puts its items at the same heights
-        /// less the live card's difference, since the card shrinks to its dot there.
+        /// less the live card's difference, since the card shrinks to its dot there: 63 px higher than on the
+        /// full sidebar, at <see cref="ItemCentreX"/>'s 27.5 across rather than 107.5. A mirror takes the
+        /// layout from <see cref="Layout"/> of the plugin control's width, not SimHub's window's, clicks
+        /// (ItemCentreX(layout), ItemCentre(i, layout)) and <see cref="UpdatesCentre"/> for Updates, and carries
+        /// PanelNav.Pages' order, PanelNav.GapAfter and PanelMetrics.BorderWeight as well as the constants
+        /// here, since all three feed these numbers.
         /// </remarks>
         public static double ItemCentre(int index, PanelLayout layout = PanelLayout.Full)
         {
