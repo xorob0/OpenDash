@@ -6,6 +6,7 @@
 // reading the files the way PanelIconsTests reads PluginComponents.dc.html.
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -136,33 +137,130 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(27.5, PanelShell.ItemCentreX(PanelLayout.Compact));
         }
 
+        /// <summary>
+        /// The column takes all the width SimHub gives the panel. The artboards are drawn 1200 wide as a
+        /// frame, not as a maximum: at 1200 the column is their 896, and past it the column keeps growing,
+        /// left-aligned beside the sidebar, with nothing centred and no ceiling.
+        /// </summary>
         [Fact]
-        public void The_content_grows_to_its_ceiling_and_no_further_unless_it_is_the_rig()
+        public void The_content_takes_the_whole_width_right_of_the_sidebar()
         {
-            // 1200: the artboard's own width, 1200 - 216 - 88.
+            // 1200: the artboard's own frame, 1200 - 216 - 88.
             Assert.Equal(896, PanelShell.ContentWidth(1200));
-            // 3840: capped.
-            Assert.Equal(1112, PanelShell.ContentWidth(3840));
-            Assert.Equal(3840 - 216 - 88, PanelShell.ContentWidth(3840, wide: true));
+            // 3840: no ceiling. The 1112 the foundation capped at left two thirds of a 4K window empty.
+            Assert.Equal(3840 - 216 - 88, PanelShell.ContentWidth(3840));
             // 900: the rail and a 32 gutter.
             Assert.Equal(900 - 56 - 64, PanelShell.ContentWidth(900));
             // 700: the rail and a 20 gutter.
             Assert.Equal(700 - 56 - 40, PanelShell.ContentWidth(700));
             Assert.Equal(0, PanelShell.ContentWidth(10));
-            // The main column's scroll bar comes out of the room wherever the room is under the ceiling:
-            // a 1100 px window has 1100 - 216 - 88 - 17, and a 3840 one is still capped.
-            Assert.Equal(1100 - 216 - 88 - 17, PanelShell.ContentWidth(1100, false, 17));
-            Assert.Equal(1112, PanelShell.ContentWidth(3840, false, 17));
-            Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, true, 17));
+            // The main column's scroll bar comes out of the room at every width.
+            Assert.Equal(1100 - 216 - 88 - 17, PanelShell.ContentWidth(1100, 17));
+            Assert.Equal(3840 - 216 - 88 - 17, PanelShell.ContentWidth(3840, 17));
+        }
+
+        /// <summary>Nothing in the panel holds the column back or centres it: the main column's frame, the hosts
+        /// inside it and the scroll around it are never given a width, a MaxWidth or an alignment other than
+        /// the frame's Stretch, in any of the shell's files, and no page is wider than the rest.</summary>
+        [Fact]
+        public void The_shell_neither_caps_nor_centres_the_column()
+        {
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
+            Assert.Contains("mainScroll.Content = mainFrame;", shell);
+            Assert.Contains("private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Stretch };", shell);
+            Assert.DoesNotContain("WidePage", shell);
+            Assert.Null(typeof(PanelShell).GetField("ContentMax"));
+
+            var code = string.Concat(RepoPaths.SettingsControlCode());
+            const string hosts = @"\b(?:mainFrame|pageHost|messageHost|mainScroll)";
+            // A width or a ceiling set on one of them after it is made.
+            Assert.Empty(Regex.Matches(code, hosts + @"\.(?:Max|Min)?Width\s*=(?!=)"));
+            Assert.Empty(Regex.Matches(code, hosts + @"\.(?:HorizontalAlignment|HorizontalContentAlignment)\s*=(?!=)"));
+            // Or in the initializer it is made with: only the frame's Stretch and the page host's Stretch.
+            foreach (Match made in Regex.Matches(code, hosts + @" = new \w+\s*(?:\([^)]*\))?\s*\{([^}]*)\}"))
+            {
+                var init = made.Groups[1].Value;
+                Assert.DoesNotMatch(@"\b(?:Max|Min)?Width\s*=", init);
+                foreach (Match alignment in Regex.Matches(init, @"\bHorizontal(?:Content)?Alignment\s*=\s*([\w.]+)"))
+                {
+                    Assert.Equal("HorizontalAlignment.Stretch", alignment.Groups[1].Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A resize rebuilds only a page drawn from what moved. With no ceiling the content width follows the
+        /// control pixel for pixel, and rebuilding on every pixel reloaded Screens' live dashboard and walked
+        /// SimHub's devices at every drag of a 4K window.
+        /// </summary>
+        [Fact]
+        public void A_resize_rebuilds_only_a_page_drawn_from_what_moved()
+        {
+            const double bar = 17;
+            const double whole = double.PositiveInfinity;
+            // 3000 to 3840: Rig's canvas read the whole width and is laid out again.
+            Assert.True(PanelShell.RebuildsOnResize(3000, 3840, whole, bar));
+            // A page that never read the width (Home) is left alone: its rows and grids stretch without it.
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 0, bar));
+            // A page that read it only up to the preview's 880 is left alone past it...
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 880, bar));
+            Assert.False(PanelShell.RebuildsOnResize(1300, 3840, 880, bar));
+            // ...and rebuilt below it, where the preview is drawn at the column.
+            Assert.True(PanelShell.RebuildsOnResize(1100, 1180, 880, bar));
+            // Under a pixel is not a move.
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3000.5, whole, bar));
+            // TwoColumns flipping rebuilds a page that read nothing, at about 1081 px...
+            Assert.True(PanelShell.RebuildsOnResize(1050, 1100, 0, bar));
+            // ...and so does the layout, the rail to the full sidebar and the rail to the compact gutter.
+            Assert.True(PanelShell.RebuildsOnResize(900, 1000, 0, bar));
+            Assert.True(PanelShell.RebuildsOnResize(800, 700, 0, bar));
+            Assert.False(PanelShell.RebuildsOnResize(800, 900, 0, bar));
+
+            // The shell asks the rule, reading the width counts only when a build reads it, and a build starts
+            // having read none.
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
+            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);", shell);
+            Assert.Contains("private double ContentWidth => ContentWidthUpTo(double.PositiveInfinity);", shell);
+            Assert.Contains("private bool TwoColumns => PanelShell.TwoColumns(layout, ColumnRoom);", shell);
+            var build = shell.Substring(shell.IndexOf("private FrameworkElement BuildPage(PanelRoute to)", StringComparison.Ordinal));
+            build = build.Substring(0, build.IndexOf("switch (to.Page)", StringComparison.Ordinal));
+            Assert.Contains("builtWidthRead = 0;", build);
+            // Only a page's own build reads ContentWidth: the shell reads ColumnRoom, which does not count, and
+            // names ContentWidth only to declare it.
+            string Code(string name) => RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == name));
+            int Reads(string text) => Regex.Matches(text, @"\bContentWidth\b(?!\s*\()").Count;
+            Assert.Equal(1, Reads(shell));
+            Assert.Equal(0, Reads(Code("SettingsControl.Sheet.cs")));
+            Assert.Equal(0, Reads(Code("SettingsControl.Sidebar.cs")));
+            Assert.Equal(0, Reads(Code("SettingsControl.Messages.cs")));
         }
 
         [Fact]
-        public void Two_columns_only_beside_the_full_sidebar_and_with_the_room()
+        public void Two_columns_beside_the_full_sidebar_wherever_there_is_the_room()
         {
             Assert.True(PanelShell.TwoColumns(PanelLayout.Full, 760));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Full, 759));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Rail, 900));
             Assert.False(PanelShell.TwoColumns(PanelLayout.Compact, 900));
+            // With no ceiling it holds from about 1080 px up, a 4K window included, scroll bar and all.
+            Assert.False(PanelShell.TwoColumns(PanelShell.Layout(1000), PanelShell.ContentWidth(1000, 17)));
+            Assert.True(PanelShell.TwoColumns(PanelShell.Layout(1200), PanelShell.ContentWidth(1200, 17)));
+            Assert.True(PanelShell.TwoColumns(PanelShell.Layout(3840), PanelShell.ContentWidth(3840, 17)));
+        }
+
+        /// <summary>Prose keeps a measure: a caption or a paragraph wraps at .cap's 620 by default however wide
+        /// the column, set against its left edge.</summary>
+        [Fact]
+        public void Prose_keeps_a_readable_measure()
+        {
+            Assert.Equal(620, PanelShell.ProseMaxWidth);
+            string Code(string name) => RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", name));
+            Assert.Contains("public static TextBlock Caption(string text, double maxWidth = PanelShell.ProseMaxWidth)", Code("Widgets.cs"));
+            var kit = Code("Widgets.Kit.cs");
+            var prose = kit.Substring(kit.IndexOf("public static TextBlock Prose(", StringComparison.Ordinal));
+            prose = prose.Substring(0, prose.IndexOf("return block;", StringComparison.Ordinal));
+            Assert.Contains("block.MaxWidth = PanelShell.ProseMaxWidth;", prose);
+            Assert.Contains("block.HorizontalAlignment = HorizontalAlignment.Left;", prose);
         }
 
         [Theory]
@@ -171,6 +269,8 @@ namespace OpenDashPlugin.Tests
         [InlineData(700, 240, 16, 3, PanelLayout.Full, 2)]
         [InlineData(200, 240, 16, 3, PanelLayout.Full, 1)]
         [InlineData(4000, 240, 16, 3, PanelLayout.Full, 3)]
+        // Screens' six at a 4K column: every column in use, the cards stretching to fill the row.
+        [InlineData(3840 - 216 - 88 - 17, 138, 10, 6, PanelLayout.Full, 6)]
         // The narrowest layout holds two whatever the room.
         [InlineData(4000, 100, 16, 6, PanelLayout.Compact, 2)]
         [InlineData(0, 100, 16, 6, PanelLayout.Full, 1)]
@@ -237,18 +337,14 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_sheet_lies_against_the_main_column_and_not_the_far_edge()
+        public void A_sheet_lies_against_the_right_edge_of_the_column_which_is_the_controls()
         {
-            // The column stops at 216 + 1112 + 2 x 44 = 1416; a sheet on a wider control stands in by the rest.
-            Assert.Equal(0, PanelShell.SheetRightGap(1200));
-            Assert.Equal(0, PanelShell.SheetRightGap(1416));
-            Assert.Equal(1600 - 1416, PanelShell.SheetRightGap(1600));
-            Assert.Equal(3840 - 1416, PanelShell.SheetRightGap(3840));
-            // Rig takes the whole column, so its sheet keeps the control's edge.
-            Assert.Equal(0, PanelShell.SheetRightGap(3840, wide: true));
-            Assert.Equal(0, PanelShell.SheetRightGap(700));
+            // The column fills the control, so the sheet docks right with nothing standing it in, at 4K too.
+            Assert.Null(typeof(PanelShell).GetMethod("SheetRightGap"));
+            Assert.Equal(560, PanelShell.SheetWidth(3840));
             var sheet = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Sheet.cs"));
-            Assert.Contains("PanelShell.SheetRightGap(controlWidth, WidePage(route.Page))", sheet);
+            Assert.Contains("sheetPanel.HorizontalAlignment = HorizontalAlignment.Right;", sheet);
+            Assert.DoesNotContain("sheetPanel.Margin", sheet);
         }
 
         [Fact]
@@ -366,8 +462,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(64, PanelShell.NumberInputWidth);
             Assert.Equal(8, PanelShell.NumberInputPaddingX);
             Assert.Equal(15, PanelShell.NumberInputTextSize);
-            // The main column's ceiling, and the room two columns need.
-            Assert.Equal(1112, PanelShell.ContentMax);
+            // The room two columns need. The main column has no ceiling; the artboards' 1200 is a frame.
             Assert.Equal(760, PanelShell.TwoColumnFrom);
         }
 
