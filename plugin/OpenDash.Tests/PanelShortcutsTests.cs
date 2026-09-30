@@ -111,9 +111,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(zones.Select(z => z + " · next page").Concat(zones.Select(z => z + " · previous page")), rows.Select(r => r.Label));
             Assert.Equal(order.Select(l => Contract.CycleZoneAction(Face, l)).Concat(order.Select(l => Contract.CycleZoneBackAction(Face, l))), rows.Select(r => r.Action));
             Assert.Equal(rows.Select(r => "Rim · " + r.Label), rows.Select(r => r.BinderName));
-            // What each row does in the clash line: a previous-page row cycles its zone back, never forward.
+            // What each row does in the clash line: a previous-page row takes its zone to its previous page.
             Assert.Equal(zones.Select(z => PanelShortcuts.ZoneDoes(z, true)).Concat(zones.Select(z => PanelShortcuts.ZoneDoes(z, false))), rows.Select(r => r.Does));
-            Assert.All(rows.Skip(zones.Count), r => Assert.EndsWith(" back", r.Does));
+            Assert.All(rows.Skip(zones.Count), r => Assert.EndsWith(" to its previous page", r.Does));
             // The previous page rows are this release's, and they alone carry the New tag.
             Assert.Equal(zones.Select(z => false).Concat(zones.Select(z => true)), rows.Select(r => r.IsNew));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
@@ -273,7 +273,7 @@ namespace OpenDashPlugin.Tests
                 Use("KeyboardReaderPlugin.B", null, PanelShortcuts.RigActionDoes(Contract.BrightnessDownAction), longPress),
             }));
             // The glance is held (During), which answers every press, so it doubles whatever shares its button.
-            Assert.Equal("Keyboard · F9 holds the quick glance and cycles zone A on Rim.", PanelShortcuts.Clashes(new[]
+            Assert.Equal("Keyboard · F9 holds the quick glance and cycles Zone A on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes, PanelShortcuts.FiresOn("During")),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
@@ -296,15 +296,16 @@ namespace OpenDashPlugin.Tests
         {
             var shortPress = PanelShortcuts.Fires.OnShortPress;
             var longPress = PanelShortcuts.Fires.OnLongPress;
-            // Short on zone A, long on zone A back and on band D back: only the two long presses are doubled.
-            Assert.Equal("Keyboard · F9 cycles zone A back and cycles band D back on Rim.", PanelShortcuts.Clashes(new[]
+            // A short press on Zone A's next page, long presses on Zone A's and Band D's previous page: only the
+            // two long presses are doubled.
+            Assert.Equal("Keyboard · F9 takes Zone A to its previous page and Band D to its previous page on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", false), longPress),
             }).Single().Text);
             // One row bound on both gestures of a button answers both, so a long press elsewhere doubles it.
-            Assert.Equal("Keyboard · F9 cycles zone A and cycles zone A back on Rim.", PanelShortcuts.Clashes(new[]
+            Assert.Equal("Keyboard · F9 cycles Zone A and takes Zone A to its previous page on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
@@ -323,23 +324,26 @@ namespace OpenDashPlugin.Tests
                 Use("JoystickPlugin.CSL_Elite_B07", "Rim", zoneB),
             });
             var clash = Assert.Single(clashes);
-            // The artboard's line, less its aside ("Fine if you meant it."), which voice.md deletes.
-            Assert.Equal("CSL Elite · 7 cycles zone B on both Main dash and Rim.", clash.Text);
+            // The artboard's line, less its aside ("Fine if you meant it."), which voice.md deletes, and with the
+            // zone as the rows write it, "Zone B", where the artboard writes "zone B".
+            Assert.Equal("CSL Elite · 7 cycles Zone B on both Main dash and Rim.", clash.Text);
             Assert.Equal("CSL Elite · 7", clash.Lead);
-            Assert.Equal("cycles zone B on both Main dash and Rim.", clash.Rest);
+            Assert.Equal("cycles Zone B on both Main dash and Rim.", clash.Rest);
             Assert.Equal("JoystickPlugin.CSL_Elite_B07", clash.Trigger);
         }
 
         [Fact]
         public void A_clash_line_reads_for_any_pair_of_rows()
         {
-            Assert.Equal("cycles band D back", PanelShortcuts.ZoneDoes("Band D", false));
-            Assert.Equal("Keyboard · N toggles night mode and cycles zone A on Rim.", PanelShortcuts.Clashes(new[]
+            Assert.Equal("cycles Band D", PanelShortcuts.ZoneDoes("Band D", true));
+            Assert.Equal("takes Band D to its previous page", PanelShortcuts.ZoneDoes("Band D", false));
+            // A screen's uses come before the rig's, so "on Rim" is said of them alone.
+            Assert.Equal("Keyboard · N cycles Zone A on Rim and toggles night mode.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.N", null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)),
                 Use("KeyboardReaderPlugin.N", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
             }).Single().Text);
-            Assert.Equal("Keyboard · F9 cycles zone A and holds the quick glance on Rim.", PanelShortcuts.Clashes(new[]
+            Assert.Equal("Keyboard · F9 cycles Zone A and holds the quick glance on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes),
@@ -350,11 +354,38 @@ namespace OpenDashPlugin.Tests
                 Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
                 Use("KeyboardReaderPlugin.F9", "Pit wall", PanelShortcuts.GlanceDoes),
             }).Single().Text);
-            Assert.Equal("Keyboard · B turns the brightness up and turns the brightness down.", PanelShortcuts.Clashes(new[]
+            // A verb the rows share is said once.
+            Assert.Equal("Keyboard · B turns the brightness up and down.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.B", null, PanelShortcuts.RigActionDoes(Contract.BrightnessUpAction)),
                 Use("KeyboardReaderPlugin.B", null, PanelShortcuts.RigActionDoes(Contract.BrightnessDownAction)),
             }).Single().Text);
+        }
+
+        [Fact]
+        public void A_clash_line_says_each_screens_uses_then_the_rigs()
+        {
+            Assert.Equal("Keyboard · N cycles Zone A and Zone C on Rim, and toggles night mode.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.N", null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)),
+                Use("KeyboardReaderPlugin.N", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+                Use("KeyboardReaderPlugin.N", "Rim", PanelShortcuts.ZoneDoes("Zone C", true)),
+            }).Single().Text);
+            Assert.Equal("Keyboard · F9 cycles Zone A on Rim and holds the quick glance on Main dash.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+                Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
+            }).Single().Text);
+        }
+
+        [Fact]
+        public void A_use_is_told_apart_by_its_screen()
+        {
+            // The place is what keeps two screens' uses of one action apart: without it, Main dash's and Rim's
+            // zone B would be one use, and the artboard's line would never be drawn.
+            var zoneB = PanelShortcuts.ZoneDoes("Zone B", true);
+            Assert.Single(PanelShortcuts.Clashes(new[] { Use("JoystickPlugin.CSL_Elite_B07", "Main dash", zoneB), Use("JoystickPlugin.CSL_Elite_B07", "Rim", zoneB) }));
+            Assert.Empty(PanelShortcuts.Clashes(new[] { Use("JoystickPlugin.CSL_Elite_B07", null, zoneB), Use("JoystickPlugin.CSL_Elite_B07", null, zoneB) }));
         }
 
         [Fact]

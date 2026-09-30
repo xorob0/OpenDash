@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace OpenDashPlugin
 {
@@ -347,11 +348,15 @@ namespace OpenDashPlugin
             public string Text { get { return Lead + " " + Rest; } }
         }
 
-        /// <summary>What a zone's row does, in the clash line: "cycles zone B", "cycles band D back".</summary>
+        /// <summary>
+        /// What a zone's row does, in the clash line, with the zone as the rows write it: "cycles Zone B", as
+        /// the artboard's line has it for a next page, and "takes Band D to its previous page", in the row's own
+        /// words for the other. The artboard writes "zone B" in lower case; the rows, the Screens picture and
+        /// the Flag display all write the zone's name "Zone B" and "Band D", and so does the line.
+        /// </summary>
         public static string ZoneDoes(string zoneLabel, bool next)
         {
-            var zone = string.IsNullOrEmpty(zoneLabel) ? zoneLabel : char.ToLowerInvariant(zoneLabel[0]) + zoneLabel.Substring(1);
-            return "cycles " + zone + (next ? string.Empty : " back");
+            return next ? "cycles " + zoneLabel : "takes " + zoneLabel + " to its " + PreviousPageTitle.ToLowerInvariant();
         }
 
         public const string GlanceDoes = "holds the quick glance";
@@ -370,7 +375,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Every trigger bound to more than one row, in the order the page first meets it, each with the line
-        /// that says what it does where: "CSL Elite · 7 cycles zone B on both Main dash and Rim." It says what
+        /// that says what it does where: "CSL Elite · 7 cycles Zone B on both Main dash and Rim." It says what
         /// is doubled and nothing more, since doubling a button on purpose is a fair thing to do.
         /// </summary>
         /// <remarks>
@@ -430,6 +435,12 @@ namespace OpenDashPlugin
             public bool OnLong;
         }
 
+        /// <summary>
+        /// The line after the trigger's name. One action on several screens: "cycles Zone B on both Main dash
+        /// and Rim." Otherwise each screen's uses, in the page's order, with the screen after them, then the
+        /// rig's own, which belong to no screen: "cycles Zone A on Rim and toggles night mode." A verb the
+        /// uses share is said once: "turns the brightness up and down".
+        /// </summary>
         private static string ClashRest(IList<BindingUse> uses)
         {
             var sameDoes = uses.All(use => use.Does == uses[0].Does);
@@ -439,9 +450,39 @@ namespace OpenDashPlugin
                 var places = uses.Select(use => use.Place).ToList();
                 return uses[0].Does + " on " + (places.Count == 2 ? "both " : string.Empty) + Listed(places) + ".";
             }
-            var samePlace = everyPlaced && uses.All(use => use.Place == uses[0].Place);
-            if (samePlace) return Listed(uses.Select(use => use.Does).ToList()) + " on " + uses[0].Place + ".";
-            return Listed(uses.Select(use => string.IsNullOrEmpty(use.Place) ? use.Does : use.Does + " on " + use.Place).ToList()) + ".";
+            var parts = new List<string>();
+            foreach (var place in uses.Where(use => !string.IsNullOrEmpty(use.Place)).Select(use => use.Place).Distinct(StringComparer.Ordinal))
+            {
+                parts.Add(Folded(uses.Where(use => use.Place == place).Select(use => use.Does).ToList()) + " on " + place);
+            }
+            var rig = uses.Where(use => string.IsNullOrEmpty(use.Place)).Select(use => use.Does).ToList();
+            if (rig.Count > 0) parts.Add(Folded(rig));
+            return Series(parts) + ".";
+        }
+
+        /// <summary>What several rows do, with the words they all start with said once: "turns the brightness
+        /// up and down", "cycles Zone A and Zone C". Listed whole when they share no first word, or when one
+        /// would be left with nothing after it.</summary>
+        private static string Folded(IList<string> does)
+        {
+            if (does.Count == 1) return does[0];
+            // A zone's name is one word here, so that "Zone A and Zone C" is never cut to "Zone A and C".
+            var words = does.Select(one => Regex.Matches(one, @"(?:Zone|Band) \S+|\S+").Cast<Match>().Select(match => match.Value).ToArray()).ToList();
+            var shared = 0;
+            while (words.All(one => one.Length > shared + 1) && words.All(one => one[shared] == words[0][shared])) shared++;
+            if (shared == 0) return Listed(does);
+            var prefix = string.Join(" ", words[0].Take(shared));
+            return prefix + " " + Listed(words.Select(one => string.Join(" ", one.Skip(shared))).ToList());
+        }
+
+        /// <summary>"A and B", or "A on Rim, and B" once a part has an "and" of its own.</summary>
+        private static string Series(IList<string> parts)
+        {
+            if (parts.Count > 1 && parts.Any(part => part.Contains(" and ")))
+            {
+                return string.Join(", ", parts.Take(parts.Count - 1)) + ", and " + parts[parts.Count - 1];
+            }
+            return Listed(parts);
         }
 
         /// <summary>"A and B", "A, B and C".</summary>
