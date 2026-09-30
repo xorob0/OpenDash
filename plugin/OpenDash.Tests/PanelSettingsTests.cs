@@ -781,21 +781,34 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains("Settings." + pair[1] + " = " + value + ";", handler);
                 Assert.Contains("Save();", handler);
             }
-            // Each segmented control reads the setting it writes.
-            Assert.Contains("BuildSegmented(Contract.PositionModes, PanelDataTab.PositionLabels, Settings.PositionMode,", page);
-            Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels, Settings.DeltaReference,", page);
-            Assert.Contains("BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels, Settings.DeltaPrecision,", page);
-            Assert.Contains("BuildSegmented(Contract.SessionProgressModes, PanelDataTab.SessionLabels, Settings.SessionProgress,", page);
-            Assert.Contains("BuildSegmented(Contract.DriverNameFormats, PanelDataTab.DriverNameLabels, Settings.DriverNameFormat,", page);
-            Assert.Contains("BuildSegmented(Contract.ClockFormats, PanelDataTab.ClockLabels, Settings.ClockFormat,", page);
-            Assert.Contains("BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels, Settings.BlueFlagDetail,", page);
-            // The low fuel box, both sliders and Try read what they write: the stored threshold, each its own
-            // brightness, and the row's own scenario.
-            Assert.Contains("Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax,", page);
+            // Each control reads the setting it writes, under the name its row draws (Each_row_draws_its_own_control_and_words).
+            Assert.Contains("var position = BuildSegmented(Contract.PositionModes, PanelDataTab.PositionLabels, Settings.PositionMode,", page);
+            Assert.Contains("var delta = BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels, Settings.DeltaReference,", page);
+            Assert.Contains("var deltaPrecision = BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels, Settings.DeltaPrecision,", page);
+            Assert.Contains("var session = BuildSegmented(Contract.SessionProgressModes, PanelDataTab.SessionLabels, Settings.SessionProgress,", page);
+            Assert.Contains("var driverName = BuildSegmented(Contract.DriverNameFormats, PanelDataTab.DriverNameLabels, Settings.DriverNameFormat,", page);
+            Assert.Contains("var clock = BuildSegmented(Contract.ClockFormats, PanelDataTab.ClockLabels, Settings.ClockFormat,", page);
+            Assert.Contains("var blueFlag = BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels, Settings.BlueFlagDetail,", page);
+            Assert.Contains("var teamName = BuildToggle(Settings.DriverNameTeam,", page);
+            Assert.Contains("var flagsInPitLane = BuildToggle(Settings.FlagsInPitLane,", page);
+            Assert.Contains("var nightMode = BuildToggle(Settings.LightsNightMode,", page);
+            // The three alert boxes, each whole: what it reads, its default and clamp, and what it writes.
+            Assert.Contains("var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });", page);
+            Assert.Contains("var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); });", page);
+            Assert.Contains("var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); });", page);
+            // Try opens the row's own scenario.
             Assert.Contains("var scenario = alert.ScenarioId;", page);
+            // Each slider reads, commits and previews its own brightness: the day's between the two calls, the
+            // night's after the second.
             var day = page.IndexOf("var brightness = Ui.Slider(Settings.LightsBrightness,", StringComparison.Ordinal);
             var night = page.IndexOf("var nightBrightness = Ui.Slider(Settings.LightsNightBrightness,", StringComparison.Ordinal);
             Assert.True(day >= 0 && night > day);
+            var dayCommit = page.IndexOf("v => { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); },", StringComparison.Ordinal);
+            var nightCommit = page.IndexOf("v => { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); },", StringComparison.Ordinal);
+            Assert.True(dayCommit > day && dayCommit < night, "the day slider's commit");
+            Assert.True(nightCommit > night, "the night slider's commit");
+            Assert.Single(Regex.Matches(page, @"Settings\.LightsBrightness = v;"));
+            Assert.Single(Regex.Matches(page, @"Settings\.LightsNightBrightness = v;"));
             // Each slider's drag repaints the preview with its own brightness, and only while the preview
             // shows the time of day it sets.
             var dayPreview = page.IndexOf("v => { if (!night()) paint(false, v, Settings.LightsNightBrightness); }", StringComparison.Ordinal);
@@ -807,6 +820,99 @@ namespace OpenDashPlugin.Tests
             var pick = Handler(page, "BuildSegmented(PanelSettings.PreviewValues,");
             Assert.Empty(Writes(pick));
             Assert.DoesNotContain("Save()", pick);
+        }
+
+        /// <summary>
+        /// Every row draws its own control and its own words: a control drawn on another's row, a caption
+        /// moved onto another row or dropped, or a title given another's control, would otherwise pass, since
+        /// each control's write and each constant's value are held on their own. Each row is pinned whole.
+        /// </summary>
+        [Fact]
+        public void Each_row_draws_its_own_control_and_words()
+        {
+            var page = Page();
+            foreach (var row in new[]
+            {
+                "SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),",
+                "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),",
+                "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),",
+                "SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),",
+                "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),",
+                "Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),",
+                "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),",
+                "Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),",
+                "SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));",
+                "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title, SettingsGreyedChoice(PanelSettings.YellowFlagLabels))), PanelSoon.YellowFlags),",
+                "Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()));",
+                "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.LowFuelTitle), lowFuel, null, temperature, surfaces, null);",
+                "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.OilTempTitle), oilTemp, PanelSettings.TemperatureCaption, temperature, surfaces, null);",
+                "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.WaterTempTitle), waterTemp, PanelSettings.TemperatureCaption, temperature, surfaces, null);",
+                "SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),",
+                "SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),",
+                "Ui.Row(PanelSettings.NightModeTitle, null, nightMode),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.DashTheme.Title, SettingsGreyedChoice(PanelSettings.ThemeLabels))), PanelSoon.DashTheme),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.ColourVision.Title, SettingsGreyedChoice(PanelSettings.ColourVisionLabels))), PanelSoon.ColourVision),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.Colours.Title, SettingsGreyedChoice(PanelSettings.ColoursLabels))), PanelSoon.Colours));",
+                "SettingsHinted(Ui.Input(string.Empty, PanelSettings.NameInputWidth), PanelSettings.FirstNameHint),",
+                "SettingsHinted(Ui.Input(string.Empty, PanelSettings.NameInputWidth), PanelSettings.SurnameHint));",
+                "Ui.Soon(Ui.SettingRow(PanelSoon.BrandRaceNumber.Title, SettingsHinted(SettingsNumberField(string.Empty), PanelSettings.RaceNumberHint)), PanelSoon.BrandRaceNumber),",
+                "Ui.Soon(Ui.SettingRow(PanelSoon.BrandLogo.Title, Ui.Button(PanelSettings.LogoButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.BrandLogo),",
+                "Ui.Soon(Ui.SettingRow(PanelSoon.IdleScreenBackground.Title, Ui.Button(PanelSettings.IdleBackgroundButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.IdleScreenBackground));",
+            })
+            {
+                Assert.Contains(row, page);
+            }
+
+            // The threshold cell: the word, the box, then the unit -- SimHub's temperature unit where the row
+            // has none of its own.
+            Assert.Contains("if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));", page);
+            Assert.Contains("var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);", page);
+            Assert.Contains("if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));", page);
+            // A name's caption under it.
+            Assert.Matches(@"if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);", page);
+
+            // The table's head in the artboard's order: Alert, then Threshold.
+            var alertHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);", StringComparison.Ordinal);
+            var thresholdHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);", StringComparison.Ordinal);
+            Assert.True(alertHead >= 0 && thresholdHead > alertHead, "the table's head");
+
+            // The greyed rows' words where they are drawn: the fuel unit SimHub's, litres when it cannot say;
+            // the tyre buttons main then secondary; every greyed option disabled and the first chosen.
+            Assert.Contains("var fuelUnit = PanelSettings.FuelUnit(units[3]) ?? PanelSettings.FuelTargetUnitFallback;", page);
+            var main = page.IndexOf("Ui.Button(PanelSettings.TyreDisplayLabels[0], PanelButtonKind.Outline, PanelButtonSize.Small),", StringComparison.Ordinal);
+            var secondary = page.IndexOf("Ui.Button(PanelSettings.TyreDisplayLabels[1], PanelButtonKind.Outline, PanelButtonSize.Small));", StringComparison.Ordinal);
+            Assert.True(main >= 0 && secondary > main, "the tyre buttons");
+            Assert.Contains("var options = labels.Select((label, i) => new Segmented.Option(\"option\" + i, label, true));", page);
+            Assert.Contains("return new Segmented(options, \"option0\");", page);
+
+            // The preview's Day and Night start on what the preview shows.
+            Assert.Contains("var pick = BuildSegmented(PanelSettings.PreviewValues, PanelSettings.PreviewLabels, night() ? PanelSettings.PreviewNight : PanelSettings.PreviewDay, value =>", page);
+        }
+
+        /// <summary>
+        /// A temperature box commits on Enter and on losing focus -- which the shell's CommitTyping raises on a
+        /// rebuild -- through ParseThreshold, writes only when the value moved, and shows the unit's default
+        /// as its placeholder. ParseThreshold and ThresholdText are tested on their own; this holds the box's
+        /// use of them.
+        /// </summary>
+        [Fact]
+        public void A_temperature_box_commits_on_enter_and_on_leaving_it()
+        {
+            var page = Page();
+            var start = page.IndexOf("private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed)", StringComparison.Ordinal);
+            Assert.True(start >= 0);
+            var end = page.IndexOf("\n        }\n", start, StringComparison.Ordinal);
+            var box = page.Substring(start, end - start);
+            Assert.Contains("var box = SettingsNumberField(PanelSettings.ThresholdText(value));", box);
+            Assert.Contains("var last = value ?? 0;", box);
+            Assert.Contains("var next = PanelSettings.ParseThreshold(box.Text, last, max);", box);
+            Assert.Contains("box.Text = PanelSettings.ThresholdText(next);", box);
+            Assert.Matches(@"if \(next == last\) return;\s*last = next;\s*changed\(next\);", box);
+            Assert.Contains("box.LostFocus += (sender, args) => commit();", box);
+            Assert.Contains("if (args.Key == Key.Enter) commit();", box);
+            Assert.Contains("return SettingsHinted(box, PanelSettings.ThresholdText(fallback));", box);
         }
 
         /// <summary>
