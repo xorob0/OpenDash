@@ -448,6 +448,32 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(110, PanelUpdates.VersionWidth(Column(3840), hasPress: true));
         }
 
+        /// <summary>
+        /// The build reads the content width only up to the widest width it draws anything differently at:
+        /// past 560 the version column, the press beside its words and everything else are the same at every
+        /// width, so a resize there does not rebuild the page, which walks SimHub's LED devices, parses the
+        /// matrix profile and lists the kept copies on the interface thread, and withdraws a question the
+        /// driver was about to answer. The cap is tight: one pixel under it the version column goes.
+        /// </summary>
+        [Fact]
+        public void The_page_reads_the_width_only_as_far_as_it_draws_from_it()
+        {
+            Assert.Equal(560, PanelUpdates.WidthDrawnUpTo);
+            Assert.True(PanelUpdates.WidthDrawnUpTo >= PanelUpdates.ButtonBesideFrom);
+            var at = PanelUpdates.WidthDrawnUpTo;
+            foreach (var width in new[] { at, at + 1, 879, Column(1200), 2000, Column(3840), 10000 })
+            {
+                Assert.Equal(PanelUpdates.ButtonBeside(at), PanelUpdates.ButtonBeside(width));
+                Assert.Equal(PanelUpdates.VersionWidth(at), PanelUpdates.VersionWidth(width));
+                Assert.Equal(PanelUpdates.VersionWidth(at, hasPress: true), PanelUpdates.VersionWidth(width, hasPress: true));
+            }
+            Assert.NotEqual(PanelUpdates.VersionWidth(at, hasPress: true), PanelUpdates.VersionWidth(at - 1, hasPress: true));
+            var code = PageCode();
+            Assert.Contains("updatesWidth = ContentWidthUpTo(PanelUpdates.WidthDrawnUpTo);", code);
+            Assert.DoesNotContain("= ContentWidth;", code);
+            Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\bContentWidth\b(?!UpTo)"), "the Updates files never read the width whole");
+        }
+
         /// <summary>A column that cannot fit stacks and never vanishes: where the version column has gone, the
         /// version follows the row's kind in the name cell, and every paint writes it, so the table says which
         /// version SimHub holds at every width and after every press.</summary>

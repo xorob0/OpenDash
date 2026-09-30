@@ -573,6 +573,18 @@ namespace OpenDashPlugin
             return name >= TableNameMin ? TableVersionWidth : 0;
         }
 
+        /// <summary>
+        /// The widest content width the page draws anything differently at, and so the most of it the build
+        /// reads (ContentWidthUpTo): <see cref="VersionWidth"/>'s threshold with a press, 2 + 32 + 126 + 166 +
+        /// 80 + 154 = 560, the highest of the page's three width decisions (the other two are the version
+        /// column's 480 without a press and <see cref="ButtonBesideFrom"/>'s 520). Past it the page is drawn
+        /// the same at every width, so a resize there leaves the page alone -- its question, the by-hand
+        /// route's line and the disk it read -- rather than rebuilding the panel's heaviest build on SimHub's
+        /// interface thread for a layout that has not changed.
+        /// </summary>
+        public const double WidthDrawnUpTo = TableBorder + 2 * TableRowPaddingX + TableVersionWidth + TableGap + TableStateWidth + TableGap
+            + TablePressColumn + TableNameMin;
+
         /// <summary>Whether any light row draws its Update press, which takes the press column's room from
         /// every row: a profile older than this build's, on a device SimHub lists.</summary>
         public static bool TableHasPress(IEnumerable<UpdatesRow> lightRows)
