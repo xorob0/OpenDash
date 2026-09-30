@@ -156,6 +156,11 @@ namespace OpenDashPlugin.Tests
             // A binding chip in the aside is cut short where it would take "Previous page" and its NEW tag's
             // 131 px of the aside's 282 inside its rule and padding, 12 apart.
             Assert.Equal(136, PanelFacePlan.AsideChipMax);
+            // Band D's button line takes at most a third of the band, so the page it shows keeps the rest:
+            // 105 of a band 315 across inside rows of 337.
+            Assert.Equal(105, PanelFacePlan.BandButtonMax(337));
+            Assert.Equal(Math.Floor((754 - 22) / 3.0), PanelFacePlan.BandButtonMax(754));
+            Assert.Equal(0, PanelFacePlan.BandButtonMax(0));
             Assert.True(PanelFacePlan.AsideWidth - 2 * PanelMetrics.BorderWeight - 2 * 16 - PanelFacePlan.AsideChipMax - 12 >= 131);
         }
 

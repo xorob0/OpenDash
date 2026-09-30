@@ -136,6 +136,20 @@ namespace OpenDashPlugin
             return width;
         }
 
+        /// <summary>
+        /// The widest band D's button line is drawn in a picture whose rows are <paramref name="rowsWidth"/>
+        /// across: a third of the band inside its rule and padding, cut short past it.
+        /// </summary>
+        /// <remarks>
+        /// The page is the band's content and the button line is about the band, so the line is what gives
+        /// way. Uncapped, "FANATEC Podium Wheel Base DD1 · 12" kept its 195 px on the portrait face's 315 px
+        /// band and cut Relative to "Relati…", and a longer device name left no room for the page at all.
+        /// </remarks>
+        public static double BandButtonMax(double rowsWidth)
+        {
+            return Math.Max(0, Math.Floor((rowsWidth - 2 * CellPaddingX - 2 * PanelMetrics.BorderWeight) / 3));
+        }
+
         /// <summary>The widest a binding chip is drawn in the zone aside, cut short past it: what leaves
         /// "Previous page" and its NEW tag their 131 px of the aside's 282.</summary>
         public const double AsideChipMax = 136;

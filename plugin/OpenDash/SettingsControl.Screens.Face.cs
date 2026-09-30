@@ -205,7 +205,7 @@ namespace OpenDashPlugin
             var body = BuildFaceBody(screen, plan, key, pick);
             body.Margin = new Thickness(0, PanelFacePlan.Seam, 0, 0);
             rows.Children.Add(body);
-            var band = BuildBandCell(screen, plan.Band, key == "D", () => pick("D"));
+            var band = BuildBandCell(screen, plan.Band, PanelFacePlan.BandButtonMax(plan.Width), key == "D", () => pick("D"));
             band.Margin = new Thickness(0, PanelFacePlan.Seam, 0, 0);
             rows.Children.Add(band);
             return new Border
@@ -334,7 +334,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Band D across the foot: the same facts as a zone, along the row.</summary>
-        private Button BuildBandCell(ScreenInstance screen, double height, bool selected, Action pick)
+        private Button BuildBandCell(ScreenInstance screen, double height, double buttonMax, bool selected, Action pick)
         {
             var dock = new DockPanel { LastChildFill = true };
             var letter = ScreensCellText("D", PanelFacePlan.BandLetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data);
@@ -343,6 +343,8 @@ namespace OpenDashPlugin
             dock.Children.Add(letter);
             var button = ScreensCellText(PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, "D"))), PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
             button.Margin = new Thickness(12, 0, 0, 0);
+            // The page is what the band shows; a long binding is cut short before it is.
+            button.MaxWidth = buttonMax;
             DockPanel.SetDock(button, Dock.Right);
             dock.Children.Add(button);
             var count = ScreensCellText(PanelScreens.ZoneCount(screen.Face, "D"), PanelFacePlan.CountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
@@ -487,7 +489,6 @@ namespace OpenDashPlugin
                 PanelScreens.Reorder(face, letter, showAll, from, to);
                 settle();
             });
-            list.Margin = new Thickness(-8, 0, -8, 0);
             var pages = Ui.VStack(2, list);
             if (showAll && PanelScreens.ListsSoonModules(letter))
             {
@@ -615,7 +616,8 @@ namespace OpenDashPlugin
             return chip;
         }
 
-        /// <summary>A page not built yet, greyed in the list under Show all, beside the grip's room.</summary>
+        /// <summary>A page not built yet, greyed in the list under Show all, beside the grip's room: 16 in, where
+        /// a real row's tick stands after its grip, so the ticks and the tags line up.</summary>
         private static FrameworkElement BuildSoonPageRow(string title, FrameworkElement tag)
         {
             var line = new DockPanel { LastChildFill = true, Height = 32, Margin = new Thickness(16, 0, 0, 0) };
