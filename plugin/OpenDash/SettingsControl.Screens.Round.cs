@@ -1,6 +1,6 @@
 // SettingsControl.Screens.Round.cs: a round screen's editor on the Screens page (Screens.dc.html) -- a picture
 // of the disc with the cards it carries, a choice per card the package reads, the rig-wide rev ring, and the
-// duplicate warning.
+// line naming a card shown twice among the ones it reads.
 //
 // The cards are the rig's twelve shared slots (Slot01 to Slot12), not this screen's: the 480 round reads the
 // first two and the 800 round the first six, so every round screen shows the same cards. Its rev ring is the
@@ -42,7 +42,7 @@ namespace OpenDashPlugin
                 choice.Uid = "screens.card." + captured;
                 rows.Add(Ui.SettingRow(PanelScreens.CardLabel(captured), choice));
             }
-            var duplicates = DuplicateAssignment.Warning(Settings.Slots);
+            var duplicates = PanelScreens.CardClash(Settings.Slots, read);
             if (duplicates.Length > 0) rows.Add(BuildScreensWarning(duplicates));
             rows.Add(Ui.Anchor(BuildRevRingRow(screen), PanelScreens.AnchorRevRing));
             rows.Add(Ui.SoonRow(PanelSoon.ZonesInsteadOfCards));

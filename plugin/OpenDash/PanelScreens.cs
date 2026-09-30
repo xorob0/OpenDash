@@ -606,6 +606,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The line under a round screen's cards when two of them show the same thing: "Speed is on Card 1
+        /// and Card 2.", one line per repeated card, and nothing when there is none.
+        /// </summary>
+        /// <remarks>
+        /// Only over the cards this screen reads. The twelve slots are the rig's, so a 480 round warned over
+        /// all of them named slots it never draws and no control on its pane can change, and it said "slots"
+        /// beside rows called Card 1 and Card 2. A slot's 1-based position is its card's number.
+        /// </remarks>
+        public static string CardClash(int[] slots, int read)
+        {
+            if (slots == null) return string.Empty;
+            var lines = DuplicateAssignment.Find(slots.Take(Math.Max(0, read)).ToArray()).Select(duplicate =>
+            {
+                var cards = duplicate.Slots.Select(CardLabel).ToArray();
+                var list = string.Join(", ", cards.Take(cards.Length - 1)) + " and " + cards[cards.Length - 1];
+                return Cards.DisplayName(duplicate.Card) + " is on " + list + ".";
+            });
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        /// <summary>
         /// The caption under the round pane's Rev ring, which writes the rig-wide OpenDash.RevBar. It reaches
         /// further than the round screens: the companion's speedo reads it, and so does every face whose own
         /// Revbar was never set, since ScreenRevBar falls back to the rig's while a screen's is null and a new

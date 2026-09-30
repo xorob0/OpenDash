@@ -572,6 +572,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
             Assert.Equal(Contract.SlotCount, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 }));
             Assert.Equal("Card 1", PanelScreens.CardLabel(1));
+
+            // A 480 round reads two cards, so the line is about those two and says "Card", as its rows do. The
+            // default slots are twelve different cards, and picking the third's for Card 1 is not a clash on a
+            // screen that never draws the third.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.Equal(string.Empty, PanelScreens.CardClash(settings.Slots, 2));
+            settings.SetSlot(1, settings.Slot(3));
+            Assert.Equal(string.Empty, PanelScreens.CardClash(settings.Slots, 2));
+            Assert.Equal(Cards.DisplayName(settings.Slot(3)) + " is on Card 1 and Card 3.", PanelScreens.CardClash(settings.Slots, 6));
+            settings.SetSlot(2, settings.Slot(1));
+            Assert.Equal(Cards.DisplayName(settings.Slot(1)) + " is on Card 1 and Card 2.", PanelScreens.CardClash(settings.Slots, 2));
+            Assert.Equal(Cards.DisplayName(settings.Slot(1)) + " is on Card 1, Card 2 and Card 3.", PanelScreens.CardClash(settings.Slots, 6));
+            Assert.Equal(string.Empty, PanelScreens.CardClash(null, 2));
             Assert.Equal("Rev ring", PanelScreens.RevRingTitle);
             Assert.Equal("Cards are shared by every round screen.", PanelScreens.CardsCaption);
         }
