@@ -155,6 +155,15 @@ namespace OpenDashPlugin.Tests
             var at = PanelSettings.SectionAnchors.Select(anchor => page.IndexOf("PanelSettings." + AnchorName(anchor) + ")", StringComparison.Ordinal)).ToList();
             Assert.All(at, index => Assert.True(index >= 0));
             Assert.Equal(at.OrderBy(i => i), at);
+            // Each section's method under its own anchor, which search, Home's routes and the row's links land
+            // on, and each link named by its section's title and scrolling to that section.
+            for (var s = 0; s < SectionMethods.Length; s++)
+            {
+                Assert.Matches(@"Ui\.Anchor\(" + Regex.Escape(SectionMethods[s]) + @"(units)?\), PanelSettings\." + AnchorName(PanelSettings.SectionAnchors[s]) + @"\),", page);
+            }
+            Assert.Contains("var link = SettingsIndexLink(PanelSettings.SectionTitles[i]);", page);
+            Assert.Contains("SettingsJumpTo(scroll, sections[index]);", page);
+            Assert.Contains("var heading = SettingsHeadingOf(sections[i]);", page);
         }
 
         /// <summary>The methods that draw each section, in the page's order.</summary>
@@ -175,7 +184,9 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// Each section draws its rows in the artboard's order, and the Race data's clock after the team names
         /// where the build adds it. Read from each section's own method, so a row moved to another section
-        /// fails too.
+        /// fails too. The six greyed rows whose control is wide -- the tyre buttons, the yellow flags, the three
+        /// appearance choosers and the driver's names, Colour vision the widest, which StackControlsBelow is
+        /// sized for -- are held with their SettingsFit, so they stack below 560 as the live rows do.
         /// </summary>
         [Fact]
         public void Each_section_draws_its_rows_in_the_artboards_order()
@@ -188,11 +199,11 @@ namespace OpenDashPlugin.Tests
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", "SettingsFit(Ui.Row(PanelDataTab.SessionTitle,",
                     "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", "Ui.Row(PanelDataTab.TeamNameTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", "Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title,",
-                    "Ui.SettingRow(PanelSoon.TyreDisplay.Title,", "SettingsNew(Ui.Row(PanelSettings.UnitsTitle,",
+                    "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title,", "SettingsNew(Ui.Row(PanelSettings.UnitsTitle,",
                 },
                 new[]
                 {
-                    "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle,", "Ui.SettingRow(PanelSoon.YellowFlags.Title,",
+                    "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle,", "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title,",
                     "Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle,",
                 },
                 new[]
@@ -211,11 +222,12 @@ namespace OpenDashPlugin.Tests
                 },
                 new[]
                 {
-                    "Ui.SettingRow(PanelSoon.DashTheme.Title,", "Ui.SettingRow(PanelSoon.ColourVision.Title,", "Ui.SettingRow(PanelSoon.Colours.Title,",
+                    "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.DashTheme.Title,", "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.ColourVision.Title,",
+                    "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.Colours.Title,",
                 },
                 new[]
                 {
-                    "Ui.SettingRow(PanelSoon.BrandName.Title,", "Ui.SettingRow(PanelSoon.BrandRaceNumber.Title,",
+                    "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.BrandName.Title,", "Ui.SettingRow(PanelSoon.BrandRaceNumber.Title,",
                     "Ui.SettingRow(PanelSoon.BrandLogo.Title,", "Ui.SettingRow(PanelSoon.IdleScreenBackground.Title,",
                 },
             };
@@ -255,6 +267,55 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>
+        /// Every greyed row carries its own ticket and no live row carries one. Every Ui.Soon on the page wraps
+        /// a SettingRow whose title is the same registry entry as the ticket it names, the one exception being
+        /// the alert cell's own wrapper, which takes the row's ticket; the four greyed alert rows each name
+        /// their own entry, the three live ones none; and no Ui.Soon wraps a live row.
+        /// </summary>
+        [Fact]
+        public void Each_greyed_row_carries_its_own_ticket_and_no_live_row_carries_one()
+        {
+            var page = Page();
+            var paired = new Regex(@"^Ui\.Soon\((?:SettingsFit\()?Ui\.SettingRow\(PanelSoon\.(\w+)\.Title,[^\n]*, PanelSoon\.\1\)");
+            var wrapped = 0;
+            foreach (Match soon in Regex.Matches(page, @"Ui\.Soon\([^\n]*"))
+            {
+                if (soon.Value.StartsWith("Ui.Soon(cell, soon);", StringComparison.Ordinal)) continue;
+                Assert.True(paired.IsMatch(soon.Value), soon.Value);
+                wrapped++;
+            }
+            // Fuel target, tyre display, yellow flags, the folded alert display, the three appearance rows and
+            // the four driver rows.
+            Assert.Equal(11, wrapped);
+            Assert.Contains("if (soon != null) cell = Ui.Soon(cell, soon);", page);
+            Assert.Single(Regex.Matches(page, @"Ui\.Soon\(cell, soon\);"));
+            // The paired regex itself: a row wrapped in another row's ticket does not pass.
+            Assert.DoesNotMatch(paired, "Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.TyreDisplay),");
+            Assert.Matches(paired, "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),");
+
+            var greyedAlerts = Regex.Matches(page, @"PanelSettings\.Alert\(PanelSoon\.(\w+)\.Title\), null, null, temperature, surfaces, PanelSoon\.\1[,)]");
+            Assert.Equal(4, greyedAlerts.Count);
+            Assert.Equal(new[] { "TyreWear", "PitWindowOpen", "Incidents", "HybridBatteryLow" }, greyedAlerts.Cast<Match>().Select(m => m.Groups[1].Value));
+            Assert.Equal(7, Regex.Matches(page, @"SettingsAlertRow\(grid, row\+\+, ").Count);
+            var live = Regex.Matches(page, @"SettingsAlertRow\(grid, row\+\+, PanelSettings\.Alert\(PanelSettings\.\w+\)[^\n]*").Cast<Match>().Select(m => m.Value).ToList();
+            Assert.Equal(3, live.Count);
+            Assert.All(live, line => Assert.EndsWith(", surfaces, null);", line));
+
+            Assert.DoesNotMatch(@"Ui\.Soon\((SettingsFit\(|SettingsNew\()*Ui\.Row\(", page);
+            foreach (var title in new[]
+            {
+                "PanelDataTab.PositionTitle", "PanelDataTab.DeltaTitle", "PanelDataTab.DeltaPrecisionTitle", "PanelDataTab.SessionTitle",
+                "PanelDataTab.DriverNameTitle", "PanelDataTab.TeamNameTitle", "PanelDataTab.ClockTitle", "PanelSettings.UnitsTitle",
+                "PanelDataTab.BlueFlagTitle", "PanelSettings.FlagsInPitLaneTitle", "PanelSettings.LowFuelTitle", "PanelSettings.OilTempTitle",
+                "PanelSettings.WaterTempTitle", "PanelSettings.BrightnessTitle", "PanelSettings.NightBrightnessTitle", "PanelSettings.NightModeTitle",
+                "PanelSettings.NightModeButtonTitle",
+            })
+            {
+                Assert.DoesNotMatch(@"Ui\.Soon\([^\n]*" + Regex.Escape(title), page);
+            }
+        }
+
         private static string AnchorName(string anchor)
         {
             return typeof(PanelSettings).GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -273,6 +334,13 @@ namespace OpenDashPlugin.Tests
             // Alerts carries its New tag after the heading, so it draws the heading itself at the same size.
             Assert.Contains("Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag()", page);
             Assert.Contains("DrawsLighting();", page);
+            // DrawsLighting rebuilds the page on every brightness or night-mode press, the wheel's included, on
+            // SimHub's interface thread, so the build reads no device, profile or disk.
+            foreach (var reads in new[] { "SafePlan(", "BarCensus", "LedTargets", "StripInstaller", "FlagBoxInstaller", "PackageExtractor" })
+            {
+                Assert.DoesNotContain(reads, page);
+            }
+            Assert.DoesNotMatch(@"\b(File|Directory)\.", page);
             Assert.Equal(28, PanelShell.SectionGapFor(PanelPage.Settings));
             Assert.Equal(12, PanelKit.SectionHeadingGapSettings);
         }
@@ -482,6 +550,10 @@ namespace OpenDashPlugin.Tests
             var page = Page();
             Assert.Contains("if (!PanelSettings.StacksControls(ContentWidth)) return row;", page);
             Assert.Contains("SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", page);
+            foreach (var greyed in new[] { "TyreDisplay", "YellowFlags", "DashTheme", "ColourVision", "Colours", "BrandName" })
+            {
+                Assert.Contains("Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon." + greyed + ".Title,", page);
+            }
             Assert.Contains("var surfaces = PanelSettings.AlertSurfacesFit(ContentWidth);", page);
             Assert.Matches(@"if \(surfaces\)\s*\{\s*foreach \(var on in alert\.Surfaces\)", page);
             Assert.Matches(@"if \(!surfaces\)\s*\{\s*(//[^\n]*\s*)*folded = Ui\.Soon\(Ui\.SettingRow\(PanelSoon\.AlertDisplay\.Title, null\), PanelSoon\.AlertDisplay\);", page);
