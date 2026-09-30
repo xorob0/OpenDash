@@ -31,14 +31,14 @@ namespace OpenDashPlugin
             var empty = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count);
             // Only the rig's quick controls draw night mode and a brightness, and an empty rig has none.
             if (!empty) DrawsLighting();
-            // The answer has already refreshed the issues when this runs; RebuildPage keeps the lines and the scroll.
-            // Only an answer that moved what the headline, the fix rows and the lines were drawn from rebuilds:
-            // "you have the newest release" lands mid-drag as often as any other, and a rebuild then takes the
-            // slider or a pressed row from under the pointer.
-            var drawn = PanelHome.DrawnFrom(issues);
+            // The answer has already refreshed the issues and the facts when this runs; RebuildPage keeps the lines
+            // and the scroll. Only an answer that moved what the headline, the fix rows and the lines were drawn
+            // from rebuilds: "you have the newest release" lands mid-drag as often as any other, and a rebuild
+            // then takes the slider or a pressed row from under the pointer.
+            var drawn = PanelHome.DrawnFrom(issues, HomeFacts(screens, strips, matrices));
             OnUpdate(null, manual =>
             {
-                if (PanelHome.DrawnFrom(issues) != drawn) RebuildPage();
+                if (PanelHome.DrawnFrom(issues, HomeFacts(screens, strips, matrices)) != drawn) RebuildPage();
             });
             var head = new StackPanel { Orientation = Orientation.Vertical };
             var eyebrow = Ui.Eyebrow(PanelHome.Title);
@@ -71,6 +71,29 @@ namespace OpenDashPlugin
                 stack.Children.Add(section);
             }
             return stack;
+        }
+
+        /// <summary>Each device's facts as its Right now row copies them at build: a screen's Installed, a
+        /// strip's Profile and Selected, a matrix's Shown.</summary>
+        private IEnumerable<string> HomeFacts(IEnumerable<ScreenInstance> screens, IEnumerable<LedBar> strips, IEnumerable<int> matrices)
+        {
+            var facts = new List<string>();
+            foreach (var screen in screens.Where(screen => screen != null))
+            {
+                var fact = ScreenFacts(screen.Namespace);
+                facts.Add(PanelHome.FactKey("screen", screen.Namespace, fact == null ? null : fact.Installed));
+            }
+            foreach (var bar in strips.Where(bar => bar != null))
+            {
+                var fact = StripFacts(bar.Namespace);
+                facts.Add(PanelHome.FactKey("strip", bar.Namespace, fact == null ? null : fact.Profile, fact == null ? null : fact.Selected));
+            }
+            foreach (var slot in matrices)
+            {
+                var fact = MatrixFacts(slot);
+                facts.Add(PanelHome.FactKey("matrix", slot.ToString(System.Globalization.CultureInfo.InvariantCulture), fact == null ? null : fact.Shown));
+            }
+            return facts;
         }
 
         // --- What needs fixing ---------------------------------------------------------------------------------

@@ -156,9 +156,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What the headline, the fix rows and the Right now lines were drawn from, as one key: each issue's id
-        /// and every word its row draws. Home draws itself again on an update check's answer only when this
-        /// moved, since the answer lands whenever it lands, a drag or a press included.
+        /// What the headline and the fix rows were drawn from, as one key: each issue's id and every word its
+        /// row draws.
         /// </summary>
         public static string DrawnFrom(IEnumerable<PanelIssue> issues)
         {
@@ -168,6 +167,27 @@ namespace OpenDashPlugin
                     issue.Id, issue.Title, issue.Detail, issue.ActionLabel,
                     string.Join(">", issue.Steps.Select(step => string.Join("/", step ?? new string[0]))),
                 })));
+        }
+
+        /// <summary>
+        /// What the headline, the fix rows and the Right now lines were drawn from, as one key: the issues'
+        /// key, and each device's facts as the rows copied them at build (<see cref="FactKey"/>). Home draws
+        /// itself again on an update check's answer only when this moved, since the answer lands whenever it
+        /// lands, a drag or a press included; the answer re-reads the facts too, and a row keeps the ones it
+        /// copied, so a fact that moved without moving an issue would otherwise leave a row stale.
+        /// </summary>
+        public static string DrawnFrom(IEnumerable<PanelIssue> issues, IEnumerable<string> facts)
+        {
+            return DrawnFrom(issues) + "\n#\n" + string.Join("\n", facts ?? Enumerable.Empty<string>());
+        }
+
+        /// <summary>One device's facts as a row copies them, for <see cref="DrawnFrom(IEnumerable{PanelIssue}, IEnumerable{string})"/>:
+        /// its kind, its id, and each fact, a fact nobody could read written apart from every value.</summary>
+        public static string FactKey(string kind, string id, params object[] facts)
+        {
+            var parts = new List<string> { kind ?? string.Empty, id ?? string.Empty };
+            parts.AddRange((facts ?? new object[0]).Select(fact => fact == null ? "?" : Convert.ToString(fact, CultureInfo.InvariantCulture)));
+            return string.Join("|", parts);
         }
 
         /// <summary>The widest an issue's press is drawn beside its text: "Open " and a name the driver typed,

@@ -806,7 +806,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var facts = StripFacts(bar.Namespace);", code);
             Assert.Contains("Profile = facts == null ? null : facts.Profile, Selected = facts == null ? null : facts.Selected,", code);
             Assert.Contains("var profile = strip.Profile; var selected = strip.Selected; var cars = plugin.CarLights;", code);
-            Assert.Equal(1, Regex.Matches(code, @"StripFacts\(").Count - Regex.Matches(code, @"StripFacts\(issue\.Subject\)").Count);
+            // Read for the row, for the key an update check's answer is compared with, and for Check again's
+            // message; never on the tick.
+            Assert.Single(Regex.Matches(code, @"StripFacts\(bar\.Namespace\); var strip = new HomeStrip"));
+            Assert.Equal(3, Regex.Matches(code, @"StripFacts\(").Count);
             Assert.Contains("var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
             Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
             Assert.Contains("var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected);", code);
@@ -840,8 +843,12 @@ namespace OpenDashPlugin.Tests
         public void The_page_draws_itself_again_when_the_update_check_answers()
         {
             var code = PageCode();
-            Assert.Contains("var drawn = PanelHome.DrawnFrom(issues); OnUpdate(null, manual => { if (PanelHome.DrawnFrom(issues) != drawn) RebuildPage(); });", code);
+            Assert.Contains("var drawn = PanelHome.DrawnFrom(issues, HomeFacts(screens, strips, matrices)); OnUpdate(null, manual => { if (PanelHome.DrawnFrom(issues, HomeFacts(screens, strips, matrices)) != drawn) RebuildPage(); });", code);
             Assert.DoesNotContain("OnUpdate(null, manual => RebuildPage());", code);
+            // The key holds every fact a row copies at build, device by device.
+            Assert.Contains("var fact = ScreenFacts(screen.Namespace); facts.Add(PanelHome.FactKey(\"screen\", screen.Namespace, fact == null ? null : fact.Installed));", code);
+            Assert.Contains("var fact = StripFacts(bar.Namespace); facts.Add(PanelHome.FactKey(\"strip\", bar.Namespace, fact == null ? null : fact.Profile, fact == null ? null : fact.Selected));", code);
+            Assert.Contains("var fact = MatrixFacts(slot); facts.Add(PanelHome.FactKey(\"matrix\", slot.ToString(System.Globalization.CultureInfo.InvariantCulture), fact == null ? null : fact.Shown));", code);
         }
 
         [Fact]
@@ -862,6 +869,21 @@ namespace OpenDashPlugin.Tests
             Assert.NotEqual(key, PanelHome.DrawnFrom(one.Concat(one).ToList()));
             Assert.NotEqual(key, PanelHome.DrawnFrom(new PanelIssue[0]));
             Assert.Equal(PanelHome.DrawnFrom(new PanelIssue[0]), PanelHome.DrawnFrom(null));
+
+            // A device's fact that moves without moving an issue moves the whole key: a strip whose profile read
+            // nothing now reads selected, a screen whose dashboard was not known is now known to be there.
+            var facts = new[] { PanelHome.FactKey("strip", "LedBar1", null, null), PanelHome.FactKey("screen", "Face1", null) };
+            var whole = PanelHome.DrawnFrom(one, facts);
+            Assert.Equal(whole, PanelHome.DrawnFrom(one, facts.ToArray()));
+            Assert.NotEqual(whole, PanelHome.DrawnFrom(one, new[] { PanelHome.FactKey("strip", "LedBar1", FlagBoxInstallState.UpToDate, true), facts[1] }));
+            Assert.NotEqual(whole, PanelHome.DrawnFrom(one, new[] { facts[0], PanelHome.FactKey("screen", "Face1", true) }));
+            Assert.NotEqual(whole, PanelHome.DrawnFrom(one, facts.Take(1)));
+            Assert.NotEqual(whole, PanelHome.DrawnFrom(new PanelIssue[0], facts));
+            // A fact nobody could read is apart from every value, and the key says which fact is which.
+            Assert.Equal("strip|LedBar1|?|?", PanelHome.FactKey("strip", "LedBar1", null, null));
+            Assert.Equal("strip|LedBar1|UpToDate|True", PanelHome.FactKey("strip", "LedBar1", FlagBoxInstallState.UpToDate, true));
+            Assert.Equal("matrix|2|False", PanelHome.FactKey("matrix", "2", (bool?)false));
+            Assert.NotEqual(PanelHome.FactKey("screen", "Face1", false), PanelHome.FactKey("screen", "Face1", null));
         }
 
         /// <summary>The attention card draws every part of each issue: the headline counts them, the well
