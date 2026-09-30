@@ -163,7 +163,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_companion_paging_path_is_drawn_as_crumbs()
         {
-            Assert.Equal(new[] { "Devices", "Phone", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs("Phone"));
+            // Only what SimHub names: the screen's name is OpenDash's, not a SimHub device's, and a companion may
+            // run in a window, so the device is left to the sentence above the crumbs.
+            Assert.Equal(new[] { "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs());
+            Assert.Contains("device or window the companion runs on", PanelCopy.CompanionPaging);
             // The crumbs are the path PanelCopy.CompanionPaging names in its sentence.
             Assert.Contains(PanelShortcuts.ControlsAndEventsCrumb, PanelCopy.CompanionPaging);
             Assert.Contains(PanelShortcuts.NextScreenCrumb, PanelCopy.CompanionPaging);
@@ -448,7 +451,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Caption(PanelCopy.PitWallGlance)", code);
             Assert.Contains("Ui.Caption(PanelCopy.CompanionGlance)", code);
             Assert.Contains("Ui.Caption(PanelCopy.CompanionPaging, BodyWidth)", code);
-            Assert.Contains("Ui.Crumbs(PanelShortcuts.PagingCrumbs(", code);
+            Assert.Contains("Ui.Crumbs(PanelShortcuts.PagingCrumbs())", code);
             Assert.Contains("Ui.Anchor(row, PanelBindings.Anchor(binding.Action));", code);
             Assert.Contains("Ui.Soon(row, item)", code);
             Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", code);

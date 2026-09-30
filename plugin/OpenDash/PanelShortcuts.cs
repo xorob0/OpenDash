@@ -203,12 +203,16 @@ namespace OpenDashPlugin
         public const string ControlsAndEventsCrumb = "Controls and events";
         public const string NextScreenCrumb = "NextScreen";
 
-        /// <summary>Where SimHub binds a companion's paging, beside PanelCopy.CompanionPaging: Devices, the
-        /// device the companion runs on (its screen's name, which is what a driver called it), Controls and
-        /// events, NextScreen.</summary>
-        public static string[] PagingCrumbs(string deviceName)
+        /// <summary>
+        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: Controls and events,
+        /// NextScreen. The artboard leads with "Devices › Phone", but OpenDash knows no SimHub device for a
+        /// companion (the screen's name is OpenDash's, not the device's, and a companion may run in a window,
+        /// which is no device at all), and a crumb a driver could look for has to be exact; the sentence above
+        /// already says to open the device or window the companion runs on.
+        /// </summary>
+        public static string[] PagingCrumbs()
         {
-            return new[] { PanelAttention.DevicesCrumb, deviceName, ControlsAndEventsCrumb, NextScreenCrumb };
+            return new[] { ControlsAndEventsCrumb, NextScreenCrumb };
         }
 
         // --- The filter ---------------------------------------------------------------------------------
