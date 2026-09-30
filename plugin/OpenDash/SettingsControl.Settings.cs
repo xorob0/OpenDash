@@ -749,21 +749,29 @@ namespace OpenDashPlugin
             head.Children.Add(eyebrow);
             head.Children.Add(pick);
 
-            // Side by side 40 apart, and wrapped onto a second line where the column is too narrow for the three.
-            var stage = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            // Side by side 40 apart, centred, as the artboard's stage; where the column is narrower than the three
+            // at full size the whole stage scales down rather than wrapping into a lopsided second line.
+            var stage = new StackPanel { Orientation = Orientation.Horizontal };
             var pictures = new FrameworkElement[] { strip, matrix, percent };
             for (var i = 0; i < pictures.Length; i++)
             {
                 pictures[i].VerticalAlignment = VerticalAlignment.Center;
-                pictures[i].Margin = new Thickness(0, PanelSettings.PreviewWrapGap / 2, i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0, PanelSettings.PreviewWrapGap / 2);
+                pictures[i].Margin = new Thickness(0, 0, i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0, 0);
                 stage.Children.Add(pictures[i]);
             }
+            var fit = new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Child = stage,
+            };
             var ground = new Border
             {
                 Background = Ui.Brush(Theme.SurfaceInset),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Padding = new Thickness(PanelSettings.PreviewStagePadding, PanelSettings.PreviewStagePadding - PanelSettings.PreviewWrapGap / 2, PanelSettings.PreviewStagePadding, PanelSettings.PreviewStagePadding - PanelSettings.PreviewWrapGap / 2),
-                Child = stage,
+                Padding = new Thickness(PanelSettings.PreviewStagePadding),
+                Child = fit,
             };
             var card = Ui.CardBox(Ui.VStack(PanelSettings.PreviewGap, head, ground), 0);
             card.Padding = new Thickness(PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY, PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY);

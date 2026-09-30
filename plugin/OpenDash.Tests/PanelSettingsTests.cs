@@ -540,10 +540,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.SurfaceZone, PanelSettings.PreviewMatrix.UnlitHex);
             Assert.Equal(40, PanelSettings.PreviewStageGap);
             Assert.Equal(18, PanelSettings.PreviewStagePadding);
-            // The stage's padding gives back half the wrap gap its pictures carry, and WPF refuses a negative
-            // padding at run time.
-            Assert.Equal(8, PanelSettings.PreviewWrapGap);
-            Assert.True(PanelSettings.PreviewStagePadding - PanelSettings.PreviewWrapGap / 2 >= 0);
+            // The stage scales down where it does not fit, never up, and never wraps into a lopsided second line.
+            var page = Page();
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly,", page);
+            Assert.DoesNotContain("var stage = new WrapPanel", page);
             Assert.True(PanelSettings.IndexPaddingBottom - PanelSettings.IndexGap >= 0);
             Assert.Equal(22, PanelSettings.PreviewPercentSize);
             Assert.Equal(56, PanelSettings.PreviewPercentWidth);

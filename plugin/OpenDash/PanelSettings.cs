@@ -449,8 +449,6 @@ namespace OpenDashPlugin
         public const double PreviewStagePadding = 18;
         public const double PreviewStageGap = 40;
 
-        /// <summary>Between the lines when the preview wraps, which the artboard at its width never does.</summary>
-        public const double PreviewWrapGap = 8;
         public const double PreviewPercentSize = 22;
         public const double PreviewPercentWidth = 56;
 
