@@ -59,19 +59,23 @@ namespace OpenDashPlugin
                 redraw();
             };
 
-            // Beside the aside only while the picture's column is as wide as the artboard's, and the picture
-            // no taller than the page can show beside its rows.
-            var sideBySide = PanelFacePlan.SideBySide(ContentWidth, TwoColumns);
-            var column = PanelFacePlan.PictureWidthFor(ContentWidth, sideBySide);
+            // Beside the aside whenever the page has two columns, the picture no taller than the page can show
+            // beside its rows. The width is read only as far as anything drawn from it changes, so a wider
+            // window re-lays the aside without rebuilding the page and reloading its live preview.
+            var twoColumns = TwoColumns;
+            var content = ContentWidthUpTo(PanelFacePlan.ContentMost(face, twoColumns));
+            var column = twoColumns ? PanelFacePlan.ColumnFor(face, content) : content;
             var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.FitWidth(face, column), key, pick), PanelScreens.AnchorZones);
             var aside = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
             var rows = BuildFaceRows(screen, redraw, column);
 
-            if (!sideBySide) return Ui.VStack(16, picture, aside, rows);
+            if (!twoColumns) return Ui.VStack(16, picture, aside, rows);
+            // The picture's column, then the aside taking the rest from its least, as the pit wall's list does:
+            // it stays beside the zone it lists however wide the window.
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(column) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideGap) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideWidth) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = PanelFacePlan.AsideWidth });
             var left = Ui.VStack(16, picture, rows);
             grid.Children.Add(left);
             aside.VerticalAlignment = VerticalAlignment.Top;
@@ -150,7 +154,7 @@ namespace OpenDashPlugin
                 ScreensSave(screen, redraw);
             }, PanelScreens.GlancePageWidth);
             page.Uid = "screens.glance.page";
-            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);
             chip.Uid = "screens.glance.chip";
             return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, chip);
         }
@@ -162,7 +166,7 @@ namespace OpenDashPlugin
             var wrap = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, MaxWidth = maxWidth };
             foreach (var control in controls)
             {
-                control.Margin = new Thickness(8, 2, 0, 2);
+                control.Margin = new Thickness(PanelScreens.WrapGap, 2, 0, 2);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 wrap.Children.Add(control);
             }
@@ -317,7 +321,8 @@ namespace OpenDashPlugin
             var page = ScreensCellText(FacePages.NameOf(letter, PanelScreens.FirstTicked(screen.Face, letter)), PanelFacePlan.PageSize, FontWeights.SemiBold, Theme.TextPrimary);
             page.VerticalAlignment = VerticalAlignment.Center;
             if (centred) page.TextAlignment = TextAlignment.Center;
-            var button = ScreensCellText(PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, letter))), PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
+            var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, letter)));
+            var button = ScreensCellText(buttonLine, PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
 
             var dock = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(top, Dock.Top);
@@ -328,7 +333,8 @@ namespace OpenDashPlugin
             dock.Children.Add(button);
             dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY));
-            cell.ToolTip = PanelFacePlan.ZoneLabel(letter);
+            // The button line is cut short in a narrow cell, so the hover carries it whole.
+            cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, buttonLine);
             cell.Uid = "screens.zone." + letter;
             return cell;
         }
@@ -341,7 +347,8 @@ namespace OpenDashPlugin
             letter.Margin = new Thickness(0, 0, 12, 0);
             DockPanel.SetDock(letter, Dock.Left);
             dock.Children.Add(letter);
-            var button = ScreensCellText(PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, "D"))), PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
+            var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, "D")));
+            var button = ScreensCellText(buttonLine, PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
             button.Margin = new Thickness(12, 0, 0, 0);
             // The page is what the band shows; a long binding is cut short before it is.
             button.MaxWidth = buttonMax;
@@ -355,7 +362,7 @@ namespace OpenDashPlugin
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, 0, PanelFacePlan.CellPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
-            cell.ToolTip = PanelFacePlan.ZoneLabel("D");
+            cell.ToolTip = PanelScreens.ZoneCellTooltip("D", buttonLine);
             cell.Uid = "screens.zone.D";
             return cell;
         }
@@ -523,9 +530,9 @@ namespace OpenDashPlugin
                 stack.Children.Add(Ui.Anchor(ScreensRuled(line), PanelScreens.AnchorClassOnly));
             }
             var previous = Ui.HStack(8, Ui.Text(PanelScreens.PreviousPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.NewTag());
-            var nextChip = ScreensAsideChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)));
+            var nextChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);
             nextChip.Uid = "screens.zone.next";
-            var backChip = ScreensAsideChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)));
+            var backChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);
             backChip.Uid = "screens.zone.back";
             stack.Children.Add(ScreensRuled(Ui.VStack(10,
                 ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), nextChip),
@@ -605,14 +612,19 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>A binding chip in the zone aside, cut short at <see cref="PanelFacePlan.AsideChipMax"/> so
-        /// a long device name leaves the words beside it their room.</summary>
-        private static FrameworkElement ScreensAsideChip(FrameworkElement chip)
+        /// <summary>A binding chip cut short at <paramref name="most"/> -- PanelFacePlan.AsideChipMax in the zone
+        /// aside, PanelScreens.GlanceChipMax beside a glance -- so a long device name leaves the words and the
+        /// controls beside it their room, with the whole binding in its hover.</summary>
+        private static FrameworkElement ScreensCutChip(FrameworkElement chip, double most)
         {
-            chip.MaxWidth = PanelFacePlan.AsideChipMax;
+            chip.MaxWidth = most;
             var button = chip as ContentControl;
             var label = button == null ? null : button.Content as TextBlock;
-            if (label != null) label.TextTrimming = TextTrimming.CharacterEllipsis;
+            if (label != null)
+            {
+                label.TextTrimming = TextTrimming.CharacterEllipsis;
+                chip.ToolTip = PanelScreens.ChipTooltip(label.Text);
+            }
             return chip;
         }
 

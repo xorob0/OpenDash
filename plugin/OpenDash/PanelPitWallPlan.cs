@@ -71,6 +71,14 @@ namespace OpenDashPlugin
         /// (<see cref="PictureHeight"/>) stands no taller than PanelFacePlan.MaxHeight.</summary>
         public static readonly double StackedMax = Math.Ceiling((PanelFacePlan.MaxHeight + 1) * 16 / 9) - 1 + 2 * Frame;
 
+        /// <summary>
+        /// The most of the content width the pit wall's editor reads (ContentWidthUpTo): the widest picture,
+        /// the gap and the zone list's least. Past it the picture has stopped at <see cref="StackedMax"/> and
+        /// the list beside it takes the rest without a rebuild; the address box and every line of controls
+        /// under it have stopped changing well before.
+        /// </summary>
+        public static readonly double ContentMost = StackedMax + ListGap + ListWidth;
+
         /// <summary>The page itself inside a picture <paramref name="outer"/> wide: the frame is drawn inside
         /// the column, not beside it, or the column clips the picture's right edge.</summary>
         public static double CanvasWidth(double outer)
@@ -371,17 +379,8 @@ namespace OpenDashPlugin
         /// <summary>"Not in iRacing" beside a module's name, smaller than the name: the artboard's 11.</summary>
         public const double NoteSize = 11;
 
-        /// <summary>The narrowest a column may be and still hold a name and "Not in iRacing" beside it.</summary>
+        /// <summary>The narrowest a column may be and still hold a name and "Not in iRacing" beside it: the
+        /// grid's least card, so three fit from 612 of content and fewer below.</summary>
         public const double ModuleLeast = 200;
-
-        /// <summary>How many columns fit a grid <paramref name="width"/> across: three at most, one at least.</summary>
-        public static int ColumnsFor(double width)
-        {
-            for (var columns = ModuleColumns; columns > 1; columns--)
-            {
-                if (columns * ModuleLeast + (columns - 1) * ModuleGap <= width) return columns;
-            }
-            return 1;
-        }
     }
 }

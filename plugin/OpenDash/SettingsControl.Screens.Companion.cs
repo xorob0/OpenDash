@@ -66,43 +66,31 @@ namespace OpenDashPlugin
                 ScreensSave(screen, redraw);
             });
             glance.Uid = "screens.companion.glance";
-            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);
             chip.Uid = "screens.companion.glance.chip";
+            // Read only as far as the glance's line of controls wraps; the module grid lays itself out.
+            var controls = PanelScreens.ControlsWidth(ContentWidthUpTo(PanelScreens.ControlsColumnMost));
 
+            // Quick glance is new on the companion in this release (#362), and tagged so for one.
             var rows = Ui.Rows(
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FirstModuleTitle, first), PanelScreens.AnchorFirstModule),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag()), PanelScreens.AnchorFlagDisplay),
-                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), glance, chip), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(controls, glance, chip), PanelCopy.CompanionGlance, Ui.NewTag()), PanelScreens.AnchorGlance),
                 Ui.Anchor(BuildCompanionPaging(), PanelScreens.AnchorPaging));
             return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
         }
 
         /// <summary>The twenty-one modules as ticks, three to a row where they fit, fewer where they do not;
         /// a tick redraws the editor, so the count and the First module follow it.</summary>
+        /// <remarks>
+        /// The kit's card grid, as the artboard's repeat(3, minmax(0, 1fr)) at a 6 px gap is: it decides its
+        /// columns as it is measured, holds Compact's two, and reads across and then down (Lap times, Delta,
+        /// Sectors on the first row), so a resize re-lays it without the page reading the width.
+        /// </remarks>
         private FrameworkElement BuildModuleGrid(ScreenInstance screen, Action redraw)
         {
-            var columns = PanelCompanionPlan.ColumnsFor(ContentWidth);
-            var rows = (Modules.Count + columns - 1) / columns;
-            var grid = new Grid();
-            for (var c = 0; c < columns; c++)
-            {
-                if (c > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelCompanionPlan.ModuleGap) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            }
-            for (var r = 0; r < rows; r++)
-            {
-                if (r > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(PanelCompanionPlan.ModuleGap) });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            }
-            // Across and then down, as the artboard reads: Lap times, Delta, Sectors on the first row.
-            for (var i = 0; i < Modules.Count; i++)
-            {
-                var cell = BuildModuleCell(screen, Modules.All[i], redraw);
-                Grid.SetColumn(cell, (i % columns) * 2);
-                Grid.SetRow(cell, (i / columns) * 2);
-                grid.Children.Add(cell);
-            }
-            return grid;
+            var cells = Modules.All.Select(module => (UIElement)BuildModuleCell(screen, module, redraw)).ToArray();
+            return Ui.CardGrid(PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, cells);
         }
 
         /// <summary>One module (.mod): its tick and its name on the base ground, and "Not in iRacing" beside the

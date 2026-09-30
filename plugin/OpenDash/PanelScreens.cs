@@ -581,6 +581,37 @@ namespace OpenDashPlugin
             return Math.Max(0, column - PanelShell.RowGap - RowTitleLeast);
         }
 
+        /// <summary>The gap a line of controls leaves before each control, which is how far apart they sit.</summary>
+        public const double WrapGap = 8;
+
+        /// <summary>The widest a binding chip is drawn beside a glance's choices, cut short past it with the whole
+        /// binding in its hover: "FANATEC Podium Wheel Base DD1 · 12" is about 213 px at the chip's 13.</summary>
+        public const double GlanceChipMax = 240;
+
+        /// <summary>The widest line of controls the page draws in a row: a face's or a pit wall's glance, its
+        /// zone and page choices and the chip, each after its gap. The companion's glance (one choice of at
+        /// least GlancePageWidth and the chip) and the portrait wall's four choices are narrower.</summary>
+        public const double ControlsMost = GlanceZoneWidth + GlancePageWidth + GlanceChipMax + 3 * WrapGap;
+
+        /// <summary>The column past which no line of controls on the page wraps: the widest line, the row's
+        /// gap and its title's least. A width read for a wrap stops here (ContentWidthUpTo).</summary>
+        public const double ControlsColumnMost = ControlsMost + PanelShell.RowGap + RowTitleLeast;
+
+        /// <summary>A binding chip's hover where the chip is cut short: the whole binding, then where a press
+        /// goes (PanelBindings.ChipTooltip), so a long device name can still be read.</summary>
+        public static string ChipTooltip(string label)
+        {
+            return string.IsNullOrEmpty(label) ? PanelBindings.ChipTooltip : label + Environment.NewLine + PanelBindings.ChipTooltip;
+        }
+
+        /// <summary>A zone's hover in the picture: its name, then the button line the cell may have cut short,
+        /// "Zone A · FANATEC Podium Wheel Base DD1 · 12".</summary>
+        public static string ZoneCellTooltip(string letter, string buttonLine)
+        {
+            var name = PanelFacePlan.ZoneLabel(letter);
+            return string.IsNullOrEmpty(buttonLine) ? name : name + " · " + buttonLine;
+        }
+
         /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 21").</summary>
         public const double HeadCountSize = 15;
 

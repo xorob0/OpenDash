@@ -599,6 +599,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(15, PanelScreens.HeadCountSize);
             Assert.Equal(420 - PanelShell.RowGap - 140, PanelScreens.ControlsWidth(420));
             Assert.Equal(0, PanelScreens.ControlsWidth(100));
+
+            // The widest line of controls is a glance's: its two choices and its chip, cut short at 240 with the
+            // whole binding in its hover, each after its 8 px gap. Every other line is narrower, so no wrap on
+            // the page changes past the column that holds it.
+            Assert.Equal(8, PanelScreens.WrapGap);
+            Assert.Equal(240, PanelScreens.GlanceChipMax);
+            Assert.Equal(524, PanelScreens.ControlsMost);
+            Assert.Equal(688, PanelScreens.ControlsColumnMost);
+            Assert.True(4 * (PanelScreens.PortraitChoiceWidth + PanelScreens.WrapGap) <= PanelScreens.ControlsMost);
+            Assert.True(PanelScreens.GlancePageWidth + PanelScreens.GlanceChipMax + 2 * PanelScreens.WrapGap <= PanelScreens.ControlsMost);
+            Assert.Equal(PanelScreens.ControlsMost, PanelScreens.ControlsWidth(PanelScreens.ControlsColumnMost));
+            // A chip cut short says the whole binding in its hover, then where it goes; a zone's hover carries
+            // the button line its cell may cut.
+            Assert.Equal("FANATEC Podium Wheel Base DD1 · 12" + System.Environment.NewLine + PanelBindings.ChipTooltip, PanelScreens.ChipTooltip("FANATEC Podium Wheel Base DD1 · 12"));
+            Assert.Equal(PanelBindings.ChipTooltip, PanelScreens.ChipTooltip(null));
+            Assert.Equal("Zone A · FANATEC Podium Wheel Base DD1 · 12", PanelScreens.ZoneCellTooltip("A", "FANATEC Podium Wheel Base DD1 · 12"));
+            Assert.Equal("Band D · Not bound", PanelScreens.ZoneCellTooltip("D", PanelScreens.NoButton));
+            Assert.Equal("Zone C", PanelScreens.ZoneCellTooltip("C", string.Empty));
+        }
+
+        /// <summary>
+        /// Every width the page reads is capped where what it draws stops changing (hooks 4.0 rule 11): the
+        /// live preview at BodyWidth, each editor at its own bound. An uncapped read made every settled resize
+        /// on a wide window rebuild the page, reload the live dashboard and close an open list.
+        /// </summary>
+        [Fact]
+        public void The_page_reads_the_width_only_as_far_as_its_drawing_changes()
+        {
+            var dir = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            foreach (var source in System.IO.Directory.GetFiles(dir, "SettingsControl.Screens*.cs"))
+            {
+                var code = RepoPaths.Code(source);
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\bContentWidth\b(?!UpTo)"), source + " reads the whole content width");
+            }
+            var page = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.cs"));
+            Assert.Contains("BuildScreenPreview(screen, ContentWidthUpTo(BodyWidth))", page);
+            var companion = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.Companion.cs"));
+            Assert.Contains("ContentWidthUpTo(PanelScreens.ControlsColumnMost)", companion);
         }
 
         /// <summary>The quick glance is picked zone first, then only the pages that zone carries, in the order a driver decides; a

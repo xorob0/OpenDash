@@ -108,6 +108,30 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelPitWallPlan.PictureWidthFor(900, true), PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.PictureWidthFor(900, true)) + 2 * PanelPitWallPlan.Frame);
         }
 
+        /// <summary>
+        /// The editor reads the content width only up to where anything it draws stops changing: the picture
+        /// at StackedMax beside the list's least, which is past where the address box and the lines of controls
+        /// under it stop too. A wider window re-lays the list without rebuilding the page and reloading its
+        /// live preview (hooks 4.0 rule 11).
+        /// </summary>
+        [Fact]
+        public void The_editor_reads_the_width_only_as_far_as_its_drawing_changes()
+        {
+            Assert.Equal(1074, PanelPitWallPlan.ContentMost);
+            Assert.Equal(PanelPitWallPlan.StackedMax + PanelPitWallPlan.ListGap + PanelPitWallPlan.ListWidth, PanelPitWallPlan.ContentMost);
+            // Past it, every width the editor draws from is what it is at the bound.
+            foreach (var content in new[] { PanelPitWallPlan.ContentMost, PanelPitWallPlan.ContentMost + 1, Column(1920), Column(3840) })
+            {
+                Assert.Equal(PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.ContentMost, true), PanelPitWallPlan.PictureWidthFor(content, true));
+                Assert.Equal(PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.ContentMost, false), PanelPitWallPlan.PictureWidthFor(content, false));
+                Assert.Equal(PanelPitWallPlan.AddressWidth, PanelPitWallPlan.AddressWidthFor(content));
+            }
+            Assert.True(PanelPitWallPlan.ContentMost >= PanelScreens.ControlsColumnMost);
+            Assert.True(PanelPitWallPlan.ContentMost >= PanelPitWallPlan.AddressWidth + PanelShell.RowGap + PanelScreens.RowTitleLeast);
+            var wall = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.PitWall.cs"));
+            Assert.Contains("ContentWidthUpTo(PanelPitWallPlan.ContentMost)", wall);
+        }
+
         /// <summary>The three pages, in the order the picture draws them.</summary>
         [Fact]
         public void The_three_pages_are_the_ones_the_pit_wall_has()
@@ -352,13 +376,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelCompanionPlan.ModuleGap);
             Assert.Equal(34, PanelCompanionPlan.ModuleHeight);
             Assert.Equal(10, PanelCompanionPlan.ModulePaddingX);
-            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(Column(1200)));
-            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(Column(3840)));
-            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(612));
-            Assert.Equal(2, PanelCompanionPlan.ColumnsFor(611));
-            Assert.Equal(2, PanelCompanionPlan.ColumnsFor(406));
-            Assert.Equal(1, PanelCompanionPlan.ColumnsFor(405));
-            Assert.Equal(1, PanelCompanionPlan.ColumnsFor(0));
+            // The kit's card grid lays them out as it is measured: three from 612 of content, two below, and
+            // Compact's two at most, so the page never reads the width for them.
+            Assert.Equal(200, PanelCompanionPlan.ModuleLeast);
+            Assert.Equal(3, PanelShell.Columns(Column(1200), PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(3, PanelShell.Columns(Column(3840), PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(3, PanelShell.Columns(612, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(2, PanelShell.Columns(611, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(1, PanelShell.Columns(405, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(2, PanelShell.Columns(640, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, PanelLayout.Compact));
+            var companion = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Companion.cs"));
+            Assert.Contains("Ui.CardGrid(PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, cells)", companion);
             Assert.Equal(11, PanelCompanionPlan.NoteSize);
         }
 

@@ -28,6 +28,9 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildPitWallEditor(ScreenInstance screen, Action redraw)
         {
+            // Read once, and only as far as anything drawn from it changes: past ContentMost the picture has
+            // stopped and the zone list beside it takes the rest without a rebuild.
+            var content = ContentWidthUpTo(PanelPitWallPlan.ContentMost);
             var portrait = PanelScreens.IsPortrait(screen);
             var blocks = new List<UIElement>();
             var rows = new List<UIElement>();
@@ -47,10 +50,10 @@ namespace OpenDashPlugin
                 pageRow.BorderThickness = new Thickness(0);
                 pageRow.Padding = new Thickness(0, 0, 0, 12);
                 blocks.Add(Ui.Anchor(pageRow, PanelScreens.AnchorPitWallPage));
-                blocks.Add(BuildPitWallLayout(screen, page, redraw));
+                blocks.Add(BuildPitWallLayout(screen, page, redraw, content));
             }
 
-            rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.WebViewTitle, BuildWebViewBox(screen)), PanelScreens.AnchorWebView));
+            rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.WebViewTitle, BuildWebViewBox(screen, content)), PanelScreens.AnchorWebView));
             // One answer for the screen and not one per zone, as a face has: the zones are widgets pointed at
             // one dashboard file per rectangle, so two zones of one column are the same file.
             var classOnly = Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; ScreensSave(screen); });
@@ -63,11 +66,11 @@ namespace OpenDashPlugin
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay));
             if (portrait)
             {
-                rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.PortraitTitle, BuildPortraitLayout(screen, redraw), null, Ui.NewTag()), PanelScreens.AnchorPortrait));
+                rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.PortraitTitle, BuildPortraitLayout(screen, redraw, content), null, Ui.NewTag()), PanelScreens.AnchorPortrait));
             }
             else
             {
-                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildPitWallGlance(screen, redraw), PanelCopy.PitWallGlance), PanelScreens.AnchorGlance));
+                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildPitWallGlance(screen, redraw, content), PanelCopy.PitWallGlance), PanelScreens.AnchorGlance));
             }
             blocks.Add(Ui.Rows(rows.ToArray()));
             return Ui.VStack(16, blocks.ToArray());
@@ -75,10 +78,10 @@ namespace OpenDashPlugin
 
         /// <summary>The page on screen, and the list of its zones beside it where there are two columns and
         /// under it where there are not.</summary>
-        private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page, Action redraw)
+        private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page, Action redraw, double content)
         {
             var twoColumns = TwoColumns;
-            var width = PanelPitWallPlan.PictureWidthFor(ContentWidth, twoColumns);
+            var width = PanelPitWallPlan.PictureWidthFor(content, twoColumns);
             var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], width), PanelScreens.AnchorZones);
             var list = BuildPitWallZoneList(screen, page, redraw);
             if (!twoColumns) return Ui.VStack(16, picture, list);
@@ -176,7 +179,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The portrait wall's four zones, one choice each, named with their letter.</summary>
-        private FrameworkElement BuildPortraitLayout(ScreenInstance screen, Action redraw)
+        private FrameworkElement BuildPortraitLayout(ScreenInstance screen, Action redraw, double content)
         {
             var choices = new List<FrameworkElement>();
             foreach (var slot in PanelScreens.PortraitZones())
@@ -191,14 +194,14 @@ namespace OpenDashPlugin
                 choice.ToolTip = PanelPitWallPlan.ZonePosition(captured);
                 choices.Add(choice);
             }
-            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), choices.ToArray());
+            return ScreensWrap(PanelScreens.ControlsWidth(content), choices.ToArray());
         }
 
         /// <summary>
         /// The glance: which zone lends its place, then which page it shows there, and the chip saying what
         /// the held button is bound to.
         /// </summary>
-        private FrameworkElement BuildPitWallGlance(ScreenInstance screen, Action redraw)
+        private FrameworkElement BuildPitWallGlance(ScreenInstance screen, Action redraw, double content)
         {
             var glance = Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance);
             var zoneIndex = Contract.QuickGlanceZone(glance);
@@ -215,9 +218,9 @@ namespace OpenDashPlugin
                 ScreensSave(screen, redraw);
             }, PanelScreens.GlancePageWidth);
             pages.Uid = "screens.pitwall.glance.page";
-            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);
             chip.Uid = "screens.pitwall.glance.chip";
-            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), zone, pages, chip);
+            return ScreensWrap(PanelScreens.ControlsWidth(content), zone, pages, chip);
         }
 
         /// <summary>
@@ -229,9 +232,9 @@ namespace OpenDashPlugin
         /// commit and the box would empty itself in front of whoever was typing into it. WPF has no
         /// watermark of its own, so it is a text block over the box rather than behind it.
         /// </remarks>
-        private FrameworkElement BuildWebViewBox(ScreenInstance screen)
+        private FrameworkElement BuildWebViewBox(ScreenInstance screen, double content)
         {
-            var width = PanelPitWallPlan.AddressWidthFor(ContentWidth);
+            var width = PanelPitWallPlan.AddressWidthFor(content);
             var box = Ui.Input(screen.WebViewUrl ?? string.Empty, width);
             var watermark = Ui.Text(PanelPitWallPlan.AddressPlaceholder, PanelShell.InputTextSize, FontWeights.Normal, Theme.TextLabel);
             watermark.HorizontalAlignment = HorizontalAlignment.Left;

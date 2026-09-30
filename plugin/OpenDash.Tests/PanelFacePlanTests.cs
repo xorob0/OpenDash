@@ -89,24 +89,83 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The aside stands beside the picture only while the picture's column is the artboard's 556 (896 less
-        /// the aside and the gap): narrower, the rows under the picture had no room for their titles, and the
-        /// zone cells fell to their least.
+        /// The aside stands beside the picture whenever the page has two columns, as the pit wall's list and the
+        /// round screen's rows do: at the artboard's own 1200 px frame (879 of content) the picture's column is
+        /// 539 and the aside 316 beside it, where a rule that waited for the artboard's 556 stacked them from
+        /// about a 1081 px control to a 1216 px one. The column is the fitted picture, or the artboard's 556 where
+        /// the picture is narrower and the page has the room, and the aside takes the rest: it stays beside the
+        /// zone it lists however wide the window.
         /// </summary>
         [Fact]
-        public void The_aside_stands_beside_the_picture_while_the_column_is_the_artboards()
+        public void The_aside_stands_beside_the_picture_whenever_the_page_has_two_columns()
         {
             Assert.Equal(556, PanelFacePlan.ColumnLeast);
             Assert.Equal(896 - PanelFacePlan.AsideWidth - PanelFacePlan.AsideGap, PanelFacePlan.ColumnLeast);
-            Assert.False(PanelFacePlan.SideBySide(PanelShell.TwoColumnFrom, true));
-            Assert.False(PanelFacePlan.SideBySide(895, true));
-            Assert.True(PanelFacePlan.SideBySide(896, true));
-            Assert.True(PanelFacePlan.SideBySide(Column(1433), true));
-            Assert.True(PanelFacePlan.SideBySide(Column(3840), true));
-            Assert.False(PanelFacePlan.SideBySide(Column(3840), false));
-            // Beside the aside, the reference face's cells scale past their least at every width.
+            // The artboard's frame, and the narrowest two columns: the column is the room beside the aside.
+            Assert.Equal(879, Column(1200));
+            Assert.Equal(539, PanelFacePlan.ColumnFor(Reference, Column(1200)));
+            Assert.Equal(420, PanelFacePlan.ColumnFor(Reference, PanelShell.TwoColumnFrom));
+            Assert.Equal(556, PanelFacePlan.ColumnFor(Reference, 896));
+            // Wider, the column follows the picture until its height stops it, and no further.
+            var most = PanelFacePlan.FitMost(Reference);
+            Assert.Equal(most, PanelFacePlan.ColumnFor(Reference, Column(3840)));
+            Assert.Equal(Math.Min(Column(1433) - 340, most), PanelFacePlan.ColumnFor(Reference, Column(1433)));
+            // A picture its height holds narrower than the artboard's column still leaves its rows 556.
+            var portrait = Contract.FaceSizes.Single(f => f.Body == Contract.FaceBody.Column);
+            Assert.True(PanelFacePlan.FitMost(portrait) < PanelFacePlan.ColumnLeast);
+            Assert.Equal(PanelFacePlan.ColumnLeast, PanelFacePlan.ColumnFor(portrait, Column(3840)));
+            foreach (var face in Contract.FaceSizes)
+            {
+                foreach (var content in new[] { PanelShell.TwoColumnFrom, Column(1200), 896, Column(1433), Column(1920), Column(3840) })
+                {
+                    var column = PanelFacePlan.ColumnFor(face, content);
+                    Assert.True(column + PanelFacePlan.AsideGap + PanelFacePlan.AsideWidth <= content, face + " leaves the aside less than its least at " + content);
+                    Assert.True(PanelFacePlan.FitWidth(face, column) <= column);
+                }
+            }
+            // At the least column, the reference face's cells scale past their least.
             var least = PanelFacePlan.For(Reference, PanelFacePlan.RowsWidth(PanelFacePlan.ColumnLeast));
             Assert.True(least.Body > PanelFacePlan.CellLeast, "the reference face's body is " + least.Body + " at the least column");
+            var source = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Face.cs"));
+            Assert.Contains("var column = twoColumns ? PanelFacePlan.ColumnFor(face, content) : content;", source);
+            Assert.Contains("MinWidth = PanelFacePlan.AsideWidth", source);
+        }
+
+        /// <summary>
+        /// The widest a face's picture is drawn is found without walking an endless column, and FitWidth of any
+        /// column is that column or the widest, whichever is less; the editor reads the content width only up
+        /// to where that and every line of controls stop changing (hooks 4.0 rule 11), so a wide window does
+        /// not rebuild the page and reload its live preview on every resize.
+        /// </summary>
+        [Fact]
+        public void The_editor_reads_the_width_only_as_far_as_its_drawing_changes()
+        {
+            foreach (var face in Contract.FaceSizes)
+            {
+                var most = PanelFacePlan.FitMost(face);
+                foreach (var column in new double[] { 200, 360, 539, 772, most - 1, most, most + 1, 1112, Column(3840) })
+                {
+                    Assert.True(Math.Min(Math.Floor(column), most) == PanelFacePlan.FitWidth(face, column), face + " fits " + PanelFacePlan.FitWidth(face, column) + " in " + column + ", its widest being " + most);
+                }
+                // Past the bound, the column, the picture and the glance's room are what they are at it.
+                foreach (var twoColumns in new[] { true, false })
+                {
+                    var bound = PanelFacePlan.ContentMost(face, twoColumns);
+                    Assert.True(bound >= (twoColumns ? 896 : PanelScreens.ControlsColumnMost));
+                    var at = twoColumns ? PanelFacePlan.ColumnFor(face, bound) : bound;
+                    foreach (var content in new[] { bound + 1, Column(3840) })
+                    {
+                        var column = twoColumns ? PanelFacePlan.ColumnFor(face, content) : content;
+                        if (twoColumns) Assert.Equal(at, column);
+                        Assert.Equal(PanelFacePlan.FitWidth(face, at), PanelFacePlan.FitWidth(face, column));
+                        Assert.Equal(Math.Min(PanelScreens.ControlsMost, PanelScreens.ControlsWidth(at)), Math.Min(PanelScreens.ControlsMost, PanelScreens.ControlsWidth(column)));
+                    }
+                }
+            }
+            // The 1920 x 480 face stops near 1923 of content beside the aside, the 850 x 480 near 1052.
+            Assert.Equal(PanelFacePlan.FitMost(Reference) + 340, PanelFacePlan.ContentMost(Reference, true));
+            var source = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Face.cs"));
+            Assert.Contains("ContentWidthUpTo(PanelFacePlan.ContentMost(face, twoColumns))", source);
         }
 
         /// <summary>
@@ -278,10 +337,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "A", "B", "C" }, PanelFacePlan.For(portrait).Letters);
 
             var columns = new List<double>();
-            foreach (var content in new double[] { 300, 360, 544, 556, 772, 896, 1112, Column(3840) })
+            foreach (var content in new double[] { 300, 360, 544, 556, 772, 879, 896, 1112, Column(3840) })
             {
                 columns.Add(PanelFacePlan.PictureWidthFor(content, false));
-                if (PanelFacePlan.SideBySide(content, true)) columns.Add(PanelFacePlan.PictureWidthFor(content, true));
+                if (content >= PanelShell.TwoColumnFrom) columns.Add(PanelFacePlan.PictureWidthFor(content, true));
             }
             columns.AddRange(new double[] { 556, 772 });
             foreach (var face in Contract.FaceSizes)

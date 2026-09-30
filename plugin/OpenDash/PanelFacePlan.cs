@@ -91,28 +91,82 @@ namespace OpenDashPlugin
         public const double SelectedEdge = 2;
 
         /// <summary>The aside beside the picture (the Info bar or the selected zone), and the gap between
-        /// them, when the page has two columns; under the picture otherwise.</summary>
+        /// them, when the page has two columns; under the picture otherwise. The aside is at least this wide,
+        /// and takes whatever the column leaves past the picture's.</summary>
         public const double AsideWidth = 316;
 
         public const double AsideGap = 24;
 
-        /// <summary>The width the picture is drawn at on a page <paramref name="content"/> wide: beside the
-        /// aside in two columns, the whole width stacked.</summary>
+        /// <summary>The room the picture has on a page <paramref name="content"/> wide: beside the aside's
+        /// least in two columns, the whole width stacked. The aside stands beside the picture whenever the page
+        /// has two columns (TwoColumns, from 760 of content), as the pit wall's list and the round screen's
+        /// rows do, and under it otherwise.</summary>
         public static double PictureWidthFor(double content, bool twoColumns)
         {
             return Math.Max(0, twoColumns ? content - AsideWidth - AsideGap : content);
         }
 
-        /// <summary>The least the picture's column can be beside the aside: the artboard's own, 896 less the
-        /// aside and the gap. Narrower, the rows under the picture have no room for a title beside their
-        /// controls, and the aside goes under the picture.</summary>
+        /// <summary>The picture's column the artboard draws, 896 less the aside and the gap: the least the
+        /// column beside the aside is laid out at where the page has the room, so the rows under a picture
+        /// that its height holds narrower (the portrait face) keep the artboard's width.</summary>
         public const double ColumnLeast = 556;
 
-        /// <summary>Whether the aside stands beside the picture: the page has two columns, and the picture's
-        /// column is still as wide as the artboard's.</summary>
-        public static bool SideBySide(double content, bool twoColumns)
+        /// <summary>
+        /// The column the picture and the rows under it take beside the aside, on a page
+        /// <paramref name="content"/> wide: as wide as the fitted picture, or <see cref="ColumnLeast"/> where
+        /// the picture is narrower, and never wider than the room beside the aside's least.
+        /// </summary>
+        /// <remarks>
+        /// The aside takes the rest of the content, as the pit wall's zone list does beside its capped
+        /// picture: a column that grew with the window while the picture stopped at its height left the aside
+        /// docked at the far edge, 1600 px and more from the zone it lists on a 4K window.
+        /// </remarks>
+        public static double ColumnFor(Contract.FaceSize face, double content)
         {
-            return twoColumns && PictureWidthFor(content, true) >= ColumnLeast;
+            var room = PictureWidthFor(content, true);
+            return Math.Min(room, Math.Max(ColumnLeast, FitWidth(face, room)));
+        }
+
+        /// <summary>
+        /// The widest the picture of <paramref name="face"/> is ever drawn: where <see cref="MaxHeight"/> stops
+        /// it, whatever the column. <see cref="FitWidth"/> of any column is that column or this, whichever is
+        /// less.
+        /// </summary>
+        /// <remarks>
+        /// Found by halving rather than by FitWidth of an endless column, whose loop walks down one pixel at a
+        /// time from the width it is given and would never end.
+        /// </remarks>
+        public static double FitMost(Contract.FaceSize face)
+        {
+            var frame = 2 * (Inset + Frame);
+            var cap = Math.Max(MaxHeight, For(face, 1).Height + frame);
+            Func<double, bool> fits = width => For(face, RowsWidth(width)).Height + frame <= cap;
+            var low = Math.Floor(frame + 1);
+            if (!fits(low)) return low;
+            double high = 1 << 16;
+            while (high - low > 1)
+            {
+                var middle = Math.Floor((low + high) / 2);
+                if (fits(middle)) low = middle;
+                else high = middle;
+            }
+            return low;
+        }
+
+        /// <summary>
+        /// The most of the content width the face's editor reads (ContentWidthUpTo): past it nothing the
+        /// editor draws changes, so a wider window does not rebuild the page and reload its live preview.
+        /// </summary>
+        /// <remarks>
+        /// Beside the aside, the column stops at the widest picture or <see cref="ColumnLeast"/>, and the aside
+        /// takes the rest without a rebuild. Stacked, the picture stops at its widest and the Quick glance's
+        /// controls stop wrapping at PanelScreens.ControlsColumnMost; the rows stretch without a rebuild.
+        /// </remarks>
+        public static double ContentMost(Contract.FaceSize face, bool twoColumns)
+        {
+            return twoColumns
+                ? Math.Max(ColumnLeast, FitMost(face)) + AsideGap + AsideWidth
+                : Math.Max(FitMost(face), PanelScreens.ControlsColumnMost);
         }
 
         /// <summary>The tallest the picture is drawn, frame included: a portrait face as wide as the column is
