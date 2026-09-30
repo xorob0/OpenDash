@@ -13,6 +13,12 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelFacePlanTests
     {
+        /// <summary>The content beside the full sidebar at a control that wide, with a 17 px scroll bar: 879 at
+        /// the artboard's 1200 frame, 1112 at 1433, 3519 at 3840. It is PanelShell.ContentWidth(control, 17)
+        /// once the column has no ceiling, spelled out so the pin reads the same on either side of that change;
+        /// the column has no widest width to pin against.</summary>
+        private static double Column(double control) => control - PanelShell.SidebarWidth - 2 * PanelShell.MainPaddingX(PanelLayout.Full) - 17;
+
         private static Contract.FaceSize Reference { get { return Contract.ReferenceFace; } }
 
         /// <summary>
@@ -50,8 +56,9 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(standard.Cells, same.Cells);
                 Assert.Equal(standard.Height, same.Height);
             }
-            // Beside the aside on the widest page (1112 less 316 and 24) and alone on a phone-width one.
-            Assert.Equal(772, PanelFacePlan.PictureWidthFor(PanelShell.ContentMax, true));
+            // Beside the aside in a 1112 px column (a 1433 px window: 1112 less 316 and 24), and alone on a
+            // phone-width one.
+            Assert.Equal(772, PanelFacePlan.PictureWidthFor(Column(1433), true));
             Assert.Equal(400, PanelFacePlan.PictureWidthFor(400, false));
             Assert.Equal(754, PanelFacePlan.RowsWidth(772));
             var wide = PanelFacePlan.For(Contract.FaceSizes[1], 754);
@@ -64,13 +71,13 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The reference face as the page draws it beside the aside on the widest page: a picture 772 wide,
+        /// The reference face as the page draws it beside the aside in a 1112 px column: a picture 772 wide,
         /// rows 754 across, 18, 24, 123 and 36 high, zones 298, 147 and 299 across.
         /// </summary>
         [Fact]
         public void The_reference_face_is_drawn_beside_the_aside_at_754()
         {
-            var outer = PanelFacePlan.FitWidth(Reference, PanelFacePlan.PictureWidthFor(PanelShell.ContentMax, true));
+            var outer = PanelFacePlan.FitWidth(Reference, PanelFacePlan.PictureWidthFor(Column(1433), true));
             Assert.Equal(772, outer);
             var plan = PanelFacePlan.For(Reference, PanelFacePlan.RowsWidth(outer));
             Assert.Equal(754, plan.Width);
@@ -94,8 +101,9 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelFacePlan.SideBySide(PanelShell.TwoColumnFrom, true));
             Assert.False(PanelFacePlan.SideBySide(895, true));
             Assert.True(PanelFacePlan.SideBySide(896, true));
-            Assert.True(PanelFacePlan.SideBySide(PanelShell.ContentMax, true));
-            Assert.False(PanelFacePlan.SideBySide(PanelShell.ContentMax, false));
+            Assert.True(PanelFacePlan.SideBySide(Column(1433), true));
+            Assert.True(PanelFacePlan.SideBySide(Column(3840), true));
+            Assert.False(PanelFacePlan.SideBySide(Column(3840), false));
             // Beside the aside, the reference face's cells scale past their least at every width.
             var least = PanelFacePlan.For(Reference, PanelFacePlan.RowsWidth(PanelFacePlan.ColumnLeast));
             Assert.True(least.Body > PanelFacePlan.CellLeast, "the reference face's body is " + least.Body + " at the least column");
@@ -112,7 +120,7 @@ namespace OpenDashPlugin.Tests
             var frame = 2 * (PanelFacePlan.Inset + PanelFacePlan.Frame);
             foreach (var face in Contract.FaceSizes)
             {
-                foreach (var column in new double[] { 360, 544, 772, 1112 })
+                foreach (var column in new double[] { 360, 544, 772, 1112, Column(3840), Column(3840) - 340 })
                 {
                     var outer = PanelFacePlan.FitWidth(face, column);
                     Assert.True(outer <= column, face + " is drawn " + outer + " wide in a column of " + column);
@@ -270,7 +278,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "A", "B", "C" }, PanelFacePlan.For(portrait).Letters);
 
             var columns = new List<double>();
-            foreach (var content in new double[] { 300, 360, 544, 556, 772, 896, 1112 })
+            foreach (var content in new double[] { 300, 360, 544, 556, 772, 896, 1112, Column(3840) })
             {
                 columns.Add(PanelFacePlan.PictureWidthFor(content, false));
                 if (PanelFacePlan.SideBySide(content, true)) columns.Add(PanelFacePlan.PictureWidthFor(content, true));

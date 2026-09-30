@@ -78,13 +78,16 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page, Action redraw)
         {
             var twoColumns = TwoColumns;
-            var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], PanelPitWallPlan.PictureWidthFor(ContentWidth, twoColumns)), PanelScreens.AnchorZones);
+            var width = PanelPitWallPlan.PictureWidthFor(ContentWidth, twoColumns);
+            var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], width), PanelScreens.AnchorZones);
             var list = BuildPitWallZoneList(screen, page, redraw);
             if (!twoColumns) return Ui.VStack(16, picture, list);
+            // The picture stops at StackedMax beside the list as it does over it, so the list takes the rest of
+            // the column: its 300 at the artboard's width, and everything past the picture on a wider window.
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelPitWallPlan.ListGap) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelPitWallPlan.ListWidth) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = PanelPitWallPlan.ListWidth });
             grid.Children.Add(picture);
             list.VerticalAlignment = VerticalAlignment.Top;
             Grid.SetColumn(list, 2);

@@ -51,17 +51,20 @@ namespace OpenDashPlugin
         public const double PictureLeast = 120;
 
         /// <summary>
-        /// The width the picture takes on a page <paramref name="content"/> wide, its frame included: beside
-        /// the zone list in two columns, and stacked the whole width up to <see cref="StackedMax"/>.
+        /// The width the picture takes on a page <paramref name="content"/> wide, its frame included: the
+        /// content less the zone list and its gap in two columns, the content stacked, and in either case no
+        /// wider than <see cref="StackedMax"/>.
         /// </summary>
         /// <remarks>
-        /// Stacked, the zone list and the rows go under the picture, and a 16 by 9 picture the width of a wide
-        /// page stood 485 px tall and pushed them out of sight, which the face's picture is capped against
-        /// for the same reason. Beside the list it keeps its column, since the list is beside it.
+        /// A 16 by 9 picture the width of a wide page stood 485 px tall and pushed the rows under it out of
+        /// sight, which the face's picture is capped against for the same reason. Beside the list it used to
+        /// stop only at the content's 1112 px ceiling; the column has none now, and at a 3840 px window the
+        /// picture was 3195 px wide and 1796 tall. Past the cap the zone list beside it takes the room.
         /// </remarks>
         public static double PictureWidthFor(double content, bool twoColumns)
         {
-            return Math.Max(PictureLeast, twoColumns ? content - ListWidth - ListGap : Math.Min(content, StackedMax));
+            var column = twoColumns ? content - ListWidth - ListGap : content;
+            return Math.Max(PictureLeast, Math.Min(column, StackedMax));
         }
 
         /// <summary>The widest a stacked picture is drawn, frame included: the widest whose page

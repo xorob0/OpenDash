@@ -15,6 +15,12 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelPitWallPlanTests
     {
+        /// <summary>The content beside the full sidebar at a control that wide, with a 17 px scroll bar: 879 at
+        /// the artboard's 1200 frame, 3519 at 3840. It is PanelShell.ContentWidth(control, 17) once the column
+        /// has no ceiling, spelled out so the pin reads the same on either side of that change; the column
+        /// has no widest width to pin against.</summary>
+        private static double Column(double control) => control - PanelShell.SidebarWidth - 2 * PanelShell.MainPaddingX(PanelLayout.Full) - 17;
+
         private static PanelPitWallPlan.Page Page(string title)
         {
             var page = PanelPitWallPlan.PageNamed(title);
@@ -80,13 +86,19 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_picture_and_its_frame_fit_the_column()
         {
-            Assert.Equal(PanelShell.ContentMax - 324, PanelPitWallPlan.PictureWidthFor(PanelShell.ContentMax, true));
+            Assert.Equal(Column(1200) - 324, PanelPitWallPlan.PictureWidthFor(Column(1200), true));
+            // Beside the list the picture stops where it stops stacked, and the list takes the rest: at a 4K
+            // window it was 3195 px wide and 1796 tall, which pushed the rows under it out of a 2160 window.
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.StackedMax + 324, true));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(1112, true));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(Column(3840), true));
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.PictureWidthFor(Column(3840), true))) <= PanelFacePlan.MaxHeight);
             Assert.Equal(544, PanelPitWallPlan.PictureWidthFor(544, false));
             // Stacked, the picture stops where its page would stand taller than the face's picture may, so
             // the zone list and the rows under it stay in sight on a wide page.
             Assert.Equal(750, PanelPitWallPlan.StackedMax);
             Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(999, false));
-            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(PanelShell.ContentMax, false));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(Column(3840), false));
             Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax)) <= PanelFacePlan.MaxHeight);
             Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax + 1)) > PanelFacePlan.MaxHeight);
             Assert.Equal(PanelPitWallPlan.PictureLeast, PanelPitWallPlan.PictureWidthFor(300, true));
@@ -297,7 +309,8 @@ namespace OpenDashPlugin.Tests
         public void The_address_box_is_the_width_the_canvas_draws()
         {
             Assert.Equal(320, PanelPitWallPlan.AddressWidth);
-            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(PanelShell.ContentMax));
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(Column(1200)));
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(Column(3840)));
             Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(320 + PanelShell.RowGap + PanelScreens.RowTitleLeast));
             Assert.Equal(PanelScreens.ControlsWidth(400), PanelPitWallPlan.AddressWidthFor(400));
             Assert.True(PanelPitWallPlan.AddressWidthFor(400) < 320);
@@ -339,7 +352,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelCompanionPlan.ModuleGap);
             Assert.Equal(34, PanelCompanionPlan.ModuleHeight);
             Assert.Equal(10, PanelCompanionPlan.ModulePaddingX);
-            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(PanelShell.ContentMax));
+            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(Column(1200)));
+            Assert.Equal(3, PanelCompanionPlan.ColumnsFor(Column(3840)));
             Assert.Equal(3, PanelCompanionPlan.ColumnsFor(612));
             Assert.Equal(2, PanelCompanionPlan.ColumnsFor(611));
             Assert.Equal(2, PanelCompanionPlan.ColumnsFor(406));
