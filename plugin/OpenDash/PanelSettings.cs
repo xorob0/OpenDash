@@ -222,13 +222,11 @@ namespace OpenDashPlugin
         /// <summary>
         /// The main and the secondary value a tyre corner will show (#325), greyed until then, in that order.
         /// Two names: the artboard's "then Pressure" is a fragment in a chooser, which voice.md does not allow
-        /// and which beats artboard copy, and #325 does not own the words as #504 owns the yellow flags'.
+        /// and which beats artboard copy. The row is drawn bare, as the artboard draws it: a greyed row has
+        /// nothing to act on, so a caption explaining the order would be words for nothing, and #325, which
+        /// builds the two choosers, settles their words.
         /// </summary>
         public static readonly string[] TyreDisplayLabels = { "Temperature", "Pressure" };
-
-        /// <summary>What the order of the two says, which the "then" the artboard put on the second button
-        /// said before.</summary>
-        public const string TyreDisplayCaption = "The first is the main value, the second the secondary.";
 
         public static string SpeedUnit(string simHub)
         {

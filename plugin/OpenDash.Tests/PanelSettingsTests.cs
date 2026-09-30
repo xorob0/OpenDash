@@ -51,12 +51,11 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The greyed rows' words, which say what the tickets will build: the artboard's, but for the
         /// tyre display's second button, whose "then Pressure" is a fragment voice.md does not allow in a
-        /// chooser. It is two names, and its caption says what the order means.</summary>
+        /// chooser. It is two names, and the row is bare, as the artboard draws it: #325 settles the words.</summary>
         [Fact]
         public void The_greyed_rows_say_what_is_coming()
         {
             Assert.Equal(new[] { "Temperature", "Pressure" }, PanelSettings.TyreDisplayLabels);
-            Assert.Equal("The first is the main value, the second the secondary.", PanelSettings.TyreDisplayCaption);
             Assert.Equal(new[] { "Whole track", "My sector only" }, PanelSettings.YellowFlagLabels);
             Assert.Equal(new[] { "Dark", "Light", "OLED black", "High contrast" }, PanelSettings.ThemeLabels);
             Assert.Equal(new[] { "Standard", "Deuteranopia", "Protanopia", "Tritanopia" }, PanelSettings.ColourVisionLabels);
@@ -110,7 +109,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_caption_is_a_sentence()
         {
-            foreach (var caption in new[] { PanelSettings.UnitsCaption, PanelSettings.TemperatureCaption, PanelSettings.BrightnessCaption, PanelSettings.TyreDisplayCaption })
+            foreach (var caption in new[] { PanelSettings.UnitsCaption, PanelSettings.TemperatureCaption, PanelSettings.BrightnessCaption })
             {
                 Assert.EndsWith(".", caption, StringComparison.Ordinal);
             }
@@ -913,7 +912,7 @@ namespace OpenDashPlugin.Tests
                 "Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),",
                 "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),",
                 "Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),",
-                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres, PanelSettings.TyreDisplayCaption)), PanelSoon.TyreDisplay),",
+                "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),",
                 "SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));",
                 "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title, SettingsGreyedChoice(PanelSettings.YellowFlagLabels))), PanelSoon.YellowFlags),",
