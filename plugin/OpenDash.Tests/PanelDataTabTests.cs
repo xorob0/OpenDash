@@ -69,6 +69,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_position_and_session_rows_name_every_value_the_contract_declares()
         {
+            Assert.Equal("Position", PanelDataTab.PositionTitle);
+            Assert.Equal("Session progress", PanelDataTab.SessionTitle);
+            Assert.Equal("Auto picks laps or time to suit the session.", PanelDataTab.SessionCaption);
             Assert.Equal(new[] { "Overall", "Class" }, PanelDataTab.PositionLabels);
             Assert.Equal(Contract.PositionModes.Length, PanelDataTab.PositionLabels.Length);
             Assert.StartsWith(PanelDataTab.PositionLabels[1], PanelDataTab.PositionCaption, StringComparison.Ordinal);

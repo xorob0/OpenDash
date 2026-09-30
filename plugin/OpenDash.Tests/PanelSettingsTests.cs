@@ -157,7 +157,20 @@ namespace OpenDashPlugin.Tests
                 .Concat(PanelSettings.ThemeLabels)
                 .Concat(PanelSettings.ColourVisionLabels)
                 .Concat(PanelSettings.ColoursLabels)
-                .Concat(new[] { PanelSettings.FirstNameHint, PanelSettings.SurnameHint, PanelSettings.LogoButton, PanelSettings.IdleBackgroundButton });
+                .Concat(new[] { PanelSettings.FirstNameHint, PanelSettings.SurnameHint, PanelSettings.LogoButton, PanelSettings.IdleBackgroundButton })
+                // The race data rows' titles and options, which are PanelDataTab's. The driver names and the
+                // clock are worked examples -- a name and a time -- and not labels, so they are left out.
+                .Concat(new[]
+                {
+                    PanelDataTab.PositionTitle, PanelDataTab.DeltaTitle, PanelDataTab.DeltaPrecisionTitle, PanelDataTab.SessionTitle,
+                    PanelDataTab.DriverNameTitle, PanelDataTab.TeamNameTitle, PanelDataTab.ClockTitle, PanelDataTab.BlueFlagTitle,
+                })
+                .Concat(PanelDataTab.PositionLabels)
+                .Concat(PanelDataTab.DeltaLabels)
+                .Concat(PanelDataTab.DeltaPrecisionLabels)
+                .Concat(PanelDataTab.SessionLabels)
+                .Concat(PanelDataTab.BlueFlagLabels);
+            Assert.Contains("Session progress", labels);
             foreach (var label in labels)
             {
                 Assert.True(char.IsUpper(label[0]), label);
@@ -421,6 +434,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(20, PanelSettings.IndexJumpMargin);
             var page = Page();
             Assert.Contains("var all = new List<UIElement> { SettingsIndex(sections, to) };", page);
+            // The rule that closes the row, and a link lit in the primary ink on the zone ground.
+            Assert.Matches(@"BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, 0, 0, PanelMetrics\.BorderWeight\),\s*Padding = new Thickness\(0, 0, 0, PanelSettings\.IndexPaddingBottom - PanelSettings\.IndexGap\),", page);
+            Assert.Contains("link.Background = lit ? Ui.Brush(Theme.SurfaceZone) : Brushes.Transparent;", page);
+            Assert.Contains("if (label != null) label.Foreground = Ui.Brush(lit ? Theme.TextPrimary : Theme.TextSecondary);", page);
+            // It follows only the main column's own scroller, a text box's included scroller aside, and lets go
+            // of it when the build is dropped, so an old build's sections are not held by a live handler.
+            Assert.Contains("if (scroll == null || !ReferenceEquals(args.OriginalSource, scroll)) return;", page);
+            Assert.Matches(@"OnDrop\(\(\) =>\s*\{\s*dropped = true;\s*if \(scroll != null\) scroll\.ScrollChanged -= follow;\s*\}\);", page);
         }
 
         /// <summary>
@@ -573,6 +594,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Dispatcher.BeginInvoke(read, DispatcherPriority.Background);", page);
             Assert.Contains("SettingsFocusHeading(heading);", page);
             Assert.Contains("KeyboardNavigation.SetIsTabStop(heading, false);", page);
+            // A press holds its section, marks it, scrolls to it and focuses its heading, in that order.
+            Assert.Matches(@"link\.Click \+= \(sender, args\) =>\s*\{\s*held = index;\s*mark\(index\);\s*SettingsJumpTo\(scroll, sections\[index\]\);\s*SettingsFocusHeading\(heading\);\s*\};", page);
+            // The heading takes the focus but is no tab stop, and is focused once the jump has been laid out.
+            Assert.Matches(@"heading\.Focusable = true;\s*KeyboardNavigation\.SetIsTabStop\(heading, false\);", page);
+            Assert.Matches(@"if \(heading\.IsVisible\) Keyboard\.Focus\(heading\);\s*\}\), DispatcherPriority\.Loaded\);", page);
+            // A read lets go of the hold once the held section is no longer the one read, and a view scrolled to
+            // its foot marks the short last section.
+            Assert.Matches(@"var current = PanelSettings\.CurrentSection\(tops, PanelSettings\.IndexReadLine, scroll\.ViewportHeight, atEnd, held\);\s*if \(current != held\) held = -1;\s*mark\(current\);", page);
+            Assert.Contains("var atEnd = scroll.ScrollableHeight > 0 && scroll.VerticalOffset >= scroll.ScrollableHeight - 1;", page);
         }
 
         [Fact]
@@ -1078,6 +1108,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Action repaint = () => paint(night(), Settings.LightsBrightness, Settings.LightsNightBrightness);", page);
             Assert.Matches(@"Action<bool, int, int> paint = \(atNight, day, dark\) =>\s*\{\s*var level = PanelSettings\.PreviewLevel\(atNight, day, dark\);\s*Ui\.Redim\(strip, level\);\s*Ui\.Redim\(matrix, level\);\s*percent\.Text = PanelSettings\.PreviewPercent\(atNight, day, dark\);\s*\};", page);
             Assert.Matches(@"settingsPreviewPickedUnder = Settings\.LightsNightMode;\s*repaint\(\);", page);
+            // The build paints once itself, or a page opened at night would show an undimmed preview with no
+            // numeral until the next change of lighting.
+            Assert.Matches(@"Action repaint = \(\) => paint\(night\(\), Settings\.LightsBrightness, Settings\.LightsNightBrightness\);\s*repaint\(\);\s*OnLighting\(repaint\);", page);
+            // Rounded, not truncated: 29 would otherwise read 28%, and 57 read 56%.
+            Assert.Equal("29%", PanelSettings.PreviewPercent(false, 29, 25));
+            Assert.Equal("57%", PanelSettings.PreviewPercent(true, 100, 57));
             Assert.Matches(@"return PanelSettings\.ShowsNight\(settingsPreviewPick, Settings\.LightsNightMode\);", page);
         }
 
@@ -1102,6 +1138,35 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("chip.ToolTip = PanelBindings.ChipTooltip;", page);
 
             Assert.Contains("return PageSection(null, true, PanelKit.SectionHeadingGapSettings, heading, Ui.CardBox(grid, 0), folded);", page);
+
+            // SettingsNew puts the New tag on the row's title line, which is all it is for.
+            Assert.Matches(@"var tag = Ui\.NewTag\(\);\s*tag\.Margin = new Thickness\(PanelSettings\.TitleTagGap, 0, 0, 0\);\s*tag\.VerticalAlignment = VerticalAlignment\.Center;\s*parts\.TitleLine\.Children\.Add\(tag\);\s*return row;", page);
+
+            // The artboards' .num-in, whole: 64 wide, 8 in, Barlow Condensed SemiBold at 15, right-aligned.
+            Assert.Matches(@"var box = Ui\.Input\(text, PanelShell\.NumberInputWidth\);\s*box\.Padding = new Thickness\(PanelShell\.NumberInputPaddingX - PanelMetrics\.BorderWeight, 0, PanelShell\.NumberInputPaddingX - PanelMetrics\.BorderWeight, 0\);\s*box\.FontFamily = PanelFonts\.Data;\s*box\.FontWeight = FontWeight\.FromOpenTypeWeight\(PanelSettings\.NumberFieldFontWeight\);\s*box\.FontSize = PanelShell\.NumberInputTextSize;\s*box\.HorizontalContentAlignment = HorizontalAlignment\.Right;\s*box\.TextAlignment = TextAlignment\.Right;\s*return box;", page);
+            // A placeholder in the label ink, which is what tells an empty temperature box (the unit's default,
+            // following SimHub's unit) from a typed number, in the box's own face and alignment.
+            Assert.Matches(@"return new TextBlock\s*\{\s*Text = hint,\s*FontFamily = box\.FontFamily,\s*FontWeight = box\.FontWeight,\s*FontSize = box\.FontSize,\s*Foreground = Ui\.Brush\(Theme\.TextLabel\),\s*TextAlignment = box\.TextAlignment,\s*\};", page);
+            Assert.Contains("hint.HorizontalAlignment = box.TextAlignment == TextAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;", page);
+
+            // The alert table: a rule under the head and under every row but the last, as the artboard's
+            // tr:last-child td has none; a name that wraps; Try against the right edge; every cell answering the
+            // pointer across its whole ground; and a greyed row's name faded and hovering its ticket as its
+            // other cells are.
+            Assert.Matches(@"grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*SettingsAlertRule\(grid, row\);\s*var column = 0;\s*SettingsAlertCell\(grid, row, column\+\+, Ui\.Eyebrow\(PanelSettings\.AlertColumn\)", page);
+            Assert.Contains("if (!last) SettingsAlertRule(grid, row);", page);
+            Assert.Contains("SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title), null, null, temperature, surfaces, PanelSoon.HybridBatteryLow, true);", page);
+            Assert.Single(Regex.Matches(page, @"SettingsAlertRow\(grid, row\+\+, [^\n]*, true\);"));
+            Assert.Contains("name.TextWrapping = TextWrapping.Wrap;", page);
+            Assert.Contains("SettingsAlertCell(grid, row, column, tryIt ?? new Border(), soon, false, HorizontalAlignment.Right);", page);
+            Assert.Contains("else if (align == HorizontalAlignment.Right) content.HorizontalAlignment = HorizontalAlignment.Right;", page);
+            Assert.Matches(@"Background = Brushes\.Transparent,\s*Child = content,", page);
+            Assert.Contains("SettingsAlertCell(grid, row, column++, nameCell, soon, false);", page);
+
+            // The preview's head: its name on the left and Day|Night against the right edge.
+            Assert.Contains("var head = new DockPanel { LastChildFill = false };", page);
+            Assert.Contains("DockPanel.SetDock(eyebrow, Dock.Left);", page);
+            Assert.Contains("DockPanel.SetDock(pick, Dock.Right);", page);
         }
 
         /// <summary>The artboard's preview: a 3·9·3 strip of 20 px LEDs, a yellow on the ends and the revs in the
@@ -1119,9 +1184,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3, PanelSettings.PreviewStrip.Gap);
             Assert.Equal(7, PanelSettings.PreviewStrip.GroupGap);
             Assert.Null(PanelSettings.PreviewStrip.GroundHex);
+            // No ground, border, padding or corner of their own: the stage's inset ground is theirs.
+            Assert.Equal(0, PanelSettings.PreviewStrip.PadX);
+            Assert.Equal(0, PanelSettings.PreviewStrip.PadY);
+            Assert.Null(PanelSettings.PreviewStrip.BorderHex);
+            Assert.Equal(0, PanelSettings.PreviewStrip.CornerRadius);
             Assert.Equal(Theme.SurfaceRaised, PanelSettings.PreviewStrip.UnlitHex);
             Assert.Equal(9, PanelSettings.PreviewMatrix.Cell);
             Assert.Equal(2, PanelSettings.PreviewMatrix.Gap);
+            Assert.Equal(0, PanelSettings.PreviewMatrix.Pad);
+            Assert.Null(PanelSettings.PreviewMatrix.GroundHex);
+            Assert.Null(PanelSettings.PreviewMatrix.BorderHex);
+            Assert.Equal(0, PanelSettings.PreviewMatrix.CornerRadius);
             Assert.Equal(Theme.SurfaceZone, PanelSettings.PreviewMatrix.UnlitHex);
             Assert.Equal(40, PanelSettings.PreviewStageGap);
             Assert.Equal(18, PanelSettings.PreviewStagePadding);
@@ -1143,6 +1217,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { Theme.FlagYellow, Theme.FlagYellow, Theme.FlagYellow }, frame[2]);
             Assert.Equal(new[] { Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage1, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage2, Theme.ShiftStage3, null, null }, frame[1]);
             Assert.Contains("var strip = Ui.Strip(PanelSettings.PreviewStripFrame(), PanelSettings.PreviewStrip);", page);
+            // The numeral against the right of its 56 with tabular figures, so "25%" and "100%" stand in one place.
+            Assert.Matches(@"percent\.Width = PanelSettings\.PreviewPercentWidth;\s*percent\.TextAlignment = TextAlignment\.Right;\s*Typography\.SetNumeralAlignment\(percent, FontNumeralAlignment\.Tabular\);", page);
             Assert.Contains("var matrix = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelSettings.PreviewMatrixScenario, PanelSettings.PreviewMatrixOptions()), PanelSettings.PreviewMatrix);", page);
         }
 
@@ -1196,6 +1272,25 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelSettings.AnchorAlerts, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
             Assert.Equal(PanelSettings.AnchorRaceData, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.UnitsTitle).Route.Anchor);
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "night mode button"));
+
+            // Each entry lands on the section whose own method draws its label's constant, so a hit scrolls to
+            // the row it names and marks that section's link.
+            var page = Page();
+            var constants = new[] { typeof(PanelSettings), typeof(PanelDataTab) }
+                .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static)
+                    .Where(field => field.IsLiteral && field.FieldType == typeof(string) && !field.Name.StartsWith("Anchor", StringComparison.Ordinal))
+                    .Select(field => new { Name = type.Name + "." + field.Name, Value = (string)field.GetValue(null) }))
+                .ToList();
+            foreach (var entry in PanelSettings.Search)
+            {
+                var names = constants.Where(c => c.Value == entry.Label).Select(c => c.Name).ToList();
+                Assert.NotEmpty(names);
+                var drawnIn = Enumerable.Range(0, SectionMethods.Length)
+                    .Where(section => names.Any(name => Regex.IsMatch(SectionBody(page, section), Regex.Escape(name) + @"\b")))
+                    .ToList();
+                Assert.True(drawnIn.Count == 1, entry.Label + " is drawn in " + drawnIn.Count + " sections");
+                Assert.True(PanelSettings.SectionAnchors[drawnIn[0]] == entry.Route.Anchor, entry.Label + " routes to " + entry.Route.Anchor);
+            }
         }
     }
 }
