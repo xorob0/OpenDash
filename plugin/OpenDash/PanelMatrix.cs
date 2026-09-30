@@ -72,6 +72,29 @@ namespace OpenDashPlugin
             return profile + " · " + ProfileRow(state, installedVersion).State;
         }
 
+        /// <summary>The state a plan reads as: a build with no profile has no plan and nothing to install.</summary>
+        public static FlagBoxInstallState StateOf(FlagBoxPlan plan)
+        {
+            return plan == null ? FlagBoxInstallState.NotEmbedded : plan.State;
+        }
+
+        /// <summary>Whether the by-hand import is drawn under the title's line (ruling 55): only when SimHub's
+        /// matrix settings could not be reached, since the press there does the rest.</summary>
+        public static bool ShowsImportFallback(FlagBoxInstallState state)
+        {
+            return state == FlagBoxInstallState.Unavailable;
+        }
+
+        /// <summary>
+        /// Whether the page keeps the press's own result as the plan it draws, rather than asking SimHub again:
+        /// only a failure, which asking again cannot see (the plan never reads Failed), so the title's line can
+        /// say "Install failed" until the page is left or asked again.
+        /// </summary>
+        public static bool KeepsPressResult(FlagBoxInstallState result)
+        {
+            return result == FlagBoxInstallState.Failed;
+        }
+
         /// <summary>Whether the line offers its press: never when there is no profile to install or nowhere
         /// to put it. The press is left out then rather than drawn disabled.</summary>
         public static bool ProfileHasButton(FlagBoxInstallState state)
@@ -139,10 +162,16 @@ namespace OpenDashPlugin
             return count.ToString(CultureInfo.InvariantCulture) + " / " + MaxPanels.ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>Whether another can be added, which is what enables the tile.</summary>
+        /// <summary>Whether another can be added by count.</summary>
         public static bool CanAdd(int count)
         {
             return count < MaxPanels;
+        }
+
+        /// <summary>Whether the add tile is enabled: fewer than four, and one of SimHub's contents free.</summary>
+        public static bool AddEnabled(int count, int freeSlot)
+        {
+            return CanAdd(count) && freeSlot != 0;
         }
 
         /// <summary>The artboard's three columns 12 apart, and the narrowest a card reads at: its border and

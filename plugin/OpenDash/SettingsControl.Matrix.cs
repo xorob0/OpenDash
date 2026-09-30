@@ -3,7 +3,8 @@
 // what it shows at rest.
 //
 // Every word, number and decision is PanelMatrix's; this file only draws. The profile's state is asked of
-// SimHub on each build and only a press writes it (ADR 0013). The build reads SimHub's matrix profiles, so it
+// SimHub when the page is opened and again after each press that redraws it, and only a press writes it (ADR
+// 0013). The build reads SimHub's matrix profiles, so it
 // never asks to be rebuilt by a wheel's lighting press: every picture re-dims in place through OnLighting.
 // docs/design/flag-box.md is what the box draws.
 using System;
@@ -21,10 +22,25 @@ namespace OpenDashPlugin
         /// <summary>The chip the preview is on, kept for the session across builds and matrices.</summary>
         private string matrixPreviewScenario = PanelMatrix.IdleScenario;
 
+        /// <summary>
+        /// What SimHub holds for the flag box, asked once and kept while the page is open: asking parses the
+        /// whole embedded profile, and a card, a side or Shift colours rebuilds the page. It is let go of when
+        /// the page is left and before each press that redraws it, so each of those asks again.
+        /// </summary>
+        private FlagBoxPlan matrixPlan;
+
+        private FlagBoxPlan MatrixPlan()
+        {
+            if (plugin.FlagBoxJson == null) return null;
+            if (matrixPlan == null) matrixPlan = SafePlan();
+            return matrixPlan;
+        }
+
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
             // No DrawsLighting(): the build reads the flag box plan from SimHub (SafePlan).
-            var plan = plugin.FlagBoxJson == null ? null : SafePlan();
+            OnLeave("Matrix.plan", () => matrixPlan = null);
+            var plan = MatrixPlan();
             var panels = Settings.MatrixPanels().ToList();
             var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));
             Border selectedCard = null;
@@ -32,7 +48,7 @@ namespace OpenDashPlugin
             return PageLayout(PanelMatrix.Title,
                 Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile),
                 // The by-hand import, only when SimHub's matrix settings could not be reached.
-                plan != null && plan.State == FlagBoxInstallState.Unavailable ? BuildFlagBoxImportFallback(plan) : null,
+                PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null,
                 Ui.Anchor(cards, PanelMatrix.AnchorPanels),
                 slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));
         }
@@ -44,7 +60,7 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildMatrixProfile(FlagBoxPlan plan)
         {
-            var state = plan == null ? FlagBoxInstallState.NotEmbedded : plan.State;
+            var state = PanelMatrix.StateOf(plan);
             var version = plan == null ? null : plan.InstalledVersion;
             var dot = new Ellipse
             {
@@ -66,6 +82,8 @@ namespace OpenDashPlugin
                 button.Click += (sender, args) =>
                 {
                     var result = InstallFlagBox();
+                    // Asked again on the redraw, unless it failed, which asking again cannot see.
+                    matrixPlan = PanelMatrix.KeepsPressResult(result.State) ? result : null;
                     // Redraw asks what needs fixing again, so the sidebar's dot and Home move with it.
                     Redraw();
                     var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());
@@ -103,7 +121,7 @@ namespace OpenDashPlugin
                     }));
             }
             var add = Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon, ShowAddMatrix, PanelMatrix.AddCount(panels.Count));
-            if (PanelMatrix.CanAdd(panels.Count) && Settings.FreeMatrixSlot() != 0)
+            if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot()))
             {
                 add.ToolTip = PanelMatrix.AddTooltip;
             }
@@ -155,7 +173,11 @@ namespace OpenDashPlugin
             if (facts != null && facts.Shown == false)
             {
                 var check = Ui.Button(PanelAttention.CheckAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
-                check.Click += (sender, args) => CheckAgain();
+                check.Click += (sender, args) =>
+                {
+                    matrixPlan = null;
+                    CheckAgain();
+                };
                 var fix = Ui.FixBox(PanelMatrix.FixTitle(m), null, PanelMatrix.FixSteps(m, FlagBoxName()), check);
                 fix.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);
                 parts.Add(fix);
@@ -555,11 +577,12 @@ namespace OpenDashPlugin
                 var added = Settings.AddMatrixPanel(name.Text);
                 Save();
                 if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added));
+                matrixPlan = null;
                 Redraw();
                 if (added == 0) return;
                 // Nothing was installed here: one profile paints every matrix and is installed once, so the
-                // line names that profile and the steps left on the device.
-                var state = plugin.FlagBoxJson == null ? FlagBoxInstallState.NotEmbedded : SafePlan().State;
+                // line names that profile and the steps left on the device. The redraw has just asked.
+                var state = PanelMatrix.StateOf(MatrixPlan());
                 Say(new PanelMessage(
                     PanelMatrix.PanelAdded(PanelMatrix.NameOf(Settings.MatrixName(added), added), added, FlagBoxName(), state),
                     PanelMatrix.NeedsInstall(state) ? PanelTone.Caution : PanelTone.Info));
@@ -567,7 +590,7 @@ namespace OpenDashPlugin
             var cancel = Ui.Button(PanelMatrix.Cancel, PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
             var body = Ui.VStack(PanelMatrix.SheetGap,
-                Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), plugin.FlagBoxJson == null ? FlagBoxInstallState.NotEmbedded : FlagBoxInstallState.NotInstalled)),
+                Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))),
                 Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption));
             ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));
         }
@@ -584,6 +607,7 @@ namespace OpenDashPlugin
                 var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
                 Settings.RenameMatrixPanel(matrix, name.Text);
                 Save();
+                matrixPlan = null;
                 Redraw();
                 var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix));
                 if (said != null) Say(said);
@@ -605,6 +629,7 @@ namespace OpenDashPlugin
                 Settings.RemoveMatrixPanel(matrix);
                 Save();
                 Select(PanelPage.Matrix, null);
+                matrixPlan = null;
                 Redraw();
                 Say(PanelMatrix.Removed(name, matrix));
             };

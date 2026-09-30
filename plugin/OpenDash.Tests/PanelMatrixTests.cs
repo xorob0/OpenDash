@@ -1,6 +1,7 @@
 // PanelMatrixTests.cs: the Matrix page's words, numbers and decisions, which SettingsControl.Matrix.cs draws
 // and no test can build: the rows and their order, which rows show, the profile's line, the cards, the
-// preview's chips, the messages after a press, and what search lists.
+// preview's chips, the messages after a press, and what search lists. The page itself is held by pinning the
+// statements that wire each press and draw each decision, since nothing here can press them.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,12 @@ namespace OpenDashPlugin.Tests
         private static string MatrixSource()
         {
             return RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Matrix.cs"));
+        }
+
+        /// <summary>The page's source with every run of whitespace made one space, so a pin can span lines.</summary>
+        private static string FlatSource()
+        {
+            return System.Text.RegularExpressions.Regex.Replace(MatrixSource(), @"\s+", " ");
         }
 
         [Fact]
@@ -59,6 +66,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Your matrices", PanelMatrix.PanelsTitle);
             Assert.Equal("Add a matrix", PanelMatrix.AddPanel);
             Assert.Equal("All four matrices are in use.", PanelMatrix.AllInUse);
+            Assert.Equal("Adds a matrix.", PanelMatrix.AddTooltip);
+            Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
+            Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
+            Assert.Equal("Cancel", PanelMatrix.Cancel);
+            Assert.Equal("Preview", PanelMatrix.PreviewChipsName);
             Assert.Equal("No strips yet.", PanelLeds.NoStrips);
             var home = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
             Assert.Contains("PanelLeds.NoStrips", home);
@@ -98,9 +110,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Installed", PanelMatrix.ProfileRow(FlagBoxInstallState.UpToDate, null).State);
             Assert.Equal("Install failed", PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).State);
             Assert.Equal("Install", PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).Button);
-            Assert.Equal(Theme.StatusFailed, PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).StateHex);
+            Assert.Equal(PanelButton.Outline, PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).Style);
             Assert.Equal("Not installed", PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).State);
             Assert.Equal("Install", PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).Button);
+            Assert.Equal(PanelButton.Outline, PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).Style);
+            // Update is the page's one primary press: of the states that offer a press, only Outdated.
+            var pressable = new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed };
+            Assert.Equal(new[] { FlagBoxInstallState.Outdated },
+                pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
+
+            // The state a plan reads as, the by-hand import, and the failure the page keeps.
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelMatrix.StateOf(null));
+            Assert.Equal(FlagBoxInstallState.Outdated, PanelMatrix.StateOf(new FlagBoxPlan { State = FlagBoxInstallState.Outdated }));
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                Assert.Equal(state == FlagBoxInstallState.Unavailable, PanelMatrix.ShowsImportFallback(state));
+                Assert.Equal(state == FlagBoxInstallState.Failed, PanelMatrix.KeepsPressResult(state));
+            }
 
             Assert.Equal("OpenDash Flag box · 0.5.0", PanelMatrix.ProfileLine("OpenDash Flag box", FlagBoxInstallState.UpToDate, "0.5.0"));
             Assert.Equal("OpenDash Flag box · Not installed", PanelMatrix.ProfileLine("OpenDash Flag box", FlagBoxInstallState.NotInstalled, null));
@@ -143,7 +169,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FlagBoxInstallPlan.Replaces, PanelMatrix.ProfileTooltip(FlagBoxInstallState.UpToDate));
 
             var matrix = MatrixSource();
+            var flat = FlatSource();
             Assert.Contains("PanelMatrix.ProfileRow(", matrix);
+            Assert.Contains("var primary = action.Style == PanelButton.Primary;", matrix);
+            Assert.Contains("primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost", matrix);
+            Assert.Contains("button.ToolTip = PanelMatrix.ProfileTooltip(state);", matrix);
+            Assert.Contains("PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null", matrix);
+            // The press installs, keeps a failure, redraws and says what it did.
+            Assert.Contains("var result = InstallFlagBox(); "
+                + "matrixPlan = PanelMatrix.KeepsPressResult(result.State) ? result : null; "
+                + "Redraw(); "
+                + "var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());", flat);
+            // SimHub is asked once while the page is open, and again once it is left.
+            Assert.Contains("OnLeave(\"Matrix.plan\", () => matrixPlan = null);", matrix);
+            Assert.Contains("if (matrixPlan == null) matrixPlan = SafePlan();", matrix);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"SafePlan\(\)"));
+            Assert.Contains("var plan = MatrixPlan();", matrix);
             Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
             // A page that asks SimHub while it is built repaints its lighting in place.
             Assert.DoesNotContain("DrawsLighting()", matrix);
@@ -190,6 +231,58 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("MatrixStyle.Card", matrix);
             Assert.Contains("Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon,", matrix);
             Assert.Contains("Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns,", matrix);
+        }
+
+        /// <summary>Every press on the page, wired to what it says it does: nothing here can press one.</summary>
+        [Fact]
+        public void Every_press_on_the_page_does_what_it_says()
+        {
+            Assert.True(PanelMatrix.AddEnabled(3, 4));
+            Assert.False(PanelMatrix.AddEnabled(4, 1));
+            Assert.False(PanelMatrix.AddEnabled(2, 0));
+            var matrix = MatrixSource();
+            var flat = FlatSource();
+            foreach (var pin in new[]
+            {
+                // The cards: a click selects its matrix and draws the page again; the tile adds.
+                "Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage();",
+                "Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon, ShowAddMatrix, PanelMatrix.AddCount(panels.Count));",
+                "if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot()))",
+                "add.IsEnabled = false; add.ToolTip = PanelMatrix.AllInUse;",
+                "return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
+                // The selected matrix's presses.
+                "rename.Click += (sender, args) => ShowRenameMatrix(m);",
+                "check.Click += (sender, args) => { matrixPlan = null; CheckAgain(); };",
+                // The add sheet.
+                "var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);",
+                "var added = Settings.AddMatrixPanel(name.Text);",
+                "Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))),",
+                "var state = PanelMatrix.StateOf(MatrixPlan());",
+                "PanelMatrix.PanelAdded(PanelMatrix.NameOf(Settings.MatrixName(added), added), added, FlagBoxName(), state), PanelMatrix.NeedsInstall(state) ? PanelTone.Caution : PanelTone.Info",
+                "ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
+                // The rename and remove sheets.
+                "Settings.RenameMatrixPanel(matrix, name.Text); Save(); matrixPlan = null; Redraw();",
+                "Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); matrixPlan = null; Redraw(); Say(PanelMatrix.Removed(name, matrix));",
+                "cancel.Click += (sender, args) => CloseSheet();",
+                // The links.
+                "thresholds.Click += (sender, args) => Go(PanelMatrix.ThresholdsRoute);",
+                "all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario));",
+                // Which idle-display rows show, and the switches that change which do.
+                "if (PanelMatrix.ShowsGearRows(rest))",
+                "if (PanelMatrix.ShowsCarShiftPoints(rest, bands))",
+                "if (PanelMatrix.ShowsRedlineFlash(rest, bands))",
+                "Settings.FlagBoxMatrixGearBands[i] = on; Save(); RebuildPage();",
+                "Settings.SetMatrixRest(m, value); Save(); RebuildPage();",
+                "Settings.FlagBoxSide[i] = value; Save(); RebuildPage();",
+                // The segmented controls, each with its own labels.
+                "BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>",
+                "BuildSegmented(Contract.FlagBoxRests, PanelMatrix.RestLabels, rest, value =>",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(matrix, @"\}, PanelKit\.SegmentedHeightMatrix\);").Count);
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.Button\(PanelMatrix\.Cancel, PanelButtonKind\.Ghost, PanelButtonSize\.Large\)").Count);
         }
 
         [Fact]
@@ -292,6 +385,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { 363, 371, 505 }, PanelMatrix.SoonDrawn.Select(item => item.Ticket).OrderBy(t => t));
             var matrix = MatrixSource();
             Assert.Contains("Ui.Soon(reorder, PanelSoon.PriorityOrder)", matrix);
+            // The list is drawn in the order Layers holds, each numbered by Rank, then the idle display and the device.
+            var flat = FlatSource();
+            Assert.Contains("return Ui.Anchor(Ui.VStack(0, head, Ui.Anchor(flags, PanelMatrix.AnchorFlags), Ui.Anchor(pit, PanelMatrix.AnchorPitLane), "
+                + "Ui.Anchor(spotter, PanelMatrix.AnchorSpotter), Ui.Anchor(warnings, PanelMatrix.AnchorWarnings), "
+                + "Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay), device), PanelMatrix.AnchorPriority);", flat);
+            foreach (var layer in new[] { "flags", "pit", "spotter", "warnings" })
+            {
+                var title = new Dictionary<string, string> { { "flags", "FlagsTitle" }, { "pit", "PitLaneTitle" }, { "spotter", "SpotterTitle" }, { "warnings", "WarningsTitle" } }[layer];
+                Assert.Contains("var " + layer + " = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix." + title + "), PanelMatrix." + title + ",", flat);
+            }
+            Assert.Contains("MatrixLayerHead(null, PanelSoon.SimHubDevice.Title,", flat);
             // Every write goes through at once; the rig-wide animation is the only one not indexed per matrix,
             // and the oil and water thresholds are Settings' only.
             foreach (var write in new[]
@@ -385,6 +489,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("gear", options.Rest);
             Assert.Equal(!Contract.DefaultFlagBoxGearBands, options.Bands);
             Assert.Equal(!Contract.DefaultFlagBoxGearCarLadder, options.CarLadder);
+            // The two gear switches read apart: each moved alone moves only its own field.
+            settings.FlagBoxMatrixGearBands[i] = true;
+            settings.FlagBoxMatrixGearCarLadder[i] = false;
+            Assert.True(PanelMatrix.OptionsFor(settings, slot).Bands);
+            Assert.False(PanelMatrix.OptionsFor(settings, slot).CarLadder);
+            settings.FlagBoxMatrixGearBands[i] = false;
+            settings.FlagBoxMatrixGearCarLadder[i] = true;
+            Assert.False(PanelMatrix.OptionsFor(settings, slot).Bands);
+            Assert.True(PanelMatrix.OptionsFor(settings, slot).CarLadder);
 
             // A family switched off leaves the matrix at its idle display under its chip, and only under its chip.
             var chips = new Dictionary<string, string>
@@ -448,6 +561,24 @@ namespace OpenDashPlugin.Tests
             }
 
             // The artboard's numbers.
+            Assert.Equal(7, PanelMatrix.ProfileDotSize);
+            Assert.Equal(10, PanelMatrix.ProfileGap);
+            Assert.Equal(6, PanelMatrix.ProfileButtonPaddingX);
+            Assert.Equal(12, PanelMatrix.HeaderGap);
+            Assert.Equal(6, PanelMatrix.ActionGap);
+            Assert.Equal(12, PanelMatrix.SheetGap);
+            Assert.Equal(12, PanelMatrix.EmptyGap);
+            Assert.Equal(280, PanelMatrix.NameWidth);
+            Assert.Equal(22, PanelMatrix.StackedGap);
+            Assert.Equal(8, PanelMatrix.ReorderGap);
+            Assert.Equal(8, PanelMatrix.PriorityHeadGap);
+            Assert.Equal(12, PanelMatrix.LayerGap);
+            Assert.Equal(16, PanelMatrix.RankSize);
+            Assert.Equal(14, PanelMatrix.OptionTextSize);
+            Assert.Equal(16, PanelMatrix.OptionGap);
+            Assert.Equal(12, PanelMatrix.OptionLineSize);
+            Assert.Equal(2, PanelMatrix.OptionLineGap);
+            Assert.Equal(8, PanelMatrix.ThresholdsGap);
             Assert.Equal(300, PanelMatrix.PreviewColumnWidth);
             Assert.Equal(36, PanelMatrix.BodyGap);
             Assert.Equal(20, PanelMatrix.PreviewFramePadding);
@@ -498,6 +629,42 @@ namespace OpenDashPlugin.Tests
             // "Your matrices" is the cards' name for a screen reader and is never drawn, so it is a keyword.
             Assert.DoesNotContain(PanelMatrix.PanelsTitle, labels);
             Assert.Contains("your matrices", PanelMatrix.Search.Single(entry => entry.Label == PanelMatrix.AddPanel).Keywords);
+            // Each entry routes to the part of the page that draws it.
+            Assert.Equal(new[]
+            {
+                FlagBoxProfile.ProfileName + " -> " + PanelMatrix.AnchorProfile,
+                PanelMatrix.AddPanel + " -> " + PanelMatrix.AnchorPanels,
+                PanelMatrix.PriorityTitle + " -> " + PanelMatrix.AnchorPriority,
+                PanelMatrix.FlagsTitle + " -> " + PanelMatrix.AnchorFlags,
+                PanelMatrix.CriticalFlagsOnlyTitle + " -> " + PanelMatrix.AnchorFlags,
+                PanelMatrix.PitLaneTitle + " -> " + PanelMatrix.AnchorPitLane,
+                PanelMatrix.SpotterTitle + " -> " + PanelMatrix.AnchorSpotter,
+                PanelMatrix.MountingSideTitle + " -> " + PanelMatrix.AnchorSpotter,
+                PanelMatrix.SpotterAnimationTitle + " -> " + PanelMatrix.AnchorSpotterAnimation,
+                PanelMatrix.WarningsTitle + " -> " + PanelMatrix.AnchorWarnings,
+                PanelMatrix.IdleDisplayTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
+                PanelMatrix.ShiftColoursTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
+                PanelMatrix.CarShiftPointsTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
+                PanelMatrix.RedlineFlashTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
+            }, PanelMatrix.Search.Select(entry => entry.Label + " -> " + entry.Route.Anchor));
+            // And the page wraps each of those parts in its anchor.
+            var flat = FlatSource();
+            foreach (var wrap in new[]
+            {
+                "Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile)",
+                "Ui.Anchor(cards, PanelMatrix.AnchorPanels)",
+                "Ui.Anchor(column, PanelMatrix.AnchorPreview)",
+                "Ui.Anchor(flags, PanelMatrix.AnchorFlags)",
+                "Ui.Anchor(pit, PanelMatrix.AnchorPitLane)",
+                "Ui.Anchor(spotter, PanelMatrix.AnchorSpotter)",
+                "on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation)",
+                "Ui.Anchor(warnings, PanelMatrix.AnchorWarnings)",
+                "Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay)",
+                "device), PanelMatrix.AnchorPriority)",
+            })
+            {
+                Assert.Contains(wrap, flat);
+            }
             var matrix = MatrixSource();
             foreach (var name in new[]
             {
