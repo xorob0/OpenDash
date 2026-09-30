@@ -129,6 +129,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(start >= 0, "RebuildPage is in the shell");
             var body = code.Substring(start, code.IndexOf("pageHost.Content = BuildPage(route);", start, StringComparison.Ordinal) - start);
             Assert.Contains("CommitTyping();", body);
+            // A save that redraws, raised by that commit, does not rebuild inside the rebuild.
+            Assert.Contains("if (!pageBuilt || rebuilding) return;", body);
             var commit = code.Substring(code.IndexOf("private void CommitTyping()", StringComparison.Ordinal));
             commit = commit.Substring(0, commit.IndexOf("private void ShowLightingChange()", StringComparison.Ordinal));
             Assert.Contains("FocusManager.SetFocusedElement(scope, null);", commit);

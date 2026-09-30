@@ -458,18 +458,31 @@ namespace OpenDashPlugin
         private void RebuildPage()
         {
             // Nothing to rebuild before the first page: that one is built at the control's first real width.
-            if (!pageBuilt) return;
-            var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
-            CommitTyping();
-            DropPreview();
-            ClearTicks();
-            ClearUpdateHandlers();
-            RunDropActions();
-            var offset = mainScroll.VerticalOffset;
-            pageHost.Content = BuildPage(route);
-            mainScroll.ScrollToVerticalOffset(offset);
-            if (focus != null) RestoreFocus(pageHost, focus);
+            // Nor inside a rebuild: CommitTyping raises the box's LostFocus, and a page whose save redraws
+            // would otherwise rebuild the page inside the rebuild that is about to build it anyway.
+            if (!pageBuilt || rebuilding) return;
+            rebuilding = true;
+            try
+            {
+                var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
+                CommitTyping();
+                DropPreview();
+                ClearTicks();
+                ClearUpdateHandlers();
+                RunDropActions();
+                var offset = mainScroll.VerticalOffset;
+                pageHost.Content = BuildPage(route);
+                mainScroll.ScrollToVerticalOffset(offset);
+                if (focus != null) RestoreFocus(pageHost, focus);
+            }
+            finally
+            {
+                rebuilding = false;
+            }
         }
+
+        /// <summary>Whether RebuildPage is running, which a save it sets off does not start again.</summary>
+        private bool rebuilding;
 
         /// <summary>
         /// Has the page's text box that is being typed in save what it holds, before a rebuild draws the page
