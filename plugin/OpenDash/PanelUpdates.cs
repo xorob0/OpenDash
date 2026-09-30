@@ -449,11 +449,10 @@ namespace OpenDashPlugin
         /// state word here is: the Screens card says the same states in words that are its page's to change.</summary>
         public const string MissingFromSimHub = "Missing from SimHub";
 
-        /// <summary>A rig dashboard SimHub has not loaded since it was written (ruling 69).</summary>
-        public const string WaitingForRestart = "Waiting for a restart";
-
-        /// <summary>A rig dashboard this build ships nothing for, whose folder SimHub has.</summary>
-        public const string InSimHubState = "In SimHub";
+        /// <summary>A rig dashboard SimHub has not loaded since it was written (ruling 69), in the one phrase
+        /// the Screens card and Home say this state in (PanelScreens.RestartToLoad, PanelHome.RestartToLoad),
+        /// held here so the table does not read another page's constant.</summary>
+        public const string RestartToLoad = "Restart SimHub to load it";
 
         /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
         /// row would otherwise read as if Reinstall everything could write it. Every note about what the build
@@ -486,6 +485,16 @@ namespace OpenDashPlugin
             if (hasStrips && !shipsProfiles) notes.Add(PanelLightRows.NoProfiles);
             else if (hasStrips && !stripsReachable) notes.Add(PanelLightRows.Unavailable);
             return notes;
+        }
+
+        /// <summary>
+        /// What follows a row's kind in its name cell when the version column has gone: " · 0.5.0", so the
+        /// version SimHub holds stays on the row at every width (a column that cannot fit stacks, and never
+        /// vanishes), and nothing while the column shows it or there is no version.
+        /// </summary>
+        public static string VersionInName(double versionWidth, string version)
+        {
+            return versionWidth > 0 || string.IsNullOrWhiteSpace(version) ? string.Empty : " · " + version.Trim();
         }
 
         /// <summary>The artboard's .f: a name column that takes the rest, 110 for the version and 150 for
@@ -592,9 +601,10 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
         /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
-        /// state words are this table's own (<see cref="MissingFromSimHub"/>, <see cref="WaitingForRestart"/>,
-        /// <see cref="InSimHubState"/>), not read from another page. A screen this build ships nothing for is
-        /// said from the facts alone, with a tooltip that says why no press here changes it.
+        /// state words are held here (<see cref="MissingFromSimHub"/>, <see cref="RestartToLoad"/>), not read
+        /// from another page. A screen this build ships nothing for is said from the facts alone -- installed
+        /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
+        /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
         /// </remarks>
         public static UpdatesRow DashboardRow(ScreenInstance screen, PackageStatus package, bool? installed, bool? waitsForRestart)
         {
@@ -604,20 +614,20 @@ namespace OpenDashPlugin
             {
                 var shipsNo = ShipsNo(screen);
                 if (installed == false) return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, shipsNo);
-                if (installed == true) return Row(name, DashboardKind, string.Empty, InSimHubState, Theme.TextLabel, shipsNo);
-                return Row(name, DashboardKind, string.Empty, PanelCopy.NotInstalled, Theme.TextLabel, shipsNo);
+                if (installed == true) return Row(name, DashboardKind, string.Empty, PanelCopy.Installed, Theme.StatusUpToDate, shipsNo);
+                return Row(name, DashboardKind, string.Empty, Unknown, Theme.TextLabel, shipsNo);
             }
             if (package.Status == InstallStatus.Failed)
             {
-                return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, "Install failed. See SimHub's log.");
+                return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, SeeLog);
             }
             if (installed == false)
             {
-                return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, MissingTooltip(name));
+                return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, MissingTooltip);
             }
             if (waitsForRestart == true)
             {
-                return Row(name, DashboardKind, version, WaitingForRestart, Theme.Caution, RestartStep(name));
+                return Row(name, DashboardKind, version, RestartToLoad, Theme.Caution, RestartStep(name));
             }
             switch (package.Status)
             {
@@ -631,11 +641,9 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>A missing dashboard's tooltip, in Home's words for the same state.</summary>
-        public static string MissingTooltip(string name)
-        {
-            return name + "'s dashboard is missing from SimHub. " + PanelConfirmation.ReinstallLabel + " installs it again.";
-        }
+        /// <summary>A missing dashboard's tooltip: the press that puts it back, since the state beside it
+        /// already says it is missing.</summary>
+        public const string MissingTooltip = PanelConfirmation.ReinstallLabel + " installs it again.";
 
         /// <summary>A dashboard SimHub has not loaded yet: the one step, as Home and the Screens fix box say it.</summary>
         public static string RestartStep(string name)

@@ -167,6 +167,13 @@ namespace OpenDashPlugin
                 Foreground = Ui.Brush(Theme.TextSecondary),
             };
             name.Inlines.Add(kind);
+            // Where the version column has gone, the version follows the kind, so the row still says it.
+            var stacked = new Run(string.Empty)
+            {
+                FontSize = PanelUpdates.TableKindSize,
+                Foreground = Ui.Brush(Theme.TextSecondary),
+            };
+            name.Inlines.Add(stacked);
             UpdatesPlace(grid, name, 0, versionWidth);
 
             var version = Ui.Text(row.Version, PanelUpdates.TableVersionSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
@@ -205,6 +212,7 @@ namespace OpenDashPlugin
             paint = current =>
             {
                 version.Text = current.Version;
+                stacked.Text = PanelUpdates.VersionInName(versionWidth, current.Version);
                 state.Text = current.State;
                 state.Foreground = Ui.Brush(current.StateHex);
                 dot.Fill = Ui.Brush(current.DotHex);

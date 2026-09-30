@@ -386,6 +386,38 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(110, PanelUpdates.VersionWidth(Column(3840), hasPress: true));
         }
 
+        /// <summary>A column that cannot fit stacks and never vanishes: where the version column has gone, the
+        /// version follows the row's kind in the name cell, and every paint writes it, so the table says which
+        /// version SimHub holds at every width and after every press.</summary>
+        [Fact]
+        public void The_version_follows_the_kind_where_its_column_has_gone()
+        {
+            Assert.Equal(" · 0.4.2", PanelUpdates.VersionInName(0, "0.4.2"));
+            Assert.Equal(" · Unknown", PanelUpdates.VersionInName(0, PanelUpdates.VersionText(Versioning.UnknownVersion)));
+            Assert.Equal(string.Empty, PanelUpdates.VersionInName(110, "0.4.2"));
+            Assert.Equal(string.Empty, PanelUpdates.VersionInName(0, string.Empty));
+            var code = PageCode();
+            Assert.Contains("stacked.Text = PanelUpdates.VersionInName(versionWidth, current.Version);", code);
+            Assert.Contains("name.Inlines.Add(stacked);", code);
+        }
+
+        /// <summary>The strip-outdated fix lands on the row whose Update is the fix, not on the first light row
+        /// whatever it offers, and on the table when no row offers one.</summary>
+        [Fact]
+        public void The_strip_outdated_fix_lands_on_the_first_row_that_offers_an_update()
+        {
+            var current = PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate });
+            var older = PanelUpdates.StripRow("Dash", new FlagBoxPlan { State = FlagBoxInstallState.Outdated });
+            Assert.Equal(1, PanelUpdates.LightsAnchor(new[] { current, older }));
+            Assert.Equal(0, PanelUpdates.LightsAnchor(new[] { older, current }));
+            Assert.Equal(-1, PanelUpdates.LightsAnchor(new[] { current }));
+            Assert.Equal(-1, PanelUpdates.LightsAnchor(null));
+            var code = PageCode();
+            Assert.Contains("var anchor = PanelUpdates.LightsAnchor(lightRows);", code);
+            Assert.Contains("if (anchor >= 0) Ui.Anchor(lights[anchor], PanelUpdates.AnchorLights);", code);
+            Assert.Contains("else Ui.Anchor(table, PanelUpdates.AnchorLights);", code);
+        }
+
         /// <summary>Only a row that draws its Update takes the press column: an older light profile on a
         /// device SimHub lists. The flag box's row is drawn only on a rig with a matrix and a build that
         /// carries the profile.</summary>
@@ -467,24 +499,26 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A failure outranks everything, then a folder that has gone, then one SimHub has not loaded
-        /// yet, which is said only when the shell's facts know it, each in the table's own words: none is read
-        /// from the Screens page, whose card words are its own to change.</summary>
+        /// yet, which is said only when the shell's facts know it. The restart is said in the one phrase the
+        /// Screens card and Home say it in, held here rather than read from their pages, and no hover repeats
+        /// the state beside it.</summary>
         [Fact]
         public void A_dashboard_row_puts_a_failure_then_a_missing_folder_then_a_restart_first()
         {
             var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false, true);
             Assert.Equal("Install failed", failed.State);
             Assert.Equal(Theme.StatusFailed, failed.StateHex);
-            Assert.Equal("Install failed. See SimHub's log.", failed.Tooltip);
+            Assert.Equal("See SimHub's log.", failed.Tooltip);
 
             var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false, true);
             Assert.Equal("Missing from SimHub", missing.State);
             Assert.Equal(Theme.StatusFailed, missing.StateHex);
             Assert.Equal(string.Empty, missing.Version);
-            Assert.Equal("Rim's dashboard is missing from SimHub. Reinstall everything installs it again.", missing.Tooltip);
+            Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
 
             var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            Assert.Equal("Waiting for a restart", waiting.State);
+            Assert.Equal("Restart SimHub to load it", waiting.State);
+            Assert.Equal("Restart SimHub to load it", PanelUpdates.RestartToLoad);
             Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
             Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", waiting.Tooltip);
@@ -495,16 +529,21 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>A screen this build ships nothing for is left as it is by the installer, so its row says
         /// what the facts say and why no press here changes it, rather than "Not installed" with a press that
-        /// would leave it alone.</summary>
+        /// would leave it alone. Installed is said in the installed ink, dot and words agreeing, as the Screens
+        /// card draws it, and facts not read are "Unknown", as a light row's are.</summary>
         [Fact]
         public void A_screen_this_build_ships_nothing_for_says_so()
         {
             var inSimHub = PanelUpdates.DashboardRow(Rim, null, true, false);
-            Assert.Equal("In SimHub", inSimHub.State);
+            Assert.Equal("Installed", inSimHub.State);
+            Assert.Equal(Theme.StatusUpToDate, inSimHub.StateHex);
+            Assert.Equal(Theme.StatusUpToDate, inSimHub.DotHex);
             Assert.Equal("This build ships no 1280 × 480 face.", inSimHub.Tooltip);
             Assert.Equal(string.Empty, inSimHub.Version);
             Assert.Equal("Missing from SimHub", PanelUpdates.DashboardRow(Rim, null, false, false).State);
-            Assert.Equal("Not installed", PanelUpdates.DashboardRow(Rim, null, null, null).State);
+            var unread = PanelUpdates.DashboardRow(Rim, null, null, null);
+            Assert.Equal("Unknown", unread.State);
+            Assert.Equal(Theme.TextLabel, unread.StateHex);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
             Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
         }
@@ -1035,6 +1074,9 @@ namespace OpenDashPlugin.Tests
             // The ordinary one-deep backup is not a copy of anybody's work.
             Assert.False(PanelUpdates.ShowsKept(new[] { @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" }, edited: false));
             Assert.False(PanelUpdates.ShowsKept(null, edited: false));
+            // A folder outside the rig is never replaced, so its copy is not the card's to offer, and it has no
+            // name but the folder's, which voice.md never shows.
+            Assert.Contains("plugin.Installer.Packages.Where(p => p.FolderName != null && !p.OutsideRig)", PageCode());
         }
 
         [Fact]

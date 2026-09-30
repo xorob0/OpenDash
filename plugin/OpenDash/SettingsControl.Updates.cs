@@ -168,7 +168,9 @@ namespace OpenDashPlugin
             var kept = new List<KeyValuePair<string, string>>();
             var root = plugin.Installer.SimHubRoot;
             var screens = Settings.RigScreens();
-            foreach (var package in plugin.Installer.Packages.Where(p => p.FolderName != null).GroupBy(p => p.FolderName, StringComparer.OrdinalIgnoreCase))
+            // The rig's folders only: nothing replaces a folder outside the rig, so its copy is not this page's
+            // to offer, and it has no name SimHub lists but the folder's.
+            foreach (var package in plugin.Installer.Packages.Where(p => p.FolderName != null && !p.OutsideRig).GroupBy(p => p.FolderName, StringComparer.OrdinalIgnoreCase))
             {
                 var folder = package.Key;
                 IReadOnlyList<string> copies;
