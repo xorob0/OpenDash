@@ -581,7 +581,9 @@ namespace OpenDashPlugin.Tests
             var page = Page();
             Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth, MaxWidth = PanelSettings.AlertNameMaxWidth(table) }", page);
             Assert.Contains("foreach (var column in PanelSettings.SurfaceColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });", page);
-            Assert.Contains("grid.ColumnDefinitions[column].MinWidth = Math.Ceiling(head.DesiredSize.Width) + 2 * PanelSettings.AlertCellPaddingX;", page);
+            // Measured with the layout rounding the panel draws with (SettingsControl sets UseLayoutRounding),
+            // which rounds each tracked glyph's margin: without it "Races only" measures 67.4 and draws 72.
+            Assert.Matches(@"head\.UseLayoutRounding = true;\s*head\.Measure\(new Size\(double\.PositiveInfinity, double\.PositiveInfinity\)\);\s*grid\.ColumnDefinitions\[column\]\.MinWidth = Math\.Ceiling\(head\.DesiredSize\.Width\) \+ 2 \* PanelSettings\.AlertCellPaddingX;", page);
         }
 
         /// <summary>A temperature of 0 is the unit's own default, which the empty box shows as its placeholder,

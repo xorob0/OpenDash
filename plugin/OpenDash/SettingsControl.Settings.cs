@@ -589,7 +589,11 @@ namespace OpenDashPlugin
                     tag.Margin = new Thickness(0, PanelSettings.AlertHeaderTagGap, 0, 0);
                     head.Children.Add(label);
                     head.Children.Add(tag);
-                    // A star column is not sized by its content, so it is held to its heading's width.
+                    // A star column is not sized by its content, so it is held to its heading's width, measured
+                    // as the tree will draw it: the panel rounds layout, which widens each tracked glyph's
+                    // margin to a whole pixel, and a heading measured outside the tree without it comes out
+                    // up to 5 px narrower than it draws and is clipped at both edges.
+                    head.UseLayoutRounding = true;
                     head.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     grid.ColumnDefinitions[column].MinWidth = Math.Ceiling(head.DesiredSize.Width) + 2 * PanelSettings.AlertCellPaddingX;
                     var cell = SettingsAlertCell(grid, row, column++, head, null, true);
