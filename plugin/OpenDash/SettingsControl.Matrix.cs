@@ -169,9 +169,10 @@ namespace OpenDashPlugin
                         RebuildPage();
                     });
                 // The card trims a long name to its column; the hover gives it whole. A screen reader is told
-                // the name too, since the card's content is a picture and two lines, which it cannot read.
+                // the name and the line under it, since the card's content is a picture and two lines, which it
+                // cannot read.
                 card.ToolTip = name;
-                AutomationProperties.SetName(card, name);
+                AutomationProperties.SetName(card, PanelMatrix.CardName(name, m, Settings.MatrixSide(m), shown));
                 cards.Add(card);
             }
             var add = Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon, ShowAddMatrix, PanelMatrix.AddCount(panels.Count));
@@ -623,9 +624,10 @@ namespace OpenDashPlugin
             }
             if (control != null)
             {
-                // A switch has no words of its own and the greyed device press says only its verb: each is
-                // named for a screen reader by its row, as the artboard's aria-labels name them.
-                if (control is ButtonBase) AutomationProperties.SetName(control, title);
+                // A switch has no words of its own, so it is named for a screen reader by its row, as the
+                // artboard's aria-labels name them. A press keeps its own words: the greyed device press is
+                // heard as "Choose a device", what it shows.
+                if (control is ToggleButton) AutomationProperties.SetName(control, title);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 control.HorizontalAlignment = HorizontalAlignment.Right;
                 control.Margin = new Thickness(PanelMatrix.LayerGap, 0, 0, 0);
@@ -671,8 +673,8 @@ namespace OpenDashPlugin
             grid.Children.Add(words);
             if (control != null)
             {
-                // Named by its row, as a layer's switch is.
-                if (control is ButtonBase) AutomationProperties.SetName(control, title);
+                // A switch named by its row, as a layer's is.
+                if (control is ToggleButton) AutomationProperties.SetName(control, title);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 control.HorizontalAlignment = HorizontalAlignment.Right;
                 control.Margin = new Thickness(PanelMatrix.OptionGap, 0, 0, 0);

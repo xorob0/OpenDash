@@ -448,7 +448,7 @@ namespace OpenDashPlugin.Tests
                 // The add tile's hover while it adds.
                 "if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot())) { add.ToolTip = PanelMatrix.AddTooltip; } else { add.IsEnabled = false;",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
-                "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; AutomationProperties.SetName(card, name); cards.Add(card);",
+                "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; AutomationProperties.SetName(card, PanelMatrix.CardName(name, m, Settings.MatrixSide(m), shown)); cards.Add(card);",
                 "var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));",
                 "if (panels.Count > 0) return grid; return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
             })
@@ -1169,13 +1169,26 @@ namespace OpenDashPlugin.Tests
                 // The cards' group, each card by its name and the add tile by its words.
                 "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
                 "AutomationProperties.SetName(add, PanelMatrix.AddPanel);",
-                "card.ToolTip = name; AutomationProperties.SetName(card, name);",
+                "card.ToolTip = name; AutomationProperties.SetName(card, PanelMatrix.CardName(name, m, Settings.MatrixSide(m), shown));",
             })
             {
                 Assert.Contains(pin, flat);
             }
             // Each switch, and the greyed device press, by its row's name, in both helpers.
-            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("if (control is ButtonBase) AutomationProperties.SetName(control, title);")).Count);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("if (control is ToggleButton) AutomationProperties.SetName(control, title);")).Count);
+            // A press keeps its own words: the greyed device press is heard as what it shows.
+            Assert.DoesNotContain("control is ButtonBase", flat);
+            Assert.Contains("Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)", flat);
+            // Each card is heard with the line under its name, which the card's name would otherwise replace.
+            Assert.Equal("Left pillar, Matrix 2, Left", PanelMatrix.CardName("Left pillar", 2, "left", null));
+            Assert.Equal("Matrix 3, Both sides", PanelMatrix.CardName("Matrix 3", 3, "both", null));
+            Assert.Equal("Left pillar, Showing", PanelMatrix.CardName("Left pillar", 1, "both", true));
+            Assert.Equal("Left pillar, Not shown in SimHub", PanelMatrix.CardName("Left pillar", 2, "left", false));
+            foreach (var shown in new bool?[] { null, true, false })
+            {
+                Assert.Equal("Left pillar, " + PanelMatrix.CardLine("Left pillar", 2, "right", shown).Replace(" · ", ", "),
+                    PanelMatrix.CardName("Left pillar", 2, "right", shown));
+            }
             Assert.DoesNotContain("SetName(preview,", flat);
             Assert.DoesNotContain("SetName(chips,", flat);
         }

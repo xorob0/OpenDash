@@ -353,6 +353,19 @@ namespace OpenDashPlugin
             return slot == null ? SideLabel(side) : slot + " · " + SideLabel(side);
         }
 
+        /// <summary>
+        /// A card's name for a screen reader: its name and the line under it, both of which the card draws.
+        /// The name replaces the card's content, so the line would go unheard without it. The line's middle dot
+        /// is spoken as a comma: "Left pillar, Matrix 2, Left".
+        /// </summary>
+        public static string CardName(string name, int matrix, string side, bool? shown)
+        {
+            if (shown == true) return name + ", " + Showing;
+            if (shown == false) return name + ", " + NotShown;
+            var slot = SlotCaption(name, matrix);
+            return name + ", " + (slot == null ? SideLabel(side) : slot + ", " + SideLabel(side));
+        }
+
         public static string CardLineHex(bool? shown)
         {
             return shown == false ? Theme.Caution : Theme.TextSecondary;
