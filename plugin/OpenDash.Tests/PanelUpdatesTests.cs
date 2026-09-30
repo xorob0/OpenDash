@@ -171,7 +171,8 @@ namespace OpenDashPlugin.Tests
         public void The_check_row_carries_the_line_only_while_the_card_is_gone()
         {
             Assert.Equal("Checking for updates…", PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.Checking }));
-            Assert.Equal("Update checks are off.", PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.Disabled }));
+            // The switch beside it already says the checks are off (voice.md).
+            Assert.Null(PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.Disabled }));
             Assert.Equal("You have the newest release, 0.5.0.", PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = "0.5.0", Manual = true }));
             Assert.Equal("Could not reach GitHub. You have 0.5.0.", PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.Unreachable, InstalledVersion = "0.5.0", Manual = true }));
             // A background check that finds nothing says nothing, and an offer is the card's.
@@ -180,6 +181,77 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.UpdateAvailable, LatestVersion = "0.5.1", Manual = true }));
             Assert.Null(PanelUpdates.CheckLine(new UpdateStatus { State = UpdateState.Idle }));
             Assert.Null(PanelUpdates.CheckLine(null));
+        }
+
+        /// <summary>A check in flight is said where the driver is looking: on the offer card, beside the
+        /// Download it holds off, while an offer shows, and on the row otherwise.</summary>
+        [Fact]
+        public void A_check_in_flight_is_said_on_the_card_while_an_offer_shows_and_on_the_row_otherwise()
+        {
+            var checking = new UpdateStatus { State = UpdateState.Checking };
+            Assert.Equal("Checking for updates…", PanelUpdates.CardLine(UpdatesCard.Available, checking));
+            Assert.Null(PanelUpdates.RowLine(UpdatesCard.Available, checking));
+            Assert.Equal("Checking for updates…", PanelUpdates.RowLine(UpdatesCard.None, checking));
+            Assert.Equal("Checking for updates…", PanelUpdates.RowLine(UpdatesCard.Staged, checking));
+            Assert.Null(PanelUpdates.CardLine(UpdatesCard.None, checking));
+
+            var answered = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = "0.5.0", Manual = true };
+            Assert.Null(PanelUpdates.CardLine(UpdatesCard.Available, answered));
+            Assert.Equal("You have the newest release, 0.5.0.", PanelUpdates.RowLine(UpdatesCard.None, answered));
+            Assert.Null(PanelUpdates.RowLine(UpdatesCard.Staged, answered));
+            Assert.Null(PanelUpdates.RowLine(UpdatesCard.None, null));
+        }
+
+        /// <summary>Download is held off while a check is in flight, whose answer redraws the card, so a
+        /// second press cannot find the offer gone and say there is nothing to install.</summary>
+        [Fact]
+        public void Download_waits_for_a_check_in_flight_and_for_a_run()
+        {
+            Assert.True(PanelUpdates.DownloadEnabled(UpdateState.UpdateAvailable, false));
+            Assert.False(PanelUpdates.DownloadEnabled(UpdateState.Checking, false));
+            Assert.False(PanelUpdates.DownloadEnabled(UpdateState.UpdateAvailable, true));
+        }
+
+        /// <summary>The check refuses a press while the switch is off (UpdateCheck.ShouldCheck), so the
+        /// press is not live then: a press that does nothing and says nothing reads as a broken panel.</summary>
+        [Fact]
+        public void Check_now_is_live_only_while_the_checks_are_on_and_nothing_is_running()
+        {
+            Assert.True(PanelUpdates.CheckNowEnabled(true, false, UpdateState.Idle));
+            Assert.True(PanelUpdates.CheckNowEnabled(true, false, UpdateState.UpdateAvailable));
+            Assert.False(PanelUpdates.CheckNowEnabled(false, false, UpdateState.Idle));
+            Assert.False(PanelUpdates.CheckNowEnabled(true, true, UpdateState.Idle));
+            Assert.False(PanelUpdates.CheckNowEnabled(true, false, UpdateState.Checking));
+            Assert.False(UpdateCheck.ShouldCheck(false, 0, Now, manual: true));
+        }
+
+        /// <summary>Turning the switch back on brings the remembered offer back to the card and the badge at
+        /// once, as the idle screen's mark shows it again, rather than after the panel is reopened.</summary>
+        [Fact]
+        public void The_switch_turned_on_brings_back_what_the_panel_opens_on()
+        {
+            var off = PanelUpdates.Switched(false, null, "0.5.1", "0.5.0");
+            Assert.Equal(UpdateState.Disabled, off.State);
+            Assert.Equal("0.5.0", off.InstalledVersion);
+
+            var offer = PanelUpdates.Switched(true, null, "0.5.1", "0.5.0");
+            Assert.Equal(UpdateState.UpdateAvailable, offer.State);
+            Assert.Equal("0.5.1", offer.LatestVersion);
+
+            var heard = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = "0.5.0" };
+            Assert.Same(heard, PanelUpdates.Switched(true, heard, null, "0.5.0"));
+
+            // A "checks are off" heard earlier this start is not what the switch now says.
+            var stale = PanelUpdates.Switched(true, new UpdateStatus { State = UpdateState.Disabled }, null, "0.5.0");
+            Assert.Equal(UpdateState.Idle, stale.State);
+            Assert.Equal("0.5.0", stale.InstalledVersion);
+        }
+
+        [Fact]
+        public void The_card_and_the_check_row_say_what_their_presses_do()
+        {
+            Assert.Equal("Downloads OpenDash 0.5.1.", PanelUpdates.DownloadTooltip("0.5.1"));
+            Assert.Equal("Asks GitHub for the newest release now.", PanelUpdates.CheckNowTooltip);
         }
 
         [Fact]

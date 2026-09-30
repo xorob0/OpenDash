@@ -13,6 +13,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Threading;
 using SimHub.Plugins.Styles;
 // Aliased rather than imported: System.Windows.Forms carries a Button of its own, and this file is
 // full of WPF ones. SHMessageBox answers with the Forms enum whatever the dialog it draws.
@@ -41,6 +43,9 @@ namespace OpenDashPlugin
         private void UpdatesDrawCard()
         {
             if (updatesCardHost == null) return;
+            // A press on the card that redraws it takes the pressed control out of the tree, and keyboard focus
+            // with it; it is put back on what the redrawn card offers (UpdatesRefocus).
+            var hadFocus = updatesCardHost.IsKeyboardFocusWithin;
             updatesCardLine = null;
             updatesDownload = null;
             updatesProgressHost = null;
@@ -49,6 +54,7 @@ namespace OpenDashPlugin
             {
                 updatesCardHost.Child = null;
                 updatesCardHost.Visibility = Visibility.Collapsed;
+                if (hadFocus) UpdatesRefocus(updatesCheckNow);
                 return;
             }
             updatesCardHost.Visibility = Visibility.Visible;
@@ -73,6 +79,8 @@ namespace OpenDashPlugin
             var text = Ui.VStack(PanelUpdates.CardTextGap, headLine, Ui.Caption(note, BodyWidth));
             updatesCardLine = Ui.Caption(string.Empty, BodyWidth);
             updatesCardLine.Visibility = Visibility.Collapsed;
+            // Added after the stack was built, so it takes the stack's gap itself.
+            updatesCardLine.Margin = new Thickness(0, PanelUpdates.CardTextGap, 0, 0);
             text.Children.Add(updatesCardLine);
             if (updatesCard == UpdatesCard.Downloading)
             {
@@ -84,7 +92,8 @@ namespace OpenDashPlugin
             {
                 updatesDownload = Ui.Button(null, PanelButtonKind.Primary);
                 updatesDownload.MinWidth = ButtonMinWidth;
-                updatesDownload.ToolTip = "Downloads OpenDash " + latest + ".";
+                updatesDownload.ToolTip = PanelUpdates.DownloadTooltip(latest);
+                updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
                 updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));
                 updatesDownload.Click += (sender, args) => ApplyUpdate();
             }
@@ -99,16 +108,36 @@ namespace OpenDashPlugin
             if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());
             updatesCardHost.Child = Ui.CardBox(card, 0);
             if (applying) ShowRun();
+            if (hadFocus) UpdatesRefocus(updatesDownload, updatesCheckNow);
+        }
+
+        /// <summary>
+        /// Puts keyboard focus, once the redrawn controls are laid out, on the first of these that can take
+        /// it, or on the page's first control when none can: a press that redraws its own place in the page
+        /// must not leave the next Tab starting from SimHub's window.
+        /// </summary>
+        private void UpdatesRefocus(params UIElement[] candidates)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var target = candidates.FirstOrDefault(c => c != null && c.Focusable && c.IsVisible && c.IsEnabled);
+                if (target != null) Keyboard.Focus(target);
+                else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>The card's foot: the release's opening sentence and the link to every release.</summary>
+        /// <remarks>
+        /// The heading only over notes: a remembered offer (UpdateMark.Opening) carries none, and a heading
+        /// over nothing but the link is not drawn.
+        /// </remarks>
         private FrameworkElement UpdatesReleaseNotes()
         {
             var notes = new StackPanel { Orientation = Orientation.Vertical };
-            notes.Children.Add(Ui.Eyebrow(PanelUpdates.ReleaseNotesTitle));
             var summary = UpdateWording.Summarise(updateStatus.Notes);
             if (summary != null)
             {
+                notes.Children.Add(Ui.Eyebrow(PanelUpdates.ReleaseNotesTitle));
                 var line = Ui.Prose(summary, Theme.SizeSmall, Theme.TextPrimary);
                 line.MaxWidth = BodyWidth;
                 line.HorizontalAlignment = HorizontalAlignment.Left;
@@ -117,7 +146,7 @@ namespace OpenDashPlugin
             }
             var link = BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl);
             link.HorizontalAlignment = HorizontalAlignment.Left;
-            link.Margin = new Thickness(0, PanelUpdates.NotesGap, 0, 0);
+            link.Margin = new Thickness(0, summary == null ? 0 : PanelUpdates.NotesGap, 0, 0);
             notes.Children.Add(link);
             return new Border
             {
@@ -138,20 +167,12 @@ namespace OpenDashPlugin
             {
                 Settings.CheckForUpdates = on;
                 Save();
-                if (on)
-                {
-                    // Back to what this start last heard, and ask when the interval allows.
-                    var last = plugin.LastUpdateStatus;
-                    updateStatus = last != null && last.State != UpdateState.Disabled
-                        ? last
-                        : new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.RigVersion };
-                    Check(manual: false);
-                }
-                else
-                {
-                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.RigVersion };
-                }
+                // On, back to what the panel opens on, a remembered offer included, as the idle screen's
+                // mark shows it again; the card is drawn before asking, so a check the interval allows is
+                // said beside the offer it may replace.
+                updateStatus = PanelUpdates.Switched(on, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.RigVersion);
                 UpdatesDrawCard();
+                if (on) Check(manual: false);
                 UpdatesRefreshCheck();
                 // An offer the switch withdrew is the sidebar's badge and Home's line too.
                 RefreshAttention();
@@ -159,7 +180,7 @@ namespace OpenDashPlugin
             });
 
             updatesCheckNow = Ui.Button(PanelUpdates.CheckNow, PanelButtonKind.Outline, PanelButtonSize.Small);
-            updatesCheckNow.ToolTip = "Asks GitHub for the newest release now.";
+            updatesCheckNow.ToolTip = PanelUpdates.CheckNowTooltip;
             updatesCheckNow.Click += (sender, args) => Check(manual: true);
 
             var row = Ui.SettingRow(PanelUpdates.CheckTitle, Ui.HStack(PanelUpdates.CheckControlsGap, updatesCheckNow, toggle), UpdateWording.CheckCaption);
@@ -169,6 +190,9 @@ namespace OpenDashPlugin
 
             updatesLastChecked = Ui.Caption(string.Empty, 520);
             updatesCheckLine = Ui.Caption(string.Empty, 520);
+            // Added to the row's stack after it was built, so each takes the caption's gap itself.
+            updatesLastChecked.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            updatesCheckLine.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
             var parts = row.Tag as RowParts;
             var left = parts == null ? null : parts.TitleLine.Parent as Panel;
             if (left != null)
@@ -180,17 +204,31 @@ namespace OpenDashPlugin
             return row;
         }
 
-        /// <summary>The check row's lines and its press, from the check's state and the card's.</summary>
+        /// <summary>
+        /// The check row's lines and its press, and the offer card's Download and line, from the check's state
+        /// and the card's. A check in flight over an offer is said on the card and holds Download off, since
+        /// the offer it would act on is being asked for again; the answer redraws the card.
+        /// </summary>
         private void UpdatesRefreshCheck()
         {
             if (updatesLastChecked != null) updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);
             if (updatesCheckLine != null)
             {
-                var line = updatesCard == UpdatesCard.None ? PanelUpdates.CheckLine(updateStatus) : null;
+                var line = PanelUpdates.RowLine(updatesCard, updateStatus);
                 updatesCheckLine.Text = line ?? string.Empty;
                 updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
             }
-            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = !applying && updateStatus.State != UpdateState.Checking;
+            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);
+            if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
+            var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);
+            // Only ever written, never cleared, here: the line is Download's question otherwise, and the
+            // answer's redraw of the card takes this sentence away with the rest. Written in place of the
+            // question rather than through UpdatesAsk, so Reinstall everything's question stands.
+            if (cardLine != null && updatesCardLine != null)
+            {
+                updatesCardLine.Text = cardLine;
+                updatesCardLine.Visibility = Visibility.Visible;
+            }
         }
 
         /// <summary>
@@ -305,6 +343,10 @@ namespace OpenDashPlugin
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
             if (applying) return;
+            // A check in flight holds Download off (UpdatesRefreshCheck), and its answer redraws the card: a
+            // press that reached here anyway has nothing to act on yet, and "No release to install" would be
+            // false in a moment.
+            if (updateStatus.State == UpdateState.Checking) return;
 
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
             if (release == null && updateStatus.State == UpdateState.UpdateAvailable && !applyWaiting)

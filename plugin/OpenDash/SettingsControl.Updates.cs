@@ -83,13 +83,9 @@ namespace OpenDashPlugin
                 updatesReinstallLine = null;
             });
             OnLeave("Updates.applyWaiting", () => applyWaiting = false);
-            OnUpdate(
-                () =>
-                {
-                    if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
-                    UpdatesRefreshCheck();
-                },
-                manual => UpdateAnswered());
+            // A check starting holds Check now and Download off and says so, on the card while an offer shows
+            // and on the row otherwise (UpdatesRefreshCheck); its answer redraws the card.
+            OnUpdate(UpdatesRefreshCheck, manual => UpdateAnswered());
 
             updatesWidth = ContentWidth;
             // What the installer says of the rig's folders, read from the disk once per build: the table's

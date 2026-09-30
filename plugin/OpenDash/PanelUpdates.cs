@@ -218,9 +218,10 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line the check row carries while the card is gone: checking, checks being off, and the answer
-        /// to a press. A background check that finds nothing says nothing (UpdateStatus.IsVisible), and an
-        /// offer is the card's.
+        /// The line the check row carries while the card is gone: checking, and the answer to a press. A
+        /// background check that finds nothing says nothing (UpdateStatus.IsVisible), an offer is the card's,
+        /// and checks being off is the switch's to say: the row does not repeat a switch that is visibly off
+        /// (voice.md).
         /// </summary>
         public static string CheckLine(UpdateStatus status)
         {
@@ -228,7 +229,6 @@ namespace OpenDashPlugin
             switch (status.State)
             {
                 case UpdateState.Checking:
-                case UpdateState.Disabled:
                     return status.Line;
                 case UpdateState.UpToDate:
                 case UpdateState.Unreachable:
@@ -236,6 +236,68 @@ namespace OpenDashPlugin
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// The check row's line beside the card that is showing. While the card is gone the row carries
+        /// <see cref="CheckLine"/>; while an offer shows, a check in flight is said on the card, beside the
+        /// Download it holds off (<see cref="CardLine"/>); under a download or a staged plugin the row still
+        /// says a check is running, since nothing else would.
+        /// </summary>
+        public static string RowLine(UpdatesCard card, UpdateStatus status)
+        {
+            if (card == UpdatesCard.None) return CheckLine(status);
+            if (card == UpdatesCard.Available || status == null || status.State != UpdateState.Checking) return null;
+            return status.Line;
+        }
+
+        /// <summary>
+        /// What the offer card's own line says of the check: "Checking for updates…" while one is in flight
+        /// over a card that still shows the offer, and null otherwise, when the line is Download's.
+        /// </summary>
+        public static string CardLine(UpdatesCard card, UpdateStatus status)
+        {
+            return card == UpdatesCard.Available && status != null && status.State == UpdateState.Checking ? status.Line : null;
+        }
+
+        /// <summary>
+        /// Whether Download can be pressed: not while a release is downloading, and not while a check is in
+        /// flight, when the offer it would act on is being asked for again and the press could only say
+        /// there is nothing to install.
+        /// </summary>
+        public static bool DownloadEnabled(UpdateState state, bool applying)
+        {
+            return !applying && state != UpdateState.Checking;
+        }
+
+        /// <summary>
+        /// Whether Check now can be pressed: only while the checks are on, since the check refuses a press
+        /// with the switch off, and neither during a download nor while a check is already in flight.
+        /// </summary>
+        public static bool CheckNowEnabled(bool checksOn, bool applying, UpdateState state)
+        {
+            return checksOn && !applying && state != UpdateState.Checking;
+        }
+
+        public const string CheckNowTooltip = "Asks GitHub for the newest release now.";
+
+        /// <summary>Download's tooltip: "Downloads OpenDash 0.5.1."</summary>
+        public static string DownloadTooltip(string version)
+        {
+            return "Downloads " + Heading(version) + ".";
+        }
+
+        /// <summary>
+        /// What the page stands on once the switch is flipped. Off, the checks are off. On, what the panel
+        /// opens on (UpdateMark.Opening), so a remembered offer comes back to the card and the sidebar's
+        /// badge the moment the idle screen's mark shows it again; a "checks are off" this start heard
+        /// before is not brought back.
+        /// </summary>
+        public static UpdateStatus Switched(bool on, UpdateStatus last, string offered, string installed)
+        {
+            if (!on) return new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = installed };
+            if (last != null && last.State == UpdateState.Disabled) last = null;
+            return UpdateMark.Opening(true, last, offered, installed);
         }
 
         // --- In SimHub ------------------------------------------------------------------------------
