@@ -283,11 +283,12 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
-        /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510.
+        /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510. The
+        /// width is read only up to the threshold, so a resize above it rebuilds nothing.
         /// </summary>
         private Border SettingsFit(Border row)
         {
-            if (!PanelSettings.StacksControls(ContentWidth)) return row;
+            if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;
             var parts = row.Tag as RowParts;
             var grid = row.Child as Grid;
             if (parts == null || parts.Control == null || grid == null) return row;
@@ -583,14 +584,18 @@ namespace OpenDashPlugin
         private FrameworkElement SettingsAlerts(string[] units)
         {
             var temperature = units[1];
-            var surfaces = PanelSettings.AlertSurfacesFit(ContentWidth);
+            // The width is read only up to the fold, so a resize above it rebuilds nothing.
+            var surfaces = PanelSettings.AlertSurfacesFit(ContentWidthUpTo(PanelSettings.AlertSurfacesFrom));
             var grid = new Grid();
             // With the surface columns, the names take the artboard's 30% and the slack spreads over the four
             // (each held to its heading's width, SettingsAlertHeader); without them the names take it all.
-            var table = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
-            grid.ColumnDefinitions.Add(surfaces
-                ? new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth, MaxWidth = PanelSettings.AlertNameMaxWidth(table) }
-                : new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            // The 30% is of the table as it is laid out, set as its width moves, so a resize re-lays the table
+            // in WPF rather than rebuilding the page.
+            var names = surfaces
+                ? new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth }
+                : new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) };
+            grid.ColumnDefinitions.Add(names);
+            if (surfaces) grid.SizeChanged += (sender, args) => names.MaxWidth = PanelSettings.AlertNameMaxWidth(args.NewSize.Width);
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             if (surfaces)
             {
@@ -850,8 +855,10 @@ namespace OpenDashPlugin
             head.Children.Add(eyebrow);
             head.Children.Add(pick);
 
-            // Side by side 40 apart, centred, as the artboard's stage; where the column is narrower than the three
-            // at full size the whole stage scales down rather than wrapping into a lopsided second line.
+            // Side by side 40 apart, as the artboard's stage, set against the left edge as every fixed-size
+            // picture on the panel is (Ui.FitWidth) where the artboard centres it; where the column is narrower
+            // than the three at full size the whole stage scales down rather than wrapping into a lopsided
+            // second line, and it never grows.
             var stage = new StackPanel { Orientation = Orientation.Horizontal };
             var pictures = new FrameworkElement[] { strip, matrix, percent };
             for (var i = 0; i < pictures.Length; i++)
@@ -861,19 +868,12 @@ namespace OpenDashPlugin
                 pictures[i].Margin = new Thickness(0, 0, gap, 0);
                 stage.Children.Add(pictures[i]);
             }
-            var fit = new Viewbox
-            {
-                Stretch = Stretch.Uniform,
-                StretchDirection = StretchDirection.DownOnly,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Child = stage,
-            };
             var ground = new Border
             {
                 Background = Ui.Brush(Theme.SurfaceInset),
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Padding = new Thickness(PanelSettings.PreviewStagePadding),
-                Child = fit,
+                Child = Ui.FitWidth(stage),
             };
             var card = Ui.CardBox(Ui.VStack(PanelSettings.PreviewGap, head, ground), 0);
             card.Padding = new Thickness(PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY, PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY);
@@ -884,11 +884,11 @@ namespace OpenDashPlugin
             var brightness = Ui.Slider(Settings.LightsBrightness,
                 v => { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); },
                 v => { if (!night()) paint(false, v, Settings.LightsNightBrightness); });
-            brightness.Width = PanelSettings.SliderWidthFor(ContentWidth);
+            brightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));
             var nightBrightness = Ui.Slider(Settings.LightsNightBrightness,
                 v => { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); },
                 v => { if (night()) paint(true, Settings.LightsBrightness, v); });
-            nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidth);
+            nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));
 
             // The switch is the setting; the preview follows it again once it is pressed.
             var nightMode = BuildToggle(Settings.LightsNightMode, on =>

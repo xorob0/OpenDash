@@ -614,18 +614,26 @@ namespace OpenDashPlugin.Tests
         public void The_page_asks_the_layout_rules_where_it_draws()
         {
             var page = Page();
-            Assert.Contains("if (!PanelSettings.StacksControls(ContentWidth)) return row;", page);
+            Assert.Contains("if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;", page);
             Assert.Contains("SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", page);
             foreach (var greyed in new[] { "TyreDisplay", "YellowFlags", "DashTheme", "ColourVision", "Colours", "BrandName" })
             {
                 Assert.Contains("Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon." + greyed + ".Title,", page);
             }
-            Assert.Contains("var surfaces = PanelSettings.AlertSurfacesFit(ContentWidth);", page);
+            Assert.Contains("var surfaces = PanelSettings.AlertSurfacesFit(ContentWidthUpTo(PanelSettings.AlertSurfacesFrom));", page);
             Assert.Matches(@"if \(surfaces\)\s*\{\s*foreach \(var on in alert\.Surfaces\)", page);
             Assert.Matches(@"if \(!surfaces\)\s*\{\s*(//[^\n]*\s*)*folded = Ui\.Soon\(Ui\.SettingRow\(PanelSoon\.AlertDisplay\.Title, null\), PanelSoon\.AlertDisplay\);", page);
             Assert.Matches(@"if \(alert\.Live\)\s*\{\s*var link = Ui\.LinkButton\(PanelSettings\.TryLabel\);", page);
-            Assert.Contains("brightness.Width = PanelSettings.SliderWidthFor(ContentWidth);", page);
-            Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidth);", page);
+            Assert.Contains("brightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
+            Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
+            // Every read of the width stops at the threshold it decides (PanelShell.RebuildsOnResize): a bare
+            // ContentWidth has no ceiling, and a page that reads it is rebuilt by every settled resize at every
+            // width, which commits whatever is in a threshold box and takes the keyboard out of it.
+            var bare = new Regex(@"(?<![\w.])ContentWidth(?!UpTo)\b");
+            Assert.DoesNotMatch(bare, page);
+            Assert.Matches(bare, "PanelSettings.StacksControls(ContentWidth)");
+            Assert.DoesNotMatch(bare, "PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))");
+            Assert.Equal(4, Regex.Matches(page, @"ContentWidthUpTo\(").Count);
         }
 
         [Fact]
@@ -777,7 +785,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelSettings.AlertNameMinWidth, PanelSettings.AlertNameMaxWidth(300));
             Assert.True(PanelSettings.AlertNameMaxWidth(PanelSettings.AlertSurfacesFrom - 2) > PanelSettings.AlertNameMinWidth);
             var page = Page();
-            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth, MaxWidth = PanelSettings.AlertNameMaxWidth(table) }", page);
+            Assert.Contains("? new ColumnDefinition { Width = new GridLength(PanelSettings.AlertNameWeight, GridUnitType.Star), MinWidth = PanelSettings.AlertNameMinWidth }", page);
+            Assert.Contains(": new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) };", page);
+            // The 30% is of the table as it is laid out, so a resize re-lays it without a rebuild.
+            Assert.Contains("if (surfaces) grid.SizeChanged += (sender, args) => names.MaxWidth = PanelSettings.AlertNameMaxWidth(args.NewSize.Width);", page);
             Assert.Contains("foreach (var column in PanelSettings.SurfaceColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });", page);
             // Measured with the layout rounding the panel draws with (SettingsControl sets UseLayoutRounding),
             // which rounds each tracked glyph's margin: without it "Races only" measures 67.4 and draws 72.
@@ -1114,9 +1125,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.SurfaceZone, PanelSettings.PreviewMatrix.UnlitHex);
             Assert.Equal(40, PanelSettings.PreviewStageGap);
             Assert.Equal(18, PanelSettings.PreviewStagePadding);
-            // The stage scales down where it does not fit, never up, and never wraps into a lopsided second line.
+            // The stage scales down where it does not fit, never up, and never wraps into a lopsided second line:
+            // Ui.FitWidth, which PanelKitTests holds to Uniform, DownOnly and set left, as every fixed-size
+            // picture on the panel is. The artboard centres it; plugin.md records the departure.
             var page = Page();
-            Assert.Contains("StretchDirection = StretchDirection.DownOnly,", page);
+            Assert.Contains("Child = Ui.FitWidth(stage),", page);
+            Assert.DoesNotContain("new Viewbox", page);
             Assert.DoesNotContain("var stage = new WrapPanel", page);
             Assert.True(PanelSettings.IndexPaddingBottom - PanelSettings.IndexGap >= 0);
             Assert.Equal(22, PanelSettings.PreviewPercentSize);
