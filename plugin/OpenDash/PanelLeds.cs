@@ -456,13 +456,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether a card draws its strip lit: only while SimHub shows the profile. A card that says "Not
-        /// selected in SimHub" or "Not installed" beside lit LEDs contradicts its own state line, which is the fake
-        /// output ruling 20 keeps off Home's pictures; the artboard draws the unselected brow dark.
+        /// Whether a card draws its strip lit: only while SimHub shows the profile, which is while SimHub holds it
+        /// and has it selected. A card that says "Not selected in SimHub" or "Not installed" beside lit LEDs
+        /// contradicts its own state line, which is the fake output ruling 20 keeps off Home's pictures; the
+        /// artboard draws the unselected brow dark.
         /// </summary>
+        /// <remarks>
+        /// Not <see cref="StateText"/> == Showing: an older copy SimHub has selected reads "Update available",
+        /// which outranks Showing, and its LEDs on the rig are running all the same. After any release that
+        /// changes the strip profiles, every strip in use would otherwise go dark on its card.
+        /// </remarks>
         public static bool CardLit(FlagBoxInstallState? profile, bool? selected)
         {
-            return StateText(profile, selected) == Showing;
+            return HeldInSimHub(profile) && selected == true;
         }
 
         /// <summary>Whether a strip's centre shows the revs (Centre display on RPM), which is the only centre the

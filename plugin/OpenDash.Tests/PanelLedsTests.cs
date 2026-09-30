@@ -474,12 +474,15 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A card draws its strip lit only while SimHub shows the profile: a card that says it is not
-        /// selected or not installed draws every LED dark, as the artboard draws the unselected brow.</summary>
+        /// selected or not installed draws every LED dark, as the artboard draws the unselected brow. An older copy
+        /// SimHub has selected is showing, though its card reads "Update available", so it is lit.</summary>
         [Theory]
         [InlineData(FlagBoxInstallState.UpToDate, true, true)]
         [InlineData(FlagBoxInstallState.UpToDate, false, false)]
         [InlineData(FlagBoxInstallState.UpToDate, null, false)]
-        [InlineData(FlagBoxInstallState.Outdated, true, false)]
+        [InlineData(FlagBoxInstallState.Outdated, true, true)]
+        [InlineData(FlagBoxInstallState.Outdated, null, false)]
+        [InlineData(FlagBoxInstallState.Failed, true, false)]
         [InlineData(FlagBoxInstallState.Outdated, false, false)]
         [InlineData(FlagBoxInstallState.NotInstalled, null, false)]
         [InlineData(FlagBoxInstallState.Unavailable, null, false)]
