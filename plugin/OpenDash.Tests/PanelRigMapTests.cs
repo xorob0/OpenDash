@@ -183,15 +183,23 @@ namespace OpenDashPlugin.Tests
             // so Tab and the shell's focus restore walk the tiles in their order.
             Assert.Contains("Panel.SetZIndex(root, ++rigTopZ);", Handler(tile, "thumb.DragStarted +="));
             InOrder(Handler(tile, "thumb.DragCompleted +="), "RigLower(root);", "if (!moved) return;");
-            InOrder(Handler(tile, "thumb.KeyUp +="), "RigLower(root);", "if (!unsaved) return;");
-            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "RigLower(root);", "if (!unsaved) return;");
+            InOrder(Handler(tile, "thumb.KeyUp +="), "RigLower(root);", "if (extent.Pending != tile) return;");
+            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "RigLower(root);", "if (extent.Pending != tile) return;");
             Assert.Contains("root.ClearValue(Panel.ZIndexProperty);", RigMethod("private static void RigLower("));
             // A tile an arrow key moves is scrolled to, since WPF does not follow a focused element that moves;
             // the key never raises it, so a rebuild while it is held restores focus to the same tile.
-            InOrder(Handler(tile, "thumb.KeyDown +="), "RigPlace(root,", "unsaved = true;", "root.BringIntoView();");
+            InOrder(Handler(tile, "thumb.KeyDown +="), "RigPlace(root,", "extent.Pending = tile;", "root.BringIntoView();");
             Assert.DoesNotContain("SetZIndex", Handler(tile, "thumb.KeyDown +="));
             Assert.Equal(1, tile.Split("Panel.SetZIndex(").Length - 1);
+
+            // A rebuild that lands mid-drag gives the focus back to the tile in the hand rather than to the
+            // one the shell's restore finds by the raised tile's place, and after that restore (Loaded).
+            InOrder(Handler(tile, "thumb.DragStarted +="), "Panel.SetZIndex(root, ++rigTopZ);", "rigHeld = tile.Id;");
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "RigLower(root);", "rigHeld = null;", "if (!extent.Live) return;");
+            InOrder(tile, "AutomationProperties.SetName(thumb,", "if (rigHeld == tile.Id)", "rigHeld = null;", "Keyboard.Focus(thumb)", "DispatcherPriority.Input);", "thumb.DragStarted +=");
+            Assert.Equal(1, tile.Split("rigHeld = tile.Id;").Length - 1);
         }
+
 
         private static void InOrder(string text, params string[] parts)
         {
@@ -225,20 +233,52 @@ namespace OpenDashPlugin.Tests
                 "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
                 "var plan = PanelRigMap.Plan(Settings, width);",
                 "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };",
-                "OnDrop(() => extent.Live = false);",
-                "var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
+                "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
                 "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
                 "var tiles = plan.Tiles;",
                 "canvas.Children.Add(layer);",
-                "BuildRigTile(tile, extent, scenario, views)",
-                "layer.Children.Add(view.Element);");
+                "var scenario = rigScenario;",
+                "foreach (var tile in tiles)",
+                "var view = BuildRigTile(tile, extent, scenario, views);",
+                "views.Add(view);",
+                "layer.Children.Add(view.Element);",
+                // Let go of after the tiles are built, a pending arrow move saved before the build is dead.
+                "OnDrop(() =>",
+                "var pending = extent.Pending;",
+                "extent.Pending = null;",
+                "if (pending != null) RigDrop(pending, views);",
+                "extent.Live = false;",
+                // The frame is the plan's, and a room wider than the canvas scrolls across inside it.
+                "var frame = new Grid { Height = plan.DrawnHeight, ClipToBounds = true };",
+                "if (plan.Scrolls(width))",
+                "HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,",
+                "VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,",
+                "Content = canvas,",
+                "scroller.PreviewMouseWheel += RigPassWheel;",
+                "frame.Height = plan.DrawnHeight + SystemParameters.HorizontalScrollBarHeight;",
+                "frame.Children.Add(scroller);",
+                "frame.Children.Add(canvas);",
+                "BorderBrush = Ui.Brush(Theme.Rule),",
+                "Child = frame,");
+            Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
+            InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
+            // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
+            // the lower left, under the tiles.
+            InOrder(canvas,
+                "if (tiles.Count == 0)",
+                "Ui.Button(PanelAttention.Open(PanelScreens.Title),",
+                "screensPress.Click += (sender, args) => Go(PanelPage.Screens);",
+                "canvas.Children.Add(empty);",
+                "Canvas.SetLeft(hint, PanelRigMap.HintLeft);",
+                "Canvas.SetBottom(hint, PanelRigMap.HintBottom);",
+                "canvas.Children.Add(hint);",
+                "canvas.Children.Add(layer);");
             Assert.DoesNotContain("SizeChanged", canvas);
             Assert.DoesNotContain("ActualWidth", canvas);
             Assert.Equal(1, canvas.Split("PanelRigMap.Plan(").Length - 1);
             InOrder(RigMethod("private static Brush RigDots("), "Ui.DotGrid();", "if (scale >= 1) return dots;", "scaled.Transform = new ScaleTransform(scale, scale);");
             // Reset layout is what the header's press does.
             Assert.Contains("reset.Click += (sender, args) => RigResetLayout();", RigMethod("private FrameworkElement BuildRigHeader("));
-
             var tile = RigMethod("private RigTileView BuildRigTile(");
             // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
             // the tile following the default.
@@ -247,8 +287,24 @@ namespace OpenDashPlugin.Tests
             InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
             InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
             InOrder(Handler(tile, "thumb.DragStarted +="), "startLeft = Canvas.GetLeft(root);", "startTop = Canvas.GetTop(root);");
-            // A build that has been replaced writes nothing: the shell drops it before the new one is built.
-            InOrder(canvas, "Live = true };", "OnDrop(() => extent.Live = false);");
+            // The tile is built where the plan puts it, its picture painted in the build's scenario, and its
+            // view repaints it: the chips reach it through that.
+            InOrder(tile,
+                "var host = new Border { Width = tile.Width, Height = tile.Height, HorizontalAlignment = HorizontalAlignment.Left };",
+                "Action<string> paint = id => host.Child = BuildRigPicture(tile, id);",
+                "paint(scenario);",
+                "Template = RigThumbTemplate,",
+                "Focusable = true,",
+                "IsTabStop = true,",
+                "Canvas.SetLeft(root, tile.X);",
+                "Canvas.SetTop(root, tile.Y);",
+                "return new RigTileView(tile, root, paint);");
+            // The tile's name as the driver named it, and the dot in Caution, as the sidebar's.
+            InOrder(tile, "Ui.Text(tile.Name, PanelRigMap.NameSize,", "nameLine.Children.Add(name);", "if (warns)", "Fill = Ui.Brush(Theme.Caution),", "body.Children.Add(nameLine);", "body.Children.Add(host);");
+            Assert.Contains("private static ControlTemplate RigThumbTemplate", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
+            // A build that has been replaced writes nothing: the shell lets go of it before the new one is built.
+            InOrder(canvas, "Live = true };", "OnDrop(() =>", "extent.Live = false;");
+
             // The arrow keys move a tile a grid step, and leave the save to the key coming up, or to focus
             // leaving first; a key that moved nothing saves nothing.
             var keyDown = Handler(tile, "thumb.KeyDown +=");
@@ -260,11 +316,11 @@ namespace OpenDashPlugin.Tests
                 "default: return;",
                 "args.Handled = true;",
                 "if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;",
-                "unsaved = true;");
+                "extent.Pending = tile;");
             Assert.DoesNotContain("RigDrop(", keyDown);
             Assert.DoesNotContain("Save(", keyDown);
-            InOrder(Handler(tile, "thumb.KeyUp +="), "if (!extent.Live) return;", "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
-            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "if (!extent.Live) return;", "if (!unsaved) return;", "unsaved = false;", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.KeyUp +="), "if (!extent.Live) return;", "if (extent.Pending != tile) return;", "extent.Pending = null;", "RigDrop(tile, views);");
+            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "if (!extent.Live) return;", "if (extent.Pending != tile) return;", "extent.Pending = null;", "RigDrop(tile, views);");
             InOrder(keyDown, "if (!extent.Live) return;", "RigPlace(");
             // A drop lands on the grid inside the canvas, where the next build draws it (bbd059f).
             var place = RigMethod("private static bool RigPlace(");
@@ -287,6 +343,7 @@ namespace OpenDashPlugin.Tests
 
             InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);");
         }
+
 
         /// <remarks>
         /// Rulings the page alone carries out: the model functions are tested, and these hold that the page
@@ -769,12 +826,19 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>Every tile inside the plan's room, and that room drawn across the canvas's width at the
-        /// plan's scale, never past it, and at least the 580 high on the canvas.</summary>
+        /// plan's scale, never shrunk past <see cref="PanelRigMap.MinScale"/> -- wider than the canvas, and
+        /// scrolled across, only there -- in a frame at least the 580 high.</summary>
         private static void Inside(RigPlan plan, double width, string label)
         {
-            Assert.True(plan.Height * plan.Scale >= PanelRigMap.CanvasHeight - 1e-9, label);
-            Assert.InRange(plan.Scale, 0.0001, 1);
-            Assert.Equal(width, plan.Width * plan.Scale, 6);
+            Assert.True(plan.DrawnHeight >= PanelRigMap.CanvasHeight, label);
+            Assert.True(plan.DrawnHeight >= plan.Height * plan.Scale, label);
+            Assert.InRange(plan.Scale, PanelRigMap.MinScale, 1);
+            if (plan.Scale > PanelRigMap.MinScale + 1e-9)
+            {
+                Assert.Equal(width, plan.DrawnWidth, 6);
+                Assert.False(plan.Scrolls(width), label);
+            }
+            else Assert.True(plan.DrawnWidth >= width - 1e-6, label);
             foreach (var tile in plan.Tiles)
             {
                 Assert.True(tile.X >= 0 && tile.X + PanelRigMap.FootprintWidth(tile) <= plan.Width + 1e-9, label + " " + tile.Id);
@@ -833,6 +897,7 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(before[id].X, after[id].X);
                 Assert.Equal(before[id].Y, after[id].Y);
             }
+
             // A place is kept to the pixel and never negative.
             PanelRigMap.SavePlaces(settings, new[] { tiles["matrix:2"].At(-30, 70.6) });
             Assert.Equal(0, settings.MatrixLayoutX[1]);
@@ -887,11 +952,12 @@ namespace OpenDashPlugin.Tests
                     }
                     else
                     {
-                        // Wider than the canvas: shrunk to it whole, its leftmost tile at the edge, and kept as
-                        // it was rather than replaced by the default.
+                        // Wider than the canvas: shrunk to it whole, as far as the floor, its leftmost tile at
+                        // the edge, and kept as it was rather than replaced by the default.
                         Assert.Equal(-left, dx);
-                        Assert.Equal(width / span, plan.Scale, 9);
+                        Assert.Equal(Math.Max(PanelRigMap.MinScale, width / span), plan.Scale, 9);
                         Assert.Equal(span, plan.Width);
+                        Assert.Equal(span * PanelRigMap.MinScale > width + 0.5, plan.Scrolls(width));
                         Assert.Equal((int)kept["Rim"].X, settings.ScreenByNamespace("Rim").LayoutX);
                     }
                 }
@@ -923,6 +989,86 @@ namespace OpenDashPlugin.Tests
             var wide = ById(PanelRigMap.Plan(settings, 3534));
             Assert.Equal(kept["MainDash"].X - kept["Rim"].X, wide["MainDash"].X - wide["Rim"].X);
             Assert.Equal(1, PanelRigMap.Plan(settings, 3534).Scale);
+        }
+
+        /// <remarks>
+        /// The shrunk room was <see cref="PanelRigMap.CanvasHeight"/> over the scale tall, so a drop in its
+        /// lower part kept a place far under the arrangement's foot, and every wider window then drew the
+        /// canvas that deep at full size: 3,454 px at 4K after one drop in a 700 px control.
+        /// </remarks>
+        [Fact]
+        public void A_drop_at_the_foot_of_a_shrunk_canvas_does_not_deepen_the_canvas_at_full_size()
+        {
+            var settings = Rig();
+            PanelRigMap.SavePlaces(settings, PanelRigMap.Plan(settings, 3517).Tiles);
+            var foot = PanelRigMap.Plan(settings, 3517).Tiles.Max(t => t.Y + PanelRigMap.FootprintHeight(t));
+            foreach (var narrowWidth in new[] { 877.0, 585 })
+            {
+                var narrow = PanelRigMap.Plan(settings, narrowWidth);
+                Assert.True(narrow.Scale < 1);
+                // The room is what a full-size canvas gives the arrangement, drawn shorter than the frame.
+                Assert.Equal(Math.Max(PanelRigMap.CanvasHeight, foot), narrow.Height);
+                Assert.Equal(PanelRigMap.CanvasHeight, narrow.DrawnHeight);
+                Assert.True(narrow.Height * narrow.Scale < narrow.DrawnHeight);
+                // Dropped as far down as the room goes.
+                Drop(settings, narrowWidth, "Rim", 0, 100000);
+                var rim = ById(PanelRigMap.Plan(settings, narrowWidth))["Rim"];
+                Assert.True(rim.Y + PanelRigMap.FootprintHeight(rim) <= Math.Max(PanelRigMap.CanvasHeight, foot));
+                var wide = PanelRigMap.Plan(settings, 3517);
+                Assert.True(wide.Height <= Math.Max(PanelRigMap.CanvasHeight, foot), narrowWidth + ": " + wide.Height);
+                Assert.Equal(PanelRigMap.CanvasHeight, wide.DrawnHeight);
+            }
+        }
+
+        [Fact]
+        public void An_arrangement_is_never_shrunk_past_legibility_and_scrolls_across_instead()
+        {
+            Assert.Equal(0.7, PanelRigMap.MinScale);
+            // The phone at the left edge of a 4K canvas and the pit wall at its right.
+            var settings = Rig();
+            var at4k = ById(PanelRigMap.Plan(settings, 3517));
+            Drop(settings, 3517, "Companion", 0, at4k["Companion"].Y);
+            Drop(settings, 3517, "PitWall", 3517, at4k["PitWall"].Y);
+            var kept = PanelRigMap.Plan(settings, 3517);
+            Inside(kept, 3517, "4K");
+            Assert.False(kept.Scrolls(3517));
+            var span = kept.Tiles.Max(t => t.X + PanelRigMap.FootprintWidth(t)) - kept.Tiles.Min(t => t.X);
+            Assert.True(span > 3400);
+            foreach (var width in new[] { 2600.0, 1377, 877, 585 })
+            {
+                var plan = PanelRigMap.Plan(settings, width);
+                Inside(plan, width, width.ToString());
+                // Never under the floor: a name is drawn at 8.4 px at the least, not 2.
+                Assert.Equal(Math.Max(PanelRigMap.MinScale, width / span), plan.Scale, 9);
+                Assert.True(PanelRigMap.NameSize * plan.Scale >= 8.4 - 1e-9);
+                Assert.Equal(span * PanelRigMap.MinScale > width + 0.5, plan.Scrolls(width));
+                Assert.Equal(span * plan.Scale, plan.DrawnWidth, 6);
+            }
+            // A drop on the room that scrolls keeps the arrangement, and lands inside the room.
+            var phone = ById(PanelRigMap.Plan(settings, 585))["Companion"];
+            Drop(settings, 585, "Companion", phone.X + 40, phone.Y);
+            var after = PanelRigMap.Plan(settings, 585);
+            Inside(after, 585, "after");
+            Assert.Equal(ById(kept)["PitWall"].X - ById(kept)["Rim"].X, ById(after)["PitWall"].X - ById(after)["Rim"].X);
+        }
+
+        /// <remarks>
+        /// A recorded decision rather than an accident, until the settings keep the width an arrangement was
+        /// kept at: an arrangement is kept in absolute pixels, so one kept in a narrower window is drawn at the
+        /// left of a wider canvas, where the default centres (A_wide_window_centres_the_rig...).
+        /// </remarks>
+        [Fact]
+        public void An_arrangement_kept_in_a_narrow_window_is_drawn_where_it_was_kept_in_a_wider_one()
+        {
+            var settings = Rig();
+            var phone = ById(PanelRigMap.Plan(settings, 877))["Companion"];
+            var kept = Drop(settings, 877, "Companion", phone.X, phone.Y + 20);
+            var wide = PanelRigMap.Plan(settings, 3517);
+            Assert.Equal(1, wide.Scale);
+            Assert.All(wide.Tiles, t => Assert.Equal(new[] { ById(kept)[t.Id].X, ById(kept)[t.Id].Y }, new[] { t.X, t.Y }));
+            var left = wide.Tiles.Min(t => t.X);
+            var right = wide.Tiles.Max(t => t.X + PanelRigMap.FootprintWidth(t));
+            Assert.True(left < 3517 - right, "kept at the left");
         }
 
         [Fact]
@@ -1329,7 +1475,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(56, PanelRigMap.RoundLimiterWidth);
             Assert.Equal(18, PanelRigMap.RoundLimiterTop);
             Assert.Equal(2, PanelRigMap.PopUpRule);
-
             // Zone A's width: its share of the body less the gap before it, or the whole body when stacked.
             var wide = Screen(Contract.KindFace, "MainDash", "Main dash", 1280, 480);
             var zones = PanelRigMap.FaceZones(wide);
@@ -1399,6 +1544,7 @@ namespace OpenDashPlugin.Tests
                 }
             }
         }
+
         [Fact]
         public void A_tile_that_wears_the_warning_dot_says_so_in_words()
         {

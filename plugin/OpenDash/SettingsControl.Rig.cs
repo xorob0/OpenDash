@@ -47,6 +47,16 @@ namespace OpenDashPlugin
         /// </remarks>
         private int rigTopZ;
 
+        /// <summary>The tile in the pointer's hand, by its id, from the press to the drop.</summary>
+        /// <remarks>
+        /// Outside the build, since a rebuild can land mid-drag: a wheel's lighting press rebuilds the page
+        /// 120 ms later on a Background timer, which fires between two moves of the pointer. The shell takes
+        /// the focus's place before the build is let go of, while the tile in the hand is still raised and so
+        /// last among the canvas's children, and restores it to whichever tile the new build draws last. The
+        /// next build gives the focus back to the tile that was in the hand, after the shell's restore.
+        /// </remarks>
+        private string rigHeld;
+
         /// <summary>One tile as drawn: its place on the canvas, and how to paint its picture again.</summary>
         private sealed class RigTileView
         {
@@ -76,6 +86,11 @@ namespace OpenDashPlugin
             /// or the pointer's capture, and WPF raises LostKeyboardFocus or a cancelled DragCompleted on it
             /// afterwards: a save from there wrote the discarded build's places over the new build's.</summary>
             public bool Live { get; set; }
+
+            /// <summary>The tile an arrow key has moved and nothing has saved yet: the key is still held, and
+            /// the save waits for it to come up. The build saves it when it is let go of, so a rebuild in
+            /// between plans from the move rather than drawing the tile back where it was.</summary>
+            public RigTile Pending { get; set; }
         }
 
         private FrameworkElement BuildRigPage(PanelRoute to)
@@ -164,8 +179,9 @@ namespace OpenDashPlugin
             var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
             var plan = PanelRigMap.Plan(Settings, width);
             var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };
-            OnDrop(() => extent.Live = false);
-            var canvas = new Canvas { Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
+            // The room on the dotted ground: the tiles' room as drawn, which a shrunk arrangement leaves
+            // shorter than the frame, so the band under it takes no drop.
+            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
             // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
             // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
             var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };
@@ -197,6 +213,38 @@ namespace OpenDashPlugin
                 views.Add(view);
                 layer.Children.Add(view.Element);
             }
+            // A build that has been replaced writes nothing: the shell lets go of it before the next is built.
+            // A move an arrow key made and has not saved is saved first, while the tiles are still where the
+            // key put them, so the next build plans from it.
+            OnDrop(() =>
+            {
+                var pending = extent.Pending;
+                extent.Pending = null;
+                if (pending != null) RigDrop(pending, views);
+                extent.Live = false;
+            });
+
+            // Past the least it is shrunk to, the room is wider than the canvas and scrolls across inside it.
+            var frame = new Grid { Height = plan.DrawnHeight, ClipToBounds = true };
+            if (plan.Scrolls(width))
+            {
+                var scroller = new ScrollViewer
+                {
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Content = canvas,
+                };
+                scroller.PreviewMouseWheel += RigPassWheel;
+                frame.Height = plan.DrawnHeight + SystemParameters.HorizontalScrollBarHeight;
+                frame.Children.Add(scroller);
+            }
+            else
+            {
+                canvas.HorizontalAlignment = HorizontalAlignment.Left;
+                canvas.VerticalAlignment = VerticalAlignment.Top;
+                frame.Children.Add(canvas);
+            }
 
             return new Border
             {
@@ -204,9 +252,21 @@ namespace OpenDashPlugin
                 BorderBrush = Ui.Brush(Theme.Rule),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Child = canvas,
+                Child = frame,
             };
         }
+
+        /// <summary>The wheel over a canvas that scrolls across goes on to the page: the canvas's scroller
+        /// scrolls only across, and would otherwise swallow the wheel that scrolls the page down.</summary>
+        private static void RigPassWheel(object sender, MouseWheelEventArgs args)
+        {
+            if (args.Handled) return;
+            var parent = (sender as FrameworkElement)?.Parent as UIElement;
+            if (parent == null) return;
+            args.Handled = true;
+            parent.RaiseEvent(new MouseWheelEventArgs(args.MouseDevice, args.Timestamp, args.Delta) { RoutedEvent = UIElement.MouseWheelEvent, Source = sender });
+        }
+
 
         /// <summary>The dotted ground at the tiles' scale, so a tile dropped on a step of the grid still has
         /// its corner between four dots when the arrangement is shrunk.</summary>
@@ -282,6 +342,13 @@ namespace OpenDashPlugin
                 ToolTip = PanelRigMap.TileLabel(tile, warns),
             };
             AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));
+            // The tile that was in the hand when a rebuild landed has the focus again, after the shell's own
+            // restore (Loaded) has put it on whichever tile its place now finds.
+            if (rigHeld == tile.Id)
+            {
+                rigHeld = null;
+                thumb.Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(thumb)), DispatcherPriority.Input);
+            }
 
             var root = new Grid { Width = PanelRigMap.FootprintWidth(tile), Height = PanelRigMap.FootprintHeight(tile) };
             root.Children.Add(body);
@@ -295,7 +362,6 @@ namespace OpenDashPlugin
             {
                 if (Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
             };
-
             var moved = false;
             double startLeft = 0, startTop = 0;
             thumb.DragStarted += (sender, args) =>
@@ -304,6 +370,7 @@ namespace OpenDashPlugin
                 startLeft = Canvas.GetLeft(root);
                 startTop = Canvas.GetTop(root);
                 Panel.SetZIndex(root, ++rigTopZ);
+                rigHeld = tile.Id;
             };
             thumb.DragDelta += (sender, args) =>
             {
@@ -317,6 +384,9 @@ namespace OpenDashPlugin
             thumb.DragCompleted += (sender, args) =>
             {
                 RigLower(root);
+                // Out of the hand: a build that replaced this one has already taken it, and a page left
+                // mid-drag leaves nothing to give the focus back to.
+                rigHeld = null;
                 if (!extent.Live) return;
                 if (args.Canceled)
                 {
@@ -329,10 +399,10 @@ namespace OpenDashPlugin
                 RigDrop(tile, views);
             };
             // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
-            // the key comes up (or focus leaves first), rather than on every repeat. The key does not raise
-            // the tile: a raised tile is last among the canvas's children, and a rebuild while the key is held
-            // restored focus by that index to another tile, which the next repeat moved and saved.
-            var unsaved = false;
+            // the key comes up (or focus leaves first), rather than on every repeat, or when a rebuild lets
+            // the build go first (extent.Pending). The key does not raise the tile: a raised tile is last
+            // among the canvas's children, and a rebuild while the key is held restored focus by that index
+            // to another tile, which the next repeat moved and saved.
             thumb.KeyDown += (sender, args) =>
             {
                 double dx = 0, dy = 0;
@@ -347,7 +417,7 @@ namespace OpenDashPlugin
                 args.Handled = true;
                 if (!extent.Live) return;
                 if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;
-                unsaved = true;
+                extent.Pending = tile;
                 // WPF does not scroll to a focused element that moves; the left button is up, so the guard
                 // above lets this through.
                 root.BringIntoView();
@@ -356,16 +426,16 @@ namespace OpenDashPlugin
             {
                 RigLower(root);
                 if (!extent.Live) return;
-                if (!unsaved) return;
-                unsaved = false;
+                if (extent.Pending != tile) return;
+                extent.Pending = null;
                 RigDrop(tile, views);
             };
             thumb.LostKeyboardFocus += (sender, args) =>
             {
                 RigLower(root);
                 if (!extent.Live) return;
-                if (!unsaved) return;
-                unsaved = false;
+                if (extent.Pending != tile) return;
+                extent.Pending = null;
                 RigDrop(tile, views);
             };
 
@@ -373,6 +443,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
+
         /// focus restore walk the tiles in the order they were built. A tile it is over may now draw over it,
         /// as the next build draws them anyway.</summary>
         private static void RigLower(FrameworkElement root)

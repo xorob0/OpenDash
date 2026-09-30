@@ -105,8 +105,23 @@ namespace OpenDashPlugin
         public double Height { get; private set; }
 
         /// <summary>What the tiles are drawn at: 1, or less for an arrangement wider than the canvas, which
-        /// is shrunk to fit it rather than set aside. The canvas is <see cref="Height"/> times this high.</summary>
+        /// is shrunk to fit it rather than set aside, never under <see cref="PanelRigMap.MinScale"/>.</summary>
         public double Scale { get; private set; }
+
+        /// <summary>The room as drawn: the canvas's width, or more where the arrangement is shrunk as far
+        /// as it goes and the room scrolls across (<see cref="Scrolls"/>).</summary>
+        public double DrawnWidth { get { return Width * Scale; } }
+
+        /// <summary>The canvas's frame: <see cref="PanelRigMap.CanvasHeight"/>, or the room as drawn where
+        /// that is taller. A shrunk room is shorter than the frame, and the band under it takes no tile.</summary>
+        public double DrawnHeight { get { return Math.Max(PanelRigMap.CanvasHeight, Height * Scale); } }
+
+        /// <summary>Whether the room as drawn is wider than a canvas <paramref name="canvasWidth"/> across,
+        /// so the canvas scrolls it across rather than shrinking the tiles past legibility.</summary>
+        public bool Scrolls(double canvasWidth)
+        {
+            return DrawnWidth > canvasWidth + 0.5;
+        }
     }
 
     /// <summary>
@@ -525,6 +540,14 @@ namespace OpenDashPlugin
         public const double LayoutGapMin = 8;
 
         /// <summary>
+        /// The least an arrangement wider than the canvas is shrunk to: about what a picture drawn at a
+        /// fixed size reaches in the narrow column (the face's 844 in a 700 px control's 587, foundation
+        /// rule 9). Past it the room scrolls across inside the canvas rather than shrinking further, where
+        /// a name would be drawn at 3 px and a phone would be too small to take hold of.
+        /// </summary>
+        public const double MinScale = 0.7;
+
+        /// <summary>
         /// Every tile of the rig where it is drawn -- the driver's arrangement, or where
         /// <see cref="DefaultLayout"/> puts the tiles before anybody has arranged them, and inside the canvas
         /// either way -- and the canvas's height.
@@ -541,13 +564,26 @@ namespace OpenDashPlugin
         /// right edge but is no wider than the canvas, it is centred in the canvas as one. When it is wider
         /// than the canvas, it is drawn whole and shrunk to the canvas's width, its leftmost tile at the
         /// edge, rather than replaced by the default: the default in its place was drawn from nothing the
-        /// driver made, and the next drop kept it over the arrangement. A drag on the shrunk arrangement is
-        /// in the tiles' own pixels, so it keeps the arrangement's scale. A tile the arrangement does not
-        /// hold, a device added since, goes in rows under it. The room is <see cref="CanvasHeight"/> high
-        /// on the canvas, or as tall as the arrangement and those rows need, so a rig arranged in a narrow
-        /// window's taller canvas is never clamped onto the foot of a wide one. The hint is not kept clear
+        /// driver made, and the next drop kept it over the arrangement. It is never shrunk under
+        /// <see cref="MinScale"/>; past that the room is drawn wider than the canvas and scrolls across. A
+        /// drag on the shrunk arrangement is in the tiles' own pixels, so it keeps the arrangement's scale.
+        /// A tile the arrangement does not hold, a device added since, goes in rows under it.
+        /// </para>
+        /// <para>
+        /// The room is as tall, in the tiles' own pixels, as a canvas drawn at full size gives the
+        /// arrangement: <see cref="CanvasHeight"/>, or the arrangement's foot and the rows under it where
+        /// they are lower, so a rig arranged in a narrow window's taller canvas is never clamped onto the
+        /// foot of a wide one. It is not <see cref="CanvasHeight"/> over the scale: a shrunk room that tall
+        /// took a drop far under the arrangement's foot, and every wider window then drew the canvas that
+        /// deep at full size, past what the screen could show (foundation rule 10). A shrunk room is drawn
+        /// shorter than the canvas's frame, and the band under it takes no tile. The hint is not kept clear
         /// of a placed tile, which may cover it, as it may while it is dragged: a canvas grown to clear it
         /// would grow again at every drop against the foot.
+        /// </para>
+        /// <para>
+        /// An arrangement is kept in absolute pixels, so one kept in a narrower window is drawn at the left
+        /// of a wider canvas rather than centred as the default is: centring it needs the width it was kept
+        /// at, stored beside LayoutX and LayoutY, which the settings do not hold yet.
         /// </para>
         /// <para>
         /// The page plans once per build, at the width the shell gives the page less the canvas's frame,
@@ -580,12 +616,12 @@ namespace OpenDashPlugin
                     else if (canvasWidth > 0)
                     {
                         shift = left;
-                        scale = canvasWidth / span;
+                        scale = Math.Max(MinScale, canvasWidth / span);
                         width = span;
                     }
                 }
                 var foot = saved.Values.Max(t => t.Y + FootprintHeight(t));
-                var canvasHeight = Math.Max(CanvasHeight / scale, foot);
+                var canvasHeight = Math.Max(CanvasHeight, foot);
                 var rest = tiles.Where(t => !saved.ContainsKey(t.Id)).ToList();
                 var under = new Dictionary<string, RigTile>(StringComparer.Ordinal);
                 if (rest.Count > 0)
@@ -1418,7 +1454,6 @@ namespace OpenDashPlugin
             if (total <= 0) return 0;
             return Math.Max(0, Math.Floor(inner * zones[index].Weight / total - (index == 0 ? 0 : ScreenGap)));
         }
-
         /// <summary>What covers a face's zones B, A and C: the flag's block where the face draws its flags full
         /// screen, and nothing otherwise.</summary>
         public static FaceBand FaceBlockFor(string scenarioId, string flagFormat)
@@ -1459,6 +1494,7 @@ namespace OpenDashPlugin
         {
             return PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatBand ? PanelEmulation.Band(scenarioId) : FaceBand.Idle;
         }
+
         /// <summary>A flag as the dash's full-screen block draws it: the band's colours and one word, the
         /// block's own name for the flag, and the chequer unnamed.</summary>
         public static FaceBand BlockFor(string scenarioId)
