@@ -426,6 +426,39 @@ namespace OpenDashPlugin
             return ends > 0 ? new[] { left, middle, right } : new[] { middle };
         }
 
+        /// <summary>The width of one colour in a packed run: "#AARRGGBB".</summary>
+        public const int PackedColourWidth = 9;
+
+        /// <summary>
+        /// A strip's LEDs as the car's own rev lights have them now: the centre from the packed run
+        /// <c>plugin.CarLights.Run(centre)</c> returns, the ends unlit, grouped as <see cref="StripFrame"/>
+        /// groups them. Home's live strip and the LEDs page's "Live" chip both draw this, so the two read the
+        /// run one way.
+        /// </summary>
+        /// <remarks>
+        /// The run is fixed-width "#AARRGGBB" colours end to end (CarLightService.Packed). A colour with a zero
+        /// alpha is a gap in the car's bar and is drawn unlit (null), as CarLightMirror.IsTransparent reads it.
+        /// Run returns "" for a length not in Contract.MirrorRunLengths, and a run that is empty or not
+        /// <paramref name="centre"/> colours long is drawn dark rather than guessed at.
+        /// </remarks>
+        public static string[][] LiveFrame(string packed, int ends, int centre)
+        {
+            ends = Math.Max(0, ends);
+            centre = Math.Max(0, centre);
+            var left = new string[ends];
+            var right = new string[ends];
+            var middle = new string[centre];
+            if (packed != null && centre > 0 && packed.Length == centre * PackedColourWidth)
+            {
+                for (var i = 0; i < centre; i++)
+                {
+                    var colour = packed.Substring(i * PackedColourWidth, PackedColourWidth);
+                    middle[i] = colour[0] != '#' || CarLightMirror.IsTransparent(colour) ? null : colour;
+                }
+            }
+            return ends > 0 ? new[] { left, middle, right } : new[] { middle };
+        }
+
         /// <summary>
         /// An 8x8 under a scenario, as 64 cells row by row, from the glyph the flag box would show: null for a
         /// dark cell.
@@ -537,6 +570,18 @@ namespace OpenDashPlugin
         {
             if (!night) return 1;
             var percent = nightBrightness < 0 ? 0 : nightBrightness > 100 ? 100 : nightBrightness;
+            return percent / 100.0;
+        }
+
+        /// <summary>
+        /// How bright the lights are drawn when the picture follows the day brightness too: the day
+        /// brightness by day, the night brightness at night. The Settings page's preview, whose ruling takes
+        /// its opacity from both, draws this; the pictures that dim only at night keep the two-argument Dim.
+        /// </summary>
+        public static double Dim(bool night, int dayBrightness, int nightBrightness)
+        {
+            var value = night ? nightBrightness : dayBrightness;
+            var percent = value < 0 ? 0 : value > 100 ? 100 : value;
             return percent / 100.0;
         }
 

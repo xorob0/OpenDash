@@ -144,6 +144,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0.25, PanelEmulation.Dim(true, 25));
             Assert.Equal(0, PanelEmulation.Dim(true, -5));
             Assert.Equal(1, PanelEmulation.Dim(true, 150));
+            // The Settings preview follows the day brightness as well.
+            Assert.Equal(0.8, PanelEmulation.Dim(false, 80, 25));
+            Assert.Equal(0.25, PanelEmulation.Dim(true, 80, 25));
+            Assert.Equal(1, PanelEmulation.Dim(false, 120, 25));
+            Assert.Equal(0, PanelEmulation.Dim(true, 80, -1));
         }
 
         [Fact]
@@ -305,6 +310,32 @@ namespace OpenDashPlugin.Tests
             var label = System.Text.RegularExpressions.Regex.Match(entry, @"label: '([^']+)'");
             Assert.True(label.Success, "flags.ts' '" + id + "' has no band label");
             return label.Groups[1].Value;
+        }
+
+        /// <summary>
+        /// The car's own rev lights as a strip picture: the centre from CarLights.Run's packed "#AARRGGBB"
+        /// colours, a zero alpha drawn unlit, the ends unlit, and a run that is empty or the wrong length
+        /// drawn dark. Home and LEDs both draw it, so neither writes a parser of its own.
+        /// </summary>
+        [Fact]
+        public void A_live_run_is_the_centre_the_car_lights_and_the_ends_dark()
+        {
+            var packed = CarLightService.Packed(new[] { "#FF00FF00", "#00000000", "#FFFF0000", "#00123456" });
+            var frame = PanelEmulation.LiveFrame(packed, 3, 4);
+            Assert.Equal(3, frame.Length);
+            Assert.Equal(new string[] { null, null, null }, frame[0]);
+            Assert.Equal(new[] { "#FF00FF00", null, "#FFFF0000", null }, frame[1]);
+            Assert.Equal(new string[] { null, null, null }, frame[2]);
+
+            // A bare run is the centre alone, as StripFrame groups it.
+            Assert.Single(PanelEmulation.LiveFrame(packed, 0, 4));
+
+            // Run answers "" for a length it has no property for, and a run of another length is not guessed at.
+            Assert.Equal(new string[] { null, null, null, null }, PanelEmulation.LiveFrame(string.Empty, 3, 4)[1]);
+            Assert.Equal(new string[] { null, null, null, null }, PanelEmulation.LiveFrame(null, 3, 4)[1]);
+            Assert.Equal(new string[] { null, null, null, null, null }, PanelEmulation.LiveFrame(packed, 3, 5)[1]);
+            Assert.Equal(9, PanelEmulation.PackedColourWidth);
+            Assert.Equal(PanelEmulation.PackedColourWidth, CarLightTable.Transparent.Length);
         }
     }
 }
