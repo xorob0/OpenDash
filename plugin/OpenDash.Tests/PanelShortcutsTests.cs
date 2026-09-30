@@ -91,7 +91,8 @@ namespace OpenDashPlugin.Tests
         public void A_card_with_one_row_counts_it_and_none_counts_when_nothing_can_be_read()
         {
             // A pit wall's card and a companion's alike: the companion's paging line is no row, and its glance
-            // is counted as the sidebar's total counts it.
+            // is counted, so the cards add up to the sidebar's total. The artboard blanks the external card's
+            // count although it has that row; the departure is listed for the author.
             Assert.Equal("1 of 1", PanelShortcuts.CardCount(new[] { Bound }, true));
             Assert.Equal("0 of 1", PanelShortcuts.CardCount(new[] { NotBound }, true));
             // Ruling 60: when any row cannot be read, no card counts, and neither the filter nor the clash
@@ -203,8 +204,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.RigActionNames().Select(PanelShortcuts.RigActionDoes), rows.Select(r => r.Does));
             Assert.Equal(new[] { "toggles night mode", "turns the brightness up", "turns the brightness down" }, rows.Select(r => r.Does));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
-            // The rig test and the alert's dismissal are coming, and are the page's two greyed rows.
+            // The rig test and the alert's dismissal are coming, and are the page's two greyed rows, each
+            // read as the ruling words it: what the button will do.
             Assert.Equal(new[] { PanelSoon.RigTest, PanelSoon.AlertDismissal }, PanelShortcuts.SoonDrawn);
+            Assert.Equal("Run the Rig test", PanelShortcuts.SoonRowLabel(PanelSoon.RigTest));
+            Assert.Equal("Dismiss the alert", PanelShortcuts.SoonRowLabel(PanelSoon.AlertDismissal));
+            Assert.Equal(PanelSoon.RevFill.Title, PanelShortcuts.SoonRowLabel(PanelSoon.RevFill));
+            Assert.Equal(string.Empty, PanelShortcuts.SoonRowLabel(null));
             Assert.Equal(511, PanelSoon.RigTest.Ticket);
             Assert.Equal(510, PanelSoon.AlertDismissal.Ticket);
         }
@@ -780,10 +786,10 @@ namespace OpenDashPlugin.Tests
             }
 
             // The rows as the model gives them: its label and press, the New tag where the model says, the
-            // greyed rows by their registry title, and each card's line beside its name.
+            // greyed rows by their ruled labels, and each card's line beside its name.
             Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
-            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);", code);
+            Assert.Contains("ShortcutsRow(PanelShortcuts.SoonRowLabel(item), PanelShortcuts.Tap, chip, layout, null);", code);
             Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);

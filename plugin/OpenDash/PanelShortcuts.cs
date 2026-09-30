@@ -33,6 +33,22 @@ namespace OpenDashPlugin
         /// <summary>The card of what an alert on screen can be bound to. Only greyed rows today.</summary>
         public const string AlertsGroupTitle = "Alerts";
 
+        /// <summary>The greyed rows' labels, as ruled (#511, #510): what the button will do, where the registry's
+        /// titles name the feature. The artboard's "Dismiss the alert on screen" loses "on screen", which the
+        /// card's name already says.</summary>
+        public const string RigTestRow = "Run the Rig test";
+        public const string AlertDismissalRow = "Dismiss the alert";
+
+        /// <summary>The label a greyed row reads: the ruled one for this page's two, else the registry's title.
+        /// Ui.Soon still takes the registry entry, for the tip, the ticket and the anchor search lands on.</summary>
+        public static string SoonRowLabel(SoonItem item)
+        {
+            if (item == null) return string.Empty;
+            if (ReferenceEquals(item, PanelSoon.RigTest)) return RigTestRow;
+            if (ReferenceEquals(item, PanelSoon.AlertDismissal)) return AlertDismissalRow;
+            return item.Title;
+        }
+
         // The rows' own words: a face's rows read "Band D · next page", and every kind's glance row reads
         // "Quick glance".
         public const string NextPageTitle = "Next page";
@@ -226,8 +242,10 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Greyed rows are not counted, since no press could ever complete the count: the artboard counts them
         /// ("1 of 4" on Lights, "0 of 1" on Alerts), and it was ruled to leave them out. The companion's card
-        /// counts its glance like any other: the artboard's external card has no count only because it has
-        /// no rows, and the sidebar's total counts the companion's glance, so the two agree.
+        /// counts its glance like any other, which departs from the artboard: Shortcuts.dc.html gives its
+        /// external Phone card a Quick glance row and still blanks that card's count. The page shows it so
+        /// that the cards add up to the sidebar's total, which counts the companion's glance; the
+        /// departure is listed for the author to rule on.
         /// </remarks>
         public static string CardCount(IEnumerable<RowState> rows, bool readable)
         {
@@ -250,7 +268,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: Devices, the device the
         /// companion runs on, its Controls and events, NextScreen. The artboard's "Devices › Phone › Controls
-        /// and events › NextScreen", with the device named by a placeholder, as PanelAttention names an
+        /// and events › NextScreen" (and the brief's screen name in the second crumb), with the device
+        /// named by a placeholder, a departure listed for the author to rule on, as PanelAttention names an
         /// unnamed LED device: the screen's name is OpenDash's, not a SimHub device's, and OpenDash cannot
         /// tell which device shows it. The trail starts at Devices, as every trail through SimHub's menus
         /// does, because a trail that started at "Controls and events" would read as SimHub's top-level page,

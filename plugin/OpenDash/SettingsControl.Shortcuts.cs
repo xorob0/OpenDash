@@ -324,14 +324,15 @@ namespace OpenDashPlugin
             group.Body.Children.Add(row);
         }
 
-        /// <summary>A greyed row: the registry's entry, tapped, and a Not bound key that nothing answers.</summary>
+        /// <summary>A greyed row: the ruled label, tapped, a Not bound key that nothing answers, and the
+        /// registry's entry for its tip and ticket.</summary>
         private static void ShortcutsSoon(ShortcutsGroupState group, SoonItem item, ShortcutsLayout layout)
         {
             // The key sits at the slot's left, where the artboard's .key starts in every row, and where SimHub's
             // bindings start once its name column is dropped.
             var chip = Ui.BindingChip(Ui.NotBound, false, key: true);
             chip.HorizontalAlignment = HorizontalAlignment.Left;
-            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);
+            var row = ShortcutsRow(PanelShortcuts.SoonRowLabel(item), PanelShortcuts.Tap, chip, layout, null);
             var shown = Ui.Soon(row, item);
             group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Bindable = false });
             group.Body.Children.Add(shown);
