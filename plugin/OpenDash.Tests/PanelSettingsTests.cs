@@ -148,6 +148,104 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(at.OrderBy(i => i), at);
         }
 
+        /// <summary>The methods that draw each section, in the page's order.</summary>
+        private static readonly string[] SectionMethods =
+        {
+            "SettingsRaceData(", "SettingsFlags(", "SettingsAlerts(", "SettingsLighting(", "SettingsAppearance(", "SettingsDriver(",
+        };
+
+        /// <summary>The page's code for one section's method, from its declaration to the next member.</summary>
+        private static string SectionBody(string page, int section)
+        {
+            var start = page.IndexOf("private FrameworkElement " + SectionMethods[section], StringComparison.Ordinal);
+            Assert.True(start >= 0, SectionMethods[section]);
+            var next = Regex.Match(page.Substring(start + 1), @"\n        (private |/// |// ---)");
+            return next.Success ? page.Substring(start, next.Index + 1) : page.Substring(start);
+        }
+
+        /// <summary>
+        /// Each section draws its rows in the artboard's order, and the Race data's clock after the team names
+        /// where the build adds it. Read from each section's own method, so a row moved to another section
+        /// fails too.
+        /// </summary>
+        [Fact]
+        public void Each_section_draws_its_rows_in_the_artboards_order()
+        {
+            var rows = new[]
+            {
+                new[]
+                {
+                    "SettingsFit(Ui.Row(PanelDataTab.PositionTitle,", "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle,",
+                    "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", "SettingsFit(Ui.Row(PanelDataTab.SessionTitle,",
+                    "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", "Ui.Row(PanelDataTab.TeamNameTitle,",
+                    "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", "Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title,",
+                    "Ui.SettingRow(PanelSoon.TyreDisplay.Title,", "Ui.Row(PanelSettings.UnitsTitle,",
+                },
+                new[]
+                {
+                    "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle,", "Ui.SettingRow(PanelSoon.YellowFlags.Title,",
+                    "Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle,",
+                },
+                new[]
+                {
+                    "PanelSettings.Alert(PanelSettings.LowFuelTitle)",
+                    "PanelSettings.Alert(PanelSettings.OilTempTitle)", "PanelSettings.Alert(PanelSettings.WaterTempTitle)",
+                    "PanelSettings.Alert(PanelSoon.TyreWear.Title)", "PanelSettings.Alert(PanelSoon.PitWindowOpen.Title)",
+                    "PanelSettings.Alert(PanelSoon.Incidents.Title)", "PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title)",
+                    "Ui.SettingRow(PanelSoon.AlertDisplay.Title,",
+                },
+                new[]
+                {
+                    "PanelKit.SectionHeadingGapSettings,\n                card,", "SettingsFit(Ui.Row(PanelSettings.BrightnessTitle,",
+                    "SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle,", "Ui.Row(PanelSettings.NightModeTitle,",
+                    "Ui.Row(PanelSettings.NightModeButtonTitle,", "Ui.SoonRow(PanelSoon.SimTimeOfDay)", "Ui.SoonRow(PanelSoon.ScreenDimming)",
+                },
+                new[]
+                {
+                    "Ui.SettingRow(PanelSoon.DashTheme.Title,", "Ui.SettingRow(PanelSoon.ColourVision.Title,", "Ui.SettingRow(PanelSoon.Colours.Title,",
+                },
+                new[]
+                {
+                    "Ui.SettingRow(PanelSoon.BrandName.Title,", "Ui.SettingRow(PanelSoon.BrandRaceNumber.Title,",
+                    "Ui.SettingRow(PanelSoon.BrandLogo.Title,", "Ui.SettingRow(PanelSoon.IdleScreenBackground.Title,",
+                },
+            };
+            var page = Page();
+            Assert.Equal(SectionMethods.Length, rows.Length);
+            for (var s = 0; s < rows.Length; s++)
+            {
+                var body = SectionBody(page, s);
+                var at = rows[s].Select(row => body.IndexOf(row, StringComparison.Ordinal)).ToList();
+                for (var r = 0; r < at.Count; r++) Assert.True(at[r] >= 0, SectionMethods[s] + " draws " + rows[s][r]);
+                Assert.Equal(at.OrderBy(i => i), at);
+            }
+        }
+
+        /// <summary>
+        /// SoonBySection, which marks the "On this page" link after a search lands on a greyed row, is exactly
+        /// the registry entries each section's own method draws, in its order: an entry filed under the wrong
+        /// section would mark the wrong link.
+        /// </summary>
+        [Fact]
+        public void Each_sections_greyed_rows_are_the_ones_it_draws()
+        {
+            var named = typeof(PanelSoon).GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(field => field.FieldType == typeof(SoonItem))
+                .ToDictionary(field => field.Name, field => (SoonItem)field.GetValue(null));
+            var page = Page();
+            for (var s = 0; s < SectionMethods.Length; s++)
+            {
+                var drawn = Regex.Matches(SectionBody(page, s), @"PanelSoon\.(\w+)").Cast<Match>()
+                    .Select(m => m.Groups[1].Value)
+                    .Where(named.ContainsKey)
+                    .Select(name => named[name])
+                    .Distinct()
+                    .ToList();
+                Assert.Equal(drawn, PanelSettings.SoonBySection[s]);
+                foreach (var item in PanelSettings.SoonBySection[s]) Assert.Equal(s, PanelSettings.SectionOf(item.Anchor));
+            }
+        }
+
         private static string AnchorName(string anchor)
         {
             return typeof(PanelSettings).GetFields(BindingFlags.Public | BindingFlags.Static)
