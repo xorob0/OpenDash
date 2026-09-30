@@ -145,23 +145,28 @@ namespace OpenDashPlugin
         ///
         /// The state is a word and the version has a column of its own, so the words are the four the
         /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
-        /// ink, as the artboard draws "Out of date", and the one press the table carries is its Update. No
-        /// pairing is the primary: the page's one accented press is the update card's Download. Nothing
-        /// embedded and SimHub being unreachable read as not installed, the section's own sentences covering
-        /// both.
+        /// ink, as the artboard draws "Out of date". The one press the table carries is an older profile's
+        /// Update (PanelUpdates.RowUpdate), and every other state offers none, so its button is null; the
+        /// page draws it as an outline, its one primary being the update card's Download. A state the page
+        /// cannot know -- SimHub's settings out of reach, or no profile in this build to compare with -- is
+        /// "Unknown", the word the table already writes for a version it cannot read, and the row's hover
+        /// says why: calling it "Not installed" would claim what nobody has checked.
         /// </remarks>
         public static RowAction LightRow(FlagBoxInstallState state, string installedVersion)
         {
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, "Update", PanelButton.Outline);
+                    return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, PanelUpdates.RowUpdate, PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
-                    return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                    return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, null, PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
-                    return new RowAction(InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
+                    return new RowAction(InstallFailed, Theme.StatusFailed, null, PanelButton.Outline);
+                case FlagBoxInstallState.Unavailable:
+                case FlagBoxInstallState.NotEmbedded:
+                    return new RowAction(PanelUpdates.Unknown, Theme.TextLabel, null, PanelButton.Outline);
                 default:
-                    return new RowAction(NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
+                    return new RowAction(NotInstalled, Theme.TextLabel, null, PanelButton.Outline);
             }
         }
 

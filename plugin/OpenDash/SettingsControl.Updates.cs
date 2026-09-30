@@ -318,7 +318,7 @@ namespace OpenDashPlugin
             }
 
             var cars = plugin.CarLights;
-            var carTables = cars == null ? null : PanelUpdates.CarTables(cars.Status, cars.CarCount, cars.FetchedAt);
+            var carTables = cars == null ? null : PanelUpdates.CarTables(cars.Status, cars.FetchedAt);
 
             return new UpdatesReportInput
             {

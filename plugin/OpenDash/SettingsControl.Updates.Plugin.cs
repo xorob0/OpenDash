@@ -319,24 +319,28 @@ namespace OpenDashPlugin
             plugin.Installer.Refresh();
             var root = plugin.Installer.SimHubRoot;
             var restored = 0;
+            // A copy that could not be put back is said by name, since the card still offers it once the
+            // page is drawn again, and "nothing to put back" under it would say the opposite.
+            var failed = new List<string>();
             foreach (var kept in UpdatesKept())
             {
                 var folder = kept.Key;
-                var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
-                if (copy == null) continue;
                 try
                 {
+                    var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                    if (copy == null) continue;
                     if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;
                 }
                 catch (Exception ex)
                 {
                     Log.Error("Putting back " + folder + " failed", ex);
+                    failed.Add(kept.Value);
                 }
             }
             plugin.Installer.Refresh();
             Save();
             Redraw();
-            Say(PanelUpdates.PutBack(restored), restored > 0);
+            Say(PanelUpdates.PutBack(restored, failed), restored > 0 && failed.Count == 0);
         }
 
         /// <summary>

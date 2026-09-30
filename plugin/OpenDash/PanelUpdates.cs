@@ -388,30 +388,33 @@ namespace OpenDashPlugin
         public const string InSimHubState = "In SimHub";
 
         /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
-        /// row would otherwise read as if Reinstall everything could write it.</summary>
-        public const string NoDashboards = "This build of OpenDash ships no dashboards.";
+        /// row would otherwise read as if Reinstall everything could write it. Every note about what the build
+        /// carries opens "This build ships no", as PanelLightRows.NoProfiles does.</summary>
+        public const string NoDashboards = "This build ships no dashboards.";
 
         /// <summary>Under the table when the installer's last read or write of a folder failed.</summary>
         public const string InstallerFailed = "OpenDash could not read or write a dashboard. See SimHub's log.";
 
         /// <summary>
         /// The sentences under the table, in order: what this build ships and what the installer could not
-        /// do, then the light profiles' own (uncovered 24): OpenDash never installs one on its own, a build
-        /// with none for the rig's strips, and SimHub's LED settings out of reach.
+        /// do, then the light profiles' own (uncovered 24): OpenDash never installs one on its own, said only
+        /// over a light row, a build with none for the rig's strips, and SimHub's LED settings out of reach.
         /// </summary>
         /// <param name="shipsDashboards">DashboardInstaller.HasEmbeddedPackage.</param>
         /// <param name="installerError">DashboardInstaller.LastError.</param>
         /// <param name="rowFailed">Whether a dashboard row already says "Install failed", which the
         /// installer's error would repeat.</param>
+        /// <param name="hasLightRows">Whether the table draws a strip or flag box row: the sentence about
+        /// profiles is about those rows, and a rig with none has nothing it would be said of.</param>
         /// <param name="hasStrips">Whether the rig has a strip.</param>
         /// <param name="shipsProfiles">Whether this build embeds any strip profile.</param>
         /// <param name="stripsReachable">Whether SimHub's LED settings could be read.</param>
-        public static IList<string> TableNotes(bool shipsDashboards, string installerError, bool rowFailed, bool hasStrips, bool shipsProfiles, bool stripsReachable)
+        public static IList<string> TableNotes(bool shipsDashboards, string installerError, bool rowFailed, bool hasLightRows, bool hasStrips, bool shipsProfiles, bool stripsReachable)
         {
             var notes = new List<string>();
             if (!shipsDashboards) notes.Add(NoDashboards);
             else if (!string.IsNullOrWhiteSpace(installerError) && !rowFailed) notes.Add(InstallerFailed);
-            notes.Add(PanelLightRows.SectionCaption);
+            if (hasLightRows) notes.Add(PanelLightRows.SectionCaption);
             if (hasStrips && !shipsProfiles) notes.Add(PanelLightRows.NoProfiles);
             else if (hasStrips && !stripsReachable) notes.Add(PanelLightRows.Unavailable);
             return notes;
@@ -461,12 +464,16 @@ namespace OpenDashPlugin
             return contentWidth > 0 ? contentWidth + TableGap : 0;
         }
 
-        /// <summary>A version as the table writes it: empty for none, "Unknown" for a copy with no readable
-        /// version, the version otherwise.</summary>
+        /// <summary>What the table writes for a version it cannot read, and for a light profile's state the
+        /// page cannot know (PanelCopy.LightRow).</summary>
+        public const string Unknown = "Unknown";
+
+        /// <summary>A version as the table writes it: empty for none, <see cref="Unknown"/> for a copy with no
+        /// readable version, the version otherwise.</summary>
         public static string VersionText(string version)
         {
             if (string.IsNullOrWhiteSpace(version)) return string.Empty;
-            if (string.Equals(version, Versioning.UnknownVersion, StringComparison.Ordinal)) return "Unknown";
+            if (string.Equals(version, Versioning.UnknownVersion, StringComparison.Ordinal)) return Unknown;
             return version.Trim();
         }
 
@@ -535,12 +542,12 @@ namespace OpenDashPlugin
 
         public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";
 
-        /// <summary>"This build of OpenDash ships no 1280 × 480 face." for a screen whose package this build
-        /// does not carry.</summary>
+        /// <summary>"This build ships no 1280 × 480 face." for a screen whose package this build does not
+        /// carry.</summary>
         public static string ShipsNo(ScreenInstance screen)
         {
             if (screen == null) return NoDashboards;
-            return "This build of OpenDash ships no " + screen.SizeLabel + " " + PanelAddScreen.KindName(screen.Kind).ToLowerInvariant() + ".";
+            return "This build ships no " + screen.SizeLabel + " " + PanelAddScreen.KindName(screen.Kind).ToLowerInvariant() + ".";
         }
 
         public const string EditedTooltip = "You have edited it, so OpenDash left it alone. " + PanelConfirmation.ReinstallLabel + " replaces it.";
@@ -583,9 +590,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A strip row's tooltip in each state. Up to date says no more than the state, since the version has a
-        /// column of its own; an older profile says what the row's Update does; a missing one names the press
-        /// on this page that installs it.
+        /// A strip row's tooltip in each state, or null where the row already says it all (voice.md): an
+        /// up-to-date profile, whose version has a column of its own, has none, as a dashboard's row has none.
+        /// An older profile names the version its Update brings, in the dashboard rows' form (BringsItTo), and
+        /// leaves what the press costs to the press's own tooltip; a missing one names the press on this page
+        /// that installs it and the step OpenDash does not take.
         /// </summary>
         public static string StripTooltip(FlagBoxPlan plan)
         {
@@ -595,22 +604,42 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotInstalled:
                     return StripNotInstalled;
                 case FlagBoxInstallState.UpToDate:
-                    return InstalledUpToDate;
+                    return null;
+                case FlagBoxInstallState.Outdated:
+                    return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Unavailable:
+                    return PanelLightRows.Unavailable;
+                case FlagBoxInstallState.NotEmbedded:
+                    return StripNotEmbedded;
                 default:
-                    return PanelLightRows.Tooltip(1, plan);
+                    return LightFailed;
             }
         }
 
         /// <summary>A row is one strip of the rig, so the census rows' "no strip of this shape" does not
-        /// apply to it: the strip is there and its profile is not.</summary>
-        public const string StripNotInstalled = "Its profile is not in SimHub. " + PanelConfirmation.ReinstallLabel + " installs it.";
+        /// apply to it: the strip is there and its profile is not, which the row's state already says.</summary>
+        public const string StripNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on its device.";
 
-        public const string InstalledUpToDate = "Installed and up to date.";
+        /// <summary>A strip whose shape this build carries no profile for, whatever SimHub holds.</summary>
+        public const string StripNotEmbedded = "This build ships no LED profile for it.";
+
+        public const string LightFailed = "Install failed. See SimHub's log.";
+
+        /// <summary>An older light profile's tooltip, naming the version the row's Update brings: "Update
+        /// brings it to 0.5.0."</summary>
+        public static string UpdateBringsItTo(string embeddedVersion)
+        {
+            return string.IsNullOrWhiteSpace(embeddedVersion)
+                ? RowUpdate + " brings it up to date."
+                : RowUpdate + " brings it to " + embeddedVersion.Trim() + ".";
+        }
 
         /// <summary>
-        /// The flag box row's tooltip in each state. Not FlagBoxInstallPlan.Summary whole, which was written
-        /// for a row with a press beside it: this row has only Update, so an up-to-date profile is not told
-        /// about a Reinstall it does not offer, and a missing one names the press on this page.
+        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, and a missing one
+        /// names the press on this page; an up-to-date one keeps only the step OpenDash does not take, since
+        /// installing a profile does not select it (FlagBoxInstallPlan.Summary). The rest are
+        /// FlagBoxInstallPlan.Summary's, which names the file to import by hand while SimHub's matrix settings
+        /// cannot be reached.
         /// </summary>
         public static string FlagBoxTooltip(FlagBoxPlan plan, string extractedPath)
         {
@@ -620,15 +649,29 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotInstalled:
                     return FlagBoxNotInstalled;
                 case FlagBoxInstallState.UpToDate:
-                    return InstalledUpToDate;
+                    return FlagBoxSelect;
+                case FlagBoxInstallState.Outdated:
+                    return UpdateBringsItTo(plan.EmbeddedVersion);
                 default:
                     return FlagBoxInstallPlan.Summary(plan, extractedPath);
             }
         }
 
-        public const string FlagBoxNotInstalled = "Not installed. " + PanelConfirmation.ReinstallLabel + " installs it, then select it on your device.";
+        public const string FlagBoxNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on your device.";
 
-        /// <summary>A light row's Update press: what it costs, in the words the Matrix and LEDs pages warn with.</summary>
+        /// <summary>The step after the flag box profile is installed, in FlagBoxInstallPlan.Summary's words.</summary>
+        public const string FlagBoxSelect = "Select it on your device to use it.";
+
+        /// <summary>The step after strip profiles are installed, for one and for several: installing adds a
+        /// profile to its device's list without selecting it.</summary>
+        public const string StripSelect = "Select it on its device in SimHub to use it.";
+        public const string StripsSelect = "Select each on its device in SimHub to use it.";
+
+        /// <summary>The light row's one press, while its profile is older than this build's.</summary>
+        public const string RowUpdate = "Update";
+
+        /// <summary>A light row's Update press: what it costs, in the words the Matrix and LEDs pages warn with.
+        /// The row's hover names the version the press brings; this is the press's own.</summary>
         public const string RowUpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         private static UpdatesRow Row(string name, string kind, string version, string state, string hex, string tooltip)
@@ -658,8 +701,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Reinstall everything's tooltip: what it writes, and what that costs a profile somebody
-        /// changed, which its question (about dashboards) does not cover.</summary>
-        public const string ReinstallTooltip = "Installs every dashboard on your rig again, and each older or missing LED and matrix profile. A profile you have edited is replaced.";
+        /// changed, which its question (about dashboards) does not cover. Only an older one: a current profile
+        /// is never rewritten (<see cref="BringsForward"/>).</summary>
+        public const string ReinstallTooltip = "Installs every dashboard on your rig again, and each older or missing LED and matrix profile. An older profile you have edited is replaced.";
 
         /// <summary>
         /// Whether Reinstall everything writes a light profile SimHub holds in this state (ruling 70): an
@@ -681,8 +725,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What Reinstall everything says when it has run: the dashboards it wrote and left alone and the step
-        /// OpenDash does not take for them (voice.md), then the light profiles it brought forward, then what
-        /// could not be written and where to look.
+        /// OpenDash does not take for them (voice.md), then the light profiles it brought forward, each install
+        /// followed by the select step installing does not take, then what could not be written and where to
+        /// look. No dashboards clause where there was no dashboard to write.
         /// </summary>
         /// <param name="replaced">Dashboards written.</param>
         /// <param name="held">Dashboards left alone because they were edited and nobody said to replace them.</param>
@@ -693,15 +738,27 @@ namespace OpenDashPlugin
         {
             lights = lights ?? new UpdatesLightsTally();
             var line = new StringBuilder();
-            line.Append(replaced == 1 ? "Reinstalled 1 dashboard." : "Reinstalled " + replaced + " dashboards.");
-            if (held == 1) line.Append(" The one you edited was left alone.");
-            else if (held > 1) line.Append(" The " + held + " you edited were left alone.");
-            // Straight after the dashboards, so "it" is one of them whatever the profiles did.
-            if (replaced > 0) line.Append(" " + UpdateWording.ToSee(wroteFonts));
+            if (replaced > 0)
+            {
+                line.Append(replaced == 1 ? " Reinstalled 1 dashboard." : " Reinstalled " + replaced + " dashboards.");
+                if (held == 1) line.Append(" The one you edited was left alone.");
+                else if (held > 1) line.Append(" The " + held + " you edited were left alone.");
+                // Straight after the dashboards, so what it points at is what the line has just named.
+                line.Append(" " + ToSee(replaced, wroteFonts));
+            }
+            else if (held == 1) line.Append(" The dashboard you edited was left alone.");
+            else if (held > 1) line.Append(" The " + held + " dashboards you edited were left alone.");
             Profiles(line, "Updated", lights.StripsUpdated);
-            Profiles(line, "Installed", lights.StripsInstalled);
+            if (lights.StripsInstalled > 0)
+            {
+                Profiles(line, "Installed", lights.StripsInstalled);
+                line.Append(" " + (lights.StripsInstalled == 1 ? StripSelect : StripsSelect));
+            }
             var name = string.IsNullOrWhiteSpace(flagBoxName) ? FlagBoxProfile.ProfileName : flagBoxName;
-            if (lights.FlagBoxAfter == FlagBoxInstallState.UpToDate) line.Append(" " + (lights.FlagBoxWasOlder ? "Updated " : "Installed ") + name + ".");
+            if (lights.FlagBoxAfter == FlagBoxInstallState.UpToDate)
+            {
+                line.Append(lights.FlagBoxWasOlder ? " Updated " + name + "." : " Installed " + name + ". " + FlagBoxSelect);
+            }
             NotWritten(line, lights.StripsNotUpdated, "updated");
             NotWritten(line, lights.StripsNotInstalled, "installed");
             if (lights.FlagBoxAfter.HasValue && lights.FlagBoxAfter != FlagBoxInstallState.UpToDate)
@@ -709,8 +766,25 @@ namespace OpenDashPlugin
                 line.Append(" " + name + " could not be " + (lights.FlagBoxWasOlder ? "updated." : "installed."));
             }
             if (!lights.Ok) line.Append(" See SimHub's log.");
-            return line.ToString();
+            return line.Length == 0 ? NothingToReinstall : line.ToString(1, line.Length - 1);
         }
+
+        /// <summary>A run that wrote nothing and had nothing to leave alone: a rig with no dashboard and every
+        /// light profile current.</summary>
+        public const string NothingToReinstall = "There was nothing to reinstall.";
+
+        /// <summary>
+        /// The step OpenDash does not take after writing <paramref name="count"/> dashboards: UpdateWording's
+        /// for one, and the plural for several, so "it" never points at a dashboard the line has not named.
+        /// </summary>
+        public static string ToSee(int count, bool wroteFonts)
+        {
+            if (count <= 1) return UpdateWording.ToSee(wroteFonts);
+            return wroteFonts ? RestartToSeeThem : ReopenThem;
+        }
+
+        public const string ReopenThem = "Close and reopen your dashboards to see them.";
+        public const string RestartToSeeThem = "Restart SimHub to see them.";
 
         private static void Profiles(StringBuilder line, string verb, int count)
         {
@@ -745,8 +819,14 @@ namespace OpenDashPlugin
         {
             var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
             if (list.Count == 0) return "Your edited dashboard was kept";
-            if (list.Count == 1) return "Your edited " + list[0] + " was kept";
-            return "Your edited " + string.Join(", ", list.Take(list.Count - 1)) + " and " + list[list.Count - 1] + " were kept";
+            return "Your edited " + And(list) + (list.Count == 1 ? " was kept" : " were kept");
+        }
+
+        /// <summary>"Rim", "Rim and Pit wall", "Rim, Pit wall and Main dash".</summary>
+        private static string And(IList<string> names)
+        {
+            if (names.Count <= 1) return names.Count == 0 ? string.Empty : names[0];
+            return string.Join(", ", names.Take(names.Count - 1)) + " and " + names[names.Count - 1];
         }
 
         /// <summary>
@@ -783,11 +863,19 @@ namespace OpenDashPlugin
             return screen == null || string.IsNullOrWhiteSpace(screen.Name) ? folder : screen.Name;
         }
 
-        /// <summary>What Put mine back says when it has run.</summary>
-        public static string PutBack(int restored)
+        /// <summary>
+        /// What Put mine back says when it has run: what it restored and the step after, then each copy it
+        /// could not restore and where to look. "Nothing to put back" only when it found no copy at all.
+        /// </summary>
+        /// <param name="restored">Copies put back.</param>
+        /// <param name="failed">The names, as SimHub lists them, of the dashboards whose copy could not be put back.</param>
+        public static string PutBack(int restored, IList<string> failed = null)
         {
-            if (restored <= 0) return "There was nothing to put back.";
-            return "Put back " + (restored == 1 ? "1 dashboard" : restored + " dashboards") + ". " + UpdateWording.Reopen;
+            var names = (failed ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            var line = new List<string>();
+            if (restored > 0) line.Add("Put back " + (restored == 1 ? "1 dashboard" : restored + " dashboards") + ". " + ToSee(restored, false));
+            if (names.Count > 0) line.Add("Could not put back " + And(names) + ". See SimHub's log.");
+            return line.Count == 0 ? "There was nothing to put back." : string.Join(" ", line);
         }
 
         // --- Support --------------------------------------------------------------------------------
@@ -798,7 +886,7 @@ namespace OpenDashPlugin
         public const string ReportIssue = "Report an issue";
         public const string ReadGuide = "Read the guide";
         public const string SupportCaption = "Versions, devices and the last 200 log lines, copied to paste. Nothing is sent.";
-        public const string Licence = "OpenDash is free software under the MIT licence.";
+        public const string Licence = "MIT licence";
 
         public const double SupportButtonGap = 8;
         public const double SupportCaptionSize = 12;
@@ -841,11 +929,15 @@ namespace OpenDashPlugin
             return "Matrix " + matrix.ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>The car tables as the report says them: "Ready (412 cars, fetched 2026-09-28)".</summary>
-        public static string CarTables(string status, int cars, DateTime? fetched)
+        /// <summary>
+        /// Lovely Car Data as the report says it: CarLightService.Status, which already carries the count and
+        /// its age ("412 cars, updated 3 days ago"), and the date it was fetched, which the age alone does not
+        /// pin down in a report read later.
+        /// </summary>
+        public static string CarTables(string status, DateTime? fetched)
         {
-            return (status ?? "unknown") + " (" + (cars == 1 ? "1 car" : cars.ToString(CultureInfo.InvariantCulture) + " cars")
-                + (fetched.HasValue ? ", fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : string.Empty) + ")";
+            return (string.IsNullOrWhiteSpace(status) ? "unknown" : status.Trim())
+                + (fetched.HasValue ? " (fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ")" : string.Empty);
         }
 
         /// <summary>Where SimHub writes its log, under its own folder: Logs\SimHub.txt is the current one and
@@ -901,7 +993,7 @@ namespace OpenDashPlugin
                 text.AppendLine("Flag box profile: " + Item(input.FlagBox));
             }
             text.AppendLine();
-            text.AppendLine("Car tables: " + Known(input.CarTables));
+            text.AppendLine("Lovely Car Data: " + Known(input.CarTables));
             var log = input.Log ?? new string[0];
             text.AppendLine();
             text.AppendLine("SimHub's log, the last " + log.Count + " OpenDash lines:");

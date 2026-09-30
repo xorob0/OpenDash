@@ -34,7 +34,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Report an issue", PanelUpdates.ReportIssue);
             Assert.Equal("Read the guide", PanelUpdates.ReadGuide);
             Assert.Equal("Versions, devices and the last 200 log lines, copied to paste. Nothing is sent.", PanelUpdates.SupportCaption);
-            Assert.Equal("OpenDash is free software under the MIT licence.", PanelUpdates.Licence);
+            // The noun phrase the old footer drew: the page does not describe itself.
+            Assert.Equal("MIT licence", PanelUpdates.Licence);
             // The empty rig in the one phrase the panel has for it, which the Screens page owns and has frozen.
             Assert.Equal(PanelScreens.NoScreens + ". Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
         }
@@ -406,36 +407,44 @@ namespace OpenDashPlugin.Tests
         {
             var inSimHub = PanelUpdates.DashboardRow(Rim, null, true, false);
             Assert.Equal("In SimHub", inSimHub.State);
-            Assert.Equal("This build of OpenDash ships no 1280 × 480 face.", inSimHub.Tooltip);
+            Assert.Equal("This build ships no 1280 × 480 face.", inSimHub.Tooltip);
             Assert.Equal(string.Empty, inSimHub.Version);
             Assert.Equal("Missing from SimHub", PanelUpdates.DashboardRow(Rim, null, false, false).State);
             Assert.Equal("Not installed", PanelUpdates.DashboardRow(Rim, null, null, null).State);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
-            Assert.Equal("This build of OpenDash ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
+            Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
         }
 
         /// <summary>The sentences under the table: what the build ships and what the installer could not do,
-        /// then the light profiles' own, which uncovered 24 puts here.</summary>
+        /// then the light profiles' own, which uncovered 24 puts here, said only over a light row. Every note
+        /// about the build opens the same way, and names the profiles as the rows do.</summary>
         [Fact]
         public void The_table_s_notes_say_what_the_build_ships_and_what_could_not_be_read()
         {
             Assert.Equal("OpenDash never installs a profile on its own.", PanelLightRows.SectionCaption);
             Assert.Equal("SimHub's LED settings are not available.", PanelLightRows.Unavailable);
-            Assert.Equal("This build ships no light profiles.", PanelLightRows.NoProfiles);
+            Assert.Equal("This build ships no LED profiles.", PanelLightRows.NoProfiles);
+            Assert.Equal("This build ships no dashboards.", PanelUpdates.NoDashboards);
+            Assert.Contains(PanelUpdates.StripKind, PanelLightRows.NoProfiles);
 
-            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, true, true, true));
-            Assert.Equal(new[] { "This build of OpenDash ships no dashboards.", PanelLightRows.SectionCaption },
-                PanelUpdates.TableNotes(false, "anything", false, false, false, true));
-            Assert.Equal(new[] { "OpenDash could not read or write a dashboard. See SimHub's log.", PanelLightRows.SectionCaption },
-                PanelUpdates.TableNotes(true, "disk full", false, false, true, true));
+            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, true, true, true, true));
+            Assert.Equal(new[] { "This build ships no dashboards.", PanelLightRows.SectionCaption },
+                PanelUpdates.TableNotes(false, "anything", false, true, false, false, true));
+            Assert.Equal(new[] { "OpenDash could not read or write a dashboard. See SimHub's log." },
+                PanelUpdates.TableNotes(true, "disk full", false, false, false, true, true));
             // A row already says "Install failed", and the note would repeat it.
-            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, "disk full", true, false, true, true));
-            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.NoProfiles }, PanelUpdates.TableNotes(true, null, false, true, false, true));
-            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.Unavailable }, PanelUpdates.TableNotes(true, null, false, true, true, false));
-            // No strip, no sentence about strips.
-            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, false, false, false));
+            Assert.Empty(PanelUpdates.TableNotes(true, "disk full", true, false, false, true, true));
+            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.NoProfiles }, PanelUpdates.TableNotes(true, null, false, true, true, false, true));
+            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.Unavailable }, PanelUpdates.TableNotes(true, null, false, true, true, true, false));
+            // The flag box row alone is a light row, and the sentence is about it.
+            Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, true, false, false, false));
+            // No strip and no matrix: no light row, so no sentence about profiles.
+            Assert.Empty(PanelUpdates.TableNotes(true, null, false, false, false, false, false));
         }
 
+        /// <summary>A strip row says what its row does not already say: nothing while its profile is current,
+        /// the version its Update brings while it is older (what the press costs is the press's own tooltip),
+        /// and the press that installs a missing one with the step OpenDash does not take.</summary>
         [Fact]
         public void A_strip_row_names_the_strip_and_offers_an_update_only_while_its_profile_is_older()
         {
@@ -447,22 +456,29 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusUpdateAvailable, older.StateHex);
             Assert.Equal(Theme.StatusUpdateAvailable, older.DotHex);
             Assert.True(older.OffersUpdate);
-            Assert.Equal("A newer profile is available (0.4.2 to 0.5.0). Replaces the copy in SimHub, including your changes to it.", older.Tooltip);
+            Assert.Equal("Update brings it to 0.5.0.", older.Tooltip);
+            Assert.Equal("Update brings it up to date.", PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Outdated }).Tooltip);
 
             var current = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" });
             Assert.Equal("Up to date", current.State);
-            Assert.Equal("Installed and up to date.", current.Tooltip);
+            // As a dashboard's up-to-date row: the state and the version already say it all.
+            Assert.Null(current.Tooltip);
             Assert.False(current.OffersUpdate);
 
             var none = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
             Assert.Equal("Not installed", none.State);
             Assert.Equal(Theme.StatusNotInstalled, none.DotHex);
-            Assert.Equal("Its profile is not in SimHub. Reinstall everything installs it.", none.Tooltip);
+            Assert.Equal("Reinstall everything installs it, then select it on its device.", none.Tooltip);
             Assert.False(none.OffersUpdate);
 
+            // What the page cannot know is said as not known, not as not installed.
             var unreachable = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
-            Assert.Equal("Not installed", unreachable.State);
+            Assert.Equal("Unknown", unreachable.State);
+            Assert.Equal(Theme.TextLabel, unreachable.StateHex);
             Assert.Equal(PanelLightRows.Unavailable, unreachable.Tooltip);
+            var notEmbedded = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
+            Assert.Equal("Unknown", notEmbedded.State);
+            Assert.Equal("This build ships no LED profile for it.", notEmbedded.Tooltip);
 
             var failed = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed });
             Assert.Equal("Install failed", failed.State);
@@ -495,19 +511,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Update available", older.State);
             Assert.True(older.OffersUpdate);
 
-            Assert.Equal("A newer profile is available (0.4.2 to 0.5.0). Replaces the copy in SimHub, including your changes to it.", older.Tooltip);
+            Assert.Equal("Update brings it to 0.5.0.", older.Tooltip);
 
             var current = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, null);
             Assert.Equal("Up to date", current.State);
-            // The row has no Reinstall, so it is not told about one.
-            Assert.Equal("Installed and up to date.", current.Tooltip);
+            // The row has no Reinstall, so it is not told about one, and it does not repeat its state: it keeps
+            // the one step installing does not take.
+            Assert.Equal("Select it on your device to use it.", current.Tooltip);
             Assert.False(current.OffersUpdate);
 
             var none = PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null);
             Assert.False(none.OffersUpdate);
-            Assert.Equal("Not installed. Reinstall everything installs it, then select it on your device.", none.Tooltip);
+            Assert.Equal("Reinstall everything installs it, then select it on your device.", none.Tooltip);
 
             var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
+            Assert.Equal("Unknown", unreachable.State);
             Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.", unreachable.Tooltip);
             Assert.Equal("Install failed. See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
         }
@@ -549,17 +567,29 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Reinstall_everything_says_what_it_wrote_and_the_step_left()
         {
-            Assert.Equal("Reinstalled 3 dashboards. Close and reopen the dashboard to see it.",
-                PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box"));
+            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it.",
+                PanelUpdates.ReinstallSummary(1, 0, false, Tally(), "OpenDash Flag box"));
             Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it.",
                 PanelUpdates.ReinstallSummary(1, 0, true, null, "OpenDash Flag box"));
-            // The step follows the dashboards, so "it" is one of them and not the last profile named.
-            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen the dashboard to see it. Updated 2 LED profiles. Updated OpenDash Flag box.",
+            // Several dashboards take the plural step, so "it" never points at one the line has not named.
+            Assert.Equal("Reinstalled 3 dashboards. Close and reopen your dashboards to see them.",
+                PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box"));
+            Assert.Equal("Reinstalled 3 dashboards. Restart SimHub to see them.",
+                PanelUpdates.ReinstallSummary(3, 0, true, Tally(), "OpenDash Flag box"));
+            // The step follows the dashboards, so it points at them and not at the last profile named.
+            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen your dashboards to see them. Updated 2 LED profiles. Updated OpenDash Flag box.",
                 PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: 2, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
-            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated 1 LED profile. Installed 2 LED profiles. Installed OpenDash Flag box.",
+            // Installing a profile adds it without selecting it, and the line names that step (voice.md).
+            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated 1 LED profile. Installed 2 LED profiles. Select each on its device in SimHub to use it. Installed OpenDash Flag box. Select it on your device to use it.",
                 PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: 1, installed: 2, flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
-            Assert.Equal("Reinstalled 0 dashboards. The 2 you edited were left alone.",
+            // A rig with strips and no screens: no dashboards clause.
+            Assert.Equal("Installed 1 LED profile. Select it on its device in SimHub to use it.",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(installed: 1), "OpenDash Flag box"));
+            Assert.Equal("The 2 dashboards you edited were left alone.",
                 PanelUpdates.ReinstallSummary(0, 2, false, Tally(), "OpenDash Flag box"));
+            Assert.Equal("The dashboard you edited was left alone. Updated 1 LED profile.",
+                PanelUpdates.ReinstallSummary(0, 1, false, Tally(updated: 1), "OpenDash Flag box"));
+            Assert.Equal("There was nothing to reinstall.", PanelUpdates.ReinstallSummary(0, 0, false, Tally(), "OpenDash Flag box"));
             Assert.True(Tally().Ok);
             Assert.True(Tally(updated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate).Ok);
         }
@@ -568,13 +598,13 @@ namespace OpenDashPlugin.Tests
         public void A_profile_that_could_not_be_written_is_said_with_where_to_look_and_the_step_still_said()
         {
             var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: 1, notUpdated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box");
-            Assert.Equal("Reinstalled 2 dashboards. Close and reopen the dashboard to see it. Updated 1 LED profile. 1 LED profile could not be updated. OpenDash Flag box could not be updated. See SimHub's log.", line);
+            Assert.Equal("Reinstalled 2 dashboards. Close and reopen your dashboards to see them. Updated 1 LED profile. 1 LED profile could not be updated. OpenDash Flag box could not be updated. See SimHub's log.", line);
             Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it. 2 LED profiles could not be updated. 3 LED profiles could not be installed. See SimHub's log.",
                 PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: 2, notInstalled: 3), "OpenDash Flag box"));
-            Assert.Equal("Reinstalled 0 dashboards. OpenDash Flag box could not be installed. See SimHub's log.",
+            Assert.Equal("OpenDash Flag box could not be installed. See SimHub's log.",
                 PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
             // A blank name is the profile's own.
-            Assert.Equal("Reinstalled 0 dashboards. Updated " + FlagBoxProfile.ProfileName + ".",
+            Assert.Equal("Updated " + FlagBoxProfile.ProfileName + ".",
                 PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), " "));
             Assert.False(Tally(notUpdated: 1).Ok);
             Assert.False(Tally(notInstalled: 1).Ok);
@@ -612,7 +642,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelUpdates.BringsFlagBoxForward(true, FlagBoxInstallState.NotInstalled));
             Assert.False(PanelUpdates.BringsFlagBoxForward(false, FlagBoxInstallState.Outdated));
             Assert.False(PanelUpdates.BringsFlagBoxForward(true, FlagBoxInstallState.UpToDate));
-            Assert.Equal("Installs every dashboard on your rig again, and each older or missing LED and matrix profile. A profile you have edited is replaced.", PanelUpdates.ReinstallTooltip);
+            // A current profile is never rewritten, so only an older one's edits are at stake.
+            Assert.Equal("Installs every dashboard on your rig again, and each older or missing LED and matrix profile. An older profile you have edited is replaced.", PanelUpdates.ReinstallTooltip);
         }
 
         // --- The kept copy ----------------------------------------------------------------------------
@@ -666,8 +697,14 @@ namespace OpenDashPlugin.Tests
         public void Put_mine_back_says_what_it_restored()
         {
             Assert.Equal("There was nothing to put back.", PanelUpdates.PutBack(0));
+            Assert.Equal("There was nothing to put back.", PanelUpdates.PutBack(0, new string[0]));
             Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it.", PanelUpdates.PutBack(1));
-            Assert.Equal("Put back 2 dashboards. Close and reopen the dashboard to see it.", PanelUpdates.PutBack(2));
+            Assert.Equal("Put back 2 dashboards. Close and reopen your dashboards to see them.", PanelUpdates.PutBack(2));
+            // A copy that could not be put back is named, never said as nothing to put back: the card still
+            // offers it under the line.
+            Assert.Equal("Could not put back Rim. See SimHub's log.", PanelUpdates.PutBack(0, new[] { "Rim" }));
+            Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it. Could not put back Rim and Pit wall. See SimHub's log.",
+                PanelUpdates.PutBack(1, new[] { "Rim", "Pit wall" }));
         }
 
         // --- Support ----------------------------------------------------------------------------------
@@ -725,8 +762,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("3/9/3 Fanatec on fanatec-1", PanelUpdates.StripDetail("3/9/3 Fanatec", "fanatec-1"));
             Assert.Equal("3/9/3 Fanatec", PanelUpdates.StripDetail("3/9/3 Fanatec", " "));
             Assert.Equal("Matrix 2", PanelUpdates.MatrixName(2));
-            Assert.Equal("Ready (412 cars, fetched 2026-09-28)", PanelUpdates.CarTables("Ready", 412, new DateTime(2026, 9, 28, 7, 0, 0, DateTimeKind.Utc)));
-            Assert.Equal("Not fetched (1 car)", PanelUpdates.CarTables("Not fetched", 1, null));
+            // CarLightService.Status is CarLightService.Describe's sentence, which carries the count and its age.
+            var status = CarLightService.Describe(412, new DateTime(2026, 9, 28, 7, 0, 0, DateTimeKind.Utc), Now, null);
+            Assert.Equal("412 cars, updated 2 days ago (fetched 2026-09-28)", PanelUpdates.CarTables(status, new DateTime(2026, 9, 28, 7, 0, 0, DateTimeKind.Utc)));
+            Assert.Equal(PanelLights.CarTablesNone, PanelUpdates.CarTables(CarLightService.Describe(0, null, Now, null), null));
+            Assert.Equal("unknown", PanelUpdates.CarTables(null, null));
         }
 
         [Fact]
@@ -748,7 +788,7 @@ namespace OpenDashPlugin.Tests
                 Strips = new[] { new UpdatesReportItem("Wheel rim", "3/9/3 Fanatec on fanatec-1", "0.4.2", "Update available") },
                 Matrices = new[] { new UpdatesReportItem("Matrix 1", "Flag box", null, null) },
                 FlagBox = new UpdatesReportItem("OpenDash Flag box", null, "0.5.0", "Up to date"),
-                CarTables = "Ready (412 cars)",
+                CarTables = "412 cars, updated 2 days ago (fetched 2026-09-28)",
                 Log = new[] { "INFO [OpenDash] one", "WARN [OpenDash] two" },
             });
             // The whole report, line for line: the caption promises what it holds, and a line added to it (a
@@ -777,7 +817,7 @@ namespace OpenDashPlugin.Tests
                 "",
                 "Flag box profile: OpenDash Flag box: Up to date, 0.5.0",
                 "",
-                "Car tables: Ready (412 cars)",
+                "Lovely Car Data: 412 cars, updated 2 days ago (fetched 2026-09-28)",
                 "",
                 "SimHub's log, the last 2 OpenDash lines:",
                 "INFO [OpenDash] one",

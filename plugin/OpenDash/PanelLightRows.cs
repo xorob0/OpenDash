@@ -139,9 +139,10 @@ namespace OpenDashPlugin
         /// <summary>What the flag box row is under its name. The profile's own Name carries the name.</summary>
         public const string FlagBoxCaption = "8 × 8 matrix";
 
-        /// <summary>A build that embedded no profile at all has no rows to draw, and says why rather than
-        /// leaving the heading over nothing.</summary>
-        public const string NoProfiles = "This build ships no light profiles.";
+        /// <summary>Under the Updates table when the rig has a strip and this build embedded no strip profile
+        /// at all: the rows name the strips' profiles "LED profile", and the note uses the same word, in the
+        /// frame every note about the build takes (PanelUpdates.NoDashboards).</summary>
+        public const string NoProfiles = "This build ships no LED profiles.";
 
         /// <summary>
         /// What a strip row says when SimHub's LED driver cannot be reached.

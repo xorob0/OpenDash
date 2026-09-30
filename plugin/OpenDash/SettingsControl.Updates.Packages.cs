@@ -48,7 +48,7 @@ namespace OpenDashPlugin
             var children = new List<UIElement> { table };
             var hasStrips = Settings.LedBarList().Any(bar => bar != null && bar.ProfileShapeId != null);
             var notes = PanelUpdates.TableNotes(plugin.Installer.HasEmbeddedPackage, plugin.Installer.LastError, rowFailed,
-                hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);
+                lights.Count > 0, hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);
             foreach (var note in notes) children.Add(UpdatesNote(note));
             // The by-hand route for the flag box, only when the matrix driver cannot be reached at all.
             if (flagBoxPlan != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable)

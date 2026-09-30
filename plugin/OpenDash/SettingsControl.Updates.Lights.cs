@@ -58,7 +58,7 @@ namespace OpenDashPlugin
         /// <summary>The row's one press, Update, while its profile is older than this build's.</summary>
         private static Button UpdatesRowPress()
         {
-            var button = Ui.Button(PanelCopy.LightRow(FlagBoxInstallState.Outdated, null).Button, PanelButtonKind.Outline, PanelButtonSize.Small);
+            var button = Ui.Button(PanelUpdates.RowUpdate, PanelButtonKind.Outline, PanelButtonSize.Small);
             button.ToolTip = PanelUpdates.RowUpdateTooltip;
             button.Margin = new Thickness(PanelUpdates.TableGap, 0, 0, 0);
             return button;
