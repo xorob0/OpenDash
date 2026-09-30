@@ -177,13 +177,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_rig_page_keeps_a_drop_and_a_reset_and_a_chip_rebuilds_nothing()
         {
-            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePosition(Settings, tile, left, top);", "PanelRigMap.ScreenOf(Settings, tile)", "Save(screen);", "Save();");
+            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePlaces(Settings, views.Select(", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
             InOrder(RigMethod("private void RigResetLayout("), "PanelRigMap.ClearLayout(Settings);", "Save();", "Redraw();");
 
             var tile = RigMethod("private RigTileView BuildRigTile(");
-            InOrder(tile, "thumb.DragCompleted +=", "RigPlace(root,", "RigDrop(tile, root);", "};");
-            InOrder(tile, "thumb.KeyUp +=", "RigDrop(tile, root);", "};");
-            InOrder(tile, "thumb.LostKeyboardFocus +=", "RigDrop(tile, root);", "};");
+            InOrder(tile, "thumb.DragCompleted +=", "RigPlace(root,", "RigDrop(tile, views);", "};");
+            InOrder(tile, "thumb.KeyUp +=", "RigDrop(tile, views);", "};");
+            InOrder(tile, "thumb.LostKeyboardFocus +=", "RigDrop(tile, views);", "};");
             // The arrow keys move a tile and leave the save to the key coming up.
             var keyDown = tile.Substring(tile.IndexOf("thumb.KeyDown +=", StringComparison.Ordinal));
             keyDown = keyDown.Substring(0, keyDown.IndexOf("};", StringComparison.Ordinal));
@@ -508,69 +508,201 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, PanelRigMap.DropPosition(10, 900, 800));
         }
 
+        /// <summary>A drop as the page makes one: the plan at a width, one tile moved to where DropPosition
+        /// lands it, and every tile kept where it is drawn (SettingsControl.Rig's RigDrop).</summary>
+        private static RigPlan Drop(OpenDashSettings settings, double width, string id, double x, double y)
+        {
+            var plan = PanelRigMap.Plan(settings, width);
+            var tiles = plan.Tiles.Select(t => t.Id != id ? t : t.At(
+                PanelRigMap.DropPosition(x, PanelRigMap.FootprintWidth(t), width),
+                PanelRigMap.DropPosition(y, PanelRigMap.FootprintHeight(t), plan.Height))).ToList();
+            PanelRigMap.SavePlaces(settings, tiles);
+            return new RigPlan(tiles, plan.Height);
+        }
+
+        private static bool Overlap(RigTile a, RigTile b)
+        {
+            return a.X < b.X + PanelRigMap.FootprintWidth(b) && b.X < a.X + PanelRigMap.FootprintWidth(a)
+                && a.Y < b.Y + PanelRigMap.FootprintHeight(b) && b.Y < a.Y + PanelRigMap.FootprintHeight(a);
+        }
+
+        /// <summary>Every pair of tiles that overlap, by their ids.</summary>
+        private static ISet<string> Overlaps(RigPlan plan)
+        {
+            var pairs = new HashSet<string>(StringComparer.Ordinal);
+            var tiles = plan.Tiles.OrderBy(t => t.Id, StringComparer.Ordinal).ToList();
+            for (var i = 0; i < tiles.Count; i++)
+            {
+                for (var j = i + 1; j < tiles.Count; j++)
+                {
+                    if (Overlap(tiles[i], tiles[j])) pairs.Add(tiles[i].Id + " over " + tiles[j].Id);
+                }
+            }
+            return pairs;
+        }
+
+        private static void Inside(RigPlan plan, double width, string label)
+        {
+            Assert.True(plan.Height >= PanelRigMap.CanvasHeight, label);
+            foreach (var tile in plan.Tiles)
+            {
+                Assert.True(tile.X >= 0 && tile.X + PanelRigMap.FootprintWidth(tile) <= width, label + " " + tile.Id);
+                Assert.True(tile.Y >= 0 && tile.Y + PanelRigMap.FootprintHeight(tile) <= plan.Height, label + " " + tile.Id);
+            }
+        }
+
+        private static IDictionary<string, RigTile> ById(RigPlan plan)
+        {
+            return plan.Tiles.ToDictionary(t => t.Id);
+        }
+
         [Fact]
         public void A_tile_dropped_against_an_edge_is_drawn_again_where_it_was_dropped()
         {
             var settings = Rig();
             const double width = 1083;
             var plan = PanelRigMap.Plan(settings, width);
-            var rim = plan.Tiles.Single(t => t.Id == "Rim");
             // Pushed past the right edge and the foot.
-            var x = PanelRigMap.DropPosition(width, PanelRigMap.FootprintWidth(rim), width);
-            var y = PanelRigMap.DropPosition(plan.Height, PanelRigMap.FootprintHeight(rim), plan.Height);
-            Assert.True(x + PanelRigMap.FootprintWidth(rim) <= width);
-            Assert.True(y + PanelRigMap.FootprintHeight(rim) <= plan.Height);
-            PanelRigMap.SavePosition(settings, rim, x, y);
-            Assert.Equal((int)x, settings.ScreenByNamespace("Rim").LayoutX);
-            Assert.Equal((int)y, settings.ScreenByNamespace("Rim").LayoutY);
-            var again = PanelRigMap.Plan(settings, width).Tiles.Single(t => t.Id == "Rim");
-            Assert.Equal(new[] { x, y }, new[] { again.X, again.Y });
+            var dropped = ById(Drop(settings, width, "Rim", width, plan.Height))["Rim"];
+            Assert.True(dropped.X + PanelRigMap.FootprintWidth(dropped) <= width);
+            Assert.True(dropped.Y + PanelRigMap.FootprintHeight(dropped) <= plan.Height);
+            Assert.Equal((int)dropped.X, settings.ScreenByNamespace("Rim").LayoutX);
+            Assert.Equal((int)dropped.Y, settings.ScreenByNamespace("Rim").LayoutY);
+            var again = PanelRigMap.Plan(settings, width);
+            Assert.Equal(new[] { dropped.X, dropped.Y }, new[] { ById(again)["Rim"].X, ById(again)["Rim"].Y });
+            // Against the foot, the canvas does not grow under it: a drop there again lands in the same place.
+            Assert.Equal(plan.Height, again.Height);
         }
 
         [Fact]
-        public void A_dropped_tile_is_kept_in_its_own_settings_and_moves_no_other()
+        public void A_drop_keeps_every_tile_where_it_is_drawn_and_moves_no_other()
         {
             var settings = Rig();
-            var before = PanelRigMap.Plan(settings, 1100).Tiles.ToDictionary(t => t.Id);
-            var tiles = PanelRigMap.Tiles(settings).ToDictionary(t => t.Id);
+            var before = ById(PanelRigMap.Plan(settings, 1100));
 
-            PanelRigMap.SavePosition(settings, tiles["Rim"], 433, 51);
-            PanelRigMap.SavePosition(settings, tiles["led:LedWheelRim"], 118, 302);
-            PanelRigMap.SavePosition(settings, tiles["matrix:2"], -30, 71);
+            // The dropped tile on the grid; every other where it was drawn, to the pixel, in its own settings.
+            Drop(settings, 1100, "Rim", 433, 51);
             Assert.Equal(440, settings.ScreenByNamespace("Rim").LayoutX);
             Assert.Equal(60, settings.ScreenByNamespace("Rim").LayoutY);
-            Assert.Equal(120, settings.LedBarByNamespace("LedWheelRim").LayoutX);
-            Assert.Equal(300, settings.LedBarByNamespace("LedWheelRim").LayoutY);
-            Assert.Equal(0, settings.MatrixLayoutX[1]);
-            Assert.Equal(80, settings.MatrixLayoutY[1]);
-            Assert.Null(settings.MatrixLayoutX[0]);
+            Assert.Equal((int)before["led:LedWheelRim"].X, settings.LedBarByNamespace("LedWheelRim").LayoutX);
+            Assert.Equal((int)before["matrix:2"].Y, settings.MatrixLayoutY[1]);
+            Assert.Equal((int)before["MainDash"].X, settings.ScreenByNamespace("MainDash").LayoutX);
 
+            var tiles = PanelRigMap.Tiles(settings).ToDictionary(t => t.Id);
             int x, y;
             Assert.True(PanelRigMap.TrySaved(settings, tiles["Rim"], out x, out y));
             Assert.Equal(new[] { 440, 60 }, new[] { x, y });
-            Assert.False(PanelRigMap.TrySaved(settings, tiles["MainDash"], out x, out y));
+            Assert.All(tiles.Values, t => Assert.True(PanelRigMap.TrySaved(settings, t, out x, out y), t.Id));
 
-            var after = PanelRigMap.Plan(settings, 1100).Tiles.ToDictionary(t => t.Id);
+            var after = ById(PanelRigMap.Plan(settings, 1100));
             Assert.Equal(440, after["Rim"].X);
             Assert.Equal(60, after["Rim"].Y);
-            Assert.Equal(0, after["matrix:2"].X);
-            foreach (var id in new[] { "MainDash", "PitWall", "Companion", "Slots480x480", "led:LedDashBrow", "matrix:1" })
+            foreach (var id in before.Keys.Where(id => id != "Rim"))
             {
                 Assert.Equal(before[id].X, after[id].X);
                 Assert.Equal(before[id].Y, after[id].Y);
             }
 
-            // A canvas narrowed since holds a saved tile inside it without forgetting where it was put.
-            var narrow = PanelRigMap.Plan(settings, 500).Tiles.ToDictionary(t => t.Id);
-            Assert.Equal(500 - 300, narrow["Rim"].X);
-            Assert.Equal(440, settings.ScreenByNamespace("Rim").LayoutX);
+            // A place is kept to the pixel and never negative.
+            PanelRigMap.SavePlaces(settings, new[] { tiles["matrix:2"].At(-30, 70.6) });
+            Assert.Equal(0, settings.MatrixLayoutX[1]);
+            Assert.Equal(71, settings.MatrixLayoutY[1]);
+            PanelRigMap.SavePlaces(null, new[] { tiles["Rim"] });
+            PanelRigMap.SavePlaces(settings, null);
+        }
 
-            // And a canvas shorter than the place a tile was kept at holds it on the foot, the place kept.
-            PanelRigMap.SavePosition(settings, tiles["Rim"], 440, 560);
-            var low = PanelRigMap.Plan(settings, 1100);
-            Assert.Equal(PanelRigMap.CanvasHeight, low.Height);
-            Assert.Equal(580 - PanelRigMap.FootprintHeight(tiles["Rim"]), low.Tiles.Single(t => t.Id == "Rim").Y);
-            Assert.Equal(560, settings.ScreenByNamespace("Rim").LayoutY);
+        /// <remarks>
+        /// A tile a driver had placed kept absolute pixels while the default re-centred every other for each
+        /// width, so an arrangement came apart whenever the sidebar changed to the rail or SimHub was
+        /// resized. Arranged at every width, planned at every other: never outside the canvas, and never an
+        /// overlap the arrangement did not have.
+        /// </remarks>
+        [Fact]
+        public void An_arranged_rig_keeps_its_shape_at_every_width_it_fits_and_the_default_where_it_does_not()
+        {
+            foreach (var arrangedAt in new[] { 542.0, 661, 894, 1100, 1597 })
+            {
+                var settings = Rig();
+                var arranged = PanelRigMap.Plan(settings, arrangedAt);
+                // Every tile dropped in place.
+                PanelRigMap.SavePlaces(settings, arranged.Tiles);
+                var had = Overlaps(arranged);
+                var kept = ById(arranged);
+                var left = arranged.Tiles.Min(t => t.X);
+                var span = arranged.Tiles.Max(t => t.X + PanelRigMap.FootprintWidth(t)) - left;
+                for (var width = 400; width <= 1700; width += 7)
+                {
+                    var label = arrangedAt + " at " + width;
+                    var plan = PanelRigMap.Plan(settings, width);
+                    Inside(plan, width, label);
+                    if (span <= width)
+                    {
+                        // The arrangement as one: every tile moved by the same, and none but left.
+                        Assert.Subset(had, Overlaps(plan));
+                        var dx = ById(plan)["MainDash"].X - kept["MainDash"].X;
+                        Assert.True(dx <= 0, label);
+                        Assert.All(plan.Tiles, t => Assert.Equal(new[] { kept[t.Id].X + dx, kept[t.Id].Y }, new[] { t.X, t.Y }));
+                    }
+                    else
+                    {
+                        // Too wide for the arrangement: the default, the arrangement kept for a wider window.
+                        Assert.Equal(PanelRigMap.Plan(Rig(), width).Tiles.Select(t => t.X + "," + t.Y), plan.Tiles.Select(t => t.X + "," + t.Y));
+                        Assert.Empty(Overlaps(plan));
+                        Assert.Equal((int)kept["Rim"].X, settings.ScreenByNamespace("Rim").LayoutX);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void A_rig_arranged_in_a_narrow_window_is_not_clamped_onto_the_foot_of_a_wide_one()
+        {
+            var settings = Rig();
+            // The fallback's canvas is taller than the 580 at 600.
+            Assert.True(PanelRigMap.Plan(settings, 600).Height > PanelRigMap.CanvasHeight);
+            Drop(settings, 600, "PitWall", 360, 480);
+            var narrow = Drop(settings, 600, "Companion", 400, 660);
+            var wall = ById(narrow)["PitWall"];
+            var phone = ById(narrow)["Companion"];
+            Assert.False(Overlap(wall, phone));
+
+            var wide = PanelRigMap.Plan(settings, 1100);
+            Inside(wide, 1100, "1100");
+            Assert.Equal(new[] { wall.X, wall.Y }, new[] { ById(wide)["PitWall"].X, ById(wide)["PitWall"].Y });
+            Assert.Equal(new[] { phone.X, phone.Y }, new[] { ById(wide)["Companion"].X, ById(wide)["Companion"].Y });
+            Assert.False(Overlap(ById(wide)["PitWall"], ById(wide)["Companion"]));
+            // The canvas holds the lowest, rather than being 580 and clamping it.
+            Assert.True(wide.Height > PanelRigMap.CanvasHeight);
+            Assert.Equal(narrow.Tiles.Max(t => t.Y + PanelRigMap.FootprintHeight(t)), wide.Height);
+            Assert.Subset(Overlaps(narrow), Overlaps(wide));
+        }
+
+        [Fact]
+        public void A_phone_dropped_under_the_rim_stays_under_it_when_the_window_widens()
+        {
+            var settings = Rig();
+            var rim = ById(PanelRigMap.Plan(settings, 894))["Rim"];
+            var narrow = ById(Drop(settings, 894, "Companion", rim.X, rim.Y + PanelRigMap.FootprintHeight(rim) + 40));
+            var wide = ById(PanelRigMap.Plan(settings, 1100));
+            Assert.Equal(narrow["Companion"].X - narrow["Rim"].X, wide["Companion"].X - wide["Rim"].X);
+            Assert.Equal(narrow["Companion"].Y - narrow["Rim"].Y, wide["Companion"].Y - wide["Rim"].Y);
+        }
+
+        [Fact]
+        public void A_device_added_after_the_rig_was_arranged_goes_under_the_arrangement()
+        {
+            var settings = Rig();
+            var arranged = Drop(settings, 1100, "Rim", 700, 300);
+            settings.AddLedBar("4-12-4", "Pedals", LedBar.ArduinoDevice);
+            var plan = PanelRigMap.Plan(settings, 1100);
+            Inside(plan, 1100, "1100");
+            var added = plan.Tiles.Single(t => t.Id == "led:LedPedals");
+            var foot = arranged.Tiles.Max(t => t.Y + PanelRigMap.FootprintHeight(t));
+            Assert.Equal(PanelRigMap.LayoutMargin, added.X);
+            Assert.Equal(foot + PanelRigMap.LayoutGap, added.Y);
+            Assert.Equal(added.Y + PanelRigMap.FootprintHeight(added) + PanelRigMap.HintClear, plan.Height);
+            Assert.DoesNotContain(Overlaps(plan), pair => pair.Contains("led:LedPedals"));
+            foreach (var tile in arranged.Tiles) Assert.Equal(new[] { tile.X, tile.Y }, new[] { ById(plan)[tile.Id].X, ById(plan)[tile.Id].Y });
         }
 
         [Fact]
@@ -608,7 +740,7 @@ namespace OpenDashPlugin.Tests
             var settings = Rig();
             var tiles = PanelRigMap.Tiles(settings);
             Assert.False(PanelRigMap.ClearLayout(settings));
-            foreach (var tile in tiles) PanelRigMap.SavePosition(settings, tile, 100, 100);
+            PanelRigMap.SavePlaces(settings, tiles.Select(tile => tile.At(100, 100)));
             Assert.All(tiles, tile => { int x, y; Assert.True(PanelRigMap.TrySaved(settings, tile, out x, out y)); });
             Assert.True(PanelRigMap.ClearLayout(settings));
             Assert.All(tiles, tile => { int x, y; Assert.False(PanelRigMap.TrySaved(settings, tile, out x, out y)); });

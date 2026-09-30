@@ -85,7 +85,8 @@ namespace OpenDashPlugin
 
         public IList<RigTile> Tiles { get; private set; }
 
-        /// <summary><see cref="PanelRigMap.CanvasHeight"/>, or more where the fallback's rows need it.</summary>
+        /// <summary><see cref="PanelRigMap.CanvasHeight"/>, or more where the fallback's rows or the tiles
+        /// the driver placed need it.</summary>
         public double Height { get; private set; }
     }
 
@@ -499,35 +500,72 @@ namespace OpenDashPlugin
         public const double LayoutGapMin = 8;
 
         /// <summary>
-        /// Every tile of the rig where it is drawn -- where the driver put it, or where
-        /// <see cref="DefaultLayout"/> puts it, and inside the canvas either way -- and the canvas's height.
+        /// Every tile of the rig where it is drawn -- the driver's arrangement, or where
+        /// <see cref="DefaultLayout"/> puts the tiles before anybody has arranged them, and inside the canvas
+        /// either way -- and the canvas's height.
         /// </summary>
         /// <remarks>
-        /// The default is worked out for the whole rig, placed tiles included, so dragging one tile moves no
-        /// other. The height is the default layout's: <see cref="CanvasHeight"/>, or taller where the
-        /// fallback's rows need it, so a narrow column grows the canvas rather than piling tiles on its foot.
-        /// A saved place is clamped rather than dropped when the canvas has narrowed or shortened since, and
-        /// it is not written back: widen the window again and the tile is where it was put. The page lays the
-        /// plan out at the width the canvas really has, and holds a drag to that same width.
+        /// <para>
+        /// A drop keeps every tile where it is drawn (<see cref="SavePlaces"/>), so an arranged rig is one
+        /// arrangement in one frame rather than a few pinned tiles among others the default re-centres for
+        /// each width: the default slid under tiles a driver had placed whenever the sidebar changed to the
+        /// rail or SimHub was resized, and clamped a placed tile onto another at the edge.
+        /// </para>
+        /// <para>
+        /// The arrangement is drawn where it was kept while it fits the canvas's width. When it does not, it
+        /// moves left as one, never past the canvas's start; and when it is wider than the canvas, the canvas
+        /// draws the default instead, and the arrangement is kept for a window wide enough for it. A tile the
+        /// arrangement does not hold, a device added since, goes in rows under it. The canvas is
+        /// <see cref="CanvasHeight"/> high, or as tall as the arrangement and those rows need, so a rig
+        /// arranged in a narrow window's taller canvas is never clamped onto the foot of a wide one. The
+        /// hint is not kept clear of a placed tile, which may cover it, as it may while it is dragged: a
+        /// canvas grown to clear it would grow again at every drop against the foot.
+        /// </para>
+        /// <para>
+        /// The page lays the plan out at the width the canvas really has, and holds a drag to that width and
+        /// to this height.
+        /// </para>
         /// </remarks>
         public static RigPlan Plan(OpenDashSettings settings, double canvasWidth)
         {
             var tiles = Tiles(settings);
             double height;
             var defaults = DefaultLayout(tiles, canvasWidth, out height);
-            var placed = new List<RigTile>();
-            foreach (var tile in defaults)
+            var saved = new Dictionary<string, RigTile>(StringComparer.Ordinal);
+            foreach (var tile in tiles)
             {
-                int savedX, savedY;
-                var x = tile.X;
-                var y = tile.Y;
-                if (TrySaved(settings, tile, out savedX, out savedY))
-                {
-                    x = savedX;
-                    y = savedY;
-                }
-                placed.Add(tile.At(Clamp(x, FootprintWidth(tile), canvasWidth), Clamp(y, FootprintHeight(tile), height)));
+                int x, y;
+                if (TrySaved(settings, tile, out x, out y)) saved[tile.Id] = tile.At(x, y);
             }
+
+            if (saved.Count > 0)
+            {
+                var left = saved.Values.Min(t => t.X);
+                var right = saved.Values.Max(t => t.X + FootprintWidth(t));
+                var shift = right > canvasWidth ? Math.Min(left, Math.Ceiling(right - canvasWidth)) : 0;
+                if (right - shift <= canvasWidth)
+                {
+                    var foot = saved.Values.Max(t => t.Y + FootprintHeight(t));
+                    var canvasHeight = Math.Max(CanvasHeight, foot);
+                    var rest = tiles.Where(t => !saved.ContainsKey(t.Id)).ToList();
+                    var under = new Dictionary<string, RigTile>(StringComparer.Ordinal);
+                    if (rest.Count > 0)
+                    {
+                        var down = foot + LayoutGap - LayoutMargin;
+                        foreach (var tile in Rows(rest, canvasWidth)) under[tile.Id] = tile.At(Clamp(tile.X, FootprintWidth(tile), canvasWidth), tile.Y + down);
+                        canvasHeight = Math.Max(canvasHeight, under.Values.Max(t => t.Y + FootprintHeight(t)) + HintClear);
+                    }
+                    var arranged = tiles.Select(tile =>
+                    {
+                        RigTile at;
+                        if (saved.TryGetValue(tile.Id, out at)) return tile.At(at.X - shift, at.Y);
+                        return under[tile.Id];
+                    }).ToList();
+                    return new RigPlan(arranged, canvasHeight);
+                }
+            }
+
+            var placed = defaults.Select(tile => tile.At(Clamp(tile.X, FootprintWidth(tile), canvasWidth), Clamp(tile.Y, FootprintHeight(tile), height))).ToList();
             return new RigPlan(placed, height);
         }
 
@@ -770,7 +808,7 @@ namespace OpenDashPlugin
         /// canvas where the nearest would pass its edge, and never before its start.
         /// </summary>
         /// <remarks>
-        /// Always on the grid, so <see cref="SavePosition"/> keeps exactly the place the tile is drawn at and
+        /// Always on the grid, so <see cref="SavePlaces"/> keeps exactly the place the tile is drawn at and
         /// <see cref="Plan"/> draws it there again: clamping after snapping would draw a tile flush with the
         /// edge and keep it snapped a few pixels further on, and the next build would move it.
         /// </remarks>
@@ -816,14 +854,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Keeps where a tile was dropped: snapped to the grid, never negative, in the tile's own settings.
-        /// The page saves after it. Nothing here is a property a dashboard reads.
+        /// Keeps every tile where it is drawn, each in its own settings, to the pixel and never negative: the
+        /// page's drop, which keeps the arrangement as one (<see cref="Plan"/>). The dropped tile is already
+        /// on the grid (<see cref="DropPosition"/>); the others keep the exact place they are drawn at, since
+        /// snapping them would close up the default's gaps of <see cref="LayoutGapMin"/> into overlaps. The
+        /// page saves after it. Nothing here is a property a dashboard reads.
         /// </summary>
-        public static void SavePosition(OpenDashSettings settings, RigTile tile, double x, double y)
+        public static void SavePlaces(OpenDashSettings settings, IEnumerable<RigTile> placed)
         {
-            if (settings == null || tile == null) return;
-            var px = (int)Math.Max(0, Snap(x));
-            var py = (int)Math.Max(0, Snap(y));
+            if (settings == null || placed == null) return;
+            foreach (var tile in placed)
+            {
+                if (tile == null) continue;
+                Store(settings, tile, (int)Math.Max(0, Math.Round(tile.X, MidpointRounding.AwayFromZero)), (int)Math.Max(0, Math.Round(tile.Y, MidpointRounding.AwayFromZero)));
+            }
+        }
+
+        private static void Store(OpenDashSettings settings, RigTile tile, int px, int py)
+        {
             switch (tile.Kind)
             {
                 case RigTileKind.Strip:

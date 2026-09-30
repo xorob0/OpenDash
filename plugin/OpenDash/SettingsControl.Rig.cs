@@ -4,9 +4,10 @@
 //
 // "Zone C" and "matrix 2" mean nothing until you see where they are, and the only way to check a flag used to
 // be to own the hardware and wait for one (#503). Rig.dc.html is the artboard. Every size, word and rule is
-// PanelRigMap's, where PanelRigMapTests holds it; this file only draws. A tile is where the driver dropped it
-// (ScreenInstance's, LedBar's or the matrix slot's LayoutX and LayoutY, saved on the drop) or where
-// PanelRigMap.DefaultLayout puts it. A chip repaints the tiles' pictures in place and rebuilds nothing.
+// PanelRigMap's, where PanelRigMapTests holds it; this file only draws. A drop keeps every tile where it is
+// drawn (ScreenInstance's, LedBar's or the matrix slot's LayoutX and LayoutY), so the rig is one arrangement;
+// before the first, PanelRigMap.DefaultLayout places them. A chip repaints the tiles' pictures in place and
+// rebuilds nothing.
 // Nothing here lights the real hardware: that is #506, greyed in the header.
 using System;
 using System.Collections.Generic;
@@ -172,7 +173,7 @@ namespace OpenDashPlugin
             var scenario = rigScenario;
             foreach (var tile in tiles)
             {
-                var view = BuildRigTile(tile, extent, scenario);
+                var view = BuildRigTile(tile, extent, scenario, views);
                 views.Add(view);
                 canvas.Children.Add(view.Element);
             }
@@ -211,7 +212,7 @@ namespace OpenDashPlugin
         /// One tile: its name (and the warning dot, when the device is on Home's list) over its picture, with a
         /// transparent Thumb over the whole of it that takes the drag and the arrow keys.
         /// </summary>
-        private RigTileView BuildRigTile(RigTile tile, RigExtent extent, string scenario)
+        private RigTileView BuildRigTile(RigTile tile, RigExtent extent, string scenario, IList<RigTileView> views)
         {
             var warns = PanelRigMap.Warns(tile, issues);
             var name = Ui.Text(tile.Name, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);
@@ -301,7 +302,7 @@ namespace OpenDashPlugin
             {
                 if (!moved) return;
                 RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
-                RigDrop(tile, root);
+                RigDrop(tile, views);
             };
             // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
             // the key comes up (or focus leaves first), rather than on every repeat.
@@ -325,13 +326,13 @@ namespace OpenDashPlugin
             {
                 if (!unsaved) return;
                 unsaved = false;
-                RigDrop(tile, root);
+                RigDrop(tile, views);
             };
             thumb.LostKeyboardFocus += (sender, args) =>
             {
                 if (!unsaved) return;
                 unsaved = false;
-                RigDrop(tile, root);
+                RigDrop(tile, views);
             };
 
             return new RigTileView(tile, root, paint);
@@ -349,16 +350,25 @@ namespace OpenDashPlugin
             return moved;
         }
 
-        /// <summary>Keeps where a tile is, in its own settings. Arranging a screen is setting it up, so a screen
-        /// is saved with Save(screen), which keeps a migrated screen as Home's list asks.</summary>
-        private void RigDrop(RigTile tile, FrameworkElement root)
+        /// <summary>
+        /// Keeps every tile where it is drawn, the dropped one included, so the rig is kept as one
+        /// arrangement (PanelRigMap.Plan). Arranging a screen is setting it up, so the dropped tile's screen
+        /// is saved with Save(screen), which keeps a migrated screen as Home's list asks; that answers Home's
+        /// unclaimed screens, so the first keep asks again what needs fixing, and the Screens item's dot and
+        /// Home's count follow it. An ordinary drop asks SimHub nothing.
+        /// </summary>
+        private void RigDrop(RigTile tile, IList<RigTileView> views)
         {
-            var left = Canvas.GetLeft(root);
-            var top = Canvas.GetTop(root);
-            PanelRigMap.SavePosition(Settings, tile, left, top);
+            PanelRigMap.SavePlaces(Settings, views.Select(view => view.Tile.At(Canvas.GetLeft(view.Element), Canvas.GetTop(view.Element))));
             var screen = PanelRigMap.ScreenOf(Settings, tile);
+            var claiming = screen != null && screen.Unclaimed == true;
             if (screen != null) Save(screen);
             else Save();
+            if (claiming)
+            {
+                RefreshAttention();
+                RefreshSidebar();
+            }
         }
 
         /// <summary>The Thumb over a tile: nothing to see, so the tile shows through and the drag is the tile's.
