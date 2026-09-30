@@ -137,9 +137,12 @@ namespace OpenDashPlugin
         /// <summary>
         /// The quick glance's row, the same on a face, a pit wall and a companion: held. New on a companion
         /// alone, by the rule that marks what the shipped plugin cannot do (Delta precision, Clock, Night
-        /// mode): v0.3.0-rc.7's CompanionActionNames is an empty list, so no released plugin registers a
-        /// companion's glance, which came back with #362 after that cut. A face's and a pit wall's glance
-        /// are in rc.7 and carry no tag.
+        /// mode). v0.3.0-rc.7 did register a companion's glance, whatever its CompanionActionNames held
+        /// (OpenDash.AttachActions' screen loop), but the action moved a property no package read (#435)
+        /// and that release's panel had no binder for it; the glance works from #362, after that cut, so
+        /// this release is the first where binding it does anything. A driver may already have an rc.7
+        /// binding on the row, which now starts to work. A face's and a pit wall's glance worked in rc.7
+        /// and carry no tag.
         /// </summary>
         public static Binding GlanceBinding(string kind, string ns, string screenName)
         {
@@ -172,9 +175,14 @@ namespace OpenDashPlugin
             return PitWallGlances(width, height) || glanceBound;
         }
 
-        /// <summary>The caption a portrait wall's glance row carries in place of PanelCopy.PitWallGlance,
-        /// which would say something untrue there: the row is drawn only so its binding can be cleared.</summary>
-        public const string PortraitGlanceCaption = "A portrait wall has no zone to show it in, so this binding does nothing.";
+        /// <summary>
+        /// The caption a portrait wall's glance row carries in place of PanelCopy.PitWallGlance, which would
+        /// say it puts a zone back where the glance does nothing. It names the fact in the panel's words
+        /// ("Pit wall", as PanelAddScreen.KindName has it) and not the mechanism, and it ends on
+        /// PanelCopy.GlanceBoundAsHold as every glance row's caption does (#435): the row is still a hold
+        /// binder, which turns any press type picked on it back into a hold.
+        /// </summary>
+        public const string PortraitGlanceCaption = "Does nothing on a portrait pit wall. " + PanelCopy.GlanceBoundAsHold;
 
         /// <summary>
         /// The Lights card's live rows: night mode, and brightness up and down. All three are new: no released

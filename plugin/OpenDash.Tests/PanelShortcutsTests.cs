@@ -190,8 +190,12 @@ namespace OpenDashPlugin.Tests
             // Contract registers the glance on every pit wall, whatever its orientation: that is why a bound
             // one has to stay in sight.
             Assert.Equal(new[] { Contract.HoldQuickGlanceActionFor(Contract.PitWallPrefix) }, Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix));
-            // Its caption says the binding does nothing, where PanelCopy.PitWallGlance would say it swaps a zone.
-            Assert.Equal("A portrait wall has no zone to show it in, so this binding does nothing.", PanelShortcuts.PortraitGlanceCaption);
+            // Its caption says the glance does nothing there, where PanelCopy.PitWallGlance would say it puts
+            // a zone back, and still ends on the hold sentence every glance row's caption ends on (#435): the
+            // row is a hold binder, which turns a picked press type back into a hold.
+            Assert.Equal("Does nothing on a portrait pit wall. Bound as a hold, whatever press type you pick.", PanelShortcuts.PortraitGlanceCaption);
+            Assert.EndsWith(PanelCopy.GlanceBoundAsHold, PanelShortcuts.PortraitGlanceCaption);
+            Assert.EndsWith(PanelCopy.GlanceBoundAsHold, PanelCopy.PitWallGlance);
         }
 
         /// <summary>
@@ -239,8 +243,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_companions_glance_is_new_and_a_face_or_pit_walls_is_not()
         {
-            // v0.3.0-rc.7 registers no companion action (its CompanionActionNames is empty); the glance came
-            // back with #362 after that cut, so it carries New for this release, as night mode does.
+            // v0.3.0-rc.7 registered the companion's glance, but it moved a property no package read (#435)
+            // and that release's panel had no binder for it; it works from #362, after that cut, so this
+            // release is the first where it does anything, and it carries New, as night mode does.
             Assert.True(PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone").IsNew);
             Assert.False(PanelShortcuts.GlanceBinding(Contract.KindPitWall, Contract.PitWallPrefix, "Pit wall").IsNew);
             Assert.False(PanelShortcuts.GlanceBinding(Contract.KindFace, Face, "Rim").IsNew);

@@ -326,7 +326,7 @@ namespace OpenDashPlugin
 
         /// <summary>A pit wall's card: the glance and nothing else. A key beside the monitor is the likelier
         /// gesture, since nobody drives a pit wall. On a portrait wall, drawn only while the glance is bound,
-        /// its caption says the binding does nothing there.</summary>
+        /// its caption says the glance does nothing there.</summary>
         private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);
