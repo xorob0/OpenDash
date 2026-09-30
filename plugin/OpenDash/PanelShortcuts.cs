@@ -395,14 +395,23 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a zone's row does, in the clash line, with the zone as the rows write it: "cycles Zone B", as
-        /// the artboard's line has it for a next page, and "takes Band D to its previous page", in the row's own
-        /// words for the other. The artboard writes "zone B" in lower case; the rows, the Screens picture and
-        /// the Flag display all write the zone's name "Zone B" and "Band D", and so does the line.
+        /// What a zone's row does, in the clash line, with the zone in its running-text form: "cycles zone B",
+        /// as the artboard's line has it for a next page, and "takes band D to its previous page", in the
+        /// row's own words for the other. A label starts with a capital because it starts a label ("Zone B ·
+        /// next page", the Screens picture, the Flag display's choices); mid-sentence the panel writes it
+        /// lower case, as the Screens page's own warning does ("Zone B and zone C both show the relative.").
         /// </summary>
         public static string ZoneDoes(string zoneLabel, bool next)
         {
-            return next ? "cycles " + zoneLabel : "takes " + zoneLabel + " to its " + PreviousPageTitle.ToLowerInvariant();
+            var zone = Running(zoneLabel);
+            return next ? "cycles " + zone : "takes " + zone + " to its " + PreviousPageTitle.ToLowerInvariant();
+        }
+
+        /// <summary>A label as it reads mid-sentence: its first letter lower case, the rest as written.</summary>
+        private static string Running(string label)
+        {
+            if (string.IsNullOrEmpty(label)) return label ?? string.Empty;
+            return char.ToLowerInvariant(label[0]) + label.Substring(1);
         }
 
         public const string GlanceDoes = "holds the quick glance";
@@ -421,7 +430,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Every trigger bound to more than one row, in the order the page first meets it, each with the line
-        /// that says what it does where: "CSL Elite · 7 cycles Zone B on both Main dash and Rim." It says what
+        /// that says what it does where: "CSL Elite · 7 cycles zone B on both Main dash and Rim." It says what
         /// is doubled and nothing more, since doubling a button on purpose is a fair thing to do.
         /// </summary>
         /// <remarks>
@@ -482,9 +491,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line after the trigger's name. One action on several screens: "cycles Zone B on both Main dash
+        /// The line after the trigger's name. One action on several screens: "cycles zone B on both Main dash
         /// and Rim." Otherwise each screen's uses, in the page's order, with the screen after them, then the
-        /// rig's own, which belong to no screen: "cycles Zone A on Rim and toggles night mode." A verb the
+        /// rig's own, which belong to no screen: "cycles zone A on Rim and toggles night mode." A verb the
         /// uses share is said once: "turns the brightness up and down".
         /// </summary>
         private static string ClashRest(IList<BindingUse> uses)
@@ -507,13 +516,14 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What several rows do, with the words they all start with said once: "turns the brightness
-        /// up and down", "cycles Zone A and Zone C". Listed whole when they share no first word, or when one
+        /// up and down", "cycles zone A and zone C". Listed whole when they share no first word, or when one
         /// would be left with nothing after it.</summary>
         private static string Folded(IList<string> does)
         {
             if (does.Count == 1) return does[0];
-            // A zone's name is one word here, so that "Zone A and Zone C" is never cut to "Zone A and C".
-            var words = does.Select(one => Regex.Matches(one, @"(?:Zone|Band) \S+|\S+").Cast<Match>().Select(match => match.Value).ToArray()).ToList();
+            // A zone's name is one word here, in either case, so that "zone A and zone C" is never cut to
+            // "zone A and C".
+            var words = does.Select(one => Regex.Matches(one, @"(?i:zone|band) \S+|\S+").Cast<Match>().Select(match => match.Value).ToArray()).ToList();
             var shared = 0;
             while (words.All(one => one.Length > shared + 1) && words.All(one => one[shared] == words[0][shared])) shared++;
             if (shared == 0) return Listed(does);
