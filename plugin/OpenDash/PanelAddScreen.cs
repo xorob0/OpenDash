@@ -73,8 +73,9 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "Add a screen";
 
-        /// <summary>The edit sheet's rows for a screen already on the rig.</summary>
-        public const string SizeTitle = "Screen size";
+        /// <summary>The edit sheet's rows for a screen already on the rig: the size row asks what the Add
+        /// sheet's second step asks, so it has the step's name.</summary>
+        public const string SizeTitle = SizeStep;
 
         public const string OrientationTitle = "Orientation";
 
@@ -107,6 +108,12 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EditTitle = "Edit";
 
+        /// <summary>The edit sheet's title: "Edit Rim".</summary>
+        public static string EditSheetTitle(string name)
+        {
+            return EditTitle + " " + name;
+        }
+
         /// <summary>
         /// What an edit keeps, which is everything but the name and the pixels.
         /// </summary>
@@ -124,13 +131,16 @@ namespace OpenDashPlugin
         /// either of the answers above it.</summary>
         public const string ReinstallTitle = "Dashboard";
 
-        public const string ReinstallCaption = "Writes this screen's dashboard into SimHub again, at the name and size above.";
+        /// <summary>What a reinstall writes, which is the screen as it is saved: a name typed in the box above
+        /// and not yet saved is not in it, and a kind that ships one package draws no size row to point at.</summary>
+        public const string ReinstallCaption = "Writes this screen's dashboard into SimHub again, at its saved name and size.";
 
         public const string ReinstallButton = "Reinstall";
 
         public const string ReinstallTooltip = "Writes this screen's dashboard into SimHub again.";
 
-        public const string SaveTooltip = "Applies the name and the size, and writes the dashboard.";
+        /// <summary>Save's hover, which does not name a row the sheet may not draw.</summary>
+        public const string SaveTooltip = "Applies your changes and writes the dashboard.";
 
         /// <summary>The edit sheet's Cancel, which has nothing to add and so does not say "adding".</summary>
         public const string EditCancelTooltip = "Goes back without changing anything.";

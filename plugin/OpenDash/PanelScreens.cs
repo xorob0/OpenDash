@@ -165,7 +165,9 @@ namespace OpenDashPlugin
         // --- The header's presses -----------------------------------------------------------------------
 
         public const string EditButton = "Edit";
-        public const string EditTooltip = "Changes this screen's name or size, or reinstalls its dashboard.";
+        /// <summary>Edit's hover: the edit sheet asks a size, or an orientation for a screen shipped both ways
+        /// up, beside the name.</summary>
+        public const string EditTooltip = "Changes this screen's name, size or orientation, or reinstalls its dashboard.";
         public const string DuplicateButton = "Duplicate";
 
         /// <summary>A screen's header press that copies it.</summary>

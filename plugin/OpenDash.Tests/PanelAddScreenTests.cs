@@ -314,15 +314,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.EditCaption);
             // The edit sheet's rows and presses, each in the words it is drawn in.
             Assert.Equal("Edit", PanelAddScreen.EditTitle);
+            Assert.Equal("Edit Rim", PanelAddScreen.EditSheetTitle("Rim"));
             Assert.Equal("Name", PanelAddScreen.NameTitle);
             Assert.Equal("Also shown in SimHub's dashboard list.", PanelAddScreen.NameCaption);
-            Assert.Equal("Screen size", PanelAddScreen.SizeTitle);
+            // One name for the one question, on the Add sheet's step and the edit sheet's row.
+            Assert.Equal("Size", PanelAddScreen.SizeTitle);
+            Assert.Equal(PanelAddScreen.SizeStep, PanelAddScreen.SizeTitle);
             Assert.Equal("Orientation", PanelAddScreen.OrientationTitle);
             Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
             Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
             Assert.Equal("Writes this screen's dashboard into SimHub again.", PanelAddScreen.ReinstallTooltip);
             Assert.Equal("Save", PanelAddScreen.SaveButton);
-            Assert.Equal("Applies the name and the size, and writes the dashboard.", PanelAddScreen.SaveTooltip);
+            Assert.Equal("Applies your changes and writes the dashboard.", PanelAddScreen.SaveTooltip);
+            Assert.Equal("Writes this screen's dashboard into SimHub again, at its saved name and size.", PanelAddScreen.ReinstallCaption);
             Assert.Equal("Goes back without changing anything.", PanelAddScreen.EditCancelTooltip);
             // A failure says what happened and points at the log, where the installer's reason is written
             // (voice.md), as Duplicate and Remove do.

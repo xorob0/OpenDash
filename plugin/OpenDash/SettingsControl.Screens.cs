@@ -766,7 +766,7 @@ namespace OpenDashPlugin
             var rows = new List<UIElement> { Ui.SettingRow(PanelAddScreen.NameTitle, name, PanelAddScreen.NameCaption) };
             if (sizeRow != null) rows.Add(sizeRow);
             rows.Add(reinstallRow);
-            ShowSheet(PanelAddScreen.EditTitle + " " + screen.Name, Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaption, cancel, save));
+            ShowSheet(PanelAddScreen.EditSheetTitle(screen.Name), Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaption, cancel, save));
         }
 
         /// <summary>

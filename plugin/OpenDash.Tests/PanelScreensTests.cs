@@ -310,7 +310,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Duplicate", PanelScreens.DuplicateButton);
             Assert.Equal("Remove", PanelScreens.RemoveButton);
             Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
-            Assert.Equal("Changes this screen's name or size, or reinstalls its dashboard.", PanelScreens.EditTooltip);
+            Assert.Equal("Changes this screen's name, size or orientation, or reinstalls its dashboard.", PanelScreens.EditTooltip);
             Assert.Contains(PanelAddScreen.ReinstallButton.ToLowerInvariant(), PanelScreens.EditTooltip);
             // The hover and the sheet list what goes in one order, and a round screen, whose cards are the
             // rig's shared slots, has no settings to lose.
