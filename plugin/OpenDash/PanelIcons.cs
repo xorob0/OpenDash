@@ -131,5 +131,19 @@ namespace OpenDashPlugin
 
         /// <summary>Night mode on the rail: a crescent, where the full sidebar draws a labelled switch.</summary>
         public const string Night = "M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z";
+
+        /// <summary>The ringed "i" AddLeds.dc.html puts before a note, on the sixteen unit box
+        /// (<see cref="Box"/>): its circle r6 about the centre, the stem and the dot.</summary>
+        public const string Info = "M8 2a6 6 0 1 0 0 12a6 6 0 1 0 0-12z M8 7v4.5 M8 4.8v.4";
+
+        /// <summary>The box the LEDs page's car line draws its ringed marks on: fourteen units.</summary>
+        public const double RingBox = 14;
+
+        /// <summary>Leds.dc.html's car line when the car is in the tables: a tick in a ring, on
+        /// <see cref="RingBox"/>. Its ringed bang, for a car that is not, is <see cref="Warning"/>.</summary>
+        public const string RingCheck = "M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.8 7.2l1.6 1.6 3-3.2";
+
+        /// <summary>Leds.dc.html's car line with no car to name: a dash in a ring, on <see cref="RingBox"/>.</summary>
+        public const string RingDash = "M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.5 7h5";
     }
 }

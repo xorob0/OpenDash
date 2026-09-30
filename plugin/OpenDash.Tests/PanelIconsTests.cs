@@ -129,6 +129,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z", PanelIcons.Night);
             Assert.Equal(20, PanelIcons.NavBox);
             Assert.Equal(18, PanelIcons.NavSize);
+            // The marks the LEDs page and the Add LEDs sheet draw, so neither page types path data: AddLeds'
+            // <circle cx="8" cy="8" r="6"/><path d="M8 7v4.5 M8 4.8v.4"/> on 16, and Leds' car line's
+            // <circle cx="7" cy="7" r="5.5"/> with "M4.8 7.2l1.6 1.6 3-3.2" or "M4.5 7h5" on 14.
+            Assert.Equal("M8 2a6 6 0 1 0 0 12a6 6 0 1 0 0-12z M8 7v4.5 M8 4.8v.4", PanelIcons.Info);
+            Assert.Equal(14, PanelIcons.RingBox);
+            Assert.Equal("M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.8 7.2l1.6 1.6 3-3.2", PanelIcons.RingCheck);
+            Assert.Equal("M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.5 7h5", PanelIcons.RingDash);
 
             var sheet = Sheet();
             foreach (var path in RedesignPaths) Assert.DoesNotContain(path, sheet, StringComparison.Ordinal);
@@ -139,6 +146,7 @@ namespace OpenDashPlugin.Tests
             PanelIcons.Home, PanelIcons.Rig, PanelIcons.Screens, PanelIcons.Leds, PanelIcons.Matrix, PanelIcons.Shortcuts,
             PanelIcons.Settings, PanelIcons.Updates, PanelIcons.Search, PanelIcons.Close, PanelIcons.Warning, PanelIcons.Restart,
             PanelIcons.DragHandle, PanelIcons.ChevronRight, PanelIcons.ChevronDown, PanelIcons.Add, PanelIcons.Night,
+            PanelIcons.Info, PanelIcons.RingCheck, PanelIcons.RingDash,
         };
 
         /// <summary>The set is one hand: one box, one weight, and two sizes named by the sheet's own
@@ -186,7 +194,7 @@ namespace OpenDashPlugin.Tests
                 PanelIcons.Alert, PanelIcons.External, PanelIcons.Display, PanelIcons.Grid,
                 PanelIcons.Phone, PanelIcons.Plus,
             }.Concat(RedesignPaths).ToArray();
-            Assert.Equal(27, paths.Length);
+            Assert.Equal(30, paths.Length);
             Assert.Equal(paths.Length, paths.Distinct(StringComparer.Ordinal).Count());
         }
 
