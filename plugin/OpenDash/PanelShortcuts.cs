@@ -216,16 +216,21 @@ namespace OpenDashPlugin
         public const string ControlsAndEventsCrumb = "Controls and events";
         public const string NextScreenCrumb = "NextScreen";
 
+        /// <summary>The crumb that stands for the device the companion runs on, which OpenDash cannot name.</summary>
+        public const string CompanionDeviceCrumb = "your companion's device";
+
         /// <summary>
-        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: Controls and events,
-        /// NextScreen. The artboard leads with "Devices › Phone", but OpenDash knows no SimHub device for a
-        /// companion (the screen's name is OpenDash's, not the device's, and a companion may run in a window,
-        /// which is no device at all), and a crumb a driver could look for has to be exact; the sentence above
-        /// already says to open the device or window the companion runs on.
+        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: Devices, the device the
+        /// companion runs on, its Controls and events, NextScreen. The artboard's "Devices › Phone › Controls
+        /// and events › NextScreen", with the device named by a placeholder, as PanelAttention names an
+        /// unnamed LED device: the screen's name is OpenDash's, not a SimHub device's, and OpenDash cannot
+        /// tell which device shows it. The trail starts at Devices, as every trail through SimHub's menus
+        /// does, because a trail that started at "Controls and events" would read as SimHub's top-level page,
+        /// whose NextScreen pages a windowed dash, where the sentence above says the binding is the device's.
         /// </summary>
         public static string[] PagingCrumbs()
         {
-            return new[] { ControlsAndEventsCrumb, NextScreenCrumb };
+            return new[] { PanelAttention.DevicesCrumb, CompanionDeviceCrumb, ControlsAndEventsCrumb, NextScreenCrumb };
         }
 
         // --- The filter ---------------------------------------------------------------------------------

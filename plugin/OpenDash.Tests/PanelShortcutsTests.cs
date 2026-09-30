@@ -183,9 +183,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_companion_paging_path_is_drawn_as_crumbs()
         {
-            // Only what SimHub names: the screen's name is OpenDash's, not a SimHub device's, and a companion may
-            // run in a window, so the device is left to the sentence above the crumbs.
-            Assert.Equal(new[] { "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs());
+            // The artboard's four crumbs, the device a placeholder as PanelAttention's unnamed LED device is:
+            // the screen's name is OpenDash's, not a SimHub device's. The trail starts at Devices, since one
+            // starting at Controls and events reads as SimHub's top-level page, which pages a windowed dash.
+            Assert.Equal(new[] { "Devices", "your companion's device", "Controls and events", "NextScreen" }, PanelShortcuts.PagingCrumbs());
+            Assert.Equal(PanelAttention.DevicesCrumb, PanelShortcuts.PagingCrumbs()[0]);
             Assert.Contains("device or window the companion runs on", PanelCopy.CompanionPaging);
             // The crumbs are the path PanelCopy.CompanionPaging names in its sentence.
             Assert.Contains(PanelShortcuts.ControlsAndEventsCrumb, PanelCopy.CompanionPaging);
