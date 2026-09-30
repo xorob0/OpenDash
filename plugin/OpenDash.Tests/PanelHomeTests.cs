@@ -1035,7 +1035,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
             Assert.Contains("text.Visibility = line.Text.Length > 0 ? Visibility.Visible : keepsRoom ? Visibility.Hidden : Visibility.Collapsed;", code);
-            // A strip that can go live keeps its line's room, so its card does not grow as a session starts.
+            // A strip that can go live keeps its line's room, one line, so its card does not grow as a session
+            // starts: the live line names the car, which nothing caps ("Car's own rev lights · Aston Martin
+            // Vantage AMR GT3 Evo" is 288 px at 12 px, where a card's row has about 250), so it trims to that
+            // line with its whole text on hover rather than wrap to a second.
+            Assert.Contains("Selected = facts == null ? null : facts.Selected, Line = HomeLineText(false), Dot = HomeDot(null), };", code);
+            Assert.Contains("text.ToolTip = text.TextTrimming == TextTrimming.None || line.Text.Length == 0 ? null : line.Text;", code);
+            Assert.Contains("if (wrap) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis;", code);
             Assert.Contains("strip.KeepsRoom = PanelHome.StripLineKeepsRoom(Settings.BarRpmStyle(bar.Namespace), Settings.BarCentre(bar.Namespace), strip.Profile, strip.Selected);", code);
             Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom);", code);
         }

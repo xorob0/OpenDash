@@ -468,8 +468,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether a strip's line keeps its room while it has nothing to say: a strip that goes live when a
-        /// car's tables are ready, whose line then says the car's own rev lights. Its card keeps one height
-        /// as a session starts and ends, so the cards and the quick controls under it never move under the
+        /// car's tables are ready, whose line then says the car's own rev lights. The room is one line, and
+        /// the line is drawn on one, trimmed however long the car's name, so its card keeps one height as a
+        /// session starts and ends, and the cards and the quick controls under it never move under the
         /// pointer, as the sidebar's live card does not (PanelShell.LiveCardHeight). A strip that can never
         /// be live gives its line's room back.
         /// </summary>
