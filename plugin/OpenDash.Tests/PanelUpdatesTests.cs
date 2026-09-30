@@ -10,6 +10,12 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelUpdatesTests
     {
+        /// <summary>The content beside the full sidebar at a control that wide, with a 17 px scroll bar: 879 at
+        /// the artboard's 1200 frame, 3519 at 3840. It is PanelShell.ContentWidth(control, 17) once the column
+        /// has no ceiling, spelled out so the pin reads the same on either side of that change; the column
+        /// has no widest width to pin against.</summary>
+        private static double Column(double control) => control - PanelShell.SidebarWidth - 2 * PanelShell.MainPaddingX(PanelLayout.Full) - 17;
+
         /// <summary>The page's words where voice.md overrules the artboard: a heading is a noun and never a
         /// question, one verb per thing, and no presets.</summary>
         [Fact]
@@ -170,7 +176,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_press_goes_under_its_words_only_when_the_content_is_narrow()
         {
-            Assert.True(PanelUpdates.ButtonBeside(PanelShell.ContentMax));
+            Assert.True(PanelUpdates.ButtonBeside(Column(1200)));
+            Assert.True(PanelUpdates.ButtonBeside(Column(3840)));
             Assert.True(PanelUpdates.ButtonBeside(679));
             Assert.True(PanelUpdates.ButtonBeside(520));
             Assert.False(PanelUpdates.ButtonBeside(519));
@@ -365,7 +372,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelUpdates.TableBorder);
             Assert.Equal(326, PanelUpdates.TableBorder + 2 * PanelUpdates.TableRowPaddingX + PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth) + PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
             Assert.Equal(154, PanelUpdates.TableNameMin);
-            Assert.Equal(110, PanelUpdates.VersionWidth(PanelShell.ContentMax));
+            Assert.Equal(110, PanelUpdates.VersionWidth(Column(1200)));
+            Assert.Equal(110, PanelUpdates.VersionWidth(Column(3840)));
             Assert.Equal(110, PanelUpdates.VersionWidth(480));
             Assert.Equal(0, PanelUpdates.VersionWidth(479));
             Assert.Equal(0, PanelUpdates.VersionWidth(340));
@@ -374,7 +382,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(80, PanelUpdates.TablePressColumn);
             Assert.Equal(110, PanelUpdates.VersionWidth(560, hasPress: true));
             Assert.Equal(0, PanelUpdates.VersionWidth(559, hasPress: true));
-            Assert.Equal(110, PanelUpdates.VersionWidth(PanelShell.ContentMax, hasPress: true));
+            Assert.Equal(110, PanelUpdates.VersionWidth(Column(1200), hasPress: true));
+            Assert.Equal(110, PanelUpdates.VersionWidth(Column(3840), hasPress: true));
         }
 
         /// <summary>Only an older light profile draws a press, and only the flag box's row on a rig with a
