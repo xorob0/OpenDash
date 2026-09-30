@@ -1,6 +1,8 @@
 // PanelLedsTests.cs: the LEDs page's decisions and words -- what a card says, what the preview draws, which
 // effect switches a shape carries, the Add LEDs sheet, the lines after a press, and where search sends a
-// driver. SettingsControl.Lights.cs draws these and decides nothing, so this is where the page is held.
+// driver. SettingsControl.Lights.cs draws these, so this is where the page is held: every rule the page
+// follows (what the switch writes, when Live runs, when a rename reinstalls, what the car line says) is a
+// PanelLeds function pinned here.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -244,6 +246,50 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Mid, PanelLeds.OptionsFor(false, null)), PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null)));
         }
 
+        /// <summary>Live draws the car's run only where the profile does: the lights loaded, the switch on and the
+        /// centre on the revs.</summary>
+        [Theory]
+        [InlineData(true, "car", "rpm", true)]
+        [InlineData(true, null, null, true)]
+        [InlineData(false, "car", "rpm", false)]
+        [InlineData(true, "leftToRight", "rpm", false)]
+        [InlineData(true, "car", "brake", false)]
+        [InlineData(true, "car", "throttleBrake", false)]
+        [InlineData(true, "car", "fuel", false)]
+        [InlineData(true, "car", "rpmOnly", true)]
+        public void Live_runs_the_cars_lights_only_where_the_strip_draws_them(bool ready, string style, string centre, bool runs)
+        {
+            Assert.Equal(runs, PanelLeds.LiveRuns(ready, style, centre));
+        }
+
+        /// <summary>A tick looks again only while Live is pressed, and the preview repaints only when the frame
+        /// changed, which is what brings the strip at rest back when the car's lights stop.</summary>
+        [Fact]
+        public void A_tick_redraws_only_Live_and_only_a_changed_frame()
+        {
+            Assert.True(PanelLeds.TickRedraws(PanelLeds.LiveScenario));
+            Assert.All(PanelLeds.Scenarios.Skip(1), s => Assert.False(PanelLeds.TickRedraws(s.Key)));
+
+            var options = PanelLeds.OptionsFor(false, null);
+            var packed = string.Concat(Enumerable.Repeat("#FF00D96A", 9));
+            var lit = PanelLeds.FrameKey(PanelLeds.PreviewFrame(PanelLeds.LiveScenario, 3, 9, options, true, packed));
+            var rest = PanelLeds.FrameKey(PanelLeds.PreviewFrame(PanelLeds.LiveScenario, 3, 9, options, false, null));
+            Assert.NotEqual(lit, rest);
+            Assert.Equal(lit, PanelLeds.FrameKey(PanelLeds.PreviewFrame(PanelLeds.LiveScenario, 3, 9, options, true, packed)));
+            Assert.Equal(string.Empty, PanelLeds.FrameKey(null));
+        }
+
+        /// <summary>The labels sit under the Viewbox in columns weighted as the groups are at the preview's
+        /// 30 px LEDs 6 apart, 22 between groups: a 3/9/3 is 566 wide.</summary>
+        [Fact]
+        public void The_preview_labels_are_laid_in_the_groups_own_proportions()
+        {
+            Assert.Equal(new double[] { 102, 22, 318, 22, 102 }, PanelLeds.PreviewColumns(3, 9));
+            Assert.Equal(566, PanelLeds.PreviewColumns(3, 9).Sum());
+            Assert.Equal(new double[] { 894 }, PanelLeds.PreviewColumns(0, 25));
+            Assert.Equal(PanelLeds.PreviewLabels(3, 9).Length * 2 - 1, PanelLeds.PreviewColumns(3, 9).Length);
+        }
+
         [Fact]
         public void The_pictures_dim_at_night_to_the_brightness_in_force()
         {
@@ -265,6 +311,20 @@ namespace OpenDashPlugin.Tests
         public void The_switch_reads_the_stored_style(string stored, bool on)
         {
             Assert.Equal(on, PanelLeds.UsesCarRevLights(stored));
+            // The width row sizes the car's own lights, so it shows only while the switch is on.
+            Assert.Equal(on, PanelLeds.ShowsMirrorFit(stored));
+        }
+
+        /// <summary>#369: the page writes the car's own style for on and the plain ladder for off, in its own
+        /// source because contract.test.ts reads the Contract names there; each reads back as the switch that
+        /// wrote it, and the write is the one expression the page carries.</summary>
+        [Fact]
+        public void The_switch_writes_the_cars_style_or_the_plain_ladder()
+        {
+            Assert.True(PanelLeds.UsesCarRevLights(Contract.NormaliseChoice(Contract.LedRpmStyleCar, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle)));
+            Assert.False(PanelLeds.UsesCarRevLights(Contract.NormaliseChoice(Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle)));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);", leds);
         }
 
         [Fact]
@@ -442,6 +502,32 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelLeds.HasFullStripSpotter(3, 3));
             Assert.True(PanelLeds.HasFullStripSpotter(1, 0));
             Assert.False(PanelLeds.HasFullStripSpotter(0, 0));
+            Assert.True(PanelLeds.HasFullStripSpotter("3-9-3-fanatec"));
+            Assert.False(PanelLeds.HasFullStripSpotter("0-15-0"));
+            // An id it cannot read is offered the row, as it is offered every effect.
+            Assert.True(PanelLeds.HasFullStripSpotter("mystery"));
+        }
+
+        /// <summary>Three effect tiles hold the longest label on one line: "Speeding in the pit lane" is 141 at
+        /// 14 px, with the 12 gap, the 40 switch and 24 of padding.</summary>
+        [Fact]
+        public void An_effect_tile_holds_the_longest_label_beside_its_switch()
+        {
+            Assert.True(PanelLeds.EffectTileMinWidth >= 141 + 12 + 40 + 24);
+        }
+
+        /// <summary>A card's picture shrinks to the card: the widest shape the build embeds, a 25-LED run at the
+        /// card's 9 px LEDs 2 apart, is wider than a card's inside at the grid's narrowest (its cell less 30).
+        /// Read as text because the page is WPF.</summary>
+        [Fact]
+        public void A_cards_picture_shrinks_to_the_card()
+        {
+            var widest = 25 * StripStyle.Card.Led + 24 * StripStyle.Card.Gap;
+            Assert.True(widest > PanelLeds.CardMinWidth - 30);
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var cards = leds.Substring(leds.IndexOf("private FrameworkElement LedsCards(", StringComparison.Ordinal));
+            cards = cards.Substring(0, cards.IndexOf("Ui.StripCard(", StringComparison.Ordinal));
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly", cards);
         }
 
         // --- The Add LEDs sheet -------------------------------------------------------------------------------
@@ -519,6 +605,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Strip (2)", PanelLeds.DefaultName("4-14-4", new[] { "Strip" }));
         }
 
+        /// <summary>The sheet's shape picture: the ends in the flag's yellow and the centre the whole ladder, and a
+        /// bare run the ladder alone, never a yellow fill that reads as a flag.</summary>
+        [Fact]
+        public void The_shape_picture_is_yellow_ends_around_the_whole_ladder()
+        {
+            var frame = PanelLeds.ShapeFrame(3, 9);
+            Assert.Equal(3, frame.Length);
+            Assert.All(frame[0], c => Assert.Equal(Theme.FlagYellow, c));
+            Assert.All(frame[2], c => Assert.Equal(Theme.FlagYellow, c));
+            Assert.Equal(Theme.ShiftStage1, frame[1][0]);
+            Assert.Equal(Theme.ShiftStage3, frame[1][8]);
+            Assert.All(frame[1], c => Assert.NotNull(c));
+            var bare = PanelLeds.ShapeFrame(0, 11);
+            Assert.Single(bare);
+            Assert.DoesNotContain(Theme.FlagYellow, bare[0]);
+            Assert.Contains(Theme.ShiftStage2, bare[0]);
+        }
+
+        /// <summary>A device row names the rig's strips already on it, and whether SimHub is talking to it.</summary>
+        [Fact]
+        public void A_device_row_names_the_strips_already_on_it()
+        {
+            Assert.Null(PanelLeds.DeviceMeta(true, null));
+            Assert.Equal("Dash brow", PanelLeds.DeviceMeta(true, new[] { "Dash brow" }));
+            Assert.Equal("Rim · Dash brow", PanelLeds.DeviceMeta(true, new[] { "Rim", "Dash brow" }));
+            Assert.Equal("Not connected", PanelLeds.DeviceMeta(false, new string[0]));
+            Assert.Equal("Rim · Not connected", PanelLeds.DeviceMeta(false, new[] { "Rim" }));
+        }
+
+        /// <summary>The device picker is bounded so a long name trims, and the lines under a row are capped as the
+        /// kit caps a row's caption.</summary>
+        [Fact]
+        public void Long_words_are_bounded()
+        {
+            Assert.Equal(260, PanelLeds.DevicePickerMaxWidth);
+            Assert.Equal(520, PanelLeds.CaptionMaxWidth);
+        }
+
         [Fact]
         public void The_Fanatec_tile_is_found_by_the_device_name_and_opened_on_only_where_it_is_found()
         {
@@ -548,8 +672,38 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim"));
             Assert.Equal("Reversed Rim.", PanelLeds.ReverseSaid("Rim", true));
             Assert.Equal("Rim runs in its usual direction again.", PanelLeds.ReverseSaid("Rim", false));
-            Assert.Equal("Rim is at 60%.", PanelLeds.BrightnessSaid("Rim", 60));
-            Assert.Equal("Rim follows the rig's brightness.", PanelLeds.BrightnessSaid("Rim", null));
+        }
+
+        /// <summary>The header's press says an update where SimHub held an older copy, an install with the step
+        /// SimHub does not take otherwise, and the log where it failed.</summary>
+        [Fact]
+        public void The_install_press_says_an_update_or_an_install()
+        {
+            Assert.Equal("Updated Rim's profile.", PanelLeds.InstallSaid(true, FlagBoxInstallState.Outdated, "Rim", "Wheel"));
+            Assert.Equal(PanelLeds.ProfileInstalled("Rim", "Wheel"), PanelLeds.InstallSaid(true, FlagBoxInstallState.NotInstalled, "Rim", "Wheel"));
+            Assert.Equal(PanelLeds.ProfileInstalled("Rim", null), PanelLeds.InstallSaid(true, null, "Rim", null));
+            Assert.Equal(PanelLeds.ProfileFailed("Rim"), PanelLeds.InstallSaid(false, FlagBoxInstallState.Outdated, "Rim", "Wheel"));
+        }
+
+        /// <summary>A rename reinstalls only where SimHub holds the profile, and a blank name renames nothing.</summary>
+        [Theory]
+        [InlineData(FlagBoxInstallState.UpToDate, true)]
+        [InlineData(FlagBoxInstallState.Outdated, true)]
+        [InlineData(FlagBoxInstallState.NotInstalled, false)]
+        [InlineData(FlagBoxInstallState.Failed, false)]
+        [InlineData(FlagBoxInstallState.Unavailable, false)]
+        [InlineData(null, false)]
+        public void A_rename_reinstalls_only_where_SimHub_holds_the_profile(FlagBoxInstallState? profile, bool reinstalls)
+        {
+            Assert.Equal(reinstalls, PanelLeds.RenameReinstalls(profile));
+        }
+
+        [Fact]
+        public void A_blank_name_cannot_be_renamed_to()
+        {
+            Assert.False(PanelLeds.CanRename(null));
+            Assert.False(PanelLeds.CanRename("   "));
+            Assert.True(PanelLeds.CanRename("Rim"));
         }
 
         /// <summary>voice.md's rules over every word the page model holds: no contractions, no question, no

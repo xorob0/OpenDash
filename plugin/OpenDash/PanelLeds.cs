@@ -75,7 +75,9 @@ namespace OpenDashPlugin
         // --- The cards ------------------------------------------------------------------------------------
 
         /// <summary>The narrowest a strip's card is laid at, which fits a 3/9/3 at the card's 9 px LEDs; the grid
-        /// takes three columns where the artboard does, and fewer below.</summary>
+        /// takes three columns where the artboard does, and fewer below. A longer strip's picture sits in a
+        /// Viewbox that only shrinks, so it fits its card rather than running off it: a 25-LED run at 9 px is
+        /// 273 wide and a card's inside can be 180.</summary>
         public const double CardMinWidth = 210;
 
         /// <summary>The artboard's grid gap between cards.</summary>
@@ -218,6 +220,46 @@ namespace OpenDashPlugin
         /// <summary>The link beside the chips, to the Rig page's picture of every device.</summary>
         public const string AllDevicesAtOnce = "All devices at once";
 
+        /// <summary>The artboard's gap between the preview's groups.</summary>
+        public const double PreviewGroupGap = 22;
+
+        /// <summary>
+        /// The preview's columns at its natural size, left to right: each group's width at the preview's LEDs
+        /// and the gap between groups. The labels are laid in these as weights, outside the Viewbox that
+        /// shrinks the LEDs, so they line up under their groups at any scale and stay at their own size.
+        /// </summary>
+        public static double[] PreviewColumns(int ends, int centre)
+        {
+            var style = StripStyle.Preview;
+            Func<int, double> group = n => n <= 0 ? 0 : 2 * style.PadX + n * style.Led + (n - 1) * style.Gap;
+            if (ends <= 0) return new[] { group(centre) };
+            return new[] { group(ends), PreviewGroupGap, group(centre), PreviewGroupGap, group(ends) };
+        }
+
+        /// <summary>Whether a tick redraws the preview: only while Live is pressed, since every other chip is a
+        /// fixed moment. The redraw itself happens only when the frame changed.</summary>
+        public static bool TickRedraws(string scenario)
+        {
+            return scenario == LiveScenario;
+        }
+
+        /// <summary>
+        /// Whether Live draws the car's own run: the car's lights are loaded, the strip uses them (#369), and its
+        /// centre shows the revs. With the centre on the brake, the pedals or the fuel, the profile draws the
+        /// car's run nowhere, so the preview must not either.
+        /// </summary>
+        public static bool LiveRuns(bool ready, string rpmStyle, string centre)
+        {
+            return ready && UsesCarRevLights(rpmStyle) && Contract.NormaliseLedCentre(centre) == Contract.DefaultLedCentre;
+        }
+
+        /// <summary>What a frame looks like, as one string: the preview redraws only when this changes.</summary>
+        public static string FrameKey(IList<string[]> frame)
+        {
+            if (frame == null) return string.Empty;
+            return string.Join("|", frame.Select(group => group == null ? string.Empty : string.Join(",", group.Select(c => c ?? "-"))));
+        }
+
         /// <summary>The words under each group of the preview: "Left · 3", "Centre · 9", "Right · 3", or "15
         /// LEDs" under a bare run.</summary>
         public static string[] PreviewLabels(int ends, int centre)
@@ -289,6 +331,13 @@ namespace OpenDashPlugin
             return Contract.NormaliseLedRpmStyle(rpmStyle) == Contract.LedRpmStyleCar;
         }
 
+
+        /// <summary>Whether the width row shows: it sizes the car's own lights, so only while the switch is on.</summary>
+        public static bool ShowsMirrorFit(string rpmStyle)
+        {
+            return UsesCarRevLights(rpmStyle);
+        }
+
         /// <summary>
         /// The line under the switch: whether the car in the sim is one Lovely Car Data has measured. Null
         /// while the switch is off, or while no car is loaded and the tables are there, since then there is
@@ -330,6 +379,14 @@ namespace OpenDashPlugin
         /// <summary>The width is the rig's (LedMirrorFit), so the row says so.</summary>
         public const string MirrorFitCaption = "Every strip.";
 
+        /// <summary>The widest a line under a row runs, as the kit caps a row's own caption: prose that runs the
+        /// width of a desk is a line nobody finishes.</summary>
+        public const double CaptionMaxWidth = 520;
+
+        /// <summary>The widest the SimHub device picker is drawn, so a long device name trims inside it rather
+        /// than crushing the row's title; the full name is its tooltip.</summary>
+        public const double DevicePickerMaxWidth = 260;
+
         public const string CentreDisplayTitle = "Centre display";
 
         /// <summary>Where the stored centre sits in Contract.LedCentres, the first when it is none of them.</summary>
@@ -348,7 +405,8 @@ namespace OpenDashPlugin
         /// <summary>The brightnesses a strip can be set to of its own, in tens.</summary>
         public static readonly int[] BrightnessSteps = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
 
-        /// <summary>The brightness chooser's entries: the rig's, named with its value, then each step.</summary>
+        /// <summary>The brightness chooser's entries: the rig's, named with its value, then each step. The page
+        /// draws the chooser again when the rig's brightness moves, so the value named is the one in force.</summary>
         public static string[] BrightnessLabels(int rig)
         {
             var labels = new List<string> { "Same as rig" + Dot + Percent(rig) };
@@ -386,8 +444,10 @@ namespace OpenDashPlugin
         public const string EffectsTitle = "Effects";
         public const string EffectsCaption = "This strip only";
 
-        /// <summary>The narrowest an effect's tile is laid at: the longest label and its switch.</summary>
-        public const double EffectTileMinWidth = 200;
+        /// <summary>The narrowest an effect's tile is laid at: the longest label, "Speeding in the pit lane" (141
+        /// at 14 px), the 12 gap, the 40 switch and the tile's 24 of padding, so three tiles hold every label on
+        /// one line.</summary>
+        public const double EffectTileMinWidth = 220;
 
         /// <summary>The artboard's gap between effect tiles.</summary>
         public const double EffectTileGap = 6;
@@ -483,6 +543,14 @@ namespace OpenDashPlugin
             return left > 0 || right > 0;
         }
 
+        /// <summary>The same, for a strip's shape id: an id this cannot read is offered the row, as it is
+        /// offered every effect, rather than nothing.</summary>
+        public static bool HasFullStripSpotter(string shapeId)
+        {
+            var shape = LightShape.Parse(shapeId);
+            return shape == null || HasFullStripSpotter(shape.Left, shape.Right);
+        }
+
         /// <summary>The flag animation row, on every strip: a bare run carries the flags over its whole length.</summary>
         public const string FlagAnimationTitle = "Flag animation";
 
@@ -528,6 +596,35 @@ namespace OpenDashPlugin
         public static string EndsLabel(int ends)
         {
             return ends <= 0 ? "None" : Digits(ends);
+        }
+
+        /// <summary>
+        /// The picture of a shape in the sheet: the ends in the flag's yellow, and the centre the whole rev
+        /// ladder, green to amber to red. A bare run is the ladder alone, never a yellow fill, which would read
+        /// as a flag rather than as the shape.
+        /// </summary>
+        public static string[][] ShapeFrame(int ends, int centre)
+        {
+            var middle = new string[Math.Max(0, centre)];
+            for (var i = 0; i < middle.Length; i++)
+            {
+                var f = (i + 1) / (double)middle.Length;
+                middle[i] = f <= 0.45 ? Theme.ShiftStage1 : f <= 0.8 ? Theme.ShiftStage2 : Theme.ShiftStage3;
+            }
+            if (ends <= 0) return new[] { middle };
+            var left = Enumerable.Repeat(Theme.FlagYellow, ends).ToArray();
+            var right = Enumerable.Repeat(Theme.FlagYellow, ends).ToArray();
+            return new[] { left, middle, right };
+        }
+
+        /// <summary>What a device row in the sheet says at its right: the rig's strips already on it, so a
+        /// driver sees a device is taken before installing a second profile into its list, and whether SimHub
+        /// is talking to it.</summary>
+        public static string DeviceMeta(bool connected, IEnumerable<string> stripsOnIt)
+        {
+            var parts = (stripsOnIt ?? Enumerable.Empty<string>()).Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
+            if (!connected) parts.Add(NotConnected);
+            return parts.Count == 0 ? null : string.Join(Dot, parts);
         }
 
         /// <summary>Whether SimHub has a device whose name says it is a Fanatec wheel, which is what the tile's
@@ -628,6 +725,28 @@ namespace OpenDashPlugin
             return inSimHub ? "Renamed to " + name + " in OpenDash and SimHub." : "Renamed to " + name + ".";
         }
 
+        /// <summary>Whether a rename installs the profile again: only where SimHub holds it, up to date or not,
+        /// so SimHub's list carries the new name. A profile SimHub lacks has no name there to change.</summary>
+        public static bool RenameReinstalls(FlagBoxInstallState? profile)
+        {
+            return profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+        }
+
+        /// <summary>Whether a Rename press can go ahead: a name of nothing but spaces renames nothing, so the
+        /// press is disabled while the box holds one.</summary>
+        public static bool CanRename(string typed)
+        {
+            return !string.IsNullOrWhiteSpace(typed);
+        }
+
+        /// <summary>The line after the header's Install or Update: an update where SimHub held an older copy,
+        /// else an install with the step SimHub does not take; the log where it failed.</summary>
+        public static string InstallSaid(bool ok, FlagBoxInstallState? before, string name, string device)
+        {
+            if (!ok) return ProfileFailed(name);
+            return before == FlagBoxInstallState.Outdated ? ProfileUpdated(name) : ProfileInstalled(name, device);
+        }
+
         public static string RenameNotInSimHub(string name)
         {
             return "Renamed to " + name + ", but SimHub still lists the old name. See SimHub's log.";
@@ -643,10 +762,6 @@ namespace OpenDashPlugin
             return reversed ? "Reversed " + name + "." : name + " runs in its usual direction again.";
         }
 
-        public static string BrightnessSaid(string name, int? own)
-        {
-            return own.HasValue ? name + " is at " + Percent(own.Value) + "." : name + " follows the rig's brightness.";
-        }
 
         // --- Search ---------------------------------------------------------------------------------------------
 

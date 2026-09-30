@@ -20,6 +20,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OpenDashPlugin
 {
@@ -41,12 +42,18 @@ namespace OpenDashPlugin
 
         private string ledsScenarioFor;
 
+        /// <summary>Each card's re-dim, by strip, so the strip's own Brightness can re-dim its card at night
+        /// as well as the preview. Filled by the build and dropped with it.</summary>
+        private readonly Dictionary<string, Action> ledsCardRedims = new Dictionary<string, Action>(StringComparer.Ordinal);
+
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
+            ledsCardRedims.Clear();
             OnDrop(() =>
             {
                 carTablesButton = null;
                 carTablesLine = null;
+                ledsCardRedims.Clear();
             });
             var bars = Settings.LedBarList().Where(bar => bar != null).ToList();
             var current = LedsSelectedBar(bars);
@@ -90,11 +97,21 @@ namespace OpenDashPlugin
                 var profile = facts == null ? null : facts.Profile;
                 var selected = facts == null ? null : facts.Selected;
                 var picture = Ui.Strip(PanelLeds.CardFrame(bar.Shape, LedsOptions(bar)), StripStyle.Card, LedsDim(ns));
-                OnLighting(() => Ui.Redim(picture, LedsDim(ns)));
+                Action redim = () => Ui.Redim(picture, LedsDim(ns));
+                ledsCardRedims[ns] = redim;
+                OnLighting(redim);
+                // A longer strip than the card holds at 9 px shrinks to it rather than being cut at its edge.
+                var fitted = new Viewbox
+                {
+                    Stretch = Stretch.Uniform,
+                    StretchDirection = StretchDirection.DownOnly,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Child = picture,
+                };
                 cards.Add(Ui.StripCard(
                     bar.Name,
                     PanelLeds.ShapeDots(bar.Shape),
-                    picture,
+                    fitted,
                     PanelLeds.StateText(profile, selected),
                     PanelLeds.StateHex(profile, selected),
                     ReferenceEquals(bar, current),
@@ -227,37 +244,56 @@ namespace OpenDashPlugin
         /// with each group named under it.
         /// </summary>
         /// <remarks>
-        /// Live is the car's own rev lights as the plugin has them, redrawn every second while they are loaded;
-        /// the other chips are PanelEmulation's rules and never reach the hardware (#506). The groups sit in a
-        /// Viewbox that only shrinks, so a 25-LED run fits a narrow window rather than running off it.
+        /// Live is the car's own rev lights as the plugin has them, looked at every second while Live is
+        /// pressed and repainted only when the frame changed, so the strip at rest comes back when the car's
+        /// lights stop; the other chips are PanelEmulation's rules and never reach the hardware (#506). The LEDs
+        /// sit in a Viewbox that only shrinks, so a 25-LED run fits a narrow window rather than running off it,
+        /// and the group labels sit under it at their own size, in columns weighted as the groups are.
         /// </remarks>
         private FrameworkElement LedsPreview(LedBar bar, out Action redraw)
         {
             var ns = bar.Namespace;
             var ends = PanelLeds.Ends(bar.Shape);
             var centre = PanelLeds.Centre(bar.Shape);
-            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
-            var preview = new Border { Child = row, Padding = new Thickness(0, 12, 0, 2), HorizontalAlignment = HorizontalAlignment.Center };
-            var fit = new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = preview };
 
+            // The groups are drawn once and repainted in place.
+            var groups = new List<Border>();
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var sizes = ends > 0 ? new[] { ends, centre, ends } : new[] { centre };
+            for (var i = 0; i < sizes.Length; i++)
+            {
+                var strip = Ui.Strip(new[] { new string[sizes[i]] }, StripStyle.Preview);
+                strip.Margin = new Thickness(i == 0 ? 0 : PanelLeds.PreviewGroupGap, 0, 0, 0);
+                groups.Add(strip);
+                row.Children.Add(strip);
+            }
+            var preview = new Border { Child = row, Padding = new Thickness(0, 12, 0, 0) };
+            var fit = new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Child = preview, HorizontalAlignment = HorizontalAlignment.Center };
+
+            var columns = PanelLeds.PreviewColumns(ends, centre);
+            var labels = PanelLeds.PreviewLabels(ends, centre);
+            var names = new Grid { MaxWidth = columns.Sum(), HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0, 10, 0, 2) };
+            for (var c = 0; c < columns.Length; c++)
+            {
+                names.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(columns[c], GridUnitType.Star) });
+                if (c % 2 == 1) continue;
+                var label = Ui.Eyebrow(c / 2 < labels.Length ? labels[c / 2] : string.Empty);
+                label.HorizontalAlignment = HorizontalAlignment.Center;
+                Grid.SetColumn(label, c);
+                names.Children.Add(label);
+            }
+
+            string drawn = null;
             Action draw = () =>
             {
                 var live = Settings.LedBarByNamespace(ns) ?? bar;
                 var lights = plugin.CarLights;
-                var running = lights.Ready && PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));
+                var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));
                 var frame = PanelLeds.PreviewFrame(ledsScenario, ends, centre, LedsOptions(live), running, running ? lights.Run(centre) : null);
-                var labels = PanelLeds.PreviewLabels(ends, centre);
-                row.Children.Clear();
-                for (var i = 0; i < frame.Length; i++)
-                {
-                    var strip = Ui.Strip(new[] { frame[i] }, StripStyle.Preview);
-                    strip.HorizontalAlignment = HorizontalAlignment.Center;
-                    var label = Ui.Eyebrow(i < labels.Length ? labels[i] : string.Empty);
-                    label.HorizontalAlignment = HorizontalAlignment.Center;
-                    var group = Ui.VStack(10, strip, label);
-                    group.Margin = new Thickness(i == 0 ? 0 : 22, 0, 0, 0);
-                    row.Children.Add(group);
-                }
+                var key = PanelLeds.FrameKey(frame);
+                if (key == drawn) return;
+                drawn = key;
+                for (var i = 0; i < groups.Count && i < frame.Length; i++) LedsRepaint(groups[i], frame[i], StripStyle.Preview);
             };
             row.Opacity = LedsDim(ns);
             OnLighting(() => Ui.Redim(preview, LedsDim(ns)));
@@ -267,14 +303,20 @@ namespace OpenDashPlugin
             drawChips = () =>
             {
                 chips.Children.Clear();
+                var index = 0;
                 foreach (var scenario in PanelLeds.Scenarios)
                 {
                     var id = scenario.Key;
+                    var at = index++;
                     var chip = Ui.Chip(scenario.Value, id == ledsScenario, () =>
                     {
+                        // The pressed chip is drawn again, so keyboard focus is handed to its successor rather
+                        // than falling out of the panel into SimHub's window.
+                        var focused = at < chips.Children.Count && chips.Children[at].IsKeyboardFocusWithin;
                         ledsScenario = id;
                         drawChips();
                         draw();
+                        if (focused) LedsFocusLater(() => at < chips.Children.Count ? chips.Children[at] : null);
                     });
                     chip.Padding = new Thickness(PanelKit.ChipPaddingXLights, 0, PanelKit.ChipPaddingXLights, 0);
                     chip.Margin = new Thickness(0, 0, 6, 6);
@@ -285,7 +327,7 @@ namespace OpenDashPlugin
             draw();
             OnTick(() =>
             {
-                if (ledsScenario == PanelLeds.LiveScenario && plugin.CarLights.Ready) draw();
+                if (PanelLeds.TickRedraws(ledsScenario)) draw();
             });
 
             var link = Ui.LinkButton(PanelLeds.AllDevicesAtOnce);
@@ -304,7 +346,7 @@ namespace OpenDashPlugin
                 draw();
                 Ui.Redim(preview, LedsDim(ns));
             };
-            var body = Ui.VStack(8, top, fit);
+            var body = Ui.VStack(8, top, Ui.VStack(0, fit, names));
             return new Border
             {
                 Background = Ui.Brush(Theme.SurfaceInset),
@@ -316,6 +358,41 @@ namespace OpenDashPlugin
             };
         }
 
+        /// <summary>The first focusable control among a host's own children: the button of a Ui.ChoiceButton.</summary>
+        private static UIElement LedsFirstControl(UIElement host)
+        {
+            var panel = host as Panel;
+            if (panel == null) return host;
+            return panel.Children.OfType<Control>().FirstOrDefault(control => control.Focusable);
+        }
+
+        /// <summary>Focuses a control once the layout that drew it has run: a control added a moment ago is
+        /// not visible yet, and focus handed to it then goes nowhere.</summary>
+        private void LedsFocusLater(Func<UIElement> find)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var element = find();
+                if (element != null) element.Focus();
+            }), DispatcherPriority.Loaded);
+        }
+
+        /// <summary>
+        /// Paints the LEDs of one group drawn by Ui.Strip in place: the preview repaints rather than draws its
+        /// groups again, which on a tick would be every LED and label rebuilt each second.
+        /// </summary>
+        private static void LedsRepaint(Border strip, string[] colours, StripStyle style)
+        {
+            var row = strip == null ? null : strip.Child as StackPanel;
+            var group = row != null && row.Children.Count > 0 ? row.Children[0] as StackPanel : null;
+            if (group == null || colours == null) return;
+            for (var i = 0; i < group.Children.Count && i < colours.Length; i++)
+            {
+                var led = group.Children[i] as Border;
+                if (led != null) led.Background = Ui.Brush(colours[i] ?? style.UnlitHex);
+            }
+        }
+
         /// <summary>
         /// Rev lights: the #369 switch, the line saying whether the car in the sim is one Lovely Car Data has
         /// measured, the rig's width for the car's lights while the switch is on, and what the centre shows.
@@ -323,7 +400,8 @@ namespace OpenDashPlugin
         private FrameworkElement LedsRevLights(LedBar bar, Action redrawPreview)
         {
             var ns = bar.Namespace;
-            var carIcon = new ContentControl { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            // A Border rather than a ContentControl, which WPF makes a tab stop: the icon is a picture.
+            var carIcon = new Border { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
             var carText = Ui.Prose(string.Empty);
             carText.VerticalAlignment = VerticalAlignment.Center;
             var carDock = new DockPanel { LastChildFill = true };
@@ -349,7 +427,7 @@ namespace OpenDashPlugin
             Action show = () =>
             {
                 var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));
-                width.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+                width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;
                 var live = plugin.Live ?? LiveStatus.None;
                 var loaded = plugin.CarLights.CarCount > 0;
                 var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);
@@ -361,7 +439,7 @@ namespace OpenDashPlugin
                 var hex = PanelLeds.CarLineHex(known);
                 carText.Text = line;
                 carText.Foreground = Ui.Brush(hex);
-                carIcon.Content = known
+                carIcon.Child = known
                     ? Ui.Icon(PanelIcons.RingCheck, hex, 14, PanelIcons.RingBox)
                     : Ui.Icon(PanelIcons.Warning, hex, 14, PanelIcons.NavBox);
             };
@@ -369,6 +447,8 @@ namespace OpenDashPlugin
             // #369: one switch, the car's own rev lights or not. On writes the car's own style and off the plain
             // left-to-right ladder, through the contract's set so it writes against the list in view (the set
             // still holds meetInMiddle and f1 so an old file reads, and a strip carrying one reads as off).
+            // Written here rather than through PanelLeds because contract.test.ts reads the panel's source for
+            // these Contract names; PanelLedsTests holds that each reads back as the switch it was written by.
             var style = Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)), on =>
             {
                 var live = Settings.LedBarByNamespace(ns);
@@ -385,6 +465,8 @@ namespace OpenDashPlugin
                 var live = Settings.LedBarByNamespace(ns);
                 if (live != null) live.Centre = Contract.LedCentres[i];
                 Save();
+                // Live draws the car's run only while the centre shows the revs.
+                redrawPreview();
             }, 160);
 
             return Ui.VStack(0,
@@ -406,14 +488,31 @@ namespace OpenDashPlugin
                 Ui.Anchor(BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value)), PanelLeds.AnchorDevice),
             };
 
-            var brightness = Ui.ChoiceButton(PanelLeds.BrightnessLabels(Settings.LightsBrightness), PanelLeds.BrightnessIndex(Settings.BarBrightness(ns)), i =>
+            // The chooser names the rig's brightness in its first entry, so it is drawn again when a wheel's
+            // press moves that; the page itself is not rebuilt by one. Nothing is said after a pick: the chooser
+            // already shows it, and a line would pull the page to its top.
+            var brightness = new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+            var rigShown = -1;
+            Action drawBrightness = () =>
             {
-                var value = PanelLeds.BrightnessValue(i);
-                Settings.SetBarBrightness(ns, value);
-                Save();
-                redrawPreview();
-                Say(PanelLeds.BrightnessSaid(bar.Name, value));
-            }, 160);
+                var hadFocus = brightness.IsKeyboardFocusWithin;
+                rigShown = Settings.LightsBrightness;
+                brightness.Child = Ui.ChoiceButton(PanelLeds.BrightnessLabels(rigShown), PanelLeds.BrightnessIndex(Settings.BarBrightness(ns)), i =>
+                {
+                    Settings.SetBarBrightness(ns, PanelLeds.BrightnessValue(i));
+                    Save();
+                    redrawPreview();
+                    // At night the card is drawn at the lower of this and the night brightness, too.
+                    Action redimCard;
+                    if (ledsCardRedims.TryGetValue(ns, out redimCard)) redimCard();
+                }, 160);
+                if (hadFocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
+            };
+            drawBrightness();
+            OnLighting(() =>
+            {
+                if (Settings.LightsBrightness != rigShown) drawBrightness();
+            });
             rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));
 
             // Only a shape that has a twin wired from the far end: a Fanatec wheel's wiring is its own.
@@ -468,8 +567,7 @@ namespace OpenDashPlugin
             // The first row under the grid has no rule over it, as the artboard draws it.
             flags.BorderThickness = new Thickness(0);
             rows.Add(Ui.SubRow(Ui.Anchor(flags, PanelLeds.AnchorFlagAnimation)));
-            var shape = LightShape.Parse(bar.Shape);
-            if (shape == null || PanelLeds.HasFullStripSpotter(shape.Left, shape.Right))
+            if (PanelLeds.HasFullStripSpotter(bar.Shape))
             {
                 rows.Add(Ui.SubRow(Ui.Anchor(LedsRow(PanelLeds.SpotterTitle, Ui.Switch(Settings.BarSpotterWhole(ns), on =>
                 {
@@ -548,22 +646,28 @@ namespace OpenDashPlugin
             carTablesButton.Click += (sender, args) => DownloadCarTables();
 
             var row = LedsRow(PanelLights.CarTablesTitle, carTablesButton);
-            carTablesLine = Ui.Prose(string.Empty);
-            carTablesLine.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            // Capped as a row's own caption is, so none of the three runs the width of a desk.
+            carTablesLine = LedsCaptionLine(string.Empty);
             var parts = row.Tag as RowParts;
             var left = parts == null ? null : parts.TitleLine.Parent as StackPanel;
             if (left != null)
             {
                 left.Children.Add(carTablesLine);
-                var caption = Ui.Prose(PanelLights.CarTablesCaption);
-                caption.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
-                left.Children.Add(caption);
-                var attribution = Ui.Prose(PanelLights.CarTablesAttribution);
-                attribution.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
-                left.Children.Add(attribution);
+                left.Children.Add(LedsCaptionLine(PanelLights.CarTablesCaption));
+                left.Children.Add(LedsCaptionLine(PanelLights.CarTablesAttribution));
             }
             RefreshCarTables();
             return row;
+        }
+
+        /// <summary>A line under a row's title, capped at the width the kit gives a row's caption.</summary>
+        private static TextBlock LedsCaptionLine(string text)
+        {
+            var line = Ui.Prose(text);
+            line.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            line.MaxWidth = PanelLeds.CaptionMaxWidth;
+            line.HorizontalAlignment = HorizontalAlignment.Left;
+            return line;
         }
 
         /// <summary>The status line and the button's label, which are one answer and so are written together.</summary>
@@ -651,6 +755,10 @@ namespace OpenDashPlugin
             {
                 if (!string.Equals(ids[i], current, StringComparison.Ordinal)) chosen(ids[i]);
             }, 160);
+            // Bounded, so a long device name trims inside the button rather than crushing the row's title or
+            // running out of its column; the whole name is the hover.
+            picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;
+            if (index >= 0) picker.ToolTip = labels[index];
             return LedsRow(PanelLights.BarDeviceTitle, picker, PanelLights.DeviceRowCaption(targets.Count, PanelLights.BarDeviceCaption, declined));
         }
 
@@ -668,6 +776,8 @@ namespace OpenDashPlugin
             if (bar == null) return;
             bar.Device = LedBar.NormaliseDevice(device);
             Save();
+            // RebuildPage keeps the lines, so the last press's goes first rather than stacking over this one's.
+            ClearMessages();
             // By the profile the strip installs, which is the reversed twin for a strip wired from the far end.
             var found = EmbeddedProfileOf(bar);
             if (found == null)
@@ -718,14 +828,12 @@ namespace OpenDashPlugin
             var bar = Settings.LedBarByNamespace(ns);
             if (bar == null) return;
             var facts = StripFacts(ns);
-            var update = facts != null && facts.Profile == FlagBoxInstallState.Outdated;
+            var before = facts == null ? null : facts.Profile;
             var plan = ReinstallBar(bar);
             var ok = plan.State == FlagBoxInstallState.UpToDate;
             Redraw();
             var target = LedTargets.Find(bar.Device);
-            var line = !ok ? PanelLeds.ProfileFailed(bar.Name)
-                : update ? PanelLeds.ProfileUpdated(bar.Name)
-                : PanelLeds.ProfileInstalled(bar.Name, target == null ? null : target.Name);
+            var line = PanelLeds.InstallSaid(ok, before, bar.Name, target == null ? null : target.Name);
             if (ok && plan.Note != null) line += " " + plan.Note;
             Say(line, ok && plan.Note == null);
         }
@@ -752,6 +860,9 @@ namespace OpenDashPlugin
             var save = Ui.Button(PanelLeds.RenameButton, PanelButtonKind.Primary, PanelButtonSize.Large);
             save.MinWidth = ButtonMinWidth;
             save.Click += (sender, args) => RenameLedBar(ns, name.Text);
+            // A blank name renames nothing, so the press waits for one rather than doing nothing when pressed.
+            name.TextChanged += (sender, args) => save.IsEnabled = PanelLeds.CanRename(name.Text);
+            save.IsEnabled = PanelLeds.CanRename(name.Text);
             var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
             var caption = Ui.Prose(PanelLights.BarNameCaption);
@@ -768,9 +879,9 @@ namespace OpenDashPlugin
         private void RenameLedBar(string ns, string wanted)
         {
             var bar = Settings.LedBarByNamespace(ns);
-            if (bar == null || string.IsNullOrWhiteSpace(wanted)) return;
+            if (bar == null || !PanelLeds.CanRename(wanted)) return;
             var facts = StripFacts(ns);
-            var inSimHub = facts != null && (facts.Profile == FlagBoxInstallState.UpToDate || facts.Profile == FlagBoxInstallState.Outdated);
+            var inSimHub = PanelLeds.RenameReinstalls(facts == null ? null : facts.Profile);
             Settings.RenameLedBar(ns, wanted);
             Save();
             var ok = true;
@@ -864,9 +975,13 @@ namespace OpenDashPlugin
             var name = Ui.Input(string.Empty);
             var typed = false;
             var footerNote = Ui.Prose(string.Empty, PanelKit.CardMetaSize);
-            var hardwareHost = new ContentControl();
-            var shapeHost = new ContentControl();
-            var deviceHost = new ContentControl();
+            // Borders rather than ContentControls, which WPF makes tab stops: a host is only where a step's
+            // controls go, and an invisible stop before each step is a Tab press that shows nothing.
+            var hardwareHost = new Border();
+            var shapeHost = new Border();
+            var deviceHost = new Border();
+            UIElement chosenTile = null;
+            UIElement chosenDevice = null;
 
             Action updateFooter = () =>
             {
@@ -889,8 +1004,10 @@ namespace OpenDashPlugin
                 updateFooter();
             };
 
-            Action showShape = null;
-            showShape = () =>
+            // Each picker is drawn once and keeps keyboard focus: a change of ends swaps only what is under the
+            // ends bar, a change of centre only the picture and the note, and a tile or a device picked hands
+            // focus to the one drawn in its place.
+            Action showShape = () =>
             {
                 if (fanatec)
                 {
@@ -901,7 +1018,7 @@ namespace OpenDashPlugin
                     DockPanel.SetDock(fixedLabel, Dock.Right);
                     fixedDock.Children.Add(fixedLabel);
                     fixedDock.Children.Add(Ui.VStack(4, numerals, Ui.Prose(PanelLeds.SetByTheWheel, PanelKit.CardMetaSize)));
-                    shapeHost.Content = new Border
+                    shapeHost.Child = new Border
                     {
                         Background = Ui.Brush(Theme.SurfaceZone),
                         CornerRadius = new CornerRadius(Theme.Radius),
@@ -911,69 +1028,84 @@ namespace OpenDashPlugin
                     return;
                 }
 
-                var ends = BuildSegmented(
-                    sides.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    sides.Select(PanelLeds.EndsLabel).ToArray(),
-                    side.ToString(CultureInfo.InvariantCulture),
-                    value =>
-                    {
-                        side = int.Parse(value, CultureInfo.InvariantCulture);
-                        centres = PanelLights.BarCentres(census, side);
-                        // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
-                        // of centre follows the choice of ends rather than offering lengths nothing is built for.
-                        if (!centres.Contains(centre)) centre = centres.Contains(9) ? 9 : centres[0];
-                        showShape();
-                        refresh();
-                    });
-                var middle = Ui.ChoiceButton(
-                    centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                    Array.IndexOf(centres, centre),
-                    i =>
-                    {
-                        centre = centres[i];
-                        showShape();
-                        refresh();
-                    }, 90);
-                var picture = Ui.Strip(PanelEmulation.StripFrame(side, centre, PanelEmulation.Yellow), StripStyle.AddLeds);
-                picture.HorizontalAlignment = HorizontalAlignment.Center;
+                var centreRow = new Border();
+                var picture = new Border { HorizontalAlignment = HorizontalAlignment.Center };
+                var note = Ui.Prose(string.Empty);
+                Action showPicture = () =>
+                {
+                    picture.Child = Ui.Strip(PanelLeds.ShapeFrame(side, centre), StripStyle.AddLeds);
+                    note.Text = PanelLights.BarShapeNote(side, centre, fanatec);
+                };
+                Action showCentre = () =>
+                {
+                    var middle = Ui.ChoiceButton(
+                        centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                        Array.IndexOf(centres, centre),
+                        i =>
+                        {
+                            centre = centres[i];
+                            showPicture();
+                            refresh();
+                        }, 90);
+                    centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle, PanelLights.BarCentreCaption);
+                    showPicture();
+                };
+
+                // The artboard's 40 px a button, where a bare digit would make it about 31.
+                var ends = new Segmented(
+                    sides.Select(n => new Segmented.Option(n.ToString(CultureInfo.InvariantCulture), PanelLeds.EndsLabel(n), minWidth: PanelKit.SegmentMinWidth)),
+                    side.ToString(CultureInfo.InvariantCulture));
+                ends.Changed += value =>
+                {
+                    side = int.Parse(value, CultureInfo.InvariantCulture);
+                    centres = PanelLights.BarCentres(census, side);
+                    // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
+                    // of centre follows the choice of ends rather than offering lengths nothing is built for.
+                    if (!centres.Contains(centre)) centre = centres.Contains(9) ? 9 : centres[0];
+                    showCentre();
+                    refresh();
+                };
+                showCentre();
                 var well = new Border { Background = Ui.Brush(Theme.SurfaceInset), CornerRadius = new CornerRadius(Theme.Radius), Child = picture };
-                shapeHost.Content = Ui.VStack(12,
+                shapeHost.Child = Ui.VStack(12,
                     LedsSheetRow(PanelLights.BarEndsTitle, ends, PanelLights.BarEndsCaption),
-                    LedsSheetRow(PanelLights.BarCentreTitle, middle, PanelLights.BarCentreCaption),
+                    centreRow,
                     well,
-                    Ui.Prose(PanelLights.BarShapeNote(side, centre, fanatec)));
+                    note);
             };
 
             Action showHardware = null;
+            Action<bool> pickHardware = wheel =>
+            {
+                var focused = hardwareHost.IsKeyboardFocusWithin;
+                fanatec = wheel;
+                showHardware();
+                showShape();
+                refresh();
+                if (focused) LedsFocusLater(() => chosenTile);
+            };
             showHardware = () =>
             {
                 var tiles = new List<UIElement>();
+                chosenTile = null;
                 if (offersFanatec)
                 {
-                    tiles.Add(LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null,
-                        PanelEmulation.StripFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre, PanelEmulation.Yellow),
-                        PanelLeds.FanatecShape, null, fanatec, () =>
-                        {
-                            fanatec = true;
-                            showHardware();
-                            showShape();
-                            refresh();
-                        }));
+                    var tile = LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null,
+                        PanelLeds.ShapeFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre),
+                        PanelLeds.FanatecShape, null, fanatec, () => pickHardware(true));
+                    if (fanatec) chosenTile = tile;
+                    tiles.Add(tile);
                 }
                 if (sides.Length > 0)
                 {
-                    tiles.Add(LedsHardwareTile(PanelLeds.SomethingElse, null,
+                    var tile = LedsHardwareTile(PanelLeds.SomethingElse, null,
                         PanelEmulation.StripFrame(0, 12, PanelEmulation.Idle),
-                        PanelLeds.SomethingElseNote, null, !fanatec, () =>
-                        {
-                            fanatec = false;
-                            showHardware();
-                            showShape();
-                            refresh();
-                        }));
+                        PanelLeds.SomethingElseNote, null, !fanatec, () => pickHardware(false));
+                    if (!fanatec) chosenTile = tile;
+                    tiles.Add(tile);
                 }
                 var grid = Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray());
-                hardwareHost.Content = offersFanatec
+                hardwareHost.Child = offersFanatec
                     ? Ui.VStack(12, grid, LedsNote(PanelLeds.OtherWheelNote))
                     : (UIElement)grid;
             };
@@ -983,19 +1115,27 @@ namespace OpenDashPlugin
             {
                 var list = new StackPanel { Orientation = Orientation.Vertical };
                 var passedOver = notOffered ?? new string[0];
+                chosenDevice = null;
                 // A device passed over is a disabled row saying so, so the prose says only what no row can.
                 if (targets.Count == 0 && passedOver.Count == 0) list.Children.Add(Ui.Prose(PanelLights.NoDevices));
                 foreach (var target in targets)
                 {
                     var id = target.Id;
-                    var radio = Ui.RadioRow(target.Name, target.Connected ? null : PanelLeds.NotConnected,
-                        string.Equals(id, device, StringComparison.Ordinal), () =>
-                        {
-                            device = id;
-                            showDevices();
-                            updateFooter();
-                        });
+                    // The rig's strips already on the device, so a driver sees it is taken before adding another.
+                    var onIt = Settings.LedBarList()
+                        .Where(other => other != null && string.Equals(Settings.BarDevice(other.Namespace), id, StringComparison.Ordinal))
+                        .Select(other => other.Name);
+                    var chosen = string.Equals(id, device, StringComparison.Ordinal);
+                    var radio = Ui.RadioRow(target.Name, PanelLeds.DeviceMeta(target.Connected, onIt), chosen, () =>
+                    {
+                        var focused = deviceHost.IsKeyboardFocusWithin;
+                        device = id;
+                        showDevices();
+                        updateFooter();
+                        if (focused) LedsFocusLater(() => chosenDevice);
+                    });
                     radio.Margin = new Thickness(0, 0, 0, 4);
+                    if (chosen) chosenDevice = radio;
                     list.Children.Add(radio);
                 }
                 foreach (var passed in passedOver)
@@ -1005,7 +1145,7 @@ namespace OpenDashPlugin
                     list.Children.Add(radio);
                 }
                 if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));
-                deviceHost.Content = list;
+                deviceHost.Child = list;
             };
 
             showHardware();
