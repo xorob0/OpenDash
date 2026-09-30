@@ -14,8 +14,10 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OpenDashPlugin
 {
@@ -275,6 +277,56 @@ namespace OpenDashPlugin
                 Log.Warn("Could not read the version of " + screen.Folder + ": " + ex.Message);
                 return string.Empty;
             }
+        }
+
+        /// <summary>
+        /// Draws an editor again in place, and puts the keyboard back on the control it was on.
+        /// </summary>
+        /// <remarks>
+        /// An editor redraws itself after a press so the picture says what was just set, and a redraw builds
+        /// new controls: without this, a zone picked from the keyboard or a page ticked with Space would
+        /// leave focus nowhere. The controls that redraw carry a Uid naming what they set, which is how the
+        /// new one is found.
+        /// </remarks>
+        private static void ScreensRedraw(ContentControl host, Func<object> build)
+        {
+            string uid = null;
+            if (host.IsKeyboardFocusWithin)
+            {
+                var at = Keyboard.FocusedElement as DependencyObject;
+                while (at != null && !ReferenceEquals(at, host))
+                {
+                    var element = at as UIElement;
+                    if (element != null && !string.IsNullOrEmpty(element.Uid))
+                    {
+                        uid = element.Uid;
+                        break;
+                    }
+                    at = (at is Visual ? VisualTreeHelper.GetParent(at) : null) ?? LogicalTreeHelper.GetParent(at);
+                }
+            }
+            host.Content = build();
+            if (uid == null) return;
+            host.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var target = ScreensFind(host, uid);
+                if (target == null) return;
+                if (target.Focusable) target.Focus();
+                else target.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }), DispatcherPriority.Loaded);
+        }
+
+        private static UIElement ScreensFind(DependencyObject root, string uid)
+        {
+            var element = root as UIElement;
+            if (element != null && string.Equals(element.Uid, uid, StringComparison.Ordinal)) return element;
+            var count = root is Visual ? VisualTreeHelper.GetChildrenCount(root) : 0;
+            for (var i = 0; i < count; i++)
+            {
+                var found = ScreensFind(VisualTreeHelper.GetChild(root, i), uid);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>A row of the kit at the Screens page's own segmented padding (Screens.dc.html's .seg, 13).</summary>

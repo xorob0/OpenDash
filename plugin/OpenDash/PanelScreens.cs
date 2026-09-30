@@ -555,7 +555,7 @@ namespace OpenDashPlugin
         /// rev bar from the round pane unawares; ruling 38's "Every round screen and the phone's speedo." left
         /// those faces out too.
         /// </summary>
-        public const string RigRevBarCaption = "Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.";
+        public const string RigRevBarCaption = "Every round screen, the phone's speedo, and any screen whose own rev bar you have not set.";
 
         // --- Anchors, search and the greyed rows ---------------------------------------------------------
 

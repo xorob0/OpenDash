@@ -39,7 +39,7 @@ namespace OpenDashPlugin
             var face = size.Value;
             var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             Action redraw = null;
-            redraw = () => host.Content = BuildFaceEditor(screen, face, redraw);
+            redraw = () => ScreensRedraw(host, () => BuildFaceEditor(screen, face, redraw));
             redraw();
             return host;
         }
@@ -87,6 +87,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 redraw();
             });
+            revBar.Uid = "screens.revbar";
             var flags = ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value =>
             {
                 screen.FlagFormat = value;
@@ -136,6 +137,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 redraw();
             }, 110);
+            zone.Uid = "screens.glance.zone";
             var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
             {
                 screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
@@ -143,6 +145,7 @@ namespace OpenDashPlugin
                 // The clash line counts the glance among what shows a page twice.
                 redraw();
             }, 150);
+            page.Uid = "screens.glance.page";
             return ScreensWrap(zone, page, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }
 
@@ -261,6 +264,7 @@ namespace OpenDashPlugin
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
             cell.ToolTip = PanelScreens.InfoBarTitle;
+            cell.Uid = "screens.zone." + PanelScreens.BarKey;
             return cell;
         }
 
@@ -318,6 +322,7 @@ namespace OpenDashPlugin
             dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY));
             cell.ToolTip = PanelFacePlan.ZoneLabel(letter);
+            cell.Uid = "screens.zone." + letter;
             return cell;
         }
 
@@ -342,6 +347,7 @@ namespace OpenDashPlugin
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
             cell.ToolTip = PanelFacePlan.ZoneLabel("D");
+            cell.Uid = "screens.zone.D";
             return cell;
         }
 
@@ -417,6 +423,7 @@ namespace OpenDashPlugin
                     Save(screen);
                     redraw();
                 });
+                choice.Uid = "screens.bar." + slot;
                 stack.Children.Add(ScreensAsideLine(Ui.Text(row.Label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), choice));
             }
             return stack;
@@ -482,13 +489,13 @@ namespace OpenDashPlugin
             }
 
             var links = Ui.HStack(12,
-                ScreensLink(showAll ? PanelScreens.OnlyTicked : PanelScreens.ShowAll, () =>
+                ScreensLink("screens.showall", showAll ? PanelScreens.OnlyTicked : PanelScreens.ShowAll, () =>
                 {
                     screensShowAll = !screensShowAll;
                     redraw();
                 }),
-                ScreensLink(PanelScreens.AllPages, () => { SetEveryPage(face, letter, true); settle(); }),
-                ScreensLink(PanelScreens.NoPages, () => { SetEveryPage(face, letter, false); settle(); }));
+                ScreensLink("screens.all", PanelScreens.AllPages, () => { SetEveryPage(face, letter, true); settle(); }),
+                ScreensLink("screens.none", PanelScreens.NoPages, () => { SetEveryPage(face, letter, false); settle(); }));
             var hint = Ui.HStack(6, Ui.Text(PanelScreens.DragHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary), Ui.NewTag());
             var foot = ScreensAsideLine(links, hint);
 
@@ -522,6 +529,7 @@ namespace OpenDashPlugin
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0),
                 ToolTip = row.Locked ? PanelScreens.LastPageTooltip : row.Name,
+                Uid = "screens.page." + row.Page,
             };
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);
@@ -576,10 +584,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A press drawn as a word in the accent, with nothing around it: Show all, All, None.</summary>
-        private static Button ScreensLink(string text, Action click)
+        private static Button ScreensLink(string uid, string text, Action click)
         {
             var button = new Button
             {
+                Uid = uid,
                 Content = Ui.Text(text, Theme.SizeSmall, FontWeights.Medium, Theme.Accent),
                 Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent,

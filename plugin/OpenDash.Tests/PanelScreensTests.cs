@@ -240,7 +240,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && System.Array.IndexOf(entry.Keywords, "revbar") >= 0);
             // The round pane's Rev ring writes the rig-wide setting, and its caption names everything that
             // follows it: the round screens, the phone's speedo, and a face that never set its own.
-            Assert.Equal("Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.", PanelScreens.RigRevBarCaption);
+            Assert.Equal("Every round screen, the phone's speedo, and any screen whose own rev bar you have not set.", PanelScreens.RigRevBarCaption);
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
             Assert.Contains("PanelScreens.RigRevBarCaption,", round);
             Assert.Contains("Settings.SetRevBar(value);", round);

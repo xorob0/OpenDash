@@ -20,7 +20,7 @@ namespace OpenDashPlugin
         {
             var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             Action redraw = null;
-            redraw = () => host.Content = BuildRoundEditor(screen, redraw);
+            redraw = () => ScreensRedraw(host, () => BuildRoundEditor(screen, redraw));
             redraw();
             return Ui.Anchor(host, PanelScreens.AnchorSlots);
         }
@@ -39,6 +39,7 @@ namespace OpenDashPlugin
                     Save(screen);
                     redraw();
                 });
+                choice.Uid = "screens.card." + captured;
                 rows.Add(Ui.SettingRow(PanelScreens.CardLabel(captured), choice));
             }
             var duplicates = DuplicateAssignment.Warning(Settings.Slots);

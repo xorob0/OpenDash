@@ -21,7 +21,7 @@ namespace OpenDashPlugin
         {
             var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             Action redraw = null;
-            redraw = () => host.Content = BuildPitWallEditor(screen, redraw);
+            redraw = () => ScreensRedraw(host, () => BuildPitWallEditor(screen, redraw));
             redraw();
             return host;
         }
@@ -43,6 +43,7 @@ namespace OpenDashPlugin
                     Save(screen);
                     redraw();
                 });
+                pages.Uid = "screens.pitwall.page";
                 var pageRow = Ui.SettingRow(PanelScreens.PitWallPageTitle, pages);
                 pageRow.BorderThickness = new Thickness(0);
                 pageRow.Padding = new Thickness(0, 0, 0, 12);
