@@ -254,7 +254,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether a row shows under the filter. A greyed row is not bound, and its chip says so, so it shows
         /// under Not bound as well as All, where its Soon tag says why; that keeps "Every shortcut is bound."
-        /// true. A row not read shows under All alone, and FilterFor gives All whenever one is.
+        /// true, which is why the line cannot appear while the Rig test (#511) and the alert's dismissal
+        /// (#510) are drawn greyed. A row not read shows under All alone, and FilterFor gives All whenever one is.
         /// </summary>
         public static bool Shows(string filter, RowState row)
         {
