@@ -2,12 +2,12 @@
 // words that go beside it, and the companion grid, as numbers.
 //
 // A pit wall's zones are letters, and a letter is a position: zone C is wherever the Tower page draws it.
-// The panel therefore says where each zone is twice, once as a miniature of every page and once as a
-// sentence in the zone's own row, and until this class the two disagreed. The miniature stacked C above D
-// and drew the wide zone down the left, while the sentence beside it said C was the lower left of the
-// tower and D the lower right; the Tower page's fixed panel was not drawn at all. Both halves now read the
-// table below, so a rectangle that moves takes its sentence with it and PanelPitWallPlanTests fails when
-// it does not.
+// The panel says where each landscape zone is by drawing it: the picture of the page on screen stands
+// beside the list of that page's zones, and every box in it is drawn from the table below. A portrait
+// wall's zones have no picture, so each of its four choices carries its place as a hover ("Upper left.").
+// Until this class the miniature stacked C above D and drew the wide zone down the left, and the Tower
+// page's fixed panel was not drawn at all; PanelPitWallPlanTests holds the table to the pages the pit wall
+// has.
 //
 // Screens.dc.html draws one page at a time, the one "Page on screen" picks, at the wall's own 16 by 9 and
 // as wide as the column gives it; the table below is that page at 253 across, and Scaled draws it at any
@@ -26,7 +26,7 @@ using System.Text;
 
 namespace OpenDashPlugin
 {
-    /// <summary>The three pit wall pages as rectangles, and the sentence each zone's row carries.</summary>
+    /// <summary>The three pit wall pages as rectangles, and where the portrait wall's zones sit.</summary>
     public static class PanelPitWallPlan
     {
         /// <summary>The design space the page table is written in: 1920 x 1080 at about 0.132. A picture at
@@ -188,23 +188,6 @@ namespace OpenDashPlugin
             public IReadOnlyList<Panel> Panels { get; private set; }
         }
 
-        /// <summary>Where one zone is drawn, as the row beside the picture says it.</summary>
-        public sealed class ZonePlace
-        {
-            public ZonePlace(string page, string where)
-            {
-                Page = page;
-                Where = where;
-            }
-
-            /// <summary>The title of the page this is a place on, which is one of the three below.</summary>
-            public string Page { get; private set; }
-
-            /// <summary>"upper right", "top", "lower left": the words the sentence ends on, and what the
-            /// test holds the rectangle to.</summary>
-            public string Where { get; private set; }
-        }
-
         /// <summary>
         /// The three pages in the order the picture draws them.
         /// </summary>
@@ -231,41 +214,15 @@ namespace OpenDashPlugin
                 new Panel("C", 4, 96, 243, 39, true)),
         };
 
-        /// <summary>
-        /// Where on its own page each zone sits.
-        /// </summary>
-        /// <remarks>
-        /// One place each, now that a zone belongs to a page. The table used to give A two places -- the
-        /// race page's upper right and the telemetry page's top -- because it was one setting drawn in two
-        /// pages, and the caption saying so was the only warning a driver got that moving one moved both.
-        /// </remarks>
+        /// <summary>Where on the portrait wall each of its four zones sits, which its choice's hover says: the
+        /// portrait wall has no picture to show it.</summary>
         private static readonly Dictionary<string, string> ZoneWhere = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            { "RaceA", "upper right" },
-            { "RaceB", "lower right" },
-            { "TowerWide", "across the top of the right column" },
-            { "TowerA", "lower left" },
-            { "TowerB", "lower right" },
-            { "TelemetryA", "top" },
-            { "TelemetryB", "middle" },
-            { "TelemetryC", "bottom" },
             { "PortraitA", "upper left" },
             { "PortraitB", "upper right" },
             { "PortraitC", "lower left" },
             { "PortraitD", "lower right" },
         };
-
-        /// <summary>Where one zone is: "Race page, upper right." Written from the table above rather than
-        /// beside it, so the words cannot drift from the picture the panel draws; PanelPitWallPlanTests reads
-        /// each one off its rectangle. The landscape zones are not described on the page, which draws them in
-        /// the picture beside their list.</summary>
-        public static string ZoneDescription(Contract.PitWallZoneSlot slot)
-        {
-            if (slot == null) return string.Empty;
-            string where;
-            if (!ZoneWhere.TryGetValue(slot.Key, out where)) return string.Empty;
-            return slot.Page + " page, " + where + ".";
-        }
 
         /// <summary>A portrait zone's hover: its place alone, "Upper left.", under a row titled Portrait layout,
         /// where "Portrait page" would name a page the wall does not have.</summary>
@@ -300,20 +257,17 @@ namespace OpenDashPlugin
             var slot = index >= 0 && index < zones.Count ? zones[index] : zones[0];
             return slot.Page + " " + slot.Slot + " · " + ZonePages.StandardName(Contract.QuickGlancePage(glance));
         }
-
-        /// <summary>The page of that title, or null. Used by the tests to hold a sentence against the
-        /// rectangles of the page it names.</summary>
-        public static Page PageNamed(string title)
-        {
-            foreach (var page in Pages)
-            {
-                if (string.Equals(page.Title, title, StringComparison.Ordinal)) return page;
-            }
-            return null;
-        }
     }
 
-    /// <summary>The round screen's picture: the disc and the cards it carries, as Screens.dc.html draws it.</summary>
+    /// <summary>
+    /// The round screen's picture: the disc and the cards it carries.
+    /// </summary>
+    /// <remarks>
+    /// The disc is the artboard's: 240 across and 32 from the rows. The cards on it are this plan's own numbers,
+    /// not Screens.dc.html's: the artboard draws only the 480 round's two cards, 10 apart and padded 9 by 10 with
+    /// 6 between their lines, and the 800 round's six do not fit the disc at those numbers. The plan draws every
+    /// round at the tighter 6 apart, padded 6 by 7 with 4 between the lines, so both rounds read alike.
+    /// </remarks>
     public static class PanelRoundPlan
     {
         /// <summary>The artboard's 240 px disc, and the 32 between it and the rows beside it.</summary>
@@ -321,15 +275,17 @@ namespace OpenDashPlugin
 
         public const double PictureGap = 32;
 
-        /// <summary>Between two cards on the disc, across and down.</summary>
+        /// <summary>Between two cards on the disc, across and down: the plan's 6, where the artboard's two cards
+        /// stand 10 apart, so six fit.</summary>
         public const double CardGap = 6;
 
-        /// <summary>A card is padded 6 at the sides and 7 above and below.</summary>
+        /// <summary>A card is padded 6 at the sides and 7 above and below: the plan's numbers, tighter than the
+        /// artboard's .zone (9 by 10), so six fit.</summary>
         public const double CardPaddingX = 6;
 
         public const double CardPaddingY = 7;
 
-        /// <summary>Between a card's label and the card it shows.</summary>
+        /// <summary>Between a card's label and the card it shows: the plan's 4, the artboard's 6.</summary>
         public const double CardLineGap = 4;
 
         /// <summary>A card's height: its rule, its padding, the 11 px label and the 14 px card name at

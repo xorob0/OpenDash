@@ -1,11 +1,12 @@
 // PanelPitWallPlanTests.cs: the pit wall picture the Screens page draws -- one page at a time, the one "Page
 // on screen" picks -- held against the canvas the way PanelFacePlanTests holds the face's own picture.
 //
-// The picture and the sentences beside it disagreed before PanelPitWallPlan existed: the Tower page
-// stacked C above D and drew the wide zone down the left, while the row beside it read "Tower page, lower
-// left" for C and "lower right" for D, and the page's fixed panel was missing altogether. The last test
-// below is the one that keeps that from coming back: it reads each sentence's own words off the rectangle
-// the same table gives the zone, so a panel that moves either takes its sentence with it or fails here.
+// The picture disagreed with the words beside it before PanelPitWallPlan existed: the Tower page stacked C
+// above D and drew the wide zone down the left, while the row beside it read "Tower page, lower left" for C
+// and "lower right" for D, and the page's fixed panel was missing altogether. The rows no longer describe the
+// zones in words -- the picture beside the list shows them -- so what is held here is the table itself: every
+// panel inside its page, none covering another, and the zones the contract has, where the pit wall's pages
+// draw them.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace OpenDashPlugin.Tests
 
         private static PanelPitWallPlan.Page Page(string title)
         {
-            var page = PanelPitWallPlan.PageNamed(title);
+            var page = PanelPitWallPlan.Pages.FirstOrDefault(p => string.Equals(p.Title, title, StringComparison.Ordinal));
             Assert.True(page != null, "there is no page called " + title);
             return page;
         }
@@ -234,97 +235,38 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(declared, drawn);
         }
 
-        /// <summary>The sentence each row carries, word for word, because it is what the panel reads out
-        /// loud and a rewrite of the table must not quietly rewrite it.</summary>
+        /// <summary>A portrait zone's choice says where the zone is, since the portrait wall has no picture; a
+        /// landscape zone says it with the picture beside its list, so the model has no words for it.</summary>
         [Fact]
-        public void A_zone_says_where_it_is_in_the_words_the_canvas_uses()
+        public void A_portrait_zone_says_where_it_is()
         {
-            Assert.Equal("Race page, upper right.", Description("RaceA"));
-            Assert.Equal("Race page, lower right.", Description("RaceB"));
-            Assert.Equal("Tower page, lower left.", Description("TowerA"));
-            Assert.Equal("Tower page, lower right.", Description("TowerB"));
-            Assert.Equal("Telemetry page, top.", Description("TelemetryA"));
-            // A portrait zone's hover is its place alone, under a row that already says Portrait layout.
             Assert.Equal("Upper left.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitA")));
+            Assert.Equal("Upper right.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitB")));
+            Assert.Equal("Lower left.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitC")));
             Assert.Equal("Lower right.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitD")));
             Assert.Equal(string.Empty, PanelPitWallPlan.ZonePosition(null));
-            // Every zone of every page has one, the portrait package's included.
-            foreach (var slot in Contract.PitWallZoneSlots) Assert.NotEqual(string.Empty, PanelPitWallPlan.ZoneDescription(slot));
-        }
-
-        private static string Description(string key)
-        {
-            return PanelPitWallPlan.ZoneDescription(Contract.PitWallZoneSlotByKey(key));
+            foreach (var slot in Contract.PitWallZoneSlots)
+            {
+                Assert.Equal(slot.Landscape, PanelPitWallPlan.ZonePosition(slot).Length == 0);
+            }
         }
 
         /// <summary>
-        /// Every sentence is true of the rectangle the picture draws.
+        /// Every landscape zone is drawn where the pit wall's own pages put it: the Race page's two zones down
+        /// the right beside the board, the Tower page's two side by side under the wide zone, the Telemetry
+        /// page's three stacked, top to bottom in letter order.
         /// </summary>
-        /// <remarks>
-        /// The words are checked rather than generated, because "lower left" is read against the zones
-        /// sharing a band where there are several and against the middle of the page where a zone is alone
-        /// in its band, and no phrasing rule short of that produces the sentences the canvas writes. What
-        /// matters is that a picture the words no longer describe cannot be committed.
-        /// </remarks>
         [Fact]
-        public void Every_zone_is_drawn_where_its_row_says_it_is()
+        public void Every_zone_is_drawn_where_the_pit_wall_draws_it()
         {
-            foreach (var slot in Contract.PitWallZoneSlots)
-            {
-                if (!slot.Landscape) continue;
-                var sentence = PanelPitWallPlan.ZoneDescription(slot);
-                Assert.StartsWith(slot.Page + " page, ", sentence, StringComparison.Ordinal);
-                var where = sentence.Substring((slot.Page + " page, ").Length).TrimEnd('.');
-                // The wide zone spans its column and is described rather than placed, so there is nothing
-                // left and right to check it against.
-                if (slot.Wide) continue;
-                AssertWhere(slot, where);
-            }
-        }
-
-        private static void AssertWhere(Contract.PitWallZoneSlot slot, string where)
-        {
-            var letter = slot.Slot;
-            var page = Page(slot.Page);
-            var panel = Panel(slot.Page, letter);
-            var zones = page.Panels.Where(p => p.Configurable).ToList();
-            var said = slot.Page + " page, " + where + ": " + letter;
-
-            if (where == "top" || where == "middle" || where == "bottom")
-            {
-                var order = zones.OrderBy(p => p.Y).Select(p => p.Name).ToList();
-                var expected = new List<string> { "top", "middle", "bottom" }[order.IndexOf(letter)];
-                Assert.True(where == expected, said + " is the " + expected + " band of three");
-                return;
-            }
-
-            if (where.StartsWith("upper", StringComparison.Ordinal))
-            {
-                Assert.True(panel.CentreY < PanelPitWallPlan.ThumbHeight / 2, said + " is drawn in the lower half");
-            }
-            else
-            {
-                Assert.True(panel.CentreY > PanelPitWallPlan.ThumbHeight / 2, said + " is drawn in the upper half");
-            }
-
-            // Beside another zone, left and right are which of the two is which; alone in its band, they
-            // are which side of the page it is on. One above the other rather than beside it fails here,
-            // because a zone alone in its band at x 118 sits right of the middle whatever the words say.
-            var band = zones.Where(p => p.Y < panel.Bottom && panel.Y < p.Bottom).ToList();
-            var left = where.EndsWith("left", StringComparison.Ordinal);
-            if (band.Count > 1)
-            {
-                var edge = left ? band.Min(p => p.X) : band.Max(p => p.X);
-                Assert.True(panel.X == edge, said + " is not the " + (left ? "left" : "right") + " of its band");
-            }
-            else if (left)
-            {
-                Assert.True(panel.CentreX < PanelPitWallPlan.ThumbWidth / 2, said + " is drawn right of the middle");
-            }
-            else
-            {
-                Assert.True(panel.CentreX > PanelPitWallPlan.ThumbWidth / 2, said + " is drawn left of the middle");
-            }
+            Assert.True(Panel("Race", "A").CentreY < PanelPitWallPlan.ThumbHeight / 2);
+            Assert.True(Panel("Race", "B").CentreY > PanelPitWallPlan.ThumbHeight / 2);
+            Assert.True(Panel("Race", "A").CentreX > PanelPitWallPlan.ThumbWidth / 2);
+            Assert.True(Panel("Tower", "A").X < Panel("Tower", "B").X);
+            Assert.True(Panel("Tower", "A").Y >= Panel("Tower", "Wide").Bottom);
+            Assert.Equal(Panel("Tower", "A").Y, Panel("Tower", "B").Y);
+            Assert.True(Panel("Telemetry", "A").Bottom <= Panel("Telemetry", "B").Y);
+            Assert.True(Panel("Telemetry", "B").Bottom <= Panel("Telemetry", "C").Y);
         }
 
         /// <summary>The web view address box is the artboard's 320, and narrower only where 320 would squeeze
@@ -401,12 +343,13 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The round screen's disc, as Screens.dc.html draws it: 240 across, 32 from the rows, its cards 6
-        /// apart and padded 6 by 7, one column of 140 for two cards and two of 84 for six, every corner of
+        /// The round screen's disc: the artboard's 240 across and 32 from the rows, and on it the plan's own
+        /// cards -- 6 apart and padded 6 by 7, tighter than the artboard's two cards at 10 and 9 by 10, so that
+        /// the 800 round's six fit -- one column of 140 for two cards and two of 84 for six, every corner of
         /// every card inside the disc; twelve cards are not drawn on it at all.
         /// </summary>
         [Fact]
-        public void A_round_screens_picture_is_the_artboards_disc()
+        public void A_round_screens_picture_is_the_artboards_disc_with_the_plans_cards()
         {
             Assert.Equal(240, PanelRoundPlan.PictureSize);
             Assert.Equal(32, PanelRoundPlan.PictureGap);
