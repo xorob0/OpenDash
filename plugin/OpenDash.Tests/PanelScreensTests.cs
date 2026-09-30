@@ -271,7 +271,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, false));
             Assert.Equal("In SimHub", PanelScreens.StateLabel(ScreenState.InSimHub));
             Assert.Equal("Restart SimHub to load it", PanelScreens.StateLabel(ScreenState.Restart));
-            Assert.Equal("Missing from SimHub", PanelScreens.StateLabel(ScreenState.Missing));
+            Assert.Equal("Missing", PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
             Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
             Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));

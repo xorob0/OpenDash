@@ -86,9 +86,9 @@ namespace OpenDashPlugin
         public const string RestartToLoad = "Restart SimHub to load it";
 
         /// <summary>A card's state, and the title of the fix box under it: the dashboard's folder is gone. One
-        /// phrase for the one state, as <see cref="RestartToLoad"/> is, and Home's "Rim's dashboard is missing
-        /// from SimHub" in fewer words.</summary>
-        public const string Missing = "Missing from SimHub";
+        /// word for the one state, on the card and in the box, as <see cref="RestartToLoad"/> is one phrase;
+        /// Home's screen line draws this constant too, so the three say it alike.</summary>
+        public const string Missing = "Missing";
 
         /// <summary>The fix box under a screen whose dashboard is gone, titled as its card is; its detail is
         /// PanelAttention.MissingDetail.</summary>
