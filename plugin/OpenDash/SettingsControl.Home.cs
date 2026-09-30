@@ -27,7 +27,14 @@ namespace OpenDashPlugin
         {
             DrawsLighting();
             // The answer has already refreshed the issues when this runs; RebuildPage keeps the lines and the scroll.
-            OnUpdate(null, manual => RebuildPage());
+            // Only an answer that moved what the headline, the fix rows and the lines were drawn from rebuilds:
+            // "you have the newest release" lands mid-drag as often as any other, and a rebuild then takes the
+            // slider or a pressed row from under the pointer.
+            var drawn = PanelHome.DrawnFrom(issues);
+            OnUpdate(null, manual =>
+            {
+                if (PanelHome.DrawnFrom(issues) != drawn) RebuildPage();
+            });
             var head = new StackPanel { Orientation = Orientation.Vertical };
             var eyebrow = Ui.Eyebrow(PanelHome.Title);
             eyebrow.Margin = new Thickness(0, 0, 0, PanelHome.HeaderGap);
@@ -198,11 +205,9 @@ namespace OpenDashPlugin
                 Go(PanelPage.Screens);
                 // Go puts focus on the Screens page's first control at Loaded. The sheet opens after that, at
                 // Input, so its own focus (queued at Normal as it opens) lands last and inside the sheet, and
-                // the opener it remembers is a control still on screen.
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (route.Page == PanelPage.Screens) ShowAddScreen();
-                }), DispatcherPriority.Input);
+                // the opener it remembers is a control still on screen. Nothing queued before it navigates,
+                // and the shell's timers run at Background, after it, so the page is still Screens.
+                Dispatcher.BeginInvoke(new Action(() => ShowAddScreen()), DispatcherPriority.Input);
             });
             var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize);
             line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0);
@@ -627,11 +632,14 @@ namespace OpenDashPlugin
             var numeral = Ui.Text(PanelHome.Percent(value), PanelHome.QuickValueSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
             System.Windows.Documents.Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular);
             numeral.VerticalAlignment = VerticalAlignment.Center;
-            // The value is saved once, when the hand lets go or a key moves it; the figure follows every step.
+            // The value is saved once, when the hand lets go or a key moves it; the figure follows every step: a
+            // drag's through preview, and a key's here, since the kit calls only changed for a key and the
+            // rebuild that would redraw the figure waits for the keys to settle.
             // Writes the brightness the slider was built for, which its label names: a wheel's night-mode press
             // mid-drag rebuilds the page, and the drag's last value must not land on the other brightness.
             var slider = Ui.Slider(value, v =>
             {
+                numeral.Text = PanelHome.Percent(v);
                 if (nightOn)
                 {
                     if (v == Settings.LightsNightBrightness) return;

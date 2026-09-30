@@ -629,6 +629,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var slider = Ui.Slider(value, v =>", code);
             Assert.Contains("var numeral = Ui.Text(PanelHome.Percent(value), PanelHome.QuickValueSize,", code);
             Assert.Contains("}, v => numeral.Text = PanelHome.Percent(v), false);", code);
+            // A key step reaches only changed, so the figure is set there too, before an unchanged value returns.
+            Assert.Contains("var slider = Ui.Slider(value, v => { numeral.Text = PanelHome.Percent(v); if (nightOn) {", code);
             Assert.Contains("var night = Ui.Switch(nightOn, on =>", code);
         }
 
@@ -678,11 +680,34 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>An update check's answer can land while Home is showing and add or drop a row, so Home hears
-        /// it and draws itself again, headline and card together.</summary>
+        /// it and draws itself again, headline and card together; an answer that moved nothing Home drew, which
+        /// can land mid-drag, leaves the page alone.</summary>
         [Fact]
         public void The_page_draws_itself_again_when_the_update_check_answers()
         {
-            Assert.Contains("OnUpdate(null, manual => RebuildPage());", PageCode());
+            var code = PageCode();
+            Assert.Contains("var drawn = PanelHome.DrawnFrom(issues); OnUpdate(null, manual => { if (PanelHome.DrawnFrom(issues) != drawn) RebuildPage(); });", code);
+            Assert.DoesNotContain("OnUpdate(null, manual => RebuildPage());", code);
+        }
+
+        [Fact]
+        public void What_the_page_was_drawn_from_moves_with_every_word_a_row_draws()
+        {
+            var steps = new List<string[]> { new[] { "Devices", "Wheel" }, new[] { "Select it." } };
+            Func<string, string, string, string, IList<string[]>, PanelIssue> issue = (id, title, detail, press, s) =>
+                new PanelIssue(id, PanelPage.Leds, "LedBar1", title, detail, s, press, PanelIssueAction.CheckAgain);
+            var one = new[] { issue("a", "Title", "Detail", "Press", steps) };
+            var key = PanelHome.DrawnFrom(one);
+            Assert.Equal(key, PanelHome.DrawnFrom(new[] { issue("a", "Title", "Detail", "Press", new List<string[]> { new[] { "Devices", "Wheel" }, new[] { "Select it." } }) }));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new[] { issue("b", "Title", "Detail", "Press", steps) }));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new[] { issue("a", "Title 2", "Detail", "Press", steps) }));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new[] { issue("a", "Title", "Detail 2", "Press", steps) }));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new[] { issue("a", "Title", "Detail", "Press 2", steps) }));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new[] { issue("a", "Title", "Detail", "Press", new List<string[]> { new[] { "Devices" } }) }));
+            // A row added or dropped moves it; no issues at all is its own key.
+            Assert.NotEqual(key, PanelHome.DrawnFrom(one.Concat(one).ToList()));
+            Assert.NotEqual(key, PanelHome.DrawnFrom(new PanelIssue[0]));
+            Assert.Equal(PanelHome.DrawnFrom(new PanelIssue[0]), PanelHome.DrawnFrom(null));
         }
 
         /// <summary>The attention card draws every part of each issue: the headline counts them, the well
@@ -744,7 +769,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
             // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last.
-            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); Dispatcher.BeginInvoke(new Action(() => { if (route.Page == PanelPage.Screens) ShowAddScreen(); }), DispatcherPriority.Input); });", code);
+            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); Dispatcher.BeginInvoke(new Action(() => ShowAddScreen()), DispatcherPriority.Input); });", code);
+            // The shell's route is its own, not a hook: Home never reads it.
+            Assert.DoesNotContain("route.", code);
             Assert.DoesNotContain("Go(PanelPage.Screens); ShowAddScreen();", code);
             Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));", code);
             Assert.Contains("HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens),", code);

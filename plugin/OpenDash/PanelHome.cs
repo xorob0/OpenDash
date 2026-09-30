@@ -155,6 +155,21 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// What the headline, the fix rows and the Right now lines were drawn from, as one key: each issue's id
+        /// and every word its row draws. Home draws itself again on an update check's answer only when this
+        /// moved, since the answer lands whenever it lands, a drag or a press included.
+        /// </summary>
+        public static string DrawnFrom(IEnumerable<PanelIssue> issues)
+        {
+            return string.Join("\n", (issues ?? Enumerable.Empty<PanelIssue>()).Where(issue => issue != null).Select(issue =>
+                string.Join("|", new[]
+                {
+                    issue.Id, issue.Title, issue.Detail, issue.ActionLabel,
+                    string.Join(">", issue.Steps.Select(step => string.Join("/", step ?? new string[0]))),
+                })));
+        }
+
         /// <summary>Whether an issue's press sits beside its text. Where two blocks do not fit side by side it
         /// goes under the text, so a narrow panel does not squeeze the sentence into a column of words.</summary>
         public static bool PressBeside(bool twoColumns)
