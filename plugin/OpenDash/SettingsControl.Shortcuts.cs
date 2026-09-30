@@ -50,6 +50,8 @@ namespace OpenDashPlugin
             public FrameworkElement Editor;
             public Border Row;
             public FrameworkElement Shown;
+            /// <summary>The binder's slot, outlined in caution while a clash line names the row.</summary>
+            public Border Slot;
             public bool Bindable;
             public string Place;
             public string Does;
@@ -399,9 +401,10 @@ namespace OpenDashPlugin
             if (fallback != null) fallback.TextWrapping = TextWrapping.Wrap;
             if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;
             var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];
-            var row = ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);
+            Border slot;
+            var row = ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, tags);
             Ui.Anchor(row, PanelBindings.Anchor(binding.Action));
-            group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Bindable = true, Place = place, Does = binding.Does });
+            group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Slot = slot, Bindable = true, Place = place, Does = binding.Does });
             group.Body.Children.Add(row);
         }
 
@@ -414,9 +417,10 @@ namespace OpenDashPlugin
             // bindings start once its name column is dropped.
             var chip = Ui.BindingChip(Ui.NotBound, false, key: true);
             chip.HorizontalAlignment = HorizontalAlignment.Left;
-            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);
+            Border slot;
+            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot);
             var shown = Ui.Soon(row, item);
-            group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Bindable = false });
+            group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Slot = slot, Bindable = false });
             group.Body.Children.Add(shown);
         }
 
@@ -426,9 +430,12 @@ namespace OpenDashPlugin
         /// sized by each row's control, so press and binder line up down a card, greyed rows included. Where
         /// the content cannot give the name room beside them, the binder goes under the name and the press.
         /// </summary>
-        /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name.</remarks>
-        private static Border ShortcutsRow(string label, string press, FrameworkElement control, ShortcutsLayout layout, FrameworkElement caption, params FrameworkElement[] tags)
+        /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name. The
+        /// slot is handed back for the clash mark: it always keeps a border's room, empty until a clash line
+        /// names the row, so marking a row moves nothing in it.</remarks>
+        private static Border ShortcutsRow(string label, string press, FrameworkElement control, ShortcutsLayout layout, FrameworkElement caption, out Border slot, params FrameworkElement[] tags)
         {
+            slot = null;
             var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             var name = Ui.Text(label, PanelShortcuts.RowNameSize, FontWeights.Normal, Theme.TextPrimary);
             name.TextWrapping = TextWrapping.Wrap;
@@ -465,9 +472,18 @@ namespace OpenDashPlugin
                 control.Margin = new Thickness(0);
                 control.VerticalAlignment = VerticalAlignment.Center;
                 // BuildBinder's floor gives way to a slot narrower than it, so SimHub's template is laid out in
-                // the room it has, its Change and Clear included, rather than clipped at the slot's edge.
-                control.MinWidth = Math.Min(control.MinWidth, layout.Binder);
-                var slot = new Border { Child = control, Width = layout.Binder, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+                // the room it has inside the clash outline's room, its Change and Clear included, rather than
+                // clipped at the slot's edge.
+                control.MinWidth = Math.Min(control.MinWidth, Math.Max(0, layout.Binder - 2 * PanelMetrics.BorderWeight));
+                slot = new Border
+                {
+                    Child = control,
+                    Width = layout.Binder,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                    CornerRadius = new CornerRadius(Theme.Radius),
+                };
                 if (layout.Stacks)
                 {
                     grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -570,17 +586,23 @@ namespace OpenDashPlugin
             if (focused != null && focused.Shown.Visibility != Visibility.Visible) ShortcutsKeepFocus(groups, focused, filter);
 
             banner.Children.Clear();
-            if (readable)
+            var clashes = readable
+                ? PanelShortcuts.Clashes(groups.SelectMany(group => group.Rows).Where(row => row.Bindable).SelectMany(row => uses[row]))
+                : new List<PanelShortcuts.Clash>();
+            foreach (var clash in clashes)
             {
-                var all = groups.SelectMany(group => group.Rows).Where(row => row.Bindable).SelectMany(row => uses[row]);
-                foreach (var clash in PanelShortcuts.Clashes(all))
-                {
-                    var line = ShortcutsClashLine(clash);
-                    if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);
-                    banner.Children.Add(line);
-                }
+                var line = ShortcutsClashLine(clash);
+                if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);
+                banner.Children.Add(line);
             }
             banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            // Each row the lines name has its binder outlined in caution, and every other loses its outline,
+            // so a row cleared or rebound, or a page no longer readable, keeps no stale mark.
+            foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Slot != null))
+            {
+                var marked = row.Bindable && PanelShortcuts.Marks(clashes, row.Place, row.Does);
+                row.Slot.BorderBrush = marked ? Ui.Brush(Theme.CautionDeep) : null;
+            }
 
             var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);
             empty.Text = emptyText ?? string.Empty;

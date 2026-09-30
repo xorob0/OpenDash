@@ -378,20 +378,37 @@ namespace OpenDashPlugin
             public Fires Fires { get; private set; }
         }
 
-        /// <summary>A trigger bound to more than one row: its name, drawn strong, and the rest of the line.</summary>
+        /// <summary>A trigger bound to more than one row: its name, drawn strong, the rest of the line, and
+        /// the uses it names, whose rows the page marks.</summary>
         public sealed class Clash
         {
-            public Clash(string trigger, string lead, string rest)
+            public Clash(string trigger, string lead, string rest, IList<BindingUse> uses = null)
             {
                 Trigger = trigger;
                 Lead = lead;
                 Rest = rest;
+                Uses = uses ?? new List<BindingUse>();
             }
 
             public string Trigger { get; private set; }
             public string Lead { get; private set; }
             public string Rest { get; private set; }
+            public IList<BindingUse> Uses { get; private set; }
             public string Text { get { return Lead + " " + Rest; } }
+        }
+
+        /// <summary>
+        /// Whether a row is one a clash line names, by the card it is on and what it does: the artboard's
+        /// "Row bound with clash", whose binder is outlined in caution (.key.clash), so the driver finds
+        /// the doubled rows without reading them out of the line. Main dash's and Rim's zone B for "CSL
+        /// Elite · 7 cycles zone B on both Main dash and Rim.", and no other row.
+        /// </summary>
+        public static bool Marks(IEnumerable<Clash> clashes, string place, string does)
+        {
+            return (clashes ?? Enumerable.Empty<Clash>())
+                .Where(clash => clash != null)
+                .SelectMany(clash => clash.Uses)
+                .Any(use => use != null && use.Place == place && use.Does == does);
         }
 
         /// <summary>
@@ -477,7 +494,7 @@ namespace OpenDashPlugin
                     .Where(heard => (heard.OnShort && shortDoubled) || (heard.OnLong && longDoubled))
                     .Select(heard => heard.Use)
                     .ToList();
-                clashes.Add(new Clash(trigger, PanelBindings.TriggerLabel(trigger) ?? trigger, ClashRest(doubled)));
+                clashes.Add(new Clash(trigger, PanelBindings.TriggerLabel(trigger) ?? trigger, ClashRest(doubled), doubled));
             }
             return clashes;
         }

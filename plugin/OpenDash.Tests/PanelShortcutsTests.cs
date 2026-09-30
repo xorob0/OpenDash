@@ -408,6 +408,43 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CSL Elite · 7", clash.Lead);
             Assert.Equal("cycles zone B on both Main dash and Rim.", clash.Rest);
             Assert.Equal("JoystickPlugin.CSL_Elite_B07", clash.Trigger);
+
+            // The artboard's "Row bound with clash": both zone B rows it names are marked, Main dash's zone C,
+            // on another button, is not, and nor is a row the line does not name.
+            Assert.Equal(new[] { "Main dash", "Rim" }, clash.Uses.Select(use => use.Place));
+            Assert.True(PanelShortcuts.Marks(clashes, "Main dash", zoneB));
+            Assert.True(PanelShortcuts.Marks(clashes, "Rim", zoneB));
+            Assert.False(PanelShortcuts.Marks(clashes, "Main dash", PanelShortcuts.ZoneDoes("Zone C", true)));
+            Assert.False(PanelShortcuts.Marks(clashes, "Pit wall", zoneB));
+            Assert.False(PanelShortcuts.Marks(clashes, null, zoneB));
+            Assert.False(PanelShortcuts.Marks(null, "Rim", zoneB));
+            Assert.False(PanelShortcuts.Marks(new PanelShortcuts.Clash[] { null }, "Rim", zoneB));
+        }
+
+        [Fact]
+        public void A_row_is_marked_only_on_the_gesture_that_doubles_it()
+        {
+            // A short press on Zone A's next page beside two long presses: only the two long presses clash, so
+            // only their rows are marked.
+            var clashes = PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), PanelShortcuts.Fires.OnShortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), PanelShortcuts.Fires.OnLongPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", false), PanelShortcuts.Fires.OnLongPress),
+            });
+            Assert.False(PanelShortcuts.Marks(clashes, "Rim", PanelShortcuts.ZoneDoes("Zone A", true)));
+            Assert.True(PanelShortcuts.Marks(clashes, "Rim", PanelShortcuts.ZoneDoes("Zone A", false)));
+            Assert.True(PanelShortcuts.Marks(clashes, "Rim", PanelShortcuts.ZoneDoes("Band D", false)));
+            // The rig's own rows are placed nowhere and marked by what they do.
+            var rig = PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.N", null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)),
+                Use("KeyboardReaderPlugin.N", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+            });
+            Assert.True(PanelShortcuts.Marks(rig, null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)));
+            Assert.False(PanelShortcuts.Marks(rig, null, PanelShortcuts.RigActionDoes(Contract.BrightnessUpAction)));
+            // No clash, no mark.
+            Assert.False(PanelShortcuts.Marks(PanelShortcuts.Clashes(new[] { Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes) }), "Rim", PanelShortcuts.GlanceDoes));
         }
 
         [Fact]
@@ -578,7 +615,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(266, PanelShortcuts.BinderSlot(300, true));
             Assert.Equal(0, PanelShortcuts.BinderSlot(20, true));
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
-            Assert.Contains("control.MinWidth = Math.Min(control.MinWidth, layout.Binder);", code);
+            Assert.Contains("control.MinWidth = Math.Min(control.MinWidth, Math.Max(0, layout.Binder - 2 * PanelMetrics.BorderWeight));", code);
             // SimHub's editor draws no name of its own: the row's beside it says what it binds.
             Assert.Empty(PanelShortcuts.EditorName);
         }
@@ -832,9 +869,9 @@ namespace OpenDashPlugin.Tests
 
             // The rows as the model gives them: its label and press, the New tag where the model says, the
             // greyed rows by the registry's titles, and each card's line beside its name.
-            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);", code);
+            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, tags);", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
-            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);", code);
+            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot);", code);
             Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);
@@ -849,7 +886,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);", code);
             Assert.Contains("control.Margin = new Thickness(0);", code);
             Assert.DoesNotContain("control.Margin = new Thickness(PanelShortcuts", code);
-            Assert.Contains("var slot = new Border { Child = control, Width = layout.Binder,", code);
+            Assert.Contains("Child = control,\n                    Width = layout.Binder,", code.Replace("\r\n", "\n"));
             Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + layout.Binder) }", code);
             Assert.DoesNotContain("GridLength.Auto });\n                    control", code.Replace("\r\n", "\n"));
             Assert.Contains("control.FriendlyName = PanelShortcuts.EditorName;", code);
@@ -865,8 +902,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;", code);
             Assert.Contains("PanelShortcuts.Shows(chosen, states[row])", code);
             Assert.Contains("var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable);", code);
-            Assert.Contains("if (readable)\n", code.Replace("\r\n", "\n"));
-            Assert.Contains("foreach (var clash in PanelShortcuts.Clashes(all))", code);
+            // The clash lines only when the page is readable, and each row a line names outlined in caution,
+            // every other row's outline cleared on every pass.
+            Assert.Contains("var clashes = readable\n                ? PanelShortcuts.Clashes(groups.SelectMany(group => group.Rows).Where(row => row.Bindable).SelectMany(row => uses[row]))\n                : new List<PanelShortcuts.Clash>();", code.Replace("\r\n", "\n"));
+            Assert.Contains("foreach (var clash in clashes)", code);
+            var mark = Between(code, "foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Slot != null))", "var emptyText =");
+            Assert.Contains("var marked = row.Bindable && PanelShortcuts.Marks(clashes, row.Place, row.Does);", mark);
+            Assert.Contains("row.Slot.BorderBrush = marked ? Ui.Brush(Theme.CautionDeep) : null;", mark);
+            var slot = Between(code, "slot = new Border\n", "};");
+            Assert.Contains("BorderThickness = new Thickness(PanelMetrics.BorderWeight),", slot);
+            Assert.Contains("Slot = slot, Bindable = true, Place = place, Does = binding.Does", code);
+            Assert.Contains("Slot = slot, Bindable = false", code);
             // A binding's presses come off SimHub's mapping by the name of its press type.
             Assert.Contains("PanelShortcuts.FiresOn(mapping.PressType.ToString())", code);
 
