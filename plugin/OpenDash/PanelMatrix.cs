@@ -237,6 +237,16 @@ namespace OpenDashPlugin
             return string.IsNullOrWhiteSpace(name) ? DefaultName(matrix) : name;
         }
 
+        /// <summary>
+        /// Where a matrix's own settings sit in each per-matrix array (FlagBoxFlags and the rest): matrix n at
+        /// n - 1, the entry Settings' readers (MatrixFlags and the rest, through Pick) take it from. Every
+        /// switch on the page writes through this, so a write can never land on another matrix's entry.
+        /// </summary>
+        public static int Index(int matrix)
+        {
+            return matrix - 1;
+        }
+
         /// <summary>The selection a card keeps for the session (SettingsControl.Select), as text.</summary>
         public static string SlotId(int matrix)
         {

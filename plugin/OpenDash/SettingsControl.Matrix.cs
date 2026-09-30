@@ -397,7 +397,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildMatrixPriority(int matrix, Action repaint)
         {
             var m = matrix;
-            var i = m - 1;
+            var i = PanelMatrix.Index(m);
 
             var reorder = Ui.HStack(PanelMatrix.ReorderGap,
                 Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary),

@@ -516,6 +516,11 @@ namespace OpenDashPlugin.Tests
         public void Every_control_is_drawn_with_the_setting_it_reads_and_writes()
         {
             var flat = FlatSource();
+            // Every indexed write lands on the matrix whose switch it is: the one index, taken from the slot the
+            // list is drawn for, and nothing else named i.
+            Assert.Contains("private FrameworkElement BuildMatrixPriority(int matrix, Action repaint) { var m = matrix; var i = PanelMatrix.Index(m);", flat);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, @"var i = ").Count);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, @"for \(var i = 0; i < chips\.Children\.Count; i\+\+\)"));
             foreach (var pin in new[]
             {
                 "var flags = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.FlagsTitle), PanelMatrix.FlagsTitle, null, null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[i] = on; Save(); repaint(); })), MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, null, BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint(); })));",
@@ -545,6 +550,32 @@ namespace OpenDashPlugin.Tests
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(write)));
             }
             Assert.Equal(9, System.Text.RegularExpressions.Regex.Matches(flat, @"BuildToggle\(").Count);
+        }
+
+        /// <summary>
+        /// The index every switch writes at is the entry Settings reads the same matrix from: a write at
+        /// Index(n) moves matrix n and no other, for each of the four.
+        /// </summary>
+        [Fact]
+        public void A_matrix_writes_the_entry_its_own_settings_are_read_from()
+        {
+            Assert.Equal(0, PanelMatrix.Index(1));
+            Assert.Equal(3, PanelMatrix.Index(PanelMatrix.MaxPanels));
+            for (var n = 1; n <= PanelMatrix.MaxPanels; n++)
+            {
+                var settings = new OpenDashSettings();
+                settings.Normalise();
+                for (var k = 1; k <= PanelMatrix.MaxPanels; k++) settings.AddMatrixPanel("M" + k);
+                var before = Enumerable.Range(1, PanelMatrix.MaxPanels).Select(k => settings.MatrixFlags(k)).ToArray();
+                var i = PanelMatrix.Index(n);
+                settings.FlagBoxFlags[i] = !settings.MatrixFlags(n);
+                settings.FlagBoxSide[i] = settings.MatrixSide(n) == "left" ? "right" : "left";
+                for (var k = 1; k <= PanelMatrix.MaxPanels; k++)
+                {
+                    Assert.Equal(k == n ? !before[k - 1] : before[k - 1], settings.MatrixFlags(k));
+                }
+                Assert.NotEqual(Contract.DefaultFlagBoxSide, settings.MatrixSide(n));
+            }
         }
 
         [Fact]
