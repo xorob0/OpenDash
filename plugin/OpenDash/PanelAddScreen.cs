@@ -430,9 +430,11 @@ namespace OpenDashPlugin
             return "Added " + name + ". Restart SimHub, then assign \"" + title + "\" to this display in Dash Studio.";
         }
 
-        public static string AddFailed(string name, string error)
+        /// <summary>An add whose dashboard was not written: the screen is on the rig, and the reason is in
+        /// SimHub's log (voice.md), as <see cref="DuplicateFailed"/> and PanelLights.BarAddFailed say it.</summary>
+        public static string AddFailed(string name)
         {
-            return "Added " + name + ", but its dashboard could not be installed: " + error;
+            return "Added " + name + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
         public static string Resized(string name, string size, string title)
@@ -440,9 +442,9 @@ namespace OpenDashPlugin
             return name + " is now " + size + ". Restart SimHub, then assign \"" + title + "\" to this display again in Dash Studio.";
         }
 
-        public static string ResizeFailed(string name, string error)
+        public static string ResizeFailed(string name)
         {
-            return "Could not resize " + name + ": " + error;
+            return "Could not resize " + name + ". See SimHub's log.";
         }
 
         /// <summary>
@@ -477,9 +479,9 @@ namespace OpenDashPlugin
             return "Renamed to " + title + ". Restart SimHub to see the new name in Dash Studio.";
         }
 
-        public static string RenameFailed(string name, string error)
+        public static string RenameFailed(string name)
         {
-            return "Renamed " + name + ", but its dashboard could not be written: " + error;
+            return "Renamed " + name + ", but its dashboard could not be written. See SimHub's log.";
         }
 
         public static string Reinstalled(string name)
@@ -487,9 +489,18 @@ namespace OpenDashPlugin
             return "Installed " + name + "'s dashboard again. Restart SimHub to load it.";
         }
 
+        /// <summary>
+        /// A reinstall that did not write the dashboard, pointing at the log rather than repeating it: the
+        /// installer's error can be a sentence of its own naming the settings model's kind ("This build
+        /// ships no package for a 1280 × 480 slots."), which is for a contributor.
+        /// </summary>
+        /// <remarks>
+        /// Two arguments still, because the shell's InstallScreenAgain calls it with the error it logs; the
+        /// error is not drawn.
+        /// </remarks>
         public static string ReinstallFailed(string name, string error)
         {
-            return "Could not install " + name + "'s dashboard: " + error;
+            return "Could not install " + name + "'s dashboard. See SimHub's log.";
         }
     }
 }

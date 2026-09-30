@@ -816,7 +816,8 @@ namespace OpenDashPlugin
                     plugin.Installer.Refresh();
                     Select(PanelPage.Screens, screen.Namespace);
                     Redraw();
-                    Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name, result.Error), result.Ok);
+                    if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
+                    Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
                     return;
                 default:
                     Save();
@@ -845,6 +846,7 @@ namespace OpenDashPlugin
             plugin.Installer.Refresh();
             Select(PanelPage.Screens, screen.Namespace);
             Redraw();
+            if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
             Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
         }
 
@@ -868,7 +870,8 @@ namespace OpenDashPlugin
             plugin.Installer.Refresh();
             Select(PanelPage.Screens, screen.Namespace);
             Redraw();
-            Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, result.Error), result.Ok);
+            if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
+            Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name), result.Ok);
         }
 
         private static string StockNamespaceOf(PackageEntry entry)
@@ -890,7 +893,8 @@ namespace OpenDashPlugin
             // Said at the moment it becomes true rather than left to be found: SimHub reads its template list
             // once, at startup, and assigning a dashboard to a display is in another part of SimHub entirely.
             // The dashboard is listed under its title, which is the name the driver just chose.
-            Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name, result.Error), result.Ok);
+            if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
+            Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
         }
 
         /// <summary>
@@ -913,7 +917,8 @@ namespace OpenDashPlugin
             plugin.Installer.Refresh();
             Select(PanelPage.Screens, copy.Namespace);
             Redraw();
-            Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name, result.Error), result.Ok);
+            if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
+            Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
         }
 
         /// <summary>

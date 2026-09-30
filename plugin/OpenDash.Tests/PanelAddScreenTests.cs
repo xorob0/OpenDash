@@ -324,8 +324,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Save", PanelAddScreen.SaveButton);
             Assert.Equal("Applies the name and the size, and writes the dashboard.", PanelAddScreen.SaveTooltip);
             Assert.Equal("Goes back without changing anything.", PanelAddScreen.EditCancelTooltip);
-            Assert.Equal("Added Rim, but its dashboard could not be installed: disk full", PanelAddScreen.AddFailed("Rim", "disk full"));
-            Assert.Equal("Could not resize Rim: disk full", PanelAddScreen.ResizeFailed("Rim", "disk full"));
+            // A failure says what happened and points at the log, where the installer's reason is written
+            // (voice.md), as Duplicate and Remove do.
+            Assert.Equal("Added Rim, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.AddFailed("Rim"));
+            Assert.Equal("Could not resize Rim. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }
@@ -379,13 +381,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Rim", reinstalled);
             Assert.Contains("Restart SimHub", reinstalled);
 
-            // A failure names the screen and the reason, and claims nothing about restarting.
-            Assert.Contains("disk full", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
-            Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
+            // A failure names the screen and points at the log rather than repeating the installer's reason,
+            // which can be a sentence of its own in the settings model's words, and claims nothing about
+            // restarting.
+            var slots = "This build ships no package for a 1280 × 480 slots.";
+            Assert.Equal("Could not install Rim's dashboard. See SimHub's log.", PanelAddScreen.ReinstallFailed("Rim", slots));
+            Assert.DoesNotContain("slots", PanelAddScreen.ReinstallFailed("Rim", slots));
+            Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", slots));
             // A rename whose dashboard could not be written did happen: the card says Wheel, and the
             // line has to admit the half that did not land rather than report a plain failure.
-            Assert.Contains("Renamed", PanelAddScreen.RenameFailed("Wheel", "disk full"));
-            Assert.Contains("disk full", PanelAddScreen.RenameFailed("Wheel", "disk full"));
+            Assert.Equal("Renamed Wheel, but its dashboard could not be written. See SimHub's log.", PanelAddScreen.RenameFailed("Wheel"));
         }
 
         /// <summary>The reinstall says what it costs, and says more when there is something to lose.</summary>
