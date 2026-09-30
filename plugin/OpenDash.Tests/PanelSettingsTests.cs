@@ -101,9 +101,12 @@ namespace OpenDashPlugin.Tests
             var hints = Regex.Matches(page, @"SettingsHinted\([^;\n]*PanelSettings\.(\w+Hint)\)").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
             Assert.Equal(new[] { "FirstNameHint", "SurnameHint", "RaceNumberHint" }, hints);
             Assert.All(hints, name => Assert.True(((string)typeof(PanelSettings).GetField(name).GetValue(null)).Any(char.IsLetterOrDigit), name));
-            // The temperatures' placeholder is the unit's default, a number.
-            Assert.Contains("return SettingsHinted(box, PanelSettings.ThresholdText(fallback));", page);
-            Assert.Equal(4, Regex.Matches(page, @"SettingsHinted\(").Count - 1);
+            Assert.Equal(3, Regex.Matches(page, @"SettingsHinted\(").Count - 1);
+            // The temperatures' placeholder is the unit's default, a number, when it is set and when it follows
+            // SimHub's unit.
+            Assert.Contains("placeholder = SettingsHint(box, PanelSettings.ThresholdText(fallback));", page);
+            Assert.Equal(2, Regex.Matches(page, @"SettingsHint\(").Count - 1);
+            Assert.Equal(2, Regex.Matches(page, @"Default\.Text = PanelSettings\.ThresholdText\(PanelSettings\.TemperatureDefault\(").Count);
         }
 
         [Fact]
@@ -508,7 +511,7 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"var heading = Ui\.HStack\(PanelSettings\.AlertsHeadingTagGap, Ui\.Heading\(PanelSettings\.AlertsTitle, true\), Ui\.NewTag\(\)\);\s*heading\.HorizontalAlignment = HorizontalAlignment\.Left;\s*heading\.Margin = new Thickness\(0, 0, 0, PanelKit\.SectionHeadingGapSettings\);", page);
             Assert.Contains("hint.Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0);", page);
             Assert.Contains("box.FontWeight = FontWeight.FromOpenTypeWeight(PanelSettings.NumberFieldFontWeight);", page);
-            Assert.Contains("Ui.Text(line, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary)", page);
+            Assert.Contains("var unitsLine = Ui.Text(string.Empty, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary);", page);
             Assert.Contains("Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeight.FromOpenTypeWeight(PanelSettings.PreviewPercentFontWeight), Theme.TextSecondary, PanelFonts.Data)", page);
             Assert.Contains("Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.AlertNameFontWeight), Theme.TextPrimary)", page);
             Assert.Contains("Ui.Text(text, PanelSettings.IndexLinkTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.IndexLinkFontWeight), Theme.TextSecondary)", page);
@@ -641,13 +644,13 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// SimHub applies its units after its own Settings window has closed and after SimHub's main window has
         /// been activated again, from that window's Apply, or with a new GameManager on a change of game, and
-        /// nothing rebuilds the page then: the page reads them again on its tick and is drawn again only when
-        /// one moved, so a driver never types a threshold against a stale unit. A window's Activated would
-        /// read them before SimHub has set them. A failed read is logged once, not once a second. The tick waits
-        /// while a text box has the keyboard, so a rebuild never lands in the middle of a typed threshold.
+        /// nothing rebuilds the page then: the page reads them again on its tick and, when one moved, sets
+        /// every text they decide again in place, so a driver never types a threshold against a stale unit and
+        /// a box being typed in is never rebuilt under them. A window's Activated would read them before
+        /// SimHub has set them. A failed read is logged once, not once a second.
         /// </summary>
         [Fact]
-        public void The_page_is_drawn_again_when_simhubs_units_move()
+        public void The_page_follows_simhubs_units_in_place()
         {
             var metric = new[] { "Kmh", "Celcius", "Bar", "Liters" };
             Assert.False(PanelSettings.UnitsMoved(metric, new[] { "Kmh", "Celcius", "Bar", "Liters" }));
@@ -658,10 +661,23 @@ namespace OpenDashPlugin.Tests
             var page = Page();
             // Never while a text box has the keyboard: a rebuild would commit the half-typed number and the
             // restored box would take the rest of it in front of its caret.
-            Assert.Matches(@"OnTick\(\(\) =>\s*\{\s*if \(Keyboard\.FocusedElement is TextBox \|\| !PanelSettings\.UnitsMoved\(units, SettingsUnitNames\(\)\)\) return;\s*RebuildPage\(\);\s*\}\);", page);
-            Assert.Single(Regex.Matches(page, @"RebuildPage\(\)"));
+            Assert.Matches(@"OnTick\(\(\) =>\s*\{\s*var now = SettingsUnitNames\(\);\s*if \(!PanelSettings\.UnitsMoved\(units, now\)\) return;\s*units = now;\s*foreach \(var follow in settingsUnitsFollow\) follow\(now\);\s*\}\);", page);
+            // Set in place, never rebuilt: a rebuild would commit a half-typed number and move the caret, so the
+            // tick would have to stand down while any text box had the keyboard.
+            Assert.DoesNotContain("RebuildPage(", page);
+            Assert.DoesNotContain("Keyboard.FocusedElement", page);
             Assert.DoesNotContain("Activated", page);
-            Assert.Contains("if (!settingsUnitsFailed) Log.Warn(\"Reading SimHub's units failed: \" + ex.Message);", page);
+            // Emptied before the sections are built, so a follower of an old build never outlives it.
+            Assert.Matches(@"var units = SettingsUnitNames\(\);\s*settingsUnitsFollow\.Clear\(\);\s*var sections = ", page);
+            // Everything the units decide follows them: the Units line (collapsed when SimHub answers none),
+            // the fuel target's unit, the unit after each temperature and both temperature defaults.
+            Assert.Equal(4, Regex.Matches(page, @"settingsUnitsFollow\.Add\(").Count);
+            Assert.Matches(@"Action<string\[\]> showUnits = now =>\s*\{\s*var line = PanelSettings\.UnitsLine\(now\[0\], now\[1\], now\[2\], now\[3\]\);\s*unitsLine\.Text = line \?\? string\.Empty;\s*unitsLine\.Visibility = line == null \? Visibility\.Collapsed : Visibility\.Visible;\s*\};\s*showUnits\(units\);\s*settingsUnitsFollow\.Add\(showUnits\);", page);
+            Assert.Contains("settingsUnitsFollow.Add(now => fuelUnit.Text = PanelSettings.FuelTargetUnit(now[3]));", page);
+            Assert.Contains("settingsUnitsFollow.Add(now => unit.Text = PanelSettings.TemperatureUnit(now[1]) ?? string.Empty);", page);
+            Assert.Matches(@"settingsUnitsFollow\.Add\(now =>\s*\{\s*oilDefault\.Text = PanelSettings\.ThresholdText\(PanelSettings\.TemperatureDefault\(true, now\[1\]\)\);\s*waterDefault\.Text = PanelSettings\.ThresholdText\(PanelSettings\.TemperatureDefault\(false, now\[1\]\)\);\s*\}\);", page);
+            // A failed read is logged once: the flag is set after the warning and cleared by a read that works.
+            Assert.Matches(@"if \(!settingsUnitsFailed\) Log\.Warn\(""Reading SimHub's units failed: "" \+ ex\.Message\);\s*settingsUnitsFailed = true;", page);
             Assert.Contains("settingsUnitsFailed = false;", page);
         }
 
@@ -705,7 +721,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("when.Add(box ?? SettingsGreyedBox(alert.Example));", drawn);
             Assert.Matches(@"if \(example != null\) return SettingsNumberField\(example\);\s*return SettingsNoValue\(SettingsNumberField\(string\.Empty\)\);", drawn);
             Assert.Matches(@"new System\.Windows\.Shapes\.Rectangle\s*\{\s*Width = PanelSettings\.NoValueDashWidth,\s*Height = PanelSettings\.NoValueDashWeight,\s*Fill = Ui\.Brush\(Theme\.TextLabel\),\s*\};\s*return SettingsOverlaid\(box, dash\);", drawn);
-            Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), Ui.Caption(fuelUnit))", drawn);
+            Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), fuelUnit)", drawn);
             // The box is drawn on every row, outside the word's condition.
             Assert.Matches(@"if \(alert\.HasThreshold\) when\.Add\(Ui\.Caption\(alert\.Op\)\);\s*when\.Add\(box \?\? SettingsGreyedBox\(alert\.Example\)\);", drawn);
             Assert.Equal(new[] { PanelSoon.TyreWear, PanelSoon.PitWindowOpen, PanelSoon.Incidents, PanelSoon.HybridBatteryLow }.Select(s => s.Title),
@@ -865,8 +881,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var nightMode = BuildToggle(Settings.LightsNightMode,", page);
             // The three alert boxes, each whole: what it reads, its default and clamp, and what it writes.
             Assert.Contains("var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });", page);
-            Assert.Contains("var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); });", page);
-            Assert.Contains("var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); });", page);
+            Assert.Contains("var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); }, out oilDefault);", page);
+            Assert.Contains("var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); }, out waterDefault);", page);
             // Try opens the row's own scenario.
             Assert.Contains("var scenario = alert.ScenarioId;", page);
             // Each slider reads, commits and previews its own brightness: the day's between the two calls, the
@@ -939,8 +955,7 @@ namespace OpenDashPlugin.Tests
             // The threshold cell: the word, the box, then the unit -- SimHub's temperature unit where the row
             // has none of its own.
             Assert.Contains("if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));", page);
-            Assert.Contains("var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);", page);
-            Assert.Contains("if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));", page);
+            Assert.Matches(@"if \(alert\.Unit == null\)\s*\{\s*var unit = Ui\.Caption\(PanelSettings\.TemperatureUnit\(temperature\) \?\? string\.Empty\);\s*settingsUnitsFollow\.Add\(now => unit\.Text = PanelSettings\.TemperatureUnit\(now\[1\]\) \?\? string\.Empty\);\s*when\.Add\(unit\);\s*\}\s*else if \(alert\.Unit\.Length > 0\) when\.Add\(Ui\.Caption\(alert\.Unit\)\);", page);
             // A name's caption under it.
             Assert.Matches(@"if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);", page);
 
@@ -951,7 +966,10 @@ namespace OpenDashPlugin.Tests
 
             // The greyed rows' words where they are drawn: the fuel unit SimHub's, litres when it cannot say;
             // the tyre buttons main then secondary; every greyed option disabled and the first chosen.
-            Assert.Contains("var fuelUnit = PanelSettings.FuelUnit(units[3]) ?? PanelSettings.FuelTargetUnitFallback;", page);
+            Assert.Contains("var fuelUnit = Ui.Caption(PanelSettings.FuelTargetUnit(units[3]));", page);
+            Assert.Equal("gal", PanelSettings.FuelTargetUnit("Gallons"));
+            Assert.Equal("L", PanelSettings.FuelTargetUnit("Liters"));
+            Assert.Equal(PanelSettings.FuelTargetUnitFallback, PanelSettings.FuelTargetUnit(null));
             var main = page.IndexOf("Ui.Button(PanelSettings.TyreDisplayLabels[0], PanelButtonKind.Outline, PanelButtonSize.Small),", StringComparison.Ordinal);
             var secondary = page.IndexOf("Ui.Button(PanelSettings.TyreDisplayLabels[1], PanelButtonKind.Outline, PanelButtonSize.Small));", StringComparison.Ordinal);
             Assert.True(main >= 0 && secondary > main, "the tyre buttons");
@@ -972,7 +990,7 @@ namespace OpenDashPlugin.Tests
         public void A_temperature_box_commits_on_enter_and_on_leaving_it()
         {
             var page = Page();
-            var start = page.IndexOf("private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed)", StringComparison.Ordinal);
+            var start = page.IndexOf("private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed, out TextBlock placeholder)", StringComparison.Ordinal);
             Assert.True(start >= 0);
             var end = page.IndexOf("\n        }\n", start, StringComparison.Ordinal);
             var box = page.Substring(start, end - start);
@@ -983,7 +1001,7 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"if \(next == last\) return;\s*last = next;\s*changed\(next\);", box);
             Assert.Contains("box.LostFocus += (sender, args) => commit();", box);
             Assert.Contains("if (args.Key == Key.Enter) commit();", box);
-            Assert.Contains("return SettingsHinted(box, PanelSettings.ThresholdText(fallback));", box);
+            Assert.Matches(@"placeholder = SettingsHint\(box, PanelSettings\.ThresholdText\(fallback\)\);\s*return SettingsOverlaid\(box, placeholder\);", box);
         }
 
         /// <summary>
@@ -999,9 +1017,10 @@ namespace OpenDashPlugin.Tests
             Assert.All(order, index => Assert.True(index >= 0));
             Assert.Equal(order.OrderBy(i => i), order);
             Assert.DoesNotMatch(@"units\.Local\w+Unit\.ToString\(\)", page);
-            Assert.Contains("PanelSettings.UnitsLine(units[0], units[1], units[2], units[3])", page);
+            Assert.Contains("PanelSettings.UnitsLine(now[0], now[1], now[2], now[3])", page);
+            Assert.Contains("showUnits(units);", page);
             Assert.Contains("var temperature = units[1];", page);
-            Assert.Contains("PanelSettings.FuelUnit(units[3])", page);
+            Assert.Contains("PanelSettings.FuelTargetUnit(units[3])", page);
             Assert.Contains("SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature),", page);
             Assert.Contains("SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature),", page);
         }

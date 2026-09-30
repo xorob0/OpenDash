@@ -6,9 +6,11 @@
 // Every word and every decision is PanelSettings' or PanelDataTab's, where PanelSettingsTests and
 // PanelDataTabTests hold them; this file only draws. Every control writes its setting at once and saves.
 // The page draws night mode and both brightnesses as controls, so it calls DrawsLighting and is built again
-// when either moves, the wheel's buttons included; the one thing it reads of SimHub while building is its
-// units, which are settings, and it reads them again on the tick, since SimHub applies a change to them only
-// after its own Settings window has closed and nothing tells the panel.
+// when either moves, the wheel's buttons included. It reads two things of SimHub while building, both
+// settings held in memory: its units (SettingsUnitNames), and the night-mode button's binding, which
+// SettingsBindingKey reads through TriggersOf from SimHub's input mappings whenever the bindings cache has
+// been cleared. It reads the units again on the tick, since SimHub applies a change to them only after its
+// own Settings window has closed and nothing tells the panel, and sets the texts that follow them in place.
 //
 // The delta's two rows stay adjacent Ui.Row calls: PanelDataTabTests holds that the precision row sits
 // directly under the reference it qualifies (#322).
@@ -39,12 +41,18 @@ namespace OpenDashPlugin
 
         private int settingsIndexHeld = -1;
 
+        /// <summary>What follows SimHub's units on this build: each sets a text the units decide -- the Units
+        /// line, the fuel target's unit, the unit after both temperatures and their default placeholders --
+        /// from the four names. Filled while the page is built and emptied at the start of the next build.</summary>
+        private readonly List<Action<string[]>> settingsUnitsFollow = new List<Action<string[]>>();
+
         private FrameworkElement BuildSettingsPage(PanelRoute to)
         {
             DrawsLighting();
             OnLeave("Settings.previewPick", () => settingsPreviewPick = null);
             OnLeave("Settings.indexMark", () => { settingsIndexMark = -1; settingsIndexHeld = -1; });
             var units = SettingsUnitNames();
+            settingsUnitsFollow.Clear();
             var sections = new FrameworkElement[]
             {
                 Ui.Anchor(SettingsRaceData(units), PanelSettings.AnchorRaceData),
@@ -56,21 +64,19 @@ namespace OpenDashPlugin
             };
             var all = new List<UIElement> { SettingsIndex(sections, to) };
             all.AddRange(sections);
-            // Built again when SimHub's units move, or the Units line, the unit after both temperatures and
-            // their defaults would stay the old ones while the matrix compares in the new. On the tick, not on
-            // SimHub's window coming back: SimHub's Settings, where the Units row sends the driver, activates
-            // SimHub's window as it closes and applies the units only after that, from its own Apply, or when a
-            // change of game brings a new GameManager. Four string properties a second while the panel is on
-            // screen, cleared on every rebuild and on Go.
-            //
-            // Never while a text box has the keyboard: the driver back from SimHub's Settings is the one most
-            // likely to be typing a temperature in the new unit, and a rebuild then would commit the half-typed
-            // number and hand focus back to a new box with its caret in front of it. The tick after they leave
-            // the box rebuilds, once the box's own LostFocus has saved what they typed.
+            // When SimHub's units move, the texts they decide are set again in place, or the Units line, the
+            // unit after both temperatures and their defaults would stay the old ones while the matrix compares
+            // in the new. On the tick, not on SimHub's window coming back: SimHub's Settings, where the Units
+            // row's caption says they are set, activates SimHub's window as it closes and applies the units
+            // only after that, from its own Apply, or when a change of game brings a new GameManager. Four
+            // string properties a second while the panel is on screen, cleared on every rebuild and on Go.
+            // Nothing is rebuilt, so a box being typed in keeps its text, its caret and the keyboard.
             OnTick(() =>
             {
-                if (Keyboard.FocusedElement is TextBox || !PanelSettings.UnitsMoved(units, SettingsUnitNames())) return;
-                RebuildPage();
+                var now = SettingsUnitNames();
+                if (!PanelSettings.UnitsMoved(units, now)) return;
+                units = now;
+                foreach (var follow in settingsUnitsFollow) follow(now);
             });
             return PageLayout(PanelSettings.Title, null, all.ToArray());
         }
@@ -341,8 +347,13 @@ namespace OpenDashPlugin
         /// field's own face and alignment.</summary>
         private static FrameworkElement SettingsHinted(TextBox box, string hint)
         {
-            if (string.IsNullOrEmpty(hint)) return box;
-            var text = new TextBlock
+            return SettingsOverlaid(box, SettingsHint(box, hint));
+        }
+
+        /// <summary>A placeholder's text, in the label ink and the field's own face and alignment.</summary>
+        private static TextBlock SettingsHint(TextBox box, string hint)
+        {
+            return new TextBlock
             {
                 Text = hint,
                 FontFamily = box.FontFamily,
@@ -351,7 +362,6 @@ namespace OpenDashPlugin
                 Foreground = Ui.Brush(Theme.TextLabel),
                 TextAlignment = box.TextAlignment,
             };
-            return SettingsOverlaid(box, text);
         }
 
         /// <summary>A greyed box with nothing in it yet: the artboard's dash, drawn as a stroke in the label ink
@@ -394,9 +404,11 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A threshold where 0 is the unit's default: empty while it is, with the default as its placeholder,
-        /// and committed on Enter or on leaving it (PanelSettings.ParseThreshold), only when it moved.
+        /// and committed on Enter or on leaving it (PanelSettings.ParseThreshold), only when it moved. The
+        /// placeholder is handed back, since the default follows SimHub's unit and is set again in place; it
+        /// is empty while SimHub cannot say.
         /// </summary>
-        private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed)
+        private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed, out TextBlock placeholder)
         {
             var box = SettingsNumberField(PanelSettings.ThresholdText(value));
             var last = value ?? 0;
@@ -413,7 +425,8 @@ namespace OpenDashPlugin
             {
                 if (args.Key == Key.Enter) commit();
             };
-            return SettingsHinted(box, PanelSettings.ThresholdText(fallback));
+            placeholder = SettingsHint(box, PanelSettings.ThresholdText(fallback));
+            return SettingsOverlaid(box, placeholder);
         }
 
         /// <summary>Whether the last read of SimHub's units failed, so a failure the tick meets every second is
@@ -498,16 +511,24 @@ namespace OpenDashPlugin
                 Save();
             });
 
-            var fuelUnit = PanelSettings.FuelUnit(units[3]) ?? PanelSettings.FuelTargetUnitFallback;
-            var fuelTarget = Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), Ui.Caption(fuelUnit));
+            var fuelUnit = Ui.Caption(PanelSettings.FuelTargetUnit(units[3]));
+            settingsUnitsFollow.Add(now => fuelUnit.Text = PanelSettings.FuelTargetUnit(now[3]));
+            var fuelTarget = Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), fuelUnit);
             var tyres = Ui.HStack(PanelSettings.TyreButtonGap,
                 Ui.Button(PanelSettings.TyreDisplayLabels[0], PanelButtonKind.Outline, PanelButtonSize.Small),
                 Ui.Button(PanelSettings.TyreDisplayLabels[1], PanelButtonKind.Outline, PanelButtonSize.Small));
 
-            // SimHub's own units, which OpenDash follows and never sets; where it cannot be asked, the caption
-            // alone says where they are set.
-            var line = PanelSettings.UnitsLine(units[0], units[1], units[2], units[3]);
-            var unitsLine = line == null ? null : Ui.Text(line, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary);
+            // SimHub's own units, which OpenDash follows and never sets; where it cannot be asked, the line is
+            // collapsed and the caption alone says where they are set.
+            var unitsLine = Ui.Text(string.Empty, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary);
+            Action<string[]> showUnits = now =>
+            {
+                var line = PanelSettings.UnitsLine(now[0], now[1], now[2], now[3]);
+                unitsLine.Text = line ?? string.Empty;
+                unitsLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
+            };
+            showUnits(units);
+            settingsUnitsFollow.Add(showUnits);
 
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
                 SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
@@ -578,8 +599,14 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });
-            var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); });
-            var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); });
+            TextBlock oilDefault, waterDefault;
+            var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); }, out oilDefault);
+            var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); }, out waterDefault);
+            settingsUnitsFollow.Add(now =>
+            {
+                oilDefault.Text = PanelSettings.ThresholdText(PanelSettings.TemperatureDefault(true, now[1]));
+                waterDefault.Text = PanelSettings.ThresholdText(PanelSettings.TemperatureDefault(false, now[1]));
+            });
 
             var row = 0;
             SettingsAlertHeader(grid, row++, surfaces);
@@ -686,8 +713,14 @@ namespace OpenDashPlugin
             var when = new List<UIElement>();
             if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));
             when.Add(box ?? SettingsGreyedBox(alert.Example));
-            var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);
-            if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));
+            if (alert.Unit == null)
+            {
+                // A temperature's unit is SimHub's, and follows it; empty, and so no gap, while SimHub cannot say.
+                var unit = Ui.Caption(PanelSettings.TemperatureUnit(temperature) ?? string.Empty);
+                settingsUnitsFollow.Add(now => unit.Text = PanelSettings.TemperatureUnit(now[1]) ?? string.Empty);
+                when.Add(unit);
+            }
+            else if (alert.Unit.Length > 0) when.Add(Ui.Caption(alert.Unit));
             SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);
 
             if (surfaces)

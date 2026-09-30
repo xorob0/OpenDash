@@ -271,6 +271,12 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>The unit after the greyed fuel target's box: SimHub's, or litres when it cannot say.</summary>
+        public static string FuelTargetUnit(string simHub)
+        {
+            return FuelUnit(simHub) ?? FuelTargetUnitFallback;
+        }
+
         /// <summary>
         /// The units row's line, "km/h · °C · bar · L", from SimHub's four enum names, in the artboard's order;
         /// the ones SimHub did not answer are left out, and null when it answered none.
