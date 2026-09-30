@@ -863,7 +863,14 @@ namespace OpenDashPlugin
         public const string AnchorRevBar = "screens.revbar";
         public const string AnchorFlagDisplay = "screens.flag-display";
         public const string AnchorLapReview = "screens.lap-review";
+        /// <summary>The picture of a face's zones, and of a landscape pit wall's page: both draw their zones.</summary>
         public const string AnchorZones = "screens.zones";
+
+        /// <summary>A face's Info bar aside, which opens on it: only a face with a bar draws it.</summary>
+        public const string AnchorInfoBar = "screens.info-bar";
+
+        /// <summary>The Next page and Previous page chips at the foot of a face's zone aside.</summary>
+        public const string AnchorZonePaging = "screens.zone-paging";
         public const string AnchorGlance = "screens.glance";
         public const string AnchorClassOnly = "screens.class-only";
         public const string AnchorDetails = "screens.details";
@@ -887,9 +894,9 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(FlagDisplayTitle, PanelPage.Screens, AnchorFlagDisplay, "band d", "full screen", "flags"),
             new PanelSearch.Entry(LapReviewTitle, PanelPage.Screens, AnchorLapReview, "last lap"),
             new PanelSearch.Entry(ZonesTitle, PanelPage.Screens, AnchorZones, "pages", "zone a", "zone b", "zone c", "band d", "reorder"),
-            new PanelSearch.Entry(InfoBarTitle, PanelPage.Screens, AnchorZones, "bar", "race time", "position"),
-            new PanelSearch.Entry(NextPageTitle, PanelPage.Screens, AnchorZones, "zone", "button"),
-            new PanelSearch.Entry(PreviousPageTitle, PanelPage.Screens, AnchorZones, "zone", "back", "button"),
+            new PanelSearch.Entry(InfoBarTitle, PanelPage.Screens, AnchorInfoBar, "bar", "race time", "position"),
+            new PanelSearch.Entry(NextPageTitle, PanelPage.Screens, AnchorZonePaging, "zone", "button"),
+            new PanelSearch.Entry(PreviousPageTitle, PanelPage.Screens, AnchorZonePaging, "zone", "back", "button"),
             new PanelSearch.Entry(ClassOnlyTitle, PanelPage.Screens, AnchorClassOnly, "class"),
             new PanelSearch.Entry(PanelShortcuts.QuickGlanceTitle, PanelPage.Screens, AnchorGlance, "hold", "glance"),
             new PanelSearch.Entry(DetailsTitle, PanelPage.Screens, AnchorDetails, "folder", "properties", "version", "namespace"),
@@ -953,9 +960,13 @@ namespace OpenDashPlugin
                 case AnchorCards:
                 case AnchorDetails:
                     return true;
+                case AnchorZones:
+                    return face || landscapeWall;
+                case AnchorInfoBar:
+                    return face && screen.FaceSize.Value.HasBar;
                 case AnchorRevBar:
                 case AnchorLapReview:
-                case AnchorZones:
+                case AnchorZonePaging:
                     return face;
                 case AnchorFlagDisplay:
                     return face || screen.IsPitWall || screen.IsCompanion;
@@ -996,12 +1007,14 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The zone a face's aside has to show for the row <paramref name="anchor"/> names to be drawn:
-        /// B or C for the two greyed pages, a zone with a class filter for My class only, and whatever was
-        /// picked for every other row.
+        /// the bar for the Info bar, a zone for Next page and Previous page, B or C for the two greyed pages,
+        /// a zone with a class filter for My class only, and whatever was picked for every other row.
         /// </summary>
         public static string AsideFor(string anchor, string picked, Contract.FaceSize face)
         {
             var key = AsideKey(picked, face);
+            if (string.Equals(anchor, AnchorInfoBar, StringComparison.Ordinal)) return face.HasBar ? BarKey : picked;
+            if (string.Equals(anchor, AnchorZonePaging, StringComparison.Ordinal)) return key == BarKey ? FirstAside : picked;
             if (ShowsEveryPage(anchor)) return ListsSoonModules(key) ? key : FirstAside;
             if (string.Equals(anchor, AnchorClassOnly, StringComparison.Ordinal)) return FacePages.OffersClassFilter(key) ? key : FirstAside;
             return picked;

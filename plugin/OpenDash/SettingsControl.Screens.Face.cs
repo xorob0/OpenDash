@@ -429,6 +429,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildInfoBarAside(ScreenInstance screen, Contract.FaceSize face, Action redraw)
         {
             var stack = Ui.VStack(12, Ui.Heading(PanelScreens.InfoBarTitle));
+            var anchored = Ui.Anchor(stack, PanelScreens.AnchorInfoBar);
             var fields = FacePages.BarFields.Select(field => field.Name).ToArray();
             foreach (var row in PanelScreens.BarRows(face))
             {
@@ -441,7 +442,7 @@ namespace OpenDashPlugin
                 choice.Uid = "screens.bar." + slot;
                 stack.Children.Add(ScreensAsideLine(Ui.Text(row.Label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), choice));
             }
-            return stack;
+            return anchored;
         }
 
         /// <summary>A line of an aside: its words on the left and its control on the right.</summary>
@@ -534,9 +535,9 @@ namespace OpenDashPlugin
             nextChip.Uid = "screens.zone.next";
             var backChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);
             backChip.Uid = "screens.zone.back";
-            stack.Children.Add(ScreensRuled(Ui.VStack(10,
+            stack.Children.Add(Ui.Anchor(ScreensRuled(Ui.VStack(10,
                 ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), nextChip),
-                ScreensAsideLine(previous, backChip))));
+                ScreensAsideLine(previous, backChip))), PanelScreens.AnchorZonePaging));
             return stack;
         }
 

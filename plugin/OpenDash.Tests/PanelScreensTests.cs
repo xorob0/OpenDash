@@ -789,7 +789,9 @@ namespace OpenDashPlugin.Tests
                 { PanelScreens.AnchorDetails, "face wall portrait companion round" },
                 { PanelScreens.AnchorRevBar, "face" },
                 { PanelScreens.AnchorLapReview, "face" },
-                { PanelScreens.AnchorZones, "face" },
+                { PanelScreens.AnchorZones, "face wall" },
+                { PanelScreens.AnchorInfoBar, "face" },
+                { PanelScreens.AnchorZonePaging, "face" },
                 { PanelScreens.AnchorFlagDisplay, "face wall portrait companion" },
                 { PanelScreens.AnchorGlance, "face wall companion" },
                 { PanelScreens.AnchorClassOnly, "face wall portrait" },
@@ -823,6 +825,20 @@ namespace OpenDashPlugin.Tests
             Assert.Same(companion, PanelScreens.ScreenFor(PanelScreens.AnchorModules, rig, face));
             Assert.Same(portrait, PanelScreens.ScreenFor(PanelScreens.AnchorPortrait, rig, face));
             Assert.Same(face, PanelScreens.ScreenFor(PanelSoon.Fit.Anchor, rig, round));
+            // A pit wall draws its zones as well, so "Zones" stays on it; Info bar, Next page and Previous
+            // page are a face's alone.
+            Assert.Same(wall, PanelScreens.ScreenFor(PanelScreens.AnchorZones, rig, wall));
+            Assert.Same(face, PanelScreens.ScreenFor(PanelScreens.AnchorInfoBar, rig, wall));
+            Assert.Same(face, PanelScreens.ScreenFor(PanelScreens.AnchorZonePaging, rig, wall));
+            Assert.Equal(PanelScreens.AnchorInfoBar, PanelScreens.Search.Single(entry => entry.Label == PanelScreens.InfoBarTitle).Route.Anchor);
+            Assert.Equal(PanelScreens.AnchorZonePaging, PanelScreens.Search.Single(entry => entry.Label == PanelScreens.NextPageTitle).Route.Anchor);
+            Assert.Equal(PanelScreens.AnchorZonePaging, PanelScreens.Search.Single(entry => entry.Label == PanelScreens.PreviousPageTitle).Route.Anchor);
+            // The nano has no bar, so it does not draw the Info bar's row.
+            var nanoFace = Contract.FaceSizes.Single(f => !f.HasBar);
+            var nano = settings.AddScreen(Entry("OpenDash " + nanoFace.Width + "x" + nanoFace.Height, Contract.KindFace, nanoFace.Width, nanoFace.Height), "Nano");
+            Assert.True(nano.FaceSize.HasValue);
+            Assert.False(PanelScreens.Draws(PanelScreens.AnchorInfoBar, nano));
+            Assert.True(PanelScreens.Draws(PanelScreens.AnchorZonePaging, nano));
             // A rig with nothing that draws the row keeps its selection, and the route lands on the cards.
             var faces = new[] { face };
             Assert.Same(face, PanelScreens.ScreenFor(PanelScreens.AnchorRevRing, faces, face));
@@ -841,6 +857,52 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("D", PanelScreens.AsideFor(PanelScreens.AnchorClassOnly, "D", reference));
             Assert.Equal("A", PanelScreens.AsideFor(PanelScreens.AnchorRevBar, "A", reference));
             Assert.Null(PanelScreens.AsideFor(PanelScreens.AnchorRevBar, null, reference));
+            // The Info bar opens the bar's aside; Next page and Previous page, drawn in a zone's, leave the bar
+            // for zone C and keep a zone that was picked.
+            Assert.Equal(PanelScreens.BarKey, PanelScreens.AsideFor(PanelScreens.AnchorInfoBar, "A", reference));
+            Assert.Equal("C", PanelScreens.AsideFor(PanelScreens.AnchorZonePaging, PanelScreens.BarKey, reference));
+            Assert.Equal("B", PanelScreens.AsideFor(PanelScreens.AnchorZonePaging, "B", reference));
+            Assert.Null(PanelScreens.AsideFor(PanelScreens.AnchorZonePaging, null, reference));
+        }
+
+        /// <summary>
+        /// Each anchor a Screens file sets is one the model says a screen of that file's kind draws: the model
+        /// test above checks the map against itself, and this holds it to where the page puts each anchor, so a
+        /// pit wall picture anchored on screens.zones while the model called the zones a face's alone fails here.
+        /// </summary>
+        [Fact]
+        public void Every_anchor_the_page_sets_is_drawn_where_the_model_says()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var face = settings.AddScreen(Entry("OpenDash 1280x480", Contract.KindFace, 1280, 480), "Rim");
+            var wall = settings.AddScreen(Entry("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080), "Wall");
+            var portrait = settings.AddScreen(Entry("OpenDash Pit wall portrait", Contract.KindPitWall, 1080, 1920), "Tall wall");
+            var companion = settings.AddScreen(Entry("OpenDash Companion", Contract.KindCompanion, 850, 480), "Phone");
+            var round = settings.AddScreen(Entry("OpenDash 480 round", Contract.KindSlots, 480, 480), "Round");
+            settings.Normalise();
+            var kinds = new Dictionary<string, ScreenInstance[]>
+            {
+                { "SettingsControl.Screens.cs", new[] { face, wall, portrait, companion, round } },
+                { "SettingsControl.Screens.Face.cs", new[] { face } },
+                { "SettingsControl.Screens.PitWall.cs", new[] { wall, portrait } },
+                { "SettingsControl.Screens.Companion.cs", new[] { companion } },
+                { "SettingsControl.Screens.Round.cs", new[] { round } },
+            };
+            var dir = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            Assert.Equal(kinds.Keys.OrderBy(k => k, System.StringComparer.Ordinal), System.IO.Directory.GetFiles(dir, "SettingsControl.Screens*.cs").Select(System.IO.Path.GetFileName).OrderBy(k => k, System.StringComparer.Ordinal));
+            var set = 0;
+            foreach (var pair in kinds)
+            {
+                var code = RepoPaths.Code(System.IO.Path.Combine(dir, pair.Key));
+                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(code, @"Ui\.Anchor\((?:[^;]*?), PanelScreens\.(Anchor\w+)\)"))
+                {
+                    var anchor = (string)typeof(PanelScreens).GetField(match.Groups[1].Value).GetValue(null);
+                    Assert.True(pair.Value.Any(screen => PanelScreens.Draws(anchor, screen)), pair.Key + " sets " + anchor + ", which the model says no screen of its kind draws");
+                    set++;
+                }
+            }
+            Assert.True(set >= 20, "found only " + set + " anchors");
         }
 
         /// <summary>
@@ -897,6 +959,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorFirstModule = screens.first-module",
                 "AnchorFlagDisplay = screens.flag-display",
                 "AnchorGlance = screens.glance",
+                "AnchorInfoBar = screens.info-bar",
                 "AnchorLapReview = screens.lap-review",
                 "AnchorModules = screens.modules",
                 "AnchorPaging = screens.paging",
@@ -906,6 +969,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorRevRing = screens.rev-ring",
                 "AnchorSlots = screens.slots",
                 "AnchorWebView = screens.webview",
+                "AnchorZonePaging = screens.zone-paging",
                 "AnchorZones = screens.zones",
             }, AnchorTable.Of(typeof(PanelScreens)));
         }
