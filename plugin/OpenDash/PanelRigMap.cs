@@ -29,7 +29,7 @@ namespace OpenDashPlugin
     /// <summary>One tile: what it is, what it is called, and where it sits on the canvas.</summary>
     public sealed class RigTile
     {
-        public RigTile(RigTileKind kind, string id, string name, double x, double y, double width, double height)
+        public RigTile(RigTileKind kind, string id, string name, double x, double y, double width, double height, string side = null)
         {
             Kind = kind;
             Id = id;
@@ -38,6 +38,7 @@ namespace OpenDashPlugin
             Y = y;
             Width = width;
             Height = height;
+            Side = side;
         }
 
         public RigTileKind Kind { get; private set; }
@@ -67,10 +68,14 @@ namespace OpenDashPlugin
         public double Width { get; private set; }
         public double Height { get; private set; }
 
+        /// <summary>A matrix's Mounting side (Contract.FlagBoxSides: "both", "left" or "right"), which
+        /// flank the default layout stands it on; null for anything else, and read as "both".</summary>
+        public string Side { get; private set; }
+
         /// <summary>The same tile somewhere else.</summary>
         public RigTile At(double x, double y)
         {
-            return new RigTile(Kind, Id, Name, x, y, Width, Height);
+            return new RigTile(Kind, Id, Name, x, y, Width, Height, Side);
         }
     }
 
@@ -379,7 +384,8 @@ namespace OpenDashPlugin
         public static string MatrixId(int slot) { return MatrixIdPrefix + slot.ToString(System.Globalization.CultureInfo.InvariantCulture); }
 
         /// <summary>Every device on the rig as a tile at the size its picture is drawn, in the rig's order:
-        /// the screens, the strips, then the matrices. Positions are zero; <see cref="Arrange"/> places them.</summary>
+        /// the screens, the strips, then the matrices. Positions are zero; <see cref="Plan"/> places them.
+        /// A matrix carries its Mounting side, which flank the default layout stands it on.</summary>
         public static IList<RigTile> Tiles(OpenDashSettings settings)
         {
             var tiles = new List<RigTile>();
@@ -410,8 +416,9 @@ namespace OpenDashPlugin
             }
             foreach (var matrix in settings.MatrixPanels())
             {
-                var side = MatrixTileSide();
-                tiles.Add(new RigTile(RigTileKind.Matrix, MatrixId(matrix), settings.MatrixName(matrix) ?? string.Empty, 0, 0, side, side));
+                var size = MatrixTileSide();
+                tiles.Add(new RigTile(RigTileKind.Matrix, MatrixId(matrix), settings.MatrixName(matrix) ?? string.Empty, 0, 0, size, size, settings.MatrixSide(matrix)));
+
             }
             return tiles;
         }
@@ -610,8 +617,10 @@ namespace OpenDashPlugin
         /// wall down the right, and the phone down the left, as Rig.dc.html arranges its nine.
         /// </summary>
         /// <remarks>
-        /// The flanks split the matrices, the first half on the left, and stand <see cref="LayoutGap"/> from
-        /// the faces, the three of them centred in the canvas as one group, so a wide window centres the rig
+        /// Each matrix stands on the flank its Mounting side names, and those mounted on both sides make up
+        /// the flanks in slot order, the left first, until each holds half (<see cref="SplitFlanks"/>). The
+        /// flanks stand <see cref="LayoutGap"/> from the faces, the three of them centred in the canvas as
+        /// one group, so a wide window centres the rig
         /// rather than pulling its flanks to the edges. What sits low on a flank -- the phone on the left, the
         /// pit wall on the right -- is set level with the foot of the faces when there is room above it, and
         /// under what is higher on its flank when there is not. The faces fill the room between the flanks in
@@ -630,8 +639,8 @@ namespace OpenDashPlugin
             var strips = list.Where(t => t.Kind == RigTileKind.Strip).ToList();
             var faces = list.Where(t => t.Kind == RigTileKind.Face).ToList();
             var matrices = list.Where(t => t.Kind == RigTileKind.Matrix).ToList();
-            var leftMatrices = matrices.Take((matrices.Count + 1) / 2).ToList();
-            var rightMatrices = matrices.Skip(leftMatrices.Count).ToList();
+            List<RigTile> leftMatrices, rightMatrices;
+            SplitFlanks(matrices, out leftMatrices, out rightMatrices);
             var leftHigh = leftMatrices;
             var leftLow = list.Where(t => t.Kind == RigTileKind.Companion).ToList();
             var rightHigh = rightMatrices.Concat(list.Where(t => t.Kind == RigTileKind.Round)).ToList();
@@ -670,7 +679,32 @@ namespace OpenDashPlugin
             return rows;
         }
 
+        /// <summary>
+        /// The matrices by flank: a panel mounted on the left on the left, one mounted on the right on the
+        /// right, and the rest in slot order on the left until it holds half of them, then on the right.
+        /// Each flank keeps the slot order.
+        /// </summary>
+        /// <remarks>
+        /// The flanks were split by slot order alone, so a rig whose first matrix is the flag box and whose
+        /// second is the left pillar drew the pillar on the right.
+        /// </remarks>
+        private static void SplitFlanks(IList<RigTile> matrices, out List<RigTile> left, out List<RigTile> right)
+        {
+            var half = (matrices.Count + 1) / 2;
+            var onLeft = new HashSet<RigTile>(matrices.Where(t => t.Side == "left"));
+            var onRight = new HashSet<RigTile>(matrices.Where(t => t.Side == "right"));
+            foreach (var tile in matrices)
+            {
+                if (onLeft.Contains(tile) || onRight.Contains(tile)) continue;
+                if (onLeft.Count < half) onLeft.Add(tile);
+                else onRight.Add(tile);
+            }
+            left = matrices.Where(onLeft.Contains).ToList();
+            right = matrices.Where(onRight.Contains).ToList();
+        }
+
         /// <summary>A flank: what sits high on it stacked from the top, then what sits low, level with the
+
         /// faces' foot where it fits there. A flank too tall for the canvas at <see cref="LayoutGap"/> closes
         /// up, as far as <see cref="LayoutGapMin"/>. Returns the flank's foot.</summary>
         private static double Column(IList<RigTile> high, IList<RigTile> low, double x, double top, double facesBottom, double foot, IDictionary<RigTile, RigTile> placed)
@@ -1418,7 +1452,6 @@ namespace OpenDashPlugin
             var cut = words.IndexOf(" · ", StringComparison.Ordinal);
             return cut > 0 ? words.Substring(0, cut) : words;
         }
-
         /// <summary>
         /// How wide Ui.Tracked draws a run: each glyph its own box, whole pixels up, and the tracking after
         /// every one of them, the last included.
@@ -1456,6 +1489,7 @@ namespace OpenDashPlugin
             { 'o', 0.557 }, { 'p', 0.568 }, { 'q', 0.568 }, { 'r', 0.383 }, { 's', 0.502 }, { 't', 0.38 }, { 'u', 0.545 },
             { 'v', 0.52 }, { 'w', 0.783 }, { 'x', 0.538 }, { 'y', 0.504 }, { 'z', 0.46 },
         };
+
 
         /// <summary>
         /// A phone: the flag over the whole of it, its one word tracked, or the module it opens on, wrapped;

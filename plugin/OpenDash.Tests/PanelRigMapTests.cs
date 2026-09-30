@@ -544,6 +544,49 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_matrix_stands_on_the_flank_it_is_mounted_on()
+        {
+            // The #503 VM rig: the flag box (both sides) in slot 1, the left pillar in slot 2. Slot order put
+            // the pillar on the right, the reverse of the artboard's home layout.
+            var settings = Rig();
+            settings.FlagBoxMatrixName[0] = "Flag box";
+            settings.FlagBoxMatrixName[1] = "Left pillar";
+            settings.FlagBoxSide[1] = "left";
+            var tiles = PanelRigMap.Tiles(settings);
+            Assert.Equal(new[] { "both", "left" }, tiles.Where(t => t.Kind == RigTileKind.Matrix).Select(t => t.Side));
+            Assert.All(tiles.Where(t => t.Kind != RigTileKind.Matrix), t => Assert.Null(t.Side));
+            Assert.Equal("left", tiles.Single(t => t.Id == "matrix:2").At(5, 5).Side);
+            var at = PanelRigMap.DefaultLayout(tiles, 894).ToDictionary(t => t.Id);
+            Assert.True(at["matrix:2"].X < at["MainDash"].X, "the left pillar on the left");
+            Assert.True(at["matrix:1"].X > at["MainDash"].X, "the flag box on the right");
+            Assert.Equal(at["MainDash"].X - 28 - at["matrix:2"].Width, at["matrix:2"].X);
+            // Reset layout restores exactly that.
+            PanelRigMap.SavePlaces(settings, PanelRigMap.Plan(settings, 894).Tiles);
+            PanelRigMap.ClearLayout(settings);
+            Assert.True(ById(PanelRigMap.Plan(settings, 894))["matrix:2"].X < ById(PanelRigMap.Plan(settings, 894))["MainDash"].X);
+
+            // A right-mounted panel on the right whatever its slot; those on both sides make up the flanks.
+            var three = new[]
+            {
+                Tile(RigTileKind.Face, "face", 300, 112),
+                new RigTile(RigTileKind.Matrix, "m1", "m1", 0, 0, 108, 108, "right"),
+                new RigTile(RigTileKind.Matrix, "m2", "m2", 0, 0, 108, 108, "both"),
+                new RigTile(RigTileKind.Matrix, "m3", "m3", 0, 0, 108, 108, "right"),
+            };
+            var laid = PanelRigMap.DefaultLayout(three, 894).ToDictionary(t => t.Id);
+            Assert.True(laid["m1"].X > laid["face"].X);
+            Assert.True(laid["m3"].X > laid["face"].X);
+            Assert.True(laid["m2"].X < laid["face"].X);
+            // A flank keeps the slot order down it.
+            Assert.True(laid["m1"].Y < laid["m3"].Y);
+            // Every panel on the left: all of them on the left flank.
+            var lefts = new[] { Tile(RigTileKind.Face, "face", 300, 112), new RigTile(RigTileKind.Matrix, "a", "a", 0, 0, 108, 108, "left"), new RigTile(RigTileKind.Matrix, "b", "b", 0, 0, 108, 108, "left") };
+            var left = PanelRigMap.DefaultLayout(lefts, 894).ToDictionary(t => t.Id);
+            Assert.Equal(left["a"].X, left["b"].X);
+            Assert.True(left["a"].X < left["face"].X);
+        }
+
+        [Fact]
         public void A_lone_matrix_takes_the_left_flank()
         {
             var placed = PanelRigMap.DefaultLayout(new[] { Tile(RigTileKind.Face, "face", 300, 112), Tile(RigTileKind.Matrix, "m", 108, 108) }, 894).ToDictionary(t => t.Id);
@@ -800,7 +843,6 @@ namespace OpenDashPlugin.Tests
                 }
             }
         }
-
         [Fact]
         public void A_drop_on_a_shrunk_arrangement_keeps_the_arrangement()
         {
@@ -830,6 +872,7 @@ namespace OpenDashPlugin.Tests
 
         [Fact]
         public void A_rig_arranged_in_a_narrow_window_is_not_clamped_onto_the_foot_of_a_wide_one()
+
         {
             var settings = Rig();
             // The fallback's canvas is taller than the 580 at 600.
@@ -1439,7 +1482,6 @@ namespace OpenDashPlugin.Tests
                 noLimiter.EffectsOff.Add("pit.limiter");
                 Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, noLimiter), centre, PanelEmulation.Limiter, noLimiter)[1], led => Assert.Null(led));
             }
-
             // Held to StripFrame: over every shape, scenario and switch, an LED the picture darkens is one the
             // rev ladder lit, and an LED it keeps is kept as the frame drew it.
             var variants = new List<StripOptions> { new StripOptions(), whole };
@@ -1480,6 +1522,7 @@ namespace OpenDashPlugin.Tests
 
         [Fact]
         public void A_matrix_on_critical_flags_only_does_not_show_the_flags_that_are_news()
+
         {
             var settings = Rig();
             Assert.True(PanelRigMap.MatrixOptionsFor(settings, 1, PanelEmulation.Green).Flags);
