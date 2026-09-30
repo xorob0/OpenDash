@@ -245,21 +245,17 @@ namespace OpenDashPlugin
         /// <summary>The artboard's "Something wrong?", headed Support (voice.md: a heading is never a question).</summary>
         private FrameworkElement UpdatesSupportSection()
         {
-            var copy = Ui.Button(PanelUpdates.CopyReport, PanelButtonKind.Outline);
-            // The artboard's NEW tag sits inside the button, after its words, for one release.
-            copy.Content = Ui.HStack(8, Ui.Text(PanelUpdates.CopyReport, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
+            var copy = UpdatesSupportPress(PanelUpdates.CopyReport);
             copy.Click += (sender, args) => UpdatesCopyReport();
 
-            var log = Ui.Button(PanelUpdates.OpenLog, PanelButtonKind.Outline);
-            // No press opened SimHub's log before this page, so it is new too, for the same one release.
-            log.Content = Ui.HStack(8, Ui.Text(PanelUpdates.OpenLog, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
+            var log = UpdatesSupportPress(PanelUpdates.OpenLog);
             log.Click += (sender, args) => UpdatesOpenLog();
 
-            var issue = Ui.Button(PanelUpdates.ReportIssue, PanelButtonKind.Outline);
+            var issue = UpdatesSupportPress(PanelUpdates.ReportIssue);
             issue.ToolTip = IssuesUrl;
             issue.Click += (sender, args) => Ui.OpenUrl(IssuesUrl);
 
-            var guide = Ui.Button(PanelUpdates.ReadGuide, PanelButtonKind.Outline);
+            var guide = UpdatesSupportPress(PanelUpdates.ReadGuide);
             guide.ToolTip = DocumentationUrl;
             guide.Click += (sender, args) => Ui.OpenUrl(DocumentationUrl);
 
@@ -278,6 +274,15 @@ namespace OpenDashPlugin
             var licence = Ui.Prose(PanelUpdates.Licence, PanelUpdates.SupportCaptionSize, Theme.TextLabel);
             licence.Margin = new Thickness(0, PanelUpdates.SupportButtonGap, 0, 0);
             return PageSection(PanelUpdates.SupportTitle, false, PanelUpdates.SectionGap, presses, caption, licence);
+        }
+
+        /// <summary>A Support press, with the artboard's NEW tag inside it after its words while PanelUpdates
+        /// counts it new.</summary>
+        private static Button UpdatesSupportPress(string label)
+        {
+            var press = Ui.Button(label, PanelButtonKind.Outline);
+            if (PanelUpdates.IsNew(label)) press.Content = Ui.HStack(8, Ui.Text(label, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
+            return press;
         }
 
         /// <summary>Copy a support report: gathered at the press, written by PanelUpdates.Report, and put on
@@ -377,7 +382,7 @@ namespace OpenDashPlugin
         {
             try
             {
-                var exe = Path.Combine(root ?? string.Empty, "SimHubWPF.exe");
+                var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);
                 return File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;
             }
             catch (Exception ex)

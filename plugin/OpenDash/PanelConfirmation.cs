@@ -45,11 +45,14 @@ namespace OpenDashPlugin
     /// the page to one question.
     ///
     /// A question is therefore held with the button that asked it, the folders it named and the sentence it put on
-    /// the line, and a second press is a yes only when all three still stand: the same button, the same edited
-    /// folders, and that sentence still on the line. Whatever else takes the line withdraws the question without
-    /// having to know that one was open, which is the property the two booleans lacked: the other button asking or
-    /// running, a check, its answer, the switch, "Put mine back", the page being left or drawn again, and any writer
-    /// added later. There is one question for both buttons, so the other button asking withdraws it.
+    /// its line, and a second press is a yes only when all three still stand: the same button, the same edited
+    /// folders, and that sentence still on that button's line. Whatever else takes the line withdraws the question
+    /// without having to know that one was open, which is the property the two booleans lacked. There is one
+    /// question for both buttons, so the other button asking withdraws it (and the page clears the first line as it
+    /// asks), as does the other button running. Download's line is on the update card, so a check in flight, its
+    /// answer and the switch, which write or redraw the card, withdraw Download's question; they do not touch
+    /// Reinstall everything's line, and its question stands there, still the one on screen. "Put mine back" and the
+    /// page being left or drawn again take both lines, as will any writer added later to either.
     /// </remarks>
     public sealed class PanelConfirmation
     {

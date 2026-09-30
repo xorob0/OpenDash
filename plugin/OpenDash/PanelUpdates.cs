@@ -177,10 +177,25 @@ namespace OpenDashPlugin
         /// <summary>Beside the heading, before the version the rig runs, which is drawn as a numeral.</summary>
         public const string YouHave = "You have";
 
+        /// <summary>Whether the card draws "You have" and the rig's version: only while that version is known,
+        /// since the words alone would promise a number that is not there.</summary>
+        public static bool ShowsYouHave(string rigVersion)
+        {
+            return !string.IsNullOrWhiteSpace(rigVersion);
+        }
+
         /// <summary>Under the heading of an offer. OpenDash has no presets, and the step is what is said.</summary>
         public const string RestartNote = "Restart SimHub to finish updating. Your settings are kept.";
 
         public const string ReleaseNotesTitle = "Release notes";
+
+        /// <summary>The card foot's heading over the release's opening sentence, or null when there is none: a
+        /// remembered offer (UpdateMark.Opening) carries no notes, and a heading over nothing but the link is
+        /// not drawn.</summary>
+        public static string NotesHeading(string summary)
+        {
+            return string.IsNullOrWhiteSpace(summary) ? null : ReleaseNotesTitle;
+        }
         public const string EveryRelease = "Every release on GitHub";
 
         /// <summary>The line over the bar while a release downloads.</summary>
@@ -996,6 +1011,19 @@ namespace OpenDashPlugin
         public const string SupportCaption = "Versions, devices and the last 200 log lines, copied to paste. Nothing is sent.";
         public const string Licence = "MIT licence";
 
+        /// <summary>
+        /// The Support presses that carry the NEW tag, drawn for one release. The artboard tags Copy a support
+        /// report; Open the log is new in the same release, as no press opened SimHub's log before this page,
+        /// and the one-release rule marks every row unreleased since the last cut, as Delta precision and
+        /// Clock are.
+        /// </summary>
+        public static readonly IReadOnlyList<string> NewTagged = new[] { CopyReport, OpenLog };
+
+        public static bool IsNew(string label)
+        {
+            return NewTagged.Contains(label);
+        }
+
         public const double SupportButtonGap = 8;
         public const double SupportCaptionSize = 12;
 
@@ -1047,6 +1075,9 @@ namespace OpenDashPlugin
             return (string.IsNullOrWhiteSpace(status) ? "unknown" : status.Trim())
                 + (fetched.HasValue ? " (fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ")" : string.Empty);
         }
+
+        /// <summary>SimHub's executable, under its own folder, whose file version is the report's SimHub version.</summary>
+        public const string SimHubExe = "SimHubWPF.exe";
 
         /// <summary>Where SimHub writes its log, under its own folder: Logs\SimHub.txt is the current one and
         /// SimHub.N.txt the rotations (docs/testing-vm.md).</summary>

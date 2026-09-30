@@ -65,7 +65,7 @@ namespace OpenDashPlugin
             heading.VerticalAlignment = VerticalAlignment.Bottom;
             headLine.Children.Add(heading);
             var installed = plugin.RigVersion;
-            if (!string.IsNullOrWhiteSpace(installed))
+            if (PanelUpdates.ShowsYouHave(installed))
             {
                 var have = Ui.HStack(4,
                     Ui.Text(PanelUpdates.YouHave, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary),
@@ -135,9 +135,10 @@ namespace OpenDashPlugin
         {
             var notes = new StackPanel { Orientation = Orientation.Vertical };
             var summary = UpdateWording.Summarise(updateStatus.Notes);
-            if (summary != null)
+            var heading = PanelUpdates.NotesHeading(summary);
+            if (heading != null)
             {
-                notes.Children.Add(Ui.Eyebrow(PanelUpdates.ReleaseNotesTitle));
+                notes.Children.Add(Ui.Eyebrow(heading));
                 var line = Ui.Prose(summary, Theme.SizeSmall, Theme.TextPrimary);
                 line.MaxWidth = BodyWidth;
                 line.HorizontalAlignment = HorizontalAlignment.Left;
@@ -146,7 +147,7 @@ namespace OpenDashPlugin
             }
             var link = BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl);
             link.HorizontalAlignment = HorizontalAlignment.Left;
-            link.Margin = new Thickness(0, summary == null ? 0 : PanelUpdates.NotesGap, 0, 0);
+            link.Margin = new Thickness(0, heading == null ? 0 : PanelUpdates.NotesGap, 0, 0);
             notes.Children.Add(link);
             return new Border
             {

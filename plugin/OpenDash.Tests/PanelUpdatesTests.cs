@@ -135,6 +135,22 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelUpdates.CardNote(UpdatesCard.None, "0.5.1"));
         }
 
+        /// <summary>The card says "You have" only beside a version it knows, and heads its foot "Release notes"
+        /// only over notes: a remembered offer carries none, and a heading over the link alone is not drawn.</summary>
+        [Fact]
+        public void The_card_draws_its_optional_parts_only_over_what_they_name()
+        {
+            Assert.True(PanelUpdates.ShowsYouHave("0.5.0"));
+            Assert.False(PanelUpdates.ShowsYouHave(null));
+            Assert.False(PanelUpdates.ShowsYouHave(" "));
+            Assert.Equal("Release notes", PanelUpdates.NotesHeading("Faster flag box."));
+            Assert.Null(PanelUpdates.NotesHeading(null));
+            Assert.Null(PanelUpdates.NotesHeading(""));
+            var code = PageCode();
+            Assert.Contains("if (PanelUpdates.ShowsYouHave(installed))", code);
+            Assert.Contains("var heading = PanelUpdates.NotesHeading(summary);", code);
+        }
+
         [Fact]
         public void The_card_is_drawn_at_the_artboard_s_numbers()
         {
@@ -887,6 +903,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("SimHub.txt", PanelUpdates.LogFile);
             Assert.Equal(8, PanelUpdates.SupportButtonGap);
             Assert.Equal(12, PanelUpdates.SupportCaptionSize);
+            Assert.Equal("SimHubWPF.exe", PanelUpdates.SimHubExe);
+        }
+
+        /// <summary>The NEW tag marks the two Support presses new in this release, for that one release: the
+        /// artboard's Copy a support report, and Open the log, which no press did before this page.</summary>
+        [Fact]
+        public void Only_the_presses_new_in_this_release_carry_the_NEW_tag()
+        {
+            Assert.Equal(new[] { PanelUpdates.CopyReport, PanelUpdates.OpenLog }, PanelUpdates.NewTagged);
+            Assert.True(PanelUpdates.IsNew(PanelUpdates.CopyReport));
+            Assert.False(PanelUpdates.IsNew(PanelUpdates.ReportIssue));
+            Assert.False(PanelUpdates.IsNew(PanelUpdates.ReadGuide));
+            var code = PageCode();
+            Assert.Contains("if (PanelUpdates.IsNew(label))", code);
+            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(code, @"Ui\.NewTag\(").Count);
         }
 
         /// <summary>The caption promises the last 200 log lines, and they are OpenDash's own.</summary>
@@ -1005,15 +1036,15 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>One primary per page: the Updates page's one accented press is the update card's Download,
-        /// and nothing else it draws is (PanelCopyTests holds the table's pairings to none).</summary>
+        /// and nothing else it draws is. Every way the panel draws an accented press is counted: the kit's
+        /// Primary kind, Ui.PrimaryButton, which the base's light rows drew their Update with, and the shell's
+        /// BuildPrimaryButton.</summary>
         [Fact]
         public void The_page_draws_one_primary_and_it_is_Download()
         {
-            var code = string.Concat(RepoPaths.SettingsControlSources()
-                .Where(p => System.IO.Path.GetFileName(p).StartsWith("SettingsControl.Updates", StringComparison.Ordinal))
-                .Select(RepoPaths.Code));
-            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(code, @"PanelButtonKind\.Primary").Count);
-            Assert.Contains("updatesDownload = Ui.Button(null, PanelButtonKind.Primary);", code);
+            var primary = Assert.Single(System.Text.RegularExpressions.Regex.Matches(PageCode(), @"PanelButtonKind\.Primary|Ui\.PrimaryButton\(|BuildPrimaryButton\("));
+            Assert.Equal("PanelButtonKind.Primary", primary.Value);
+            Assert.Contains("updatesDownload = Ui.Button(null, PanelButtonKind.Primary);", PageCode());
         }
 
         // --- Search -----------------------------------------------------------------------------------
@@ -1027,9 +1058,12 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.SupportTitle, PanelUpdates.CopyReport, PanelUpdates.OpenLog, PanelUpdates.ReportIssue, PanelUpdates.ReadGuide,
             }, PanelUpdates.Search.Select(entry => entry.Label));
             Assert.All(PanelUpdates.Search, entry => Assert.Equal(PanelPage.Updates, entry.Route.Page));
-            Assert.Equal(PanelUpdates.AnchorCheck, PanelUpdates.Search.Single(e => e.Label == PanelUpdates.CheckTitle).Route.Anchor);
-            Assert.Equal(PanelUpdates.AnchorReinstall, PanelUpdates.Search.Single(e => e.Label == PanelConfirmation.ReinstallLabel).Route.Anchor);
-            Assert.Equal(PanelUpdates.AnchorKept, PanelUpdates.Search.Single(e => e.Label == PanelUpdates.PutMineBack).Route.Anchor);
+            // Every entry's anchor, so a row moved to another section takes its search entry with it.
+            Assert.Equal(new[]
+            {
+                PanelUpdates.AnchorCheck, PanelUpdates.AnchorPackages, PanelUpdates.AnchorReinstall, PanelUpdates.AnchorKept,
+                PanelUpdates.AnchorSupport, PanelUpdates.AnchorSupport, PanelUpdates.AnchorSupport, PanelUpdates.AnchorSupport, PanelUpdates.AnchorSupport,
+            }, PanelUpdates.Search.Select(entry => entry.Route.Anchor));
             Assert.Equal(PanelPage.Updates, PanelSearch.Find(PanelSearch.All(), "repair").First().Route.Page);
             Assert.Equal(PanelPage.Updates, PanelSearch.Find(PanelSearch.All(), "support report").First().Route.Page);
             Assert.Empty(PanelUpdates.SoonDrawn);

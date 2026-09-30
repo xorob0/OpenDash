@@ -1,37 +1,71 @@
 // PanelConfirmationTests.cs: the question Download and Reinstall everything ask before replacing a dashboard
 // somebody has edited.
 //
-// Each test drives the confirmation the way the Updates page does: a press is given the folders edited at that
-// moment, the question it would ask, and what the update line shows, and when it asks the line is then made to show
-// that question. The line is the whole of what binds a yes to its question, so every test keeps it in step.
+// Each test drives the confirmation the way the Updates page does: each press has a line of its own, Download's on
+// the update card and Reinstall everything's beside it, and a press is given the folders edited at that moment, the
+// question it would ask, and what its own line shows. When it asks, its line shows the question and the other line
+// is cleared (SettingsControl.UpdatesAsk). The line is the whole of what binds a yes to its question, so every test
+// keeps both lines in step with what the page writes to them.
 using Xunit;
 
 namespace OpenDashPlugin.Tests
 {
     public class PanelConfirmationTests
     {
-        private const string Offer = "Version 0.3.1 is available. You have 0.3.0.";
         private const string AskUpdate = "You have edited 1 dashboard: OpenDash. Updating replaces your version.";
         private const string AskReinstall = "You have edited 1 dashboard: OpenDash. Reinstalling replaces your version.";
-        private const string Reinstalled = "Reinstalled 1 dashboard. Close and reopen the dashboard to see it.";
+        private const string Checking = "Checking for updates…";
 
         private static readonly string[] OneEdited = { "OpenDash" };
 
-        /// <summary>The Updates page's side of a press: the line shows the question whenever the press asks.</summary>
+        /// <summary>The Updates page's side of a press: two lines, each empty until something writes it.</summary>
         private sealed class Tab
         {
             public readonly PanelConfirmation Confirmation = new PanelConfirmation();
-            public string Line = Offer;
+
+            /// <summary>Download's line on the update card.</summary>
+            public string CardLine = string.Empty;
+
+            /// <summary>Reinstall everything's line beside it.</summary>
+            public string ReinstallLine = string.Empty;
 
             public PressOutcome Press(ReplacingAction action, string[] edited, string question)
             {
-                var outcome = Confirmation.Press(action, edited, question, Line);
-                if (outcome == PressOutcome.Ask) Line = question;
+                var outcome = Confirmation.Press(action, edited, question, action == ReplacingAction.Update ? CardLine : ReinstallLine);
+                if (outcome == PressOutcome.Ask) Ask(action, question);
                 return outcome;
             }
 
-            public string Update => Confirmation.Label(ReplacingAction.Update, Line);
-            public string Reinstall => Confirmation.Label(ReplacingAction.Reinstall, Line);
+            /// <summary>UpdatesAsk: the question on the press's own line, and the other line cleared.</summary>
+            private void Ask(ReplacingAction action, string question)
+            {
+                if (action == ReplacingAction.Update)
+                {
+                    CardLine = question;
+                    ReinstallLine = string.Empty;
+                }
+                else
+                {
+                    ReinstallLine = question;
+                    CardLine = string.Empty;
+                }
+            }
+
+            /// <summary>A redraw of the card (an answer, the switch): a new, empty line for Download.</summary>
+            public void RedrawCard()
+            {
+                CardLine = string.Empty;
+            }
+
+            /// <summary>A redraw of the page (a run, Put mine back, a return): both lines new.</summary>
+            public void Redraw()
+            {
+                CardLine = string.Empty;
+                ReinstallLine = string.Empty;
+            }
+
+            public string Update => Confirmation.Label(ReplacingAction.Update, CardLine);
+            public string Reinstall => Confirmation.Label(ReplacingAction.Reinstall, ReinstallLine);
         }
 
         /// <summary>One press to be told, a second to mean it, and a third is a new question rather than a second yes.</summary>
@@ -43,17 +77,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
-            tab.Line = "Downloading 0.3.1…";
+            // The run redraws the card, and its line with it.
+            tab.RedrawCard();
             Assert.Equal("Download", tab.Update);
 
-            tab.Line = Offer;
             Assert.Equal("Reinstall everything", tab.Reinstall);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
 
-            // The run wrote a sentence of its own; the same sentence written back by some later writer is no yes.
-            tab.Line = AskReinstall;
+            // The run spent the yes; the same sentence written back by some later writer is no yes.
+            tab.ReinstallLine = AskReinstall;
             Assert.Equal("Reinstall everything", tab.Reinstall);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
         }
@@ -68,13 +102,15 @@ namespace OpenDashPlugin.Tests
             var tab = new Tab();
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
 
-            // Reinstall does not take Update's yes for its own: it asks its question, which takes the line.
+            // Reinstall does not take Update's yes for its own: it asks its question on its own line, and the
+            // card's line gives Download's question up.
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
+            Assert.Equal(string.Empty, tab.CardLine);
             Assert.Equal("Download", tab.Update);
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
 
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
-            tab.Line = Reinstalled;
+            tab.Redraw();
             Assert.Equal("Download", tab.Update);
             Assert.Equal("Reinstall everything", tab.Reinstall);
 
@@ -90,12 +126,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
+            Assert.Equal(string.Empty, tab.ReinstallLine);
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
             Assert.Equal("Reinstall everything", tab.Reinstall);
 
-            // Reinstall's question has gone from the line, so its button asks it again rather than running.
+            // Reinstall's question has gone from its line, so its button asks it again rather than running.
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
             Assert.Equal("Download", tab.Update);
+        }
+
+        /// <summary>
+        /// Even were the other line still to show its question, one question is open at a time: the confirmation
+        /// holds only the last one asked, so a press on the first button asks again rather than running.
+        /// </summary>
+        [Fact]
+        public void One_question_is_open_whatever_the_other_line_still_shows()
+        {
+            var confirmation = new PanelConfirmation();
+            Assert.Equal(PressOutcome.Ask, confirmation.Press(ReplacingAction.Update, OneEdited, AskUpdate, string.Empty));
+            Assert.Equal(PressOutcome.Ask, confirmation.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall, string.Empty));
+            Assert.Equal("Download", confirmation.Label(ReplacingAction.Update, AskUpdate));
+            Assert.Equal(PressOutcome.Ask, confirmation.Press(ReplacingAction.Update, OneEdited, AskUpdate, AskUpdate));
         }
 
         /// <summary>A second press replaces exactly the folders the question named, and a list that has moved is asked
@@ -109,32 +160,67 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, two, askTwo));
-            Assert.Equal(askTwo, tab.Line);
+            Assert.Equal(askTwo, tab.CardLine);
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
-            Assert.Equal(AskUpdate, tab.Line);
+            Assert.Equal(AskUpdate, tab.CardLine);
 
             // The same folders are the same question, in whatever order the installer lists them.
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, two, askTwo));
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Update, new[] { "OpenDash Rim", "OpenDash" }, askTwo));
         }
 
-        /// <summary>A check, its answer, the switch or "Put mine back" writes the line, and that alone withdraws the
-        /// question, without any of them having to know that one was open.</summary>
+        /// <summary>A check in flight writes the card's line, and its answer and the switch redraw the card: each
+        /// withdraws Download's question without having to know that one was open.</summary>
         [Fact]
-        public void Whatever_takes_the_line_withdraws_the_question()
+        public void A_check_its_answer_or_the_switch_withdraws_Download_s_question()
         {
             var tab = new Tab();
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
-
-            tab.Line = "Checking for updates…";
+            tab.CardLine = Checking;
             Assert.Equal("Download", tab.Update);
-            tab.Line = Offer;
+            tab.RedrawCard();
             Assert.Equal("Download", tab.Update);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
 
-            // The tab being left takes the line away altogether.
+            // The switch redraws the card too.
+            tab.RedrawCard();
+            Assert.Equal("Download", tab.Update);
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
+        }
+
+        /// <summary>Neither a check nor the switch writes Reinstall everything's line, so its question stands there,
+        /// still on screen, its button still reads "Replace anyway", and the next press on it is the yes.</summary>
+        [Fact]
+        public void A_check_or_the_switch_leaves_Reinstall_everything_s_question_standing()
+        {
+            var tab = new Tab();
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
+            tab.CardLine = Checking;
+            Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
+            Assert.Equal("Download", tab.Update);
+            tab.RedrawCard();
+            Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
+            Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
+        }
+
+        /// <summary>"Put mine back" and the page being drawn again take both lines, and the page being left takes
+        /// them away altogether.</summary>
+        [Fact]
+        public void A_redraw_or_leaving_the_page_withdraws_either_question()
+        {
+            var tab = new Tab();
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
+            tab.Redraw();
+            Assert.Equal("Reinstall everything", tab.Reinstall);
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
+
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
+            tab.Redraw();
+            Assert.Equal("Download", tab.Update);
+
+            Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal("Download", tab.Confirmation.Label(ReplacingAction.Update, null));
             Assert.Equal(PressOutcome.Ask, tab.Confirmation.Press(ReplacingAction.Update, OneEdited, AskUpdate, null));
         }
@@ -145,11 +231,12 @@ namespace OpenDashPlugin.Tests
         {
             var tab = new Tab();
             Assert.Equal(PressOutcome.Run, tab.Press(ReplacingAction.Update, new string[0], AskUpdate));
-            Assert.Equal(Offer, tab.Line);
+            Assert.Equal(string.Empty, tab.CardLine);
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PressOutcome.Run, tab.Press(ReplacingAction.Reinstall, new string[0], AskReinstall));
-            // Nothing was written over the question yet, and the label already lets it go.
+            // Nothing was written over the question on the card's line yet, and the label already lets it go.
+            Assert.Equal(AskUpdate, tab.CardLine);
             Assert.Equal("Download", tab.Update);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
         }
