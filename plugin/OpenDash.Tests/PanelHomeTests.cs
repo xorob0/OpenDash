@@ -521,6 +521,35 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(dotHex, line.DotHex);
         }
 
+        /// <summary>A strip's line keeps its room exactly where the strip can go live, which is where the line
+        /// says the car's own rev lights once a car's tables are ready, and so where a session moves it.</summary>
+        [Fact]
+        public void A_strip_that_can_go_live_keeps_its_lines_room()
+        {
+            var car = Contract.LedRpmStyleCar;
+            var rpm = Contract.LedCentres[0];
+            var states = new FlagBoxInstallState?[] { null }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>());
+            foreach (var profile in states)
+            {
+                foreach (var selected in new bool?[] { null, true, false })
+                {
+                    foreach (var style in new[] { car, Contract.LedRpmStyleLeftToRight })
+                    {
+                        foreach (var centre in new[] { rpm, "brake" })
+                        {
+                            var keeps = PanelHome.StripLineKeepsRoom(style, centre, profile, selected);
+                            Assert.Equal(PanelHome.StripLive(true, style, centre, profile, selected), keeps);
+                            // Where the line keeps its room it has something to say once the car is ready.
+                            if (keeps) Assert.NotEqual(string.Empty, PanelHome.StripLine(true, "Car", profile, selected).Text);
+                        }
+                    }
+                }
+            }
+            Assert.True(PanelHome.StripLineKeepsRoom(car, rpm, null, null));
+            Assert.False(PanelHome.StripLineKeepsRoom(Contract.LedRpmStyleLeftToRight, rpm, null, null));
+            Assert.False(PanelHome.StripLineKeepsRoom(car, rpm, FlagBoxInstallState.NotInstalled, null));
+        }
+
         /// <summary>
         /// Every state a strip's line can be in, in the LEDs cards' words and with its ink and its dot: amber
         /// only where the attention card has a row, and green only for a selection SimHub reported.
@@ -712,7 +741,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex)) {", code);
             Assert.Contains("HomeRelightMissed(); strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim); strip.Host.Child = strip.Picture;", code);
             Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex);", code);
-            Assert.Contains("HomeSetLine(strip.Line, line); HomeSetDot(strip.Dot, line.DotHex);", code);
+            Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom); HomeSetDot(strip.Dot, line.DotHex);", code);
             Assert.Contains("strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);", code);
             Assert.Contains("OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });", code);
             Assert.Contains("if (live.Count > 0) OnTick(", code);
@@ -889,7 +918,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (beside) { press.VerticalAlignment = align; press.MaxWidth = PanelHome.PressMaxWidth; press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0); DockPanel.SetDock(press, Dock.Right); dock.Children.Add(press); dock.Children.Add(text); } else { press.HorizontalAlignment = HorizontalAlignment.Left; press.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(press); dock.Children.Add(text); }", code);
             Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
-            Assert.Contains("text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;", code);
+            Assert.Contains("text.Visibility = line.Text.Length > 0 ? Visibility.Visible : keepsRoom ? Visibility.Hidden : Visibility.Collapsed;", code);
+            // A strip that can go live keeps its line's room, so its card does not grow as a session starts.
+            Assert.Contains("strip.KeepsRoom = PanelHome.StripLineKeepsRoom(Settings.BarRpmStyle(bar.Namespace), Settings.BarCentre(bar.Namespace), strip.Profile, strip.Selected);", code);
+            Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom);", code);
         }
     }
 }

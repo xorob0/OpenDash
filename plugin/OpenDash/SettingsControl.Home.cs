@@ -330,6 +330,7 @@ namespace OpenDashPlugin
             public double Dim;
             public FlagBoxInstallState? Profile;
             public bool? Selected;
+            public bool KeepsRoom;
             public Viewbox Host;
             public Border Picture;
             public TextBlock Line;
@@ -364,6 +365,7 @@ namespace OpenDashPlugin
                     Line = HomeLineText(true),
                     Dot = HomeDot(null),
                 };
+                strip.KeepsRoom = PanelHome.StripLineKeepsRoom(Settings.BarRpmStyle(bar.Namespace), Settings.BarCentre(bar.Namespace), strip.Profile, strip.Selected);
                 // The picture is built once, dark, and the tick sets its LEDs in place.
                 strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);
                 strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);
@@ -398,7 +400,8 @@ namespace OpenDashPlugin
                 strip.Host = host;
                 HomePaintStrip(strip);
                 live.Add(strip);
-                // The line carries its own gap, so a line with nothing to say takes its gap with it.
+                // The line carries its own gap, so a line with nothing to say takes its gap with it, unless the
+                // strip can go live, whose card keeps one height as a session starts and ends.
                 var ns = bar.Namespace;
                 rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));
             }
@@ -434,7 +437,7 @@ namespace OpenDashPlugin
             var lineKey = line.Text + "|" + line.TextHex + "|" + line.DotHex;
             if (lineKey == strip.PaintedLine) return;
             strip.PaintedLine = lineKey;
-            HomeSetLine(strip.Line, line);
+            HomeSetLine(strip.Line, line, strip.KeepsRoom);
             HomeSetDot(strip.Dot, line.DotHex);
         }
 
@@ -555,14 +558,15 @@ namespace OpenDashPlugin
             return text;
         }
 
-        /// <summary>Says a line: its text and ink, its whole text on hover where it is trimmed, and no room at
-        /// all, gap included, when it has nothing to say.</summary>
-        private static void HomeSetLine(TextBlock text, HomeLine line)
+        /// <summary>Says a line: its text and ink, its whole text on hover where it is trimmed, and, when it has
+        /// nothing to say, no room at all, gap included, or its room kept blank where the line will speak on a
+        /// later tick.</summary>
+        private static void HomeSetLine(TextBlock text, HomeLine line, bool keepsRoom = false)
         {
             text.Text = line.Text;
             text.Foreground = Ui.Brush(line.TextHex);
             text.ToolTip = text.TextTrimming == TextTrimming.None || line.Text.Length == 0 ? null : line.Text;
-            text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+            text.Visibility = line.Text.Length > 0 ? Visibility.Visible : keepsRoom ? Visibility.Hidden : Visibility.Collapsed;
         }
 
         /// <summary>The state dot, which keeps its room when there is nothing to say so the rows line up.</summary>
