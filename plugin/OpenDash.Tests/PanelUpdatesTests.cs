@@ -437,6 +437,157 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (updatesCardHost != null) Say(outcome.Line, outcome.Ok);", applied);
         }
 
+        /// <summary>The page's code with every run of whitespace one space, so a pin reads a call that is
+        /// wrapped over lines as one.</summary>
+        private static string FlatCode() => System.Text.RegularExpressions.Regex.Replace(PageCode(), @"\s+", " ");
+
+        /// <summary>One method of the page, from its signature to the next member's.</summary>
+        private static string Method(string signature)
+        {
+            var code = FlatCode();
+            var start = code.IndexOf(signature, StringComparison.Ordinal);
+            Assert.True(start >= 0, signature + " is on the page");
+            var next = code.IndexOf(" private ", start + signature.Length, StringComparison.Ordinal);
+            return next < 0 ? code.Substring(start) : code.Substring(start, next - start);
+        }
+
+        /// <summary>
+        /// Each press reaches what it says it does. A press whose handler went would draw with every pure test
+        /// green, and a Support press that copied nothing would still say "Support report copied.".
+        /// </summary>
+        [Fact]
+        public void Every_press_is_wired_to_what_it_says()
+        {
+            var code = FlatCode();
+            Assert.Contains("updatesDownload.Click += (sender, args) => ApplyUpdate();", code);
+            Assert.Contains("updatesCheckNow.Click += (sender, args) => Check(manual: true);", code);
+            Assert.Contains("updatesReinstall.Click += (sender, args) => Reinstall();", code);
+            Assert.Contains("restore.Click += (sender, args) => RestoreKept();", code);
+            Assert.Contains("copy.Click += (sender, args) => UpdatesCopyReport();", code);
+            Assert.Contains("log.Click += (sender, args) => UpdatesOpenLog();", code);
+            Assert.Contains("issue.Click += (sender, args) => Ui.OpenUrl(IssuesUrl);", code);
+            Assert.Contains("guide.Click += (sender, args) => Ui.OpenUrl(DocumentationUrl);", code);
+            Assert.Contains("BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl)", code);
+
+            var copy = Method("private void UpdatesCopyReport()");
+            Assert.Contains("report = PanelUpdates.Report(UpdatesReportInput());", copy);
+            Assert.True(copy.IndexOf("Clipboard.SetText(report);", StringComparison.Ordinal) < copy.IndexOf("Say(PanelUpdates.ReportCopied);", StringComparison.Ordinal)
+                && copy.Contains("Clipboard.SetText(report);"), "the report is on the clipboard before the page says so");
+
+            var log = Method("private void UpdatesOpenLog()");
+            Assert.Contains("var folder = Path.Combine(plugin.Installer.SimHubRoot ?? string.Empty, PanelUpdates.LogFolder);", log);
+            Assert.Contains("Process.Start(new ProcessStartInfo { FileName = folder, UseShellExecute = true });", log);
+
+            // The restart said after the dialog's yes, in UpdateWording's words.
+            Assert.Equal("Closing SimHub. It starts again with the new OpenDash.", UpdateWording.RestartGoing);
+            Assert.Contains("Say(UpdateWording.RestartGoing);", Method("private async void OfferRestart("));
+        }
+
+        /// <summary>The one setting the page writes is the switch's, read and saved where it is flipped.</summary>
+        [Fact]
+        public void The_switch_reads_and_saves_the_check_setting()
+        {
+            var row = Method("private FrameworkElement BuildCheckRow()");
+            Assert.Contains("var toggle = BuildToggle(Settings.CheckForUpdates, on => { Settings.CheckForUpdates = on; Save();", row);
+        }
+
+        /// <summary>
+        /// Download and Reinstall everything each ask on their own line and read their label from it, and
+        /// asking on one line takes the other's question away (PanelConfirmation: one question at a time). A
+        /// Download asking on Reinstall everything's line would ask again on every press and never replace
+        /// an edited dashboard.
+        /// </summary>
+        [Fact]
+        public void Each_replacing_press_asks_on_its_own_line_and_withdraws_the_other_s_question()
+        {
+            var code = FlatCode();
+            Assert.Contains("updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));", code);
+            Assert.Contains("updatesReinstall.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesReinstallLine, ReplacingAction.Reinstall));", code);
+
+            var apply = Method("private void ApplyUpdate()");
+            Assert.Contains("confirmation.Press(ReplacingAction.Update, edited, question, updatesCardLine == null ? null : updatesCardLine.Text);", apply);
+            Assert.Contains("UpdatesAsk(updatesCardLine, question);", apply);
+            Assert.DoesNotContain("updatesReinstallLine", apply);
+
+            var reinstall = Method("private void Reinstall()");
+            Assert.Contains("confirmation.Press(ReplacingAction.Reinstall, edited, question, updatesReinstallLine == null ? null : updatesReinstallLine.Text);", reinstall);
+            Assert.Contains("UpdatesAsk(updatesReinstallLine, question);", reinstall);
+            Assert.DoesNotContain("updatesCardLine", reinstall);
+
+            var ask = Method("private void UpdatesAsk(TextBlock line, string question)");
+            Assert.Contains("foreach (var other in new[] { updatesCardLine, updatesReinstallLine }) { if (other == null || other == line) continue; other.Text = string.Empty; other.Visibility = Visibility.Collapsed; }", ask);
+        }
+
+        /// <summary>
+        /// A download holds off every press that writes DashTemplates or SimHub's profiles: two installers over
+        /// the same folders can delete one mid-extraction. Each press returns while a run is going, and the
+        /// run draws each of them disabled, whenever it was drawn.
+        /// </summary>
+        [Fact]
+        public void A_run_holds_off_every_press_that_writes()
+        {
+            foreach (var signature in new[] { "private void ApplyUpdate()", "private void RestoreKept()", "private void Reinstall()" })
+            {
+                var body = Method(signature);
+                var guard = body.IndexOf("if (applying) return;", StringComparison.Ordinal);
+                Assert.True(guard >= 0 && guard < body.IndexOf("plugin.Installer.Refresh();", StringComparison.Ordinal), signature + " returns during a run before it reads or writes");
+            }
+            var lights = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => p.EndsWith("SettingsControl.Updates.Lights.cs", StringComparison.Ordinal))), @"\s+", " ");
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(lights, @"\{ if \(applying\) return; draw\((update|press)\(\)\);").Count);
+
+            var run = Method("private void ShowRun()");
+            Assert.Contains("if (updatesReinstall != null) updatesReinstall.IsEnabled = false;", run);
+            Assert.Contains("if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;", run);
+            Assert.Contains("foreach (var press in updatesRunPresses) press.IsEnabled = false;", run);
+            // Put mine back and both light rows' Update join the presses a run holds off.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(FlatCode(), @"updatesRunPresses\.Add\(").Count);
+        }
+
+        /// <summary>
+        /// Put mine back never overwrites edits it did not ask about: it reads the disk first and restores only
+        /// what the kept card offers, which is a folder the driver has not edited again (ShowsKept, fed the
+        /// installer's own Edited). PackageExtractor.Restore keeps no copy of what it replaces.
+        /// </summary>
+        [Fact]
+        public void Put_mine_back_restores_only_what_the_card_offers_from_a_fresh_read()
+        {
+            var code = FlatCode();
+            Assert.Contains("if (!PanelUpdates.ShowsKept(copies, package.Any(p => p.Edited))) continue;", code);
+            var restore = Method("private void RestoreKept()");
+            var read = restore.IndexOf("plugin.Installer.Refresh();", StringComparison.Ordinal);
+            var each = restore.IndexOf("foreach (var kept in UpdatesKept())", StringComparison.Ordinal);
+            Assert.True(read >= 0 && each > read, "the disk is read before the copies are chosen");
+        }
+
+        /// <summary>
+        /// What a light press costs is said on the presses themselves: a row's Update and Reinstall everything
+        /// replace an older profile the driver has changed, and the row's hover names only the version.
+        /// </summary>
+        [Fact]
+        public void The_presses_that_replace_a_changed_profile_say_so()
+        {
+            var code = FlatCode();
+            Assert.Contains("private static Button UpdatesRowPress() { var button = Ui.Button(PanelUpdates.RowUpdate, PanelButtonKind.Outline, PanelButtonSize.Small); button.ToolTip = PanelUpdates.RowUpdateTooltip;", code);
+            Assert.Contains("updatesReinstall.ToolTip = PanelUpdates.ReinstallTooltip;", code);
+            Assert.Contains("replaced", PanelUpdates.ReinstallTooltip);
+            // The flag box only on a rig with a matrix, from what SimHub held before the run.
+            Assert.Contains("if (PanelUpdates.BringsFlagBoxForward(Settings.MatrixPanels().Any(), before)) tally.FlagBox(before, InstallFlagBox());", code);
+        }
+
+        /// <summary>The draw-time choices that are not a press: the card the state draws, where search's Put
+        /// mine back lands while no kept card is drawn, and the notes under the table.</summary>
+        [Fact]
+        public void The_page_draws_its_choices_from_PanelUpdates()
+        {
+            var code = FlatCode();
+            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());", code);
+            Assert.Contains("Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages)", code);
+            Assert.Contains("children.Add(keptAnchorHere ? Ui.Anchor(new Border { Child = reinstall }, PanelUpdates.AnchorKept) : reinstall);", code);
+            Assert.Contains("var hasStrips = Settings.LedBarList().Any(bar => bar != null && bar.ProfileShapeId != null);", code);
+            Assert.Contains("PanelUpdates.TableNotes(plugin.Installer.HasEmbeddedPackage, plugin.Installer.LastError, rowFailed, lights.Count > 0, hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);", code);
+            Assert.Contains("rowFailed |= pair.Value.State == PanelCopy.InstallFailed;", code);
+        }
+
         // --- In SimHub --------------------------------------------------------------------------------
 
         [Fact]
@@ -574,6 +725,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelUpdates.ImportGap);
             Assert.Equal(8, PanelUpdates.ImportLineGap);
             Assert.Equal("Could not copy the profile. See SimHub's log.", PanelUpdates.CopyForImportFailed);
+            Assert.Equal("Copy to SimHub's import folder", PanelUpdates.CopyForImport);
+            Assert.Equal(@"Puts a copy in Documents\SimHub.", PanelUpdates.CopyForImportTooltip);
+            Assert.Equal("Where OpenDash left the profile.", PanelUpdates.ImportPathTooltip);
             Assert.Equal(@"Copied to C:\Users\Rim\Documents\SimHub\flag-box.json. In SimHub, open your device's profiles and press Import.",
                 PanelUpdates.CopiedForImport(@"C:\Users\Rim\Documents\SimHub\flag-box.json"));
             var code = PageCode();
@@ -1182,7 +1336,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FlagBoxInstallState.Failed, plans["LedDash"].State);
             Assert.Equal(FlagBoxInstallState.UpToDate, plans["LedBrow"].State);
 
-            Assert.All(PanelUpdates.AfterWrite(after, false, written).Values, plan => Assert.Equal(FlagBoxInstallState.Unavailable, plan.State));
+            // Every strip is repainted while SimHub cannot be read, each as unknown: an empty answer would leave
+            // every row saying what it said before the press.
+            var unreachable = PanelUpdates.AfterWrite(after, false, written);
+            Assert.Equal(new[] { "LedBrow", "LedDash", "LedRim" }, unreachable.Keys.OrderBy(k => k, StringComparer.Ordinal));
+            Assert.All(unreachable.Values, plan => Assert.Equal(FlagBoxInstallState.Unavailable, plan.State));
             Assert.Equal(3, PanelUpdates.AfterWrite(after, true, null).Count);
         }
 

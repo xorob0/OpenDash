@@ -134,6 +134,17 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("0.4.0", PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0").State);
         }
 
+        /// <summary>The table's one press is drawn from PanelUpdates' OffersUpdate, never from this row's Button or
+        /// Style, and every state's style stays an outline: the page's one primary is Download.</summary>
+        [Fact]
+        public void No_light_state_is_a_primary()
+        {
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                Assert.Equal(PanelButton.Outline, PanelCopy.LightRow(state, "0.4.0").Style);
+            }
+        }
+
         /// <summary>What the page cannot know it does not claim: with SimHub's settings out of reach, or no
         /// profile in this build to compare with, the row reads "Unknown", the table's word for a version it
         /// cannot read, and the row's hover says why.</summary>

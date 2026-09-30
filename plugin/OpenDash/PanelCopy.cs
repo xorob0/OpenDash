@@ -151,6 +151,10 @@ namespace OpenDashPlugin
         /// cannot know -- SimHub's settings out of reach, or no profile in this build to compare with -- is
         /// "Unknown", the word the table already writes for a version it cannot read, and the row's hover
         /// says why: calling it "Not installed" would claim what nobody has checked.
+        ///
+        /// Only State and StateHex are drawn. The row's press is PanelUpdates.StripRow's and FlagBoxRow's
+        /// OffersUpdate, since it also depends on SimHub listing the strip's device, so Button and Style here
+        /// are the RowAction's shape, read by no page: pinned as an outline so a primary never creeps back.
         /// </remarks>
         public static RowAction LightRow(FlagBoxInstallState state, string installedVersion)
         {
