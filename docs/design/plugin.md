@@ -52,8 +52,13 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   the icon sheet has no moon) that lights in the accent on the zone ground when on, a nav item high and the
   rail's 39 px inside wide. Its label is the tooltip where the label is not drawn, and a rail item's tooltip
   ends "Needs attention" when it wears the amber dot. The artboards draw no rail at all.
-- **Past the 1112 px ceiling the main column stays beside the sidebar** and the room beyond it is left
-  empty on the right, rather than the column being centred in the window; the artboards stop at 1200.
+- **The main column fills the window.** The artboards are drawn 1200 wide as a frame, not as a maximum:
+  past 1200 the column keeps growing beside the sidebar with no ceiling and nothing centred, rows and card
+  grids stretch to its right edge, and two blocks sit side by side wherever the full sidebar leaves 760 px
+  of content. Prose keeps a measure: a caption or paragraph wraps at .cap's 620 by default
+  (`PanelShell.ProseMaxWidth`), a row's caption at 520, and a message line or a long caption that asks for
+  it at `BodyWidth` 880, which also bounds the live preview. A picture drawn at a fixed size shrinks to a
+  narrower column rather than being clipped by it.
 - **The version and the nav counts are the display family's SemiBold**; the artboard's 500 is a face the
   plugin does not bundle.
 - **Voice replacements**: greyed rows are noun phrases ("Rig test", "Alert dismissal", "RPM colour for
