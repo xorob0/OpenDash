@@ -55,8 +55,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { PanelSoon.RealHardware }, PanelRigMap.SoonDrawn);
             Assert.Equal("Leaderboard", PanelRigMap.BoardLabel);
             // The artboard's <section aria-label="What to emulate"> is a wh-clause posing as a heading; a
-            // heading is a noun (voice.md), and search already finds the chips by "emulate".
+            // heading is a noun (voice.md), and the name a screen reader announces is one search finds.
             Assert.Equal("Emulation", PanelRigMap.ScenariosName);
+            Assert.Equal(PanelPage.Rig, PanelSearch.Find(PanelSearch.All(), PanelRigMap.ScenariosName).First().Route.Page);
+            Assert.All(PanelSearch.Find(PanelSearch.All(), "emulation"), hit => Assert.Equal(PanelPage.Rig, hit.Route.Page));
             Assert.DoesNotContain(new[] { "What", "Where", "How", "Which", "When", "Who", "Why" }, w => PanelRigMap.ScenariosName.StartsWith(w + " ", StringComparison.Ordinal));
             // The chips are the voice's words: "Pit limiter" and the temperatures by name.
             Assert.Equal(new[] { "Flags", "Spotter", "Pit lane", "Warnings", "Revs" }, PanelEmulation.Groups.Select(g => g.Title));
@@ -139,18 +141,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Rig", "Night mode", "Reset layout", "Flags", "Spotter", "Pit lane", "Warnings", "Revs" }, PanelRigMap.Search.Select(e => e.Label));
             Assert.All(PanelRigMap.Search, e => Assert.Equal(PanelPage.Rig, e.Route.Page));
             Assert.Equal(PanelRigMap.AnchorCanvas, PanelRigMap.Search[0].Route.Anchor);
+            // Night mode and Reset layout are in the header, at the page's top.
+            Assert.Null(PanelRigMap.Search[1].Route.Anchor);
+            Assert.Null(PanelRigMap.Search[2].Route.Anchor);
             Assert.All(PanelRigMap.Search.Skip(3), e => Assert.Equal(PanelRigMap.AnchorScenarios, e.Route.Anchor));
             Assert.Equal(PanelSettings.NightModeTitle, PanelRigMap.Search[1].Label);
             Assert.DoesNotContain(PanelRigMap.Search, e => e.Label == PanelRigMap.RealHardwareTitle);
-            // The words a driver types for each, which a search that finds the label alone would lose.
-            Assert.Equal(new[] { "rig layout", "map", "arrange", "tiles", "emulate" }, PanelRigMap.Search[0].Keywords);
+            // The words a driver types for each, which a search that finds the label alone would lose. A
+            // keyword is matched when it contains the query, so "emulation" is carried beside "emulate".
+            Assert.Equal(new[] { "rig layout", "map", "arrange", "tiles", "emulate", "emulation" }, PanelRigMap.Search[0].Keywords);
             Assert.Equal(new[] { "dark", "dim" }, PanelRigMap.Search[1].Keywords);
             Assert.Equal(new[] { "arrange", "tiles", "rig layout" }, PanelRigMap.Search[2].Keywords);
-            Assert.Equal(new[] { "emulate", "test", "yellow", "blue", "chequered" }, PanelRigMap.Search[3].Keywords);
-            Assert.Equal(new[] { "emulate", "car left", "car right" }, PanelRigMap.Search[4].Keywords);
-            Assert.Equal(new[] { "emulate", "limiter", "speeding" }, PanelRigMap.Search[5].Keywords);
-            Assert.Equal(new[] { "emulate", "fuel", "oil", "water" }, PanelRigMap.Search[6].Keywords);
-            Assert.Equal(new[] { "emulate", "shift point", "rpm" }, PanelRigMap.Search[7].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "test", "yellow", "blue", "chequered" }, PanelRigMap.Search[3].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "car left", "car right" }, PanelRigMap.Search[4].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "limiter", "speeding" }, PanelRigMap.Search[5].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "fuel", "oil", "water" }, PanelRigMap.Search[6].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "shift point", "rpm" }, PanelRigMap.Search[7].Keywords);
         }
 
         /// <summary>The body of one method of the Rig page, comments stripped, up to its closing brace.</summary>
@@ -222,7 +228,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_rig_page_keeps_a_drop_and_a_reset_and_a_chip_rebuilds_nothing()
         {
-            InOrder(RigMethod("private void RigDrop("), "PanelRigMap.SavePlaces(Settings, views.Select(view => view.Tile.At(Canvas.GetLeft(view.Element), Canvas.GetTop(view.Element))));", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
+            var drop = RigMethod("private void RigDrop(");
+            InOrder(drop, "PanelRigMap.SavePlaces(Settings, views.Select(view => view.Tile.At(Canvas.GetLeft(view.Element), Canvas.GetTop(view.Element))));", "PanelRigMap.ScreenOf(Settings, tile)", "screen.Unclaimed == true", "Save(screen);", "Save();", "if (claiming)", "RefreshAttention();", "RefreshSidebar();");
+            // An ordinary drop asks SimHub nothing: the refresh is inside the claim's braces, and only there.
+            Assert.Contains("if (claiming)\n            {\n                RefreshAttention();\n                RefreshSidebar();\n            }", drop);
+            Assert.Equal(1, drop.Split("RefreshAttention();").Length - 1);
+            Assert.Equal(1, drop.Split("RefreshSidebar();").Length - 1);
             InOrder(RigMethod("private void RigResetLayout("), "PanelRigMap.ClearLayout(Settings);", "Save();", "Redraw();");
             // The canvas is planned once, at the page's width less its frame, and drawn from that plan: the
             // tiles' room, which a drag is held to, and the canvas as high as the room at the plan's scale.
@@ -279,6 +290,7 @@ namespace OpenDashPlugin.Tests
             InOrder(RigMethod("private static Brush RigDots("), "Ui.DotGrid();", "if (scale >= 1) return dots;", "scaled.Transform = new ScaleTransform(scale, scale);");
             // Reset layout is what the header's press does.
             Assert.Contains("reset.Click += (sender, args) => RigResetLayout();", RigMethod("private FrameworkElement BuildRigHeader("));
+
             var tile = RigMethod("private RigTileView BuildRigTile(");
             // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
             // the tile following the default.
@@ -334,14 +346,26 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var warns = PanelRigMap.Warns(tile, issues);", tile);
 
             var pick = RigMethod("private void RigPick(");
-            InOrder(pick, "Select(PanelPage.Rig, id);", "view.Paint(id);");
+            InOrder(pick, "Select(PanelPage.Rig, id);", "foreach (var view in views) view.Paint(id);", "RigDrawChips(host, views, id);");
             Assert.DoesNotContain("RebuildPage(", pick);
             Assert.DoesNotContain("Redraw(", pick);
             Assert.DoesNotContain("Save(", pick);
-            // And a chip is what picks it.
-            Assert.Contains("() => RigPick(host, views, id)", RigMethod("private void RigDrawChips("));
+            // And a chip is what picks it: each group under its own title, the picked chip pressed, and one
+            // picked from the keyboard focused again after its redraw.
+            InOrder(RigMethod("private void RigDrawChips("),
+                "var current = rigScenario;",
+                "foreach (var group in PanelEmulation.Groups)",
+                "foreach (var scenario in group.Scenarios)",
+                "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",
+                "if (id == focus) focusChip = chip;",
+                "Ui.Eyebrow(group.Title)",
+                "host.Child = wrap;",
+                "chip.Dispatcher.BeginInvoke(new Action(() => chip.Focus()), DispatcherPriority.Input);");
+            // A rebuild -- the night switch, a resize, Settings' Try -- paints the selection, not the default.
+            InOrder(canvas, "var scenario = rigScenario;", "BuildRigTile(tile, extent, scenario, views)");
+            Assert.Contains("return id != null && PanelEmulation.Find(id) != null ? id : PanelEmulation.Default;", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
 
-            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);");
+            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", "RigDrawChips(host, views, null);", "return host;");
         }
 
 
@@ -354,7 +378,16 @@ namespace OpenDashPlugin.Tests
         {
             // The lights dim at night (ruling 22), and the header's night switch follows a wheel's press.
             Assert.Contains("return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);", RigMethod("private double RigLights("));
-            InOrder(RigMethod("private FrameworkElement BuildRigPage("), "DrawsLighting();", "BuildRigHeader()");
+            // The page is its header, the canvas and the chips, in that order, each under the anchor search and
+            // Home's fix rows route to.
+            InOrder(RigMethod("private FrameworkElement BuildRigPage("),
+                "DrawsLighting();",
+                "var canvas = Ui.Anchor(BuildRigCanvas(views), PanelRigMap.AnchorCanvas);",
+                "var chips = Ui.Anchor(BuildRigScenarios(views), PanelRigMap.AnchorScenarios);",
+                "stack.Children.Add(BuildRigHeader());",
+                "stack.Children.Add(canvas);",
+                "stack.Children.Add(chips);",
+                "return stack;");
 
             // A strip from its shape, its switches and its centre; a matrix from its slot, critical flags only
             // included, which needs the scenario.
@@ -435,6 +468,29 @@ namespace OpenDashPlugin.Tests
             InOrder(header, "var real = PanelSoon.RealHardware;", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), Ui.Switch(false, null)), real)");
             var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
             foreach (var write in new[] { "InstallBar(", "ReinstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
+            // The page calls DrawsLighting, so a wheel's lighting press rebuilds it on SimHub's interface
+            // thread: its build reads nothing of SimHub's devices, profiles or disk (foundation §4).
+            foreach (var read in new[] { "LedTargets", "StripInstaller", "FlagBoxInstaller", "PackageExtractor", "SafePlan", "BarCensus" }) Assert.DoesNotContain(read, page);
+
+            // The night switch shows the setting, saves at once, and shows the change; it is named, and it has
+            // its words beside it.
+            InOrder(header,
+                "var night = Ui.Switch(Settings.LightsNightMode, on =>",
+                "Settings.LightsNightMode = on;",
+                "Save();",
+                "ShowLightingChange();",
+                "AutomationProperties.SetName(night, PanelSettings.NightModeTitle);",
+                "Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(PanelSettings.NightModeTitle), night)");
+            // Every control of the header drawn: beside the title on two columns, wrapped under it otherwise.
+            InOrder(header,
+                "var controls = new FrameworkElement[] { nightGroup, hardware, reset };",
+                "if (TwoColumns)",
+                "Ui.HStack(PanelRigMap.HeaderGap, controls)",
+                "return Ui.Row(title, right);",
+                "foreach (var control in controls)",
+                "wrap.Children.Add(control);",
+                "return Ui.VStack(0, title, wrap);");
+
 
             // The page's own words: its title and New tag, the canvas's hint, and the empty rig.
             InOrder(header, "Ui.PageTitle(PanelRigMap.Title), Ui.NewTag()");
@@ -1162,9 +1218,15 @@ namespace OpenDashPlugin.Tests
             Assert.All(tiles, tile => { int x, y; Assert.True(PanelRigMap.TrySaved(settings, tile, out x, out y)); });
             Assert.True(PanelRigMap.ClearLayout(settings));
             Assert.All(tiles, tile => { int x, y; Assert.False(PanelRigMap.TrySaved(settings, tile, out x, out y)); });
-            Assert.All(settings.RigScreens(), s => Assert.Null(s.LayoutX));
-            Assert.All(settings.LedBarList(), b => Assert.Null(b.LayoutY));
+            // Both halves of every place: a half left behind is a setting the file keeps for nothing.
+            Assert.All(settings.RigScreens(), s => { Assert.Null(s.LayoutX); Assert.Null(s.LayoutY); });
+            Assert.All(settings.LedBarList(), b => { Assert.Null(b.LayoutX); Assert.Null(b.LayoutY); });
             Assert.All(settings.MatrixLayoutX, v => Assert.Null(v));
+            Assert.All(settings.MatrixLayoutY, v => Assert.Null(v));
+            // A matrix with only its Y left is still forgotten.
+            settings.MatrixLayoutY[1] = 40;
+            Assert.True(PanelRigMap.ClearLayout(settings));
+            Assert.Null(settings.MatrixLayoutY[1]);
             Assert.False(PanelRigMap.ClearLayout(settings));
             var placed = PanelRigMap.Plan(settings, 1100).Tiles;
             Assert.Equal(PanelRigMap.Plan(Rig(), 1100).Tiles.Select(t => t.X + "," + t.Y), placed.Select(t => t.X + "," + t.Y));
@@ -1403,23 +1465,28 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextSecondary, idle.InkHex);
             Assert.Null(idle.BorderHex);
             Assert.Null(PanelRigMap.BandPaint(null, 290).Words);
-            // A flag on its colour.
+            // A flag on its colour, its words tracked.
             var yellow = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Yellow), 290);
             Assert.Equal("YELLOW", yellow.Words);
             Assert.Equal(Theme.FlagYellow, yellow.FillHex);
             Assert.Equal(Theme.OnFlag, yellow.InkHex);
             Assert.Null(yellow.BorderHex);
+            Assert.True(yellow.Tracked);
+            Assert.False(yellow.RuleOnTop);
             // The black flag an outline of its colour on the base ground.
             var black = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Black), 290);
             Assert.Equal("BLACK", black.Words);
             Assert.Equal(Theme.SurfaceBase, black.FillHex);
             Assert.Equal(Theme.FlagBlack, black.BorderHex);
             Assert.Equal(PanelRigMap.BandOutline, black.BorderWidth);
+            Assert.True(black.Tracked);
+            Assert.False(black.RuleOnTop);
             // The chequer says nothing.
             var chequer = PanelRigMap.BandPaint(PanelEmulation.Band(PanelEmulation.Chequer), 290);
             Assert.True(chequer.Chequer);
             Assert.Null(chequer.Words);
             Assert.Null(chequer.FillHex);
+            Assert.False(chequer.Tracked);
 
             // A phone nothing takes: the module it opens on, wrapped, on the inset ground inside its border.
             var phone = PanelRigMap.CompanionPaint(FaceBand.Idle, "Timing");
@@ -1475,6 +1542,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(56, PanelRigMap.RoundLimiterWidth);
             Assert.Equal(18, PanelRigMap.RoundLimiterTop);
             Assert.Equal(2, PanelRigMap.PopUpRule);
+
             // Zone A's width: its share of the body less the gap before it, or the whole body when stacked.
             var wide = Screen(Contract.KindFace, "MainDash", "Main dash", 1280, 480);
             var zones = PanelRigMap.FaceZones(wide);
@@ -1501,12 +1569,92 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Pit limiter", PanelRigMap.LimiterPaint(PanelEmulation.Limiter, reference).Words);
         }
 
+        /// <summary>A TrueType file's advance for each character, in em: head's em, hhea's metric count,
+        /// hmtx's widths and a format 4 cmap, which is what tools/measure-font reads too.</summary>
+        private static IDictionary<char, double> FontAdvances(string path, IEnumerable<char> characters)
+        {
+            var font = File.ReadAllBytes(path);
+            int U16(int at) => (font[at] << 8) | font[at + 1];
+            long U32(int at) => ((long)font[at] << 24) | ((long)font[at + 1] << 16) | ((long)font[at + 2] << 8) | font[at + 3];
+            var tables = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < U16(4); i++)
+            {
+                var record = 12 + 16 * i;
+                tables[System.Text.Encoding.ASCII.GetString(font, record, 4)] = (int)U32(record + 8);
+            }
+            var em = U16(tables["head"] + 18);
+            var metrics = U16(tables["hhea"] + 34);
+            var cmap = tables["cmap"];
+            var sub = -1;
+            for (var i = 0; i < U16(cmap + 2); i++)
+            {
+                var record = cmap + 4 + 8 * i;
+                var at = cmap + (int)U32(record + 4);
+                if (U16(at) == 4 && (U16(record) == 3 || U16(record) == 0)) { sub = at; break; }
+            }
+            Assert.True(sub >= 0, "no format 4 cmap in " + path);
+            var segments = U16(sub + 6) / 2;
+            var ends = sub + 14;
+            var starts = ends + 2 * segments + 2;
+            var deltas = starts + 2 * segments;
+            var offsets = deltas + 2 * segments;
+            var advances = new Dictionary<char, double>();
+            foreach (var character in characters)
+            {
+                var code = (int)character;
+                var glyph = 0;
+                for (var s = 0; s < segments; s++)
+                {
+                    if (code > U16(ends + 2 * s)) continue;
+                    var start = U16(starts + 2 * s);
+                    if (code < start) break;
+                    var delta = U16(deltas + 2 * s);
+                    var offset = U16(offsets + 2 * s);
+                    if (offset == 0) glyph = (code + delta) & 0xFFFF;
+                    else
+                    {
+                        var at = offsets + 2 * s + offset + 2 * (code - start);
+                        glyph = U16(at);
+                        if (glyph != 0) glyph = (glyph + delta) & 0xFFFF;
+                    }
+                    break;
+                }
+                Assert.True(glyph != 0, "no glyph for '" + character + "'");
+                var advance = U16(tables["hmtx"] + 4 * Math.Min(glyph, metrics - 1));
+                advances[character] = (double)advance / em;
+            }
+            return advances;
+        }
+
+        [Fact]
+        public void A_bands_words_are_measured_in_the_weight_they_are_drawn_in()
+        {
+            // The table is Barlow SemiBold's, held here to the font file the panel embeds, entry for entry.
+            var path = Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-SemiBold.ttf");
+            var glyphs = PanelRigMap.BandGlyphs.ToList();
+            Assert.Contains('·', glyphs);
+            Assert.Equal(26 * 2 + 2, glyphs.Count);
+            var font = FontAdvances(path, glyphs);
+            foreach (var character in glyphs) Assert.Equal(Math.Round(font[character], 3), PanelRigMap.BandAdvance(character), 3);
+            // A character it does not carry is measured as its widest.
+            Assert.Equal(glyphs.Max(PanelRigMap.BandAdvance), PanelRigMap.BandAdvance('%'));
+            Assert.Equal(PanelRigMap.BandAdvance('W'), PanelRigMap.BandAdvance('%'));
+            // Each glyph a whole pixel, up: 0.878 of 10 px is 9.
+            Assert.Equal(9, PanelRigMap.TrackedWidth("W", 10, 0));
+            Assert.Equal(9 + 1.4, PanelRigMap.TrackedWidth("W", 10, 0.14), 6);
+            // The panel draws the band's words in SemiBold, and embeds that face.
+            Assert.Contains("FontWeights.SemiBold, paint.InkHex, tracking", RigMethod("private static Border RigPainted("));
+            Assert.Contains("\"Barlow-SemiBold.ttf\"", File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelFonts.cs")));
+        }
+
         [Fact]
         public void A_bands_words_fit_the_band_of_every_screen_they_are_drawn_on()
         {
             // "WHITE · LAST LAP" is 16 glyphs; tracked at 10 px it is wider than a portrait pit wall's band.
             Assert.Equal(PanelRigMap.TrackedWidth("WHITE", 10, 0.14) + PanelRigMap.TrackedWidth(" · LAST LAP", 10, 0.14), PanelRigMap.TrackedWidth("WHITE · LAST LAP", 10, 0.14), 6);
-            Assert.InRange(PanelRigMap.TrackedWidth("WHITE · LAST LAP", 10, 0.14), 100, 115);
+            // W 9, H 7, I 3, T 6, E 6, the dot 3, the spaces 2, L 6, A 7, S 6, P 6, and 1.4 after each of 16.
+            Assert.Equal(9 + 7 + 3 + 6 + 6 + 2 + 3 + 2 + 6 + 7 + 6 + 6 + 2 + 6 + 7 + 6 + 16 * 1.4, PanelRigMap.TrackedWidth("WHITE · LAST LAP", 10, 0.14), 6);
+
             Assert.Equal(0, PanelRigMap.TrackedWidth(null, 10, 0.14));
             Assert.Equal(75 - 10, PanelRigMap.ScreenInner(75));
             Assert.Equal("WHITE · LAST LAP", PanelRigMap.BandWords("WHITE · LAST LAP", 290));
@@ -1554,8 +1702,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Dash brow · Needs attention", PanelRigMap.TileLabel(tile, true));
             Assert.Equal("Dash brow · " + PanelNav.WarnTooltip, PanelRigMap.TileLabel(tile, true));
             Assert.Equal(string.Empty, PanelRigMap.TileLabel(null, false));
+            // A tooltip only where the tile says less than its label: the bare name, drawn whole, says it all
+            // (voice.md: where the control already says it, say nothing).
+            Assert.Null(PanelRigMap.TileTooltip(tile, false, false));
+            Assert.Equal("Dash brow · Needs attention", PanelRigMap.TileTooltip(tile, true, false));
+            Assert.Equal("Dash brow", PanelRigMap.TileTooltip(tile, false, true));
+            Assert.Equal("Dash brow · Needs attention", PanelRigMap.TileTooltip(tile, true, true));
             var thumb = RigMethod("private RigTileView BuildRigTile(");
-            InOrder(thumb, "ToolTip = PanelRigMap.TileLabel(tile, warns),", "AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));");
+            InOrder(thumb,
+                "name.MaxWidth = Math.Max(0, tile.Width - (warns ? PanelRigMap.WarnDot + PanelRigMap.WarnGap : 0));",
+                "ToolTip = PanelRigMap.TileTooltip(tile, warns, RigNameTrimmed(tile.Name, name.MaxWidth)),",
+                "AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));");
+            // Trimmed is measured as the line draws the name: its size and weight, unbounded.
+            InOrder(RigMethod("private static bool RigNameTrimmed("), "Ui.Text(text ?? string.Empty, PanelRigMap.NameSize, FontWeights.Medium,", "probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));", "return probe.DesiredSize.Width > room;");
+            Assert.Contains("var name = Ui.Text(tile.Name, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);", thumb);
         }
 
         [Fact]
@@ -1750,7 +1910,7 @@ namespace OpenDashPlugin.Tests
             // Held to StripFrame: over every shape, scenario and switch, an LED the picture darkens is one the
             // rev ladder lit, and an LED it keeps is kept as the frame drew it.
             var variants = new List<StripOptions> { new StripOptions(), whole };
-            foreach (var effect in new[] { "flag.yellow", "pit.limiter", "pit.speeding", "spotter.left", "spotter.right" })
+            foreach (var effect in Contract.LedEffectIds())
             {
                 var off = new StripOptions { SpotterWhole = true };
                 off.EffectsOff.Add(effect);
@@ -1783,6 +1943,17 @@ namespace OpenDashPlugin.Tests
             PanelRigMap.StripPicture(shift, "brake", PanelEmulation.Shift);
             Assert.All(shift[1], led => Assert.Equal(Theme.ShiftStage3, led));
             Assert.Null(PanelRigMap.StripPicture(null, "brake", PanelEmulation.Shift));
+        }
+
+        [Fact]
+        public void A_flag_is_drawn_on_a_strip_by_an_effect_the_strip_has()
+        {
+            // Each by its own id; the contract's rows name every one but red, which the strip draws under the
+            // flags' one switch all the same.
+            Assert.Equal(new[] { "flag.green", "flag.yellow", "flag.blue", "flag.white", "flag.black", "flag.chequered", "flag.red" },
+                PanelEmulation.Scenarios().Select(s => s.Id).Where(PanelEmulation.IsFlag).Select(PanelRigMap.StripFlagEffect));
+            var ids = Contract.LedEffectIds().ToList();
+            Assert.All(PanelEmulation.Scenarios().Select(s => s.Id).Where(id => PanelEmulation.IsFlag(id) && id != PanelEmulation.Red), id => Assert.Contains(PanelRigMap.StripFlagEffect(id), ids));
         }
 
         [Fact]

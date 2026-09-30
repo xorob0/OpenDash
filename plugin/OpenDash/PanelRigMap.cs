@@ -348,8 +348,9 @@ namespace OpenDashPlugin
         // --- The scenario chips ---------------------------------------------------------------------
 
         /// <summary>What assistive technology calls the chips' section. The artboard's aria-label is "What to
-        /// emulate", a wh-clause posing as a heading; a heading is a noun (voice.md), and "Emulation" is the
-        /// word search already finds the chips by.</summary>
+        /// emulate", a wh-clause posing as a heading; a heading is a noun (voice.md). Search matches a keyword
+        /// that contains what is typed, so the entries carry "emulation" beside "emulate": the name a screen
+        /// reader announces finds the chips when it is typed back.</summary>
         public const string ScenariosName = "Emulation";
 
         /// <summary>Between groups across and down, under a group's title, and between two chips.</summary>
@@ -365,14 +366,14 @@ namespace OpenDashPlugin
 
         public static readonly PanelSearch.Entry[] Search =
         {
-            new PanelSearch.Entry(Title, PanelPage.Rig, AnchorCanvas, "rig layout", "map", "arrange", "tiles", "emulate"),
+            new PanelSearch.Entry(Title, PanelPage.Rig, AnchorCanvas, "rig layout", "map", "arrange", "tiles", "emulate", "emulation"),
             new PanelSearch.Entry(PanelSettings.NightModeTitle, PanelPage.Rig, null, "dark", "dim"),
             new PanelSearch.Entry(ResetLayout, PanelPage.Rig, null, "arrange", "tiles", "rig layout"),
-            new PanelSearch.Entry(PanelEmulation.FlagsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "test", "yellow", "blue", "chequered"),
-            new PanelSearch.Entry(PanelEmulation.SpotterGroup, PanelPage.Rig, AnchorScenarios, "emulate", "car left", "car right"),
-            new PanelSearch.Entry(PanelEmulation.PitLaneGroup, PanelPage.Rig, AnchorScenarios, "emulate", "limiter", "speeding"),
-            new PanelSearch.Entry(PanelEmulation.WarningsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "fuel", "oil", "water"),
-            new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "shift point", "rpm"),
+            new PanelSearch.Entry(PanelEmulation.FlagsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "test", "yellow", "blue", "chequered"),
+            new PanelSearch.Entry(PanelEmulation.SpotterGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "car left", "car right"),
+            new PanelSearch.Entry(PanelEmulation.PitLaneGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "limiter", "speeding"),
+            new PanelSearch.Entry(PanelEmulation.WarningsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "fuel", "oil", "water"),
+            new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "shift point", "rpm"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
@@ -1091,6 +1092,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What a tile's Thumb shows a pointer: <see cref="TileLabel"/> where the tile says less than that
+        /// -- it wears the warning dot, or its name is trimmed -- and nothing where the name is drawn whole
+        /// and there is no dot.
+        /// </summary>
+        /// <remarks>
+        /// voice.md: where the control already says it, say nothing. The sidebar gives a full item no
+        /// tooltip for the same reason, and a tile whose tooltip repeated the name printed over it did not.
+        /// </remarks>
+        public static string TileTooltip(RigTile tile, bool warns, bool trimmed)
+        {
+            return warns || trimmed ? TileLabel(tile, warns) : null;
+        }
+
+        /// <summary>
         /// A strip's picture from its frame and its Centre display (OpenDashSettings.BarCentre): the frame as
         /// PanelEmulation draws it on a strip whose centre shows the revs, and otherwise the frame with the
         /// rev ladder taken out of its centre -- the centre unlit except where an effect the strip draws over
@@ -1150,8 +1165,8 @@ namespace OpenDashPlugin
             return onLeft ? lightLeft : lightRight;
         }
 
-        /// <summary>The strip effect a flag is drawn by (Contract.LedEffects).</summary>
-        private static string StripFlagEffect(string scenarioId)
+        /// <summary>The strip effect a flag is drawn by, one of Contract.LedEffects' ids.</summary>
+        public static string StripFlagEffect(string scenarioId)
         {
             return scenarioId == PanelEmulation.Chequer ? "flag.chequered" : "flag." + scenarioId;
         }
@@ -1454,6 +1469,7 @@ namespace OpenDashPlugin
             if (total <= 0) return 0;
             return Math.Max(0, Math.Floor(inner * zones[index].Weight / total - (index == 0 ? 0 : ScreenGap)));
         }
+
         /// <summary>What covers a face's zones B, A and C: the flag's block where the face draws its flags full
         /// screen, and nothing otherwise.</summary>
         public static FaceBand FaceBlockFor(string scenarioId, string flagFormat)
@@ -1578,37 +1594,45 @@ namespace OpenDashPlugin
         /// every one of them, the last included.
         /// </summary>
         /// <remarks>
-        /// The advances are Barlow Bold's, from packages/dash/src/design/advances.ts: the band is drawn in
-        /// SemiBold, which is narrower, so a run measured here is never wider on screen. A character the table
-        /// does not carry is measured as its widest, the W.
+        /// The advances are Barlow SemiBold's, the weight the band's words are drawn in (RigPainted), read from
+        /// packages/dash/fonts/Barlow-SemiBold.ttf by tools/measure-font, and PanelRigMapTests holds each one
+        /// to that file. They were Barlow Bold's from advances.ts, on the claim that SemiBold is narrower; it
+        /// is not for B, E, F, G, H, N, U or W. A character the table does not carry is measured as its
+        /// widest, the W.
         /// </remarks>
         public static double TrackedWidth(string text, double size, double tracking)
         {
             if (string.IsNullOrEmpty(text)) return 0;
             var spacing = Math.Round(size * tracking, 2);
             var width = 0.0;
-            foreach (var character in text)
-            {
-                double advance;
-                if (!BoldAdvances.TryGetValue(character, out advance)) advance = BoldWidest;
-                width += Math.Ceiling(advance * size) + spacing;
-            }
+            foreach (var character in text) width += Math.Ceiling(BandAdvance(character) * size) + spacing;
             return width;
         }
 
-        private const double BoldWidest = 0.877;
-
-        private static readonly IReadOnlyDictionary<char, double> BoldAdvances = new Dictionary<char, double>
+        /// <summary>How far one character of a band's words advances, in em: its Barlow SemiBold advance, or
+        /// the widest one's for a character the table does not carry.</summary>
+        public static double BandAdvance(char character)
         {
-            { ' ', 0.2 }, { '·', 0.235 },
-            { 'A', 0.671 }, { 'B', 0.62 }, { 'C', 0.608 }, { 'D', 0.618 }, { 'E', 0.584 }, { 'F', 0.56 }, { 'G', 0.612 },
-            { 'H', 0.628 }, { 'I', 0.263 }, { 'J', 0.583 }, { 'K', 0.626 }, { 'L', 0.572 }, { 'M', 0.715 }, { 'N', 0.665 },
-            { 'O', 0.621 }, { 'P', 0.597 }, { 'Q', 0.593 }, { 'R', 0.614 }, { 'S', 0.595 }, { 'T', 0.585 }, { 'U', 0.629 },
-            { 'V', 0.622 }, { 'W', 0.877 }, { 'X', 0.631 }, { 'Y', 0.617 }, { 'Z', 0.557 },
-            { 'a', 0.528 }, { 'b', 0.566 }, { 'c', 0.537 }, { 'd', 0.566 }, { 'e', 0.546 }, { 'f', 0.387 }, { 'g', 0.556 },
-            { 'h', 0.547 }, { 'i', 0.255 }, { 'j', 0.254 }, { 'k', 0.533 }, { 'l', 0.244 }, { 'm', 0.835 }, { 'n', 0.547 },
-            { 'o', 0.557 }, { 'p', 0.568 }, { 'q', 0.568 }, { 'r', 0.383 }, { 's', 0.502 }, { 't', 0.38 }, { 'u', 0.545 },
-            { 'v', 0.52 }, { 'w', 0.783 }, { 'x', 0.538 }, { 'y', 0.504 }, { 'z', 0.46 },
+            double advance;
+            return SemiBoldAdvances.TryGetValue(character, out advance) ? advance : SemiBoldWidest;
+        }
+
+        /// <summary>The characters the table carries: a space, the middle dot, and the Latin letters.</summary>
+        public static IEnumerable<char> BandGlyphs { get { return SemiBoldAdvances.Keys; } }
+
+        private const double SemiBoldWidest = 0.878;
+
+        private static readonly IReadOnlyDictionary<char, double> SemiBoldAdvances = new Dictionary<char, double>
+        {
+            { ' ', 0.2 }, { '·', 0.226 },
+            { 'A', 0.648 }, { 'B', 0.622 }, { 'C', 0.608 }, { 'D', 0.618 }, { 'E', 0.592 }, { 'F', 0.563 }, { 'G', 0.613 },
+            { 'H', 0.637 }, { 'I', 0.262 }, { 'J', 0.581 }, { 'K', 0.62 }, { 'L', 0.571 }, { 'M', 0.715 }, { 'N', 0.669 },
+            { 'O', 0.621 }, { 'P', 0.595 }, { 'Q', 0.587 }, { 'R', 0.613 }, { 'S', 0.591 }, { 'T', 0.579 }, { 'U', 0.636 },
+            { 'V', 0.61 }, { 'W', 0.878 }, { 'X', 0.616 }, { 'Y', 0.599 }, { 'Z', 0.554 },
+            { 'a', 0.522 }, { 'b', 0.559 }, { 'c', 0.531 }, { 'd', 0.559 }, { 'e', 0.541 }, { 'f', 0.376 }, { 'g', 0.549 },
+            { 'h', 0.544 }, { 'i', 0.255 }, { 'j', 0.251 }, { 'k', 0.522 }, { 'l', 0.239 }, { 'm', 0.829 }, { 'n', 0.544 },
+            { 'o', 0.556 }, { 'p', 0.563 }, { 'q', 0.563 }, { 'r', 0.376 }, { 's', 0.493 }, { 't', 0.374 }, { 'u', 0.541 },
+            { 'v', 0.504 }, { 'w', 0.761 }, { 'x', 0.516 }, { 'y', 0.489 }, { 'z', 0.455 },
         };
 
 

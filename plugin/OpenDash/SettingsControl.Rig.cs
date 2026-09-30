@@ -337,9 +337,9 @@ namespace OpenDashPlugin
                 Focusable = true,
                 IsTabStop = true,
                 FocusVisualStyle = Ui.FocusRing(),
-                // The whole name, where the line above the picture trims it, and what the dot means; the Thumb
-                // is what the pointer is on, the dot included.
-                ToolTip = PanelRigMap.TileLabel(tile, warns),
+                // The whole name where the line above the picture trims it, and what the dot means; the Thumb
+                // is what the pointer is on, the dot included. Nothing where the tile already says it all.
+                ToolTip = PanelRigMap.TileTooltip(tile, warns, RigNameTrimmed(tile.Name, name.MaxWidth)),
             };
             AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));
             // The tile that was in the hand when a rebuild landed has the focus again, after the shell's own
@@ -362,6 +362,7 @@ namespace OpenDashPlugin
             {
                 if (Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
             };
+
             var moved = false;
             double startLeft = 0, startTop = 0;
             thumb.DragStarted += (sender, args) =>
@@ -440,6 +441,14 @@ namespace OpenDashPlugin
             };
 
             return new RigTileView(tile, root, paint);
+        }
+
+        /// <summary>Whether a tile's name is wider than the room over its picture, so the line trims it.</summary>
+        private static bool RigNameTrimmed(string text, double room)
+        {
+            var probe = Ui.Text(text ?? string.Empty, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);
+            probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return probe.DesiredSize.Width > room;
         }
 
         /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
