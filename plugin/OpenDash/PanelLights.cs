@@ -279,8 +279,8 @@ namespace OpenDashPlugin
         /// </remarks>
         public static string BarAdded(string name, string device, string note = null)
         {
-            var where = string.IsNullOrWhiteSpace(device) ? " in SimHub." : " on " + device + ".";
-            var steps = BarAddedRestart + "select \"" + name + "\"" + where;
+            var select = PanelLeds.SelectIt(name, device);
+            var steps = BarAddedRestart + char.ToLowerInvariant(select[0]) + select.Substring(1);
             return "Added " + name + ". " + (string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim() + " ") + steps;
         }
 
@@ -289,12 +289,13 @@ namespace OpenDashPlugin
         public const string BarAddedRestart = "Restart SimHub, then ";
 
         /// <summary>
-        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form);
-        /// the LEDs header then offers Install for it.
+        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form),
+        /// then names the steps left in order: the LEDs header's Install, and the restart the strip's own
+        /// settings wait on, as <see cref="BarAdded"/> says it.
         /// </summary>
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See SimHub's log.";
+            return "Added " + name + ", but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.";
         }
 
         /// <summary>A strip whose profile could not be moved to another device: nothing was added.</summary>

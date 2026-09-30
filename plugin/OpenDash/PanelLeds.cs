@@ -273,19 +273,25 @@ namespace OpenDashPlugin
         /// Why nothing on this page can install the strip's profile, said under the header in place of a press
         /// and after a Reverse or a Rename that could not install it again; null where something can.
         /// </summary>
-        public static string ProfileBlocked(bool embedded, bool deviceListed)
+        /// <remarks>
+        /// A device SimHub does not list is two states. Where SimHub offers another, the step is the device
+        /// row's picker, in its value's words. Where it offers none, the device row has no picker to point at,
+        /// so the line is the row's own caption (<see cref="PanelLights.DeviceRowCaption"/>): the first step is
+        /// in SimHub, and a device passed over is named with the log that says why.
+        /// </remarks>
+        public static string ProfileBlocked(bool embedded, bool deviceListed, int offered = 1, IList<string> declined = null)
         {
             if (!embedded) return NoProfileForStrip;
-            if (!deviceListed) return DeviceNotListed;
+            if (!deviceListed) return offered > 0 ? DeviceNotListed : PanelLights.DeviceRowCaption(0, null, declined);
             return null;
         }
 
         /// <summary>The build carries no profile of the strip's shape: nothing here can install one.</summary>
         public const string NoProfileForStrip = "This build ships no profile for this strip.";
 
-        /// <summary>SimHub does not list the device the strip names, which is also every strip added while SimHub
-        /// had no LED device: the one step is the device row's.</summary>
-        public const string DeviceNotListed = "SimHub does not list this strip's device. Choose one under SimHub device.";
+        /// <summary>SimHub does not list the device the strip names and offers another: the one step is the device
+        /// row's, whose picker names this state "Device not in SimHub".</summary>
+        public const string DeviceNotListed = "This strip's device is not in SimHub. Choose one under SimHub device.";
 
         public const string InstallTooltip = "Installs this strip's profile in SimHub.";
         public const string UpdateTooltip = "Updates this strip's profile in SimHub.";
@@ -680,6 +686,13 @@ namespace OpenDashPlugin
 
         public const string ReverseTitle = "Reverse direction";
 
+        /// <summary>The line after a Brightness pick (ruling 50: every press says what it did): the strip's own
+        /// value, or the rig's again.</summary>
+        public static string BrightnessSaid(string name, int? value)
+        {
+            return value.HasValue ? "Set " + name + "'s brightness to " + Percent(value.Value) + "." : name + "'s brightness follows the rig's.";
+        }
+
         /// <summary>The greyed "Each LED in turn" row's press (#434).</summary>
         public const string EachLedStart = "Start";
 
@@ -988,7 +1001,8 @@ namespace OpenDashPlugin
             return Steps("Installed " + name + "'s profile.", note, SelectIt(name, device));
         }
 
-        /// <summary>The step SimHub does not take after an install, in the one form every press says it.</summary>
+        /// <summary>The step SimHub does not take after an install, in the one form every press says it: after
+        /// an install, a move, a Reverse and, behind the restart, an Add (PanelLights.BarAdded).</summary>
         public static string SelectIt(string name, string device)
         {
             var on = string.IsNullOrWhiteSpace(device) ? string.Empty : " on " + device;
@@ -1009,8 +1023,8 @@ namespace OpenDashPlugin
         /// unselected: the step SimHub does not take, as after any install.</summary>
         public static string Moved(string name, string device, string note = null)
         {
-            if (string.IsNullOrWhiteSpace(device)) return Steps("Moved " + name + "'s profile.", note, SelectIt(name, null));
-            return Steps("Moved " + name + "'s profile to " + device + ".", note, "Select \"" + name + "\" there in SimHub to use it.");
+            var moved = string.IsNullOrWhiteSpace(device) ? "Moved " + name + "'s profile." : "Moved " + name + "'s profile to " + device + ".";
+            return Steps(moved, note, SelectIt(name, device));
         }
 
         /// <summary>A rename, which installs the profile again so SimHub's list carries the new name.</summary>
@@ -1055,9 +1069,23 @@ namespace OpenDashPlugin
             return Steps(said, reason);
         }
 
-        public static string Removed(string name)
+        /// <summary>
+        /// The line after Remove: the strip and its profile where the profile was taken out of SimHub, the strip
+        /// alone where SimHub never held one, and the log where SimHub held one and it is still there or the
+        /// uninstall threw (<paramref name="takenOut"/> null).
+        /// </summary>
+        public static string Removed(string name, bool heldInSimHub, bool? takenOut)
         {
-            return "Removed " + name + " and its profile.";
+            if (takenOut == true) return "Removed " + name + " and its profile.";
+            if (!RemovedCleanly(heldInSimHub, takenOut)) return "Removed " + name + ", but its profile could not be taken out of SimHub. See SimHub's log.";
+            return "Removed " + name + ".";
+        }
+
+        /// <summary>Whether a Remove left nothing behind in SimHub: false where the uninstall threw, or SimHub held
+        /// the profile and nothing was taken out.</summary>
+        public static bool RemovedCleanly(bool heldInSimHub, bool? takenOut)
+        {
+            return takenOut == true || (takenOut == false && !heldInSimHub);
         }
 
         public static string ReverseSaid(string name, bool reversed)
@@ -1092,10 +1120,15 @@ namespace OpenDashPlugin
             return hasDevice ? AddAndInstall : AddOnly;
         }
 
-        /// <summary>A strip added with no device SimHub lists: the step left is the device row's.</summary>
+        /// <summary>
+        /// A strip added while SimHub offered no LED device: the steps left, in order, which start in SimHub. The
+        /// profile is installed here once there is a device, by the header's Install or the device row, and the
+        /// restart comes last, since the plugin publishes a strip's own settings only for the strips it held when
+        /// SimHub started (PanelLights.BarAdded says the same).
+        /// </summary>
         public static string AddedWithoutDevice(string name)
         {
-            return "Added " + name + ". Choose its SimHub device to install its profile.";
+            return "Added " + name + ". Add your wheel or Arduino in SimHub, install " + name + "'s profile here, then restart SimHub.";
         }
 
 

@@ -250,10 +250,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Why nothing on this page can install the strip's profile, or null: PanelLeds.ProfileBlocked
-        /// over whether the build carries it and whether SimHub lists the strip's device.</summary>
+        /// over whether the build carries it, whether SimHub lists the strip's device, and what SimHub offers.</summary>
         private static string LedsProfileBlocked(LedBar bar)
         {
-            return PanelLeds.ProfileBlocked(EmbeddedProfileOf(bar) != null, LedTargets.Find(bar.Device) != null);
+            IList<string> declined;
+            var offered = LedTargets.All(out declined).Count;
+            return PanelLeds.ProfileBlocked(EmbeddedProfileOf(bar) != null, LedTargets.Find(bar.Device) != null, offered, declined);
         }
 
         /// <summary>
@@ -593,8 +595,7 @@ namespace OpenDashPlugin
 
             // The chooser names the rig's brightness in force in its first entry, so it is drawn again when a
             // wheel's press or night mode moves that; the page itself is not rebuilt by one. It is drawn again
-            // after a pick too, so the list marks the entry now chosen. Nothing is said after a pick: the chooser
-            // already shows it, and a line would pull the page to its top.
+            // after a pick too, so the list marks the entry now chosen, and the pick says what it set.
             var brightness = new Border { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
             var rigShown = -1;
             Func<int> rigInForce = () => PanelLeds.RigBrightnessInForce(Settings.LightsNightMode, Settings.LightsBrightness, Settings.LightsNightBrightness);
@@ -605,11 +606,16 @@ namespace OpenDashPlugin
                 rigShown = rigInForce();
                 brightness.Child = Ui.ChoiceButton(PanelLeds.BrightnessLabels(rigShown), PanelLeds.BrightnessIndex(Settings.BarBrightness(ns)), i =>
                 {
-                    Settings.SetBarBrightness(ns, PanelLeds.BrightnessValue(i));
+                    var value = PanelLeds.BrightnessValue(i);
+                    Settings.SetBarBrightness(ns, value);
                     Save();
                     // At night the preview and the card are drawn at the lower of this and the night brightness.
                     redrawPreview();
                     drawBrightness(true);
+                    // The page is not redrawn, so the last press's line goes first rather than stacking.
+                    var live = Settings.LedBarByNamespace(ns) ?? bar;
+                    ClearMessages();
+                    Say(PanelLeds.BrightnessSaid(live.Name, value));
                 }, 160);
                 if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
             };
@@ -1051,22 +1057,27 @@ namespace OpenDashPlugin
             var bar = Settings.LedBarByNamespace(ns);
             if (bar == null) return;
             var name = bar.Name;
+            var facts = StripFacts(ns);
+            var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);
+            bool? takenOut;
             try
             {
                 // Everywhere, not just the device the strip names: the device it was installed into may
                 // have been removed from SimHub since, and a profile nothing attaches settings to any
                 // more is a row in somebody's list that lights nothing.
-                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns));
+                takenOut = StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns));
             }
             catch (Exception ex)
             {
                 Log.Warn("The profile for " + name + " could not be taken out of SimHub: " + ex.Message);
+                takenOut = null;
             }
+            if (takenOut == false && held) Log.Warn("The profile for " + name + " was not taken out of SimHub: no LED device OpenDash can reach holds it.");
             Settings.RemoveLedBar(ns);
             Save();
             Select(PanelPage.Leds, null);
             Redraw();
-            Say(PanelMessage.Info(PanelLeds.Removed(name)));
+            Say(PanelLeds.Removed(name, held, takenOut), PanelLeds.RemovedCleanly(held, takenOut));
         }
 
         // --- The Add LEDs sheet ---------------------------------------------------------------------------------

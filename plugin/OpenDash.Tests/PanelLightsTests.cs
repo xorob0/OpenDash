@@ -181,7 +181,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_whose_profile_failed_is_sent_to_the_log()
         {
-            Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log.", PanelLights.BarAddFailed("Rim"));
+            // The log, then the steps left in order: the header's Install, and the restart the strip's settings wait on.
+            Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.", PanelLights.BarAddFailed("Rim"));
             Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
             // Rename reinstalls only where SimHub holds the profile, so the hover promises only the rename.
             Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
@@ -199,11 +200,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_strip_added_says_where_to_select_it_and_that_its_settings_wait_for_a_restart()
         {
-            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" on Fanatec CSL Elite.",
+            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" on Fanatec CSL Elite in SimHub to use it.",
                 PanelLights.BarAdded("Rim", "Fanatec CSL Elite"));
-            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" in SimHub.",
+            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" in SimHub to use it.",
                 PanelLights.BarAdded("Rim", null));
-            Assert.Equal("Added Rim. " + FlagBoxInstallPlan.BuiltInModeNote + " Restart SimHub, then select \"Rim\" on Wheel.",
+            Assert.Equal("Added Rim. " + FlagBoxInstallPlan.BuiltInModeNote + " Restart SimHub, then select \"Rim\" on Wheel in SimHub to use it.",
                 PanelLights.BarAdded("Rim", "Wheel", FlagBoxInstallPlan.BuiltInModeNote));
         }
 
