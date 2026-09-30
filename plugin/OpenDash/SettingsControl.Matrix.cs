@@ -254,13 +254,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The 8x8 at the size of the real thing's cells, what it shows under the chip chosen, the link to
-        /// every device at once, and the chips. A chip repaints the picture and the chips in place.
+        /// The 8x8 at the size of the real thing's cells under its New tag, what it shows under the chip chosen
+        /// (named for a screen reader as the artboard's alt text), the link to every device at once, and the
+        /// chips. A chip repaints the picture and the chips in place.
         /// </summary>
         private MatrixPreviewColumn BuildMatrixPreview(int matrix, Border cardPicture)
         {
             var m = matrix;
             var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
+            AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
             var frame = new Border
@@ -278,10 +280,12 @@ namespace OpenDashPlugin
             all.Height = double.NaN;
             all.HorizontalAlignment = HorizontalAlignment.Left;
             all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario));
-            // New in this release (the Map's "Live 8×8 preview"). The preview has no title to follow, and the
-            // frame's padding is narrower than the tag is tall, so the tag follows the line under the frame.
-            var links = Ui.HStack(PanelMatrix.NewTagGap, all, Ui.NewTag());
-            links.HorizontalAlignment = HorizontalAlignment.Left;
+            // New in this release (the Map's "Live 8×8 preview", ruling 7). The preview has no title to follow
+            // and the frame's padding is narrower than the tag is tall, so the tag has the frame's own line,
+            // over it and clear of the lamps, rather than following the link to Rig.
+            var tag = Ui.NewTag();
+            tag.HorizontalAlignment = HorizontalAlignment.Left;
+            var tagged = Ui.VStack(PanelMatrix.NewTagGap, tag, frame);
 
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
             AutomationProperties.SetName(chips, PanelMatrix.PreviewChipsName);
@@ -290,6 +294,7 @@ namespace OpenDashPlugin
             {
                 var options = PanelMatrix.OptionsFor(Settings, m);
                 MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);
+                AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));
                 if (cardPicture != null) MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);
             };
             drawChips = () =>
@@ -318,7 +323,7 @@ namespace OpenDashPlugin
             };
             drawChips();
 
-            var column = Ui.VStack(PanelMatrix.PreviewGap, frame, links, chips);
+            var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips);
             return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);
         }
 

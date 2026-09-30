@@ -70,7 +70,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
             Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
             Assert.Equal("Cancel", PanelMatrix.Cancel);
-            Assert.Equal("Preview", PanelMatrix.PreviewChipsName);
+            Assert.Equal("What to preview", PanelMatrix.PreviewChipsName);
             Assert.Equal("No strips yet.", PanelLeds.NoStrips);
             var home = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
             Assert.Contains("PanelLeds.NoStrips", home);
@@ -480,10 +480,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_preview_draws_the_matrix_as_its_settings_would()
         {
-            Assert.Equal(new[] { "Idle display", "Yellow", "Blue", "Pit limiter", "Car left", "Low fuel", "Chequered" },
+            Assert.Equal(new[] { "Idle display", "Mid revs", "Yellow", "Blue", "Pit limiter", "Car left", "Low fuel", "Chequered" },
                 PanelMatrix.PreviewScenarios.Select(PanelMatrix.PreviewLabel));
-            // The box at rest: the gear in its one white whatever Shift colours says, as Home and Rig's Idle draw it.
+            // The box at rest: the gear in its one white whatever Shift colours says, as Home and Rig's Idle draw
+            // it. The artboard draws Shift colours on its "At rest" chip; the build keeps the idle display true to
+            // the box and shows the switch under a chip of its own, the Rig page's "Mid revs".
             Assert.Equal(PanelEmulation.Idle, PanelMatrix.IdleScenario);
+            Assert.Equal(PanelEmulation.Mid, PanelMatrix.RevsScenario);
             Assert.Equal("Idle display", PanelMatrix.PreviewLabel(PanelMatrix.IdleScenario));
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(null));
             Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.PreviewScenario(PanelEmulation.Oil));
@@ -493,6 +496,21 @@ namespace OpenDashPlugin.Tests
             var bandsOff = new MatrixOptions { Rest = "gear", Bands = false };
             Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOn));
             Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOff));
+            // Shift colours can be seen: under the revs chip the gear takes its first shift colour with the
+            // switch on and stays white with it off; on a matrix that rests dark the chip draws the idle display.
+            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false));
+            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false), bandsOn));
+            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOff, false), bandsOff));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, new MatrixOptions { Rest = "dark", Bands = true }, false));
+
+            // What a screen reader is told the preview draws: the artboard's alt text, as the matrix leaves it.
+            var gear = new MatrixOptions { Rest = "gear" };
+            var dark = new MatrixOptions { Rest = "dark" };
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.IdleScenario, gear));
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelMatrix.RevsScenario, gear));
+            Assert.Equal("Dark", PanelMatrix.PreviewAlt(PanelMatrix.IdleScenario, dark));
+            Assert.Equal(new[] { "Yellow flag", "Blue flag", "Pit limiter frame", "Car on the left", "Fuel pump", "Chequered flag" },
+                PanelMatrix.PreviewScenarios.Skip(2).Select(id => PanelMatrix.PreviewAlt(id, gear)));
 
             // Every setting reaches the picture, each from its own switch: every field is moved off its default.
             var settings = new OpenDashSettings();
@@ -578,6 +596,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
             Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario))", source);
+            // The preview is named for what it draws, when it is built and on every repaint.
+            Assert.Contains("AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));", source);
+            Assert.Contains("AutomationProperties.SetName(preview, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));", source);
+            Assert.Contains("AutomationProperties.SetName(chips, PanelMatrix.PreviewChipsName);", source);
             foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
                 "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })
             {
@@ -612,7 +634,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(26, PanelMatrix.OptionIndent);
             Assert.Equal(PanelMatrix.RankWidth + PanelMatrix.LayerGap, PanelMatrix.OptionIndent);
             Assert.Equal(4, PanelMatrix.UnrankedDotSize);
-            Assert.Equal(12, PanelMatrix.NewTagGap);
+            Assert.Equal(8, PanelMatrix.NewTagGap);
             Assert.Equal(4, PanelMatrix.SlotCaptionLift);
             Assert.Equal(7, PanelMatrix.OptionPaddingY);
             Assert.Equal(12, PanelMatrix.LayerPaddingY);
@@ -621,9 +643,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelMatrix.SectionGap);
             var matrix = MatrixSource();
             Assert.Contains("MatrixStyle.Preview", matrix);
-            // The New tag follows the line under the frame, clear of the lamps.
-            Assert.Contains("var links = Ui.HStack(PanelMatrix.NewTagGap, all, Ui.NewTag());", matrix);
-            Assert.Contains("Ui.VStack(PanelMatrix.PreviewGap, frame, links, chips)", matrix);
+            // The New tag has the frame's own line, over it and clear of the lamps, never after the Rig link.
+            Assert.Contains("var tagged = Ui.VStack(PanelMatrix.NewTagGap, tag, frame);", matrix);
+            Assert.Contains("Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips)", matrix);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.NewTag\(\)"));
+            Assert.DoesNotContain("all, Ui.NewTag()", matrix);
             Assert.Contains("Child = preview,", matrix);
             // Idle display is unranked, drawn with the artboard's dot; the device row has no rank column.
             Assert.Contains("MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle), PanelMatrix.IdleDisplayTitle,", matrix);

@@ -398,12 +398,42 @@ namespace OpenDashPlugin
         /// </summary>
         public const string IdleScenario = PanelEmulation.Idle;
 
-        /// <summary>The preview's chips, in the artboard's order.</summary>
+        /// <summary>
+        /// The chip that draws the gear at revs, the Rig page's "Mid revs": where Shift colours shows, green
+        /// with it on and white with it off. Matrix.dc.html shows the switch on its "At rest" chip instead,
+        /// but the box at rest draws the gear white whatever the switch says (gear.ts), so the idle display
+        /// stays the box and this chip is where the switch can be seen.
+        /// </summary>
+        public const string RevsScenario = PanelEmulation.Mid;
+
+        /// <summary>The preview's chips, in the artboard's order, with the revs chip after the idle display.</summary>
         public static readonly string[] PreviewScenarios =
         {
-            IdleScenario, PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Limiter,
+            IdleScenario, RevsScenario, PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Limiter,
             PanelEmulation.CarLeft, PanelEmulation.LowFuel, PanelEmulation.Chequer,
         };
+
+        /// <summary>
+        /// What the preview draws, for a screen reader (the artboard's role=img alt text): the scenario the
+        /// matrix is drawn in, as <see cref="DrawnScenario"/> leaves it, and at rest the gear or nothing.
+        /// </summary>
+        public static string PreviewAlt(string drawn, MatrixOptions options)
+        {
+            switch (drawn)
+            {
+                case PanelEmulation.Yellow: return "Yellow flag";
+                case PanelEmulation.Blue: return "Blue flag";
+                case PanelEmulation.Limiter: return "Pit limiter frame";
+                case PanelEmulation.CarLeft: return "Car on the left";
+                case PanelEmulation.LowFuel: return "Fuel pump";
+                case PanelEmulation.Chequer: return "Chequered flag";
+            }
+            var gear = options != null && ShowsGearRows(options.Rest);
+            return gear ? "Gear " + PanelEmulation.Gear : PreviewDark;
+        }
+
+        /// <summary>The preview's alt text when the idle display rests dark.</summary>
+        public const string PreviewDark = "Dark";
 
         /// <summary>A chip's label: the Rig page's word for the scenario, and the idle display by its row's name.</summary>
         public static string PreviewLabel(string scenarioId)
@@ -449,6 +479,9 @@ namespace OpenDashPlugin
         {
             if (scenario == null || scenario == IdleScenario) return IdleScenario;
             if (criticalOnly && IsNewsFlag(scenario)) return IdleScenario;
+            // The revs are the idle display's own: drawn while the matrix rests on the gear, which is the only
+            // thing they change.
+            if (scenario == RevsScenario) return options != null && ShowsGearRows(options.Rest) ? RevsScenario : IdleScenario;
             // Whether anything but the idle display shows: the chip on a matrix that rests dark.
             var dark = new MatrixOptions
             {
@@ -469,7 +502,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What the chips are, for a screen reader: the artboard's group.</summary>
-        public const string PreviewChipsName = "Preview";
+        public const string PreviewChipsName = "What to preview";
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
         public const string AllDevices = "All devices at once";
@@ -485,9 +518,10 @@ namespace OpenDashPlugin
         /// <summary>The gap between the preview and the priority list when they are stacked: the page's own.</summary>
         public const double StackedGap = 22;
 
-        /// <summary>The gap between "All devices at once" and the New tag after it, as a title is followed
-        /// by its tag on Rig. The tag is kept out of the frame, whose padding is narrower than it is tall.</summary>
-        public const double NewTagGap = 12;
+        /// <summary>The gap under the New tag, which sits on its own line over the preview's frame (ruling 7
+        /// tags the preview itself): the frame's padding is narrower than the tag is tall, so it cannot sit
+        /// inside the frame clear of the lamps.</summary>
+        public const double NewTagGap = 8;
 
         // --- What may take the matrix over -------------------------------------------------------------
 
