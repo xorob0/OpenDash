@@ -377,6 +377,44 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A screen at a size this build offers no package for -- a card face a migration made at 1280 x 480,
+        /// or a face size a later build dropped -- is never resized by a Save that only renamed it.
+        /// </summary>
+        /// <remarks>
+        /// The edit sheet's size row opened on the first size offered and held it as the answer, so Save took
+        /// the resize path: the screen's dashboard folder was removed and the screen became an 800 round.
+        /// </remarks>
+        [Fact]
+        public void A_screen_at_a_size_not_offered_is_not_resized_unless_a_size_is_picked()
+        {
+            var rounds = new[] { Package("OpenDash 480 round", Contract.KindSlots, 480, 480), Package("OpenDash 800 round", Contract.KindSlots, 800, 800) };
+            // The legacy card face is not among them: its row leads with its own size, and opens there.
+            Assert.Equal(-1, PanelAddScreen.OpensOn(rounds, 1280, 480));
+            var choices = PanelAddScreen.EditSizes(rounds, 1280, 480);
+            Assert.Equal(3, choices.Count);
+            Assert.Null(choices[0]);
+            Assert.Same(rounds[0], choices[1]);
+            // Nothing picked, or its own size picked again, is no resize, and so no rename becomes one.
+            Assert.False(PanelAddScreen.Resizes(null, 1280, 480));
+            Assert.False(PanelAddScreen.Resizes(choices[0], 1280, 480));
+            Assert.Equal(ScreenEdit.Rename, PanelAddScreen.Edit("Round", "Dial", PanelAddScreen.Resizes(null, 1280, 480)));
+            // A size picked is.
+            Assert.True(PanelAddScreen.Resizes(choices[2], 1280, 480));
+
+            // A screen at a size offered opens on it, and the row is the sizes alone.
+            Assert.Equal(1, PanelAddScreen.OpensOn(rounds, 800, 800));
+            Assert.Same(rounds, PanelAddScreen.EditSizes(rounds, 800, 800));
+            Assert.False(PanelAddScreen.Resizes(rounds[1], 800, 800));
+            Assert.True(PanelAddScreen.Resizes(rounds[0], 800, 800));
+
+            // The sheet holds no answer until one is picked, and Save asks the model.
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("PanelAddScreen.EditSizes(PanelAddScreen.Offered(type), screen.Width, screen.Height)", screens);
+            Assert.Contains("PanelAddScreen.Resizes(entry, screen.Width, screen.Height)", screens);
+            Assert.DoesNotContain("?? offered[0]", screens);
+        }
+
+        /// <summary>
         /// The three lines the edit panel can leave behind, each naming what the driver is now waiting for.
         /// </summary>
         /// <remarks>

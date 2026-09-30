@@ -472,6 +472,45 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The size the edit sheet's row opens on: the screen's own among <paramref name="offered"/>, or -1 where
+        /// this build offers no package at the screen's size.
+        /// </summary>
+        /// <remarks>
+        /// The case is real: a card face a migration brought onto the rig at "OpenDash slots 1280x480" is a size
+        /// no build embeds, and a face size a later build drops is another. The row used to open on the first
+        /// size offered and hold it as the answer, so pressing Save only to rename such a screen resized it to
+        /// a package the driver never picked and removed its dashboard folder on the way.
+        /// </remarks>
+        public static int OpensOn(IReadOnlyList<PackageEntry> offered, int width, int height)
+        {
+            if (offered == null) return -1;
+            for (var i = 0; i < offered.Count; i++)
+            {
+                if (offered[i] != null && offered[i].Width == width && offered[i].Height == height) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// The choices the edit sheet's size row draws: the sizes offered, led by the screen's own size (a null
+        /// entry, drawn as its size label) where that is not among them, so the row says what the screen is and
+        /// Save keeps it until another size is picked.
+        /// </summary>
+        public static IReadOnlyList<PackageEntry> EditSizes(IReadOnlyList<PackageEntry> offered, int width, int height)
+        {
+            if (offered == null) return new PackageEntry[] { null };
+            if (OpensOn(offered, width, height) >= 0) return offered;
+            return new PackageEntry[] { null }.Concat(offered).ToList();
+        }
+
+        /// <summary>Whether Save resizes the screen: only to a size that was picked and that the screen is not.
+        /// The screen's own size, and a row nobody touched, keep it.</summary>
+        public static bool Resizes(PackageEntry chosen, int width, int height)
+        {
+            return chosen != null && (chosen.Width != width || chosen.Height != height);
+        }
+
+        /// <summary>
         /// What an edit amounts to, from the two answers the panel is holding.
         /// </summary>
         /// <remarks>

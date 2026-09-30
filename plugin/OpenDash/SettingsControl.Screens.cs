@@ -711,26 +711,28 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The size or the orientation control of the edit sheet: a segmented pair for a way round or
-        /// a few sizes, a list for more.</summary>
-        private FrameworkElement BuildSizeRow(ScreenType type, IReadOnlyList<PackageEntry> offered, SizeQuestion question, int selected, Action<PackageEntry> chose)
+        /// a few sizes, a list for more. <paramref name="choices"/> is PanelAddScreen.EditSizes: a null entry is
+        /// the screen's own size where no package offers it, drawn as that size and chosen as no resize.</summary>
+        private FrameworkElement BuildSizeRow(ScreenType type, ScreenInstance screen, IReadOnlyList<PackageEntry> choices, SizeQuestion question, Action<PackageEntry> chose)
         {
-            var labels = offered.Select((e, i) => PanelAddScreen.SizeLabel(type, e, i)).ToArray();
-            var opens = selected < 0 || selected >= offered.Count ? 0 : selected;
+            var offset = choices.Count > 0 && choices[0] == null ? 1 : 0;
+            var labels = choices.Select((e, i) => e == null ? screen.SizeLabel : PanelAddScreen.SizeLabel(type, e, i - offset)).ToArray();
+            var opens = offset == 1 ? 0 : Math.Max(0, PanelAddScreen.OpensOn(choices, screen.Width, screen.Height));
             FrameworkElement control;
-            if (question == SizeQuestion.Orientation || offered.Count <= 3)
+            if (question == SizeQuestion.Orientation || choices.Count <= 3)
             {
-                var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
+                var values = choices.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
                 control = ScreensSegmented(values, labels, values[opens], value =>
                 {
                     int index;
                     if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
-                    if (index < 0 || index >= offered.Count) return;
-                    chose(offered[index]);
+                    if (index < 0 || index >= choices.Count) return;
+                    chose(choices[index]);
                 });
             }
             else
             {
-                control = Ui.ChoiceButton(labels, opens, index => chose(offered[index]));
+                control = Ui.ChoiceButton(labels, opens, index => chose(choices[index]));
             }
             return Ui.SettingRow(question == SizeQuestion.Orientation ? PanelAddScreen.OrientationTitle : PanelAddScreen.SizeTitle, control);
         }
@@ -755,15 +757,10 @@ namespace OpenDashPlugin
             PackageEntry chosen = null;
             if (question != SizeQuestion.None)
             {
-                var offered = PanelAddScreen.Offered(type);
-                var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
-                chosen = current;
-                var opensOn = 0;
-                for (var i = 0; i < offered.Count; i++)
-                {
-                    if (ReferenceEquals(offered[i], current)) opensOn = i;
-                }
-                sizeRow = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
+                // Nothing is chosen until a size is picked: a screen at a size no package offers opens on its own
+                // size, and Save keeps it (PanelAddScreen.Resizes).
+                var choices = PanelAddScreen.EditSizes(PanelAddScreen.Offered(type), screen.Width, screen.Height);
+                sizeRow = BuildSizeRow(type, screen, choices, question, e => chosen = e);
             }
 
             var edited = Edited(screen);
@@ -819,7 +816,7 @@ namespace OpenDashPlugin
             // Whatever was changed, even nothing: pressing Save on a screen's own edit sheet is the driver
             // saying that this one is theirs.
             screen.Keep();
-            var sizeChanged = entry != null && (entry.Width != screen.Width || entry.Height != screen.Height);
+            var sizeChanged = PanelAddScreen.Resizes(entry, screen.Width, screen.Height);
             switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
             {
                 case ScreenEdit.Resize:
