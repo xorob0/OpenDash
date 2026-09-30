@@ -44,7 +44,7 @@ namespace OpenDashPlugin
             var caption = Ui.Caption(PanelLights.BarsCaption);
             caption.Margin = new Thickness(0, 0, 0, 12);
             groups.Add(caption);
-            if (bars.Count == 0) groups.Add(Ui.Caption(PanelLights.NoBars));
+            if (bars.Count == 0) groups.Add(Ui.Caption(PanelLeds.NoStrips));
             foreach (var bar in bars)
             {
                 var open = selected == null ? ReferenceEquals(bar, bars[0]) : string.Equals(selected, bar.Namespace, StringComparison.Ordinal);

@@ -12,6 +12,11 @@ namespace OpenDashPlugin
     {
         public const string Title = "LEDs";
 
+        /// <summary>The empty state, here and under Home's LEDs eyebrow: the LEDs page's own, as NoScreens is
+        /// Screens', so the LEDs agent can reword it without touching a file another page owns. It was
+        /// PanelLights.NoBars, shared, which Home's read froze.</summary>
+        public const string NoStrips = "No strips yet.";
+
         public const string AnchorStrips = "leds.strips";
         public const string AnchorDevice = "leds.device";
         public const string AnchorCentre = "leds.centre";

@@ -138,6 +138,9 @@ namespace OpenDashPlugin
         /// What a light profile's row says and offers, from the state the install plan found it in.
         /// </summary>
         /// <remarks>
+        /// The Updates page's: its census rows and PanelLightRows read it, and the Updates agent may reword
+        /// it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow.
+        ///
         /// One function rather than a label here and a style there, so that the panel cannot pair a verb
         /// with the wrong button: an update is the one accented action on the page, and everything else is
         /// an outline. The canvas draws two of these rows, the older profile and the uninstalled one. A

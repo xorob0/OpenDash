@@ -18,10 +18,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Critical flags only", PanelMatrix.CriticalFlagsOnlyTitle);
             Assert.Equal("Shift colours", PanelMatrix.ShiftColoursTitle);
             Assert.Equal("Redline flash", PanelMatrix.RedlineFlashTitle);
-            // Shift points, not thresholds, which is the settings model's word; and "Car's own", the
-            // qualifier the LEDs page's #369 switch gives the same tables.
+            // Shift points, not thresholds, which is the settings model's word; and "Car-specific", the name
+            // voice.md gives the car's own tables.
             Assert.Equal("Car-specific shift points", PanelMatrix.CarShiftPointsTitle);
-            Assert.StartsWith("Car's own", PanelLeds.CarRevLightsTitle, StringComparison.Ordinal);
             Assert.DoesNotContain("threshold", PanelMatrix.CarShiftPointsTitle, StringComparison.OrdinalIgnoreCase);
             // Nothing about a fallback the row cannot name, and no "table", which is internal vocabulary.
             Assert.Equal("Colours change where this car's own lights do.", PanelMatrix.CarShiftPointsCaption);
@@ -34,6 +33,39 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Warns about cars alongside.", PanelMatrix.SpotterCaption);
             Assert.Equal("Car warnings", PanelMatrix.CarWarningsTitle);
             Assert.Equal("Low fuel, oil and water.", PanelMatrix.CarWarningsCaption);
+        }
+
+        /// <summary>
+        /// The Matrix page's empty state and its header's profile row are its own, so its agent can reword
+        /// them without touching what Home or Updates owns: Home reads NoPanels as it reads NoScreens, and
+        /// the Updates page's rows read PanelCopy.LightRow.
+        /// </summary>
+        [Fact]
+        public void The_empty_state_and_the_profile_row_are_the_Matrix_pages_own()
+        {
+            Assert.Equal("No panels yet.", PanelMatrix.NoPanels);
+            Assert.Equal("No strips yet.", PanelLeds.NoStrips);
+            // Its own table, pinned here and not held to Updates' LightRow, so either page's agent rewords
+            // its row without the other's test moving.
+            var outdated = PanelMatrix.ProfileRow(FlagBoxInstallState.Outdated, "0.4.0");
+            Assert.Equal("Installed · 0.4.0", outdated.State);
+            Assert.Equal("Update", outdated.Button);
+            Assert.Equal(PanelButton.Primary, outdated.Style);
+            Assert.Equal("Reinstall", PanelMatrix.ProfileRow(FlagBoxInstallState.UpToDate, "0.5.0").Button);
+            Assert.Equal("Install failed", PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).State);
+            Assert.Equal(Theme.StatusFailed, PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).StateHex);
+            foreach (var state in new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotEmbedded, FlagBoxInstallState.Unavailable })
+            {
+                Assert.Equal("Not installed", PanelMatrix.ProfileRow(state, null).State);
+                Assert.Equal("Install", PanelMatrix.ProfileRow(state, null).Button);
+                Assert.Equal(PanelButton.Outline, PanelMatrix.ProfileRow(state, null).Style);
+            }
+            var matrix = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Matrix.cs"));
+            Assert.Contains("PanelMatrix.ProfileRow(", matrix);
+            Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
+            var home = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
+            Assert.Contains("PanelLeds.NoStrips", home);
+            Assert.Contains("PanelMatrix.NoPanels", home);
         }
 
         [Fact]

@@ -44,8 +44,6 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string BarsCaption = "Add one for each RGB strip you have.";
 
-        public const string NoBars = "No strips yet.";
-
         public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";
@@ -353,8 +351,6 @@ namespace OpenDashPlugin
         /// it rather than its slot number.
         /// </remarks>
         public const string PanelsCaption = "Add one for each panel you have. Four at most.";
-
-        public const string NoPanels = "No panels yet.";
 
         public const string AddPanel = "Add a matrix panel";
 

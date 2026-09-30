@@ -143,8 +143,8 @@ namespace OpenDashPlugin
             var matrices = Settings.MatrixPanels().ToList();
             var grid = Ui.CardGrid(220, 16, 3,
                 DeviceCount(PanelNav.Label(PanelPage.Screens), screens.Select(s => s.Name), PanelPage.Screens, PanelScreens.NoScreens + "."),
-                DeviceCount(PanelNav.Label(PanelPage.Leds), strips.Select(b => b.Name), PanelPage.Leds, PanelLights.NoBars),
-                DeviceCount(PanelNav.Label(PanelPage.Matrix), matrices.Select(m => Settings.MatrixName(m) ?? "Matrix " + m), PanelPage.Matrix, PanelLights.NoPanels));
+                DeviceCount(PanelNav.Label(PanelPage.Leds), strips.Select(b => b.Name), PanelPage.Leds, PanelLeds.NoStrips),
+                DeviceCount(PanelNav.Label(PanelPage.Matrix), matrices.Select(m => Settings.MatrixName(m) ?? "Matrix " + m), PanelPage.Matrix, PanelMatrix.NoPanels));
             return PageSection(PanelHome.RightNowTitle, grid);
         }
 

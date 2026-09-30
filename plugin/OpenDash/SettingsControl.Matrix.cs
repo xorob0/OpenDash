@@ -24,7 +24,7 @@ namespace OpenDashPlugin
             var caption = Ui.Caption(PanelLights.PanelsCaption);
             caption.Margin = new Thickness(0, 0, 0, 12);
             groups.Add(caption);
-            if (panels.Count == 0) groups.Add(Ui.Caption(PanelLights.NoPanels));
+            if (panels.Count == 0) groups.Add(Ui.Caption(PanelMatrix.NoPanels));
             var selected = Selected(PanelPage.Matrix);
             foreach (var matrix in panels)
             {
@@ -61,7 +61,7 @@ namespace OpenDashPlugin
             Action<FlagBoxPlan> draw = null;
             draw = current =>
             {
-                var state = PanelCopy.LightRow(current.State, current.InstalledVersion);
+                var state = PanelMatrix.ProfileRow(current.State, current.InstalledVersion);
                 pillHost.Child = Ui.StatusPill(PanelLightRows.DotHex(current.State), state.State, state.StateHex);
                 var button = state.Style == PanelButton.Primary
                     ? Ui.Button(state.Button, PanelButtonKind.Primary, PanelButtonSize.Small)

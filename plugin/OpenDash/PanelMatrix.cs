@@ -11,6 +11,31 @@ namespace OpenDashPlugin
     {
         public const string Title = "Matrix";
 
+        /// <summary>The empty state, here and under Home's Matrix eyebrow: the Matrix page's own, as NoScreens
+        /// is Screens', so ruling 59's one noun ("No matrices yet") is the Matrix agent's to apply. It was
+        /// PanelLights.NoPanels, shared, which Home's read froze.</summary>
+        public const string NoPanels = "No panels yet.";
+
+        /// <summary>
+        /// What the flag box profile's row in the Matrix page's header says and offers. The Matrix page's
+        /// own table: it was PanelCopy.LightRow, which the Updates page's rows read too, so neither page could
+        /// reword a state without changing the other's. Today it says what LightRow says.
+        /// </summary>
+        public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
+        {
+            switch (state)
+            {
+                case FlagBoxInstallState.Outdated:
+                    return new RowAction(PanelCopy.InstalledAt(installedVersion), Theme.StatusUpToDate, "Update", PanelButton.Primary);
+                case FlagBoxInstallState.UpToDate:
+                    return new RowAction(PanelCopy.InstalledAt(installedVersion), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                case FlagBoxInstallState.Failed:
+                    return new RowAction(PanelCopy.InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
+                default:
+                    return new RowAction(PanelCopy.NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
+            }
+        }
+
         public const string AnchorProfile = "matrix.profile";
         public const string AnchorPanels = "matrix.panels";
         public const string AnchorSpotterAnimation = "matrix.spotter-animation";
