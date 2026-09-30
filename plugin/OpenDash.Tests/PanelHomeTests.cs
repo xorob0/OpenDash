@@ -255,6 +255,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Tower page", PanelHome.ScreenShows(new OpenDashSettings(), wall));
             Assert.Equal("Telemetry page", PanelHome.PitWallPage(2));
             Assert.Equal("Race page", PanelHome.PitWallPage(9));
+            Assert.False(PanelHome.PitWallPortrait(wall));
 
             Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(null));
             Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(new bool[Modules.Count]));
@@ -277,6 +278,29 @@ namespace OpenDashPlugin.Tests
             // A size no package is drawn at names nothing rather than twelve cards it may not draw.
             Assert.Equal(string.Empty, PanelHome.ScreenShows(new OpenDashSettings(), Screen(Contract.KindSlots, 1024, 600)));
             Assert.Equal(string.Empty, PanelHome.ScreenShows(new OpenDashSettings(), null));
+        }
+
+        /// <summary>
+        /// The portrait pit wall ("OpenDash Pit wall portrait", 1080 × 1920) is its own package, one page of
+        /// four zones, with no Race, Tower or Telemetry page: its line is its zones' pages, never a landscape
+        /// page, whatever PitWallPage a resize from landscape left behind.
+        /// </summary>
+        [Fact]
+        public void A_portrait_pit_wall_says_its_zones_never_a_landscape_page()
+        {
+            var portrait = Screen(Contract.KindPitWall, 1080, 1920);
+            Assert.True(PanelHome.PitWallPortrait(portrait));
+            Assert.Equal("Fuel · Tyres · Relative · Opponents", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
+            portrait.PitWallPage = 1;
+            Assert.Equal("Fuel · Tyres · Relative · Opponents", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
+            portrait.SetZonePage("PortraitC", 5);
+            Assert.Equal("Fuel · Tyres · Leaderboard · Opponents", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
+            foreach (var page in Contract.PitWallPageNames) Assert.DoesNotContain(page + " page", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
+            // The line a Right now row draws for it, dot and all.
+            Assert.Equal("Fuel · Tyres · Leaderboard · Opponents", PanelHome.ScreenLine(new OpenDashSettings(), portrait, true, false).Text);
+            Assert.False(PanelHome.PitWallPortrait(Screen(Contract.KindFace, 600, 686)));
+            Assert.False(PanelHome.PitWallPortrait(null));
+            Assert.Equal(string.Empty, PanelHome.PortraitZones(null));
         }
 
         /// <summary>The slots each card face reads are the manifest's, which e2e.test.ts pins: a package that
@@ -305,13 +329,14 @@ namespace OpenDashPlugin.Tests
             var face = Screen(Contract.KindFace, 1280, 480);
             var settings = new OpenDashSettings();
             var missing = PanelHome.ScreenLine(settings, face, false, true);
-            Assert.Equal("Missing", missing.Text);
+            // The Screens card's own constant, not a copy: when the card's word moves, Home's moves with it.
+            Assert.Equal(PanelScreens.Missing, missing.Text);
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
-            Assert.Equal("Missing", PanelHome.Missing);
-            Assert.Equal("Not in SimHub yet", PanelHome.NotInSimHubYet);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
-            Assert.Equal("Not in SimHub yet", restart.Text);
+            // The ruled phrase for a dashboard SimHub has not read (voice ruling 23, scenario HM-03).
+            Assert.Equal("Restart SimHub to load it", restart.Text);
+            Assert.Equal(PanelHome.RestartToLoad, restart.Text);
             Assert.Equal(Theme.Caution, restart.TextHex);
             Assert.Equal(Theme.Caution, restart.DotHex);
             var fine = PanelHome.ScreenLine(settings, face, true, false);
@@ -319,6 +344,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextSecondary, fine.TextHex);
             Assert.Equal(Theme.StatusUpToDate, fine.DotHex);
             Assert.Null(PanelHome.ScreenLine(settings, face, null, false).DotHex);
+        }
+
+        /// <summary>
+        /// One phrase for the one state on both pages: the moment PanelScreens carries the restart state's
+        /// phrase (the Screens branch's RestartToLoad), Home's must be it, and Home names no state with a
+        /// constant of its own besides that one.
+        /// </summary>
+        [Fact]
+        public void Home_names_a_screens_state_as_its_card_does()
+        {
+            var cards = typeof(PanelScreens).GetField("RestartToLoad");
+            if (cards != null) Assert.Equal(PanelHome.RestartToLoad, (string)cards.GetValue(null));
+            Assert.Null(typeof(PanelHome).GetField("Missing"));
+            Assert.Null(typeof(PanelHome).GetField("NotInSimHubYet"));
         }
 
         /// <summary>A size nobody knows is not drawn, and nor is one the name already says.</summary>

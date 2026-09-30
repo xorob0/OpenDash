@@ -206,21 +206,28 @@ namespace OpenDashPlugin
             return string.Equals((screen.Name ?? string.Empty).Trim(), size, StringComparison.Ordinal) ? string.Empty : size;
         }
 
-        /// <summary>The words for what SimHub is missing, as Main.dc.html's rows say them. Home's own, not the
-        /// Screens page's, which may name its card's states otherwise.</summary>
-        public const string Missing = "Missing";
-        public const string NotInSimHubYet = "Not in SimHub yet";
+        /// <summary>
+        /// A dashboard written after SimHub started, which SimHub has not read: the ruled phrase for that state
+        /// (voice ruling 23, "One phrase for the one state"), which the Screens card and its fix box say too.
+        /// </summary>
+        /// <remarks>
+        /// The base's PanelScreens has no constant with these words: its NotInSimHubYet is the wording the
+        /// ruling replaced, and the Screens branch drops it for PanelScreens.RestartToLoad. PanelHomeTests holds
+        /// this one to PanelScreens' own the moment that constant exists, so the two pages cannot drift; once
+        /// it does, Home should draw PanelScreens.StateLabel and lose this copy.
+        /// </remarks>
+        public const string RestartToLoad = "Restart SimHub to load it";
 
         /// <summary>
-        /// A screen's line: what SimHub is missing when something is, in that state's ink, and otherwise what
-        /// the screen shows now.
+        /// A screen's line: what SimHub is missing when something is, in the Screens card's words and ink, and
+        /// otherwise what the screen shows now.
         /// </summary>
         /// <param name="installed">Whether its dashboard is in SimHub, or null when the disk could not be asked.</param>
         /// <param name="waitsForRestart">Whether SimHub has not loaded it yet (PanelAttention.ScreenRestart).</param>
         public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed, bool waitsForRestart)
         {
-            if (installed == false) return new HomeLine(Missing, Theme.StatusFailed, Theme.StatusFailed);
-            if (waitsForRestart) return new HomeLine(NotInSimHubYet, Theme.Caution, Theme.Caution);
+            if (installed == false) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
+            if (waitsForRestart) return new HomeLine(RestartToLoad, Theme.Caution, Theme.Caution);
             return new HomeLine(ScreenShows(settings, screen), Theme.TextSecondary, installed == true ? Theme.StatusUpToDate : null);
         }
 
@@ -229,7 +236,9 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A face: the page each zone is on, in the panel's zone order ("Lap times · Gear, speed, revs ·
-        /// Leaderboard · Fuel"). A pit wall: its page ("Race page"). A companion: how much of the catalogue its
+        /// Leaderboard · Fuel"). A landscape pit wall: its page ("Race page"). A portrait pit wall, which is its
+        /// own package with one page and never reads PitWallPage: its four zones' pages, as a face's line is. A
+        /// companion: how much of the catalogue its
         /// rotation holds ("12 of 21 modules"), since which module it is on is the phone's own and not
         /// something OpenDash is told. A card face: the cards its package reads, slot by slot (SlotsRead).
         /// Nothing is made up for a kind the panel does not know.
@@ -244,7 +253,7 @@ namespace OpenDashPlugin
                 var size = screen.FaceSize ?? Contract.ReferenceFace;
                 return string.Join(Separator, PanelFacePlan.ZoneOrder(size).Select(letter => FacePages.NameOf(letter, face.Zone(letter))));
             }
-            if (screen.IsPitWall) return PitWallPage(screen.PitWallPage);
+            if (screen.IsPitWall) return PitWallPortrait(screen) ? PortraitZones(screen) : PitWallPage(screen.PitWallPage);
             if (screen.IsCompanion) return ModulesLine(screen.Modules);
             if (screen.IsSlots)
             {
@@ -294,6 +303,24 @@ namespace OpenDashPlugin
         public static string PitWallPage(int page)
         {
             return Contract.PitWallPageNames[Contract.NormalisePitWallPage(page)] + " page";
+        }
+
+        /// <summary>Whether a pit wall is the portrait package ("OpenDash Pit wall portrait", 1080 × 1920), told
+        /// by its shape as the Screens and Rig pages tell it: that package draws one page of four zones, and
+        /// has no Race, Tower or Telemetry page for PitWallPage to name.</summary>
+        public static bool PitWallPortrait(ScreenInstance screen)
+        {
+            return screen != null && screen.IsPitWall && screen.Height > screen.Width;
+        }
+
+        /// <summary>"Fuel · Tyres · Relative · Opponents": the portrait pit wall's zones A to D, by the names
+        /// the Screens page's zone controls give their pages.</summary>
+        public static string PortraitZones(ScreenInstance screen)
+        {
+            if (screen == null) return string.Empty;
+            return string.Join(Separator, Contract.PitWallZoneSlots
+                .Where(slot => !slot.Landscape)
+                .Select(slot => slot.Wide ? ZonePages.WideName(screen.ZonePage(slot.Key)) : ZonePages.StandardName(screen.ZonePage(slot.Key))));
         }
 
         /// <summary>"12 of 21 modules". A rotation with nothing on reads as the whole catalogue, as the
