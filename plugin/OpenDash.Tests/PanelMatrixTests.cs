@@ -70,7 +70,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
             Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
             Assert.Equal("Cancel", PanelMatrix.Cancel);
-            Assert.Equal("Preview scenarios", PanelMatrix.PreviewChipsName);
+            Assert.Equal("Preview", PanelMatrix.PreviewChipsName);
+            // The code's word for the chips never reaches a driver.
+            Assert.DoesNotContain("scenario", PanelMatrix.PreviewChipsName, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("No strips yet.", PanelLeds.NoStrips);
             var home = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
             Assert.Contains("PanelLeds.NoStrips", home);

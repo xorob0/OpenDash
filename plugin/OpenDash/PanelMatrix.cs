@@ -684,8 +684,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
-        /// where the artboard's aria-label is the clause "What to preview".</summary>
-        public const string PreviewChipsName = "Preview scenarios";
+        /// the artboard's own from its clause "What to preview". Not "scenarios", which is the code's word for
+        /// PanelEmulation's chips and no page shows a driver.</summary>
+        public const string PreviewChipsName = "Preview";
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
         public const string AllDevices = "All devices at once";
