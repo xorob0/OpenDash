@@ -457,11 +457,21 @@ namespace OpenDashPlugin
             return ShowsGearRows(rest) && bands;
         }
 
-        /// <summary>The line under Car-specific shift points while the car in the session is in the tables,
-        /// or null: one sentence for one fact, as on LEDs.</summary>
-        public static string CarLine(string car)
+        /// <summary>
+        /// The line under Car-specific shift points, the same as on LEDs (PanelLeds.CarLine): while the switch
+        /// is on and a car is loaded, whether the tables have measured it, which says whether the gear takes
+        /// the car's own points or falls back to openDash's. No line while the switch is off or no car is loaded.
+        /// </summary>
+        public static string CarLine(bool on, string car, bool hasTable)
         {
-            return string.IsNullOrWhiteSpace(car) ? null : car + " is in Lovely Car Data.";
+            if (!on || string.IsNullOrWhiteSpace(car)) return null;
+            return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
+        }
+
+        /// <summary>The car line's ink: the in-use green while the tables have the car, caution while not.</summary>
+        public static string CarLineHex(bool hasTable)
+        {
+            return hasTable ? Theme.StatusUpToDate : Theme.Caution;
         }
 
         /// <summary>The greyed press on the SimHub device row (#363).</summary>

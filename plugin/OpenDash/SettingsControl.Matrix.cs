@@ -364,19 +364,23 @@ namespace OpenDashPlugin
             }
             if (PanelMatrix.ShowsCarShiftPoints(rest, bands))
             {
-                // The car in the session, while it is in the tables; read on the tick, from properties only.
+                // Whether the car in the session is in the tables, while the switch is on; read on the tick,
+                // from properties only, and again when the switch moves.
                 var carLine = Ui.Text(string.Empty, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.StatusUpToDate);
                 carLine.TextWrapping = TextWrapping.Wrap;
                 Action readCar = () =>
                 {
-                    var text = PanelMatrix.CarLine(MatrixCarName());
+                    var live = plugin.Live ?? LiveStatus.None;
+                    var known = plugin.LiveCarHasTable;
+                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known);
                     carLine.Text = text ?? string.Empty;
+                    carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(known));
                     carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible;
                 };
                 readCar();
                 OnTick(readCar);
                 idle.Add(MatrixOption(PanelMatrix.CarShiftPointsTitle, null,
-                    BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[i] = on; Save(); }), carLine));
+                    BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[i] = on; Save(); readCar(); }), carLine));
             }
             if (PanelMatrix.ShowsRedlineFlash(rest, bands))
             {
@@ -398,17 +402,6 @@ namespace OpenDashPlugin
                 Ui.Anchor(warnings, PanelMatrix.AnchorWarnings),
                 Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay),
                 device), PanelMatrix.AnchorPriority);
-        }
-
-        /// <summary>The name of the car in the session while the tables have measured it, else null.</summary>
-        private string MatrixCarName()
-        {
-            var live = plugin.Live;
-            var carId = live == null ? null : live.CarId;
-            if (string.IsNullOrEmpty(carId)) return null;
-            var table = plugin.CarLights.For(carId);
-            if (table == null) return null;
-            return string.IsNullOrWhiteSpace(table.CarName) ? live.CarModel : table.CarName;
         }
 
         /// <summary>The artboard's .layer: a rule over a layer's line and the options under it.</summary>
