@@ -184,7 +184,7 @@ namespace OpenDashPlugin
             duplicate.ToolTip = PanelScreens.DuplicateTooltip;
             duplicate.Click += (sender, args) => DuplicateScreen(screen);
             var remove = Ui.Button(PanelScreens.RemoveButton, PanelButtonKind.GhostDanger, PanelButtonSize.Small);
-            remove.ToolTip = PanelScreens.RemoveTooltip;
+            remove.ToolTip = PanelScreens.RemoveTooltipFor(screen);
             remove.Click += (sender, args) => ShowRemove(screen);
             var presses = Ui.HStack(6, edit, duplicate, remove);
 
@@ -929,7 +929,7 @@ namespace OpenDashPlugin
         private void ShowRemove(ScreenInstance screen)
         {
             var remove = Ui.Button(PanelScreens.RemoveItButton, PanelButtonKind.Danger, PanelButtonSize.Large);
-            remove.ToolTip = PanelScreens.RemoveTooltip;
+            remove.ToolTip = PanelScreens.RemoveTooltipFor(screen);
             remove.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
@@ -950,7 +950,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 Redraw();
             };
-            ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(PanelScreens.HasActions(screen)), Theme.SizeBody),
+            ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),
                 SheetFooter(null, keep, remove));
         }
     }

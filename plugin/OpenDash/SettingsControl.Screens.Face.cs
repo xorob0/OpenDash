@@ -514,7 +514,9 @@ namespace OpenDashPlugin
                     face.SetClassOnly(letter, on);
                     ScreensSave(screen);
                 });
-                classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
+                // No hover: the label beside it already says it. Named for a screen reader, which the label
+                // beside it is not tied to.
+                System.Windows.Automation.AutomationProperties.SetName(classOnly, PanelScreens.ClassOnlyTitle);
                 classOnly.Uid = "screens.classonly";
                 var line = ScreensAsideLine(Ui.Text(PanelScreens.ClassOnlyTitle, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), classOnly);
                 stack.Children.Add(Ui.Anchor(ScreensRuled(line), PanelScreens.AnchorClassOnly));
@@ -541,7 +543,8 @@ namespace OpenDashPlugin
                 IsChecked = row.Ticked,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0),
-                ToolTip = row.Locked ? PanelScreens.LastPageTooltip : row.Name,
+                // The name is printed beside the tick, so only the locked page has something to add.
+                ToolTip = row.Locked ? PanelScreens.LastPageTooltip : null,
                 Uid = "screens.page." + row.Page,
             };
             System.Windows.Automation.AutomationProperties.SetName(box, row.Name);

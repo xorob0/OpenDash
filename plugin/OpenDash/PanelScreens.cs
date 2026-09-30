@@ -174,6 +174,20 @@ namespace OpenDashPlugin
         public const string RemoveButton = "Remove";
         public const string RemoveTooltip = "Removes this screen, its dashboard and its settings.";
 
+        /// <summary>Remove's hover for this screen: a round screen owns no settings, since its cards are the
+        /// rig's shared slots and stay, so it says only what goes.</summary>
+        public static string RemoveTooltipFor(ScreenInstance screen)
+        {
+            return OwnsSettings(screen) ? RemoveTooltip : "Removes this screen and its dashboard.";
+        }
+
+        /// <summary>Whether the screen has settings of its own that go with it: every kind but a round
+        /// screen, whose cards are the twelve slots every round screen shares.</summary>
+        public static bool OwnsSettings(ScreenInstance screen)
+        {
+            return screen == null || !screen.IsSlots;
+        }
+
         // --- The remove sheet ---------------------------------------------------------------------------
 
         public static string RemoveTitle(string name)
@@ -187,21 +201,26 @@ namespace OpenDashPlugin
             return screen != null && (screen.IsFace || screen.IsPitWall || screen.IsCompanion);
         }
 
-        /// <summary>What removing costs, and the bound buttons that stop working where the kind has actions.</summary>
-        public static string RemoveBody(bool hasActions)
+        /// <summary>What removing costs -- the settings only where the screen owns some -- and the bound
+        /// buttons that stop working where the kind has actions.</summary>
+        public static string RemoveBody(ScreenInstance screen)
         {
-            return "Removes the screen, its dashboard and its settings." + (hasActions ? " " + BoundButtonsStop : string.Empty);
+            var goes = OwnsSettings(screen) ? "Removes the screen, its dashboard and its settings." : "Removes the screen and its dashboard.";
+            return goes + (HasActions(screen) ? " " + BoundButtonsStop : string.Empty);
         }
 
         public const string BoundButtonsStop = "Any wheel button you bound to it stops working.";
         public const string KeepButton = "Keep it";
-        public const string KeepTooltip = "Leaves this screen alone.";
+        /// <summary>Keep keeps the screen (Save(screen) calls Keep), which answers the line over the cards'
+        /// "Keep or remove", so the hover says keep as the button does.</summary>
+        public const string KeepTooltip = "Keeps this screen.";
         public const string RemoveItButton = "Remove it";
 
-        /// <summary>After a remove: SimHub reads its list at startup, so the step left is named.</summary>
+        /// <summary>After a remove: SimHub reads its list at startup, so the step left is named, and the list
+        /// named by where the driver meets it.</summary>
         public static string Removed(string name)
         {
-            return "Removed " + name + ". Restart SimHub to take its dashboard off the list.";
+            return "Removed " + name + ". Restart SimHub to take its dashboard out of Dash Studio.";
         }
 
         /// <summary>A remove whose folder stayed: "removed", as the sheet says, and the reason in the log, as
@@ -587,8 +606,8 @@ namespace OpenDashPlugin
 
         public const string WebViewTitle = "Web view address";
 
-        /// <summary>The box's hover while it is empty; its whole address once it has one.</summary>
-        public const string WebViewEmptyTooltip = "http or https only.";
+        /// <summary>The box's hover while it is empty, saying what it sets; its whole address once it has one.</summary>
+        public const string WebViewEmptyTooltip = "Sets the page the web view shows, from an http or https address.";
 
         public const string PortraitTitle = "Portrait layout";
 
@@ -708,15 +727,15 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The caption under the round pane's Rev ring, which writes the rig-wide OpenDash.RevBar. It reaches
-        /// further than the round screens: the companion's speedo reads it, and so does every face whose own
-        /// Revbar was never set, since ScreenRevBar falls back to the rig's while a screen's is null and a new
-        /// face starts null. "Applies to every round face on your rig." let a driver turn off the main face's
-        /// rev bar from the round pane unawares; ruling 38's "Every round screen and the phone's speedo." left
-        /// those faces out too. The companion is named by its kind and its module by the module's name: "the
-        /// phone" named nothing on a rig whose companion is called Tablet, and only a face has a rev bar of
-        /// its own.
+        /// further than the round screens: every face whose own rev bar was never set reads it, since
+        /// ScreenRevBar falls back to the rig's while a screen's is null and a new face starts null; and the
+        /// Speedo module reads it wherever it is drawn -- the companion's, and a face's zone B or C, whose
+        /// Speedo page reads OpenDash.RevBar and never the face's own. "Applies to every round face on your
+        /// rig." let a driver turn off the main face's rev bar from the round pane unawares, and "Every round
+        /// screen and the phone's speedo." left those faces out. A page name is lower case after an article,
+        /// as the clash lines write them, and the list has no serial comma, as the page's others do not.
         /// </summary>
-        public const string RigRevBarCaption = "Every round screen, the companion's Speedo, and any face whose own rev bar you have not set.";
+        public const string RigRevBarCaption = "Every round screen, any face whose own rev bar you have not set and the speedo wherever it is shown.";
 
         // --- Anchors, search and the greyed rows ---------------------------------------------------------
 

@@ -246,8 +246,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && System.Array.IndexOf(entry.Keywords, "revbar") >= 0);
             // The round pane's Rev ring writes the rig-wide setting, and its caption names everything that
-            // follows it: the round screens, the companion's Speedo, and a face that never set its own.
-            Assert.Equal("Every round screen, the companion's Speedo, and any face whose own rev bar you have not set.", PanelScreens.RigRevBarCaption);
+            // follows it: the round screens, a face that never set its own, and the Speedo module wherever it
+            // is drawn, a face's zone B or C included.
+            Assert.Equal("Every round screen, any face whose own rev bar you have not set and the speedo wherever it is shown.", PanelScreens.RigRevBarCaption);
+            Assert.Contains(FacePages.For("B"), page => page.Name == "Speedo");
             Assert.Contains(Modules.All, module => module.Name == "Speedo");
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
             Assert.Contains("PanelScreens.RigRevBarCaption,", round);
@@ -310,19 +312,27 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
             Assert.Equal("Changes this screen's name or size, or reinstalls its dashboard.", PanelScreens.EditTooltip);
             Assert.Contains(PanelAddScreen.ReinstallButton.ToLowerInvariant(), PanelScreens.EditTooltip);
-            // The hover and the sheet list what goes in one order.
+            // The hover and the sheet list what goes in one order, and a round screen, whose cards are the
+            // rig's shared slots, has no settings to lose.
+            var face = new ScreenInstance { Kind = Contract.KindFace };
+            var round = new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 };
             Assert.Equal("Removes this screen, its dashboard and its settings.", PanelScreens.RemoveTooltip);
-            Assert.Equal("Leaves this screen alone.", PanelScreens.KeepTooltip);
+            Assert.Equal(PanelScreens.RemoveTooltip, PanelScreens.RemoveTooltipFor(face));
+            Assert.Equal("Removes this screen and its dashboard.", PanelScreens.RemoveTooltipFor(round));
+            // Keep answers the line over the cards, and says keep as the button does.
+            Assert.Equal("Keeps this screen.", PanelScreens.KeepTooltip);
             Assert.Equal("Remove Rim", PanelScreens.RemoveTitle("Rim"));
-            Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.", PanelScreens.RemoveBody(true));
-            Assert.Equal("Removes the screen, its dashboard and its settings.", PanelScreens.RemoveBody(false));
+            Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.", PanelScreens.RemoveBody(face));
+            Assert.Equal("Removes the screen and its dashboard.", PanelScreens.RemoveBody(round));
+            Assert.Equal("Removes the screen, its dashboard and its settings. Any wheel button you bound to it stops working.",
+                PanelScreens.RemoveBody(new ScreenInstance { Kind = Contract.KindCompanion }));
             Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindFace }));
             Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindPitWall }));
             Assert.True(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindCompanion }));
             Assert.False(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindSlots }));
             Assert.Equal("Keep it", PanelScreens.KeepButton);
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
-            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard off the list.", PanelScreens.Removed("Rim"));
+            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio.", PanelScreens.Removed("Rim"));
             Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
         }
 
@@ -386,7 +396,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A zone in the picture: how many pages it cycles, the page it opens on, and the button that
-        /// advances it -- or "No button", or nothing when the bindings cannot be read.</summary>
+        /// advances it -- or "Not bound", the chip's own words beside the aside, or nothing when the bindings
+        /// cannot be read.</summary>
         [Fact]
         public void A_zone_in_the_picture_counts_its_pages_and_names_its_button()
         {
@@ -602,7 +613,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.IsPortrait(new ScreenInstance { Width = 1920, Height = 1080 }));
             Assert.Equal("Portrait layout", PanelScreens.PortraitTitle);
             Assert.Equal("Web view address", PanelScreens.WebViewTitle);
-            Assert.Equal("http or https only.", PanelScreens.WebViewEmptyTooltip);
+            Assert.Equal("Sets the page the web view shows, from an http or https address.", PanelScreens.WebViewEmptyTooltip);
         }
 
         /// <summary>A companion's count, and a round screen's cards: one per slot its package reads.</summary>

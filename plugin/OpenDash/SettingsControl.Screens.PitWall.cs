@@ -54,7 +54,7 @@ namespace OpenDashPlugin
             // One answer for the screen and not one per zone, as a face has: the zones are widgets pointed at
             // one dashboard file per rectangle, so two zones of one column are the same file.
             var classOnly = Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; ScreensSave(screen); });
-            classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
+            System.Windows.Automation.AutomationProperties.SetName(classOnly, PanelScreens.ClassOnlyTitle);
             classOnly.Uid = "screens.pitwall.classonly";
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.ClassOnlyTitle, classOnly), PanelScreens.AnchorClassOnly));
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenPitWallFlagFormat(screen.Namespace),
