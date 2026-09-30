@@ -72,6 +72,27 @@ namespace OpenDashPlugin
         /// </summary>
         public static readonly PanelRoute StripUpdateRoute = new PanelRoute(PanelPage.Updates, PanelUpdates.AnchorLights);
 
+        // --- Which strip, and which moment ------------------------------------------------------------------
+
+        /// <summary>Which of the rig's strips the page shows: the one selected, else the first; -1 with none.
+        /// A selection that is gone (the strip was removed elsewhere) falls back to the first.</summary>
+        public static int ShownStrip(IList<string> namespaces, string selected)
+        {
+            if (namespaces == null || namespaces.Count == 0) return -1;
+            for (var i = 0; i < namespaces.Count; i++)
+            {
+                if (string.Equals(namespaces[i], selected, StringComparison.Ordinal)) return i;
+            }
+            return 0;
+        }
+
+        /// <summary>The preview chip a strip opens on: the one pressed, while it was pressed for this strip, and
+        /// Live for any other, as the artboard has it.</summary>
+        public static string ScenarioFor(string pressed, string pressedFor, string shown)
+        {
+            return string.Equals(pressedFor, shown, StringComparison.Ordinal) && pressed != null ? pressed : LiveScenario;
+        }
+
         // --- The cards ------------------------------------------------------------------------------------
 
         /// <summary>The narrowest a strip's card is laid at, which fits a 3/9/3 at the card's 9 px LEDs; the grid
@@ -227,6 +248,12 @@ namespace OpenDashPlugin
         public const string RemoveTooltip = "Removes this strip and its profile from SimHub.";
         public const string RemoveConfirm = "Remove it";
         public const string RemoveBody = "Removes the strip, its settings and its profile in SimHub.";
+
+        /// <summary>The Remove sheet's title: the press, and the strip it removes.</summary>
+        public static string RemoveTitle(string name)
+        {
+            return RemoveButton + " " + name;
+        }
 
         /// <summary>The fix box's title for a profile SimHub holds and has not selected, in the card's words.</summary>
         public const string NotSelectedTitle = "Installed, but not selected in SimHub";
@@ -703,6 +730,9 @@ namespace OpenDashPlugin
         /// <summary>The eyebrow on the Fanatec tile when SimHub has a device of that name.</summary>
         public const string FoundInSimHub = "Found in SimHub";
 
+        /// <summary>The artboard's size for that eyebrow, a point below the kit's.</summary>
+        public const double FoundInSimHubSize = 10;
+
         /// <summary>The note under the tiles. The artboard promises more wheels; the panel promises nothing.</summary>
         public const string OtherWheelNote = "For any other wheel, use Something else.";
 
@@ -761,11 +791,57 @@ namespace OpenDashPlugin
             return offered && found;
         }
 
+        /// <summary>Whether the sheet has a shape to offer at all: a plain shape or the Fanatec wheel. Where it
+        /// has neither it says <see cref="NoProfiles"/> and nothing else.</summary>
+        public static bool SheetHasShapes(int plainSides, bool offersFanatec)
+        {
+            return plainSides > 0 || offersFanatec;
+        }
+
+        /// <summary>The tile the sheet opens on, the build's plain shapes counted: the Fanatec wheel wherever the
+        /// build has no plain shape, since then it is the only tile.</summary>
+        public static bool SheetStartsOnFanatec(bool hasPlainShapes, bool offersFanatec, bool found)
+        {
+            return !hasPlainShapes || StartsOnFanatec(offersFanatec, found);
+        }
+
+        /// <summary>The ends the sheet opens on: three where the build has them, the artboard's 3 · 9 · 3, else
+        /// the fewest it has, and the Fanatec wheel's where it has no plain shape.</summary>
+        public static int StartSide(int[] sides)
+        {
+            if (sides == null || sides.Length == 0) return PanelLights.FanatecSide;
+            return sides.Contains(3) ? 3 : sides[0];
+        }
+
+        /// <summary>The centre the sheet opens on, and the one it keeps when the ends change: the one chosen where
+        /// the new ends have it, else nine where they do, else the fewest, and the Fanatec wheel's with none.</summary>
+        public static int KeptCentre(int[] centres, int chosen)
+        {
+            if (centres == null || centres.Length == 0) return PanelLights.FanatecCentre;
+            if (centres.Contains(chosen)) return chosen;
+            return centres.Contains(9) ? 9 : centres[0];
+        }
+
+        /// <summary>The note under the tiles goes with the Fanatec tile: without it there is only Something else,
+        /// and no other wheel to point away from.</summary>
+        public static bool ShowsOtherWheelNote(bool offersFanatec)
+        {
+            return offersFanatec;
+        }
+
+        /// <summary>Whether the device step says <see cref="PanelLights.NoDevices"/>: only with nothing offered
+        /// and nothing passed over, since a device passed over is a disabled row saying so.</summary>
+        public static bool ShowsNoDevices(int offered, int passedOver)
+        {
+            return offered == 0 && passedOver == 0;
+        }
+
         /// <summary>What a device OpenDash passed over says in the device list (PanelLights.NotOffered's fact).</summary>
         public const string NotReachable = "No LEDs OpenDash can reach";
 
-        /// <summary>The one line under the rows passed over: the rows say which, and the log says why.</summary>
-        public const string PassedOverNote = "SimHub's log says why.";
+        /// <summary>The one line under the rows passed over: the rows say which, and the log says why, in the
+        /// one form every line on the page points at it.</summary>
+        public const string PassedOverNote = "See SimHub's log.";
 
         /// <summary>What a device SimHub is not talking to says beside its name. A profile installs into it all
         /// the same.</summary>

@@ -43,8 +43,8 @@ namespace OpenDashPlugin
         public const string BarsTitle = "Your LED strips";
 
         /// <summary>The tile beside the cards and the sheet it opens: voice.md's own example beside "No strips
-        /// yet", since the strips are strips throughout. The artboard's "Add LEDs" is the departure
-        /// docs/design/plugin.md records, and search still finds the tile by it.</summary>
+        /// yet", since the strips are strips throughout. It departs from the artboard's "Add LEDs", which
+        /// docs/design/plugin.md does not record yet; search still finds the tile by it.</summary>
         public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";
@@ -53,8 +53,9 @@ namespace OpenDashPlugin
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        /// <summary>The line under the ends, in a driver's words rather than the generator's ("lamps"): what the
-        /// ends carry, and how to have none.</summary>
+        /// <summary>What the ends carry, and how to have none, in a driver's words rather than the generator's
+        /// ("lamps"). Not drawn: the artboard has no caption there and voice.md's default is none. Kept, with its
+        /// pin, as BarFanatecCaption is, as the reason the choice includes None.</summary>
         public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every strip: SimHub's word for it, since SimHub's
@@ -99,7 +100,7 @@ namespace OpenDashPlugin
         public static string NotOffered(System.Collections.Generic.IList<string> names)
         {
             if (names == null || names.Count == 0) return null;
-            return NameList(names) + (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach; see SimHub's log.";
+            return NameList(names) + (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach. See SimHub's log.";
         }
 
         /// <summary>At most this many names are spelled out before the rest are counted.</summary>
@@ -133,9 +134,10 @@ namespace OpenDashPlugin
             return string.Join(", ", spelled.GetRange(0, spelled.Count - 1)) + " and " + spelled[spelled.Count - 1];
         }
 
-        /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
-        /// happened rather than silently reading as the first device in the list.</summary>
-        public const string DeviceGone = "The device it was on (no longer on this rig)";
+        /// <summary>What a bar pointed at a device SimHub does not list is shown as, so the row says what the
+        /// code knows rather than silently reading as the first device in the list. A chooser's value is read
+        /// without its label, so it names the device and not an "it".</summary>
+        public const string DeviceGone = "Device not in SimHub";
 
         /// <summary>Said beside a device that SimHub is not talking to. A profile installs into it all the
         /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
@@ -144,7 +146,8 @@ namespace OpenDashPlugin
         /// <summary>The centre's count, in the word the rest of the page uses for it ("Centre display").</summary>
         public const string BarCentreTitle = "LEDs in the centre";
 
-        /// <summary>The line under the centre: how to arrive at the number.</summary>
+        /// <summary>How to arrive at the centre's number. Not drawn, as <see cref="BarEndsCaption"/> is not: the
+        /// note under the picture ("15 LEDs in all, as 3 · 9 · 3.") is where the count is checked.</summary>
         public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
 
         /// <summary>The line under the two numbers: what they add up to, and the shape written as the cards
@@ -319,8 +322,8 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
-            + "so your car is never disclosed.";
+            "Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, "
+            + "about 400 KB, so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
         /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
@@ -353,20 +356,14 @@ namespace OpenDashPlugin
             return cars > 0 ? "Update" : "Download";
         }
 
-        /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
-        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
-
         /// <summary>
-        /// The row's status line: CarLightService's status, and the stale note after it as a sentence of its
-        /// own. The status ends with no stop ("84 cars, updated 9 days ago"), so a bare space ran the two
-        /// together.
+        /// The row's status line: CarLightService's status as it stands. It gives the copy's age ("84 cars,
+        /// updated 9 days ago"), and the button beside it reads Update, so a note that the copy is old said the
+        /// age twice and described the button.
         /// </summary>
-        public static string CarTablesLine(string status, bool stale)
+        public static string CarTablesLine(string status)
         {
-            var line = (status ?? string.Empty).TrimEnd();
-            if (!stale) return line;
-            if (line.Length == 0) return CarTablesStale;
-            return line.TrimEnd('.') + ". " + CarTablesStale;
+            return (status ?? string.Empty).Trim();
         }
 
         /// <summary>The heading over the panels a driver has added.</summary>

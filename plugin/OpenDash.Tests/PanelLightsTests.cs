@@ -64,18 +64,28 @@ namespace OpenDashPlugin.Tests
             // display says it.
             Assert.Equal("LEDs at each end", PanelLights.BarEndsTitle);
             Assert.Equal("LEDs in the centre", PanelLights.BarCentreTitle);
-            // The one thing the two captions have to get the right way round, said in a driver's words
-            // rather than the generator's ("lamps", "the rev ladder"); docs/design/voice.md is the rule.
-            Assert.Contains("Flags", PanelLights.BarEndsCaption);
-            Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
+            // The two captions, in a driver's words rather than the generator's ("lamps", "the rev ladder"), as
+            // docs/design/voice.md has them. Not drawn, as the artboard draws none; pinned as the reasons the
+            // choices are what they are.
+            Assert.Equal("Flags, warnings and cars alongside. Pick None for one continuous run.", PanelLights.BarEndsCaption);
+            Assert.Equal("Count your LEDs and subtract the ends.", PanelLights.BarCentreCaption);
+            var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.DoesNotContain("PanelLights.BarEndsCaption", leds);
+            Assert.DoesNotContain("PanelLights.BarCentreCaption", leds);
         }
 
         /// <summary>The strip words the LEDs page draws, as the artboards and docs/design/voice.md have them.</summary>
         [Fact]
         public void The_strip_words_are_the_pages()
         {
-            // voice.md's own example beside "No strips yet"; the artboard's "Add LEDs" is a recorded departure.
+            // voice.md's own example beside "No strips yet", departing from the artboard's "Add LEDs", which
+            // docs/design/plugin.md has yet to record.
             Assert.Equal("Add an LED strip", PanelLights.AddBar);
+            // The Centre display chooser, in Contract.LedCentres' order.
+            Assert.Equal(new[] { "RPM", "Brake", "Throttle and brake", "Fuel" }, PanelLights.CentreLabels);
+            Assert.Equal(new[] { "rpm", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
+            // The Rename sheet's caption: the fact nothing on the panel shows, that the name is SimHub's too.
+            Assert.Equal("Also shown in SimHub's LED profile list.", PanelLights.BarNameCaption);
             Assert.Equal("Your LED strips", PanelLights.BarsTitle);
             // SimHub's word for it, since SimHub's Devices list is where the driver finds it.
             Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
@@ -85,8 +95,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Downloads Lovely Car Data.", PanelLights.CarTablesButtonTooltip);
             Assert.Equal("Not downloaded yet.", PanelLights.CarTablesNone);
             Assert.Equal("Downloading…", PanelLights.CarTablesDownloading);
-            Assert.Equal("Over a week old. Press Update for a newer copy.", PanelLights.CarTablesStale);
-            Assert.Equal("The device it was on (no longer on this rig)", PanelLights.DeviceGone);
+            // A chooser's value names what the code knows: SimHub does not list the device.
+            Assert.Equal("Device not in SimHub", PanelLights.DeviceGone);
             Assert.Equal(" (not connected)", PanelLights.DeviceOffline);
             Assert.Equal("Goes to Arduino RGB LEDs.", PanelLights.OneDevice("Arduino RGB LEDs"));
             Assert.Equal("No SimHub device has LEDs. Add your wheel or Arduino in SimHub first.", PanelLights.NoDevices);
@@ -165,8 +175,9 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>A strip whose profile could not be installed is sent to SimHub's log (voice.md's failure
         /// form): Updates offers no press for a profile that is not in SimHub, so "See the Updates page" led
-        /// nowhere. A failed move says "move", not "Added". Rename installs the profile again itself, so its
-        /// hover says SimHub is renamed too and its sheet promises no "Install the strip again".</summary>
+        /// nowhere. A failed move says "move", not "Added". Rename installs the profile again only where SimHub
+        /// holds it, so its hover promises only the rename, and its sheet promises no "Install the strip
+        /// again".</summary>
         [Fact]
         public void A_strip_whose_profile_failed_is_sent_to_the_log()
         {
@@ -196,17 +207,20 @@ namespace OpenDashPlugin.Tests
                 PanelLights.BarAdded("Rim", "Wheel", FlagBoxInstallPlan.BuiltInModeNote));
         }
 
-        /// <summary>The status line and the stale note are two sentences, not one run-on.</summary>
+        /// <summary>The status line is the status: it gives the copy's age and the button beside it reads Update,
+        /// so a stale note would say the age twice and describe the button.</summary>
         [Fact]
-        public void The_stale_note_follows_the_status_as_a_sentence_of_its_own()
+        public void The_status_line_gives_the_age_once()
         {
-            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
-            Assert.Equal("84 cars, updated 9 days ago. Over a week old. Press Update for a newer copy.",
-                PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
-            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout). Over a week old. Press Update for a newer copy.",
-                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout)", true));
-            Assert.Equal("Not downloaded yet. Over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("Not downloaded yet.", true));
-            Assert.Equal(PanelLights.CarTablesStale, PanelLights.CarTablesLine(null, true));
+            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago"));
+            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout)",
+                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout) "));
+            Assert.Equal(string.Empty, PanelLights.CarTablesLine(null));
+            Assert.Equal("Update", PanelLights.CarTablesButton(84));
+            Assert.Equal("Download", PanelLights.CarTablesButton(0));
+            // The one row that fetches the tables names both things that read them.
+            Assert.Equal("Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, about 400 KB, so your car is never disclosed.",
+                PanelLights.CarTablesCaption);
         }
 
         [Theory]
@@ -233,12 +247,12 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Null(PanelLights.NotOffered(null));
             Assert.Null(PanelLights.NotOffered(new string[0]));
-            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.", PanelLights.NotOffered(new[] { "Rim" }));
-            Assert.Equal("Rim and Formula rim have no LEDs OpenDash can reach; see SimHub's log.",
+            Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", PanelLights.NotOffered(new[] { "Rim" }));
+            Assert.Equal("Rim and Formula rim have no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.NotOffered(new[] { "Rim", "Formula rim" }));
-            Assert.Equal("Rim, Formula rim, Hub and 2 others have no LEDs OpenDash can reach; see SimHub's log.",
+            Assert.Equal("Rim, Formula rim, Hub and 2 others have no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box", "GT rim" }));
-            Assert.Equal("Rim, Formula rim, Hub and 1 other have no LEDs OpenDash can reach; see SimHub's log.",
+            Assert.Equal("Rim, Formula rim, Hub and 1 other have no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.NotOffered(new[] { "Rim", "Formula rim", "Hub", "Button box" }));
 
             // Nothing passed over: the row reads exactly as it did.
@@ -248,13 +262,13 @@ namespace OpenDashPlugin.Tests
 
             // Something passed over and nothing offered: the device is named in place of "No LED device".
             var none = PanelLights.DeviceRowCaption(0, null, new[] { "Rim" });
-            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.", none);
+            Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", none);
             Assert.DoesNotContain(PanelLights.NoDevices, none);
 
             // Something offered as well: the name follows what the row said, or stands alone.
-            Assert.Equal("Goes to Arduino RGB LEDs. Rim has no LEDs OpenDash can reach; see SimHub's log.",
+            Assert.Equal("Goes to Arduino RGB LEDs. Rim has no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.DeviceRowCaption(1, "Goes to Arduino RGB LEDs.", new[] { "Rim" }));
-            Assert.Equal("Rim has no LEDs OpenDash can reach; see SimHub's log.",
+            Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.DeviceRowCaption(2, PanelLights.BarDeviceCaption, new[] { "Rim" }));
         }
     }

@@ -71,9 +71,8 @@ namespace OpenDashPlugin
         /// <summary>The strip whose settings are showing: the one selected, else the first; null with none.</summary>
         private LedBar LedsSelectedBar(IList<LedBar> bars)
         {
-            if (bars.Count == 0) return null;
-            var ns = Selected(PanelPage.Leds);
-            return bars.FirstOrDefault(bar => string.Equals(bar.Namespace, ns, StringComparison.Ordinal)) ?? bars[0];
+            var shown = PanelLeds.ShownStrip(bars.Select(bar => bar.Namespace).ToList(), Selected(PanelPage.Leds));
+            return shown < 0 ? null : bars[shown];
         }
 
         /// <summary>How bright a strip's pictures are drawn now: full by day, the brightness in force at night.</summary>
@@ -144,11 +143,8 @@ namespace OpenDashPlugin
         private FrameworkElement LedsStripSection(LedBar bar)
         {
             var ns = bar.Namespace;
-            if (!string.Equals(ledsScenarioFor, ns, StringComparison.Ordinal))
-            {
-                ledsScenario = PanelLeds.LiveScenario;
-                ledsScenarioFor = ns;
-            }
+            ledsScenario = PanelLeds.ScenarioFor(ledsScenario, ledsScenarioFor, ns);
+            ledsScenarioFor = ns;
             IList<string> declined;
             var targets = LedTargets.All(out declined);
 
@@ -647,7 +643,13 @@ namespace OpenDashPlugin
             var head = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 12) };
             DockPanel.SetDock(caption, Dock.Right);
             head.Children.Add(caption);
-            head.Children.Add(Ui.Heading(PanelLeds.EffectsTitle));
+            // NEW, as Brightness and Reverse direction carry it: none of the fifteen switches (#370) shipped in rc.7.
+            var tag = Ui.NewTag();
+            tag.Margin = new Thickness(8, 0, 0, 0);
+            tag.VerticalAlignment = VerticalAlignment.Center;
+            var title = Ui.HStack(0, Ui.Heading(PanelLeds.EffectsTitle), tag);
+            title.HorizontalAlignment = HorizontalAlignment.Left;
+            head.Children.Add(title);
 
             var tiles = new List<UIElement>();
             foreach (var effect in PanelLeds.EffectsFor(bar.Shape))
@@ -780,9 +782,9 @@ namespace OpenDashPlugin
         {
             if (carTablesLine == null) return;
             var service = plugin.CarLights;
-            // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
-            // refetches on its own any more, so the invitation is the whole of what staleness now does.
-            var line = PanelLights.CarTablesLine(service.Status, service.Stale(DateTime.UtcNow));
+            // The status gives the copy's age, which is all staleness says: nothing refetches on its own, and
+            // the button beside it already reads Update.
+            var line = PanelLights.CarTablesLine(service.Status);
             carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
             if (carTablesButton != null)
             {
@@ -1054,7 +1056,7 @@ namespace OpenDashPlugin
             remove.Click += (sender, args) => RemoveLedBar(ns);
             var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
-            ShowSheet(PanelLeds.RemoveButton + " " + bar.Name, Ui.Prose(PanelLeds.RemoveBody, Theme.SizeBody), SheetFooter(null, cancel, remove));
+            ShowSheet(PanelLeds.RemoveTitle(bar.Name), Ui.Prose(PanelLeds.RemoveBody, Theme.SizeBody), SheetFooter(null, cancel, remove));
         }
 
         private void RemoveLedBar(string ns)
@@ -1104,7 +1106,7 @@ namespace OpenDashPlugin
             // "3/9/3" among every other geometry and to know that is what their wheel is called.
             var sides = PanelLights.BarSides(census);
             var offersFanatec = PanelLights.OffersFanatec(census);
-            if (sides.Length == 0 && !offersFanatec)
+            if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))
             {
                 ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLeds.NoProfiles), null);
                 return;
@@ -1119,12 +1121,12 @@ namespace OpenDashPlugin
             var preferred = LedTargets.Preferred(targets);
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
 
-            var side = sides.Length == 0 ? PanelLights.FanatecSide : sides.Contains(3) ? 3 : sides[0];
+            var side = PanelLeds.StartSide(sides);
             var centres = PanelLights.BarCentres(census, side);
-            var centre = centres.Length == 0 ? PanelLights.FanatecCentre : centres.Contains(9) ? 9 : centres[0];
+            var centre = PanelLeds.KeptCentre(centres, 9);
             // The one question the two numbers cannot answer: how the wheel is wired. Chosen, it decides them,
             // and side and centre keep what the driver chose so that Something else gives that back.
-            var fanatec = sides.Length == 0 || PanelLeds.StartsOnFanatec(offersFanatec, found);
+            var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);
 
             var name = Ui.Input(string.Empty);
             var typed = false;
@@ -1206,7 +1208,8 @@ namespace OpenDashPlugin
                             refresh();
                             LedsFocusLater(() => LedsFirstControl(middle));
                         }, 90);
-                    centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle, PanelLights.BarCentreCaption);
+                    // No caption, as the artboard has none: the note under the picture is where the count is checked.
+                    centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle);
                     showPicture();
                 };
 
@@ -1220,14 +1223,14 @@ namespace OpenDashPlugin
                     centres = PanelLights.BarCentres(census, side);
                     // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
                     // of centre follows the choice of ends rather than offering lengths nothing is built for.
-                    if (!centres.Contains(centre)) centre = centres.Contains(9) ? 9 : centres[0];
+                    centre = PanelLeds.KeptCentre(centres, centre);
                     showCentre();
                     refresh();
                 };
                 showCentre();
                 var well = new Border { Background = Ui.Brush(Theme.SurfaceInset), CornerRadius = new CornerRadius(Theme.Radius), Child = picture };
                 shapeHost.Child = Ui.VStack(12,
-                    LedsSheetRow(PanelLights.BarEndsTitle, ends, PanelLights.BarEndsCaption),
+                    LedsSheetRow(PanelLights.BarEndsTitle, ends),
                     centreRow,
                     well,
                     note);
@@ -1264,7 +1267,7 @@ namespace OpenDashPlugin
                     tiles.Add(tile);
                 }
                 var grid = Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray());
-                hardwareHost.Child = offersFanatec
+                hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec)
                     ? Ui.VStack(12, grid, LedsNote(PanelLeds.OtherWheelNote))
                     : (UIElement)grid;
             };
@@ -1276,7 +1279,7 @@ namespace OpenDashPlugin
                 var passedOver = notOffered ?? new string[0];
                 chosenDevice = null;
                 // A device passed over is a disabled row saying so, so the prose says only what no row can.
-                if (targets.Count == 0 && passedOver.Count == 0) list.Children.Add(Ui.Prose(PanelLights.NoDevices));
+                if (PanelLeds.ShowsNoDevices(targets.Count, passedOver.Count)) list.Children.Add(Ui.Prose(PanelLights.NoDevices));
                 foreach (var target in targets)
                 {
                     var id = target.Id;
@@ -1356,13 +1359,19 @@ namespace OpenDashPlugin
             var head = new DockPanel { LastChildFill = true };
             if (eyebrow != null)
             {
-                var found = Ui.Eyebrow(eyebrow, Theme.StatusUpToDate);
+                // The artboard's 10 px, a size below the kit's eyebrow, so the name beside it keeps some room.
+                var found = Ui.Tracked(eyebrow, PanelLeds.FoundInSimHubSize, FontWeights.SemiBold, Theme.StatusUpToDate, Theme.TrackingLabel);
                 found.VerticalAlignment = VerticalAlignment.Center;
                 found.Margin = new Thickness(8, 0, 0, 0);
                 DockPanel.SetDock(found, Dock.Right);
                 head.Children.Add(found);
             }
-            head.Children.Add(Ui.Text(title, PanelKit.LightCardNameSize, FontWeights.SemiBold, Theme.TextPrimary));
+            // Trimmed rather than cut where a narrow sheet leaves the name less room than it needs; the tile's
+            // accessible name is the whole of it.
+            var name = Ui.Text(title, PanelKit.LightCardNameSize, FontWeights.SemiBold, Theme.TextPrimary);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            name.ToolTip = title;
+            head.Children.Add(name);
             var tile = Ui.ChoiceTile(Ui.VStack(10, head, Ui.Strip(frame, StripStyle.Card), Ui.Prose(note, PanelKit.CardMetaSize)), selected, pick);
             if (tooltip != null) tile.ToolTip = tooltip;
             AutomationProperties.SetName(tile, title);

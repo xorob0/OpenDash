@@ -1,8 +1,9 @@
 // PanelLedsTests.cs: the LEDs page's decisions and words -- what a card says, what the preview draws, which
 // effect switches a shape carries, the Add LEDs sheet, the lines after a press, and where search sends a
-// driver. SettingsControl.Lights.cs draws these, so this is where the page is held: every rule the page
-// follows (what the switch writes, when Live runs, when a rename reinstalls, what the car line says) is a
-// PanelLeds function pinned here.
+// driver. SettingsControl.Lights.cs draws these, so this is where the page is held: the rules the page follows
+// (when Live runs, when a rename reinstalls, what the car line says, which strip and which chip it opens on)
+// are PanelLeds functions pinned here, and what each control writes, and which anchor each row carries, is
+// read out of the page's own source, since the net8.0 test project cannot compile a line of WPF.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -756,7 +757,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Fixed", PanelLeds.Fixed);
             Assert.Equal("3 · 9 · 3", PanelLeds.FanatecShape);
             Assert.Equal("No LEDs OpenDash can reach", PanelLeds.NotReachable);
-            Assert.Equal("SimHub's log says why.", PanelLeds.PassedOverNote);
+            // The one form every line on the page points at the log in.
+            Assert.Equal("See SimHub's log.", PanelLeds.PassedOverNote);
             Assert.Equal("Not connected", PanelLeds.NotConnected);
             Assert.Equal("Add and install", PanelLeds.AddAndInstall);
             Assert.Equal("None", PanelLeds.EndsLabel(0));
@@ -800,6 +802,170 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Start", PanelLeds.EachLedStart);
             Assert.Equal("This build ships no strip profiles.", PanelLeds.NoProfiles);
             Assert.Equal(new[] { "1 LED" }, PanelLeds.PreviewLabels(0, 1));
+        }
+
+        /// <summary>
+        /// The footer's name is the name the press adds: PanelLeds.NameToAdd is held to what
+        /// OpenDashSettings.AddLedBar settles, for a typed name, a cleared box (the page passes the name the sheet
+        /// opened on, as AddLedBar would otherwise fall back to the shape id) and a name the rig has.
+        /// </summary>
+        [Theory]
+        [InlineData(" Rim ")]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("Strip")]
+        [InlineData("strip")]
+        [InlineData("Wheel rim")]
+        public void The_footers_name_is_the_one_the_settings_add(string typed)
+        {
+            var settings = new OpenDashSettings();
+            settings.AddLedBar("0-15-0", "Strip", null);
+            settings.AddLedBar("3-9-3-fanatec", "Wheel rim", null);
+            var taken = settings.LedBarList().Select(bar => bar.Name).ToList();
+            foreach (var shape in new[] { "0-15-0", "3-9-3-fanatec" })
+            {
+                var opened = PanelLeds.DefaultName(shape, taken);
+                var footer = PanelLeds.NameToAdd(typed, opened, taken);
+                var copy = new OpenDashSettings();
+                copy.AddLedBar("0-15-0", "Strip", null);
+                copy.AddLedBar("3-9-3-fanatec", "Wheel rim", null);
+                // As SettingsControl.Lights.cs's AddLedBar hands it over.
+                var added = copy.AddLedBar(shape, string.IsNullOrWhiteSpace(typed) ? opened : typed, null);
+                Assert.Equal(footer, added.Name);
+            }
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("Settings.AddLedBar(shape, string.IsNullOrWhiteSpace(name) ? DefaultBarName(shape) : name, device)", leds);
+            Assert.Contains("PanelLeds.NameToAdd(name.Text, DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)), TakenBarNames())", leds);
+        }
+
+        /// <summary>The sheet's rules: whether it has anything to offer, which tile and shape it opens on, the note
+        /// beside the Fanatec tile and the device step's empty state.</summary>
+        [Fact]
+        public void The_sheet_opens_where_the_build_and_SimHub_say()
+        {
+            Assert.False(PanelLeds.SheetHasShapes(0, false));
+            Assert.True(PanelLeds.SheetHasShapes(0, true));
+            Assert.True(PanelLeds.SheetHasShapes(3, false));
+            // The Fanatec tile wherever the build has no plain shape, since it is then the only tile.
+            Assert.True(PanelLeds.SheetStartsOnFanatec(false, true, false));
+            Assert.True(PanelLeds.SheetStartsOnFanatec(true, true, true));
+            Assert.False(PanelLeds.SheetStartsOnFanatec(true, true, false));
+            Assert.False(PanelLeds.SheetStartsOnFanatec(true, false, true));
+            // 3 · 9 · 3 where the build has it, else the fewest, and the Fanatec wheel's with no plain shape.
+            Assert.Equal(3, PanelLeds.StartSide(new[] { 0, 1, 2, 3, 4 }));
+            Assert.Equal(0, PanelLeds.StartSide(new[] { 0, 4 }));
+            Assert.Equal(PanelLights.FanatecSide, PanelLeds.StartSide(new int[0]));
+            Assert.Equal(9, PanelLeds.KeptCentre(new[] { 4, 9, 12 }, 9));
+            Assert.Equal(12, PanelLeds.KeptCentre(new[] { 4, 9, 12 }, 12));
+            Assert.Equal(9, PanelLeds.KeptCentre(new[] { 4, 9, 12 }, 25));
+            Assert.Equal(10, PanelLeds.KeptCentre(new[] { 10, 11 }, 25));
+            Assert.Equal(PanelLights.FanatecCentre, PanelLeds.KeptCentre(new int[0], 9));
+            Assert.True(PanelLeds.ShowsOtherWheelNote(true));
+            Assert.False(PanelLeds.ShowsOtherWheelNote(false));
+            // A device passed over is a disabled row saying so, so the prose says only what no row can.
+            Assert.True(PanelLeds.ShowsNoDevices(0, 0));
+            Assert.False(PanelLeds.ShowsNoDevices(0, 1));
+            Assert.False(PanelLeds.ShowsNoDevices(1, 0));
+            Assert.Equal("Remove Rim", PanelLeds.RemoveTitle("Rim"));
+        }
+
+        /// <summary>The strip the page shows, and the chip its preview opens on: the one selected, else the first,
+        /// and the chip pressed only for the strip it was pressed for.</summary>
+        [Fact]
+        public void The_page_shows_the_selected_strip_and_a_new_one_opens_on_Live()
+        {
+            Assert.Equal(-1, PanelLeds.ShownStrip(new string[0], "LedRim"));
+            Assert.Equal(1, PanelLeds.ShownStrip(new[] { "LedBrow", "LedRim" }, "LedRim"));
+            // A selection that is gone falls back to the first.
+            Assert.Equal(0, PanelLeds.ShownStrip(new[] { "LedBrow", "LedRim" }, "LedGone"));
+            Assert.Equal(0, PanelLeds.ShownStrip(new[] { "LedBrow" }, null));
+            Assert.Equal(PanelEmulation.Yellow, PanelLeds.ScenarioFor(PanelEmulation.Yellow, "LedRim", "LedRim"));
+            Assert.Equal(PanelLeds.LiveScenario, PanelLeds.ScenarioFor(PanelEmulation.Yellow, "LedRim", "LedBrow"));
+            Assert.Equal(PanelLeds.LiveScenario, PanelLeds.ScenarioFor(PanelEmulation.Yellow, null, "LedBrow"));
+        }
+
+        /// <summary>
+        /// What each control writes, and the gate that decides whether it is drawn, read out of the page's own
+        /// source: a control that stopped writing its setting, or a row drawn for every strip in place of the
+        /// strips that carry it, would otherwise leave every test green. Each write is saved at once.
+        /// </summary>
+        [Fact]
+        public void Each_control_writes_its_own_setting_and_saves_it()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            foreach (var write in new[]
+            {
+                "Settings.SetBarEffect(ns, id, on);",
+                "Settings.SetBarBrightness(ns, PanelLeds.BrightnessValue(i));",
+                "if (bar == null || !Settings.SetBarReversed(ns, reversed)) return;",
+                "if (live != null) live.FlagAnimation = on;",
+                "if (live != null) live.SpotterWhole = on;",
+                "if (live != null) live.Centre = Contract.LedCentres[i];",
+                "Settings.LedMirrorFit = value;",
+                "if (live != null) live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);",
+                "Settings.RenameLedBar(ns, wanted);",
+                "bar.Device = LedBar.NormaliseDevice(device);",
+            })
+            {
+                var at = leds.IndexOf(write, StringComparison.Ordinal);
+                Assert.True(at >= 0, "the page no longer carries: " + write);
+                Assert.StartsWith("Save();", leds.Substring(at + write.Length).TrimStart(), StringComparison.Ordinal);
+            }
+            // What each control reads, and which strips it is drawn for.
+            foreach (var read in new[]
+            {
+                "foreach (var effect in PanelLeds.EffectsFor(bar.Shape))",
+                "LedsEffectTile(effect.Label, Settings.BarEffectEnabled(ns, id),",
+                "PanelLeds.BrightnessIndex(Settings.BarBrightness(ns))",
+                "if (bar.SupportsReversal)",
+                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));",
+                "Ui.Switch(Settings.BarFlagAnimation(ns),",
+                "if (PanelLeds.HasFullStripSpotter(bar.Shape))",
+                "Ui.Switch(Settings.BarSpotterWhole(ns),",
+                "PanelLeds.CentreIndex(Settings.BarCentre(ns))",
+                "BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,",
+                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value))",
+                "link.Click += (sender, args) => Go(PanelPage.Rig);",
+                "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
+            })
+            {
+                Assert.True(leds.Contains(read), "the page no longer carries: " + read);
+            }
+            Assert.DoesNotContain("PanelLeds.Effects)", leds);
+        }
+
+        /// <summary>Every anchor the page model names is one the page attaches to a row, so search, Home's fix rows
+        /// and the capture scripts land on it rather than on the page's top.</summary>
+        [Fact]
+        public void Every_anchor_is_attached_to_a_row()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var anchors = typeof(PanelLeds).GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(field => field.IsLiteral && field.Name.StartsWith("Anchor", StringComparison.Ordinal))
+                .Select(field => field.Name)
+                .ToList();
+            Assert.Equal(15, anchors.Count);
+            foreach (var name in anchors)
+            {
+                Assert.True(leds.Contains(", PanelLeds." + name + ")"), "no Ui.Anchor(..., PanelLeds." + name + ") on the page");
+            }
+        }
+
+        /// <summary>The artboard's layout numbers the page draws: the .dcard grid's gap and its three columns, the
+        /// .fx grid's gap and its three to a row, and the .hw tiles two to a row 8 apart.</summary>
+        [Fact]
+        public void The_grids_are_laid_as_the_artboards_lay_them()
+        {
+            Assert.Equal(12, PanelLeds.CardGap);
+            Assert.Equal(3, PanelLeds.CardColumns);
+            Assert.Equal(210, PanelLeds.CardMinWidth);
+            Assert.Equal(6, PanelLeds.EffectTileGap);
+            Assert.Equal(3, PanelLeds.EffectColumns);
+            Assert.Equal(220, PanelLeds.EffectTileMinWidth);
+            Assert.Equal(180, PanelLeds.HardwareTileMinWidth);
+            Assert.Equal(8, PanelLeds.HardwareTileGap);
+            Assert.Equal(22, PanelLeds.PreviewGroupGap);
+            Assert.Equal(10, PanelLeds.FoundInSimHubSize);
         }
 
         [Fact]
