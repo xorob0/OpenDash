@@ -252,7 +252,8 @@ namespace OpenDashPlugin.Tests
             var typed = new List<string>();
             foreach (var source in sources)
             {
-                typed.AddRange(TypedGlyphs(File.ReadAllText(source)).Select(found => Path.GetFileName(source) + ": " + found));
+                var kit = Path.GetFileName(source).StartsWith("Widgets", StringComparison.Ordinal);
+                typed.AddRange(TypedGlyphs(File.ReadAllText(source), kit).Select(found => Path.GetFileName(source) + ": " + found));
             }
 
             Assert.True(typed.Count == 0,
@@ -261,13 +262,19 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The glyphs handed to a text factory in one source: every Ui.* factory, and Text, Label and Numeral
-        /// under any qualifier, with each argument that is a literal or starts with one.
+        /// The glyphs handed to a text factory in one source: every Ui.* factory, Text, Label and Numeral
+        /// under any qualifier, and the pages' own heading helpers PageLayout and PageSection, which draw
+        /// their string as a page's title or a section's heading, with each argument that is a literal or
+        /// starts with one. Inside the kit (<paramref name="kit"/>), whose factories call one another without
+        /// the Ui. prefix -- Prose, Tracked, Tag -- every capitalised call is read.
         /// </summary>
-        private static List<string> TypedGlyphs(string text)
+        private static List<string> TypedGlyphs(string text, bool kit = false)
         {
             var typed = new List<string>();
-            foreach (Match call in Regex.Matches(text, @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\("))
+            var calls = kit
+                ? @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\(|\b(?:PageLayout|PageSection)\s*\(|(?<![\w.])[A-Z]\w*\s*\("
+                : @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\(|\b(?:PageLayout|PageSection)\s*\(";
+            foreach (Match call in Regex.Matches(text, calls))
             {
                 foreach (var literal in LiteralArguments(text, call.Index + call.Length))
                 {
@@ -298,6 +305,12 @@ namespace OpenDashPlugin.Tests
             Assert.Empty(TypedGlyphs("Ui.Text(a + \" · \" + b, 13);"));
             Assert.Empty(TypedGlyphs("Ui.Text(\"Laps · \" + count, 13);"));
             Assert.Empty(TypedGlyphs("SetText(\"—\");"));
+            // The pages' heading helpers, and the kit's factories calling one another unprefixed.
+            Assert.Single(TypedGlyphs("PageSection(\"›\", null);"));
+            Assert.Single(TypedGlyphs("PageLayout(\"—\", null, body);"));
+            Assert.Empty(TypedGlyphs("Prose(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Prose(\"—\", 13);", kit: true));
+            Assert.Single(TypedGlyphs("Tag(\"›\", Theme.Border, Theme.TextSecondary);", kit: true));
         }
 
         /// <summary>
