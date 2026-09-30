@@ -619,10 +619,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Low fuel", "Oil temperature", "Water temperature", "Tyre wear", "Pit window open", "Incidents", "Hybrid battery low" }, PanelSettings.Alerts.Select(a => a.Title));
             Assert.Equal(new[] { PanelEmulation.LowFuel, PanelEmulation.Oil, PanelEmulation.Water, null, null, null, null }, PanelSettings.Alerts.Select(a => a.ScenarioId));
             Assert.Equal(new[] { "under", "over", "over", "over", "", "at", "under" }, PanelSettings.Alerts.Select(a => a.Op));
-            Assert.Equal(new[] { "laps", null, null, "", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
-            // A unit drawn alone is a word: a bare glyph slips past the icon guard, which reads only literals,
-            // so the tyre wear's '%' is drawn inside its value, as the panel draws every percentage.
-            Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.Matches(@"[\p{L}\p{Nd}]", a.Unit));
+            // Every unit after the box, as the artboard sets it: "over [70] %", not "over [70%]".
+            Assert.Equal(new[] { "laps", null, null, "%", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
+            // A unit is a word or a unit symbol; the percent sign is the one symbol without a letter, and it is
+            // a unit set as a caption, as "°C" is, never an icon standing in for a drawn path.
+            Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.True(a.Unit.Any(char.IsLetterOrDigit) || a.Unit == "%", a.Unit));
             Assert.False(PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).HasThreshold);
             Assert.Equal(new[] { true, true, true, false }, PanelSettings.Alert(PanelSettings.LowFuelTitle).Surfaces);
             Assert.Equal(new[] { false, false, true, false }, PanelSettings.Alert(PanelSettings.OilTempTitle).Surfaces);
@@ -634,7 +635,7 @@ namespace OpenDashPlugin.Tests
             // What a greyed row's box holds, faded with the row: the artboard's values as the box's text in the
             // field's ink, and where it has none, the artboard's dash as the placeholder in the label ink. Pit
             // window open, an event with no word before its box, still draws the box, as the artboard does.
-            Assert.Equal(new string[] { null, null, null, "70%", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
+            Assert.Equal(new string[] { null, null, null, "70", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
             Assert.Equal("—", PanelSettings.NoValueHint);
             var drawn = Page();
             Assert.Contains("when.Add(box ?? SettingsGreyedBox(alert.Example));", drawn);
