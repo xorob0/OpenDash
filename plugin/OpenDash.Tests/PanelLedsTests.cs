@@ -297,6 +297,52 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;", leds);
         }
 
+        /// <summary>
+        /// Every press on the page reaches the method that does its work, and every one that changes what SimHub
+        /// holds goes through the guarded install: a Remove that stopped removing the strip, a Rename that saved the
+        /// name and left SimHub's list on the old one, or a Reverse that never installed the twin would otherwise
+        /// leave every test green. Read as text because the page is WPF.
+        /// </summary>
+        [Fact]
+        public void Every_press_reaches_its_work()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            foreach (var wiring in new[]
+            {
+                "install.Click += (sender, args) => InstallLedBarProfile(ns);",
+                "rename.Click += (sender, args) => ShowRenameLedBar(ns);",
+                "remove.Click += (sender, args) => ShowRemoveLedBar(ns);",
+                "remove.Click += (sender, args) => RemoveLedBar(ns);",
+                "save.Click += (sender, args) => RenameLedBar(ns, name.Text);",
+                "Ui.InlineAddCard(PanelLights.AddBar, PanelKit.StripAddIcon, ShowAddLedBar)",
+                "add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device);",
+            })
+            {
+                Assert.True(leds.Contains(wiring), "the page no longer carries: " + wiring);
+            }
+            // Install, Reverse, Rename and Add each install through the guard, once.
+            Assert.Equal(4, Occurrences(leds, "LedsReinstall(bar)"));
+            foreach (var (method, next) in new[]
+            {
+                ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
+                ("private void AddLedBar(", null),
+            })
+            {
+                var body = leds.Substring(leds.IndexOf(method, StringComparison.Ordinal));
+                if (next != null) body = body.Substring(0, body.IndexOf(next, StringComparison.Ordinal));
+                Assert.True(Occurrences(body, "LedsReinstall(bar)") == 1, method + " does not install through the guard");
+            }
+            // A rename installs again only where SimHub holds the profile and the page can install it.
+            var rename = leds.Substring(leds.IndexOf("private void RenameLedBar(", StringComparison.Ordinal));
+            rename = rename.Substring(rename.IndexOf("if (inSimHub && blocked == null)", StringComparison.Ordinal));
+            Assert.InRange(rename.IndexOf("LedsReinstall(bar)", StringComparison.Ordinal), 0, rename.IndexOf("}", StringComparison.Ordinal));
+            // Remove takes the profile out of SimHub before the strip leaves the rig.
+            var remove = leds.Substring(leds.IndexOf("private void RemoveLedBar(", StringComparison.Ordinal));
+            Assert.InRange(remove.IndexOf("StripInstaller.UninstallEverywhere(", StringComparison.Ordinal), 0, remove.IndexOf("Settings.RemoveLedBar(ns);", StringComparison.Ordinal));
+        }
+
         private static int Occurrences(string text, string part)
         {
             var count = 0;
@@ -1092,6 +1138,7 @@ namespace OpenDashPlugin.Tests
                 "if (live != null) live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);",
                 "Settings.RenameLedBar(ns, wanted);",
                 "bar.Device = LedBar.NormaliseDevice(device);",
+                "Settings.RemoveLedBar(ns);",
             })
             {
                 var at = leds.IndexOf(write, StringComparison.Ordinal);
@@ -1104,6 +1151,8 @@ namespace OpenDashPlugin.Tests
                 "foreach (var effect in PanelLeds.EffectsFor(bar.Shape))",
                 "LedsEffectTile(effect.Label, Settings.BarEffectEnabled(ns, id),",
                 "PanelLeds.BrightnessIndex(Settings.BarBrightness(ns))",
+                // The entry picked is the value written: an index off by one would store 70% for 60%.
+                "var value = PanelLeds.BrightnessValue(i);",
                 "if (bar.SupportsReversal)",
                 "reverse = Ui.Switch(Settings.BarReversed(ns), on =>",
                 "ReverseLedBar(ns, on);",
@@ -1133,6 +1182,37 @@ namespace OpenDashPlugin.Tests
                 "if (fix != null) parts.Add(fix);",
                 // The car tables' button greys out while a download is out.
                 "carTablesButton.IsEnabled = !carTablesDownloading;",
+                // The row's caption and attribution (contract.test.ts holds the attribution too).
+                "left.Children.Add(LedsCaptionLine(PanelLights.CarTablesCaption));",
+                "left.Children.Add(LedsCaptionLine(PanelLights.CarTablesAttribution));",
+                // The fix box: SimHub's steps and the press that asks again, at the artboard's padding.
+                "var box = Ui.FixBox(PanelLeds.NotSelectedTitle, null, issue.Steps, again);",
+                "again.Click += (sender, args) => CheckAgain();",
+                "box.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);",
+                // Live draws the car's run for the strip's centre, which is the run the profile draws.
+                "running ? lights.Run(centre) : null",
+                // A card: its state line and ink, and the press that shows its strip.
+                "PanelLeds.StateText(profile, selected),",
+                "PanelLeds.StateHex(profile, selected),",
+                "Select(PanelPage.Leds, ns);",
+                // The empty state names the emptiness beside the tile that ends it.
+                "return Ui.VStack(12, Ui.Prose(PanelLeds.NoStrips, Theme.SizeBody), grid);",
+                // The artboard's numbers on this page: the chips' padding, the rows' gap.
+                "chip.Padding = new Thickness(PanelKit.ChipPaddingXLights, 0, PanelKit.ChipPaddingXLights, 0);",
+                "if (control != null) control.Margin = new Thickness(PanelKit.RowGapLeds - PanelShell.RowGap, 0, 0, 0);",
+                // The car line's icons: the ringed check for good news, the warning otherwise.
+                "? Ui.Icon(PanelIcons.RingCheck, hex, 14, PanelIcons.RingBox)",
+                ": Ui.Icon(PanelIcons.Warning, hex, 14, PanelIcons.NavBox);",
+                // The Add LEDs sheet: the device SimHub prefers, never the Arduino whatever the rig, since a
+                // profile installed into the wrong device's list is exactly what a rig reported.
+                "var preferred = LedTargets.Preferred(targets);",
+                "var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;",
+                // A device passed over is a row that cannot be picked.
+                "Ui.RadioRow(passed, PanelLeds.NotReachable, false, null, false)",
+                // The tile it opens on, the eyebrow only where SimHub has the wheel, and the press's label.
+                "var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);",
+                "found ? PanelLeds.FoundInSimHub : null",
+                "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
             })
             {
                 Assert.True(leds.Contains(read), "the page no longer carries: " + read);
@@ -1446,6 +1526,8 @@ namespace OpenDashPlugin.Tests
             // shell's hand-back (which scrolls) has nothing to hand back, and the rebuilt switch takes it here.
             var reverse = leds.Substring(leds.IndexOf("reverse = Ui.Switch(Settings.BarReversed(ns), on =>", StringComparison.Ordinal));
             reverse = reverse.Substring(0, reverse.IndexOf("rows.Add(", StringComparison.Ordinal));
+            Assert.Contains("ledsFocusReverse = LedsLetGoOfFocus(reverse);", reverse);
+            Assert.Contains("ReverseLedBar(ns, on);", reverse);
             Assert.True(reverse.IndexOf("ledsFocusReverse = LedsLetGoOfFocus(reverse);", StringComparison.Ordinal) < reverse.IndexOf("ReverseLedBar(ns, on);", StringComparison.Ordinal));
             Assert.Equal(2, Occurrences(reverse, "LedsFocusLater(() => reverse);"));
             var letGo = leds.Substring(leds.IndexOf("private static bool LedsLetGoOfFocus(", StringComparison.Ordinal));
@@ -1455,7 +1537,7 @@ namespace OpenDashPlugin.Tests
             // The line after the press is said after the redraw, which is what it has to stay in view of.
             var press = leds.Substring(leds.IndexOf("private void ReverseLedBar(", StringComparison.Ordinal));
             press = press.Substring(0, press.IndexOf("private void ShowRenameLedBar(", StringComparison.Ordinal));
-            Assert.True(press.IndexOf("Redraw();", StringComparison.Ordinal) < press.IndexOf("Say(", StringComparison.Ordinal));
+            Assert.True(press.IndexOf("Redraw();", StringComparison.Ordinal) >= 0 && press.IndexOf("Redraw();", StringComparison.Ordinal) < press.IndexOf("Say(", StringComparison.Ordinal));
         }
 
         /// <summary>
@@ -1481,8 +1563,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Rim runs at 60% brightness.", PanelLeds.BrightnessSaid("Rim", 60));
             Assert.Equal("Rim runs at the rig's brightness.", PanelLeds.BrightnessSaid("Rim", null));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            var pick = leds.Substring(leds.IndexOf("Settings.SetBarBrightness(ns, value);", StringComparison.Ordinal));
+            var pick = leds.Substring(leds.IndexOf("var value = PanelLeds.BrightnessValue(i);", StringComparison.Ordinal));
             pick = pick.Substring(0, pick.IndexOf("}, 160);", StringComparison.Ordinal));
+            // The value said is the value written, and the value written is the entry picked.
+            Assert.Contains("Settings.SetBarBrightness(ns, value);", pick);
+            Assert.Equal(60, PanelLeds.BrightnessValue(Array.IndexOf(PanelLeds.BrightnessLabels(80), "60%")));
+            Assert.Null(PanelLeds.BrightnessValue(0));
             Assert.Contains("ClearMessages();", pick);
             Assert.Contains("Say(PanelLeds.BrightnessSaid(live.Name, value));", pick);
         }
