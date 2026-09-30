@@ -292,8 +292,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322), the clock
-        /// (#324) and the night-mode action the button row binds landed after v0.3.0-rc.7, whose contract has
-        /// none of them.
+        /// (#324), the night-mode action the button row binds and the Units row landed after v0.3.0-rc.7,
+        /// whose contract has none of the first three and whose panel never read SimHub's units.
         /// </remarks>
         private static Border SettingsNew(Border row)
         {
@@ -480,7 +480,7 @@ namespace OpenDashPlugin
                 SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),
                 Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),
-                Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine));
+                SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));
         }
 
         // --- Flags -----------------------------------------------------------------------------------
@@ -576,7 +576,7 @@ namespace OpenDashPlugin
             SettingsAlertRule(grid, row);
             var column = 0;
             SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);
-            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.WhenColumn), null, false);
+            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);
             if (surfaces)
             {
                 foreach (var name in PanelSettings.SurfaceColumns)
@@ -652,7 +652,7 @@ namespace OpenDashPlugin
                 var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);
                 if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));
             }
-            SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertWhenGap, when.ToArray()), soon, false);
+            SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);
 
             if (surfaces)
             {

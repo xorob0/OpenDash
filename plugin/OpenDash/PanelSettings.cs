@@ -199,10 +199,12 @@ namespace OpenDashPlugin
         public const string FuelTargetUnitFallback = "L";
 
         /// <summary>
-        /// The two readings a tyre corner shows, in order (#325). The artboard's "then Pressure" says the
-        /// order in a fragment; the two buttons side by side say it already.
+        /// The main and the secondary value a tyre corner will show (#325), greyed until then: the artboard's
+        /// words, whose "then" is the only thing that says the second is secondary rather than a second
+        /// choice. #325 builds the two choosers and settles their words, so the row keeps the artboard's until
+        /// it does, as the yellow flags keep theirs for #504.
         /// </summary>
-        public static readonly string[] TyreDisplayLabels = { "Temperature", "Pressure" };
+        public static readonly string[] TyreDisplayLabels = { "Temperature", "then Pressure" };
 
         public static string SpeedUnit(string simHub)
         {
@@ -288,10 +290,10 @@ namespace OpenDashPlugin
 
         public const string AlertColumn = "Alert";
 
-        /// <summary>The artboard's th, kept as a short column label the way the Updates table keeps "In
-        /// SimHub", although voice.md asks a heading to be a noun: an open divergence, whose noun would be
-        /// "Threshold".</summary>
-        public const string WhenColumn = "When";
+        /// <summary>What each row warns at. The artboard heads the column "When", which asks the question
+        /// each row answers ("under 2 laps"); voice.md asks a heading to be a noun and a label never to be a
+        /// question, and voice.md beats artboard copy, so the column is named by what it holds.</summary>
+        public const string ThresholdColumn = "Threshold";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
         public static readonly string[] SurfaceColumns = { "Screens", "LEDs", "Matrix", "Races only" };
@@ -407,7 +409,7 @@ namespace OpenDashPlugin
         /// <summary>Over the "Alert display" row the table folds into, under the card: the build's own, since
         /// the artboard never folds.</summary>
         public const double AlertFoldGap = 8;
-        public const double AlertWhenGap = 8;
+        public const double AlertThresholdGap = 8;
         public const double AlertCheck = 16;
         public const double AlertCheckIcon = 12;
         public const double AlertTryTextSize = 13;

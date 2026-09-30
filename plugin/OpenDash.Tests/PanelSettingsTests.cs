@@ -49,13 +49,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "day", "night" }, PanelSettings.PreviewValues);
         }
 
-        /// <summary>The greyed rows' words, which say what the tickets will build: the artboard's, with the tyre
-        /// display's "then Pressure" as a bare "Pressure", since the two buttons side by side say the order.
-        /// The yellow flags keep "My sector only", which #504 names and is to settle.</summary>
+        /// <summary>The greyed rows' words, which say what the tickets will build: the artboard's. The tyre
+        /// display keeps "then Pressure", the only word of the pair that says the second value is secondary,
+        /// for #325 to settle, as the yellow flags keep "My sector only" for #504.</summary>
         [Fact]
         public void The_greyed_rows_say_what_is_coming()
         {
-            Assert.Equal(new[] { "Temperature", "Pressure" }, PanelSettings.TyreDisplayLabels);
+            Assert.Equal(new[] { "Temperature", "then Pressure" }, PanelSettings.TyreDisplayLabels);
             Assert.Equal(new[] { "Whole track", "My sector only" }, PanelSettings.YellowFlagLabels);
             Assert.Equal(new[] { "Dark", "Light", "OLED black", "High contrast" }, PanelSettings.ThemeLabels);
             Assert.Equal(new[] { "Standard", "Deuteranopia", "Protanopia", "Tritanopia" }, PanelSettings.ColourVisionLabels);
@@ -79,7 +79,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>voice.md: no contractions and no question anywhere in the page's words, PanelDataTab's and the
         /// alert rows' included, and every title, column and option in sentence case, where an acronym keeps
-        /// its capitals.</summary>
+        /// its capitals. The greyed tyre display's pair is the one exception: the artboard's "then Pressure",
+        /// kept for #325 to reword, since dropping its "then" lost what the pair means.</summary>
         [Fact]
         public void The_words_follow_the_voice()
         {
@@ -106,17 +107,17 @@ namespace OpenDashPlugin.Tests
                 {
                     PanelSettings.UnitsTitle, PanelSettings.FlagsInPitLaneTitle, PanelSettings.BrightnessTitle,
                     PanelSettings.NightBrightnessTitle, PanelSettings.NightModeTitle, PanelSettings.NightModeButtonTitle,
-                    PanelSettings.PreviewTitle, PanelSettings.AlertColumn, PanelSettings.WhenColumn, PanelSettings.TryLabel,
+                    PanelSettings.PreviewTitle, PanelSettings.AlertColumn, PanelSettings.ThresholdColumn, PanelSettings.TryLabel,
                 })
                 .Concat(PanelSettings.Alerts.Select(alert => alert.Title))
                 .Concat(PanelSettings.SurfaceColumns)
                 .Concat(PanelSettings.PreviewLabels)
-                .Concat(PanelSettings.TyreDisplayLabels)
                 .Concat(PanelSettings.YellowFlagLabels)
                 .Concat(PanelSettings.ThemeLabels)
                 .Concat(PanelSettings.ColourVisionLabels)
                 .Concat(PanelSettings.ColoursLabels)
                 .Concat(new[] { PanelSettings.FirstNameHint, PanelSettings.SurnameHint, PanelSettings.LogoButton, PanelSettings.IdleBackgroundButton });
+            Assert.Equal(new[] { "Temperature", "then Pressure" }, PanelSettings.TyreDisplayLabels);
             foreach (var label in labels)
             {
                 Assert.True(char.IsUpper(label[0]), label);
@@ -187,7 +188,7 @@ namespace OpenDashPlugin.Tests
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", "SettingsFit(Ui.Row(PanelDataTab.SessionTitle,",
                     "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", "Ui.Row(PanelDataTab.TeamNameTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", "Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title,",
-                    "Ui.SettingRow(PanelSoon.TyreDisplay.Title,", "Ui.Row(PanelSettings.UnitsTitle,",
+                    "Ui.SettingRow(PanelSoon.TyreDisplay.Title,", "SettingsNew(Ui.Row(PanelSettings.UnitsTitle,",
                 },
                 new[]
                 {
@@ -280,7 +281,9 @@ namespace OpenDashPlugin.Tests
         /// New marks what the shipped plugin cannot do, for one release: the pit-lane switch and the Alerts
         /// heading, as the artboard tags them; the night preview, which only the Map tags; and the rows that
         /// landed after v0.3.0-rc.7, the tagged release, although no artboard tags them: delta precision
-        /// (#322), the clock (#324) and the night-mode button, whose action rc.7 does not register.
+        /// (#322), the clock (#324), the night-mode button, whose action rc.7 does not register, and the Units
+        /// line, which rc.7's panel never drew: nothing in it read SimHub's GameUnitSettings. A read-only row
+        /// is no exception, since what the tag says is that the row is new.
         /// </summary>
         [Fact]
         public void New_marks_what_the_artboards_tag_and_what_rc7_lacks()
@@ -292,6 +295,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine))", page);
         }
 
         /// <summary>The row sits 18 under the title, as the artboard's nav, although PageLayout puts 28 over it.</summary>
@@ -313,7 +317,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// Every metric the page draws with is PanelSettings', held to Settings.dc.html where the artboard has
-        /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the When cell's gap 8, the
+        /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the Threshold cell's gap 8, the
         /// Units line 14, the preview card's padding 16/18 with gap 16 and 8 under it, the name inputs 150 with
         /// gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre buttons' 6 and the .idx's 500. The page
         /// types no gap, padding or weight of its own.
@@ -327,7 +331,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(500, PanelSettings.AlertNameFontWeight);
             Assert.Equal(16, PanelSettings.AlertCheck);
             Assert.Equal(13, PanelSettings.AlertTryTextSize);
-            Assert.Equal(8, PanelSettings.AlertWhenGap);
+            Assert.Equal(8, PanelSettings.AlertThresholdGap);
             Assert.Equal(14, PanelSettings.UnitsTextSize);
             Assert.Equal(18, PanelSettings.PreviewPaddingX);
             Assert.Equal(16, PanelSettings.PreviewPaddingY);
@@ -533,7 +537,8 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelSettings.Alert("Nothing"));
             Assert.Equal(new[] { "Screens", "LEDs", "Matrix", "Races only" }, PanelSettings.SurfaceColumns);
             Assert.Equal("Alert", PanelSettings.AlertColumn);
-            Assert.Equal("When", PanelSettings.WhenColumn);
+            // The artboard's "When" asks the question each row answers; voice.md's noun is the column's.
+            Assert.Equal("Threshold", PanelSettings.ThresholdColumn);
             Assert.Equal("Try", PanelSettings.TryLabel);
             // Every row is drawn, in this order, and every live row writes the rig-wide setting.
             var page = Page();
