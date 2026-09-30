@@ -154,13 +154,21 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The line beside a screen card's name: its kind and its size, as a Screens card writes them
-        /// ("Face · 1280 × 480", "Pit wall · 1920 × 1080"). The kind alone when the size is not known.
+        /// ("Face · 1280 × 480", "Pit wall · 1920 × 1080"), less whatever the name already says. A pit wall
+        /// named "Pit wall" reads "1920 × 1080", a face named by its size reads "Face", and a line with nothing
+        /// left is null. The kind alone when the size is not known.
         /// </summary>
-        public static string GroupDetail(string kind, int width, int height)
+        public static string GroupDetail(string screenName, string kind, int width, int height)
         {
-            var name = PanelAddScreen.KindName(kind);
-            if (width <= 0 || height <= 0) return name;
-            return name + Join + width.ToString(CultureInfo.InvariantCulture) + " × " + height.ToString(CultureInfo.InvariantCulture);
+            var kindName = PanelAddScreen.KindName(kind);
+            var size = width > 0 && height > 0
+                ? width.ToString(CultureInfo.InvariantCulture) + " × " + height.ToString(CultureInfo.InvariantCulture)
+                : null;
+            var name = (screenName ?? string.Empty).Trim();
+            var parts = new List<string>();
+            if (!string.Equals(name, kindName, StringComparison.OrdinalIgnoreCase)) parts.Add(kindName);
+            if (size != null && !string.Equals(name, size, StringComparison.Ordinal)) parts.Add(size);
+            return parts.Count == 0 ? null : string.Join(Join, parts);
         }
 
         /// <summary>What a row is, for the filter and its card's count: greyed (it cannot be bound yet), not

@@ -205,7 +205,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private ShortcutsGroupState BuildShortcutsFace(ScreenInstance screen, ShortcutsLayout layout)
         {
-            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);
             foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name))
             {
                 ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);
@@ -219,7 +219,7 @@ namespace OpenDashPlugin
         /// gesture, since nobody drives a pit wall.</summary>
         private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
-            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);
             var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
             ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);
             return group;
@@ -236,7 +236,7 @@ namespace OpenDashPlugin
                 Padding = new Thickness(PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY, PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY),
                 Child = Ui.VStack(0, Ui.Caption(PanelCopy.CompanionPaging, BodyWidth), crumbs),
             };
-            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), lead);
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), lead);
             var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
             ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);
             return group;

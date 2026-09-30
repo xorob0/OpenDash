@@ -33,13 +33,23 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_card_names_its_screen_by_kind_and_size_as_a_screens_card_does()
+        public void A_cards_line_gives_its_screens_kind_and_size_less_what_its_name_says()
         {
-            Assert.Equal("Face · 1280 × 480", PanelShortcuts.GroupDetail(Contract.KindFace, 1280, 480));
-            Assert.Equal("Pit wall · 1920 × 1080", PanelShortcuts.GroupDetail(Contract.KindPitWall, 1920, 1080));
-            Assert.Equal("Companion · 480 × 850", PanelShortcuts.GroupDetail(Contract.KindCompanion, 480, 850));
-            // A screen whose package is gone has no size to show, and "0 × 0" is worse than the kind alone.
-            Assert.Equal("Face", PanelShortcuts.GroupDetail(Contract.KindFace, 0, 0));
+            // A renamed screen keeps both, in a Screens card's words.
+            Assert.Equal("Face · 1280 × 480", PanelShortcuts.GroupDetail("Main dash", Contract.KindFace, 1280, 480));
+            Assert.Equal("Pit wall · 1920 × 1080", PanelShortcuts.GroupDetail("Garage", Contract.KindPitWall, 1920, 1080));
+            Assert.Equal("Companion · 480 × 850", PanelShortcuts.GroupDetail("Phone", Contract.KindCompanion, 480, 850));
+            // A default name says the kind or the size already, so the line leaves it out, as the artboard's
+            // "Pit wall" card reads "1920×1080": nothing said twice.
+            Assert.Equal("1920 × 1080", PanelShortcuts.GroupDetail("Pit wall", Contract.KindPitWall, 1920, 1080));
+            Assert.Equal("480 × 850", PanelShortcuts.GroupDetail("Companion", Contract.KindCompanion, 480, 850));
+            Assert.Equal("Face", PanelShortcuts.GroupDetail("1920 × 480", Contract.KindFace, 1920, 480));
+            Assert.Null(PanelShortcuts.GroupDetail("Companion", Contract.KindCompanion, 0, 0));
+            // A screen whose package is gone has no size to show, and "0 × 0" or "1280 × 0" is worse than the
+            // kind alone.
+            Assert.Equal("Face", PanelShortcuts.GroupDetail("Rim", Contract.KindFace, 0, 0));
+            Assert.Equal("Face", PanelShortcuts.GroupDetail("Rim", Contract.KindFace, 1280, 0));
+            Assert.Equal("Face", PanelShortcuts.GroupDetail("Rim", Contract.KindFace, 0, 480));
         }
 
         [Fact]
@@ -560,7 +570,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
             Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);", code);
-            Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height)")).Count);
+            Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);
 
