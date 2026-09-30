@@ -36,12 +36,25 @@ namespace OpenDashPlugin.Tests
         /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
         /// keeps "Add a screen" on the first row. At 150 the grid took five there.
         /// </summary>
+        /// <summary>A picture drawn at a fixed size shrinks to a narrower column and never grows past its own
+        /// size, set against the column's left edge: grown, the 846 px face filled a 4K column four times over;
+        /// centred, it stood in the middle of an empty band.</summary>
+        [Fact]
+        public void A_fixed_picture_shrinks_to_the_column_and_never_grows()
+        {
+            var fit = Factory("FitWidth");
+            Assert.Contains("new Viewbox", fit);
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly", fit);
+            Assert.Contains("HorizontalAlignment = HorizontalAlignment.Left", fit);
+            Assert.Contains("Stretch = Stretch.Uniform", fit);
+        }
+
         [Fact]
         public void The_card_grid_holds_the_artboards_six_at_its_own_width()
         {
             Assert.Equal(138, PanelKit.CardMinWidth);
-            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 17), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
-            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, false, 0), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, 17), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
+            Assert.Equal(6, PanelShell.Columns(PanelShell.ContentWidth(1200, 0), PanelKit.CardMinWidth, PanelKit.CardGridGap, 6));
         }
 
         /// <summary>

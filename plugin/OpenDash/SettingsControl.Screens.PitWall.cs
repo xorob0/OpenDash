@@ -29,7 +29,7 @@ namespace OpenDashPlugin
             // The glance's binding is on Shortcuts, with every other one; the page it shows is set here.
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
             return Ui.VStack(0,
-                PageSection("Layout", BuildPitWallPicture()),
+                PageSection("Layout", Ui.FitWidth(BuildPitWallPicture())),
                 PageSection(PanelScreens.ZonesTitle, Ui.VStack(0, BuildPitWallRows(screen))),
                 Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8, BuildPitWallGlanceSelect(screen), chip)));
         }
