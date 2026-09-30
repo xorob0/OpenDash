@@ -11,6 +11,12 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelShortcutsTests
     {
+        /// <summary>The content beside the full sidebar at a control that wide, with a 17 px scroll bar: 879 at
+        /// the artboard's 1200 frame, 3519 at 3840. It is PanelShell.ContentWidth(control, 17) once the column
+        /// has no ceiling, spelled out so the pin reads the same on either side of that change; the column
+        /// has no widest width to pin against.</summary>
+        private static double Column(double control) => control - PanelShell.SidebarWidth - 2 * PanelShell.MainPaddingX(PanelLayout.Full) - 17;
+
         private const string Face = "Face1920x480";
 
         [Fact]
@@ -499,7 +505,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(712, PanelShortcuts.RowStackBelow);
             Assert.Equal(PanelShortcuts.RowStackBelow, 2 + 2 * PanelShortcuts.RowPaddingX + PanelShortcuts.NameMinWidth
                 + PanelShortcuts.RowGap + PanelShortcuts.PressWidth + PanelShortcuts.RowGap + PanelShortcuts.BinderWidth);
-            Assert.False(PanelShortcuts.RowStacks(PanelShell.ContentMax));
+            Assert.False(PanelShortcuts.RowStacks(Column(1200)));
+            Assert.False(PanelShortcuts.RowStacks(Column(3840)));
             Assert.False(PanelShortcuts.RowStacks(712));
             Assert.True(PanelShortcuts.RowStacks(711));
             // The rail's content at the narrowest full-sidebar width: the binder goes under the name there.
@@ -516,7 +523,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("MinWidth = " + PanelShortcuts.BinderMinWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }", shell);
             // Beside the name, the same slot on every row, whatever the content's width.
             Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, false));
-            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShell.ContentMax, false));
+            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(Column(1200), false));
+            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(Column(3840), false));
             // Under it, the whole row inside its padding, which may be less than the floor: the row lowers the
             // editor's MinWidth to the slot there, so SimHub's template is laid out in it rather than clipped.
             Assert.Equal(566, PanelShortcuts.BinderSlot(600, true));
