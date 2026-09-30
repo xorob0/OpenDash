@@ -60,23 +60,27 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_card_counts_its_bound_rows_out_of_those_it_can_bind()
         {
-            Assert.Equal("3 of 6", PanelShortcuts.CardCount(new[] { Bound, Bound, Bound, NotBound, NotBound, NotBound }, true, false));
-            // Greyed rows are left out of the total: Lights with night mode bound reads "1 of 3", not the
-            // artboard's "1 of 4" (a departure awaiting a ruling), and Alerts, all greyed, has no count.
-            Assert.Equal("1 of 3", PanelShortcuts.CardCount(new[] { Bound, NotBound, NotBound, Greyed }, true, false));
-            Assert.Null(PanelShortcuts.CardCount(new[] { Greyed }, true, false));
-            Assert.Null(PanelShortcuts.CardCount(new PanelShortcuts.RowState[0], true, false));
+            Assert.Equal("3 of 6", PanelShortcuts.CardCount(new[] { Bound, Bound, Bound, NotBound, NotBound, NotBound }, true));
+            // Nothing bound yet, which is every card on a new rig: still counted.
+            Assert.Equal("0 of 9", PanelShortcuts.CardCount(Enumerable.Repeat(NotBound, 9), true));
+            // Greyed rows are left out of the total, as ruled: Lights with night mode bound reads "1 of 3", not
+            // the artboard's "1 of 4", and Alerts, all greyed, has no count.
+            Assert.Equal("1 of 3", PanelShortcuts.CardCount(new[] { Bound, NotBound, NotBound, Greyed }, true));
+            Assert.Equal("0 of 3", PanelShortcuts.CardCount(new[] { NotBound, NotBound, NotBound, Greyed }, true));
+            Assert.Null(PanelShortcuts.CardCount(new[] { Greyed }, true));
+            Assert.Null(PanelShortcuts.CardCount(new PanelShortcuts.RowState[0], true));
         }
 
         [Fact]
-        public void A_card_has_no_count_when_simhub_pages_it_or_nothing_can_be_read()
+        public void A_card_with_one_row_counts_it_and_none_counts_when_nothing_can_be_read()
         {
-            // The companion's card, whose paging SimHub binds: the artboard's external card has no count.
-            Assert.Null(PanelShortcuts.CardCount(new[] { Bound }, true, true));
-            Assert.Null(PanelShortcuts.CardCount(new[] { NotBound }, true, true));
+            // A pit wall's card and a companion's alike: the companion's paging line is no row, and its glance
+            // is counted as the sidebar's total counts it.
+            Assert.Equal("1 of 1", PanelShortcuts.CardCount(new[] { Bound }, true));
+            Assert.Equal("0 of 1", PanelShortcuts.CardCount(new[] { NotBound }, true));
             // Ruling 60: when any row cannot be read, no card counts, and neither the filter nor the clash
             // line is drawn.
-            Assert.Null(PanelShortcuts.CardCount(new[] { Bound, NotBound }, false, false));
+            Assert.Null(PanelShortcuts.CardCount(new[] { Bound, NotBound }, false));
             Assert.True(PanelShortcuts.Readable(new[] { Bound, NotBound, Greyed }));
             Assert.True(PanelShortcuts.Readable(new PanelShortcuts.RowState[0]));
             Assert.False(PanelShortcuts.Readable(new[] { Bound, Unread, Greyed }));
@@ -573,14 +577,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var titleLine = new WrapPanel", code);
 
             // What the model decides from the bindings read, each drawn through it: the row's state, the
-            // page's readability, the filter, the counts (and none for the companion), and ruling 60's three
+            // page's readability, the filter, the counts, and ruling 60's three
             // hides when a row cannot be read.
             Assert.Contains("states[row] = PanelShortcuts.StateOf(row.Bindable, read == null ? (int?)null : read.Count);", code);
             Assert.Contains("var readable = PanelShortcuts.Readable(states.Values);", code);
             Assert.Contains("var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);", code);
             Assert.Contains("filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;", code);
             Assert.Contains("PanelShortcuts.Shows(chosen, states[row])", code);
-            Assert.Contains("var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable, group.HasLead);", code);
+            Assert.Contains("var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable);", code);
             Assert.Contains("if (readable)\n", code.Replace("\r\n", "\n"));
             Assert.Contains("foreach (var clash in PanelShortcuts.Clashes(all))", code);
             Assert.Contains("PanelShortcuts.FilterEmpty(chosen)", code);

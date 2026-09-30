@@ -54,8 +54,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>One card: its rows, the host of its count, and whether a line sits between its header and
-        /// its first row (the companion's paging), which decides whether that row draws its rule, and leaves
-        /// the card without a count, as the artboard's external card has none.</summary>
+        /// its first row (the companion's paging), which decides whether that row draws its rule.</summary>
         private sealed class ShortcutsGroupState
         {
             public FrameworkElement Card;
@@ -439,7 +438,7 @@ namespace OpenDashPlugin
                 }
                 group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;
                 anyShown |= groupShown;
-                var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable, group.HasLead);
+                var count = PanelShortcuts.CardCount(group.Rows.Select(row => states[row]), readable);
                 group.CountHost.Child = count == null ? null : Ui.Numeral(count, PanelShortcuts.CountSize, Theme.TextSecondary);
                 group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
             }

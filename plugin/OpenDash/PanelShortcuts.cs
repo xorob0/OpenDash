@@ -193,14 +193,17 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A card's count, "3 of 6": how many of the rows it can bind are bound. Null when the page is not
-        /// <see cref="Readable"/>; for a card with nothing to bind; and for a card SimHub pages (the
-        /// companion's), which Shortcuts.dc.html leaves without a count, since its paging is bound elsewhere.
+        /// <see cref="Readable"/>, and for a card with nothing to bind.
         /// </summary>
-        /// <remarks>Greyed rows are not counted, since no press could ever complete the count: the artboard
-        /// counts them ("1 of 4" on Lights, "0 of 1" on Alerts), and this departure waits on a ruling.</remarks>
-        public static string CardCount(IEnumerable<RowState> rows, bool readable, bool pagedBySimHub)
+        /// <remarks>
+        /// Greyed rows are not counted, since no press could ever complete the count: the artboard counts them
+        /// ("1 of 4" on Lights, "0 of 1" on Alerts), and it was ruled to leave them out. The companion's card
+        /// counts its glance like any other: the artboard's external card has no count only because it has
+        /// no rows, and the sidebar's total counts the companion's glance, so the two agree.
+        /// </remarks>
+        public static string CardCount(IEnumerable<RowState> rows, bool readable)
         {
-            if (!readable || pagedBySimHub) return null;
+            if (!readable) return null;
             var list = (rows ?? Enumerable.Empty<RowState>()).ToList();
             var total = list.Count(row => row != RowState.Greyed);
             if (total <= 0) return null;
