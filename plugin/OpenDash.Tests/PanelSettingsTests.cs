@@ -473,9 +473,11 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// SimHub's Settings is a window of its own and applies the units when it closes, and nothing else
-        /// rebuilds the page then: the page reads them again when the panel's window is activated, and is
-        /// drawn again only when one moved, so a driver never types a threshold against a stale unit.
+        /// SimHub applies its units after its own Settings window has closed and after SimHub's main window has
+        /// been activated again, from that window's Apply, or with a new GameManager on a change of game, and
+        /// nothing rebuilds the page then: the page reads them again on its tick and is drawn again only when
+        /// one moved, so a driver never types a threshold against a stale unit. A window's Activated would
+        /// read them before SimHub has set them. A failed read is logged once, not once a second.
         /// </summary>
         [Fact]
         public void The_page_is_drawn_again_when_simhubs_units_move()
@@ -487,11 +489,10 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelSettings.UnitsMoved(new string[4], new string[4]));
             Assert.True(PanelSettings.UnitsMoved(metric, null));
             var page = Page();
-            Assert.Contains("SettingsFollowUnits(page, units);", page);
-            Assert.Contains("window = Window.GetWindow(page);", page);
-            Assert.Contains("if (window != null) window.Activated += activated;", page);
-            Assert.Contains("if (!dropped && PanelSettings.UnitsMoved(drawn, SettingsUnitNames())) RebuildPage();", page);
-            Assert.Contains("if (window != null) window.Activated -= activated;", page);
+            Assert.Contains("OnTick(() => { if (PanelSettings.UnitsMoved(units, SettingsUnitNames())) RebuildPage(); });", page);
+            Assert.DoesNotContain("Activated", page);
+            Assert.Contains("if (!settingsUnitsFailed) Log.Warn(\"Reading SimHub's units failed: \" + ex.Message);", page);
+            Assert.Contains("settingsUnitsFailed = false;", page);
         }
 
         /// <summary>

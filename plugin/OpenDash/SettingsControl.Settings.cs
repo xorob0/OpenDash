@@ -7,8 +7,8 @@
 // PanelDataTabTests hold them; this file only draws. Every control writes its setting at once and saves.
 // The page draws night mode and both brightnesses as controls, so it calls DrawsLighting and is built again
 // when either moves, the wheel's buttons included; the one thing it reads of SimHub while building is its
-// units, which are settings, and it reads them again when the panel's window comes back from SimHub's own
-// Settings window, where they are changed.
+// units, which are settings, and it reads them again on the tick, since SimHub applies a change to them only
+// after its own Settings window has closed and nothing tells the panel.
 //
 // The delta's two rows stay adjacent Ui.Row calls: PanelDataTabTests holds that the precision row sits
 // directly under the reference it qualifies (#322).
@@ -56,38 +56,14 @@ namespace OpenDashPlugin
             };
             var all = new List<UIElement> { SettingsIndex(sections, to) };
             all.AddRange(sections);
-            var page = PageLayout(PanelSettings.Title, null, all.ToArray());
-            SettingsFollowUnits(page, units);
-            return page;
-        }
-
-        /// <summary>
-        /// Builds the page again when SimHub's units have moved since it was drawn. SimHub's Settings, where
-        /// the Units row sends the driver, opens as a window of its own and applies the units when it closes;
-        /// nothing unloads or resizes the panel meanwhile, so without this the Units line, the unit after both
-        /// temperatures and their defaults would stay the old ones while the matrix compares in the new.
-        /// </summary>
-        private void SettingsFollowUnits(FrameworkElement page, string[] drawn)
-        {
-            Window window = null;
-            var dropped = false;
-            EventHandler activated = (sender, args) =>
-            {
-                if (!dropped && PanelSettings.UnitsMoved(drawn, SettingsUnitNames())) RebuildPage();
-            };
-            RoutedEventHandler loaded = (sender, args) =>
-            {
-                if (dropped || window != null) return;
-                window = Window.GetWindow(page);
-                if (window != null) window.Activated += activated;
-            };
-            page.Loaded += loaded;
-            OnDrop(() =>
-            {
-                dropped = true;
-                page.Loaded -= loaded;
-                if (window != null) window.Activated -= activated;
-            });
+            // Built again when SimHub's units move, or the Units line, the unit after both temperatures and
+            // their defaults would stay the old ones while the matrix compares in the new. On the tick, not on
+            // SimHub's window coming back: SimHub's Settings, where the Units row sends the driver, activates
+            // SimHub's window as it closes and applies the units only after that, from its own Apply, or when a
+            // change of game brings a new GameManager. Four enum reads a second while the panel is on screen,
+            // cleared on every rebuild and on Go.
+            OnTick(() => { if (PanelSettings.UnitsMoved(units, SettingsUnitNames())) RebuildPage(); });
+            return PageLayout(PanelSettings.Title, null, all.ToArray());
         }
 
         // --- On this page -----------------------------------------------------------------------------
@@ -403,10 +379,14 @@ namespace OpenDashPlugin
             return SettingsHinted(box, PanelSettings.ThresholdText(fallback));
         }
 
+        /// <summary>Whether the last read of SimHub's units failed, so a failure the tick meets every second is
+        /// logged once rather than once a second.</summary>
+        private bool settingsUnitsFailed;
+
         /// <summary>
         /// SimHub's four units, as the enum names GameReaderCommon spells them, or nulls where SimHub cannot be
         /// asked. A read of SimHub's own settings, which a build that draws the lighting may make, and which
-        /// SettingsFollowUnits makes again when the panel's window is activated -- never on the tick.
+        /// the page's tick makes again every second: four enum properties, nothing that touches a device.
         /// </summary>
         private string[] SettingsUnitNames()
         {
@@ -415,18 +395,20 @@ namespace OpenDashPlugin
                 var manager = plugin == null ? null : plugin.PluginManager;
                 var game = manager == null ? null : manager.GameManager;
                 var units = game == null ? null : game.GameUnitSettings;
-                if (units == null) return new string[4];
-                return new[]
+                var names = units == null ? new string[4] : new[]
                 {
                     units.LocalSpeedUnit.ToString(),
                     units.LocalTemperatureUnit.ToString(),
                     units.LocalPressureUnit.ToString(),
                     units.LocalFuelUnit.ToString(),
                 };
+                settingsUnitsFailed = false;
+                return names;
             }
             catch (Exception ex)
             {
-                Log.Warn("Reading SimHub's units failed: " + ex.Message);
+                if (!settingsUnitsFailed) Log.Warn("Reading SimHub's units failed: " + ex.Message);
+                settingsUnitsFailed = true;
                 return new string[4];
             }
         }
