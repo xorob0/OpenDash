@@ -644,10 +644,13 @@ namespace OpenDashPlugin
                 group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
             }
 
+            // The record is cleared before the focus moves on, so the row that takes it records itself through
+            // its own GotKeyboardFocus: cleared after, the next row's record was wiped at once, and a second
+            // bind by keyboard in a row found nothing to hand on from.
             if (focused != null && focused.Shown.Visibility != Visibility.Visible)
             {
-                ShortcutsKeepFocus(groups, focused, filter);
                 touch.Row = null;
+                ShortcutsKeepFocus(groups, focused, filter);
             }
 
             banner.Children.Clear();

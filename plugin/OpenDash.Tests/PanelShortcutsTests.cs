@@ -967,7 +967,11 @@ namespace OpenDashPlugin.Tests
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             var evaluate = Between(code, "private void ShortcutsEvaluate(", "banner.Children.Clear();");
             Assert.Contains("var focused = groups.SelectMany(group => group.Rows).FirstOrDefault(row => row.Shown.IsKeyboardFocusWithin);", evaluate);
-            Assert.Matches(@"if \(focused != null && focused\.Shown\.Visibility != Visibility\.Visible\)\s*\{\s*ShortcutsKeepFocus\(groups, focused, filter\);\s*touch\.Row = null;", evaluate);
+            // The record is cleared before the focus moves on: the row that takes it sets the record through its
+            // own GotKeyboardFocus, synchronously, and clearing after would wipe that, so a second bind by
+            // keyboard under Not bound would find no row to hand on from.
+            Assert.Matches(@"if \(focused != null && focused\.Shown\.Visibility != Visibility\.Visible\)\s*\{\s*touch\.Row = null;\s*ShortcutsKeepFocus\(groups, focused, filter\);\s*\}", evaluate);
+            Assert.Single(Regex.Matches(code, @"touch\.Row = null;"));
             // SimHub takes the focus off the row before this runs (its picker's Closed focuses the main window,
             // and a focused Clear leaves the tree), so the row last pressed or focused in stands for it while
             // the focus is on nothing but a bare window.
