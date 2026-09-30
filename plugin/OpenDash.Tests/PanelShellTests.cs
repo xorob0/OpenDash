@@ -218,6 +218,24 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch, Focusable = false, IsTabStop = false }", shell);
         }
 
+        /// <summary>
+        /// The shell builds the first page once, at the control's first real width, and a build that throws
+        /// lets go of the preview it had started.
+        /// </summary>
+        [Fact]
+        public void The_first_page_is_built_once_and_a_failed_build_drops_its_preview()
+        {
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
+            var constructor = shell.Substring(shell.IndexOf("public SettingsControl(OpenDash plugin)", StringComparison.Ordinal));
+            constructor = constructor.Substring(0, constructor.IndexOf("private UIElement BuildFrame()", StringComparison.Ordinal));
+            Assert.DoesNotContain("Go(route);", constructor);
+            Assert.Contains("if (!pageBuilt) BuildFirstPage();", constructor);
+            var resize = shell.Substring(shell.IndexOf("private void Resize(double width)", StringComparison.Ordinal));
+            Assert.Contains("BuildFirstPage();", resize.Substring(0, resize.IndexOf("if (flipped)", StringComparison.Ordinal)));
+            var failure = shell.Substring(shell.IndexOf("catch (Exception ex)", shell.IndexOf("private FrameworkElement BuildPage(", StringComparison.Ordinal), StringComparison.Ordinal));
+            Assert.Contains("DropPreview();", failure.Substring(0, failure.IndexOf("return Ui.VStack(", StringComparison.Ordinal)));
+        }
+
         [Fact]
         public void A_sheet_lies_against_the_main_column_and_not_the_far_edge()
         {

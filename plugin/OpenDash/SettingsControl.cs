@@ -102,6 +102,10 @@ namespace OpenDashPlugin
         /// <summary>Whether SimHub has taken the panel off screen since it was last shown.</summary>
         private bool wasUnloaded;
 
+        /// <summary>Whether the first page has been built. It waits for the control's first real width, so
+        /// the page is built once at the width it is shown at rather than at an assumed one and again.</summary>
+        private bool pageBuilt;
+
         /// <summary>Whether the build that is showing draws the rig's lighting -- night mode or a brightness --
         /// and so asked through <see cref="DrawsLighting"/> to be rebuilt when either changes.</summary>
         private bool pageDrawsLighting;
@@ -141,6 +145,9 @@ namespace OpenDashPlugin
                 plugin.RigLightingPressed -= ShowLightingChange;
                 plugin.RigLightingPressed += ShowLightingChange;
                 StartClock();
+                // SizeChanged has built the first page by now; a host that never gave the control a width
+                // gets it at the assumed one rather than an empty column.
+                if (!pageBuilt) BuildFirstPage();
                 if (wasUnloaded)
                 {
                     wasUnloaded = false;
@@ -162,7 +169,9 @@ namespace OpenDashPlugin
                 wasUnloaded = true;
             };
 
-            Go(route);
+            // The first page is built by the first real size (Resize), or by Loaded when none comes: built
+            // here it was built at the assumed PanelShell.FullFrom and again 150 ms later at the real width,
+            // so every opening loaded Screens' live preview twice and read SimHub's devices and profiles twice.
             // Init has already queued the day's check, so this asks only when that one did not start: never on
             // the startup path, never within the day, never twice in one start even when the first found no
             // network, and never at all unless the setting says so. A check still in flight answers here too.
@@ -218,8 +227,8 @@ namespace OpenDashPlugin
         /// window has stopped moving. A card grid decides its columns as it is measured.
         /// </summary>
         /// <remarks>
-        /// The constructor builds the first page before SimHub has measured the control, at the
-        /// <see cref="PanelShell.FullFrom"/> it assumes; the first real size is what corrects it.
+        /// The first real size builds the first page, at that width: nothing is built before SimHub has
+        /// measured the control.
         /// </remarks>
         private void Resize(double width)
         {
@@ -230,6 +239,11 @@ namespace OpenDashPlugin
             layout = next;
             Ui.Layout = next;
             ApplyLayout();
+            if (!pageBuilt)
+            {
+                BuildFirstPage();
+                return;
+            }
             if (flipped)
             {
                 RefreshSidebar();
@@ -240,6 +254,14 @@ namespace OpenDashPlugin
                 SettleThenRebuild();
             }
             if (SheetOpen) SizeSheet();
+        }
+
+        /// <summary>Builds the first page, once.</summary>
+        private void BuildFirstPage()
+        {
+            if (pageBuilt) return;
+            pageBuilt = true;
+            Go(route);
         }
 
         /// <summary>Whether the page that is showing was built for other room than it has now.</summary>
@@ -410,6 +432,8 @@ namespace OpenDashPlugin
         /// </remarks>
         private void RebuildPage()
         {
+            // Nothing to rebuild before the first page: that one is built at the control's first real width.
+            if (!pageBuilt) return;
             var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
             CommitTyping();
             DropPreview();
@@ -695,6 +719,9 @@ namespace OpenDashPlugin
                 // A page that throws while it is drawn leaves the panel usable, the sidebar with it, and
                 // says where to look rather than showing SimHub's own crash dialog.
                 Log.Error("Drawing the " + PanelNav.Label(to.Page) + " page failed", ex);
+                // A preview the build started before it threw was never added to the tree, so its own
+                // Unloaded would never dispose it: SimHub's renderer would run behind the error page.
+                DropPreview();
                 return Ui.VStack(12,
                     Ui.PageTitle(PanelNav.Label(to.Page)),
                     Ui.Prose(PanelShell.PageFailed, Theme.SizeBody, Theme.Caution));
