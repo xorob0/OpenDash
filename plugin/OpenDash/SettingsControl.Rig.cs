@@ -46,7 +46,7 @@ namespace OpenDashPlugin
                 ShowLightingChange();
             });
             var real = PanelSoon.Find(PanelRigMap.RealHardwareTitle);
-            var hardware = Ui.Soon(Ui.HStack(10, Ui.Text(real.Title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(), Ui.Switch(false, null)), real);
+            var hardware = Ui.Soon(Ui.HStack(10, Ui.Text(real.Title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.SoonTag(real), Ui.Switch(false, null)), real);
             var actions = Ui.HStack(18, Ui.HStack(10, Ui.Text(PanelSettings.NightModeTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), night), hardware);
 
             var title = Ui.HStack(12, Ui.PageTitle(PanelRigMap.Title), Ui.NewTag());

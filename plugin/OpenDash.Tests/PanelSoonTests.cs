@@ -81,7 +81,7 @@ namespace OpenDashPlugin.Tests
             // Verbs only: "Colour vision" and "Colours" are nouns, so "Colour" is not listed; the old "Colour
             // everything by RPM" is held out by name.
             Assert.Null(PanelSoon.Find("Colour everything by RPM"));
-            var imperatives = new[] { "Run", "Dismiss", "Follow", "Dim", "Use", "Show", "Sweep", "Try", "Set", "Add", "Turn", "Pick", "Choose", "Enable", "Disable" };
+            var imperatives = new[] { "Run", "Dismiss", "Follow", "Dim", "Use", "Show", "Sweep", "Try", "Set", "Add", "Turn", "Pick", "Choose", "Enable", "Disable", "Light", "Drag", "Flash" };
             // Nor on a question word: "Where each alert shows" is a sentence pretending to be a heading, the
             // failure voice.md names in "What each zone shows". #512's row is "Alert display", in the panel's
             // own "X display" pattern.
@@ -113,36 +113,70 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The ruled rows, as (title, ticket, page): the ticket set and each page's count alone let two rows
-        /// swap tickets and stay green -- Pit limiter lights 509 with Priority order 505, Rig test 511 with
-        /// Alert dismissal 510, Yellow flags 504 with Incidents 508.
+        /// Every greyed row, as (title, ticket, page, drawn only in a sheet), in the order All lists them. The
+        /// ticket set and each page's count alone let two rows swap tickets and stay green -- Fit 319 with
+        /// Circle tracker 320, Fuel target per lap 326 with Tyre display 325 -- and let a title be reworded
+        /// with no test noticing, so each row is held here whole: a change to one is a change to this table.
         /// </summary>
-        [Theory]
-        [InlineData("Zones instead of cards", 146, PanelPage.Screens)]
-        [InlineData("Yellow flags", 504, PanelPage.Settings)]
-        [InlineData("Priority order", 505, PanelPage.Matrix)]
-        [InlineData("Real hardware", 506, PanelPage.Rig)]
-        [InlineData("Tyre wear", 507, PanelPage.Settings)]
-        [InlineData("Pit window open", 507, PanelPage.Settings)]
-        [InlineData("Incidents", 508, PanelPage.Settings)]
-        [InlineData("Pit limiter lights", 509, PanelPage.Leds)]
-        [InlineData("Alert dismissal", 510, PanelPage.Shortcuts)]
-        [InlineData("Rig test", 511, PanelPage.Shortcuts)]
-        [InlineData("Alert display", 512, PanelPage.Settings)]
-        [InlineData("Sim time of day", 128, PanelPage.Settings)]
-        [InlineData("Screen dimming", 128, PanelPage.Settings)]
-        public void A_ruled_row_cites_its_own_ticket_on_its_own_page(string title, int ticket, PanelPage page)
+        private static readonly (string Title, int Ticket, PanelPage Page, bool InSheetOnly)[] Registry =
         {
-            var item = PanelSoon.Find(title);
-            Assert.NotNull(item);
-            Assert.Equal(ticket, item.Ticket);
-            Assert.Equal(page, item.Page);
+            ("Rev fill under the lights", 381, PanelPage.Screens, false),
+            ("Spotter at the rev bar ends", 96, PanelPage.Screens, false),
+            ("Pit page in the pit lane", 383, PanelPage.Screens, false),
+            ("Pop-ups", 112, PanelPage.Screens, false),
+            ("Edge lights for the delta", 321, PanelPage.Screens, false),
+            ("Screen care", 114, PanelPage.Screens, false),
+            ("Fit", 319, PanelPage.Screens, false),
+            ("Circle tracker", 320, PanelPage.Screens, false),
+            ("Launch", 152, PanelPage.Screens, false),
+            ("Flags screen", 116, PanelPage.Screens, true),
+            ("Your displays", 85, PanelPage.Screens, true),
+            ("Zones instead of cards", 146, PanelPage.Screens, false),
+            ("Each LED in turn", 434, PanelPage.Leds, false),
+            ("Idle sweep", 485, PanelPage.Leds, false),
+            ("Engine start animation", 300, PanelPage.Leds, false),
+            ("Car data for AC, ACC and LMU", 479, PanelPage.Leds, false),
+            ("Pit limiter lights", 509, PanelPage.Leds, false),
+            ("RPM colour for everything", 371, PanelPage.Matrix, false),
+            ("SimHub device", 363, PanelPage.Matrix, false),
+            ("Priority order", 505, PanelPage.Matrix, false),
+            ("Real hardware", 506, PanelPage.Rig, false),
+            ("Rig test", 511, PanelPage.Shortcuts, false),
+            ("Alert dismissal", 510, PanelPage.Shortcuts, false),
+            ("Fuel target per lap", 326, PanelPage.Settings, false),
+            ("Tyre display", 325, PanelPage.Settings, false),
+            ("Yellow flags", 504, PanelPage.Settings, false),
+            ("Tyre wear", 507, PanelPage.Settings, false),
+            ("Pit window open", 507, PanelPage.Settings, false),
+            ("Incidents", 508, PanelPage.Settings, false),
+            ("Hybrid battery low", 110, PanelPage.Settings, false),
+            ("Alert display", 512, PanelPage.Settings, false),
+            ("Sim time of day", 128, PanelPage.Settings, false),
+            ("Screen dimming", 128, PanelPage.Settings, false),
+            ("Theme", 99, PanelPage.Settings, false),
+            ("Colour vision", 129, PanelPage.Settings, false),
+            ("Colours", 127, PanelPage.Settings, false),
+            ("Name", 484, PanelPage.Settings, false),
+            ("Race number", 484, PanelPage.Settings, false),
+            ("Logo", 484, PanelPage.Settings, false),
+            ("Idle screen background", 104, PanelPage.Settings, false),
+        };
+
+        [Fact]
+        public void The_registry_is_exactly_these_rows_in_order()
+        {
+            Assert.Equal(40, Registry.Length);
+            Assert.Equal(
+                Registry.Select(row => row.Title + " #" + row.Ticket + " " + row.Page + (row.InSheetOnly ? " sheet" : "")),
+                PanelSoon.All.Select(item => item.Title + " #" + item.Ticket + " " + item.Page + (item.InSheetOnly ? " sheet" : "")));
         }
 
         /// <summary>
         /// Only the registry greys a row. SoonItem's constructor is internal, and no plugin file but
-        /// PanelSoon.cs constructs one or writes the "Coming soon" hover, so a closed ticket such as #370 or
-        /// #322 cannot be greyed from a page with a number typed beside it and pass every test here.
+        /// PanelSoon.cs constructs one or writes the "Coming soon" hover; nor does any file but PanelSoon.cs
+        /// and the kit that draws an entry call PanelSoon.Tip(ticket), which takes a bare number, or draw the
+        /// kit's bare Soon tag, which Ui.SoonTag(item) draws only for an entry. So a closed ticket such as
+        /// #370 or #322 cannot be greyed from a page with a number typed beside it and pass every test here.
         /// </summary>
         [Fact]
         public void Only_the_registry_greys_a_row()
@@ -154,6 +188,9 @@ namespace OpenDashPlugin.Tests
                 var code = RepoPaths.Code(path);
                 if (code.Contains("new SoonItem(")) offenders.Add(Path.GetFileName(path) + ": new SoonItem(");
                 if (code.Contains("Coming soon")) offenders.Add(Path.GetFileName(path) + ": \"Coming soon\"");
+                if (Path.GetFileName(path) == "Widgets.Kit.cs") continue;
+                if (code.Contains("PanelSoon.Tip(")) offenders.Add(Path.GetFileName(path) + ": PanelSoon.Tip(");
+                if (Regex.IsMatch(code, @"\bSoonTag\(\s*\)")) offenders.Add(Path.GetFileName(path) + ": SoonTag()");
             }
             Assert.True(offenders.Count == 0, string.Join(Environment.NewLine, offenders));
             Assert.All(typeof(SoonItem).GetConstructors(), ctor => Assert.False(ctor.IsPublic, "SoonItem's constructor is public"));
@@ -233,6 +270,36 @@ namespace OpenDashPlugin.Tests
             var listed = (SoonItem[])model.GetField("SoonDrawn").GetValue(null);
             Assert.Equal(drawn.Select(item => item.Anchor).OrderBy(a => a, StringComparer.Ordinal), listed.Select(item => item.Anchor).OrderBy(a => a, StringComparer.Ordinal));
             Assert.All(listed, item => Assert.Equal(page, item.Page));
+        }
+
+        /// <summary>
+        /// A greyed row belongs to a page, which lists it in its SoonDrawn and search lists from there, so no
+        /// shell partial draws one: a row drawn from SettingsControl.Profiles.cs or .Sheet.cs would be in no
+        /// page's list, search would never find it, and the per-page test above reads page files only.
+        /// </summary>
+        [Fact]
+        public void No_shell_file_draws_a_greyed_row()
+        {
+            var entries = typeof(PanelSoon).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .Where(field => field.FieldType == typeof(SoonItem))
+                .Select(field => field.Name)
+                .ToList();
+            var offenders = new List<string>();
+            foreach (var path in RepoPaths.SettingsControlSources())
+            {
+                var file = Path.GetFileName(path);
+                if (Pages.Values.Any(p => file == p.Sources + ".cs" || file.StartsWith(p.Sources + ".", StringComparison.Ordinal))) continue;
+                var code = RepoPaths.Code(path);
+                if (code.Contains("PanelSoon.For(")) offenders.Add(file + ": PanelSoon.For(");
+                if (code.Contains("PanelSoon.Find(")) offenders.Add(file + ": PanelSoon.Find(");
+                foreach (var entry in entries)
+                {
+                    if (Regex.IsMatch(code, @"\bPanelSoon\." + entry + @"\b")) offenders.Add(file + ": PanelSoon." + entry);
+                }
+            }
+            Assert.True(offenders.Count == 0, string.Join(Environment.NewLine, offenders));
+            // The guard reads the shell partials, and there are shell partials to read.
+            Assert.Contains(RepoPaths.SettingsControlSources(), path => Path.GetFileName(path) == "SettingsControl.Profiles.cs");
         }
 
         /// <summary>A Find argument as the title it names: a literal, or a Panel constant read by reflection.</summary>

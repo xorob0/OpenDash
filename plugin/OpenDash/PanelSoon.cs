@@ -15,8 +15,10 @@
 // search cannot open the sheet.
 //
 // A page draws an entry by name -- Ui.Soon(row, PanelSoon.RevFill), Ui.SoonRow(PanelSoon.DashTheme) -- or all
-// of its page's entries through For(page). Nothing but this file constructs a SoonItem, and no other file
-// writes the "Coming soon" hover, which PanelSoonTests holds, so a ticket cannot be typed beside a row.
+// of its page's entries through For(page). Nothing but this file constructs a SoonItem, no other file writes
+// the "Coming soon" hover, and only this file and the kit call Tip(ticket) or draw the bare Soon tag, which
+// PanelSoonTests holds, so a ticket cannot be typed beside a row. No shell partial draws an entry: a row
+// belongs to a page, whose SoonDrawn lists it.
 //
 // Pure: no WPF. Ui.Soon draws an entry.
 using System;

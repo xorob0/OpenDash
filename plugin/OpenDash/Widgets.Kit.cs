@@ -515,8 +515,18 @@ namespace OpenDashPlugin
         /// <summary>What a control new in this release carries after its title, for one release.</summary>
         public static Border NewTag() { return Tag(PanelSoon.NewTag, Theme.TagNewBorder, Theme.TagNewText); }
 
-        /// <summary>What a greyed control carries after its title.</summary>
-        public static Border SoonTag() { return Tag(PanelSoon.Tag, Theme.Border, Theme.TextSecondary); }
+        /// <summary>What a greyed control carries after its title. Private: a page draws it through
+        /// <see cref="SoonTag(SoonItem)"/>, for a registry entry, or gets it from a kit row inside Soon.</summary>
+        private static Border SoonTag() { return Tag(PanelSoon.Tag, Theme.Border, Theme.TextSecondary); }
+
+        /// <summary>The Soon tag, for a page that lays out a greyed control of its own inside
+        /// <see cref="Soon(FrameworkElement, SoonItem)"/> (Rig's Real hardware): it takes the entry, so the tag
+        /// is only ever drawn for a row the registry holds.</summary>
+        public static Border SoonTag(SoonItem item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            return SoonTag();
+        }
 
         /// <summary>
         /// A control that is drawn and not yet built: faded, not answering, the ticket in its hover, and a
