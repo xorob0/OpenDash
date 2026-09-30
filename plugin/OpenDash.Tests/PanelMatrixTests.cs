@@ -404,6 +404,94 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.Button\(PanelMatrix\.Cancel, PanelButtonKind\.Ghost, PanelButtonSize\.Large\)").Count);
         }
 
+        /// <summary>
+        /// Every part the page builds reaches the screen: the pins above hold what each control reads, writes
+        /// and says where it is made, and these hold that it is then added to what is drawn -- each helper's
+        /// adds, the page's parts and the selected matrix's two columns, the title's press, the chips and the
+        /// repaint -- so a dropped add, a press wired to the wrong event or a picture never repainted fails
+        /// here rather than compiling to a page with a hole in it.
+        /// </summary>
+        [Fact]
+        public void Every_part_the_page_builds_is_put_on_screen()
+        {
+            var flat = FlatSource();
+            foreach (var pin in new[]
+            {
+                // The page: every matrix's card, the selected one handed its picture, and the add tile.
+                "return PageLayout(PanelMatrix.Title,",
+                "var panels = Settings.MatrixPanels().ToList();",
+                "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
+                "if (m == selected) selectedPicture(picture);",
+                "cards.Add(add); var grid = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray());",
+                "ToolTipService.SetShowOnDisabled(add, true);",
+                "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
+                // The title's line: the version SimHub holds, the press for the line's own state, clicked, and
+                // put on the line.
+                "var version = plan == null ? null : plan.InstalledVersion;",
+                "var action = PanelMatrix.ProfileRow(state, version); var primary = action.Style == PanelButton.Primary; "
+                    + "var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);",
+                "button.Click += (sender, args) => { var from = PanelMatrix.PressedFrom(state, matrixFailedFrom); var result = InstallFlagBox();",
+                "if (said != null) Say(said); }; row.Children.Add(button); }",
+                // The selected matrix: its name as the heading, its number beside it, the fix box when it is
+                // drawn, and the preview beside the priority list, or over it.
+                "var title = Ui.SubHeading(name);",
+                "heading.Children.Add(title);",
+                "heading.Children.Add(slot); }",
+                "var parts = new List<UIElement> { head };",
+                "var check = Ui.Button(PanelAttention.CheckAgain, PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "parts.Add(fix); }",
+                "var previewColumn = BuildMatrixPreview(m, cardPicture); var priority = BuildMatrixPriority(m, previewColumn.Repaint);",
+                "Grid.SetColumn(previewColumn.Element, 0); Grid.SetColumn(priority, 2); body.Children.Add(previewColumn.Element); body.Children.Add(priority); parts.Add(body);",
+                "parts.Add(Ui.VStack(PanelMatrix.StackedGap, previewColumn.Element, priority));",
+                // The chips: cleared and drawn again on every press, each added, drawn once as the column is
+                // built, and the keyboard's focus kept on the chip it was on.
+                "chips.Children.Clear();",
+                "chips.Children.Add(chip); }",
+                "if (focused >= 0 && focused < chips.Children.Count) chips.Children[focused].Focus();",
+                "drawChips(); var column = Ui.VStack(PanelMatrix.PreviewGap, tagged, all, chips);",
+                "return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);",
+                // The repaint: the fresh lamps into the picture already on the page, the card's included.
+                "var fresh = Ui.Matrix(cells, style, MatrixDim()); var lamps = fresh.Child; fresh.Child = null; picture.Child = lamps;",
+                "if (cardPicture != null) MatrixRepaint(cardPicture,",
+                "return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);",
+                // The priority list's own words and greyed rows.
+                "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary)",
+                "var head = Ui.Row(Ui.Heading(PanelMatrix.PriorityTitle), Ui.Soon(reorder, PanelSoon.PriorityOrder));",
+                "idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(false, null)), PanelSoon.RpmColourForEverything)); var idleLayer",
+                // Each helper adds what it is given: a layer its rows, a layer's line its name, number or dot,
+                // words, link and control, an option its words, caption, line and control.
+                "if (row != null) stack.Children.Add(row);",
+                "titleLine.Children.Add(name); var words = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center }; words.Children.Add(titleLine);",
+                "line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(line); }",
+                "grid.Children.Add(cell); }",
+                "grid.Children.Add(number); }",
+                "Grid.SetColumn(words, 1); grid.Children.Add(words);",
+                "Grid.SetColumn(link, 2); grid.Children.Add(link); }",
+                "Grid.SetColumn(control, 3); grid.Children.Add(control); }",
+                "under.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(under); }",
+                "if (line != null) { line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(line); }",
+                "grid.Children.Add(words); if (control != null)",
+                "Grid.SetColumn(control, 1); grid.Children.Add(control); }",
+                // The sheets: the content number SimHub will give the new matrix, the presses by their words,
+                // the message after adding, and the rename box opening on the name.
+                "var slot = Settings.FreeMatrixSlot(); if (slot == 0) return;",
+                "var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large); add.Click += (sender, args) =>",
+                "Say(new PanelMessage( PanelMatrix.PanelAdded(",
+                "var name = Ui.Input(current, PanelMatrix.NameWidth); var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);",
+                "save.Click += (sender, args) =>",
+                "remove.Click += (sender, args) => { Settings.RemoveMatrixPanel(matrix);",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            // Each helper's two adds of a caption line: the layer's and the option's, and the option's own line.
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("titleLine.Children.Add(name);")).Count);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("words.Children.Add(line);")).Count);
+            // Nothing on the page reads the matrices with a limit or drops the add tile.
+            Assert.DoesNotContain(".Take(", flat);
+            Assert.DoesNotContain("GC.KeepAlive", flat);
+        }
+
         [Fact]
         public void The_page_opens_on_the_selected_matrix_while_the_rig_still_has_it()
         {
