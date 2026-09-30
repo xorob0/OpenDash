@@ -215,20 +215,51 @@ namespace OpenDashPlugin
 
         // --- The clash line -----------------------------------------------------------------------------
 
+        /// <summary>
+        /// Which presses of its trigger a binding answers. SimHub reports a press three ways: when it goes
+        /// down, when it comes up, and once as either a short or a long press (PluginManager.TriggerInput,
+        /// 9.12.6), and a binding fires only on the presses its press type matches (CheckPressType). So a
+        /// short press and a long press of one button are two gestures, and two bindings on them never fire
+        /// together; every other press type (Default, During, ShortAndLongPress, Pressed, Released and the
+        /// latching ones) answers every press.
+        /// </summary>
+        public enum Fires
+        {
+            OnEveryPress,
+            OnShortPress,
+            OnLongPress,
+        }
+
+        /// <summary>The presses a binding answers, from the name of SimHub's PressType it carries. The view
+        /// passes <c>mapping.PressType.ToString()</c>, so this file stays free of SimHub's types.</summary>
+        public static Fires FiresOn(string pressType)
+        {
+            switch (pressType)
+            {
+                case "ShortPress": return Fires.OnShortPress;
+                case "LongPress":
+                case "LongPressNoAutoRepeat": return Fires.OnLongPress;
+                default: return Fires.OnEveryPress;
+            }
+        }
+
         /// <summary>One binding of one trigger: the raw trigger SimHub stores, the card it is on (a screen's
-        /// name, or null for the rig's lights) and what the row does, in the clash line's words.</summary>
+        /// name, or null for the rig's lights), what the row does, in the clash line's words, and the presses
+        /// of the trigger it answers.</summary>
         public sealed class BindingUse
         {
-            public BindingUse(string trigger, string place, string does)
+            public BindingUse(string trigger, string place, string does, Fires fires = Fires.OnEveryPress)
             {
                 Trigger = trigger;
                 Place = place;
                 Does = does;
+                Fires = fires;
             }
 
             public string Trigger { get; private set; }
             public string Place { get; private set; }
             public string Does { get; private set; }
+            public Fires Fires { get; private set; }
         }
 
         /// <summary>A trigger bound to more than one row: its name, drawn strong, and the rest of the line.</summary>
@@ -276,33 +307,58 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Triggers are SimHub's own strings and compared as they are stored; the line names one through
         /// PanelBindings.TriggerLabel, as every page names a binding. A use repeated on one card with the same
-        /// action is one use.
+        /// action is one use, answering every press either copy answers. Two uses of one trigger are doubled
+        /// only when one press can fire both (<see cref="Fires"/>): a button's short press on one row and its
+        /// long press on another is two gestures, and no line. The line names every use that is doubled with
+        /// another, in the page's order.
         /// </remarks>
         public static IList<Clash> Clashes(IEnumerable<BindingUse> uses)
         {
             var order = new List<string>();
-            var byTrigger = new Dictionary<string, List<BindingUse>>(StringComparer.Ordinal);
+            var byTrigger = new Dictionary<string, List<Heard>>(StringComparer.Ordinal);
             foreach (var use in uses ?? Enumerable.Empty<BindingUse>())
             {
                 if (use == null || string.IsNullOrWhiteSpace(use.Trigger)) continue;
-                List<BindingUse> list;
+                List<Heard> list;
                 if (!byTrigger.TryGetValue(use.Trigger, out list))
                 {
-                    list = new List<BindingUse>();
+                    list = new List<Heard>();
                     byTrigger.Add(use.Trigger, list);
                     order.Add(use.Trigger);
                 }
-                if (list.Any(seen => seen.Place == use.Place && seen.Does == use.Does)) continue;
-                list.Add(use);
+                var onShort = use.Fires != Fires.OnLongPress;
+                var onLong = use.Fires != Fires.OnShortPress;
+                var seen = list.FirstOrDefault(heard => heard.Use.Place == use.Place && heard.Use.Does == use.Does);
+                if (seen != null)
+                {
+                    seen.OnShort |= onShort;
+                    seen.OnLong |= onLong;
+                    continue;
+                }
+                list.Add(new Heard { Use = use, OnShort = onShort, OnLong = onLong });
             }
             var clashes = new List<Clash>();
             foreach (var trigger in order)
             {
                 var list = byTrigger[trigger];
-                if (list.Count < 2) continue;
-                clashes.Add(new Clash(trigger, PanelBindings.TriggerLabel(trigger) ?? trigger, ClashRest(list)));
+                var shortDoubled = list.Count(heard => heard.OnShort) > 1;
+                var longDoubled = list.Count(heard => heard.OnLong) > 1;
+                if (!shortDoubled && !longDoubled) continue;
+                var doubled = list
+                    .Where(heard => (heard.OnShort && shortDoubled) || (heard.OnLong && longDoubled))
+                    .Select(heard => heard.Use)
+                    .ToList();
+                clashes.Add(new Clash(trigger, PanelBindings.TriggerLabel(trigger) ?? trigger, ClashRest(doubled)));
             }
             return clashes;
+        }
+
+        /// <summary>One row's use of a trigger, and which of the trigger's two gestures it answers.</summary>
+        private sealed class Heard
+        {
+            public BindingUse Use;
+            public bool OnShort;
+            public bool OnLong;
         }
 
         private static string ClashRest(IList<BindingUse> uses)

@@ -169,9 +169,78 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Every shortcut is bound.", PanelShortcuts.FilterEmpty(PanelShortcuts.FilterNotBound));
         }
 
-        private static PanelShortcuts.BindingUse Use(string trigger, string place, string does)
+        private static PanelShortcuts.BindingUse Use(string trigger, string place, string does, PanelShortcuts.Fires fires = PanelShortcuts.Fires.OnEveryPress)
         {
-            return new PanelShortcuts.BindingUse(trigger, place, does);
+            return new PanelShortcuts.BindingUse(trigger, place, does, fires);
+        }
+
+        [Fact]
+        public void A_binding_answers_the_presses_its_press_type_names()
+        {
+            // SimHub 9.12.6's PressType names, as the view reads them off each mapping.
+            Assert.Equal(PanelShortcuts.Fires.OnShortPress, PanelShortcuts.FiresOn("ShortPress"));
+            Assert.Equal(PanelShortcuts.Fires.OnLongPress, PanelShortcuts.FiresOn("LongPress"));
+            Assert.Equal(PanelShortcuts.Fires.OnLongPress, PanelShortcuts.FiresOn("LongPressNoAutoRepeat"));
+            foreach (var any in new[] { "Default", "During", "ShortAndLongPress", "Pressed", "Released", null })
+            {
+                Assert.Equal(PanelShortcuts.Fires.OnEveryPress, PanelShortcuts.FiresOn(any));
+            }
+        }
+
+        [Fact]
+        public void A_short_press_and_a_long_press_of_one_button_are_two_gestures_and_no_clash()
+        {
+            var shortPress = PanelShortcuts.Fires.OnShortPress;
+            var longPress = PanelShortcuts.Fires.OnLongPress;
+            // The pairing this release's previous-page and brightness rows invite on a rim with few buttons.
+            Assert.Empty(PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+            }));
+            Assert.Empty(PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.B", null, PanelShortcuts.RigActionDoes(Contract.BrightnessUpAction), shortPress),
+                Use("KeyboardReaderPlugin.B", null, PanelShortcuts.RigActionDoes(Contract.BrightnessDownAction), longPress),
+            }));
+            // The glance is held (During), which answers every press, so it doubles whatever shares its button.
+            Assert.Equal("Keyboard · F9 holds the quick glance and cycles zone A on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes, PanelShortcuts.FiresOn("During")),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+            }).Single().Text);
+            // Two short presses clash; ShortAndLongPress, SimHub's default in its picker, clashes with either.
+            Assert.Single(PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F1", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F1", "Main dash", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+            }));
+            Assert.Single(PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F1", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), PanelShortcuts.FiresOn("ShortAndLongPress")),
+                Use("KeyboardReaderPlugin.F1", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+            }));
+        }
+
+        [Fact]
+        public void A_clash_names_every_row_doubled_on_either_gesture_and_no_other()
+        {
+            var shortPress = PanelShortcuts.Fires.OnShortPress;
+            var longPress = PanelShortcuts.Fires.OnLongPress;
+            // Short on zone A, long on zone A back and on band D back: only the two long presses are doubled.
+            Assert.Equal("Keyboard · F9 cycles zone A back and cycles band D back on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", false), longPress),
+            }).Single().Text);
+            // One row bound on both gestures of a button answers both, so a long press elsewhere doubles it.
+            Assert.Equal("Keyboard · F9 cycles zone A and cycles zone A back on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+            }).Single().Text);
         }
 
         [Fact]

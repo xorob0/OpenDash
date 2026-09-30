@@ -351,11 +351,11 @@ namespace OpenDashPlugin
         /// </summary>
         private void ShortcutsEvaluate(IList<ShortcutsGroupState> groups, FrameworkElement filter, StackPanel banner, TextBlock empty)
         {
-            var triggers = new Dictionary<ShortcutsRowState, IList<string>>();
+            var triggers = new Dictionary<ShortcutsRowState, IList<PanelShortcuts.BindingUse>>();
             var readable = true;
             foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Bindable))
             {
-                var read = ShortcutsTriggers(row);
+                var read = ShortcutsUses(row);
                 if (read == null) readable = false;
                 triggers[row] = read;
             }
@@ -402,7 +402,7 @@ namespace OpenDashPlugin
                 {
                     foreach (var row in group.Rows.Where(row => row.Bindable))
                     {
-                        foreach (var trigger in triggers[row]) uses.Add(new PanelShortcuts.BindingUse(trigger, row.Place, row.Does));
+                        uses.AddRange(triggers[row]);
                     }
                 }
                 foreach (var clash in PanelShortcuts.Clashes(uses))
@@ -447,19 +447,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The triggers bound to a row's action: from its editor's own model, which SimHub's Bind, Change and
-        /// Clear write into, or from the shell's read before the editor has loaded one. Null when the editor
-        /// could not be made (BuildBinder's fallback text) or SimHub cannot be read.
+        /// The bindings of a row's action, each with the presses it answers: from its editor's own model,
+        /// which SimHub's Bind, Change and Clear write into, or from the shell's read before the editor has
+        /// one, which knows no press type and so is taken to answer every press. Null when the editor could
+        /// not be made (BuildBinder's fallback text) or SimHub cannot be read.
         /// </summary>
-        private IList<string> ShortcutsTriggers(ShortcutsRowState row)
+        private IList<PanelShortcuts.BindingUse> ShortcutsUses(ShortcutsRowState row)
         {
             var editor = row.Editor as ControlsEditor;
             if (editor == null) return null;
             try
             {
                 var model = editor.Model;
-                if (model == null || model.Triggers == null) return TriggersOf(row.Action);
-                return model.Triggers.Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger)).Select(mapping => mapping.Trigger).ToList();
+                if (model == null || model.Triggers == null)
+                {
+                    var read = TriggersOf(row.Action);
+                    return read == null ? null : read.Select(trigger => new PanelShortcuts.BindingUse(trigger, row.Place, row.Does)).ToList();
+                }
+                return model.Triggers
+                    .Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger))
+                    .Select(mapping => new PanelShortcuts.BindingUse(mapping.Trigger, row.Place, row.Does, PanelShortcuts.FiresOn(mapping.PressType.ToString())))
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -470,8 +478,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Calls <paramref name="changed"/> whenever the editor's bindings move: a model replaced (SimHub makes
-        /// a new one each time the editor loads), a mapping added or removed, or a mapping's trigger changed in
-        /// place.
+        /// a new one each time the editor loads), a mapping added or removed, or a mapping's trigger or press
+        /// type changed in place (SimHub's Change edits both on the mapping already there).
         /// </summary>
         /// <remarks>
         /// The mappings are SimHub's for the whole session, and a mapping's PropertyChanged holds its handlers
@@ -512,7 +520,7 @@ namespace OpenDashPlugin
             };
             mappingChanged = (sender, args) =>
             {
-                if (args.PropertyName == null || args.PropertyName == "Trigger") changed();
+                if (args.PropertyName == null || args.PropertyName == "Trigger" || args.PropertyName == "PressType") changed();
             };
             collectionChanged = (sender, args) =>
             {
