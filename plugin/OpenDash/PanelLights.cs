@@ -1,12 +1,13 @@
-// PanelLights.cs: the words the Lights tab puts beside a value, and the section that answers for the
-// whole rig.
+// PanelLights.cs: the words the LEDs page puts beside a value -- the strips, the Add LEDs sheet and Lovely
+// Car Data -- and the matrix words the Matrix page still reads until it lands copies of its own.
 //
-// Apart from SettingsControl.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the tab is
+// Apart from SettingsControl.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the page is
 // WPF and the net8.0 test project cannot compile a line of it, so what a test can hold has to live where
-// it can reach. What it holds here is the pairing. BuildChoice and BuildSegmented are handed the values
+// it can reach. PanelLeds holds the page's own decisions; this file holds the strip words it shares with
+// the shell's comments and the Matrix page. What it holds here is the pairing. BuildChoice and BuildSegmented are handed the values
 // and the labels as two arrays and read them by index, so a value set that gains or loses one leaves the
 // labels beside it wrong without saying so: the centre drop-down carried a label for a retired fifth
-// value that way, and a segmented bar one label short throws while a tab is being drawn. Pure: no WPF
+// value that way, and a segmented bar one label short throws while a page is being drawn. Pure: no WPF
 // types.
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ namespace OpenDashPlugin
 
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
-        public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
+        public static readonly string[] MirrorFitLabels = { "Stretch to fit", "Actual size" };
 
         /// <summary>One label per <see cref="Contract.FlagBoxRests"/> value, in its order.</summary>
         public static readonly string[] RestLabels = { "Dark", "Gear" };
@@ -29,11 +30,8 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.FlagBoxSides"/> value, in its order.</summary>
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
-        /// <summary>The heading over the strips a driver has added.</summary>
-        public const string BarsTitle = "Your LED strips";
-
         /// <summary>
-        /// The line under it.
+        /// What the strips a driver has added are, as a group: the cards' accessible name.
         /// </summary>
         /// <remarks>
         /// A strip used to be a shape the Install tab offered and nothing more, so two strips on one rig
@@ -42,9 +40,10 @@ namespace OpenDashPlugin
         /// name, a shape and settings of its own, and installing it is what puts a profile of that name
         /// into SimHub.
         /// </remarks>
-        public const string BarsCaption = "Add one for each RGB strip you have.";
+        public const string BarsTitle = "Your LED strips";
 
-        public const string AddBar = "Add an LED strip";
+        /// <summary>The tile beside the cards and the sheet it opens, in the artboard's words.</summary>
+        public const string AddBar = "Add LEDs";
 
         public const string BarNameTitle = "Name";
 
@@ -52,10 +51,9 @@ namespace OpenDashPlugin
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
-
-        /// <summary>The device row of the add flow and of every bar.</summary>
-        public const string BarDeviceTitle = "LED device";
+        /// <summary>The device row of the add flow and of every strip: SimHub's word for it, since SimHub's
+        /// Devices list is where the driver finds it.</summary>
+        public const string BarDeviceTitle = "SimHub device";
 
         /// <summary>
         /// The line under it, which has to carry a fact about SimHub rather than a preference.
@@ -136,9 +134,8 @@ namespace OpenDashPlugin
         /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
         public const string DeviceOffline = " (not connected)";
 
-        public const string BarCentreTitle = "LEDs in the middle";
-
-        public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
+        /// <summary>The centre's count, in the word the rest of the page uses for it ("Centre display").</summary>
+        public const string BarCentreTitle = "LEDs in the centre";
 
         /// <summary>The line under the two numbers: what they add up to and what the profile will be
         /// called. A driver counts LEDs, and this is where the two counts are checked against the total
@@ -228,8 +225,8 @@ namespace OpenDashPlugin
         /// that is not a wiring to pick here: a bar is reversed by its own switch (LedBar.Reversed), which
         /// installs the twin in place of the plain profile (#503). The Fanatec wiring is not a reversal --
         /// it is the order SimHub's Fanatec LED device presents a wheel's runs in, which reverses nothing
-        /// -- so it stays a switch of its own on the form. The reversed 4/14/4 keeps a row of its own on the Install tab only because it is named for
-        /// a device, as the plain 4/14/4 is.
+        /// -- so it stays a tile of its own on the Add LEDs sheet. The reversed 4/14/4 keeps a row of its own on the
+        /// Updates page only because it is named for a device, as the plain 4/14/4 is.
         /// </remarks>
         public static bool OffersFanatec(IEnumerable<string> census)
         {
@@ -276,12 +273,13 @@ namespace OpenDashPlugin
             return "Could not move " + name + "'s profile. See SimHub's log.";
         }
 
-        /// <summary>The strip's Rename press. It renames the strip; no page reinstalls a profile yet, so the
-        /// tooltip does not send the driver to one.</summary>
-        public const string RenameBarTooltip = "Renames this strip.";
+        /// <summary>The strip's Rename press. Saving installs the profile again, so SimHub's list carries the
+        /// new name as well.</summary>
+        public const string RenameBarTooltip = "Renames this strip, in SimHub too.";
 
-        /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
-        public const string CarTablesTitle = "Car light tables";
+        /// <summary>The row that offers the car light tables, under Every strip: the source's own name, which
+        /// is what a driver who met the tables at Lovely Sim Racing knows them by.</summary>
+        public const string CarTablesTitle = "Lovely Car Data";
 
         /// <summary>
         /// What the button will do, said before it is pressed rather than after.
@@ -301,18 +299,18 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
+            "Needed for a strip set to use the car's own rev lights. Every car is downloaded at once, about 400 KB, "
             + "so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
         /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
-        public const string CarTablesButtonTooltip = "Downloads the car light tables.";
+        public const string CarTablesButtonTooltip = "Downloads Lovely Car Data.";
 
         /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
         public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
 
         /// <summary>The state a rig is in until somebody presses the button, which is every rig on a fresh install.</summary>
-        public const string CarTablesNone = "No car light tables yet.";
+        public const string CarTablesNone = "Not downloaded yet.";
 
         /// <summary>Said after a download that did not answer, beside whatever is already on disk.</summary>
         public static string CarTablesFailed(string reason)

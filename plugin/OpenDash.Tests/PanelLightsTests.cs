@@ -1,9 +1,9 @@
-// PanelLightsTests.cs: the Lights tab hands its controls two arrays and reads them by index, so the
-// labels and the values they name have to stay the same length.
+// PanelLightsTests.cs: the LEDs page hands its controls two arrays and reads them by index, so the
+// labels and the values they name have to stay the same length; and the strip words the page draws.
 //
 // This is the failure the design audit found rather than an invented one: the centre drop-down went on
 // offering a label for a value the contract had retired, and nothing said so. A segmented bar is worse
-// than silent, since BuildSegmented indexes the labels with the values and throws while the tab is being
+// than silent, since BuildSegmented indexes the labels with the values and throws while the page is being
 // drawn.
 using System.Linq;
 using Xunit;
@@ -58,10 +58,29 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("15 LEDs in all, as 0/15/0.", PanelLights.BarShapeNote(0, 15));
             Assert.Equal("3-9-3", PanelLights.BarShapeId(3, 9));
             Assert.Equal("0-15-0", PanelLights.BarShapeId(0, 15));
-            // The one thing the two captions have to get the right way round, said in a driver's words
-            // rather than the generator's ("lamps", "the rev ladder"); docs/design/voice.md is the rule.
-            Assert.Contains("Flags", PanelLights.BarEndsCaption);
-            Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
+            // The two rows of the Add LEDs sheet's shape step, in the page's word for the middle: "centre", as
+            // Centre display says it. The artboard draws them with no captions; the line above adds them up.
+            Assert.Equal("LEDs at each end", PanelLights.BarEndsTitle);
+            Assert.Equal("LEDs in the centre", PanelLights.BarCentreTitle);
+        }
+
+        /// <summary>The strip words the LEDs page draws, as the artboards and docs/design/voice.md have them.</summary>
+        [Fact]
+        public void The_strip_words_are_the_pages()
+        {
+            Assert.Equal("Add LEDs", PanelLights.AddBar);
+            // SimHub's word for it, since SimHub's Devices list is where the driver finds it.
+            Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
+            Assert.Equal(new[] { "Stretch to fit", "Actual size" }, PanelLights.MirrorFitLabels);
+            // The source by its own name, which is how a driver who met it at Lovely Sim Racing knows it.
+            Assert.Equal("Lovely Car Data", PanelLights.CarTablesTitle);
+            Assert.Equal("Downloads Lovely Car Data.", PanelLights.CarTablesButtonTooltip);
+            Assert.Equal("Not downloaded yet.", PanelLights.CarTablesNone);
+            // No word of the old tabs survives in the words the page draws.
+            foreach (var words in new[] { PanelLights.CarTablesCaption, PanelLights.BarAddFailed("Rim"), PanelLights.BarNameCaption, PanelLights.RenameBarTooltip })
+            {
+                Assert.DoesNotContain(" tab", words);
+            }
         }
 
         /// <summary>
@@ -131,17 +150,16 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A strip whose profile could not be installed is sent to SimHub's log (voice.md's failure
-        /// form): Updates offers no press for a profile that is not in SimHub and its hover sends the driver
-        /// back to LEDs, so "See the Updates page" led nowhere. A failed move says "move", not "Added", and
-        /// Rename, its hover or its sheet, no longer promises an "Install it again" no page has.</summary>
+        /// form): Updates offers no press for a profile that is not in SimHub, so "See the Updates page" led
+        /// nowhere. A failed move says "move", not "Added". Rename installs the profile again itself, so its
+        /// hover says SimHub is renamed too and its sheet promises no "Install the strip again".</summary>
         [Fact]
         public void A_strip_whose_profile_failed_is_sent_to_the_log()
         {
             Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log.", PanelLights.BarAddFailed("Rim"));
             Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
-            Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
-            // Nor does the Rename sheet one click later: its footer has no note, since no page reinstalls a
-            // strip's profile yet.
+            Assert.Equal("Renames this strip, in SimHub too.", PanelLights.RenameBarTooltip);
+            // Nor does the Rename sheet one click later: its footer has no note, since saving reinstalls.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var rename = leds.Substring(leds.IndexOf("ShowSheet(\"Rename \"", System.StringComparison.Ordinal));
             Assert.StartsWith("SheetFooter(null, cancel, save)", rename.Substring(rename.IndexOf("SheetFooter(", System.StringComparison.Ordinal)));
