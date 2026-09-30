@@ -176,10 +176,52 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_portrait_pit_wall_has_no_glance_row_and_so_no_card()
+        public void A_portrait_pit_wall_has_a_card_only_while_its_glance_is_bound()
+        {
+            // A landscape wall always has its card; a portrait wall only while its glance is still bound (or
+            // cannot be read), so that the binding, live in SimHub and in the sidebar's count, can be cleared.
+            Assert.True(PanelShortcuts.PitWallCard(1920, 1080, false));
+            Assert.True(PanelShortcuts.PitWallCard(1920, 1080, true));
+            Assert.False(PanelShortcuts.PitWallCard(1080, 1920, false));
+            Assert.True(PanelShortcuts.PitWallCard(1080, 1920, true));
+            // Contract registers the glance on every pit wall, whatever its orientation: that is why a bound
+            // one has to stay in sight.
+            Assert.Equal(new[] { Contract.HoldQuickGlanceActionFor(Contract.PitWallPrefix) }, Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix));
+            // Its caption says the binding does nothing, where PanelCopy.PitWallGlance would say it swaps a zone.
+            Assert.Equal("A portrait wall has no zone to show it in, so this binding does nothing.", PanelShortcuts.PortraitGlanceCaption);
+        }
+
+        /// <summary>
+        /// The cards' bound rows add up to the sidebar's Shortcuts count, which counts every bound action of
+        /// every screen (ScreenInstance.ActionNames) and the rig's: each kind's card draws exactly its screen's
+        /// actions, the companion's glance included, less a portrait wall's glance only while nothing is bound
+        /// on it, which the sidebar does not count either.
+        /// </summary>
+        [Fact]
+        public void The_cards_draw_every_action_the_sidebar_counts()
+        {
+            var face = PanelShortcuts.FaceBindings(Face, "Rim").Select(r => r.Action).Concat(new[] { PanelShortcuts.GlanceBinding(Contract.KindFace, Face, "Rim").Action });
+            Assert.Equal(Contract.ScreenActionNames(Contract.KindFace, Face).OrderBy(a => a, StringComparer.Ordinal), face.OrderBy(a => a, StringComparer.Ordinal));
+            Assert.Equal(Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix), new[] { PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone").Action });
+            Assert.Equal(Contract.RigActionNames(), PanelShortcuts.LightsBindings().Select(r => r.Action));
+            // A pit wall's one action is drawn unless the wall is portrait and nothing is bound on it.
+            foreach (var size in new[] { new[] { 1920, 1080 }, new[] { 1080, 1920 }, new[] { 0, 0 } })
+            {
+                foreach (var bound in new[] { false, true })
+                {
+                    var drawn = PanelShortcuts.PitWallCard(size[0], size[1], bound);
+                    var counted = bound;
+                    // A card not drawn is never one whose binding the sidebar counts.
+                    Assert.True(drawn || !counted, size[0] + "x" + size[1] + (bound ? " bound" : " not bound"));
+                }
+            }
+        }
+
+        [Fact]
+        public void A_pit_wall_glances_only_in_landscape()
         {
             // The glance borrows a landscape zone; the portrait package draws only its own four, so a held
-            // key there would change nothing, and the page offers no binding for it.
+            // key there would change nothing.
             Assert.All(Contract.GlanceZoneSlots(), slot => Assert.True(slot.Landscape));
             Assert.True(PanelShortcuts.PitWallGlances(1920, 1080));
             Assert.False(PanelShortcuts.PitWallGlances(1080, 1920));
@@ -796,7 +838,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", face);
             Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);", face);
             var wall = Between(code, "private ShortcutsGroupState BuildShortcutsPitWall(", "return group;");
-            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);", wall);
+            Assert.Contains("var caption = PanelShortcuts.PitWallGlances(screen.Width, screen.Height) ? Ui.Caption(PanelCopy.PitWallGlance) : Ui.Caption(PanelShortcuts.PortraitGlanceCaption);", wall);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), caption, layout);", wall);
+            var bound = Between(code, "private bool ShortcutsGlanceBound(", "\n        }");
+            Assert.Contains("var triggers = TriggersOf(PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name).Action);", bound);
+            Assert.Contains("return triggers == null || triggers.Count > 0;", bound);
             var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
             Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);", companion);
             var lights = Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;");
@@ -804,7 +850,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", lights);
 
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights(layout);");
-            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallGlances\(screen\.Width, screen\.Height\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
+            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallCard\(screen\.Width, screen\.Height, ShortcutsGlanceBound\(screen\)\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
             Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
         }
 

@@ -160,6 +160,23 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether a pit wall has a card: when its glance works, and on a portrait wall while its glance is
+        /// still bound, or cannot be read. Contract.PitWallActionNames registers the glance whatever the
+        /// wall's orientation, so a binding made while the wall stood in landscape, or in SimHub's Controls
+        /// and events, stays live in SimHub and in the sidebar's Shortcuts count; the card is where it is
+        /// seen and cleared. So the cards' bound rows add up to the sidebar's count, which counts only what
+        /// is bound: a portrait wall's glance with nothing on it is counted by neither.
+        /// </summary>
+        public static bool PitWallCard(int width, int height, bool glanceBound)
+        {
+            return PitWallGlances(width, height) || glanceBound;
+        }
+
+        /// <summary>The caption a portrait wall's glance row carries in place of PanelCopy.PitWallGlance,
+        /// which would say something untrue there: the row is drawn only so its binding can be cleared.</summary>
+        public const string PortraitGlanceCaption = "A portrait wall has no zone to show it in, so this binding does nothing.";
+
+        /// <summary>
         /// The Lights card's live rows: night mode, and brightness up and down. All three are new: no released
         /// plugin registers any of them (v0.3.0-rc.7 has none), and New marks what the shipped plugin cannot
         /// do, as ruled for Delta precision and Clock. Shortcuts.dc.html draws Night mode untagged.

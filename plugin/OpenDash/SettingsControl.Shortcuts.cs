@@ -109,10 +109,10 @@ namespace OpenDashPlugin
             {
                 if (screen == null) continue;
                 if (screen.IsFace) screens.Add(BuildShortcutsFace(screen, layout));
-                else if (screen.IsPitWall && PanelShortcuts.PitWallGlances(screen.Width, screen.Height)) screens.Add(BuildShortcutsPitWall(screen, layout));
+                else if (screen.IsPitWall && PanelShortcuts.PitWallCard(screen.Width, screen.Height, ShortcutsGlanceBound(screen))) screens.Add(BuildShortcutsPitWall(screen, layout));
                 else if (screen.IsCompanion) screens.Add(BuildShortcutsCompanion(screen, layout));
-                // A round screen cycles nothing, and a portrait pit wall has no zone a glance can swap, so
-                // neither has a card.
+                // A round screen cycles nothing, so it has no card, and nor has a portrait pit wall, whose
+                // glance has no zone to swap, unless that glance is still bound and has to be cleared.
             }
             var lights = BuildShortcutsLights(layout);
             var alerts = BuildShortcutsAlerts(layout);
@@ -316,13 +316,23 @@ namespace OpenDashPlugin
             return group;
         }
 
-        /// <summary>A landscape pit wall's card: the glance and nothing else. A key beside the monitor is the
-        /// likelier gesture, since nobody drives a pit wall.</summary>
+        /// <summary>Whether a pit wall's glance is bound, taking a binding that cannot be read as one: a row
+        /// is never hidden on a guess.</summary>
+        private bool ShortcutsGlanceBound(ScreenInstance screen)
+        {
+            var triggers = TriggersOf(PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name).Action);
+            return triggers == null || triggers.Count > 0;
+        }
+
+        /// <summary>A pit wall's card: the glance and nothing else. A key beside the monitor is the likelier
+        /// gesture, since nobody drives a pit wall. On a portrait wall, drawn only while the glance is bound,
+        /// its caption says the binding does nothing there.</summary>
         private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);
             var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);
-            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);
+            var caption = PanelShortcuts.PitWallGlances(screen.Width, screen.Height) ? Ui.Caption(PanelCopy.PitWallGlance) : Ui.Caption(PanelShortcuts.PortraitGlanceCaption);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), caption, layout);
             return group;
         }
 
