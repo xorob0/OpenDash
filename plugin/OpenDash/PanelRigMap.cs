@@ -989,6 +989,43 @@ namespace OpenDashPlugin
             return warns ? name + " · " + PanelNav.WarnTooltip : name;
         }
 
+        /// <summary>
+        /// A strip's picture from its frame and its Centre display (OpenDashSettings.BarCentre): the frame as
+        /// PanelEmulation draws it on a strip whose centre shows the revs, and otherwise the centre unlit,
+        /// the ends as the frame has them.
+        /// </summary>
+        /// <remarks>
+        /// StripFrame always puts the rev ladder in the centre, and StripOptions has no field for the centre
+        /// display, so a strip set to Brake, Throttle and brake or Fuel was drawn with rev lights, and the
+        /// Idle, Mid revs and Shift point chips lit and flashed a centre that on the real strip shows the
+        /// pedals or the fuel gauge. Neither is a value the page has, so the centre is drawn dark rather than
+        /// as revs. On the real strip a flag, the limiter or the full-strip spotter composes over that centre
+        /// (rpmStrip.ts); drawing it here needs StripFrame to know the centre, which is PanelEmulation's.
+        /// </remarks>
+        public static string[][] StripPicture(string[][] frame, string centreDisplay)
+        {
+            if (frame == null || StripCentreShowsRevs(centreDisplay)) return frame;
+            var picture = (string[][])frame.Clone();
+            var centre = frame.Length == 3 ? 1 : 0;
+            if (centre < picture.Length && picture[centre] != null) picture[centre] = new string[picture[centre].Length];
+            return picture;
+        }
+
+        /// <summary>A strip's Centre display, or the rig's for a strip the rig no longer has. The page reads it
+        /// here rather than spelling the setting, as it reads a face's Revbar, so the LEDs page's Centre
+        /// display row stays the one control that sets it.</summary>
+        public static string StripCentreDisplay(OpenDashSettings settings, LedBar bar)
+        {
+            if (settings == null) return Contract.DefaultLedCentre;
+            return settings.BarCentre(bar == null ? null : bar.Namespace);
+        }
+
+        /// <summary>Whether a strip's centre carries the revs: its Centre display is "rpm", the default.</summary>
+        public static bool StripCentreShowsRevs(string centreDisplay)
+        {
+            return Contract.NormaliseLedCentre(centreDisplay) == Contract.DefaultLedCentre;
+        }
+
         /// <summary>What a strip is set to that changes its picture.</summary>
         public static StripOptions StripOptionsFor(LedBar bar)
         {

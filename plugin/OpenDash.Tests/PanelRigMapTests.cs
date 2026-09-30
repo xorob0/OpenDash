@@ -1223,6 +1223,44 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_strip_whose_centre_is_not_the_revs_draws_its_centre_dark()
+        {
+            var settings = Rig();
+            var wheel = settings.LedBarByNamespace("LedWheelRim");
+            Assert.Equal(Contract.DefaultLedCentre, PanelRigMap.StripCentreDisplay(settings, wheel));
+            Assert.Equal(Contract.DefaultLedCentre, PanelRigMap.StripCentreDisplay(null, wheel));
+            Assert.True(PanelRigMap.StripCentreShowsRevs(null));
+            // The retired "rpmOnly" was the revs.
+            Assert.True(PanelRigMap.StripCentreShowsRevs(Contract.RetiredLedCentre));
+            var shift = PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift);
+            Assert.Same(shift, PanelRigMap.StripPicture(shift, Contract.DefaultLedCentre));
+
+            wheel.Centre = "fuel";
+            Assert.Equal("fuel", PanelRigMap.StripCentreDisplay(settings, wheel));
+            foreach (var centre in Contract.LedCentres.Where(c => c != Contract.DefaultLedCentre))
+            {
+                Assert.False(PanelRigMap.StripCentreShowsRevs(centre), centre);
+                foreach (var scenario in PanelEmulation.Scenarios().Select(s => s.Id))
+                {
+                    // The revs chips light nothing in the centre; the ends are as the frame has them.
+                    var frame = PanelEmulation.StripFrame(3, 9, scenario);
+                    var picture = PanelRigMap.StripPicture(frame, centre);
+                    Assert.Equal(3, picture.Length);
+                    Assert.Equal(9, picture[1].Length);
+                    Assert.All(picture[1], led => Assert.Null(led));
+                    Assert.Equal(frame[0], picture[0]);
+                    Assert.Equal(frame[2], picture[2]);
+                    // A bare run is all centre.
+                    Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(0, 15, scenario), centre)[0], led => Assert.Null(led));
+                }
+            }
+            // The frame it was given is left as it was.
+            PanelRigMap.StripPicture(shift, "brake");
+            Assert.All(shift[1], led => Assert.Equal(Theme.ShiftStage3, led));
+            Assert.Null(PanelRigMap.StripPicture(null, "brake"));
+        }
+
+        [Fact]
         public void A_matrix_on_critical_flags_only_does_not_show_the_flags_that_are_news()
         {
             var settings = Rig();
