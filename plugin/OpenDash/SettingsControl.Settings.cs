@@ -350,26 +350,46 @@ namespace OpenDashPlugin
                 FontSize = box.FontSize,
                 Foreground = Ui.Brush(Theme.TextLabel),
                 TextAlignment = box.TextAlignment,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = box.TextAlignment == TextAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-                Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0),
-                IsHitTestVisible = false,
             };
-            Action show = () => text.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;
+            return SettingsOverlaid(box, text);
+        }
+
+        /// <summary>A greyed box with nothing in it yet: the artboard's dash, drawn as a stroke in the label ink
+        /// rather than typed, since a dash alone is an icon standing in for a drawn path.</summary>
+        private static FrameworkElement SettingsNoValue(TextBox box)
+        {
+            var dash = new System.Windows.Shapes.Rectangle
+            {
+                Width = PanelSettings.NoValueDashWidth,
+                Height = PanelSettings.NoValueDashWeight,
+                Fill = Ui.Brush(Theme.TextLabel),
+            };
+            return SettingsOverlaid(box, dash);
+        }
+
+        /// <summary>Draws a placeholder over a text field while it is empty, where its text would sit, and lets
+        /// the pointer through to the field.</summary>
+        private static FrameworkElement SettingsOverlaid(TextBox box, FrameworkElement hint)
+        {
+            hint.VerticalAlignment = VerticalAlignment.Center;
+            hint.HorizontalAlignment = box.TextAlignment == TextAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+            hint.Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0);
+            hint.IsHitTestVisible = false;
+            Action show = () => hint.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;
             show();
             box.TextChanged += (sender, args) => show();
             var grid = new Grid { Width = box.Width, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
             grid.Children.Add(box);
-            grid.Children.Add(text);
+            grid.Children.Add(hint);
             return grid;
         }
 
         /// <summary>A greyed row's box: the artboard's example as its value, in the field's own ink, or empty with
-        /// the artboard's dash as its placeholder where it has none. Only ever inside Ui.Soon.</summary>
+        /// the artboard's dash, drawn, where it has none. Only ever inside Ui.Soon.</summary>
         private static FrameworkElement SettingsGreyedBox(string example)
         {
             if (example != null) return SettingsNumberField(example);
-            return SettingsHinted(SettingsNumberField(string.Empty), PanelSettings.NoValueHint);
+            return SettingsNoValue(SettingsNumberField(string.Empty));
         }
 
         /// <summary>

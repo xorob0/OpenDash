@@ -69,6 +69,38 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("L", PanelSettings.FuelTargetUnitFallback);
         }
 
+        /// <summary>
+        /// No text the page draws is a glyph alone, the route PanelIconsTests' guard cannot see: that guard reads
+        /// only literal arguments, and a constant handed to a hand-built TextBlock passes it. Every public
+        /// string of PanelSettings and PanelDataTab, and every placeholder the page hands SettingsHinted, has a
+        /// letter or a digit in it; the greyed boxes' dash is drawn.
+        /// </summary>
+        [Fact]
+        public void No_text_on_the_page_is_a_glyph_alone()
+        {
+            var texts = new[] { typeof(PanelSettings), typeof(PanelDataTab) }
+                .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static)
+                    .Select(field => new { field.Name, Value = field.GetValue(null) }))
+                .SelectMany(field => field.Value is string ? new[] { field.Name + " = " + (string)field.Value }
+                    : field.Value is string[] ? ((string[])field.Value).Select(text => field.Name + "[] = " + text).ToArray()
+                    : new string[0])
+                .ToList();
+            Assert.Contains("TyreDisplayLabels[] = Pressure", texts);
+            Assert.DoesNotContain(texts, text =>
+            {
+                var value = text.Substring(text.IndexOf(" = ", StringComparison.Ordinal) + 3);
+                return value.Length > 0 && !value.Any(char.IsLetterOrDigit);
+            });
+
+            var page = Page();
+            var hints = Regex.Matches(page, @"SettingsHinted\([^;\n]*PanelSettings\.(\w+Hint)\)").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
+            Assert.Equal(new[] { "FirstNameHint", "SurnameHint", "RaceNumberHint" }, hints);
+            Assert.All(hints, name => Assert.True(((string)typeof(PanelSettings).GetField(name).GetValue(null)).Any(char.IsLetterOrDigit), name));
+            // The temperatures' placeholder is the unit's default, a number.
+            Assert.Contains("return SettingsHinted(box, PanelSettings.ThresholdText(fallback));", page);
+            Assert.Equal(4, Regex.Matches(page, @"SettingsHinted\(").Count - 1);
+        }
+
         [Fact]
         public void Every_caption_is_a_sentence()
         {
@@ -443,7 +475,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Padding = new Thickness(0, 0, 0, PanelSettings.IndexPaddingBottom - PanelSettings.IndexGap),", page);
             Assert.Contains("link.Margin = new Thickness(0, 0, PanelSettings.IndexGap, PanelSettings.IndexGap);", page);
             Assert.Matches(@"var heading = Ui\.HStack\(PanelSettings\.AlertsHeadingTagGap, Ui\.Heading\(PanelSettings\.AlertsTitle, true\), Ui\.NewTag\(\)\);\s*heading\.HorizontalAlignment = HorizontalAlignment\.Left;\s*heading\.Margin = new Thickness\(0, 0, 0, PanelKit\.SectionHeadingGapSettings\);", page);
-            Assert.Contains("Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0),", page);
+            Assert.Contains("hint.Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0);", page);
             Assert.Contains("box.FontWeight = FontWeight.FromOpenTypeWeight(PanelSettings.NumberFieldFontWeight);", page);
             Assert.Contains("Ui.Text(line, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary)", page);
             Assert.Contains("Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeight.FromOpenTypeWeight(PanelSettings.PreviewPercentFontWeight), Theme.TextSecondary, PanelFonts.Data)", page);
@@ -633,13 +665,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { true, false, false, true }, PanelSettings.Alert(PanelSoon.Incidents.Title).Surfaces);
             Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title).Surfaces);
             // What a greyed row's box holds, faded with the row: the artboard's values as the box's text in the
-            // field's ink, and where it has none, the artboard's dash as the placeholder in the label ink. Pit
+            // field's ink, and where it has none, the artboard's dash, drawn as a stroke in the label ink. Pit
             // window open, an event with no word before its box, still draws the box, as the artboard does.
             Assert.Equal(new string[] { null, null, null, "70", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
-            Assert.Equal("—", PanelSettings.NoValueHint);
+            Assert.Equal(8, PanelSettings.NoValueDashWidth);
+            Assert.Equal(1.5, PanelSettings.NoValueDashWeight);
             var drawn = Page();
             Assert.Contains("when.Add(box ?? SettingsGreyedBox(alert.Example));", drawn);
-            Assert.Matches(@"if \(example != null\) return SettingsNumberField\(example\);\s*return SettingsHinted\(SettingsNumberField\(string\.Empty\), PanelSettings\.NoValueHint\);", drawn);
+            Assert.Matches(@"if \(example != null\) return SettingsNumberField\(example\);\s*return SettingsNoValue\(SettingsNumberField\(string\.Empty\)\);", drawn);
+            Assert.Matches(@"new System\.Windows\.Shapes\.Rectangle\s*\{\s*Width = PanelSettings\.NoValueDashWidth,\s*Height = PanelSettings\.NoValueDashWeight,\s*Fill = Ui\.Brush\(Theme\.TextLabel\),\s*\};\s*return SettingsOverlaid\(box, dash\);", drawn);
             Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), Ui.Caption(fuelUnit))", drawn);
             // The box is drawn on every row, outside the word's condition.
             Assert.Matches(@"if \(alert\.HasThreshold\) when\.Add\(Ui\.Caption\(alert\.Op\)\);\s*when\.Add\(box \?\? SettingsGreyedBox\(alert\.Example\)\);", drawn);
