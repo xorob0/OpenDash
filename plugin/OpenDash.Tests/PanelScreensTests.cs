@@ -375,12 +375,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Info bar", PanelScreens.InfoBarTitle);
             Assert.Equal("Car settings", PanelScreens.InfoBarMiddle);
 
-            Assert.Equal("B", PanelScreens.AsideKey(null, reference));
-            Assert.Equal("A", PanelScreens.AsideKey(null, portrait));
-            Assert.Equal("C", PanelScreens.AsideKey("C", reference));
+            // Zone C before anything is picked, on every face, as the artboard opens.
+            Assert.Equal("C", PanelScreens.AsideKey(null, reference));
+            Assert.Equal("C", PanelScreens.AsideKey(null, portrait));
+            Assert.All(Contract.FaceSizes, face => Assert.Contains(PanelScreens.AsideKey(null, face), face.BodyOrder));
+            Assert.Equal("B", PanelScreens.AsideKey("B", reference));
             Assert.Equal(PanelScreens.BarKey, PanelScreens.AsideKey(PanelScreens.BarKey, reference));
-            Assert.Equal("B", PanelScreens.AsideKey(PanelScreens.BarKey, nano));
-            Assert.Equal("B", PanelScreens.AsideKey("Z", reference));
+            Assert.Equal("C", PanelScreens.AsideKey(PanelScreens.BarKey, nano));
+            Assert.Equal("C", PanelScreens.AsideKey("Z", reference));
         }
 
         /// <summary>A zone in the picture: how many pages it cycles, the page it opens on, and the button that

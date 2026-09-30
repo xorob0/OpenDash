@@ -14,7 +14,24 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        /// <summary>
+        /// The companion's editor, drawn again in place after a First module pick or a module tick.
+        /// </summary>
+        /// <remarks>
+        /// Save normalises the screen, which moves CompanionStart past a module the rotation has off: picking
+        /// one stores the next module on, and unticking the First module moves it. The choice has to say what
+        /// the setting now holds, and a list reopened has to mark it, so both redraw.
+        /// </remarks>
         private FrameworkElement BuildCompanionPane(ScreenInstance screen)
+        {
+            var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            Action redraw = null;
+            redraw = () => ScreensRedraw(host, () => BuildCompanionEditor(screen, redraw));
+            redraw();
+            return host;
+        }
+
+        private FrameworkElement BuildCompanionEditor(ScreenInstance screen, Action redraw)
         {
             var count = Ui.Text(PanelScreens.ModuleCount(screen.Modules), 15, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
             count.VerticalAlignment = VerticalAlignment.Center;
@@ -31,7 +48,9 @@ namespace OpenDashPlugin
                 // itself after the same window Init's does, so the taps come back.
                 screen.OpenOnStartModule(DateTime.UtcNow);
                 Save(screen);
+                redraw();
             });
+            first.Uid = "screens.companion.first";
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace),
                 value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(screen); });
             // Any module, the ones the rotation has off included: a glance is asked for by holding a button,
@@ -40,19 +59,21 @@ namespace OpenDashPlugin
             {
                 screen.CompanionQuickGlance = value;
                 Save(screen);
+                redraw();
             });
+            glance.Uid = "screens.companion.glance";
 
             var rows = Ui.Rows(
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FirstModuleTitle, first), PanelScreens.AnchorFirstModule),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag()), PanelScreens.AnchorFlagDisplay),
                 Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(glance, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace))), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
                 Ui.Anchor(BuildCompanionPaging(), PanelScreens.AnchorPaging));
-            return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, count)), PanelScreens.AnchorModules), rows);
+            return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
         }
 
         /// <summary>The twenty-one modules as ticks, three to a row where they fit, fewer where they do not;
-        /// the count above follows every tick.</summary>
-        private FrameworkElement BuildModuleGrid(ScreenInstance screen, TextBlock count)
+        /// a tick redraws the editor, so the count and the First module follow it.</summary>
+        private FrameworkElement BuildModuleGrid(ScreenInstance screen, Action redraw)
         {
             var columns = PanelCompanionPlan.ColumnsFor(ContentWidth);
             var rows = (Modules.Count + columns - 1) / columns;
@@ -70,7 +91,7 @@ namespace OpenDashPlugin
             // Across and then down, as the artboard reads: Lap times, Delta, Sectors on the first row.
             for (var i = 0; i < Modules.Count; i++)
             {
-                var cell = BuildModuleCell(screen, Modules.All[i], count);
+                var cell = BuildModuleCell(screen, Modules.All[i], redraw);
                 Grid.SetColumn(cell, (i % columns) * 2);
                 Grid.SetRow(cell, (i / columns) * 2);
                 grid.Children.Add(cell);
@@ -80,7 +101,7 @@ namespace OpenDashPlugin
 
         /// <summary>One module (.mod): its tick and its name on the base ground, and "Not in iRacing" beside the
         /// three iRacing publishes nothing for. The description is its hover.</summary>
-        private FrameworkElement BuildModuleCell(ScreenInstance screen, Module module, TextBlock count)
+        private FrameworkElement BuildModuleCell(ScreenInstance screen, Module module, Action redraw)
         {
             var index = module.Number - 1;
             var box = new CheckBox
@@ -88,13 +109,14 @@ namespace OpenDashPlugin
                 IsChecked = screen.Modules != null && index < screen.Modules.Length && screen.Modules[index],
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0),
+                Uid = "screens.module." + module.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
             Action<bool> ticked = on =>
             {
                 if (screen.Modules == null || index >= screen.Modules.Length) return;
                 screen.Modules[index] = on;
                 Save(screen);
-                count.Text = PanelScreens.ModuleCount(screen.Modules);
+                redraw();
             };
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);

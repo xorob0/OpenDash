@@ -48,7 +48,7 @@ namespace OpenDashPlugin
                 pageRow.BorderThickness = new Thickness(0);
                 pageRow.Padding = new Thickness(0, 0, 0, 12);
                 blocks.Add(Ui.Anchor(pageRow, PanelScreens.AnchorPitWallPage));
-                blocks.Add(BuildPitWallLayout(screen, page));
+                blocks.Add(BuildPitWallLayout(screen, page, redraw));
             }
 
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.WebViewTitle, BuildWebViewBox(screen)), PanelScreens.AnchorWebView));
@@ -62,11 +62,11 @@ namespace OpenDashPlugin
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay));
             if (portrait)
             {
-                rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.PortraitTitle, BuildPortraitLayout(screen), null, Ui.NewTag()), PanelScreens.AnchorPortrait));
+                rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.PortraitTitle, BuildPortraitLayout(screen, redraw), null, Ui.NewTag()), PanelScreens.AnchorPortrait));
             }
             else
             {
-                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildPitWallGlance(screen), PanelCopy.PitWallGlance), PanelScreens.AnchorGlance));
+                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildPitWallGlance(screen, redraw), PanelCopy.PitWallGlance), PanelScreens.AnchorGlance));
             }
             blocks.Add(Ui.Rows(rows.ToArray()));
             return Ui.VStack(16, blocks.ToArray());
@@ -74,12 +74,12 @@ namespace OpenDashPlugin
 
         /// <summary>The page on screen, and the list of its zones beside it where there are two columns and
         /// under it where there are not.</summary>
-        private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page)
+        private FrameworkElement BuildPitWallLayout(ScreenInstance screen, int page, Action redraw)
         {
             var twoColumns = TwoColumns;
             var width = twoColumns ? ContentWidth - PanelPitWallPlan.ListWidth - PanelPitWallPlan.ListGap : ContentWidth;
             var picture = Ui.Anchor(BuildPitWallPicture(screen, PanelPitWallPlan.Pages[page], Math.Max(120, width)), PanelScreens.AnchorZones);
-            var list = BuildPitWallZoneList(screen, page);
+            var list = BuildPitWallZoneList(screen, page, redraw);
             if (!twoColumns) return Ui.VStack(16, picture, list);
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -126,12 +126,10 @@ namespace OpenDashPlugin
                     Child = Ui.VStack(0, name, what),
                     ToolTip = PanelPitWallPlan.ZoneDescription(slot),
                 };
-                box.Tag = slot == null ? null : slot.Key;
                 Canvas.SetLeft(box, panel.X);
                 Canvas.SetTop(box, panel.Y);
                 canvas.Children.Add(box);
             }
-            pitWallPicture = canvas;
             return new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -142,10 +140,6 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>The picture last drawn, so a zone's choice can rewrite its word in place rather than
-        /// redrawing the list the choice was made from.</summary>
-        private Canvas pitWallPicture;
-
         /// <summary>The page a zone shows, by name.</summary>
         private static string ScreensZonePageName(Contract.PitWallZoneSlot slot, ScreenInstance screen)
         {
@@ -153,8 +147,9 @@ namespace OpenDashPlugin
             return slot.Wide ? ZonePages.WideName(page) : ZonePages.StandardName(page);
         }
 
-        /// <summary>The card beside the picture: the page's zones, each a choice of what it shows.</summary>
-        private FrameworkElement BuildPitWallZoneList(ScreenInstance screen, int page)
+        /// <summary>The card beside the picture: the page's zones, each a choice of what it shows. A choice
+        /// redraws the editor, so the picture and the list both say what was just set.</summary>
+        private FrameworkElement BuildPitWallZoneList(ScreenInstance screen, int page, Action redraw)
         {
             var stack = Ui.VStack(10, Ui.Eyebrow(PanelScreens.PitWallZonesLabel(Contract.PitWallPageNames[page])));
             foreach (var slot in PanelScreens.PitWallZones(page))
@@ -165,32 +160,18 @@ namespace OpenDashPlugin
                 {
                     screen.SetZonePage(captured.Key, index);
                     Save(screen);
-                    RenamePitWallZone(screen, captured);
+                    redraw();
                 });
+                choice.Uid = "screens.pitwall.zone." + captured.Key;
                 var label = Ui.Text(PanelScreens.PitWallZoneLabel(captured), Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
                 label.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
                 stack.Children.Add(ScreensAsideLine(label, choice));
             }
-            OnDrop(() => pitWallPicture = null);
             return Ui.CardBox(stack, 14);
         }
 
-        /// <summary>Writes a zone's new page into the picture beside the list, where the picture is on screen.</summary>
-        private void RenamePitWallZone(ScreenInstance screen, Contract.PitWallZoneSlot slot)
-        {
-            if (pitWallPicture == null) return;
-            foreach (var child in pitWallPicture.Children.OfType<Border>())
-            {
-                if (!string.Equals(child.Tag as string, slot.Key, StringComparison.Ordinal)) continue;
-                var stack = child.Child as StackPanel;
-                if (stack == null || stack.Children.Count < 2) continue;
-                var what = stack.Children[1] as TextBlock;
-                if (what != null) what.Text = ScreensZonePageName(slot, screen);
-            }
-        }
-
         /// <summary>The portrait wall's four zones, one choice each, named with their letter.</summary>
-        private FrameworkElement BuildPortraitLayout(ScreenInstance screen)
+        private FrameworkElement BuildPortraitLayout(ScreenInstance screen, Action redraw)
         {
             var choices = new List<FrameworkElement>();
             foreach (var slot in PanelScreens.PortraitZones())
@@ -200,7 +181,9 @@ namespace OpenDashPlugin
                 {
                     screen.SetZonePage(captured.Key, index);
                     Save(screen);
+                    redraw();
                 }, 96);
+                choice.Uid = "screens.pitwall.portrait." + captured.Key;
                 choice.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
                 choices.Add(choice);
             }
@@ -211,7 +194,7 @@ namespace OpenDashPlugin
         /// The glance: which zone lends its place, then which page it shows there, and the chip saying what
         /// the held button is bound to.
         /// </summary>
-        private FrameworkElement BuildPitWallGlance(ScreenInstance screen)
+        private FrameworkElement BuildPitWallGlance(ScreenInstance screen, Action redraw)
         {
             var glance = Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance);
             var zoneIndex = Contract.QuickGlanceZone(glance);
@@ -220,12 +203,16 @@ namespace OpenDashPlugin
             {
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(chosen, Contract.QuickGlancePage(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)));
                 Save(screen);
+                redraw();
             }, 110);
+            zone.Uid = "screens.pitwall.glance.zone";
             var pages = Ui.ChoiceButton(ZonePages.Standard.Select(p => p.Name).ToArray(), page, chosen =>
             {
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(Contract.QuickGlanceZone(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)), chosen);
                 Save(screen);
+                redraw();
             }, 150);
+            pages.Uid = "screens.pitwall.glance.page";
             return ScreensWrap(zone, pages, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }
 

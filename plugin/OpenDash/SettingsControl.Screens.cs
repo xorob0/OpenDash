@@ -285,12 +285,17 @@ namespace OpenDashPlugin
         /// <remarks>
         /// An editor redraws itself after a press so the picture says what was just set, and a redraw builds
         /// new controls: without this, a zone picked from the keyboard or a page ticked with Space would
-        /// leave focus nowhere. The controls that redraw carry a Uid naming what they set, which is how the
-        /// new one is found.
+        /// leave focus nowhere, which WPF answers by moving it out of the panel. The controls that redraw
+        /// carry a Uid naming what they set, which is how the new one is found.
+        ///
+        /// The control can be gone from the new drawing: a page unticked under Only ticked leaves the list.
+        /// The keyboard then goes to the control that took its place -- the next one the old drawing named
+        /// that is still drawn, else the one before it -- and never stays on a control that was removed.
         /// </remarks>
         private static void ScreensRedraw(ContentControl host, Func<object> build)
         {
             string uid = null;
+            List<string> named = null;
             if (host.IsKeyboardFocusWithin)
             {
                 var at = Keyboard.FocusedElement as DependencyObject;
@@ -304,16 +309,37 @@ namespace OpenDashPlugin
                     }
                     at = (at is Visual ? VisualTreeHelper.GetParent(at) : null) ?? LogicalTreeHelper.GetParent(at);
                 }
+                if (uid != null)
+                {
+                    named = new List<string>();
+                    ScreensUids(host, named);
+                }
             }
             host.Content = build();
             if (uid == null) return;
             host.Dispatcher.BeginInvoke(new Action(() =>
             {
                 var target = ScreensFind(host, uid);
-                if (target == null) return;
+                var at = named.IndexOf(uid);
+                for (var i = at + 1; target == null && at >= 0 && i < named.Count; i++) target = ScreensFind(host, named[i]);
+                for (var i = at - 1; target == null && i >= 0; i--) target = ScreensFind(host, named[i]);
+                if (target == null)
+                {
+                    host.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                    return;
+                }
                 if (target.Focusable) target.Focus();
                 else target.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
             }), DispatcherPriority.Loaded);
+        }
+
+        /// <summary>Every Uid under <paramref name="root"/>, in the order the drawing reads.</summary>
+        private static void ScreensUids(DependencyObject root, List<string> into)
+        {
+            var element = root as UIElement;
+            if (element != null && !string.IsNullOrEmpty(element.Uid) && !into.Contains(element.Uid)) into.Add(element.Uid);
+            var count = root is Visual ? VisualTreeHelper.GetChildrenCount(root) : 0;
+            for (var i = 0; i < count; i++) ScreensUids(VisualTreeHelper.GetChild(root, i), into);
         }
 
         private static UIElement ScreensFind(DependencyObject root, string uid)
@@ -385,32 +411,37 @@ namespace OpenDashPlugin
                 note.Visibility = note.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             };
             TextBlock sizeTitle = null;
+            // A pick redraws the grid its tile sits in while that tile has the keyboard, so both grids are drawn
+            // through ScreensRedraw and every tile carries a Uid: otherwise the focused tile leaves the tree,
+            // WPF moves focus out of the panel, and Tab stops cycling in the sheet and Escape stops closing it.
             Action drawSizes = null;
-            drawSizes = () =>
+            drawSizes = () => ScreensRedraw(sizesHost, () =>
             {
                 var offered = PanelAddScreen.Offered(type);
                 var tiles = new List<UIElement>();
                 for (var i = 0; i < offered.Count; i++)
                 {
                     var option = offered[i];
-                    tiles.Add(Ui.ChoiceTile(BuildSizeTile(type, option, i, ReferenceEquals(option, entry)), ReferenceEquals(option, entry), () =>
+                    var tile = Ui.ChoiceTile(BuildSizeTile(type, option, i, ReferenceEquals(option, entry)), ReferenceEquals(option, entry), () =>
                     {
                         entry = option;
                         drawSizes();
                         fillName();
                         refreshNote();
-                    }, centred: true));
+                    }, centred: true);
+                    tile.Uid = "screens.add.size." + i.ToString(CultureInfo.InvariantCulture);
+                    tiles.Add(tile);
                 }
-                sizesHost.Content = Ui.CardGrid(96, 8, 4, tiles.ToArray());
-            };
+                return Ui.CardGrid(96, 8, 4, tiles.ToArray());
+            });
             Action drawKinds = null;
-            drawKinds = () =>
+            drawKinds = () => ScreensRedraw(kindsHost, () =>
             {
                 var tiles = new List<UIElement>();
                 foreach (var candidate in types)
                 {
                     var option = candidate;
-                    tiles.Add(Ui.ChoiceTile(BuildKindTile(option.Label, option.Caption, null), ReferenceEquals(option, type), () =>
+                    var tile = Ui.ChoiceTile(BuildKindTile(option.Label, option.Caption, null), ReferenceEquals(option, type), () =>
                     {
                         type = option;
                         entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
@@ -419,11 +450,13 @@ namespace OpenDashPlugin
                         drawSizes();
                         fillName();
                         refreshNote();
-                    }));
+                    });
+                    tile.Uid = "screens.add.kind." + option.Kind;
+                    tiles.Add(tile);
                 }
                 tiles.Add(Ui.ChoiceTile(BuildKindTile(PanelSoon.FlagsScreen.Title, PanelAddScreen.FlagsScreenCaption, Ui.SoonTag(PanelSoon.FlagsScreen)), false, null, false, PanelSoon.FlagsScreen));
-                kindsHost.Content = Ui.CardGrid(140, 8, 3, tiles.ToArray());
-            };
+                return Ui.CardGrid(140, 8, 3, tiles.ToArray());
+            });
             drawKinds();
             drawSizes();
             fillName();

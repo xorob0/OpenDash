@@ -54,6 +54,8 @@ namespace OpenDashPlugin
             Action<string> pick = chosen =>
             {
                 screensFaceAside[screen.Namespace] = chosen;
+                // A zone picked opens on its ticked pages, as the artboard's does, whatever the last one showed.
+                screensShowAll = false;
                 redraw();
             };
 

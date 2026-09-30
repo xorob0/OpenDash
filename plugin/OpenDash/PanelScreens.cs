@@ -253,13 +253,17 @@ namespace OpenDashPlugin
         /// phrase for the one state rather than the artboard's "No button".</summary>
         public const string NoButton = PanelBindings.NotBound;
 
+        /// <summary>The zone the aside opens on before anything is picked: C, as the artboard's does, on
+        /// every face, whichever zone the body draws first.</summary>
+        public const string FirstAside = "C";
+
         /// <summary>What the aside shows: the bar or zone last picked on this screen where the face has it, and
-        /// the first zone of the picture otherwise.</summary>
+        /// zone C otherwise.</summary>
         public static string AsideKey(string picked, Contract.FaceSize face)
         {
             if (picked == BarKey && face.HasBar) return BarKey;
             if (picked != null && Array.IndexOf(Contract.FaceZoneLetters, picked) >= 0) return picked;
-            return PanelFacePlan.ZoneOrder(face)[0];
+            return FirstAside;
         }
 
         /// <summary>The ends of the bar in the order the aside lists them: two fields an end on a wide face,
