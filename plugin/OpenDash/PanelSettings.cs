@@ -287,6 +287,10 @@ namespace OpenDashPlugin
         public const string TemperatureCaption = "In SimHub's unit.";
 
         public const string AlertColumn = "Alert";
+
+        /// <summary>The artboard's th, kept as a short column label the way the Updates table keeps "In
+        /// SimHub", although voice.md asks a heading to be a noun: an open divergence, whose noun would be
+        /// "Threshold".</summary>
         public const string WhenColumn = "When";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
