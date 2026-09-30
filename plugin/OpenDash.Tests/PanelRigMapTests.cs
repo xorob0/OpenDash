@@ -157,6 +157,32 @@ namespace OpenDashPlugin.Tests
             return page.Substring(start, end - start);
         }
 
+        /// <summary>One handler of a method, from where it is attached to the first "};" after it, so a pin on
+        /// it cannot be met by the handler below it.</summary>
+        private static string Handler(string method, string attach)
+        {
+            var start = method.IndexOf(attach, StringComparison.Ordinal);
+            Assert.True(start >= 0, attach);
+            var end = method.IndexOf("};", start, StringComparison.Ordinal);
+            Assert.True(end > start, attach);
+            return method.Substring(start, end - start);
+        }
+
+        [Fact]
+        public void A_tile_is_raised_only_while_it_is_in_the_hand_and_a_key_brings_it_into_view()
+        {
+            var tile = RigMethod("private RigTileView BuildRigTile(");
+            // Raised on the press and the key, and lowered on the drop and the key coming up or focus leaving,
+            // so Tab and the shell's focus restore walk the tiles in their order.
+            Assert.Contains("Panel.SetZIndex(root, ++rigTopZ);", Handler(tile, "thumb.DragStarted +="));
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "RigLower(root);", "if (!moved) return;");
+            InOrder(Handler(tile, "thumb.KeyUp +="), "RigLower(root);", "if (!unsaved) return;");
+            InOrder(Handler(tile, "thumb.LostKeyboardFocus +="), "RigLower(root);", "if (!unsaved) return;");
+            Assert.Contains("root.ClearValue(Panel.ZIndexProperty);", RigMethod("private static void RigLower("));
+            // A tile an arrow key moves is scrolled to, since WPF does not follow a focused element that moves.
+            InOrder(Handler(tile, "thumb.KeyDown +="), "Panel.SetZIndex(root, ++rigTopZ);", "RigPlace(root,", "unsaved = true;", "root.BringIntoView();");
+        }
+
         private static void InOrder(string text, params string[] parts)
         {
             var at = 0;
@@ -1096,6 +1122,21 @@ namespace OpenDashPlugin.Tests
             wall.PitWallPage = 1;
             Assert.Equal(new[] { "Tower", ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
             Assert.False(PanelRigMap.PitWallPortrait(wall));
+
+            // Every page the settings name is one the Screens page draws, by its title: the two lists are
+            // typed apart, so a rename fails here rather than drawing a pit wall with no panels.
+            for (var i = 0; i < Contract.PitWallPageNames.Length; i++)
+            {
+                var page = PanelRigMap.PitWallPlanPage(i);
+                Assert.NotNull(page);
+                Assert.Equal(Contract.PitWallPageNames[i], page.Title);
+                wall.PitWallPage = i;
+                var drawn = PanelRigMap.PitWallCells(wall);
+                Assert.Equal(page.Panels.Count, drawn.Count);
+                Assert.All(drawn, c => Assert.False(string.IsNullOrEmpty(c.Text), Contract.PitWallPageNames[i]));
+            }
+            Assert.Null(PanelRigMap.PitWallPlanPage(-1));
+            Assert.Null(PanelRigMap.PitWallPlanPage(Contract.PitWallPageNames.Length));
         }
 
         [Fact]

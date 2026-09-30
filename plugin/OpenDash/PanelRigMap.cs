@@ -1401,10 +1401,11 @@ namespace OpenDashPlugin
             if (PitWallPortrait(screen)) return PortraitCells(screen);
             var index = Contract.NormalisePitWallPage(screen == null ? Contract.DefaultPitWallPage : screen.PitWallPage);
             var title = Contract.PitWallPageNames[index];
-            var page = PanelPitWallPlan.Pages.First(p => p.Title == title);
+            var page = PitWallPlanPage(index);
+            var cells = new List<RigCell>();
+            if (page == null) return cells;
             var spanX = PanelPitWallPlan.ThumbWidth - 2 * PanelPitWallPlan.Inset;
             var spanY = PanelPitWallPlan.ThumbHeight - 2 * PanelPitWallPlan.Inset;
-            var cells = new List<RigCell>();
             foreach (var panel in page.Panels)
             {
                 string text;
@@ -1417,6 +1418,20 @@ namespace OpenDashPlugin
                     Fraction(panel.Height, spanY)));
             }
             return cells;
+        }
+
+        /// <summary>
+        /// The Screens page's plan of the landscape page at <paramref name="index"/> of
+        /// Contract.PitWallPageNames: by its title, or at the same place in its list, which is in the same
+        /// order, or null. Never throws: the two lists are typed apart, and a renamed page draws a tile with
+        /// no panels rather than failing the whole page.
+        /// </summary>
+        public static PanelPitWallPlan.Page PitWallPlanPage(int index)
+        {
+            if (index < 0 || index >= Contract.PitWallPageNames.Length) return null;
+            var page = PanelPitWallPlan.PageNamed(Contract.PitWallPageNames[index]);
+            if (page != null) return page;
+            return index < PanelPitWallPlan.Pages.Count ? PanelPitWallPlan.Pages[index] : null;
         }
 
         /// <summary>The portrait page: the board across the top, and zones A to D two by two under the session

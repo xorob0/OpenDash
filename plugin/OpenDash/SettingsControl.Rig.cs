@@ -39,6 +39,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The z-order the last tile picked up was raised to, so the tile in the hand is on top.</summary>
+        /// <remarks>
+        /// Only while it is in the hand: Panel.ZIndex reorders the canvas's visual children as well as its
+        /// drawing, and keyboard navigation and the shell's FocusPath walk the visual children. A tile left
+        /// raised moved to the end of the Tab order, and after a rebuild focus was restored by its raised
+        /// index to another tile, which the next arrow key moved and saved. RigLower puts it back.
+        /// </remarks>
         private int rigTopZ;
 
         /// <summary>One tile as drawn: its place on the canvas, and how to paint its picture again.</summary>
@@ -300,6 +306,7 @@ namespace OpenDashPlugin
             // Saved on the drop, never in End(): SimHub is force-killed on the VM.
             thumb.DragCompleted += (sender, args) =>
             {
+                RigLower(root);
                 if (!moved) return;
                 RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
                 RigDrop(tile, views);
@@ -320,22 +327,36 @@ namespace OpenDashPlugin
                 }
                 args.Handled = true;
                 Panel.SetZIndex(root, ++rigTopZ);
-                if (RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) unsaved = true;
+                if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;
+                unsaved = true;
+                // WPF does not scroll to a focused element that moves; the left button is up, so the guard
+                // above lets this through.
+                root.BringIntoView();
             };
             thumb.KeyUp += (sender, args) =>
             {
+                RigLower(root);
                 if (!unsaved) return;
                 unsaved = false;
                 RigDrop(tile, views);
             };
             thumb.LostKeyboardFocus += (sender, args) =>
             {
+                RigLower(root);
                 if (!unsaved) return;
                 unsaved = false;
                 RigDrop(tile, views);
             };
 
             return new RigTileView(tile, root, paint);
+        }
+
+        /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
+        /// focus restore walk the tiles in the order they were built. A tile it is over may now draw over it,
+        /// as the next build draws them anyway.</summary>
+        private static void RigLower(FrameworkElement root)
+        {
+            root.ClearValue(Panel.ZIndexProperty);
         }
 
         /// <summary>Puts a tile on the nearest step of the grid inside the canvas, the place it will be kept at.
