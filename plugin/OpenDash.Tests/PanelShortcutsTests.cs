@@ -205,12 +205,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "toggles night mode", "turns the brightness up", "turns the brightness down" }, rows.Select(r => r.Does));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
             // The rig test and the alert's dismissal are coming, and are the page's two greyed rows, each
-            // read as the ruling words it: what the button will do.
+            // read by the registry's title: a noun phrase, as plugin.md's voice replacements and every other
+            // page's greyed rows have it, and the words search lists the row by and its automation name says.
+            // Rulings 7 and 62 name which rows exist, not their copy.
             Assert.Equal(new[] { PanelSoon.RigTest, PanelSoon.AlertDismissal }, PanelShortcuts.SoonDrawn);
-            Assert.Equal("Run the Rig test", PanelShortcuts.SoonRowLabel(PanelSoon.RigTest));
-            Assert.Equal("Dismiss the alert", PanelShortcuts.SoonRowLabel(PanelSoon.AlertDismissal));
-            Assert.Equal(PanelSoon.RevFill.Title, PanelShortcuts.SoonRowLabel(PanelSoon.RevFill));
-            Assert.Equal(string.Empty, PanelShortcuts.SoonRowLabel(null));
+            Assert.Equal("Rig test", PanelSoon.RigTest.Title);
+            Assert.Equal("Alert dismissal", PanelSoon.AlertDismissal.Title);
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.DoesNotContain("Run the Rig test", code);
+            Assert.DoesNotContain("Dismiss the alert", code);
             Assert.Equal(511, PanelSoon.RigTest.Ticket);
             Assert.Equal(510, PanelSoon.AlertDismissal.Ticket);
         }
@@ -816,10 +819,10 @@ namespace OpenDashPlugin.Tests
             }
 
             // The rows as the model gives them: its label and press, the New tag where the model says, the
-            // greyed rows by their ruled labels, and each card's line beside its name.
+            // greyed rows by the registry's titles, and each card's line beside its name.
             Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
-            Assert.Contains("ShortcutsRow(PanelShortcuts.SoonRowLabel(item), PanelShortcuts.Tap, chip, layout, null);", code);
+            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);", code);
             Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);

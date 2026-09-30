@@ -33,21 +33,6 @@ namespace OpenDashPlugin
         /// <summary>The card of what an alert on screen can be bound to. Only greyed rows today.</summary>
         public const string AlertsGroupTitle = "Alerts";
 
-        /// <summary>The greyed rows' labels, as ruled (#511, #510): what the button will do, where the registry's
-        /// titles name the feature. The artboard's "Dismiss the alert on screen" loses "on screen", which the
-        /// card's name already says.</summary>
-        public const string RigTestRow = "Run the Rig test";
-        public const string AlertDismissalRow = "Dismiss the alert";
-
-        /// <summary>The label a greyed row reads: the ruled one for this page's two, else the registry's title.
-        /// Ui.Soon still takes the registry entry, for the tip, the ticket and the anchor search lands on.</summary>
-        public static string SoonRowLabel(SoonItem item)
-        {
-            if (item == null) return string.Empty;
-            if (ReferenceEquals(item, PanelSoon.RigTest)) return RigTestRow;
-            if (ReferenceEquals(item, PanelSoon.AlertDismissal)) return AlertDismissalRow;
-            return item.Title;
-        }
 
         // The rows' own words: a face's rows read "Band D · next page", and every kind's glance row reads
         // "Quick glance".
