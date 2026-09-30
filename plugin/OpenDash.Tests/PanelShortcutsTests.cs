@@ -662,6 +662,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
         }
 
+        /// <summary>
+        /// A row the filter hides while it holds keyboard focus (bound under Not bound, cleared under Bound)
+        /// hands focus to a row still shown, or the filter, rather than letting it leave the panel.
+        /// </summary>
+        [Fact]
+        public void A_row_the_filter_hides_hands_its_focus_on()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            var evaluate = Between(code, "private void ShortcutsEvaluate(", "banner.Children.Clear();");
+            Assert.Contains("var focused = groups.SelectMany(group => group.Rows).FirstOrDefault(row => row.Shown.IsKeyboardFocusWithin);", evaluate);
+            Assert.Contains("if (focused != null && focused.Shown.Visibility != Visibility.Visible) ShortcutsKeepFocus(groups, focused, filter);", evaluate);
+            Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
+            var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
+            Assert.Contains("row.Bindable && row.Shown.Visibility == Visibility.Visible", keep);
+            Assert.Contains("filter.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));", keep);
+        }
+
         /// <summary>The model's geometry is what the view draws with: the header's gaps, the crumbs' gap, the
         /// card name's ellipsis and the editor filling its slot.</summary>
         [Fact]

@@ -20,6 +20,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Threading;
 using SimHub.Plugins;
 using SimHub.Plugins.UI;
@@ -459,6 +460,9 @@ namespace OpenDashPlugin
             var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);
             filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;
 
+            // The row holding keyboard focus, which a binding made or cleared there can take out of the filter.
+            var focused = groups.SelectMany(group => group.Rows).FirstOrDefault(row => row.Shown.IsKeyboardFocusWithin);
+
             var anyShown = false;
             foreach (var group in groups)
             {
@@ -479,6 +483,8 @@ namespace OpenDashPlugin
                 group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
             }
 
+            if (focused != null && focused.Shown.Visibility != Visibility.Visible) ShortcutsKeepFocus(groups, focused, filter);
+
             banner.Children.Clear();
             if (readable)
             {
@@ -495,6 +501,25 @@ namespace OpenDashPlugin
             var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);
             empty.Text = emptyText ?? string.Empty;
             empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>
+        /// Keeps keyboard focus on the page when the filter hides the row that held it: a row bound under Not
+        /// bound, or cleared under Bound, collapses once SimHub's picker closes, with its card if it was the
+        /// last. Nothing between it and the panel takes focus, so WPF would let it leave the panel. It goes to
+        /// the next row still shown, or the one before, else to the filter, as the shell keeps focus in place
+        /// across a rebuild.
+        /// </summary>
+        private static void ShortcutsKeepFocus(IList<ShortcutsGroupState> groups, ShortcutsRowState from, FrameworkElement filter)
+        {
+            var rows = groups.SelectMany(group => group.Rows).ToList();
+            var at = rows.IndexOf(from);
+            var near = rows.Skip(at + 1).Concat(rows.Take(Math.Max(0, at)).Reverse());
+            foreach (var row in near.Where(row => row.Bindable && row.Shown.Visibility == Visibility.Visible))
+            {
+                if (row.Row.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)) && row.Row.IsKeyboardFocusWithin) return;
+            }
+            filter.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
         }
 
         /// <summary>The artboard's role=status line: a button bound to two things, in caution, its name strong.</summary>
