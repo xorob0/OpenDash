@@ -125,6 +125,23 @@ namespace OpenDashPlugin
             return current;
         }
 
+        /// <summary>The mark a build of the row starts with: the last build's on a rebuild in place, which keeps
+        /// the scroll where the driver was; on arriving (<paramref name="kept"/> is -1), the section the route
+        /// lands in.</summary>
+        public static int IndexStartMark(int kept, string anchor)
+        {
+            return kept >= 0 ? kept : SectionOf(anchor);
+        }
+
+        /// <summary>The section a build holds from the start: the last build's hold on a rebuild in place; on
+        /// arriving at an anchor, the section it lands in, so the landing scroll, which leaves a short section
+        /// at the foot of the view, cannot mark the one above it; nothing on arriving at the page's top.</summary>
+        public static int IndexStartHeld(int keptMark, int keptHeld, string anchor)
+        {
+            if (keptMark >= 0) return keptHeld;
+            return anchor == null ? -1 : SectionOf(anchor);
+        }
+
         /// <summary>The section a route's anchor lands in: a section's own anchor, or the section that draws
         /// a greyed row when it is one of this page's. 0 for anything else.</summary>
         public static int SectionOf(string anchor)

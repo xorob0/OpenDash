@@ -19,6 +19,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace OpenDashPlugin
 {
@@ -31,10 +32,17 @@ namespace OpenDashPlugin
         /// <summary>The night mode the pick was made under (PanelSettings.KeptPick).</summary>
         private bool settingsPreviewPickedUnder;
 
+        /// <summary>The "On this page" row's mark and the section a link's press holds, kept outside the build so
+        /// a rebuild in place starts where the last build was, and -1 on arriving, when the route decides.</summary>
+        private int settingsIndexMark = -1;
+
+        private int settingsIndexHeld = -1;
+
         private FrameworkElement BuildSettingsPage(PanelRoute to)
         {
             DrawsLighting();
             OnLeave("Settings.previewPick", () => settingsPreviewPick = null);
+            OnLeave("Settings.indexMark", () => { settingsIndexMark = -1; settingsIndexHeld = -1; });
             var units = SettingsUnitNames();
             var sections = new FrameworkElement[]
             {
@@ -56,19 +64,33 @@ namespace OpenDashPlugin
         /// The row of links under the title, one per section: a press scrolls its section to the top, and the
         /// link of the section being read is marked as the page scrolls.
         /// </summary>
+        /// <remarks>
+        /// A rebuild in place keeps the scroll offset but raises no ScrollChanged this build can hear, so the
+        /// row starts from the last build's mark (PanelSettings.IndexStartMark) and reads the view once itself
+        /// when it is loaded. On arriving at an anchor it holds the section the route lands in
+        /// (IndexStartHeld). A press moves keyboard focus to its section's heading, as an in-page link moves
+        /// the focus start point: focus left on the link would scroll the view back up whenever something
+        /// brings it into view again -- a rebuild restoring focus, or Tab to the next link.
+        /// </remarks>
         private FrameworkElement SettingsIndex(IList<FrameworkElement> sections, PanelRoute to)
         {
             var links = new List<Button>();
             var wrap = new WrapPanel { Orientation = Orientation.Horizontal };
             ScrollViewer scroll = null;
-            var held = -1;
+            var dropped = false;
+            var anchor = to == null ? null : to.Anchor;
+            var start = PanelSettings.IndexStartMark(settingsIndexMark, anchor);
+            var held = PanelSettings.IndexStartHeld(settingsIndexMark, settingsIndexHeld, anchor);
             Action<int> mark = current =>
             {
+                settingsIndexMark = current;
+                settingsIndexHeld = held;
                 for (var k = 0; k < links.Count; k++) SettingsPaintIndexLink(links[k], k == current);
             };
             for (var i = 0; i < PanelSettings.SectionTitles.Length; i++)
             {
                 var index = i;
+                var heading = SettingsHeadingOf(sections[i]);
                 var link = SettingsIndexLink(PanelSettings.SectionTitles[i]);
                 link.Margin = new Thickness(0, 0, PanelSettings.IndexGap, PanelSettings.IndexGap);
                 link.Click += (sender, args) =>
@@ -76,11 +98,12 @@ namespace OpenDashPlugin
                     held = index;
                     mark(index);
                     SettingsJumpTo(scroll, sections[index]);
+                    SettingsFocusHeading(heading);
                 };
                 links.Add(link);
                 wrap.Children.Add(link);
             }
-            mark(PanelSettings.SectionOf(to == null ? null : to.Anchor));
+            mark(start);
 
             var row = new Border
             {
@@ -93,28 +116,62 @@ namespace OpenDashPlugin
                 Child = wrap,
             };
 
-            ScrollChangedEventHandler follow = (sender, args) =>
+            Action read = () =>
             {
-                // ScrollChanged bubbles, and a text box on the page has a scroller of its own.
-                if (scroll == null || !ReferenceEquals(args.OriginalSource, scroll)) return;
-                if (args.VerticalChange == 0 && args.ViewportHeightChange == 0 && args.ExtentHeightChange == 0) return;
+                if (dropped || scroll == null || !row.IsVisible) return;
                 var tops = sections.Select(section => SettingsTopIn(scroll, section)).ToList();
                 var atEnd = scroll.ScrollableHeight > 0 && scroll.VerticalOffset >= scroll.ScrollableHeight - 1;
                 var current = PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, scroll.ViewportHeight, atEnd, held);
                 if (current != held) held = -1;
                 mark(current);
             };
+            ScrollChangedEventHandler follow = (sender, args) =>
+            {
+                // ScrollChanged bubbles, and a text box on the page has a scroller of its own.
+                if (scroll == null || !ReferenceEquals(args.OriginalSource, scroll)) return;
+                if (args.VerticalChange == 0 && args.ViewportHeightChange == 0 && args.ExtentHeightChange == 0) return;
+                read();
+            };
             row.Loaded += (sender, args) =>
             {
                 if (scroll != null) return;
                 scroll = SettingsScrollOf(row);
-                if (scroll != null) scroll.ScrollChanged += follow;
+                if (scroll == null) return;
+                scroll.ScrollChanged += follow;
+                // Once what is queued -- the shell's offset restore, an arrival's landing scroll -- has been laid
+                // out, whether or not it raised a ScrollChanged this build heard.
+                Dispatcher.BeginInvoke(read, DispatcherPriority.Background);
             };
             OnDrop(() =>
             {
+                dropped = true;
                 if (scroll != null) scroll.ScrollChanged -= follow;
             });
             return row;
+        }
+
+        /// <summary>A section's heading, which a link's press focuses: the first thing a section draws.
+        /// Focusable but no tab stop, so Tab from it goes on into the section and never lands on it.</summary>
+        private static FrameworkElement SettingsHeadingOf(FrameworkElement section)
+        {
+            var panel = section as Panel;
+            var heading = panel == null || panel.Children.Count == 0 ? null : panel.Children[0] as FrameworkElement;
+            if (heading == null) return null;
+            heading.Focusable = true;
+            KeyboardNavigation.SetIsTabStop(heading, false);
+            heading.FocusVisualStyle = Ui.FocusRing();
+            return heading;
+        }
+
+        /// <summary>Focuses a heading once the jump has been laid out, so the focus's own BringIntoView finds it
+        /// in view and scrolls nothing.</summary>
+        private void SettingsFocusHeading(FrameworkElement heading)
+        {
+            if (heading == null) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (heading.IsVisible) Keyboard.Focus(heading);
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>One link of the row: the artboard's .idx, 30 high, 12 in, 14 px Medium in the secondary ink,

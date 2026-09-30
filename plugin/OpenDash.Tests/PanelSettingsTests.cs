@@ -174,24 +174,64 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(30, PanelSettings.IndexLinkHeight);
             Assert.Equal(12, PanelSettings.IndexLinkPaddingX);
             Assert.Equal(14, PanelSettings.IndexLinkTextSize);
+            // The page's own top padding, and where a press puts its heading.
+            Assert.Equal(36, PanelSettings.IndexReadLine);
+            Assert.Equal(20, PanelSettings.IndexJumpMargin);
+            var page = Page();
+            Assert.Contains("var all = new List<UIElement> { SettingsIndex(sections, to) };", page);
         }
 
         [Fact]
         public void The_section_being_read_is_the_last_to_reach_the_top()
         {
             var tops = new double[] { -900, -300, 20, 500, 1100, 1600 };
-            Assert.Equal(2, PanelSettings.CurrentSection(tops, 36, 700, false, -1));
-            Assert.Equal(1, PanelSettings.CurrentSection(new double[] { -900, -300, 40, 500, 1100, 1600 }, 36, 700, false, -1));
+            Assert.Equal(2, PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, 700, false, -1));
+            Assert.Equal(1, PanelSettings.CurrentSection(new double[] { -900, -300, 40, 500, 1100, 1600 }, PanelSettings.IndexReadLine, 700, false, -1));
             // Nothing has reached the top yet: the first.
-            Assert.Equal(0, PanelSettings.CurrentSection(new double[] { 120, 800, 1600 }, 36, 700, false, -1));
+            Assert.Equal(0, PanelSettings.CurrentSection(new double[] { 120, 800, 1600 }, PanelSettings.IndexReadLine, 700, false, -1));
             // At the foot of the page a short last section never reaches the top, so it is the one read.
-            Assert.Equal(5, PanelSettings.CurrentSection(tops, 36, 700, true, -1));
+            Assert.Equal(5, PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, 700, true, -1));
             // A link's press holds its own section while its heading is in view, even at the foot...
-            Assert.Equal(4, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, 200, 500 }, 36, 700, true, 4));
+            Assert.Equal(4, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, 200, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
             // ...and lets go once it has scrolled out of view.
-            Assert.Equal(3, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, 10, 800, 1300 }, 36, 700, false, 4));
-            Assert.Equal(0, PanelSettings.CurrentSection(new double[0], 36, 700, false, -1));
-            Assert.Equal(0, PanelSettings.CurrentSection(null, 36, 700, true, 2));
+            Assert.Equal(3, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, 10, 800, 1300 }, PanelSettings.IndexReadLine, 700, false, 4));
+            Assert.Equal(0, PanelSettings.CurrentSection(new double[0], PanelSettings.IndexReadLine, 700, false, -1));
+            Assert.Equal(0, PanelSettings.CurrentSection(null, PanelSettings.IndexReadLine, 700, true, 2));
+        }
+
+        /// <summary>
+        /// On arriving, the row marks and holds the section the route lands in, so the landing scroll cannot mark
+        /// the one above it; a rebuild in place starts from the last build's mark and hold, not the route's, and
+        /// every build reads the view once it is loaded, since a rebuild raises no ScrollChanged it can hear. A
+        /// press focuses its section's heading, so a later focus restore or Tab does not scroll back up.
+        /// </summary>
+        [Fact]
+        public void The_row_starts_from_where_the_view_is()
+        {
+            Assert.Equal(0, PanelSettings.IndexStartMark(-1, null));
+            Assert.Equal(-1, PanelSettings.IndexStartHeld(-1, -1, null));
+            Assert.Equal(2, PanelSettings.IndexStartMark(-1, PanelSoon.Incidents.Anchor));
+            Assert.Equal(1, PanelSettings.IndexStartHeld(-1, -1, PanelSettings.AnchorFlags));
+            // A rebuild in place, after the driver scrolled away from where the route landed.
+            Assert.Equal(4, PanelSettings.IndexStartMark(4, PanelSettings.AnchorFlags));
+            Assert.Equal(-1, PanelSettings.IndexStartHeld(4, -1, PanelSettings.AnchorFlags));
+            Assert.Equal(5, PanelSettings.IndexStartHeld(5, 5, null));
+            // Search lands on Flags, a short section the landing scroll leaves at the foot of the view: held,
+            // it stays marked rather than Race data, whose top is the last to reach the read line.
+            var landed = new double[] { -400, 560, 820, 1300, 1900, 2300 };
+            var held = PanelSettings.IndexStartHeld(-1, -1, PanelSettings.AnchorFlags);
+            Assert.Equal(1, PanelSettings.CurrentSection(landed, PanelSettings.IndexReadLine, 700, false, held));
+            Assert.Equal(0, PanelSettings.CurrentSection(landed, PanelSettings.IndexReadLine, 700, false, -1));
+
+            var page = Page();
+            Assert.Contains("var start = PanelSettings.IndexStartMark(settingsIndexMark, anchor);", page);
+            Assert.Contains("var held = PanelSettings.IndexStartHeld(settingsIndexMark, settingsIndexHeld, anchor);", page);
+            Assert.Contains("mark(start);", page);
+            Assert.Contains("OnLeave(\"Settings.indexMark\", () => { settingsIndexMark = -1; settingsIndexHeld = -1; });", page);
+            Assert.Contains("PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, scroll.ViewportHeight, atEnd, held)", page);
+            Assert.Contains("Dispatcher.BeginInvoke(read, DispatcherPriority.Background);", page);
+            Assert.Contains("SettingsFocusHeading(heading);", page);
+            Assert.Contains("KeyboardNavigation.SetIsTabStop(heading, false);", page);
         }
 
         [Fact]
