@@ -562,20 +562,35 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line under Car-specific shift points, the same as on LEDs (PanelLeds.CarLine): while the switch
-        /// is on and a car is loaded, whether the tables have measured it, which says whether the gear takes
-        /// the car's own points or falls back to openDash's. No line while the switch is off or no car is loaded.
+        /// The line under Car-specific shift points, saying what the LEDs page's does (PanelLeds.CarLine on the
+        /// LEDs branch) in this page's words: while the switch is on, that the tables are not downloaded when
+        /// they are not, and where the download is, since this page has none; else, with a car loaded, whether
+        /// the tables have measured it, which says whether the gear takes the car's own points or falls back to
+        /// openDash's. No line while the switch is off, or with the tables on disk and no car loaded.
         /// </summary>
-        public static string CarLine(bool on, string car, bool hasTable)
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded)
         {
-            if (!on || string.IsNullOrWhiteSpace(car)) return null;
+            if (!on) return null;
+            if (!tablesLoaded) return CarTablesMissing;
+            if (string.IsNullOrWhiteSpace(car)) return null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
         }
 
-        /// <summary>The car line's ink: the in-use green while the tables have the car, caution while not.</summary>
-        public static string CarLineHex(bool hasTable)
+        /// <summary>The car line with no tables on disk: the tables are downloaded on the LEDs page only
+        /// (ADR 0018), under the section every strip shares.</summary>
+        public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it on the LEDs page, under Every strip.";
+
+        /// <summary>Whether the car line is the good news, in green, rather than something to act on, in
+        /// caution: only a car the downloaded tables have measured.</summary>
+        public static bool CarLineGood(bool hasTable, bool tablesLoaded)
         {
-            return hasTable ? Theme.StatusUpToDate : Theme.Caution;
+            return tablesLoaded && hasTable;
+        }
+
+        /// <summary>The car line's ink.</summary>
+        public static string CarLineHex(bool good)
+        {
+            return good ? Theme.StatusUpToDate : Theme.Caution;
         }
 
         /// <summary>The greyed press on the SimHub device row (#363).</summary>

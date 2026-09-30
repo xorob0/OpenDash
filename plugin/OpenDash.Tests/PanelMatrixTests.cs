@@ -446,21 +446,33 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The line under Car-specific shift points says what LEDs says (PanelLeds.CarLine), and only
-        /// while the switch is on and a car is loaded.</summary>
+        /// while the switch is on: with no tables on disk it says so and where the download is, rather than that
+        /// the car is missing from them.</summary>
         [Fact]
         public void The_car_line_follows_its_switch_and_says_whether_the_tables_have_the_car()
         {
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, "Porsche 911 GT3 R (992)", true));
-            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, "Porsche 911 GT3 R (992)", false));
-            Assert.Null(PanelMatrix.CarLine(false, "Porsche 911 GT3 R (992)", true));
-            Assert.Null(PanelMatrix.CarLine(false, "Porsche 911 GT3 R (992)", false));
-            Assert.Null(PanelMatrix.CarLine(true, null, false));
-            Assert.Null(PanelMatrix.CarLine(true, " ", true));
+            const string car = "Porsche 911 GT3 R (992)";
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, car, true, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, car, false, true));
+            // A fresh install: a new matrix has the switch on, and the tables arrive only from the LEDs page.
+            Assert.Equal("Lovely Car Data is not downloaded yet. Download it on the LEDs page, under Every strip.", PanelMatrix.CarTablesMissing);
+            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, car, false, false));
+            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, null, false, false));
+            Assert.Null(PanelMatrix.CarLine(false, car, true, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, false));
+            Assert.Null(PanelMatrix.CarLine(true, null, false, true));
+            Assert.Null(PanelMatrix.CarLine(true, " ", true, true));
+            Assert.True(PanelMatrix.CarLineGood(true, true));
+            Assert.False(PanelMatrix.CarLineGood(false, true));
+            Assert.False(PanelMatrix.CarLineGood(false, false));
+            Assert.False(PanelMatrix.CarLineGood(true, false));
             Assert.Equal(Theme.StatusUpToDate, PanelMatrix.CarLineHex(true));
             Assert.Equal(Theme.Caution, PanelMatrix.CarLineHex(false));
             var matrix = MatrixSource();
-            Assert.Contains("PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known)", matrix);
-            Assert.Contains("carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(known));", matrix);
+            Assert.Contains("var tables = plugin.CarLights.CarCount > 0;", matrix);
+            Assert.Contains("PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables)", matrix);
+            Assert.Contains("carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables)));", matrix);
             Assert.Contains("Settings.FlagBoxMatrixGearCarLadder[i] = on; Save(); readCar();", matrix);
             Assert.Contains("OnTick(readCar);", matrix);
         }
