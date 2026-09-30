@@ -20,7 +20,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Flags and spotter", PanelHome.TryTitle);
             Assert.Equal("Open Rig", PanelHome.OpenRig);
             Assert.Equal("Open", PanelHome.OpenLink);
-            Assert.Equal("Open Screens", PanelHome.OpenScreens);
             Assert.Contains(PanelHome.Search, entry => entry.Label == PanelHome.RightNowTitle && entry.Route.Anchor == PanelHome.AnchorRightNow);
             Assert.Contains(PanelHome.Search, entry => entry.Label == PanelHome.QuickControlsTitle && entry.Route.Anchor == PanelHome.AnchorQuickControls);
             // Home's headline changes with the count, so its entry is the page's own name, which it draws over it.
@@ -78,8 +77,9 @@ namespace OpenDashPlugin.Tests
             }, AnchorTable.Of(typeof(PanelHome)));
         }
 
-        /// <summary>Main.dc.html's numbers, which the page draws and nothing else holds. One besides: the
-        /// cards' 280 floor is the brief's (the artboard's grid is repeat(3, minmax(0, 1fr))).</summary>
+        /// <summary>Main.dc.html's numbers, which the page draws and nothing else holds. Three besides: the
+        /// cards' 280 floor is the brief's (the artboard's grid is repeat(3, minmax(0, 1fr))), and the empty
+        /// rig's 12, which the artboard does not draw.</summary>
         [Fact]
         public void Its_geometry_is_the_artboards()
         {
@@ -100,6 +100,7 @@ namespace OpenDashPlugin.Tests
             });
             Assert.Equal(new[] { 18.0, 16, 12, 15, 14 }, new[] { PanelHome.QuickPaddingX, PanelHome.QuickPaddingY, PanelHome.QuickGap, PanelHome.QuickValueSize, PanelHome.QuickRigPaddingX });
             Assert.Equal(new[] { 1.6, 1, 1.2 }, PanelHome.QuickColumns);
+            Assert.Equal(12, PanelHome.EmptyRigGap);
         }
 
         /// <summary>Three cards of 280 fit the artboard's 896 of content, and fewer fit a narrower panel.</summary>
@@ -499,21 +500,115 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("100%", PanelHome.Percent(140));
         }
 
-        /// <summary>The page file writes each lighting setting then shows it, and lays the quick controls and the
-        /// issue presses side by side only on TwoColumns, never on !Narrow.</summary>
-        [Fact]
-        public void The_page_shows_each_lighting_write_and_asks_TwoColumns_for_columns()
+        /// <summary>The page's source as code, with every run of whitespace one space, so a pin is on whole
+        /// statements rather than on fragments a wrong branch still contains.</summary>
+        private static string PageCode()
         {
             var code = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
-            Assert.Contains("Settings.LightsNightBrightness = v; Save(); ShowLightingChange();", code);
-            Assert.Contains("Settings.LightsBrightness = v; Save(); ShowLightingChange();", code);
-            Assert.Contains("if (v == Settings.LightsNightBrightness) return;", code);
-            Assert.Contains("if (v == Settings.LightsBrightness) return;", code);
-            Assert.Contains("OnTick(", code);
-            Assert.Contains("PanelEmulation.LiveFrame(", code);
-            Assert.Contains("TwoColumns", code);
+            return Regex.Replace(code, @"\s+", " ");
+        }
+
+        /// <summary>The slider writes the brightness in force, under that brightness's label and value, and
+        /// never saves a drag that lands where it started.</summary>
+        [Fact]
+        public void The_slider_writes_the_brightness_its_label_names()
+        {
+            var code = PageCode();
+            Assert.Contains("var nightOn = Settings.LightsNightMode;", code);
+            Assert.Contains("PanelHome.BrightnessInForce(nightOn, Settings.LightsBrightness, Settings.LightsNightBrightness)", code);
+            Assert.Contains("Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn))", code);
+            Assert.Contains("if (Settings.LightsNightMode) { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); } else { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); }", code);
+            Assert.Contains("Settings.LightsNightMode = on; Save(); ShowLightingChange();", code);
+        }
+
+        /// <summary>Home draws night mode and a brightness as controls, so it says so before anything else:
+        /// without it a wheel's press leaves the slider on the other brightness's label and value.</summary>
+        [Fact]
+        public void The_page_says_it_draws_lighting_first()
+        {
+            Assert.Contains("private FrameworkElement BuildHomePage(PanelRoute to) { DrawsLighting();", PageCode());
+        }
+
+        /// <summary>The pictures are live only where PanelHome says so: the car's run on a strip StripLive
+        /// allows, the idle glyph on a matrix MatrixDrawsGlyph allows, and both repainted on the tick.</summary>
+        [Fact]
+        public void The_page_draws_live_only_what_PanelHome_allows()
+        {
+            var code = PageCode();
+            Assert.Contains("var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
+            Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
+            Assert.Contains("PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre)", code);
+            Assert.Contains("PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre)", code);
+            Assert.Contains("OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });", code);
+            Assert.Contains("if (live.Count > 0) OnTick(", code);
+            Assert.Contains("OnTick(() => { foreach (var screen in shown) HomePaintScreen(screen); });", code);
+            Assert.Contains("if (shown.Count > 0) OnTick(", code);
+            Assert.Contains("var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);", code);
+            Assert.Contains("var shown = facts == null ? null : facts.Shown;", code);
+            Assert.Contains("if (PanelHome.MatrixDrawsGlyph(shown))", code);
+            Assert.Contains("PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options)", code);
+            Assert.Contains("PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown)", code);
+        }
+
+        /// <summary>What each press does: the issue's own call, and each row and link to its own page.</summary>
+        [Fact]
+        public void Each_press_makes_its_own_call()
+        {
+            var code = PageCode();
+            Assert.Contains("case HomePress.CheckAgain: CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); return;", code);
+            Assert.Contains("InstallScreenAgain(screen); return;", code);
+            Assert.Contains("case HomePress.Open: Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
+            Assert.Contains("default: Go(issue.Route); return;", code);
+            Assert.Contains("HomeRow(dock, () => Open(PanelPage.Screens, ns))", code);
+            Assert.Contains("() => Open(PanelPage.Leds, ns)", code);
+            Assert.Contains("HomeRow(dock, () => Open(PanelPage.Matrix, id))", code);
+            Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
+            Assert.Contains("open.Click += (sender, args) => Go(page);", code);
+            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); ShowAddScreen(); })", code);
+            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));", code);
+            Assert.Contains("PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace)", code);
+            Assert.Contains("Installed = facts == null ? null : facts.Installed,", code);
+            Assert.Contains("HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens)", code);
+            Assert.Contains("HomeCard(PanelPage.Leds, HomeStripRows(strips, dim), PanelLeds.NoStrips)", code);
+            Assert.Contains("PanelMatrix.NoPanels)", code);
+        }
+
+        /// <summary>The empty rig is the add tile with its sentence, in place of Right now and the quick
+        /// controls, which have nothing to show or act on. Only an issue the headline counts (an update, the
+        /// one kind an empty rig can have) is drawn above it, so the count is never over no rows.</summary>
+        [Fact]
+        public void The_empty_rig_stands_in_place_of_right_now_and_the_quick_controls()
+        {
+            var code = PageCode();
+            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention)); if (PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count)) { sections.Add(HomeEmptyRig()); } else { sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow)); sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls)); }", code);
+            Assert.Contains("Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize)", code);
+            Assert.Contains("new Thickness(0, PanelHome.EmptyRigGap, 0, 0)", code);
+        }
+
+        /// <summary>The presses sit beside their text and the quick controls side by side only on TwoColumns,
+        /// never on !Narrow; a stacked press hangs its row's icon from the top.</summary>
+        [Fact]
+        public void The_page_asks_TwoColumns_for_columns()
+        {
+            var code = PageCode();
+            Assert.Contains("var beside = PanelHome.PressBeside(TwoColumns);", code);
+            Assert.Contains("var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;", code);
+            Assert.Contains("var beside = TwoColumns;", code);
             Assert.DoesNotContain("!Narrow", code);
             Assert.DoesNotContain("RefreshSidebar();", code);
+        }
+
+        /// <summary>A long name trims before the size after it is cut, and a line with nothing to say takes its
+        /// gap with it.</summary>
+        [Fact]
+        public void A_long_name_trims_before_its_size_and_an_empty_line_takes_its_gap()
+        {
+            var code = PageCode();
+            Assert.Contains("var dock = new DockPanel { LastChildFill = true, HorizontalAlignment = HorizontalAlignment.Left };", code);
+            Assert.Contains("DockPanel.SetDock(figure, Dock.Right);", code);
+            Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
+            Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
+            Assert.Contains("text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;", code);
         }
     }
 }

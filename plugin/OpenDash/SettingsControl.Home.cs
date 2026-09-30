@@ -4,8 +4,9 @@
 //
 // This file only draws. Every word, number and rule is PanelHome's (and PanelAttention's), where
 // PanelHomeTests holds it. What needs fixing is asked of SimHub on Go and on "Check again"
-// (SettingsControl.Status.cs), never on the tick; the tick only repaints the strips from the car's own run,
-// which is a property the plugin already holds.
+// (SettingsControl.Status.cs), never on the tick. The tick repaints the strips from the car's own run, which
+// is a property the plugin already holds, and each screen's line from its live zone pages, which are settings a
+// wheel button writes: both reads, never a call into SimHub.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,10 +28,23 @@ namespace OpenDashPlugin
             head.Children.Add(eyebrow);
             head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));
 
+            var screens = Settings.RigScreens();
+            var strips = Settings.LedBarList();
+            var matrices = Settings.MatrixPanels().ToList();
+            // An empty rig's state stands in place of Right now and the quick controls, which have nothing to
+            // show or act on. What needs fixing stays: an empty rig can still wait on an update, and the
+            // headline counts it, so a count over no rows would be a number nobody can read.
             var sections = new List<FrameworkElement>();
             if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));
-            sections.Add(Ui.Anchor(HomeRightNow(), PanelHome.AnchorRightNow));
-            sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
+            if (PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count))
+            {
+                sections.Add(HomeEmptyRig());
+            }
+            else
+            {
+                sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow));
+                sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
+            }
 
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);
@@ -64,9 +78,12 @@ namespace OpenDashPlugin
 
         private Border HomeIssueRow(PanelIssue issue)
         {
-            // A row with steps hangs from its top, as the artboard's second row does; a one-line row is centred.
+            // A row with steps hangs from its top, as the artboard's second row does, and so does one whose press
+            // is stacked under its text, whose icon would otherwise sit beside the press. A one-line row with its
+            // press beside it is centred on its title and detail.
             var hasSteps = issue.Steps.Count > 0;
-            var align = hasSteps ? VerticalAlignment.Top : VerticalAlignment.Center;
+            var beside = PanelHome.PressBeside(TwoColumns);
+            var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;
 
             var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize);
             icon.HorizontalAlignment = HorizontalAlignment.Center;
@@ -105,7 +122,7 @@ namespace OpenDashPlugin
             var dock = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(well, Dock.Left);
             dock.Children.Add(well);
-            if (PanelHome.PressBeside(TwoColumns))
+            if (beside)
             {
                 press.VerticalAlignment = align;
                 press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0);
@@ -130,6 +147,7 @@ namespace OpenDashPlugin
             switch (PanelHome.Press(issue))
             {
                 case HomePress.CheckAgain:
+                    // After the redraw, which clears the lines; said from what SimHub answered the second time.
                     CheckAgain();
                     Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject)));
                     return;
@@ -153,36 +171,29 @@ namespace OpenDashPlugin
 
         // --- Right now -----------------------------------------------------------------------------------------
 
-        /// <summary>One card per kind of device, each listing every device of that kind in rig order, or the
-        /// empty rig's card alone when there is nothing at all.</summary>
-        private FrameworkElement HomeRightNow()
+        /// <summary>One card per kind of device, each listing every device of that kind in rig order.</summary>
+        private FrameworkElement HomeRightNow(IReadOnlyList<ScreenInstance> screens, IReadOnlyList<LedBar> strips, IList<int> matrices)
         {
-            var screens = Settings.RigScreens();
-            var strips = Settings.LedBarList();
-            var matrices = Settings.MatrixPanels().ToList();
-            if (PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count))
-                return PageSection(PanelHome.RightNowTitle, HomeEmptyRig());
-
             var dim = PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);
             var grid = Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax,
-                HomeCard(PanelPage.Screens, screens.Select(HomeScreenRow).ToList(), PanelScreens.NoScreens),
+                HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens),
                 HomeCard(PanelPage.Leds, HomeStripRows(strips, dim), PanelLeds.NoStrips),
                 HomeCard(PanelPage.Matrix, matrices.Select(m => HomeMatrixRow(m, dim)).ToList(), PanelMatrix.NoPanels));
             return PageSection(PanelHome.RightNowTitle, grid);
         }
 
-        /// <summary>The rig's first minute: the Screens page's own empty state and the press that goes there.</summary>
+        /// <summary>The rig's first minute, as the Screens page draws it: the add tile, as wide as a Right now
+        /// card, and the sentence under it. The tile goes to Screens and opens its Add sheet there.</summary>
         private FrameworkElement HomeEmptyRig()
         {
-            var title = Ui.Text(PanelScreens.NoScreens, PanelShell.RowTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
+            var tile = Ui.DashedAddCard(PanelAddScreen.SectionTitle, () =>
+            {
+                Go(PanelPage.Screens);
+                ShowAddScreen();
+            });
             var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize);
-            line.Margin = new Thickness(0, PanelHome.DetailGap, 0, 0);
-            var open = Ui.Button(PanelHome.OpenScreens, PanelButtonKind.Primary);
-            open.HorizontalAlignment = HorizontalAlignment.Left;
-            open.Margin = new Thickness(0, PanelHome.StepsGap + 4, 0, 0);
-            open.Click += (sender, args) => Go(PanelPage.Screens);
-            var stack = Ui.VStack(0, title, line, open);
-            return Ui.CardBox(stack, PanelHome.IssuePaddingX);
+            line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0);
+            return Ui.VStack(0, Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax, tile), line);
         }
 
         /// <summary>A card: the page's name and an Open link over its rows, or over the page's own empty state.</summary>
@@ -217,21 +228,70 @@ namespace OpenDashPlugin
             return Ui.CardBox(stack, 0);
         }
 
+        /// <summary>A screen on the Home card, and what its row needs to repaint its line on the tick.</summary>
+        private sealed class HomeScreen
+        {
+            public string Namespace;
+            public bool? Installed;
+            public bool Restart;
+            public TextBlock Line;
+            public Ellipse Dot;
+            public string Painted;
+        }
+
+        /// <summary>The screens, each with a line that follows its live zone pages once a second: a wheel's
+        /// zone press writes them without a word to the panel.</summary>
+        private IList<Button> HomeScreenRows(IReadOnlyList<ScreenInstance> screens)
+        {
+            var rows = new List<Button>();
+            var shown = new List<HomeScreen>();
+            foreach (var screen in screens)
+            {
+                if (screen == null) continue;
+                var row = HomeScreenRow(screen);
+                shown.Add(row.Key);
+                rows.Add(row.Value);
+            }
+            if (shown.Count > 0) OnTick(() => { foreach (var screen in shown) HomePaintScreen(screen); });
+            return rows;
+        }
+
         /// <summary>A screen: its name and size, what it shows now (or what SimHub is missing), and its state.</summary>
-        private Button HomeScreenRow(ScreenInstance screen)
+        private KeyValuePair<HomeScreen, Button> HomeScreenRow(ScreenInstance screen)
         {
             var facts = ScreenFacts(screen.Namespace);
             var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace);
-            var line = PanelHome.ScreenLine(Settings, screen, facts == null ? null : facts.Installed, restart);
+            var row = new HomeScreen
+            {
+                Namespace = screen.Namespace,
+                Installed = facts == null ? null : facts.Installed,
+                Restart = restart,
+                Line = HomeLineText(false),
+                Dot = HomeDot(null),
+            };
+            HomePaintScreen(row);
 
-            var dot = HomeDot(line.DotHex);
-            var text = Ui.VStack(0, HomeNameLine(screen.Name, PanelHome.ScreenSize(screen)), HomeLineText(line));
+            var text = Ui.VStack(0, HomeNameLine(screen.Name, PanelHome.ScreenSize(screen)), row.Line);
             var dock = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(dot, Dock.Right);
-            dock.Children.Add(dot);
+            DockPanel.SetDock(row.Dot, Dock.Right);
+            dock.Children.Add(row.Dot);
             dock.Children.Add(text);
             var ns = screen.Namespace;
-            return HomeRow(dock, () => Open(PanelPage.Screens, ns));
+            return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, () => Open(PanelPage.Screens, ns)));
+        }
+
+        /// <summary>Draws a screen's line from its settings as they are now, with the facts the last Go read,
+        /// and only when the text or its ink moved.</summary>
+        private void HomePaintScreen(HomeScreen row)
+        {
+            var screen = Settings.ScreenByNamespace(row.Namespace);
+            if (screen == null) return;
+            var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);
+            var painted = line.Text + "|" + line.TextHex + "|" + line.DotHex;
+            if (painted == row.Painted) return;
+            row.Painted = painted;
+            HomeSetLine(row.Line, line);
+            HomeSetDot(row.Dot, line.DotHex);
         }
 
         /// <summary>A strip on the Home card, and what its row needs to repaint itself on the tick.</summary>
@@ -240,11 +300,11 @@ namespace OpenDashPlugin
             public LedBar Bar;
             public int Ends;
             public int Centre;
-            public double Dim;
-            public Border Host;
+            public Border Picture;
             public TextBlock Line;
             public Ellipse Dot;
-            public string Painted;
+            public string PaintedRun;
+            public string PaintedLine;
         }
 
         /// <summary>
@@ -264,12 +324,12 @@ namespace OpenDashPlugin
                     Bar = bar,
                     Ends = span[0],
                     Centre = span[1],
-                    Dim = dim,
-                    Host = new Border { HorizontalAlignment = HorizontalAlignment.Left },
-                    Line = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary),
+                    Line = HomeLineText(true),
                     Dot = HomeDot(null),
                 };
-                strip.Line.TextTrimming = TextTrimming.CharacterEllipsis;
+                // The picture is built once, dark, and the tick sets its LEDs in place.
+                strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);
+                strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);
                 HomePaintStrip(strip);
                 live.Add(strip);
 
@@ -287,12 +347,22 @@ namespace OpenDashPlugin
                     top.Children.Add(meta);
                 }
                 var name = Ui.Text(bar.Name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
-                name.TextTrimming = TextTrimming.CharacterEllipsis;
+                name.TextWrapping = TextWrapping.Wrap;
                 name.VerticalAlignment = VerticalAlignment.Center;
                 top.Children.Add(name);
 
+                // Wider strips than the card shrink to it rather than spilling out of it.
+                var host = new Viewbox
+                {
+                    Stretch = Stretch.Uniform,
+                    StretchDirection = StretchDirection.DownOnly,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0),
+                    Child = strip.Picture,
+                };
+                // The line carries its own gap, so a line with nothing to say takes its gap with it.
                 var ns = bar.Namespace;
-                rows.Add(HomeRow(Ui.VStack(PanelHome.StripRowGap, top, strip.Host, strip.Line), () => Open(PanelPage.Leds, ns)));
+                rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));
             }
             if (live.Count > 0) OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });
             return rows;
@@ -310,22 +380,36 @@ namespace OpenDashPlugin
             var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);
             var run = live ? cars.Run(strip.Centre) : null;
             var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected);
-            var painted = (run ?? string.Empty) + "|" + line.Text + "|" + line.TextHex + "|" + line.DotHex;
-            if (painted == strip.Painted) return;
-            strip.Painted = painted;
-
-            // Wider strips than the card shrink to it rather than spilling out of it.
-            strip.Host.Child = new Viewbox
+            var runKey = run ?? string.Empty;
+            if (runKey != strip.PaintedRun)
             {
-                Stretch = Stretch.Uniform,
-                StretchDirection = StretchDirection.DownOnly,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Child = Ui.Strip(PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre), StripStyle.Home, strip.Dim),
-            };
-            strip.Line.Text = line.Text;
-            strip.Line.Foreground = Ui.Brush(line.TextHex);
-            strip.Line.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+                strip.PaintedRun = runKey;
+                HomeRelight(strip.Picture, PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre), StripStyle.Home.UnlitHex);
+            }
+            var lineKey = line.Text + "|" + line.TextHex + "|" + line.DotHex;
+            if (lineKey == strip.PaintedLine) return;
+            strip.PaintedLine = lineKey;
+            HomeSetLine(strip.Line, line);
             HomeSetDot(strip.Dot, line.DotHex);
+        }
+
+        /// <summary>Sets each LED of a picture Ui.Strip drew to a frame of the same shape, in place: the row,
+        /// its groups, and a Border per LED. A frame of another shape leaves the picture as it was.</summary>
+        private static void HomeRelight(Border picture, string[][] frame, string unlitHex)
+        {
+            var row = picture == null ? null : picture.Child as Panel;
+            if (row == null || frame == null || row.Children.Count != frame.Length) return;
+            for (var g = 0; g < frame.Length; g++)
+            {
+                var group = row.Children[g] as Panel;
+                var leds = frame[g] ?? new string[0];
+                if (group == null || group.Children.Count != leds.Length) return;
+                for (var i = 0; i < leds.Length; i++)
+                {
+                    var led = group.Children[i] as Border;
+                    if (led != null) led.Background = Ui.Brush(leds[i] ?? unlitHex);
+                }
+            }
         }
 
         /// <summary>A matrix: its idle glyph (dark when no device shows it), its name and its content number.</summary>
@@ -352,8 +436,10 @@ namespace OpenDashPlugin
             picture.Margin = new Thickness(0, 0, PanelHome.RowGap, 0);
 
             var name = Ui.Text(title, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
-            name.TextTrimming = TextTrimming.CharacterEllipsis;
-            var text = Ui.VStack(0, name, HomeLineText(line));
+            name.TextWrapping = TextWrapping.Wrap;
+            var lineText = HomeLineText(true);
+            HomeSetLine(lineText, line);
+            var text = Ui.VStack(0, name, lineText);
             text.VerticalAlignment = VerticalAlignment.Center;
             var dot = HomeDot(line.DotHex);
 
@@ -367,34 +453,47 @@ namespace OpenDashPlugin
             return HomeRow(dock, () => Open(PanelPage.Matrix, id));
         }
 
-        /// <summary>A name with its figure after it, as the Screens rows draw "Main dash 1280 × 480".</summary>
+        /// <summary>A name with its figure after it, as the Screens rows draw "Main dash 1280 × 480". The figure
+        /// is docked first, so a long name trims, with its whole text on hover, before the size is cut.</summary>
         private static FrameworkElement HomeNameLine(string name, string meta)
         {
-            var dock = new DockPanel { LastChildFill = false };
-            var title = Ui.Text(name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
-            title.TextTrimming = TextTrimming.CharacterEllipsis;
-            title.VerticalAlignment = VerticalAlignment.Center;
-            DockPanel.SetDock(title, Dock.Left);
-            dock.Children.Add(title);
+            var dock = new DockPanel { LastChildFill = true, HorizontalAlignment = HorizontalAlignment.Left };
             if (!string.IsNullOrEmpty(meta))
             {
                 var figure = Ui.Text(meta, PanelHome.MetaSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
                 figure.VerticalAlignment = VerticalAlignment.Center;
                 figure.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0);
-                DockPanel.SetDock(figure, Dock.Left);
+                DockPanel.SetDock(figure, Dock.Right);
                 dock.Children.Add(figure);
             }
+            var title = Ui.Text(name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
+            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            title.VerticalAlignment = VerticalAlignment.Center;
+            if (!string.IsNullOrEmpty(name)) title.ToolTip = name;
+            dock.Children.Add(title);
             return dock;
         }
 
-        /// <summary>A device's line under its name, one line and trimmed.</summary>
-        private static TextBlock HomeLineText(HomeLine line)
+        /// <summary>A device's line under its name, 3 under it: a screen's on one line, trimmed with its whole
+        /// text on hover as the artboard's now line is, and a strip's or a matrix's wrapped. HomeSetLine fills it.</summary>
+        private static TextBlock HomeLineText(bool wrap)
         {
-            var text = Ui.Text(line.Text, PanelHome.LineSize, FontWeights.Normal, line.TextHex);
-            text.TextTrimming = TextTrimming.CharacterEllipsis;
+            var text = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary);
+            if (wrap) text.TextWrapping = TextWrapping.Wrap;
+            else text.TextTrimming = TextTrimming.CharacterEllipsis;
             text.Margin = new Thickness(0, PanelHome.LineGap, 0, 0);
-            if (line.Text.Length == 0) text.Visibility = Visibility.Collapsed;
+            text.Visibility = Visibility.Collapsed;
             return text;
+        }
+
+        /// <summary>Says a line: its text and ink, its whole text on hover where it is trimmed, and no room at
+        /// all, gap included, when it has nothing to say.</summary>
+        private static void HomeSetLine(TextBlock text, HomeLine line)
+        {
+            text.Text = line.Text;
+            text.Foreground = Ui.Brush(line.TextHex);
+            text.ToolTip = text.TextTrimming == TextTrimming.None || line.Text.Length == 0 ? null : line.Text;
+            text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
 
         /// <summary>The state dot, which keeps its room when there is nothing to say so the rows line up.</summary>
@@ -478,11 +577,17 @@ namespace OpenDashPlugin
             {
                 if (Settings.LightsNightMode)
                 {
-                    if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange();
+                    if (v == Settings.LightsNightBrightness) return;
+                    Settings.LightsNightBrightness = v;
+                    Save();
+                    ShowLightingChange();
                 }
                 else
                 {
-                    if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange();
+                    if (v == Settings.LightsBrightness) return;
+                    Settings.LightsBrightness = v;
+                    Save();
+                    ShowLightingChange();
                 }
             }, v => numeral.Text = PanelHome.Percent(v), false);
             var label = Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn));

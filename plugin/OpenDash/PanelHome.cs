@@ -62,9 +62,6 @@ namespace OpenDashPlugin
         /// <summary>The link in each Right now card's head, to that card's page.</summary>
         public const string OpenLink = "Open";
 
-        /// <summary>The press under the empty rig's sentence.</summary>
-        public static readonly string OpenScreens = PanelAttention.Open(PanelScreens.Title);
-
         public const string AnchorAttention = "home.attention";
         public const string AnchorRightNow = "home.right-now";
         public const string AnchorQuickControls = "home.quick-controls";
@@ -111,6 +108,10 @@ namespace OpenDashPlugin
 
         /// <summary>A strip's row stacks its name, its picture and its line, 10 apart.</summary>
         public const double StripRowGap = 10;
+
+        /// <summary>The empty rig, which the artboard does not draw: the Screens page's add tile in a column as
+        /// wide as a Right now card, and the sentence 12 under it.</summary>
+        public const double EmptyRigGap = 12;
 
         /// <summary>The quick controls' cells: padded 16 by 18, 12 between the eyebrow and the control, and
         /// sharing the card 1.6 : 1 : 1.2 where they sit side by side.</summary>
@@ -460,7 +461,7 @@ namespace OpenDashPlugin
             return text.Length == 0 || text.EndsWith(".", StringComparison.Ordinal) ? text : text + ".";
         }
 
-        /// <summary>Whether the rig has nothing at all, in which case Right now is the empty rig's card alone.</summary>
+        /// <summary>Whether the rig has nothing at all, in which case the empty rig stands in place of Right now and the quick controls.</summary>
         public static bool RigEmpty(int screens, int strips, int matrices)
         {
             return screens + strips + matrices == 0;
