@@ -7,7 +7,8 @@
 // gives it, with its own name column dropped. Around it the page draws what the artboard adds: the press each action
 // answers to, a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
 // things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
-// cleared, and are hidden when SimHub's mappings cannot be read. PanelShortcuts decides the rows, the words and
+// cleared, here or anywhere SimHub reports it (ShortcutsFollowSimHub), and are hidden when SimHub's mappings
+// cannot be read. PanelShortcuts decides the rows, the words and
 // the geometry; this file only draws. The Shortcuts page agent owns it.
 //
 // Exactly one hold binder per kind of screen, each captioned with its glance sentence: PanelCopyTests counts
@@ -134,17 +135,94 @@ namespace OpenDashPlugin
                     if (!dropped) evaluate();
                 }));
             };
+            var editors = new List<ControlsEditor>();
             foreach (var row in groups.SelectMany(group => group.Rows))
             {
                 var editor = row.Editor as ControlsEditor;
                 if (editor != null) ShortcutsWatch(editor, changed);
+                if (editor != null) editors.Add(editor);
             }
             evaluate();
 
             var sections = new List<UIElement> { header, banner };
             sections.AddRange(groups.Select(group => (UIElement)group.Card));
             sections.Add(empty);
-            return ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));
+            var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));
+            ShortcutsFollowSimHub(page, editors, changed, () => dropped);
+            return page;
+        }
+
+        /// <summary>
+        /// Keeps every editor's bindings SimHub's own. An editor's model holds a copy of SimHub's list, taken
+        /// when it loads, and SimHub's picker can delete another action's mapping from that list alone
+        /// (ControlPicker's Delete on an "already used" binding): SimHub 9.12.6 wrote the handler that would
+        /// refresh the editors (ControlsEditor.PluginManager_InputMappingsChanged) but only ever unsubscribes
+        /// it. So whenever SimHub reports a change, once it has settled, each editor's model is brought
+        /// back into line with SimHub's list in place, and the page reads again: the counts, the filter and
+        /// the clash line stop naming a binding SimHub no longer has, and SimHub's editor stops drawing it.
+        /// </summary>
+        /// <remarks>
+        /// In place rather than a new model, so that the watches on the model (this page's, and
+        /// HoldWhilePressed's on a glance) see a mapping come or go as the collection's own change. After the
+        /// change has settled, because SimHub's Add writes its list first and the editor's copy after it: a
+        /// reconcile in between would put the new mapping in the copy twice. The event is static and SimHub's
+        /// for the session, so it is held only while the page is on screen and let go of when the build is
+        /// dropped, as the shell holds its own.
+        /// </remarks>
+        private void ShortcutsFollowSimHub(FrameworkElement page, IList<ControlsEditor> editors, Action changed, Func<bool> dropped)
+        {
+            var pending = false;
+            EventHandler mappingsChanged = null;
+            mappingsChanged = (sender, args) =>
+            {
+                if (pending || dropped()) return;
+                pending = true;
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    pending = false;
+                    if (dropped()) return;
+                    foreach (var editor in editors) ShortcutsReconcile(editor);
+                    changed();
+                }));
+            };
+            Action release = () => PluginManager.InputMappingsChanged -= mappingsChanged;
+            page.Loaded += (sender, args) =>
+            {
+                release();
+                if (!dropped()) PluginManager.InputMappingsChanged += mappingsChanged;
+            };
+            page.Unloaded += (sender, args) => release();
+            OnDrop(release);
+        }
+
+        /// <summary>
+        /// Brings one editor's model back into line with SimHub's list, in place: what SimHub no longer has is
+        /// removed, and what it has that the model lacks is added. SimHub's list is internal to it, so it is
+        /// read the way the shell reads it, through a new ControlsEditorModel, whose Triggers are the very
+        /// mappings in that list; they are compared as objects, as SimHub's own Remove compares them.
+        /// </summary>
+        private static void ShortcutsReconcile(ControlsEditor editor)
+        {
+            try
+            {
+                var model = editor.Model;
+                if (model == null || model.Triggers == null || string.IsNullOrEmpty(editor.ActionName)) return;
+                if (PluginManager.GetInstance() == null) return;
+                var simhub = new ControlsEditorModel(editor.ActionName, null).Triggers;
+                if (simhub == null) return;
+                foreach (var gone in model.Triggers.Where(mapping => !simhub.Any(kept => ReferenceEquals(kept, mapping))).ToList())
+                {
+                    model.Triggers.Remove(gone);
+                }
+                foreach (var added in simhub.Where(mapping => !model.Triggers.Any(held => ReferenceEquals(held, mapping))).ToList())
+                {
+                    model.Triggers.Add(added);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not read SimHub's bindings for " + editor.ActionName + " again: " + ex.Message);
+            }
         }
 
         /// <summary>

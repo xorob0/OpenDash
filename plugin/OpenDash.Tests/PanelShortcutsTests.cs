@@ -667,8 +667,38 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("args.PropertyName != \"Triggers\"", Between(body, "modelChanged = (sender, args) =>", "};"));
             Assert.Contains("args.PropertyName == \"Model\") attach();", body);
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
-            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "return ShortcutsTitleTagged(");
-            Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);", page);
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
+            Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);\s*if \(editor != null\) editors\.Add\(editor\);", page);
+        }
+
+        /// <summary>
+        /// Every editor follows SimHub's own list, not only what it was given when it loaded: SimHub's picker
+        /// can delete another action's mapping from that list alone, and SimHub 9.12.6's editor never hears of
+        /// it. On each change SimHub reports, once settled, each model is brought back into line in place and
+        /// the page reads again; the static event is held only while the page is on screen.
+        /// </summary>
+        [Fact]
+        public void The_page_reads_again_whenever_simhub_reports_a_mapping_change()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.Contains("ShortcutsFollowSimHub(page, editors, changed, () => dropped);", code);
+            var follow = Between(code, "private void ShortcutsFollowSimHub(", "private static void ShortcutsReconcile(");
+            Assert.Matches(@"Dispatcher\.BeginInvoke\(DispatcherPriority\.Background, new Action\(\(\) =>\s*\{\s*pending = false;\s*if \(dropped\(\)\) return;\s*foreach \(var editor in editors\) ShortcutsReconcile\(editor\);\s*changed\(\);", follow);
+            Assert.Contains("Action release = () => PluginManager.InputMappingsChanged -= mappingsChanged;", follow);
+            Assert.Matches(@"page\.Loaded \+= \(sender, args\) =>\s*\{\s*release\(\);\s*if \(!dropped\(\)\) PluginManager\.InputMappingsChanged \+= mappingsChanged;", follow);
+            Assert.Contains("page.Unloaded += (sender, args) => release();", follow);
+            Assert.Contains("OnDrop(release);", follow);
+            Assert.Single(Regex.Matches(code, @"InputMappingsChanged \+="));
+
+            var reconcile = Between(code, "private static void ShortcutsReconcile(", "catch (Exception ex)");
+            Assert.Contains("if (PluginManager.GetInstance() == null) return;", reconcile);
+            Assert.Contains("var simhub = new ControlsEditorModel(editor.ActionName, null).Triggers;", reconcile);
+            Assert.Contains("model.Triggers.Where(mapping => !simhub.Any(kept => ReferenceEquals(kept, mapping))).ToList()", reconcile);
+            Assert.Contains("model.Triggers.Remove(gone);", reconcile);
+            Assert.Contains("simhub.Where(mapping => !model.Triggers.Any(held => ReferenceEquals(held, mapping))).ToList()", reconcile);
+            Assert.Contains("model.Triggers.Add(added);", reconcile);
+            // In place: never a new model, which would leave HoldWhilePressed watching the old one.
+            Assert.DoesNotContain("ModelProperty", code);
         }
 
         private static string Between(string text, string from, string to)
@@ -768,7 +798,7 @@ namespace OpenDashPlugin.Tests
             // the header's two columns only where TwoColumns says, and every anchor id AnchorTable pins drawn.
             Assert.Contains("Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth)", code);
             // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's does.
-            Assert.Contains("return ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
+            Assert.Contains("var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
             Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
             Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);", code);
