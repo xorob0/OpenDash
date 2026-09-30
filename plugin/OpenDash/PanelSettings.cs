@@ -42,9 +42,12 @@ namespace OpenDashPlugin
         public string Unit { get; private set; }
 
         /// <summary>What a greyed row's box holds as its value, in the field's own ink and faded with the row,
-        /// so the row reads as the setting it will be. Not a placeholder: the artboard sets it as the value.</summary>
+        /// so the row reads as the setting it will be. Not a placeholder: the artboard sets it as the value.
+        /// Null where the artboard has none, and the box shows PanelSettings.NoValueHint.</summary>
         public string Example { get; private set; }
 
+        /// <summary>Whether a word stands before the box. Pit window open, an event, has none, and its box is
+        /// still drawn, empty, as the artboard draws it.</summary>
         public bool HasThreshold { get { return !string.IsNullOrEmpty(Op); } }
 
         public bool Screens { get; private set; }
@@ -194,6 +197,10 @@ namespace OpenDashPlugin
 
         /// <summary>The greyed tyre display's two buttons, 6 apart as the artboard's.</summary>
         public const double TyreButtonGap = 6;
+
+        /// <summary>The placeholder of a greyed box with nothing in it yet, the artboard's dash: the fuel target,
+        /// Pit window open and Hybrid battery low.</summary>
+        public const string NoValueHint = "—";
 
         /// <summary>The fuel target's greyed row (#326) shows the fuel unit; litres when SimHub cannot say.</summary>
         public const string FuelTargetUnitFallback = "L";

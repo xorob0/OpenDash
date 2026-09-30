@@ -528,10 +528,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { true, true, true, true }, PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).Surfaces);
             Assert.Equal(new[] { true, false, false, true }, PanelSettings.Alert(PanelSoon.Incidents.Title).Surfaces);
             Assert.Equal(new[] { true, false, true, false }, PanelSettings.Alert(PanelSoon.HybridBatteryLow.Title).Surfaces);
-            // What a greyed row's box holds, faded with the row: the artboard's values, and nothing where it
-            // draws a dash. The value is the box's text in the field's ink, not a placeholder in the label ink.
+            // What a greyed row's box holds, faded with the row: the artboard's values as the box's text in the
+            // field's ink, and where it has none, the artboard's dash as the placeholder in the label ink. Pit
+            // window open, an event with no word before its box, still draws the box, as the artboard does.
             Assert.Equal(new string[] { null, null, null, "70%", null, "12", null }, PanelSettings.Alerts.Select(a => a.Example));
-            Assert.Contains("when.Add(box ?? SettingsNumberField(alert.Example ?? string.Empty));", Page());
+            Assert.Equal("—", PanelSettings.NoValueHint);
+            var drawn = Page();
+            Assert.Contains("when.Add(box ?? SettingsGreyedBox(alert.Example));", drawn);
+            Assert.Matches(@"if \(example != null\) return SettingsNumberField\(example\);\s*return SettingsHinted\(SettingsNumberField\(string\.Empty\), PanelSettings\.NoValueHint\);", drawn);
+            Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), Ui.Caption(fuelUnit))", drawn);
+            // The box is drawn on every row, outside the word's condition.
+            Assert.Matches(@"if \(alert\.HasThreshold\) when\.Add\(Ui\.Caption\(alert\.Op\)\);\s*when\.Add\(box \?\? SettingsGreyedBox\(alert\.Example\)\);", drawn);
             Assert.Equal(new[] { PanelSoon.TyreWear, PanelSoon.PitWindowOpen, PanelSoon.Incidents, PanelSoon.HybridBatteryLow }.Select(s => s.Title),
                 PanelSettings.Alerts.Where(a => !a.Live).Select(a => a.Title));
             Assert.Null(PanelSettings.Alert("Nothing"));

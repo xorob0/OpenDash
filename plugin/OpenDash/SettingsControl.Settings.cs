@@ -355,6 +355,14 @@ namespace OpenDashPlugin
             return grid;
         }
 
+        /// <summary>A greyed row's box: the artboard's example as its value, in the field's own ink, or empty with
+        /// the artboard's dash as its placeholder where it has none. Only ever inside Ui.Soon.</summary>
+        private static FrameworkElement SettingsGreyedBox(string example)
+        {
+            if (example != null) return SettingsNumberField(example);
+            return SettingsHinted(SettingsNumberField(string.Empty), PanelSettings.NoValueHint);
+        }
+
         /// <summary>
         /// A threshold where 0 is the unit's default: empty while it is, with the default as its placeholder,
         /// and committed on Enter or on leaving it (PanelSettings.ParseThreshold), only when it moved.
@@ -460,7 +468,7 @@ namespace OpenDashPlugin
             });
 
             var fuelUnit = PanelSettings.FuelUnit(units[3]) ?? PanelSettings.FuelTargetUnitFallback;
-            var fuelTarget = Ui.HStack(PanelSettings.FuelTargetGap, SettingsNumberField(string.Empty), Ui.Caption(fuelUnit));
+            var fuelTarget = Ui.HStack(PanelSettings.FuelTargetGap, SettingsGreyedBox(null), Ui.Caption(fuelUnit));
             var tyres = Ui.HStack(PanelSettings.TyreButtonGap,
                 Ui.Button(PanelSettings.TyreDisplayLabels[0], PanelButtonKind.Outline, PanelButtonSize.Small),
                 Ui.Button(PanelSettings.TyreDisplayLabels[1], PanelButtonKind.Outline, PanelButtonSize.Small));
@@ -642,16 +650,13 @@ namespace OpenDashPlugin
             }
             SettingsAlertCell(grid, row, column++, nameCell, soon, false);
 
+            // Every row draws a box, Pit window open's too, which has no word before it and no unit after, as
+            // the artboard draws it; a greyed row's is disabled inside the row's Soon.
             var when = new List<UIElement>();
-            if (alert.HasThreshold)
-            {
-                when.Add(Ui.Caption(alert.Op));
-                // A greyed row's example is the box's value, in the field's own ink, as the artboard sets it;
-                // the box is disabled inside the row's Soon, so it cannot be edited.
-                when.Add(box ?? SettingsNumberField(alert.Example ?? string.Empty));
-                var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);
-                if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));
-            }
+            if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));
+            when.Add(box ?? SettingsGreyedBox(alert.Example));
+            var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);
+            if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));
             SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);
 
             if (surfaces)
