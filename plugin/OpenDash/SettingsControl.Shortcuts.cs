@@ -1,120 +1,557 @@
-// SettingsControl.Shortcuts.cs: the Shortcuts page -- every wheel button and key in one list, per screen and
-// for the rig.
+// SettingsControl.Shortcuts.cs: the Shortcuts page -- every wheel button and key in one list, a card per
+// screen and one for the rig's lights, drawn to Shortcuts.dc.html.
 //
 // Each binding is SimHub's own ControlsEditor (BuildBinder), so a button is bound here rather than by sending
-// the driver to Controls and events to find an action's name. The #503 foundation gathers what was spread
-// over the old Rig tab's panes: a face's zone buttons and the new "previous page" twins, the three quick
-// glances (face, pit wall, companion), and the rig's own night mode and brightness. The Shortcuts page agent
-// owns this file and rebuilds it to Shortcuts.dc.html.
+// the driver to Controls and events to find an action's name; SimHub draws the binding, its Bind, Change and
+// Clear, and its listening state. Around it the page draws what the artboard adds: the press each action
+// answers to, a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
+// things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
+// cleared, and are hidden when SimHub's mappings cannot be read. PanelShortcuts decides the rows, the words and
+// the geometry; this file only draws. The Shortcuts page agent owns it.
 //
 // Exactly one hold binder per kind of screen, each captioned with its glance sentence: PanelCopyTests counts
 // the call sites, and the caption is what says the binding is corrected to a hold (#435).
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Threading;
+using SimHub.Plugins;
+using SimHub.Plugins.UI;
 
 namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        /// <summary>The filter chosen on Shortcuts, kept for the session so that a rebuild keeps it.</summary>
+        private string shortcutsFilter = PanelShortcuts.FilterAll;
+
+        /// <summary>One row the page drew: its action, SimHub's editor (or the fallback text), the bordered row
+        /// and the element that shows or hides it (a greyed row's Soon wrapper).</summary>
+        private sealed class ShortcutsRowState
+        {
+            public string Action;
+            public FrameworkElement Editor;
+            public Border Row;
+            public FrameworkElement Shown;
+            public bool Bindable;
+            public string Place;
+            public string Does;
+        }
+
+        /// <summary>One card: its rows, the host of its count, and whether a line sits between its header and
+        /// its first row (the companion's paging), which decides whether that row draws its rule.</summary>
+        private sealed class ShortcutsGroupState
+        {
+            public FrameworkElement Card;
+            public StackPanel Body;
+            public Border CountHost;
+            public bool HasLead;
+            public readonly List<ShortcutsRowState> Rows = new List<ShortcutsRowState>();
+        }
+
         private FrameworkElement BuildShortcutsPage(PanelRoute to)
         {
-            var intro = Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth);
-            var screens = new StackPanel { Orientation = Orientation.Vertical };
+            shortcutsFilter = PanelShortcuts.FilterFor(shortcutsFilter, to == null ? null : to.Anchor, true);
+            var stacks = PanelShortcuts.RowStacks(ContentWidth);
+
+            var screens = new List<ShortcutsGroupState>();
             foreach (var screen in Settings.RigScreens())
             {
-                var group = BuildScreenShortcuts(screen);
-                if (group == null) continue;
-                group.Margin = new Thickness(0, screens.Children.Count == 0 ? 0 : PanelShell.SectionGapFor(PanelPage.Shortcuts), 0, 0);
-                screens.Children.Add(group);
+                if (screen == null) continue;
+                if (screen.IsFace) screens.Add(BuildShortcutsFace(screen, stacks));
+                else if (screen.IsPitWall) screens.Add(BuildShortcutsPitWall(screen, stacks));
+                else if (screen.IsCompanion) screens.Add(BuildShortcutsCompanion(screen, stacks));
+                // A round screen cycles nothing, so it has no card.
             }
-            var sections = new List<UIElement> { intro };
-            if (screens.Children.Count > 0) sections.Add(Ui.Anchor(screens, PanelShortcuts.AnchorScreens));
-            sections.Add(Ui.Anchor(BuildRigShortcuts(), PanelShortcuts.AnchorRig));
-            foreach (var item in PanelSoon.For(PanelPage.Shortcuts)) sections.Add(Ui.SoonRow(item, Ui.BindingChip(Ui.NotBound, false, key: true)));
+            var lights = BuildShortcutsLights(stacks);
+            var alerts = BuildShortcutsAlerts(stacks);
+            var groups = screens.Concat(new[] { lights, alerts }).ToList();
+
+            if (screens.Count > 0) Ui.Anchor(screens[0].Card, PanelShortcuts.AnchorScreens);
+            Ui.Anchor(lights.Card, PanelShortcuts.AnchorRig);
+            Ui.Anchor(alerts.Card, PanelShortcuts.AnchorAlerts);
+
+            var banner = new StackPanel { Orientation = Orientation.Vertical };
+            var empty = Ui.Caption(string.Empty, BodyWidth);
+            Action evaluate = null;
+            var filter = BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter, value =>
+            {
+                shortcutsFilter = value;
+                if (evaluate != null) evaluate();
+            }, padding: PanelKit.SegmentedPaddingShortcuts);
+            var header = BuildShortcutsHeader(filter);
+
+            evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);
+
+            // An editor replaces its model when it loads and whenever a binding is made, so a burst of changes
+            // is read once, after it.
+            var pending = false;
+            var dropped = false;
+            OnDrop(() => dropped = true);
+            Action changed = () =>
+            {
+                if (pending || dropped) return;
+                pending = true;
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    pending = false;
+                    if (!dropped) evaluate();
+                }));
+            };
+            foreach (var row in groups.SelectMany(group => group.Rows))
+            {
+                var editor = row.Editor as ControlsEditor;
+                if (editor != null) ShortcutsWatch(editor, changed);
+            }
+            evaluate();
+
+            var sections = new List<UIElement> { header, banner };
+            sections.AddRange(groups.Select(group => (UIElement)group.Card));
+            sections.Add(empty);
             return PageLayout(PanelShortcuts.Title, null, sections.ToArray());
         }
 
-        /// <summary>One screen's bindings, or null for a kind that has none.</summary>
-        private FrameworkElement BuildScreenShortcuts(ScreenInstance screen)
+        /// <summary>
+        /// The line under the title and the filter at its right, sharing a foot as the header's flex-end draws
+        /// them; the filter goes under the line when the page has no room for two columns.
+        /// </summary>
+        private FrameworkElement BuildShortcutsHeader(FrameworkElement filter)
         {
-            if (screen.IsCompanion) return PageSection(screen.Name, BuildCompanionShortcuts(screen));
-            if (screen.IsPitWall) return PageSection(screen.Name, BuildPitWallShortcuts(screen));
-            if (screen.IsFace && screen.FaceSize != null) return PageSection(screen.Name, BuildFaceShortcuts(screen, screen.FaceSize.Value));
-            return null;
+            var caption = Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth);
+            FrameworkElement header;
+            if (TwoColumns)
+            {
+                var grid = new Grid();
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                caption.VerticalAlignment = VerticalAlignment.Bottom;
+                filter.VerticalAlignment = VerticalAlignment.Bottom;
+                filter.HorizontalAlignment = HorizontalAlignment.Right;
+                filter.Margin = new Thickness(PanelShell.RowGap, -PanelShortcuts.FilterRaise, 0, 0);
+                Grid.SetColumn(filter, 1);
+                grid.Children.Add(caption);
+                grid.Children.Add(filter);
+                header = grid;
+            }
+            else
+            {
+                filter.HorizontalAlignment = HorizontalAlignment.Left;
+                filter.Margin = new Thickness(0, PanelShortcuts.FilterGapStacked, 0, 0);
+                header = Ui.VStack(0, caption, filter);
+            }
+            // The caption sits 8 under the title, where PageLayout sets every section the page's gap under the
+            // one before it.
+            header.Margin = new Thickness(0, PanelShortcuts.IntroGap - PanelShell.SectionGapFor(PanelPage.Shortcuts), 0, 0);
+            return header;
         }
 
         /// <summary>
-        /// A face's buttons: each zone's next and previous page, in the order its picture draws the zones, and
-        /// the quick glance held on a button.
+        /// A face's card: each zone's next page in the order its picture draws the zones, each zone's previous
+        /// page, and the quick glance held on a button.
         /// </summary>
         /// <remarks>
         /// Per screen, which is what lets a second face stay still while the one in front of the driver
-        /// cycles (ADR 0017). PanelFacePlan.ZoneOrder is the picture's order; Contract.FaceZoneLetters keeps
-        /// its own, because it indexes the settings.
+        /// cycles (ADR 0017). A face whose size OpenDash does not know still lists every zone, in
+        /// Contract.FaceZoneLetters' order, so that none of its actions goes without a row.
         /// </remarks>
-        private FrameworkElement BuildFaceShortcuts(ScreenInstance screen, Contract.FaceSize face)
+        private ShortcutsGroupState BuildShortcutsFace(ScreenInstance screen, bool stacks)
         {
-            var rows = new List<UIElement>();
-            foreach (var letter in PanelFacePlan.ZoneOrder(face))
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
+            var face = screen.FaceSize;
+            IList<string> order = face != null ? PanelFacePlan.ZoneOrder(face.Value) : Contract.FaceZoneLetters;
+            foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name, order))
             {
-                var zone = PanelFacePlan.ZoneLabel(letter);
-                var next = Contract.CycleZoneAction(screen.Namespace, letter);
-                var back = Contract.CycleZoneBackAction(screen.Namespace, letter);
-                rows.Add(Ui.Anchor(Ui.Row(PanelShortcuts.ZoneRow(zone, true), null,
-                    BuildBinder(next, PanelShortcuts.ZoneBinderName(screen.Name, zone, true))), PanelBindings.Anchor(next)));
-                rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.ZoneRow(zone, false),
-                    BuildBinder(back, PanelShortcuts.ZoneBinderName(screen.Name, zone, false)),
-                    null, Ui.NewTag()), PanelBindings.Anchor(back)));
+                ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, stacks);
             }
-            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
-                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
-            rows.Add(glance);
-            var caption = Ui.Caption(PanelCopy.FaceGlance);
-            caption.Margin = new Thickness(0, 0, 0, 8);
-            rows.Add(caption);
-            return Ui.VStack(0, rows.ToArray());
+            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), stacks);
+            return group;
         }
 
-        /// <summary>A pit wall's one binding: the glance. A key beside the monitor is the likelier gesture,
-        /// since nobody drives a pit wall.</summary>
-        private FrameworkElement BuildPitWallShortcuts(ScreenInstance screen)
+        /// <summary>A pit wall's card: the glance and nothing else. A key beside the monitor is the likelier
+        /// gesture, since nobody drives a pit wall.</summary>
+        private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, bool stacks)
         {
-            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
-                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
-            var caption = Ui.Caption(PanelCopy.PitWallGlance);
-            caption.Margin = new Thickness(0, 0, 0, 8);
-            return Ui.VStack(0, glance, caption);
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
+            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), stacks);
+            return group;
         }
 
-        /// <summary>A companion's one binding, the glance: a tap pages it, and that belongs to SimHub
-        /// (PanelCopy.CompanionPaging, on the companion's own pane).</summary>
-        private FrameworkElement BuildCompanionShortcuts(ScreenInstance screen)
+        /// <summary>A companion's card: where SimHub binds its paging, which is not OpenDash's to bind, and
+        /// the glance, which is.</summary>
+        private ShortcutsGroupState BuildShortcutsCompanion(ScreenInstance screen, bool stacks)
         {
-            var glanceAction = Contract.HoldQuickGlanceActionFor(screen.Namespace);
-            var glance = Ui.Anchor(Ui.Row(PanelShortcuts.QuickGlanceTitle, null,
-                BuildBinder(glanceAction, screen.Name + " · quick glance", hold: true)), PanelBindings.Anchor(glanceAction));
-            var caption = Ui.Caption(PanelCopy.CompanionGlance);
-            caption.Margin = new Thickness(0, 0, 0, 8);
-            return Ui.VStack(0, glance, caption);
-        }
-
-        /// <summary>The rig's own actions: night mode, and the brightness up and down (Contract.RigActionNames).</summary>
-        private FrameworkElement BuildRigShortcuts()
-        {
-            var rows = new List<UIElement>();
-            foreach (var action in Contract.RigActionNames())
+            var crumbs = Ui.Crumbs(PanelShortcuts.PagingCrumbs(screen.Name));
+            crumbs.Margin = new Thickness(0, PanelShortcuts.LeadGap, 0, 0);
+            var lead = new Border
             {
-                var label = PanelShortcuts.RigActionLabel(action);
-                var row = action == Contract.ToggleNightModeAction
-                    ? Ui.Row(label, null, BuildBinder(action, label))
-                    : Ui.SettingRow(label, BuildBinder(action, label), null, Ui.NewTag());
-                rows.Add(Ui.Anchor(row, PanelBindings.Anchor(action)));
+                Padding = new Thickness(PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY, PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY),
+                Child = Ui.VStack(0, Ui.Caption(PanelCopy.CompanionPaging, BodyWidth), crumbs),
+            };
+            var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), lead);
+            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), stacks);
+            return group;
+        }
+
+        /// <summary>The rig's own actions (Contract.RigActionNames), and the Rig test, which is coming.</summary>
+        private ShortcutsGroupState BuildShortcutsLights(bool stacks)
+        {
+            var group = ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);
+            foreach (var binding in PanelShortcuts.LightsBindings())
+            {
+                ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, stacks);
             }
-            return PageSection(PanelShortcuts.RigGroupTitle, rows.ToArray());
+            ShortcutsSoon(group, PanelSoon.RigTest, stacks);
+            return group;
+        }
+
+        private ShortcutsGroupState BuildShortcutsAlerts(bool stacks)
+        {
+            var group = ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);
+            ShortcutsSoon(group, PanelSoon.AlertDismissal, stacks);
+            return group;
+        }
+
+        /// <summary>The artboard's .card with its .gh header: the name, the line beside it, and the count on the
+        /// right, over a rule; then the lead line, if any, and the rows.</summary>
+        private static ShortcutsGroupState ShortcutsCard(string title, string detail, FrameworkElement lead)
+        {
+            var name = Ui.Text(title ?? string.Empty, PanelShortcuts.GroupTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            name.VerticalAlignment = VerticalAlignment.Center;
+            var titleLine = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            titleLine.Children.Add(name);
+            if (!string.IsNullOrEmpty(detail))
+            {
+                var line = Ui.Text(detail, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+                line.VerticalAlignment = VerticalAlignment.Center;
+                line.Margin = new Thickness(PanelShortcuts.GroupDetailGap, 0, 0, 0);
+                titleLine.Children.Add(line);
+            }
+            var count = new Border { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0) };
+            var head = new Grid();
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(count, 1);
+            head.Children.Add(titleLine);
+            head.Children.Add(count);
+
+            var body = new StackPanel { Orientation = Orientation.Vertical };
+            body.Children.Add(new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
+                Padding = new Thickness(PanelShortcuts.HeaderPaddingX, PanelShortcuts.HeaderPaddingY, PanelShortcuts.HeaderPaddingX, PanelShortcuts.HeaderPaddingY),
+                Child = head,
+            });
+            if (lead != null) body.Children.Add(lead);
+            return new ShortcutsGroupState { Card = Ui.CardBox(body, 0), Body = body, CountHost = count, HasLead = lead != null };
+        }
+
+        /// <summary>A live row: the binding's name and its New tag, the press, SimHub's editor, and the glance's
+        /// caption under the name. Anchored at the binding, where every other page's chip lands.</summary>
+        private static void ShortcutsBinding(ShortcutsGroupState group, string place, PanelShortcuts.Binding binding, FrameworkElement editor, FrameworkElement caption, bool stacks)
+        {
+            var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];
+            var row = ShortcutsRow(binding.Label, binding.Press, editor, stacks, caption, tags);
+            Ui.Anchor(row, PanelBindings.Anchor(binding.Action));
+            group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Bindable = true, Place = place, Does = binding.Does });
+            group.Body.Children.Add(row);
+        }
+
+        /// <summary>A greyed row: the registry's entry, tapped, and a Not bound key that nothing answers.</summary>
+        private static void ShortcutsSoon(ShortcutsGroupState group, SoonItem item, bool stacks)
+        {
+            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, Ui.BindingChip(Ui.NotBound, false, key: true), stacks, null);
+            var shown = Ui.Soon(row, item);
+            group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Bindable = false });
+            group.Body.Children.Add(shown);
+        }
+
+        /// <summary>
+        /// The artboard's .r: the name with its tags, the press in a 90 px column and the binder after it, 16
+        /// apart, padded 10 by 16 under a rule. Where the content cannot give the name room beside a 260 px
+        /// binder, the binder goes under the name and the press.
+        /// </summary>
+        /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name.</remarks>
+        private static Border ShortcutsRow(string label, string press, FrameworkElement control, bool stacks, FrameworkElement caption, params FrameworkElement[] tags)
+        {
+            var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            var name = Ui.Text(label, PanelShortcuts.RowNameSize, FontWeights.Normal, Theme.TextPrimary);
+            name.TextWrapping = TextWrapping.Wrap;
+            name.VerticalAlignment = VerticalAlignment.Center;
+            nameLine.Children.Add(name);
+            foreach (var tag in tags ?? new FrameworkElement[0])
+            {
+                if (tag == null) continue;
+                tag.Margin = new Thickness(PanelShortcuts.TagGap, 0, 0, 0);
+                tag.VerticalAlignment = VerticalAlignment.Center;
+                nameLine.Children.Add(tag);
+            }
+            var left = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
+            left.Children.Add(nameLine);
+            if (caption != null)
+            {
+                caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);
+                left.Children.Add(caption);
+            }
+            var pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+            pressText.VerticalAlignment = VerticalAlignment.Center;
+            pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + PanelShortcuts.PressWidth) });
+            Grid.SetColumn(pressText, 1);
+            grid.Children.Add(left);
+            grid.Children.Add(pressText);
+            if (control != null)
+            {
+                control.VerticalAlignment = VerticalAlignment.Center;
+                if (stacks)
+                {
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    control.HorizontalAlignment = HorizontalAlignment.Left;
+                    control.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);
+                    Grid.SetRow(control, 1);
+                    Grid.SetColumnSpan(control, 2);
+                }
+                else
+                {
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    control.HorizontalAlignment = HorizontalAlignment.Right;
+                    control.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);
+                    Grid.SetColumn(control, 2);
+                }
+                grid.Children.Add(control);
+            }
+            return new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(PanelShortcuts.RowPaddingX, PanelShortcuts.RowPaddingY, PanelShortcuts.RowPaddingX, PanelShortcuts.RowPaddingY),
+                Child = grid,
+                Tag = new RowParts(nameLine, control),
+            };
+        }
+
+        /// <summary>
+        /// Reads every editor's triggers and redraws what depends on them: the filter's rows and cards, each
+        /// card's count, the clash lines and the empty line. When any live row cannot be read, the filter, the
+        /// counts and the clash lines are hidden and every row shows: a count that is sometimes wrong would be
+        /// worse than none.
+        /// </summary>
+        private void ShortcutsEvaluate(IList<ShortcutsGroupState> groups, FrameworkElement filter, StackPanel banner, TextBlock empty)
+        {
+            var triggers = new Dictionary<ShortcutsRowState, IList<string>>();
+            var readable = true;
+            foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Bindable))
+            {
+                var read = ShortcutsTriggers(row);
+                if (read == null) readable = false;
+                triggers[row] = read;
+            }
+            var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);
+            filter.Visibility = readable ? Visibility.Visible : Visibility.Collapsed;
+
+            var anyShown = false;
+            foreach (var group in groups)
+            {
+                var bound = 0;
+                var total = 0;
+                var ruled = group.HasLead;
+                var groupShown = false;
+                foreach (var row in group.Rows)
+                {
+                    var isBound = false;
+                    if (row.Bindable)
+                    {
+                        total++;
+                        var read = triggers[row];
+                        isBound = read != null && read.Count > 0;
+                        if (isBound) bound++;
+                    }
+                    var shows = PanelShortcuts.Shows(chosen, row.Bindable, isBound);
+                    row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
+                    if (!shows) continue;
+                    // The header draws a rule under itself, so the first row under it draws none of its own.
+                    row.Row.BorderThickness = new Thickness(0, ruled ? PanelMetrics.BorderWeight : 0, 0, 0);
+                    ruled = true;
+                    groupShown = true;
+                }
+                group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;
+                anyShown |= groupShown;
+                var count = readable ? PanelShortcuts.Count(bound, total) : null;
+                group.CountHost.Child = count == null ? null : Ui.Numeral(count, PanelShortcuts.CountSize, Theme.TextSecondary);
+                group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            banner.Children.Clear();
+            if (readable)
+            {
+                var uses = new List<PanelShortcuts.BindingUse>();
+                foreach (var group in groups)
+                {
+                    foreach (var row in group.Rows.Where(row => row.Bindable))
+                    {
+                        foreach (var trigger in triggers[row]) uses.Add(new PanelShortcuts.BindingUse(trigger, row.Place, row.Does));
+                    }
+                }
+                foreach (var clash in PanelShortcuts.Clashes(uses))
+                {
+                    var line = ShortcutsClashLine(clash);
+                    if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);
+                    banner.Children.Add(line);
+                }
+            }
+            banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            var emptyText = anyShown ? null : PanelShortcuts.FilterEmpty(chosen);
+            empty.Text = emptyText ?? string.Empty;
+            empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>The artboard's role=status line: a button bound to two things, in caution, its name strong.</summary>
+        private static Border ShortcutsClashLine(PanelShortcuts.Clash clash)
+        {
+            var icon = Ui.NavIcon(PanelIcons.Warning, Theme.Caution, PanelShortcuts.BannerIconSize);
+            icon.VerticalAlignment = VerticalAlignment.Top;
+            icon.Margin = new Thickness(0, 1, PanelShortcuts.BannerGap, 0);
+            var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);
+            text.TextWrapping = TextWrapping.Wrap;
+            text.Inlines.Add(new Run(clash.Lead) { FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush(Theme.TextPrimary) });
+            text.Inlines.Add(new Run(" " + clash.Rest));
+            var dock = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(icon, Dock.Left);
+            dock.Children.Add(icon);
+            dock.Children.Add(text);
+            var line = new Border
+            {
+                BorderBrush = Ui.Brush(Theme.CautionDeep),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                Background = Ui.Tint(Theme.Caution, 0.06),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Padding = new Thickness(PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY, PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY),
+                Child = dock,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(line, clash.Text);
+            return line;
+        }
+
+        /// <summary>
+        /// The triggers bound to a row's action: from its editor's own model, which SimHub's Bind, Change and
+        /// Clear write into, or from the shell's read before the editor has loaded one. Null when the editor
+        /// could not be made (BuildBinder's fallback text) or SimHub cannot be read.
+        /// </summary>
+        private IList<string> ShortcutsTriggers(ShortcutsRowState row)
+        {
+            var editor = row.Editor as ControlsEditor;
+            if (editor == null) return null;
+            try
+            {
+                var model = editor.Model;
+                if (model == null || model.Triggers == null) return TriggersOf(row.Action);
+                return model.Triggers.Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger)).Select(mapping => mapping.Trigger).ToList();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not read the bindings of " + row.Action + ": " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Calls <paramref name="changed"/> whenever the editor's bindings move: a model replaced (SimHub makes
+        /// a new one each time the editor loads), a mapping added or removed, or a mapping's trigger changed in
+        /// place.
+        /// </summary>
+        /// <remarks>
+        /// The mappings are SimHub's for the whole session, and a mapping's PropertyChanged holds its handlers
+        /// strongly, so the watch is let go of when the editor leaves the tree and when the page is dropped, as
+        /// HoldWhilePressed lets go of its own; Loaded takes it up again.
+        /// </remarks>
+        private void ShortcutsWatch(ControlsEditor editor, Action changed)
+        {
+            ControlsEditorModel watched = null;
+            System.Collections.ObjectModel.ObservableCollection<InputMapping> watchedTriggers = null;
+            var watchedMappings = new List<InputMapping>();
+            PropertyChangedEventHandler mappingChanged = null;
+            PropertyChangedEventHandler modelChanged = null;
+            NotifyCollectionChangedEventHandler collectionChanged = null;
+
+            Action rewatchMappings = () =>
+            {
+                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= mappingChanged;
+                watchedMappings.Clear();
+                if (watchedTriggers == null) return;
+                foreach (var mapping in watchedTriggers)
+                {
+                    if (mapping == null) continue;
+                    mapping.PropertyChanged += mappingChanged;
+                    watchedMappings.Add(mapping);
+                }
+            };
+            Action rewatchTriggers = () =>
+            {
+                var triggers = watched == null ? null : watched.Triggers;
+                if (!ReferenceEquals(triggers, watchedTriggers))
+                {
+                    if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
+                    watchedTriggers = triggers;
+                    if (watchedTriggers != null) watchedTriggers.CollectionChanged += collectionChanged;
+                }
+                rewatchMappings();
+            };
+            mappingChanged = (sender, args) =>
+            {
+                if (args.PropertyName == null || args.PropertyName == "Trigger") changed();
+            };
+            collectionChanged = (sender, args) =>
+            {
+                rewatchMappings();
+                changed();
+            };
+            modelChanged = (sender, args) =>
+            {
+                if (args.PropertyName != null && args.PropertyName != "Triggers") return;
+                rewatchTriggers();
+                changed();
+            };
+            Action attach = () =>
+            {
+                var model = editor.Model;
+                if (ReferenceEquals(model, watched)) return;
+                if (watched != null) watched.PropertyChanged -= modelChanged;
+                watched = model;
+                if (watched != null) watched.PropertyChanged += modelChanged;
+                rewatchTriggers();
+                changed();
+            };
+            Action detach = () =>
+            {
+                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= mappingChanged;
+                watchedMappings.Clear();
+                if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
+                watchedTriggers = null;
+                if (watched != null) watched.PropertyChanged -= modelChanged;
+                watched = null;
+            };
+            editor.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == null || args.PropertyName == "Model") attach();
+            };
+            editor.Loaded += (sender, args) => attach();
+            editor.Unloaded += (sender, args) => detach();
+            OnDrop(detach);
+            attach();
         }
     }
 }
