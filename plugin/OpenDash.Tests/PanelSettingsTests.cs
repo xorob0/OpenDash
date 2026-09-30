@@ -77,21 +77,29 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>voice.md: no contractions and no question anywhere in the page's words, the alert rows'
-        /// included, and every title, column and option in sentence case, where an acronym keeps its capitals.</summary>
+        /// <summary>voice.md: no contractions and no question anywhere in the page's words, PanelDataTab's and the
+        /// alert rows' included, and every title, column and option in sentence case, where an acronym keeps
+        /// its capitals.</summary>
         [Fact]
         public void The_words_follow_the_voice()
         {
-            var words = typeof(PanelSettings).GetFields(BindingFlags.Public | BindingFlags.Static)
-                .Where(field => field.FieldType == typeof(string))
-                .Select(field => (string)field.GetValue(null))
-                .Concat(typeof(PanelSettings).GetFields(BindingFlags.Public | BindingFlags.Static)
-                    .Where(field => field.FieldType == typeof(string[]))
-                    .SelectMany(field => (string[])field.GetValue(null)))
+            var words = new[] { typeof(PanelSettings), typeof(PanelDataTab) }
+                .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static))
+                .SelectMany(field => field.FieldType == typeof(string) ? new[] { (string)field.GetValue(null) }
+                    : field.FieldType == typeof(string[]) ? (string[])field.GetValue(null)
+                    : new string[0])
                 .Concat(PanelSettings.Alerts.SelectMany(alert => new[] { alert.Title, alert.Op, alert.Unit, alert.Example }))
                 .Where(text => text != null)
                 .ToList();
-            Assert.DoesNotContain(words, text => Regex.IsMatch(text, @"n't|'re\b|'ll\b|'ve\b|'m\b|'d\b"));
+            // Either apostrophe, since copy taken from an artboard carries the typographic one, and the
+            // pronoun contractions by name, so a possessive such as "SimHub's" still passes.
+            const string contraction = @"n['’]t\b|['’](re|ll|ve|m|d)\b|\b(it|that|there|here|what|who|let)['’]s\b";
+            foreach (var sample in new[] { "It's set in SimHub.", "That's the default.", "Isn’t shown.", "Don’t.", "We’re here.", "You'd see it." })
+            {
+                Assert.Matches(new Regex(contraction, RegexOptions.IgnoreCase), sample);
+            }
+            Assert.DoesNotMatch(new Regex(contraction, RegexOptions.IgnoreCase), "SimHub's device brightness applies on top.");
+            Assert.DoesNotContain(words, text => Regex.IsMatch(text, contraction, RegexOptions.IgnoreCase));
             Assert.DoesNotContain(words, text => text.EndsWith("?", StringComparison.Ordinal));
             var labels = PanelSettings.SectionTitles
                 .Concat(new[]
