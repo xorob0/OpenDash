@@ -198,11 +198,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(under, main.Y);
             Assert.Equal(main.Y + PanelRigMap.FootprintHeight(main) + 28, rim.Y);
             Assert.Equal(main.X, rim.X);
-            // The first matrix on the left flank, the second on the right.
-            Assert.Equal(24, pillar.X);
+            // The first matrix on the left flank, the second on the right, each 28 from the faces, as the
+            // artboard stands its pillar and its flag box beside the main dash; and the three centred in the
+            // canvas as one group, the pit wall being the right flank's widest.
+            Assert.Equal(main.X - 28 - pillar.Width, pillar.X);
+            Assert.Equal(main.X + main.Width + 28, box.X);
+            Assert.Equal(95, pillar.X);
+            Assert.Equal(pillar.X, width - (pit.X + pit.Width));
             Assert.Equal(under, pillar.Y);
             Assert.Equal(under, box.Y);
-            Assert.True(box.X > main.X + main.Width);
             // Down the right: the matrix, the round, then the pit wall, closed up from 28 to fit the 580.
             Assert.Equal(box.X, round.X);
             Assert.Equal(box.X, pit.X);
@@ -211,7 +215,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(box.Y + PanelRigMap.FootprintHeight(box) + closed, round.Y);
             Assert.Equal(round.Y + PanelRigMap.FootprintHeight(round) + closed, pit.Y);
             // Down the left: the phone under the matrix, since the foot of the faces is higher than that.
-            Assert.Equal(24, phone.X);
+            Assert.Equal(pillar.X, phone.X);
             Assert.Equal(pillar.Y + PanelRigMap.FootprintHeight(pillar) + 28, phone.Y);
             // Nothing past the right margin or the foot.
             Assert.All(placed, t => Assert.True(t.X + t.Width <= width - 24 && t.Y + PanelRigMap.FootprintHeight(t) <= 580 - 24, t.Id));
@@ -222,8 +226,27 @@ namespace OpenDashPlugin.Tests
             var wide = PanelRigMap.DefaultLayout(tiles, 1100).ToDictionary(t => t.Id);
             Assert.Equal(wide["MainDash"].Y, wide["Rim"].Y);
             Assert.Equal(wide["MainDash"].X + 300 + 28, wide["Rim"].X);
-            Assert.Equal(24, wide["Companion"].X);
+            Assert.Equal(wide["matrix:1"].X, wide["Companion"].X);
+            Assert.Equal(wide["MainDash"].X - 28 - 108, wide["matrix:1"].X);
             Assert.Equal(wide["matrix:1"].Y + PanelRigMap.FootprintHeight(wide["matrix:1"]) + 28, wide["Companion"].Y);
+        }
+
+        [Fact]
+        public void A_wide_window_centres_the_rig_rather_than_pulling_its_flanks_apart()
+        {
+            var tiles = PanelRigMap.Tiles(Rig());
+            foreach (var width in new[] { 894.0, 1377, 2017, 3600 })
+            {
+                var at = PanelRigMap.DefaultLayout(tiles, width).ToDictionary(t => t.Id);
+                // The left pillar stands 28 from the faces however wide the window, as the right flank does.
+                Assert.Equal(28, at["MainDash"].X - (at["matrix:1"].X + at["matrix:1"].Width));
+                var facesRight = Math.Max(at["MainDash"].X, at["Rim"].X) + 300;
+                Assert.Equal(28, at["matrix:2"].X - facesRight);
+                // And the group is as far from the left edge as from the right, to the pixel the floor takes.
+                var left = at["matrix:1"].X;
+                var right = width - (at["PitWall"].X + at["PitWall"].Width);
+                Assert.InRange(right - left, 0, 1);
+            }
         }
 
         [Fact]
@@ -234,8 +257,8 @@ namespace OpenDashPlugin.Tests
             var foot = placed["b"].Y + PanelRigMap.FootprintHeight(placed["b"]);
             Assert.Equal(foot, placed["phone"].Y + PanelRigMap.FootprintHeight(placed["phone"]));
             Assert.Equal(foot, placed["wall"].Y + PanelRigMap.FootprintHeight(placed["wall"]));
-            Assert.Equal(24, placed["phone"].X);
-            Assert.Equal(894 - 24 - 240, placed["wall"].X);
+            Assert.Equal(placed["a"].X - 28 - 76, placed["phone"].X);
+            Assert.Equal(placed["a"].X + 300 + 28, placed["wall"].X);
         }
 
         [Fact]
@@ -243,15 +266,87 @@ namespace OpenDashPlugin.Tests
         {
             var tiles = PanelRigMap.Tiles(Rig());
             // 600 is too narrow for a 300 face between a 108 matrix and a 240 pit wall.
-            var placed = PanelRigMap.DefaultLayout(tiles, 600).ToDictionary(t => t.Id);
-            Assert.Equal(24, placed["led:LedDashBrow"].X);
-            Assert.Equal(24, placed["led:LedDashBrow"].Y);
-            // Strips, then the screens in a row of their own, then the matrices.
+            double height;
+            var placed = PanelRigMap.DefaultLayout(tiles, 600, out height).ToDictionary(t => t.Id);
+            var brow = placed["led:LedDashBrow"];
+            var wheel = placed["led:LedWheelRim"];
+            Assert.Equal(24, brow.X);
+            Assert.Equal(24, brow.Y);
+            // 24 + 270 + 28 + 280 passes 576, so the wheel rim wraps: each row one gap under the one before.
+            Assert.Equal(24, wheel.X);
+            Assert.Equal(brow.Y + PanelRigMap.FootprintHeight(brow) + 28, wheel.Y);
+            // Then the screens, starting a row of their own, wrapped where the next would pass the canvas.
             Assert.Equal(24, placed["MainDash"].X);
-            Assert.True(placed["MainDash"].Y > placed["led:LedWheelRim"].Y);
-            Assert.True(placed["matrix:1"].Y > placed["Companion"].Y);
+            Assert.Equal(wheel.Y + PanelRigMap.FootprintHeight(wheel) + 28, placed["MainDash"].Y);
+            Assert.Equal(placed["MainDash"].Y + PanelRigMap.FootprintHeight(placed["MainDash"]) + 28, placed["Rim"].Y);
+            Assert.Equal(placed["Rim"].Y, placed["Slots480x480"].Y);
+            Assert.Equal(24 + 300 + 28, placed["Slots480x480"].X);
+            // The matrices a row of their own under the tallest screen of the last row.
+            var wall = placed["PitWall"];
+            Assert.Equal(wall.Y, placed["Companion"].Y);
             Assert.Equal(24, placed["matrix:1"].X);
-            Assert.All(placed.Values, t => Assert.True(t.X < 600, t.Id));
+            Assert.Equal(wall.Y + PanelRigMap.FootprintHeight(wall) + 28, placed["matrix:1"].Y);
+            Assert.All(placed.Values, t => Assert.True(t.X + t.Width <= 600 - 24, t.Id));
+            // The canvas grows to hold them, the last row clear of the hint.
+            Assert.Equal(placed["matrix:1"].Y + PanelRigMap.FootprintHeight(placed["matrix:1"]) + PanelRigMap.HintClear, height);
+            Assert.True(height > PanelRigMap.CanvasHeight);
+        }
+
+        [Fact]
+        public void A_rig_too_tall_for_its_flanks_falls_back_to_rows()
+        {
+            // Two matrices, a round and a pit wall down the right need 597 even closed up to 8, past the 556.
+            var tiles = new[]
+            {
+                Tile(RigTileKind.Matrix, "m1", 108, 108), Tile(RigTileKind.Matrix, "m2", 108, 108),
+                Tile(RigTileKind.Matrix, "m3", 108, 108), Tile(RigTileKind.Matrix, "m4", 108, 108),
+                Tile(RigTileKind.Round, "round", 110, 110), Tile(RigTileKind.PitWall, "wall", 240, 135),
+            };
+            double height;
+            var placed = PanelRigMap.DefaultLayout(tiles, 894, out height).ToDictionary(t => t.Id);
+            Assert.Equal(new double[] { 24, 24 }, new[] { placed["round"].X, placed["round"].Y });
+            Assert.Equal(new double[] { 24 + 110 + 28, 24 }, new[] { placed["wall"].X, placed["wall"].Y });
+            var row = 24 + PanelRigMap.FootprintHeight(placed["wall"]) + 28;
+            Assert.Equal(new double[] { 24, 160, 296, 432 }, new[] { "m1", "m2", "m3", "m4" }.Select(id => placed[id].X));
+            Assert.All(new[] { "m1", "m2", "m3", "m4" }, id => Assert.Equal(row, placed[id].Y));
+            // Short enough for the 580 once in rows.
+            Assert.Equal(PanelRigMap.CanvasHeight, height);
+        }
+
+        [Fact]
+        public void A_lone_matrix_takes_the_left_flank()
+        {
+            var placed = PanelRigMap.DefaultLayout(new[] { Tile(RigTileKind.Face, "face", 300, 112), Tile(RigTileKind.Matrix, "m", 108, 108) }, 894).ToDictionary(t => t.Id);
+            Assert.Equal(placed["face"].X - 28 - 108, placed["m"].X);
+            Assert.Equal(placed["face"].Y, placed["m"].Y);
+        }
+
+        [Fact]
+        public void At_every_width_the_default_layout_stays_inside_the_canvas_and_overlaps_nothing()
+        {
+            var settings = Rig();
+            for (var width = 400; width <= 1400; width += 3)
+            {
+                var plan = PanelRigMap.Plan(settings, width);
+                Assert.True(plan.Height >= PanelRigMap.CanvasHeight);
+                var tiles = plan.Tiles;
+                foreach (var tile in tiles)
+                {
+                    Assert.True(tile.X >= 0 && tile.X + PanelRigMap.FootprintWidth(tile) <= width, width + " " + tile.Id);
+                    Assert.True(tile.Y >= 0 && tile.Y + PanelRigMap.FootprintHeight(tile) <= plan.Height, width + " " + tile.Id);
+                }
+                for (var i = 0; i < tiles.Count; i++)
+                {
+                    for (var j = i + 1; j < tiles.Count; j++)
+                    {
+                        var a = tiles[i];
+                        var b = tiles[j];
+                        var overlap = a.X < b.X + PanelRigMap.FootprintWidth(b) && b.X < a.X + PanelRigMap.FootprintWidth(a)
+                            && a.Y < b.Y + PanelRigMap.FootprintHeight(b) && b.Y < a.Y + PanelRigMap.FootprintHeight(a);
+                        Assert.False(overlap, width + ": " + a.Id + " over " + b.Id);
+                    }
+                }
+            }
         }
 
         [Fact]
@@ -272,13 +367,23 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Tiles_of_one_kind_keep_the_rigs_order()
         {
-            // Twenty strips, which List.Sort's introsort put out of order, and four pit walls down the right.
+            // The fallback is the one layout that sorts, so both cases are forced into it by a face wider than
+            // the 700 canvas. Twenty strips, which List.Sort's introsort put out of order above sixteen, read
+            // in the rig's order along their rows.
             var strips = Enumerable.Range(0, 20).Select(i => Tile(RigTileKind.Strip, "s" + i, 10, 10)).ToList();
-            var placed = PanelRigMap.DefaultLayout(strips, 5000);
-            Assert.Equal(strips.Select(t => t.Id), placed.OrderBy(t => t.X).Select(t => t.Id));
-            var walls = new[] { Tile(RigTileKind.PitWall, "A"), Tile(RigTileKind.PitWall, "B"), Tile(RigTileKind.Face, "Rim") };
-            var laid = PanelRigMap.DefaultLayout(walls, 2000);
-            Assert.True(laid[0].Y < laid[1].Y);
+            var rim = Tile(RigTileKind.Face, "Rim", 900, 80);
+            var placed = PanelRigMap.DefaultLayout(strips.Concat(new[] { rim }), 700);
+            Assert.Equal(24, placed[20].X);
+            Assert.True(placed[20].Y > placed[19].Y);
+            Assert.Equal(strips.Select(t => t.Id), placed.Take(20).OrderBy(t => t.Y).ThenBy(t => t.X).Select(t => t.Id));
+            // Pit wall A before pit wall B, as the rig lists them; List.Sort laid them out as the rim, B, A.
+            var walls = new[] { Tile(RigTileKind.PitWall, "A"), Tile(RigTileKind.PitWall, "B"), rim };
+            var laid = PanelRigMap.DefaultLayout(walls, 700);
+            Assert.Equal(new double[] { 24, 24 }, new[] { laid[2].X, laid[2].Y });
+            Assert.Equal(laid[0].Y, laid[1].Y);
+            Assert.Equal(24 + PanelRigMap.FootprintHeight(rim) + 28, laid[0].Y);
+            Assert.Equal(24, laid[0].X);
+            Assert.Equal(24 + 100 + 28, laid[1].X);
         }
 
         [Fact]
@@ -293,13 +398,39 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(60, PanelRigMap.Snap(50));
             Assert.Equal(0, PanelRigMap.Snap(9));
             Assert.Equal(20, PanelRigMap.Snap(10));
+            // A drop lands on the grid, the last step inside an edge that is not on it, and never before 0.
+            Assert.Equal(40, PanelRigMap.DropPosition(49, 100, 800));
+            Assert.Equal(0, PanelRigMap.DropPosition(-30, 100, 800));
+            Assert.Equal(700, PanelRigMap.DropPosition(790, 100, 800));
+            Assert.Equal(780, PanelRigMap.DropPosition(783, 300, 1083));
+            Assert.Equal(440, PanelRigMap.DropPosition(446, 134, 580));
+            Assert.Equal(0, PanelRigMap.DropPosition(10, 900, 800));
+        }
+
+        [Fact]
+        public void A_tile_dropped_against_an_edge_is_drawn_again_where_it_was_dropped()
+        {
+            var settings = Rig();
+            const double width = 1083;
+            var plan = PanelRigMap.Plan(settings, width);
+            var rim = plan.Tiles.Single(t => t.Id == "Rim");
+            // Pushed past the right edge and the foot.
+            var x = PanelRigMap.DropPosition(width, PanelRigMap.FootprintWidth(rim), width);
+            var y = PanelRigMap.DropPosition(plan.Height, PanelRigMap.FootprintHeight(rim), plan.Height);
+            Assert.True(x + PanelRigMap.FootprintWidth(rim) <= width);
+            Assert.True(y + PanelRigMap.FootprintHeight(rim) <= plan.Height);
+            PanelRigMap.SavePosition(settings, rim, x, y);
+            Assert.Equal((int)x, settings.ScreenByNamespace("Rim").LayoutX);
+            Assert.Equal((int)y, settings.ScreenByNamespace("Rim").LayoutY);
+            var again = PanelRigMap.Plan(settings, width).Tiles.Single(t => t.Id == "Rim");
+            Assert.Equal(new[] { x, y }, new[] { again.X, again.Y });
         }
 
         [Fact]
         public void A_dropped_tile_is_kept_in_its_own_settings_and_moves_no_other()
         {
             var settings = Rig();
-            var before = PanelRigMap.Arrange(settings, 1100, 580).ToDictionary(t => t.Id);
+            var before = PanelRigMap.Plan(settings, 1100).Tiles.ToDictionary(t => t.Id);
             var tiles = PanelRigMap.Tiles(settings).ToDictionary(t => t.Id);
 
             PanelRigMap.SavePosition(settings, tiles["Rim"], 433, 51);
@@ -318,7 +449,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { 440, 60 }, new[] { x, y });
             Assert.False(PanelRigMap.TrySaved(settings, tiles["MainDash"], out x, out y));
 
-            var after = PanelRigMap.Arrange(settings, 1100, 580).ToDictionary(t => t.Id);
+            var after = PanelRigMap.Plan(settings, 1100).Tiles.ToDictionary(t => t.Id);
             Assert.Equal(440, after["Rim"].X);
             Assert.Equal(60, after["Rim"].Y);
             Assert.Equal(0, after["matrix:2"].X);
@@ -329,9 +460,33 @@ namespace OpenDashPlugin.Tests
             }
 
             // A canvas narrowed since holds a saved tile inside it without forgetting where it was put.
-            var narrow = PanelRigMap.Arrange(settings, 500, 580).ToDictionary(t => t.Id);
+            var narrow = PanelRigMap.Plan(settings, 500).Tiles.ToDictionary(t => t.Id);
             Assert.Equal(500 - 300, narrow["Rim"].X);
             Assert.Equal(440, settings.ScreenByNamespace("Rim").LayoutX);
+
+            // And a canvas shorter than the place a tile was kept at holds it on the foot, the place kept.
+            PanelRigMap.SavePosition(settings, tiles["Rim"], 440, 560);
+            var low = PanelRigMap.Plan(settings, 1100);
+            Assert.Equal(PanelRigMap.CanvasHeight, low.Height);
+            Assert.Equal(580 - PanelRigMap.FootprintHeight(tiles["Rim"]), low.Tiles.Single(t => t.Id == "Rim").Y);
+            Assert.Equal(560, settings.ScreenByNamespace("Rim").LayoutY);
+        }
+
+        [Fact]
+        public void A_negative_saved_place_is_no_place()
+        {
+            var settings = Rig();
+            var tiles = PanelRigMap.Tiles(settings).ToDictionary(t => t.Id);
+            int x, y;
+            settings.ScreenByNamespace("Rim").LayoutX = -20;
+            settings.ScreenByNamespace("Rim").LayoutY = 40;
+            Assert.False(PanelRigMap.TrySaved(settings, tiles["Rim"], out x, out y));
+            settings.LedBarByNamespace("LedWheelRim").LayoutX = 40;
+            settings.LedBarByNamespace("LedWheelRim").LayoutY = -1;
+            Assert.False(PanelRigMap.TrySaved(settings, tiles["led:LedWheelRim"], out x, out y));
+            settings.MatrixLayoutX[0] = 0;
+            settings.MatrixLayoutY[0] = 0;
+            Assert.True(PanelRigMap.TrySaved(settings, tiles["matrix:1"], out x, out y));
         }
 
         [Fact]
@@ -348,8 +503,8 @@ namespace OpenDashPlugin.Tests
             Assert.All(settings.LedBarList(), b => Assert.Null(b.LayoutY));
             Assert.All(settings.MatrixLayoutX, v => Assert.Null(v));
             Assert.False(PanelRigMap.ClearLayout(settings));
-            var placed = PanelRigMap.Arrange(settings, 1100, 580);
-            Assert.Equal(PanelRigMap.Arrange(Rig(), 1100, 580).Select(t => t.X + "," + t.Y), placed.Select(t => t.X + "," + t.Y));
+            var placed = PanelRigMap.Plan(settings, 1100).Tiles;
+            Assert.Equal(PanelRigMap.Plan(Rig(), 1100).Tiles.Select(t => t.X + "," + t.Y), placed.Select(t => t.X + "," + t.Y));
         }
 
         [Fact]

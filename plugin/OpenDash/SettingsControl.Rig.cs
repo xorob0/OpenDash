@@ -57,6 +57,14 @@ namespace OpenDashPlugin
             public Action<string> Paint { get; private set; }
         }
 
+        /// <summary>The width and height the tiles were last laid out at, which a drag and a drop are held to,
+        /// so the place a tile is dropped at is the place the next build draws it at.</summary>
+        private sealed class RigExtent
+        {
+            public double Width { get; set; }
+            public double Height { get; set; }
+        }
+
         private FrameworkElement BuildRigPage(PanelRoute to)
         {
             // The header draws the night switch, so a wheel's night-mode press rebuilds the page and the switch
@@ -138,8 +146,10 @@ namespace OpenDashPlugin
         private FrameworkElement BuildRigCanvas(IList<RigTileView> views)
         {
             var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
-            var canvas = new Canvas { Height = PanelRigMap.CanvasHeight, ClipToBounds = true, Background = Ui.DotGrid() };
-            var tiles = PanelRigMap.Arrange(Settings, width, PanelRigMap.CanvasHeight);
+            var plan = PanelRigMap.Plan(Settings, width);
+            var extent = new RigExtent { Width = width, Height = plan.Height };
+            var canvas = new Canvas { Height = plan.Height, ClipToBounds = true, Background = Ui.DotGrid() };
+            var tiles = plan.Tiles;
 
             if (tiles.Count == 0)
             {
@@ -162,10 +172,30 @@ namespace OpenDashPlugin
             var scenario = rigScenario;
             foreach (var tile in tiles)
             {
-                var view = BuildRigTile(tile, canvas, width, scenario);
+                var view = BuildRigTile(tile, extent, scenario);
                 views.Add(view);
                 canvas.Children.Add(view.Element);
             }
+
+            // ContentWidth allows for a scroll bar the page may not be showing, so the canvas can be wider than
+            // the width the plan was worked out for. Laid out again at the width it really has, the default is
+            // centred in it and a drag is held to the same edge the next build clamps to.
+            canvas.SizeChanged += (sender, args) =>
+            {
+                var real = canvas.ActualWidth;
+                if (real <= 0 || Math.Abs(real - extent.Width) < 0.5) return;
+                var again = PanelRigMap.Plan(Settings, real);
+                extent.Width = real;
+                extent.Height = again.Height;
+                canvas.Height = again.Height;
+                foreach (var view in views)
+                {
+                    var moved = again.Tiles.FirstOrDefault(t => t.Id == view.Tile.Id);
+                    if (moved == null) continue;
+                    Canvas.SetLeft(view.Element, moved.X);
+                    Canvas.SetTop(view.Element, moved.Y);
+                }
+            };
 
             return new Border
             {
@@ -181,7 +211,7 @@ namespace OpenDashPlugin
         /// One tile: its name (and the warning dot, when the device is on Home's list) over its picture, with a
         /// transparent Thumb over the whole of it that takes the drag and the arrow keys.
         /// </summary>
-        private RigTileView BuildRigTile(RigTile tile, Canvas canvas, double canvasWidth, string scenario)
+        private RigTileView BuildRigTile(RigTile tile, RigExtent extent, string scenario)
         {
             var warns = PanelRigMap.Warns(tile, issues);
             var name = Ui.Text(tile.Name, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);
@@ -231,8 +261,6 @@ namespace OpenDashPlugin
             Canvas.SetLeft(root, tile.X);
             Canvas.SetTop(root, tile.Y);
 
-            Func<double> extentX = () => canvas.ActualWidth > 0 ? canvas.ActualWidth : canvasWidth;
-            Func<double> extentY = () => canvas.ActualHeight > 0 ? canvas.ActualHeight : PanelRigMap.CanvasHeight;
             var moved = false;
             thumb.DragStarted += (sender, args) =>
             {
@@ -243,14 +271,14 @@ namespace OpenDashPlugin
             {
                 if (args.HorizontalChange == 0 && args.VerticalChange == 0) return;
                 moved = true;
-                Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extentX()));
-                Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extentY()));
+                Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
+                Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
             };
             // Saved on the drop, never in End(): SimHub is force-killed on the VM.
             thumb.DragCompleted += (sender, args) =>
             {
                 if (!moved) return;
-                RigDrop(tile, root, Canvas.GetLeft(root), Canvas.GetTop(root), extentX(), extentY());
+                RigDrop(tile, root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
             };
             thumb.KeyDown += (sender, args) =>
             {
@@ -265,17 +293,17 @@ namespace OpenDashPlugin
                 }
                 args.Handled = true;
                 Panel.SetZIndex(root, ++rigTopZ);
-                RigDrop(tile, root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extentX(), extentY());
+                RigDrop(tile, root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent);
             };
 
             return new RigTileView(tile, root, paint);
         }
 
-        /// <summary>Puts a dropped tile on the nearest dot inside the canvas and keeps it there.</summary>
-        private void RigDrop(RigTile tile, FrameworkElement root, double x, double y, double extentX, double extentY)
+        /// <summary>Puts a dropped tile on the nearest step of the grid inside the canvas and keeps it there.</summary>
+        private void RigDrop(RigTile tile, FrameworkElement root, double x, double y, RigExtent extent)
         {
-            var left = PanelRigMap.Clamp(PanelRigMap.Snap(x), root.Width, extentX);
-            var top = PanelRigMap.Clamp(PanelRigMap.Snap(y), root.Height, extentY);
+            var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);
+            var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);
             Canvas.SetLeft(root, left);
             Canvas.SetTop(root, top);
             PanelRigMap.SavePosition(Settings, tile, left, top);

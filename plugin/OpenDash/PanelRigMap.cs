@@ -74,6 +74,21 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>Every tile of the rig where it is drawn, and how tall the canvas is to hold them.</summary>
+    public sealed class RigPlan
+    {
+        public RigPlan(IList<RigTile> tiles, double height)
+        {
+            Tiles = tiles;
+            Height = height;
+        }
+
+        public IList<RigTile> Tiles { get; private set; }
+
+        /// <summary><see cref="PanelRigMap.CanvasHeight"/>, or more where the fallback's rows need it.</summary>
+        public double Height { get; private set; }
+    }
+
     /// <summary>One of a face's three body zones: its letter, what it shows, and its share of the body.</summary>
     public sealed class RigZone
     {
@@ -128,6 +143,10 @@ namespace OpenDashPlugin
 
         /// <summary>The line in the canvas's corner.</summary>
         public const string CanvasHint = "Drag to arrange like your rig";
+
+        /// <summary>The room the hint takes at the canvas's foot, which the fallback's last row stays clear
+        /// of: its <see cref="HintBottom"/> under it, its 16 px line, and 16 over it.</summary>
+        public const double HintClear = 44;
 
         public const string ResetLayout = "Reset layout";
 
@@ -372,18 +391,22 @@ namespace OpenDashPlugin
         public const double LayoutGapMin = 8;
 
         /// <summary>
-        /// Every tile of the rig where it is drawn: where the driver put it, or where
-        /// <see cref="DefaultLayout"/> puts it, and inside the canvas either way.
+        /// Every tile of the rig where it is drawn -- where the driver put it, or where
+        /// <see cref="DefaultLayout"/> puts it, and inside the canvas either way -- and the canvas's height.
         /// </summary>
         /// <remarks>
         /// The default is worked out for the whole rig, placed tiles included, so dragging one tile moves no
-        /// other. A saved place is clamped rather than dropped when the canvas has narrowed since, and it is
-        /// not written back: widen the window again and the tile is where it was put.
+        /// other. The height is the default layout's: <see cref="CanvasHeight"/>, or taller where the
+        /// fallback's rows need it, so a narrow column grows the canvas rather than piling tiles on its foot.
+        /// A saved place is clamped rather than dropped when the canvas has narrowed or shortened since, and
+        /// it is not written back: widen the window again and the tile is where it was put. The page lays the
+        /// plan out at the width the canvas really has, and holds a drag to that same width.
         /// </remarks>
-        public static IList<RigTile> Arrange(OpenDashSettings settings, double canvasWidth, double canvasHeight)
+        public static RigPlan Plan(OpenDashSettings settings, double canvasWidth)
         {
             var tiles = Tiles(settings);
-            var defaults = DefaultLayout(tiles, canvasWidth);
+            double height;
+            var defaults = DefaultLayout(tiles, canvasWidth, out height);
             var placed = new List<RigTile>();
             foreach (var tile in defaults)
             {
@@ -395,9 +418,17 @@ namespace OpenDashPlugin
                     x = savedX;
                     y = savedY;
                 }
-                placed.Add(tile.At(Clamp(x, FootprintWidth(tile), canvasWidth), Clamp(y, FootprintHeight(tile), canvasHeight)));
+                placed.Add(tile.At(Clamp(x, FootprintWidth(tile), canvasWidth), Clamp(y, FootprintHeight(tile), height)));
             }
-            return placed;
+            return new RigPlan(placed, height);
+        }
+
+        /// <summary>Where the tiles go before anybody has arranged them, on a canvas of
+        /// <see cref="CanvasHeight"/> or as tall as the fallback needs.</summary>
+        public static IList<RigTile> DefaultLayout(IEnumerable<RigTile> tiles, double canvasWidth)
+        {
+            double height;
+            return DefaultLayout(tiles, canvasWidth, out height);
         }
 
         /// <summary>
@@ -406,15 +437,19 @@ namespace OpenDashPlugin
         /// wall down the right, and the phone down the left, as Rig.dc.html arranges its nine.
         /// </summary>
         /// <remarks>
-        /// The flanks split the matrices, the first half on the left. What sits low on a flank -- the phone
-        /// on the left, the pit wall on the right -- is set level with the foot of the faces when there is
-        /// room above it, and under what is higher on its flank when there is not. The faces fill the room
-        /// between the flanks in rows, each row centred. A canvas too narrow for that, or a rig too tall for
-        /// the canvas, falls back to rows by kind across the whole width, which is always tidy if not always
-        /// inside the canvas. The tiles come back in the order they were given.
+        /// The flanks split the matrices, the first half on the left, and stand <see cref="LayoutGap"/> from
+        /// the faces, the three of them centred in the canvas as one group, so a wide window centres the rig
+        /// rather than pulling its flanks to the edges. What sits low on a flank -- the phone on the left, the
+        /// pit wall on the right -- is set level with the foot of the faces when there is room above it, and
+        /// under what is higher on its flank when there is not. The faces fill the room between the flanks in
+        /// rows, each row centred. A canvas too narrow for that, or a rig too tall for
+        /// <see cref="CanvasHeight"/>, falls back to rows by kind across the whole width, and
+        /// <paramref name="canvasHeight"/> grows to hold them with the hint clear under the last. The tiles
+        /// come back in the order they were given.
         /// </remarks>
-        public static IList<RigTile> DefaultLayout(IEnumerable<RigTile> tiles, double canvasWidth)
+        public static IList<RigTile> DefaultLayout(IEnumerable<RigTile> tiles, double canvasWidth, out double canvasHeight)
         {
+            canvasHeight = CanvasHeight;
             var list = tiles == null ? new List<RigTile>() : tiles.Where(tile => tile != null).ToList();
             var placed = new Dictionary<RigTile, RigTile>();
             if (list.Count == 0) return new List<RigTile>();
@@ -438,19 +473,28 @@ namespace OpenDashPlugin
 
             var leftWidth = Widest(leftHigh.Concat(leftLow));
             var rightWidth = Widest(rightHigh.Concat(rightLow));
-            var centreLeft = LayoutMargin + (leftWidth > 0 ? leftWidth + LayoutGap : 0);
-            var centreRight = canvasWidth - LayoutMargin - (rightWidth > 0 ? rightWidth + LayoutGap : 0);
-            var fits = faces.Count == 0 || centreRight - centreLeft >= Widest(faces);
+            var leftPart = leftWidth > 0 ? leftWidth + LayoutGap : 0;
+            var rightPart = rightWidth > 0 ? rightWidth + LayoutGap : 0;
+            var room = canvasWidth - 2 * LayoutMargin - leftPart - rightPart;
+            if (room > 0 && (faces.Count == 0 || room >= Widest(faces)))
+            {
+                // The faces' rows in the room between the flanks, and the block the widest of them makes;
+                // the flanks stand a gap either side of that block, and the three are centred together.
+                var block = faces.Count == 0 ? 0 : FlowRows(faces, room).Max(row => RowWidth(row));
+                var group = block > 0 ? leftPart + block + rightPart : Math.Max(0, leftPart + rightPart - LayoutGap);
+                var groupLeft = Math.Max(LayoutMargin, Math.Floor((canvasWidth - group) / 2));
+                var blockLeft = groupLeft + leftPart;
+                var facesBottom = faces.Count == 0 ? top : FlowCentred(faces, blockLeft, blockLeft + block, top, placed);
+                var foot = CanvasHeight - LayoutMargin;
+                var leftBottom = Column(leftHigh, leftLow, groupLeft, top, facesBottom, foot, placed);
+                var rightBottom = Column(rightHigh, rightLow, groupLeft + group - rightWidth, top, facesBottom, foot, placed);
+                var lowest = Math.Max(facesBottom, Math.Max(leftBottom, rightBottom));
+                if (lowest <= foot) return list.Select(tile => placed[tile]).ToList();
+            }
 
-            var facesBottom = faces.Count == 0 ? top : FlowCentred(faces, centreLeft, centreRight, top, placed);
-            var foot = CanvasHeight - LayoutMargin;
-            var leftBottom = Column(leftHigh, leftLow, LayoutMargin, top, facesBottom, foot, placed);
-            var rightBottom = Column(rightHigh, rightLow, canvasWidth - LayoutMargin - rightWidth, top, facesBottom, foot, placed);
-            var lowest = Math.Max(facesBottom, Math.Max(leftBottom, rightBottom));
-            fits = fits && centreLeft < centreRight && lowest <= foot;
-
-            if (!fits) return Rows(list, canvasWidth);
-            return list.Select(tile => placed[tile]).ToList();
+            var rows = Rows(list, canvasWidth);
+            canvasHeight = Math.Max(CanvasHeight, rows.Max(tile => tile.Y + FootprintHeight(tile)) + HintClear);
+            return rows;
         }
 
         /// <summary>A flank: what sits high on it stacked from the top, then what sits low, level with the
@@ -486,29 +530,11 @@ namespace OpenDashPlugin
         /// pass the right edge. Returns the foot of the last row.</summary>
         private static double FlowCentred(IList<RigTile> tiles, double left, double right, double top, IDictionary<RigTile, RigTile> placed)
         {
-            var rows = new List<List<RigTile>>();
-            var row = new List<RigTile>();
-            var used = 0.0;
-            foreach (var tile in tiles)
-            {
-                var need = (row.Count == 0 ? 0 : LayoutGap) + FootprintWidth(tile);
-                if (row.Count > 0 && left + used + need > right)
-                {
-                    rows.Add(row);
-                    row = new List<RigTile>();
-                    used = 0;
-                    need = FootprintWidth(tile);
-                }
-                row.Add(tile);
-                used += need;
-            }
-            if (row.Count > 0) rows.Add(row);
-
             var y = top;
             var bottom = top;
-            foreach (var line in rows)
+            foreach (var line in FlowRows(tiles, right - left))
             {
-                var width = line.Sum(tile => FootprintWidth(tile)) + (line.Count - 1) * LayoutGap;
+                var width = RowWidth(line);
                 var x = Math.Max(left, Math.Floor(left + (right - left - width) / 2));
                 var tall = 0.0;
                 foreach (var tile in line)
@@ -521,6 +547,35 @@ namespace OpenDashPlugin
                 y = bottom + LayoutGap;
             }
             return bottom;
+        }
+
+        /// <summary>Tiles in rows no wider than <paramref name="width"/>, a row wrapped when the next tile would
+        /// pass it; a tile wider than that has a row of its own.</summary>
+        private static List<List<RigTile>> FlowRows(IList<RigTile> tiles, double width)
+        {
+            var rows = new List<List<RigTile>>();
+            var row = new List<RigTile>();
+            var used = 0.0;
+            foreach (var tile in tiles)
+            {
+                var need = (row.Count == 0 ? 0 : LayoutGap) + FootprintWidth(tile);
+                if (row.Count > 0 && used + need > width)
+                {
+                    rows.Add(row);
+                    row = new List<RigTile>();
+                    used = 0;
+                    need = FootprintWidth(tile);
+                }
+                row.Add(tile);
+                used += need;
+            }
+            if (row.Count > 0) rows.Add(row);
+            return rows;
+        }
+
+        private static double RowWidth(IList<RigTile> row)
+        {
+            return row.Sum(tile => FootprintWidth(tile)) + (row.Count - 1) * LayoutGap;
         }
 
         private static double Widest(IEnumerable<RigTile> tiles)
@@ -600,6 +655,23 @@ namespace OpenDashPlugin
         public static double Snap(double position)
         {
             return Math.Round(position / GridStep, MidpointRounding.AwayFromZero) * GridStep;
+        }
+
+        /// <summary>
+        /// One axis of where a dropped tile lands: the nearest step of the grid, or the last step inside the
+        /// canvas where the nearest would pass its edge, and never before its start.
+        /// </summary>
+        /// <remarks>
+        /// Always on the grid, so <see cref="SavePosition"/> keeps exactly the place the tile is drawn at and
+        /// <see cref="Plan"/> draws it there again: clamping after snapping would draw a tile flush with the
+        /// edge and keep it snapped a few pixels further on, and the next build would move it.
+        /// </remarks>
+        public static double DropPosition(double position, double size, double extent)
+        {
+            var most = Math.Floor((extent - size) / GridStep) * GridStep;
+            var snapped = Snap(position);
+            if (snapped > most) snapped = most;
+            return snapped < 0 ? 0 : snapped;
         }
 
         /// <summary>Where the driver put a tile, if they have: ScreenInstance's, LedBar's or the matrix
