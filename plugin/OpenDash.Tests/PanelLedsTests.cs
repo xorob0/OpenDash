@@ -17,8 +17,9 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("LEDs", PanelLeds.Title);
             Assert.Equal("No strips yet.", PanelLeds.NoStrips);
-            // #369 decided the artboard's words for the switch; the noun form would be "Car's own rev lights".
-            Assert.Equal("Use the car's own rev lights", PanelLeds.CarRevLightsTitle);
+            // A switch names the thing: the artboard's "Use the car's own rev lights" is the departure
+            // docs/design/plugin.md records (#369).
+            Assert.Equal("Car's own rev lights", PanelLeds.CarRevLightsTitle);
             Assert.Equal("Off fills the strip left to right.", PanelLeds.CarRevLightsCaption);
             Assert.Equal("Rev lights", PanelLeds.RevLightsTitle);
             // voice.md's own example: "Centre display", never the artboard's "Centre shows".
@@ -104,6 +105,11 @@ namespace OpenDashPlugin.Tests
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "car light tables"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "LED device"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "your LED strips"));
+            Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "true size"));
+            Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "fill the strip"));
+            // And the artboard's words, where the build keeps voice.md's.
+            Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "add leds"));
+            Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "use the car's own rev lights"));
         }
 
         [Fact]
@@ -264,11 +270,28 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_car_line_says_whether_Lovely_Car_Data_has_the_car_and_nothing_otherwise()
         {
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true));
-            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false));
-            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false));
-            Assert.Null(PanelLeds.CarLine(true, null, false));
-            Assert.Null(PanelLeds.CarLine(true, " ", true));
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", true, true));
+            Assert.Equal("Radical SR8 is not in Lovely Car Data.", PanelLeds.CarLine(true, "Radical SR8", false, true));
+            Assert.Null(PanelLeds.CarLine(false, "Radical SR8", false, true));
+            Assert.Null(PanelLeds.CarLine(true, null, false, true));
+            Assert.Null(PanelLeds.CarLine(true, " ", true, true));
+            Assert.True(PanelLeds.CarLineGood(true, true));
+            Assert.False(PanelLeds.CarLineGood(false, true));
+            Assert.Equal(Theme.StatusUpToDate, PanelLeds.CarLineHex(true));
+            Assert.Equal(Theme.Caution, PanelLeds.CarLineHex(false));
+        }
+
+        /// <summary>With no tables on disk no car can be found in them, so the line never says a car is missing
+        /// from Lovely Car Data then: it says the tables are, and where the row that fetches them is.</summary>
+        [Fact]
+        public void With_no_tables_the_car_line_says_they_are_missing_rather_than_the_car()
+        {
+            Assert.Equal("Lovely Car Data is not downloaded yet. Download it under Every strip.", PanelLeds.CarLine(true, "Porsche 911 GT3 R (992)", false, false));
+            Assert.Equal(PanelLeds.CarTablesMissing, PanelLeds.CarLine(true, null, false, false));
+            Assert.Null(PanelLeds.CarLine(false, "Porsche 911 GT3 R (992)", false, false));
+            Assert.False(PanelLeds.CarLineGood(true, false));
+            Assert.Contains(PanelLights.CarTablesTitle, PanelLeds.CarTablesMissing);
+            Assert.Contains(PanelLeds.EveryStripTitle, PanelLeds.CarTablesMissing);
         }
 
         [Fact]
@@ -423,10 +446,11 @@ namespace OpenDashPlugin.Tests
 
         // --- The Add LEDs sheet -------------------------------------------------------------------------------
 
+        /// <summary>The sheet takes the artboard's words, and voice.md's name for the press that opens it.</summary>
         [Fact]
-        public void The_sheet_is_worded_as_voice_md_has_it()
+        public void The_sheet_takes_the_artboards_words_and_voice_mds_name_for_its_button()
         {
-            Assert.Equal("Add LEDs", PanelLights.AddBar);
+            Assert.Equal("Add an LED strip", PanelLights.AddBar);
             Assert.Equal("Hardware", PanelLeds.HardwareStep);
             Assert.Equal("Shape", PanelLeds.ShapeStep);
             Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
@@ -441,6 +465,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Fixed", PanelLeds.Fixed);
             Assert.Equal("3 · 9 · 3", PanelLeds.FanatecShape);
             Assert.Equal("No LEDs OpenDash can reach", PanelLeds.NotReachable);
+            Assert.Equal("SimHub's log says why.", PanelLeds.PassedOverNote);
             Assert.Equal("Not connected", PanelLeds.NotConnected);
             Assert.Equal("Add and install", PanelLeds.AddAndInstall);
             Assert.Equal("None", PanelLeds.EndsLabel(0));
@@ -451,7 +476,39 @@ namespace OpenDashPlugin.Tests
         public void The_footer_says_what_will_be_installed_and_where()
         {
             Assert.Equal("Installs \"Wheel rim\" on Fanatec CSL Elite.", PanelLeds.InstallsOn("Wheel rim", "Fanatec CSL Elite"));
-            Assert.Equal("Installs \"Strip\".", PanelLeds.InstallsOn(" Strip ", null));
+            Assert.Equal("Installs \"Strip\" on Arduino RGB LEDs.", PanelLeds.InstallsOn(" Strip ", "Arduino RGB LEDs"));
+            // No device, nothing to install on: no promise, since the press would fail.
+            Assert.Null(PanelLeds.InstallsOn("Strip", null));
+        }
+
+        /// <summary>The footer names what the press adds, as the settings settle it: a cleared box adds the name
+        /// the sheet opened on, and a name the rig has is numbered.</summary>
+        [Fact]
+        public void The_footer_names_the_strip_the_press_will_add()
+        {
+            Assert.Equal("Wheel rim", PanelLeds.NameToAdd("  ", "Wheel rim", new string[0]));
+            Assert.Equal("Brow", PanelLeds.NameToAdd(" Brow ", "Strip", null));
+            Assert.Equal("Strip (2)", PanelLeds.NameToAdd("Strip", "Strip (2)", new[] { "Strip" }));
+            Assert.Equal("Strip (2)", PanelLeds.NameToAdd("", PanelLeds.DefaultName("0-15-0", new[] { "Strip" }), new[] { "Strip" }));
+        }
+
+        /// <summary>The words the page draws that no other test reads by value.</summary>
+        [Fact]
+        public void The_presses_and_their_hovers_are_pinned()
+        {
+            Assert.Equal("Install", PanelLeds.InstallProfile);
+            Assert.Equal("Update", PanelLeds.UpdateProfile);
+            Assert.Equal("Installs this strip's profile in SimHub.", PanelLeds.InstallTooltip);
+            // What the press does, not how: never "this build's version".
+            Assert.Equal("Updates this strip's profile in SimHub.", PanelLeds.UpdateTooltip);
+            Assert.Equal("Rename", PanelLeds.RenameButton);
+            Assert.Equal("Remove", PanelLeds.RemoveButton);
+            Assert.Equal("Removes this strip and its profile from SimHub.", PanelLeds.RemoveTooltip);
+            Assert.Equal("Remove it", PanelLeds.RemoveConfirm);
+            Assert.Equal("Removes the strip, its settings and its profile in SimHub.", PanelLeds.RemoveBody);
+            Assert.Equal("Start", PanelLeds.EachLedStart);
+            Assert.Equal("This build ships no strip profiles.", PanelLeds.NoProfiles);
+            Assert.Equal(new[] { "1 LED" }, PanelLeds.PreviewLabels(0, 1));
         }
 
         [Fact]
@@ -479,11 +536,13 @@ namespace OpenDashPlugin.Tests
         public void Each_press_says_what_happened_and_the_step_SimHub_does_not_take()
         {
             Assert.Equal("Installed Rim. Select \"Rim\" on Fanatec CSL Elite in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", "Fanatec CSL Elite"));
-            Assert.Equal("Installed Rim. Select \"Rim\" on your LED device in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", null));
+            Assert.Equal("Installed Rim. Select \"Rim\" in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", null));
             Assert.Equal("Updated Rim's profile.", PanelLeds.ProfileUpdated("Rim"));
             Assert.Equal("Could not install Rim's profile. See SimHub's log.", PanelLeds.ProfileFailed("Rim"));
-            Assert.Equal("Moved Rim's profile to Arduino RGB LEDs.", PanelLeds.Moved("Rim", "Arduino RGB LEDs"));
-            Assert.Equal("Renamed to Rim, in SimHub too.", PanelLeds.Renamed("Rim", true));
+            // A move installs the profile fresh on the other device, where it is not selected.
+            Assert.Equal("Moved Rim's profile to Arduino RGB LEDs. Select \"Rim\" there in SimHub to use it.", PanelLeds.Moved("Rim", "Arduino RGB LEDs"));
+            Assert.Equal("Moved Rim's profile. Select \"Rim\" in SimHub to use it.", PanelLeds.Moved("Rim", null));
+            Assert.Equal("Renamed to Rim in OpenDash and SimHub.", PanelLeds.Renamed("Rim", true));
             Assert.Equal("Renamed to Rim.", PanelLeds.Renamed("Rim", false));
             Assert.Equal("Renamed to Rim, but SimHub still lists the old name. See SimHub's log.", PanelLeds.RenameNotInSimHub("Rim"));
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim"));

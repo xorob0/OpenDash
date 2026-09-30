@@ -351,13 +351,14 @@ namespace OpenDashPlugin
                 var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));
                 width.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
                 var live = plugin.Live ?? LiveStatus.None;
-                var known = plugin.LiveCarHasTable;
-                var line = PanelLeds.CarLine(on, live.CarModel, known);
+                var loaded = plugin.CarLights.CarCount > 0;
+                var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);
+                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded);
                 carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
                 var key = line + "|" + known;
                 if (line == null || key == shown) return;
                 shown = key;
-                var hex = known ? Theme.StatusUpToDate : Theme.Caution;
+                var hex = PanelLeds.CarLineHex(known);
                 carText.Text = line;
                 carText.Foreground = Ui.Brush(hex);
                 carIcon.Content = known
@@ -570,10 +571,9 @@ namespace OpenDashPlugin
         {
             if (carTablesLine == null) return;
             var service = plugin.CarLights;
-            var line = service.Status;
             // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
             // refetches on its own any more, so the invitation is the whole of what staleness now does.
-            if (service.Stale(DateTime.UtcNow)) line += " " + PanelLights.CarTablesStale;
+            var line = PanelLights.CarTablesLine(service.Status, service.Stale(DateTime.UtcNow));
             carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
             if (carTablesButton != null)
             {
@@ -870,8 +870,13 @@ namespace OpenDashPlugin
 
             Action updateFooter = () =>
             {
+                // The name the press will add under, a cleared box included, and nothing where there is no
+                // device to install on: step 3 says why.
                 var target = targets.FirstOrDefault(t => string.Equals(t.Id, device, StringComparison.Ordinal));
-                footerNote.Text = PanelLeds.InstallsOn(name.Text, target == null ? null : target.Name);
+                var adds = PanelLeds.NameToAdd(name.Text, DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)), TakenBarNames());
+                var said = PanelLeds.InstallsOn(adds, target == null ? null : target.Name);
+                footerNote.Text = said ?? string.Empty;
+                footerNote.Visibility = said == null ? Visibility.Collapsed : Visibility.Visible;
             };
             name.TextChanged += (sender, args) =>
             {
@@ -933,8 +938,8 @@ namespace OpenDashPlugin
                 picture.HorizontalAlignment = HorizontalAlignment.Center;
                 var well = new Border { Background = Ui.Brush(Theme.SurfaceInset), CornerRadius = new CornerRadius(Theme.Radius), Child = picture };
                 shapeHost.Content = Ui.VStack(12,
-                    LedsSheetRow(PanelLights.BarEndsTitle, ends),
-                    LedsSheetRow(PanelLights.BarCentreTitle, middle),
+                    LedsSheetRow(PanelLights.BarEndsTitle, ends, PanelLights.BarEndsCaption),
+                    LedsSheetRow(PanelLights.BarCentreTitle, middle, PanelLights.BarCentreCaption),
                     well,
                     Ui.Prose(PanelLights.BarShapeNote(side, centre, fanatec)));
             };
@@ -947,7 +952,7 @@ namespace OpenDashPlugin
                 {
                     tiles.Add(LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null,
                         PanelEmulation.StripFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre, PanelEmulation.Yellow),
-                        PanelLeds.FanatecShape, PanelLights.BarFanatecCaption, fanatec, () =>
+                        PanelLeds.FanatecShape, null, fanatec, () =>
                         {
                             fanatec = true;
                             showHardware();
@@ -977,7 +982,9 @@ namespace OpenDashPlugin
             showDevices = () =>
             {
                 var list = new StackPanel { Orientation = Orientation.Vertical };
-                if (targets.Count == 0) list.Children.Add(Ui.Prose(PanelLights.DeviceRowCaption(0, null, notOffered)));
+                var passedOver = notOffered ?? new string[0];
+                // A device passed over is a disabled row saying so, so the prose says only what no row can.
+                if (targets.Count == 0 && passedOver.Count == 0) list.Children.Add(Ui.Prose(PanelLights.NoDevices));
                 foreach (var target in targets)
                 {
                     var id = target.Id;
@@ -991,12 +998,13 @@ namespace OpenDashPlugin
                     radio.Margin = new Thickness(0, 0, 0, 4);
                     list.Children.Add(radio);
                 }
-                foreach (var passed in notOffered ?? new string[0])
+                foreach (var passed in passedOver)
                 {
                     var radio = Ui.RadioRow(passed, PanelLeds.NotReachable, false, null, false);
                     radio.Margin = new Thickness(0, 0, 0, 4);
                     list.Children.Add(radio);
                 }
+                if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));
                 deviceHost.Content = list;
             };
 
@@ -1019,17 +1027,26 @@ namespace OpenDashPlugin
             ShowSheet(PanelLights.AddBar, body, Ui.VStack(14, footerNote, SheetFooter(null, cancel, add)));
         }
 
-        /// <summary>A label and its control on one line, as the sheet's shape step draws them.</summary>
-        private static FrameworkElement LedsSheetRow(string label, FrameworkElement control)
+        /// <summary>A label and its control on one line, as the sheet's shape step draws them, with a caption
+        /// under the label where it has one.</summary>
+        private static FrameworkElement LedsSheetRow(string label, FrameworkElement control, string caption = null)
         {
             var text = Ui.Text(label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
-            text.VerticalAlignment = VerticalAlignment.Center;
+            FrameworkElement words = text;
+            if (!string.IsNullOrEmpty(caption))
+            {
+                var under = Ui.Prose(caption, PanelKit.CardMetaSize);
+                under.Margin = new Thickness(0, 2, 0, 0);
+                words = Ui.VStack(0, text, under);
+            }
+            words.VerticalAlignment = VerticalAlignment.Center;
+            words.Margin = new Thickness(0, 0, 12, 0);
             control.HorizontalAlignment = HorizontalAlignment.Right;
             control.VerticalAlignment = VerticalAlignment.Center;
             var dock = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(control, Dock.Right);
             dock.Children.Add(control);
-            dock.Children.Add(text);
+            dock.Children.Add(words);
             return dock;
         }
 
@@ -1080,7 +1097,13 @@ namespace OpenDashPlugin
         /// numbered as the rig numbers a second one. SimHub's list shows the profile under this name.</summary>
         private string DefaultBarName(string shape)
         {
-            return PanelLeds.DefaultName(shape, Settings.LedBarList().Where(bar => bar != null).Select(bar => bar.Name));
+            return PanelLeds.DefaultName(shape, TakenBarNames());
+        }
+
+        /// <summary>The names the rig's strips already have, which a new one is numbered against.</summary>
+        private IEnumerable<string> TakenBarNames()
+        {
+            return Settings.LedBarList().Where(bar => bar != null).Select(bar => bar.Name).ToList();
         }
 
         private void AddLedBar(string shape, string name, string device)

@@ -185,7 +185,7 @@ namespace OpenDashPlugin
         }
 
         public const string InstallTooltip = "Installs this strip's profile in SimHub.";
-        public const string UpdateTooltip = "Installs this build's version of this strip's profile.";
+        public const string UpdateTooltip = "Updates this strip's profile in SimHub.";
 
         public const string RenameButton = "Rename";
         public const string RemoveButton = "Remove";
@@ -276,9 +276,10 @@ namespace OpenDashPlugin
 
         public const string RevLightsTitle = "Rev lights";
 
-        /// <summary>The #369 switch: the car's own rev lights, or the plain ladder. The artboard's words, which
-        /// #369 decided; the noun form would be "Car's own rev lights" (docs/design/plugin.md).</summary>
-        public const string CarRevLightsTitle = "Use the car's own rev lights";
+        /// <summary>The #369 switch: the car's own rev lights, or the plain ladder. A switch names the thing
+        /// (voice.md), so the artboard's instruction "Use the car's own rev lights" is the departure
+        /// docs/design/plugin.md records; search still finds the row by it.</summary>
+        public const string CarRevLightsTitle = "Car's own rev lights";
         public const string CarRevLightsCaption = "Off fills the strip left to right.";
 
         /// <summary>Whether a strip's stored style reads as the switch on. A retired style (meetInMiddle, f1)
@@ -290,12 +291,36 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The line under the switch: whether the car in the sim is one Lovely Car Data has measured. Null
-        /// while the switch is off or no car is loaded, since then there is nothing to say.
+        /// while the switch is off, or while no car is loaded and the tables are there, since then there is
+        /// nothing to say.
         /// </summary>
-        public static string CarLine(bool on, string car, bool hasTable)
+        /// <remarks>
+        /// With no tables on disk, which is every fresh install, no car can be found in them, and saying the
+        /// car "is not in Lovely Car Data" would be false for a car it measures. The line says what is missing
+        /// instead, and where the row that fetches it is.
+        /// </remarks>
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded)
         {
-            if (!on || string.IsNullOrWhiteSpace(car)) return null;
+            if (!on) return null;
+            if (!tablesLoaded) return CarTablesMissing;
+            if (string.IsNullOrWhiteSpace(car)) return null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
+        }
+
+        /// <summary>The car line while no tables are on disk.</summary>
+        public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it under Every strip.";
+
+        /// <summary>Whether the car line is the good news, drawn in green with the ringed check, rather than
+        /// something to act on, drawn in amber with the warning.</summary>
+        public static bool CarLineGood(bool hasTable, bool tablesLoaded)
+        {
+            return tablesLoaded && hasTable;
+        }
+
+        /// <summary>The car line's ink.</summary>
+        public static string CarLineHex(bool good)
+        {
+            return good ? Theme.StatusUpToDate : Theme.Caution;
         }
 
         /// <summary>The width row, in the noun the switch uses: "Rev light width". The artboard's bare "Width"
@@ -522,18 +547,31 @@ namespace OpenDashPlugin
         /// <summary>What a device OpenDash passed over says in the device list (PanelLights.NotOffered's fact).</summary>
         public const string NotReachable = "No LEDs OpenDash can reach";
 
+        /// <summary>The one line under the rows passed over: the rows say which, and the log says why.</summary>
+        public const string PassedOverNote = "SimHub's log says why.";
+
         /// <summary>What a device SimHub is not talking to says beside its name. A profile installs into it all
         /// the same.</summary>
         public const string NotConnected = "Not connected";
 
         public const string AddAndInstall = "Add and install";
 
-        /// <summary>The footer's line: what the press will install and where. The profile is listed under the
-        /// strip's own name.</summary>
+        /// <summary>The footer's line: what the press will install and where, the profile listed under the
+        /// strip's own name. Null with no SimHub device, where the press can install nothing and the device
+        /// step already says why.</summary>
         public static string InstallsOn(string name, string device)
         {
-            var quoted = "\"" + (name ?? string.Empty).Trim() + "\"";
-            return string.IsNullOrWhiteSpace(device) ? "Installs " + quoted + "." : "Installs " + quoted + " on " + device + ".";
+            if (string.IsNullOrWhiteSpace(device)) return null;
+            return "Installs \"" + (name ?? string.Empty).Trim() + "\" on " + device + ".";
+        }
+
+        /// <summary>The name the press adds a strip under, as OpenDashSettings.AddLedBar settles it: what was
+        /// typed, or the name the sheet opened on where the box was cleared, numbered where the rig already
+        /// has it. The footer names this, so it names what will be added.</summary>
+        public static string NameToAdd(string typed, string defaultName, IEnumerable<string> taken)
+        {
+            var wanted = string.IsNullOrWhiteSpace(typed) ? defaultName : typed.Trim();
+            return PackageCatalogue.UniqueName(wanted, taken ?? Enumerable.Empty<string>());
         }
 
         public const string WheelRim = "Wheel rim";
@@ -552,11 +590,18 @@ namespace OpenDashPlugin
 
         // --- What is said after a press ---------------------------------------------------------------------------
 
-        /// <summary>A profile installed from the header: the step SimHub does not take, selecting it.</summary>
+        /// <summary>A profile installed from the header: the step SimHub does not take, selecting it, on the
+        /// SimHub device it went to, or in SimHub where that device cannot be named.</summary>
         public static string ProfileInstalled(string name, string device)
         {
-            var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
-            return "Installed " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
+            return "Installed " + name + ". " + SelectIt(name, device);
+        }
+
+        /// <summary>The step SimHub does not take after an install, in the one form every press says it.</summary>
+        public static string SelectIt(string name, string device)
+        {
+            var on = string.IsNullOrWhiteSpace(device) ? string.Empty : " on " + device;
+            return "Select \"" + name + "\"" + on + " in SimHub to use it.";
         }
 
         public static string ProfileUpdated(string name)
@@ -569,15 +614,18 @@ namespace OpenDashPlugin
             return "Could not install " + name + "'s profile. See SimHub's log.";
         }
 
+        /// <summary>A strip moved to another SimHub device, which installs its profile there fresh and
+        /// unselected: the step SimHub does not take, as after any install.</summary>
         public static string Moved(string name, string device)
         {
-            return "Moved " + name + "'s profile to " + (string.IsNullOrWhiteSpace(device) ? "that device" : device) + ".";
+            if (string.IsNullOrWhiteSpace(device)) return "Moved " + name + "'s profile. " + SelectIt(name, null);
+            return "Moved " + name + "'s profile to " + device + ". Select \"" + name + "\" there in SimHub to use it.";
         }
 
         /// <summary>A rename, which installs the profile again so SimHub's list carries the new name.</summary>
         public static string Renamed(string name, bool inSimHub)
         {
-            return inSimHub ? "Renamed to " + name + ", in SimHub too." : "Renamed to " + name + ".";
+            return inSimHub ? "Renamed to " + name + " in OpenDash and SimHub." : "Renamed to " + name + ".";
         }
 
         public static string RenameNotInSimHub(string name)
@@ -610,10 +658,10 @@ namespace OpenDashPlugin
         {
             var entries = new List<PanelSearch.Entry>
             {
-                new PanelSearch.Entry(PanelLights.AddBar, PanelPage.Leds, AnchorStrips, "strip", "wheel", "rim", "brow", "your LED strips", "new"),
+                new PanelSearch.Entry(PanelLights.AddBar, PanelPage.Leds, AnchorStrips, "strip", "wheel", "rim", "brow", "your LED strips", "add leds", "new"),
                 new PanelSearch.Entry(RevLightsTitle, PanelPage.Leds, AnchorRevLights, "shift lights", "rpm"),
-                new PanelSearch.Entry(CarRevLightsTitle, PanelPage.Leds, AnchorRevStyle, "rev light style", "car-specific", "car's own rev lights", "shift lights", "rpm"),
-                new PanelSearch.Entry(MirrorFitTitle, PanelPage.Leds, AnchorMirrorFit, "stretch", "actual size", "width"),
+                new PanelSearch.Entry(CarRevLightsTitle, PanelPage.Leds, AnchorRevStyle, "rev light style", "car-specific", "use the car's own rev lights", "shift lights", "rpm"),
+                new PanelSearch.Entry(MirrorFitTitle, PanelPage.Leds, AnchorMirrorFit, "stretch", "actual size", "width", "true size", "fill the strip"),
                 new PanelSearch.Entry(CentreDisplayTitle, PanelPage.Leds, AnchorCentre, "middle", "brake", "throttle", "fuel"),
                 new PanelSearch.Entry(ThisStripTitle, PanelPage.Leds, AnchorThisStrip, "strip"),
                 new PanelSearch.Entry(PanelLights.BarDeviceTitle, PanelPage.Leds, AnchorDevice, "LED device", "arduino", "wheel"),

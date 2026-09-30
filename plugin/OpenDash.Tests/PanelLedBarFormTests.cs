@@ -64,11 +64,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_note_and_the_default_name_follow_the_switch()
         {
-            Assert.Equal("15 LEDs in all, as 3/9/3.", PanelLights.BarShapeNote(3, 9, false));
-            Assert.Equal("24 LEDs in all, as 4/16/4.", PanelLights.BarShapeNote(4, 16, false));
-            Assert.Equal("15 LEDs in all, as 3/9/3 Fanatec.", PanelLights.BarShapeNote(3, 9, true));
-            Assert.Equal("15 LEDs in all, as 3/9/3 Fanatec.", PanelLights.BarShapeNote(0, 20, true));
-            // What DefaultBarName prefixes with "OpenDash ", which is the Name the generator gives the profile.
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3.", PanelLights.BarShapeNote(3, 9, false));
+            Assert.Equal("24 LEDs in all, as 4 · 16 · 4.", PanelLights.BarShapeNote(4, 16, false));
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3 Fanatec.", PanelLights.BarShapeNote(3, 9, true));
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3 Fanatec.", PanelLights.BarShapeNote(0, 20, true));
+            // The label the Updates page lists the profile under, which "OpenDash " before it makes the Name the
+            // generator gives the profile.
             Assert.Equal("3/9/3 Fanatec", PanelLightRows.ShapeLabel(PanelLights.BarShapeId(0, 20, true)));
             Assert.Equal("3/9/3", PanelLightRows.ShapeLabel(PanelLights.BarShapeId(3, 9, false)));
         }
@@ -119,8 +120,9 @@ namespace OpenDashPlugin.Tests
             Assert.Single(PanelLights.BarCentres(census, 4), 14);
         }
 
-        /// <summary>The name the switch gives a bar before the driver types over it is the Name the build
-        /// wrote into the Fanatec profile, so the row in SimHub's list and the bar agree.</summary>
+        /// <summary>The label the Updates page lists the Fanatec profile under, with "OpenDash " before it, is the
+        /// Name the build wrote into that profile, so the Updates row and SimHub's list agree. (The name the Add
+        /// sheet opens on is PanelLeds.DefaultName's, which PanelLedsTests pins.)</summary>
         [Fact]
         public void A_Fanatec_bar_is_named_for_the_profile_the_build_wrote()
         {
@@ -138,7 +140,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The form hands AddLedBar, and names the bar after, the id the switch decides.
+        /// The form hands AddLedBar, and opens its name box on the default for, the id the switch decides.
         /// </summary>
         /// <remarks>
         /// Read as text because the csproj compiles no WPF file: this is the one line that joins the

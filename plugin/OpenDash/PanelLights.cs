@@ -42,14 +42,20 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string BarsTitle = "Your LED strips";
 
-        /// <summary>The tile beside the cards and the sheet it opens, in the artboard's words.</summary>
-        public const string AddBar = "Add LEDs";
+        /// <summary>The tile beside the cards and the sheet it opens: voice.md's own example beside "No strips
+        /// yet", since the strips are strips throughout. The artboard's "Add LEDs" is the departure
+        /// docs/design/plugin.md records, and search still finds the tile by it.</summary>
+        public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";
 
         public const string BarNameCaption = "Also shown in SimHub's LED profile list.";
 
         public const string BarEndsTitle = "LEDs at each end";
+
+        /// <summary>The line under the ends, in a driver's words rather than the generator's ("lamps"): what the
+        /// ends carry, and how to have none.</summary>
+        public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every strip: SimHub's word for it, since SimHub's
         /// Devices list is where the driver finds it.</summary>
@@ -74,9 +80,10 @@ namespace OpenDashPlugin
             return "Goes to " + name + ".";
         }
 
-        /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
-        /// cannot have is a profile anywhere, which is a thing about the rig and not about OpenDash.</summary>
-        public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
+        /// <summary>Said when SimHub has none, in the row's own noun ("SimHub device"). The bar is still added
+        /// and still configurable; what it cannot have is a profile anywhere, which is a thing about the rig
+        /// and not about OpenDash.</summary>
+        public const string NoDevices = "No SimHub device has LEDs. Add your wheel or Arduino in SimHub first.";
 
         /// <summary>
         /// Said beside the picker when SimHub has devices with some sign of LEDs that OpenDash did not
@@ -137,18 +144,22 @@ namespace OpenDashPlugin
         /// <summary>The centre's count, in the word the rest of the page uses for it ("Centre display").</summary>
         public const string BarCentreTitle = "LEDs in the centre";
 
-        /// <summary>The line under the two numbers: what they add up to and what the profile will be
-        /// called. A driver counts LEDs, and this is where the two counts are checked against the total
-        /// they actually have.</summary>
+        /// <summary>The line under the centre: how to arrive at the number.</summary>
+        public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
+
+        /// <summary>The line under the two numbers: what they add up to, and the shape written as the cards
+        /// write it. A driver counts LEDs, and this is where the two counts are checked against the total
+        /// they actually have. A bare run is its total alone, since "0 · 15 · 0" is the id talking.</summary>
         public static string BarShapeNote(int side, int centre)
         {
             var total = side * 2 + centre;
-            var shape = side + "/" + centre + "/" + side;
-            return total + (total == 1 ? " LED in all" : " LEDs in all") + ", as " + shape + ".";
+            var all = total + (total == 1 ? " LED in all" : " LEDs in all");
+            if (side <= 0) return all + ".";
+            return all + ", as " + PanelLeds.ShapeDots(BarShapeId(side, centre)) + ".";
         }
 
-        /// <summary>The same line for the form as it stands, the switch included: on, the two numbers are
-        /// the wheel's whatever the controls held before, and the profile is the Fanatec one.</summary>
+        /// <summary>The same line for the form as it stands, the tile included: the Fanatec wheel's shape is
+        /// its own whatever the controls held before, and the profile is the Fanatec one.</summary>
         public static string BarShapeNote(int side, int centre, bool fanatec)
         {
             if (!fanatec) return BarShapeNote(side, centre);
@@ -156,17 +167,19 @@ namespace OpenDashPlugin
             return plain.Substring(0, plain.Length - 1) + " Fanatec.";
         }
 
-        /// <summary>What a bar of this shape is called before the driver types over it.</summary>
+        /// <summary>The id of a plain A/B/A shape, which the census and the Add sheet ask over.</summary>
         public static string BarShapeId(int side, int centre)
         {
             return side + "-" + centre + "-" + side;
         }
 
-        /// <summary>The switch above the two numbers, which decides them when it is on.</summary>
+        /// <summary>The hardware tile that decides the shape when it is chosen.</summary>
         public const string BarFanatecTitle = "Fanatec wheel";
 
         /// <summary>
-        /// The line under it: why a Fanatec wheel is not simply a 3/9/3.
+        /// Why a Fanatec wheel is not simply a 3/9/3. Not drawn: it explains how SimHub presents the LEDs,
+        /// which voice.md keeps off the panel, and the tile already says Fanatec wheel and 3 · 9 · 3. Kept, with
+        /// PanelLedBarFormTests' pin, as the reason the tile exists.
         /// </summary>
         /// <remarks>
         /// The plain 3/9/3 on a Fanatec wheel lights only some of its LEDs and starts the bar from the
@@ -244,7 +257,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What is said once a bar exists, which is the step SimHub does not take for you: installing
-        /// adds a profile, it does not select one on the device.
+        /// adds a profile, it does not select one on the device. Then the step OpenDash cannot take yet:
+        /// the plugin publishes a strip's own settings only for the strips it held when SimHub started, so
+        /// until SimHub restarts the new strip draws its defaults whatever this page sets.
         /// </summary>
         /// <remarks>
         /// It names the device, because "your LED device" was the whole confusion: a profile goes into
@@ -253,14 +268,16 @@ namespace OpenDashPlugin
         /// </remarks>
         public static string BarAdded(string name, string device)
         {
-            var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
-            return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
+            return "Added " + name + ". " + PanelLeds.SelectIt(name, device) + " " + BarAddedRestart;
         }
 
+        /// <summary>The restart BarAdded asks for, pinned apart so it goes when the plugin attaches a strip's
+        /// settings as the strip is added.</summary>
+        public const string BarAddedRestart = "Its settings here reach it once SimHub restarts.";
+
         /// <summary>
-        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form):
-        /// no page offers a press that installs it again -- the Updates row for a profile that is not in SimHub
-        /// has none, and its hover sends the driver back to LEDs -- until the LEDs header carries ReinstallBar's.
+        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form);
+        /// the LEDs header then offers Install for it.
         /// </summary>
         public static string BarAddFailed(string name)
         {
@@ -273,9 +290,9 @@ namespace OpenDashPlugin
             return "Could not move " + name + "'s profile. See SimHub's log.";
         }
 
-        /// <summary>The strip's Rename press. Saving installs the profile again, so SimHub's list carries the
-        /// new name as well.</summary>
-        public const string RenameBarTooltip = "Renames this strip, in SimHub too.";
+        /// <summary>The strip's Rename press. Saving installs the profile again where SimHub holds it, so
+        /// SimHub's list carries the new name as well; the tooltip promises only what always happens.</summary>
+        public const string RenameBarTooltip = "Renames this strip.";
 
         /// <summary>The row that offers the car light tables, under Every strip: the source's own name, which
         /// is what a driver who met the tables at Lovely Sim Racing knows them by.</summary>
@@ -299,7 +316,7 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for a strip set to use the car's own rev lights. Every car is downloaded at once, about 400 KB, "
+            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
             + "so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
@@ -335,6 +352,19 @@ namespace OpenDashPlugin
 
         /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
         public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
+
+        /// <summary>
+        /// The row's status line: CarLightService's status, and the stale note after it as a sentence of its
+        /// own. The status ends with no stop ("84 cars, updated 9 days ago"), so a bare space ran the two
+        /// together.
+        /// </summary>
+        public static string CarTablesLine(string status, bool stale)
+        {
+            var line = (status ?? string.Empty).TrimEnd();
+            if (!stale) return line;
+            if (line.Length == 0) return CarTablesStale;
+            return line.TrimEnd('.') + ". " + CarTablesStale;
+        }
 
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";

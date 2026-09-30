@@ -54,21 +54,29 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_shape_note_says_what_the_two_numbers_add_up_to()
         {
-            Assert.Equal("15 LEDs in all, as 3/9/3.", PanelLights.BarShapeNote(3, 9));
-            Assert.Equal("15 LEDs in all, as 0/15/0.", PanelLights.BarShapeNote(0, 15));
+            // The shape as the cards write it; a bare run is its total alone, never the id's "0/15/0".
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3.", PanelLights.BarShapeNote(3, 9));
+            Assert.Equal("15 LEDs in all.", PanelLights.BarShapeNote(0, 15));
+            Assert.Equal("1 LED in all.", PanelLights.BarShapeNote(0, 1));
             Assert.Equal("3-9-3", PanelLights.BarShapeId(3, 9));
             Assert.Equal("0-15-0", PanelLights.BarShapeId(0, 15));
-            // The two rows of the Add LEDs sheet's shape step, in the page's word for the middle: "centre", as
-            // Centre display says it. The artboard draws them with no captions; the line above adds them up.
+            // The two rows of the sheet's shape step, in the page's word for the middle: "centre", as Centre
+            // display says it.
             Assert.Equal("LEDs at each end", PanelLights.BarEndsTitle);
             Assert.Equal("LEDs in the centre", PanelLights.BarCentreTitle);
+            // The one thing the two captions have to get the right way round, said in a driver's words
+            // rather than the generator's ("lamps", "the rev ladder"); docs/design/voice.md is the rule.
+            Assert.Contains("Flags", PanelLights.BarEndsCaption);
+            Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
         }
 
         /// <summary>The strip words the LEDs page draws, as the artboards and docs/design/voice.md have them.</summary>
         [Fact]
         public void The_strip_words_are_the_pages()
         {
-            Assert.Equal("Add LEDs", PanelLights.AddBar);
+            // voice.md's own example beside "No strips yet"; the artboard's "Add LEDs" is a recorded departure.
+            Assert.Equal("Add an LED strip", PanelLights.AddBar);
+            Assert.Equal("Your LED strips", PanelLights.BarsTitle);
             // SimHub's word for it, since SimHub's Devices list is where the driver finds it.
             Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
             Assert.Equal(new[] { "Stretch to fit", "Actual size" }, PanelLights.MirrorFitLabels);
@@ -76,6 +84,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Lovely Car Data", PanelLights.CarTablesTitle);
             Assert.Equal("Downloads Lovely Car Data.", PanelLights.CarTablesButtonTooltip);
             Assert.Equal("Not downloaded yet.", PanelLights.CarTablesNone);
+            Assert.Equal("Downloading…", PanelLights.CarTablesDownloading);
+            Assert.Equal("Over a week old. Press Update for a newer copy.", PanelLights.CarTablesStale);
+            Assert.Equal("The device it was on (no longer on this rig)", PanelLights.DeviceGone);
+            Assert.Equal(" (not connected)", PanelLights.DeviceOffline);
+            Assert.Equal("Goes to Arduino RGB LEDs.", PanelLights.OneDevice("Arduino RGB LEDs"));
+            Assert.Equal("No SimHub device has LEDs. Add your wheel or Arduino in SimHub first.", PanelLights.NoDevices);
             // No word of the old tabs survives in the words the page draws.
             foreach (var words in new[] { PanelLights.CarTablesCaption, PanelLights.BarAddFailed("Rim"), PanelLights.BarNameCaption, PanelLights.RenameBarTooltip })
             {
@@ -158,12 +172,37 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log.", PanelLights.BarAddFailed("Rim"));
             Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
-            Assert.Equal("Renames this strip, in SimHub too.", PanelLights.RenameBarTooltip);
+            // Rename reinstalls only where SimHub holds the profile, so the hover promises only the rename.
+            Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
             // Nor does the Rename sheet one click later: its footer has no note, since saving reinstalls.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var rename = leds.Substring(leds.IndexOf("ShowSheet(\"Rename \"", System.StringComparison.Ordinal));
             Assert.StartsWith("SheetFooter(null, cancel, save)", rename.Substring(rename.IndexOf("SheetFooter(", System.StringComparison.Ordinal)));
             Assert.DoesNotContain("Install the strip again", leds);
+        }
+
+        /// <summary>A strip added is told the step SimHub does not take, on the device it went to, and the
+        /// restart its own settings wait on: the plugin publishes them only for the strips it held at start.</summary>
+        [Fact]
+        public void A_strip_added_says_where_to_select_it_and_that_its_settings_wait_for_a_restart()
+        {
+            Assert.Equal("Added Rim. Select \"Rim\" on Fanatec CSL Elite in SimHub to use it. Its settings here reach it once SimHub restarts.",
+                PanelLights.BarAdded("Rim", "Fanatec CSL Elite"));
+            Assert.Equal("Added Rim. Select \"Rim\" in SimHub to use it. Its settings here reach it once SimHub restarts.",
+                PanelLights.BarAdded("Rim", null));
+        }
+
+        /// <summary>The status line and the stale note are two sentences, not one run-on.</summary>
+        [Fact]
+        public void The_stale_note_follows_the_status_as_a_sentence_of_its_own()
+        {
+            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
+            Assert.Equal("84 cars, updated 9 days ago. Over a week old. Press Update for a newer copy.",
+                PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
+            Assert.Equal("84 cars, updated 9 days ago (last download failed: timeout). Over a week old. Press Update for a newer copy.",
+                PanelLights.CarTablesLine("84 cars, updated 9 days ago (last download failed: timeout)", true));
+            Assert.Equal("Not downloaded yet. Over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("Not downloaded yet.", true));
+            Assert.Equal(PanelLights.CarTablesStale, PanelLights.CarTablesLine(null, true));
         }
 
         [Theory]
