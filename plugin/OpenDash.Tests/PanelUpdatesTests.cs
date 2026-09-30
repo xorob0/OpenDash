@@ -332,7 +332,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.4.2", older.Version);
 
             var edited = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.UpdateAvailable, "0.4.2", true), true, false);
-            Assert.Contains("You have edited it", edited.Tooltip);
+            Assert.Equal("You have edited it, so OpenDash left it alone. Reinstall everything replaces it.", edited.Tooltip);
+            Assert.Equal("Reinstall everything brings it to 0.5.0.", PanelUpdates.BringsItTo("0.5.0"));
+            Assert.Equal("Reinstall everything brings it up to date.", PanelUpdates.BringsItTo(null));
 
             var none = PanelUpdates.DashboardRow("Rim", Package(InstallStatus.NotInstalled, null), null, null);
             Assert.Equal("Not installed", none.State);
@@ -376,23 +378,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.4.2", older.Version);
             Assert.Equal("Update available", older.State);
             Assert.Equal(Theme.StatusUpdateAvailable, older.StateHex);
+            Assert.Equal(Theme.StatusUpdateAvailable, older.DotHex);
             Assert.True(older.OffersUpdate);
-            Assert.Contains(FlagBoxInstallPlan.Replaces, older.Tooltip);
+            Assert.Equal("A newer profile is available (0.4.2 to 0.5.0). Replaces the copy in SimHub, including your changes to it.", older.Tooltip);
 
             var current = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" });
             Assert.Equal("Up to date", current.State);
+            Assert.Equal("Installed and up to date.", current.Tooltip);
             Assert.False(current.OffersUpdate);
 
             var none = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
             Assert.Equal("Not installed", none.State);
-            Assert.Equal("Its profile is not in SimHub.", none.Tooltip);
+            Assert.Equal(Theme.StatusNotInstalled, none.DotHex);
+            Assert.Equal("Its profile is not in SimHub. Reinstall everything installs it.", none.Tooltip);
             Assert.False(none.OffersUpdate);
 
             var unreachable = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
             Assert.Equal("Not installed", unreachable.State);
             Assert.Equal(PanelLightRows.Unavailable, unreachable.Tooltip);
 
-            Assert.Equal("Install failed", PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed }).State);
+            var failed = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed });
+            Assert.Equal("Install failed", failed.State);
+            Assert.Equal("Install failed. See SimHub's log.", failed.Tooltip);
+        }
+
+        /// <summary>A light row's dot is its own words' ink, so an older profile's amber words have an
+        /// amber dot, whatever the Matrix pill's dot (PanelLightRows.DotHex) says beside its own words.</summary>
+        [Fact]
+        public void A_light_row_s_dot_is_the_ink_of_its_own_words()
+        {
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                var plan = new FlagBoxPlan { State = state, InstalledVersion = "0.4.2", EmbeddedVersion = "0.5.0" };
+                foreach (var row in new[] { PanelUpdates.StripRow("Wheel rim", plan), PanelUpdates.FlagBoxRow("OpenDash Flag box", plan, null) })
+                {
+                    var expected = row.StateHex == Theme.TextLabel ? Theme.StatusNotInstalled : row.StateHex;
+                    Assert.Equal(expected, row.DotHex);
+                }
+            }
         }
 
         [Fact]
@@ -405,10 +428,30 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Update available", older.State);
             Assert.True(older.OffersUpdate);
 
+            Assert.Equal("A newer profile is available (0.4.2 to 0.5.0). Replaces the copy in SimHub, including your changes to it.", older.Tooltip);
+
             var current = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, null);
             Assert.Equal("Up to date", current.State);
+            // The row has no Reinstall, so it is not told about one.
+            Assert.Equal("Installed and up to date.", current.Tooltip);
             Assert.False(current.OffersUpdate);
-            Assert.False(PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null).OffersUpdate);
+
+            var none = PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null);
+            Assert.False(none.OffersUpdate);
+            Assert.Equal("Not installed. Reinstall everything installs it, then select it on your device.", none.Tooltip);
+
+            var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
+            Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.", unreachable.Tooltip);
+            Assert.Equal("Install failed. See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
+        }
+
+        /// <summary>A light row's Update press says what it costs, in the words the Matrix and LEDs pages
+        /// warn with.</summary>
+        [Fact]
+        public void A_light_row_s_update_says_it_replaces_the_driver_s_changes()
+        {
+            Assert.Equal(FlagBoxInstallPlan.Replaces, PanelUpdates.RowUpdateTooltip);
+            Assert.Equal("Replaces the copy in SimHub, including your changes to it.", PanelUpdates.RowUpdateTooltip);
         }
 
         // --- Reinstall everything ---------------------------------------------------------------------
@@ -424,29 +467,84 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.ReinstallQuestion(new[] { "Rim", "Pit wall" }));
         }
 
+        /// <summary>Counts strips one by one, and a flag box write by what it was before.</summary>
+        private static UpdatesLightsTally Tally(int updated = 0, int installed = 0, int notUpdated = 0, int notInstalled = 0, FlagBoxInstallState? flagBoxBefore = null, FlagBoxInstallState? flagBoxAfter = null)
+        {
+            var tally = new UpdatesLightsTally();
+            for (var i = 0; i < updated; i++) tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate);
+            for (var i = 0; i < installed; i++) tally.Strip(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate);
+            for (var i = 0; i < notUpdated; i++) tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed);
+            for (var i = 0; i < notInstalled; i++) tally.Strip(FlagBoxInstallState.Failed, FlagBoxInstallState.Failed);
+            if (flagBoxBefore.HasValue) tally.FlagBox(flagBoxBefore.Value, flagBoxAfter.Value);
+            return tally;
+        }
+
         [Fact]
         public void Reinstall_everything_says_what_it_wrote_and_the_step_left()
         {
             Assert.Equal("Reinstalled 3 dashboards. Close and reopen the dashboard to see it.",
-                PanelUpdates.ReinstallSummary(3, 0, false, 0, 0, "OpenDash Flag box", null));
+                PanelUpdates.ReinstallSummary(3, 0, false, Tally(), "OpenDash Flag box"));
             Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it.",
-                PanelUpdates.ReinstallSummary(1, 0, true, 0, 0, "OpenDash Flag box", null));
-            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Updated 2 LED profiles. Updated OpenDash Flag box. Close and reopen the dashboard to see it.",
-                PanelUpdates.ReinstallSummary(2, 1, false, 2, 0, "OpenDash Flag box", FlagBoxInstallState.UpToDate));
+                PanelUpdates.ReinstallSummary(1, 0, true, null, "OpenDash Flag box"));
+            // The step follows the dashboards, so "it" is one of them and not the last profile named.
+            Assert.Equal("Reinstalled 2 dashboards. The one you edited was left alone. Close and reopen the dashboard to see it. Updated 2 LED profiles. Updated OpenDash Flag box.",
+                PanelUpdates.ReinstallSummary(2, 1, false, Tally(updated: 2, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
+            Assert.Equal("Reinstalled 1 dashboard. Close and reopen the dashboard to see it. Updated 1 LED profile. Installed 2 LED profiles. Installed OpenDash Flag box.",
+                PanelUpdates.ReinstallSummary(1, 0, false, Tally(updated: 1, installed: 2, flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.UpToDate), "OpenDash Flag box"));
             Assert.Equal("Reinstalled 0 dashboards. The 2 you edited were left alone.",
-                PanelUpdates.ReinstallSummary(0, 2, false, 0, 0, "OpenDash Flag box", null));
-            Assert.True(PanelUpdates.ReinstallOk(0, null));
-            Assert.True(PanelUpdates.ReinstallOk(0, FlagBoxInstallState.UpToDate));
+                PanelUpdates.ReinstallSummary(0, 2, false, Tally(), "OpenDash Flag box"));
+            Assert.True(Tally().Ok);
+            Assert.True(Tally(updated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate).Ok);
         }
 
         [Fact]
-        public void A_profile_that_could_not_be_updated_is_said_with_where_to_look()
+        public void A_profile_that_could_not_be_written_is_said_with_where_to_look_and_the_step_still_said()
         {
-            var line = PanelUpdates.ReinstallSummary(2, 0, false, 1, 1, "OpenDash Flag box", FlagBoxInstallState.Failed);
-            Assert.Equal("Reinstalled 2 dashboards. Updated 1 LED profile. 1 LED profile could not be updated. OpenDash Flag box could not be updated. See SimHub's log.", line);
-            Assert.False(PanelUpdates.ReinstallOk(1, null));
-            Assert.False(PanelUpdates.ReinstallOk(0, FlagBoxInstallState.Failed));
+            var line = PanelUpdates.ReinstallSummary(2, 0, false, Tally(updated: 1, notUpdated: 1, flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box");
+            Assert.Equal("Reinstalled 2 dashboards. Close and reopen the dashboard to see it. Updated 1 LED profile. 1 LED profile could not be updated. OpenDash Flag box could not be updated. See SimHub's log.", line);
+            Assert.Equal("Reinstalled 1 dashboard. Restart SimHub to see it. 2 LED profiles could not be updated. 3 LED profiles could not be installed. See SimHub's log.",
+                PanelUpdates.ReinstallSummary(1, 0, true, Tally(notUpdated: 2, notInstalled: 3), "OpenDash Flag box"));
+            Assert.Equal("Reinstalled 0 dashboards. OpenDash Flag box could not be installed. See SimHub's log.",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.NotInstalled, flagBoxAfter: FlagBoxInstallState.Failed), "OpenDash Flag box"));
+            // A blank name is the profile's own.
+            Assert.Equal("Reinstalled 0 dashboards. Updated " + FlagBoxProfile.ProfileName + ".",
+                PanelUpdates.ReinstallSummary(0, 0, false, Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.UpToDate), " "));
+            Assert.False(Tally(notUpdated: 1).Ok);
+            Assert.False(Tally(notInstalled: 1).Ok);
+            Assert.False(Tally(flagBoxBefore: FlagBoxInstallState.Outdated, flagBoxAfter: FlagBoxInstallState.Failed).Ok);
             Assert.Equal("The reinstall did not finish: disk full", PanelUpdates.ReinstallFailed("disk full"));
+        }
+
+        /// <summary>Two strips of one shape are two strips: one rewritten and one whose device has gone is
+        /// one updated and one that could not be, not two failures.</summary>
+        [Fact]
+        public void A_run_is_counted_strip_by_strip()
+        {
+            var tally = new UpdatesLightsTally();
+            tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate);
+            tally.Strip(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed);
+            Assert.Equal(1, tally.StripsUpdated);
+            Assert.Equal(1, tally.StripsNotUpdated);
+            Assert.Equal(0, tally.StripsInstalled);
+            Assert.Equal(0, tally.StripsNotInstalled);
+            Assert.Null(tally.FlagBoxAfter);
+        }
+
+        /// <summary>Ruling 70: an older, missing or failed profile is written, a current one never, and the
+        /// flag box only on a rig with a matrix, where the table draws its row.</summary>
+        [Fact]
+        public void Reinstall_everything_writes_older_and_missing_profiles_and_never_a_current_one()
+        {
+            Assert.True(PanelUpdates.BringsForward(FlagBoxInstallState.Outdated));
+            Assert.True(PanelUpdates.BringsForward(FlagBoxInstallState.NotInstalled));
+            Assert.True(PanelUpdates.BringsForward(FlagBoxInstallState.Failed));
+            Assert.False(PanelUpdates.BringsForward(FlagBoxInstallState.UpToDate));
+            Assert.False(PanelUpdates.BringsForward(FlagBoxInstallState.Unavailable));
+            Assert.False(PanelUpdates.BringsForward(FlagBoxInstallState.NotEmbedded));
+            Assert.True(PanelUpdates.BringsFlagBoxForward(true, FlagBoxInstallState.NotInstalled));
+            Assert.False(PanelUpdates.BringsFlagBoxForward(false, FlagBoxInstallState.Outdated));
+            Assert.False(PanelUpdates.BringsFlagBoxForward(true, FlagBoxInstallState.UpToDate));
+            Assert.Equal("Installs every dashboard on your rig again, and each older or missing LED and matrix profile. A profile you have edited is replaced.", PanelUpdates.ReinstallTooltip);
         }
 
         // --- The kept copy ----------------------------------------------------------------------------

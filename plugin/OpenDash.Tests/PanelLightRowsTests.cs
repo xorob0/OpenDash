@@ -236,14 +236,34 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_dot_never_disagrees_with_the_words_beside_it()
         {
-            // Read off PanelCopy.LightRow rather than from a table of its own, except for the one pairing
-            // that table cannot carry: the uninstalled dot is status.notInstalled and its label text.label.
+            // Read off PanelMatrix.ProfileRow, the words the Matrix pill draws beside it, rather than from a
+            // table of its own, except for the one pairing that table cannot carry: the uninstalled dot is
+            // status.notInstalled and its label text.label.
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.UpToDate));
-            Assert.Equal(Theme.StatusUpdateAvailable, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
+            Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
             Assert.Equal(Theme.StatusFailed, PanelLightRows.DotHex(FlagBoxInstallState.Failed));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.NotInstalled));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.Unavailable));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.NotEmbedded));
+        }
+
+        /// <summary>
+        /// The Matrix page's pill draws DotHex beside PanelMatrix.ProfileRow's words, so for every state the
+        /// two agree, the uninstalled pairing excepted. The Updates table's older profile says "Update
+        /// available" in amber, and moving LightRow's ink moved this dot with it once: an amber dot beside
+        /// green words on a page the Updates rows do not draw.
+        /// </summary>
+        [Fact]
+        public void The_matrix_pill_s_dot_agrees_with_its_words_in_every_state()
+        {
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                var ink = PanelMatrix.ProfileRow(state, "0.4.0").StateHex;
+                var expected = ink == Theme.TextLabel ? Theme.StatusNotInstalled : ink;
+                Assert.Equal(expected, PanelLightRows.DotHex(state));
+            }
+            var matrix = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Matrix.cs"));
+            if (matrix.Contains("PanelLightRows.DotHex(")) Assert.Contains("PanelMatrix.ProfileRow(", matrix);
         }
 
         [Fact]

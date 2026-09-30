@@ -501,8 +501,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A light profile that is current is never rewritten: a rewrite could only cost the edits made to it in
-        /// SimHub. Nor is one installed where SimHub has none, which is the LEDs and Matrix pages' to add
-        /// (PanelLightRows.OutdatedBars).
+        /// SimHub. One that is older, missing or failed is written (ruling 70, PanelUpdates.BringsForward), the
+        /// flag box's only on a rig with a matrix, where the table draws its row.
         /// </remarks>
         private void Reinstall()
         {
@@ -543,13 +543,11 @@ namespace OpenDashPlugin
                 failure = ex.Message;
             }
 
-            int stripsUpdated = 0, stripsFailed = 0;
-            FlagBoxInstallState? flagBox = null;
-            if (failure == null) UpdatesBringLightsForward(out stripsUpdated, out stripsFailed, out flagBox);
+            var lights = failure == null ? UpdatesBringLightsForward() : null;
             Save();
             Redraw();
             if (failure != null) Say(PanelUpdates.ReinstallFailed(failure), false);
-            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, stripsUpdated, stripsFailed, FlagBoxName(), flagBox), PanelUpdates.ReinstallOk(stripsFailed, flagBox));
+            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName()), lights.Ok);
         }
     }
 }

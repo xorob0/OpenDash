@@ -185,7 +185,7 @@ namespace OpenDashPlugin
             updatesReinstallLine.VerticalAlignment = VerticalAlignment.Center;
             updatesReinstall = Ui.Button(null, PanelButtonKind.Outline);
             updatesReinstall.MinWidth = ButtonMinWidth;
-            updatesReinstall.ToolTip = "Writes every dashboard on your rig again, and updates each older light profile.";
+            updatesReinstall.ToolTip = PanelUpdates.ReinstallTooltip;
             updatesReinstall.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesReinstallLine, ReplacingAction.Reinstall));
             updatesReinstall.Click += (sender, args) => Reinstall();
             updatesReinstall.IsEnabled = !applying;

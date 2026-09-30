@@ -383,17 +383,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The colour of a row's status dot.
+        /// The colour of the flag box profile's status dot in the Matrix page's header pill.
         /// </summary>
         /// <remarks>
-        /// Read off <see cref="PanelCopy.LightRow"/> rather than from a second table, so the dot cannot
-        /// disagree with the words beside it. The one pairing a table carrying a single colour per state
-        /// cannot say is the uninstalled one: the canvas draws that dot in status.notInstalled and its label
-        /// in text.label. SettingsControl.Install.Packages.cs resolves the same pair the same way.
+        /// Read off <see cref="PanelMatrix.ProfileRow"/>, the words the pill draws beside it, rather than from
+        /// a second table, so the dot cannot disagree with the words beside it. It read PanelCopy.LightRow
+        /// while both pages drew that table; the Updates rows now take their dot from LightRow's words
+        /// themselves (PanelUpdates), and LightRow's older profile is amber where ProfileRow's is green. The
+        /// one pairing a table carrying a single colour per state cannot say is the uninstalled one: the
+        /// canvas draws that dot in status.notInstalled and its label in text.label.
         /// </remarks>
         public static string DotHex(FlagBoxInstallState state)
         {
-            var ink = PanelCopy.LightRow(state, null).StateHex;
+            var ink = PanelMatrix.ProfileRow(state, null).StateHex;
             return string.Equals(ink, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : ink;
         }
 

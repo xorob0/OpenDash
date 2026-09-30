@@ -110,6 +110,57 @@ namespace OpenDashPlugin
         public IList<string> Log { get; set; }
     }
 
+    /// <summary>
+    /// What Reinstall everything did to the light profiles, counted per strip: a strip rewritten and a strip
+    /// that could not be are two strips, whatever shape they share.
+    /// </summary>
+    public sealed class UpdatesLightsTally
+    {
+        /// <summary>Older strip profiles brought to this build's version.</summary>
+        public int StripsUpdated { get; private set; }
+
+        /// <summary>Missing strip profiles installed.</summary>
+        public int StripsInstalled { get; private set; }
+
+        public int StripsNotUpdated { get; private set; }
+        public int StripsNotInstalled { get; private set; }
+
+        /// <summary>What the flag box profile was left in, or null when the run did not write it.</summary>
+        public FlagBoxInstallState? FlagBoxAfter { get; private set; }
+
+        /// <summary>Whether the flag box profile the run wrote was an older one rather than a missing one.</summary>
+        public bool FlagBoxWasOlder { get; private set; }
+
+        /// <summary>One strip the run wrote: what SimHub held before, and what the write reported.</summary>
+        public void Strip(FlagBoxInstallState before, FlagBoxInstallState after)
+        {
+            var older = before == FlagBoxInstallState.Outdated;
+            if (after == FlagBoxInstallState.UpToDate)
+            {
+                if (older) StripsUpdated++;
+                else StripsInstalled++;
+            }
+            else if (older) StripsNotUpdated++;
+            else StripsNotInstalled++;
+        }
+
+        public void FlagBox(FlagBoxInstallState before, FlagBoxInstallState after)
+        {
+            FlagBoxWasOlder = before == FlagBoxInstallState.Outdated;
+            FlagBoxAfter = after;
+        }
+
+        /// <summary>Whether that run is said in the ordinary ink: nothing it tried failed.</summary>
+        public bool Ok
+        {
+            get
+            {
+                return StripsNotUpdated == 0 && StripsNotInstalled == 0
+                    && (!FlagBoxAfter.HasValue || FlagBoxAfter == FlagBoxInstallState.UpToDate);
+            }
+        }
+    }
+
     public static class PanelUpdates
     {
         public const string Title = "Updates";
@@ -402,43 +453,110 @@ namespace OpenDashPlugin
                     return Row(name, DashboardKind, version, UpToDate, Theme.StatusUpToDate, null);
                 case InstallStatus.UpdateAvailable:
                     return Row(name, DashboardKind, version, UpdateAvailable, Theme.StatusUpdateAvailable,
-                        package.HeldBack || package.Edited
-                            ? "You have edited it, so OpenDash left it alone. Reinstall everything replaces it."
-                            : "Reinstall everything brings it to this version.");
+                        package.HeldBack || package.Edited ? EditedTooltip : BringsItTo(package.EmbeddedVersion));
                 default:
                     return Row(name, DashboardKind, version, PanelCopy.NotInstalled, Theme.TextLabel, "Reinstall everything writes it.");
             }
+        }
+
+        public const string EditedTooltip = "You have edited it, so OpenDash left it alone. " + PanelConfirmation.ReinstallLabel + " replaces it.";
+
+        /// <summary>An older dashboard's tooltip, naming the version the row does not show: "Reinstall
+        /// everything brings it to 0.5.0."</summary>
+        public static string BringsItTo(string embeddedVersion)
+        {
+            return string.IsNullOrWhiteSpace(embeddedVersion)
+                ? PanelConfirmation.ReinstallLabel + " brings it up to date."
+                : PanelConfirmation.ReinstallLabel + " brings it to " + embeddedVersion.Trim() + ".";
         }
 
         /// <summary>A strip's row: its name, the version of its profile in SimHub, and the state
         /// PanelCopy.LightRow says, with an Update press while that profile is older than this build's.</summary>
         public static UpdatesRow StripRow(string name, FlagBoxPlan plan)
         {
-            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
-            var words = PanelCopy.LightRow(state, plan == null ? null : plan.InstalledVersion);
-            // A row is one strip of the rig, so the census rows' "no strip of this shape" does not apply to it:
-            // the strip is there and its profile is not.
-            var tooltip = state == FlagBoxInstallState.NotInstalled ? StripNotInstalled : PanelLightRows.Tooltip(1, plan);
-            return new UpdatesRow(name, StripKind, VersionText(plan == null ? null : plan.InstalledVersion), words.State, words.StateHex,
-                PanelLightRows.DotHex(state), tooltip, state == FlagBoxInstallState.Outdated);
+            return LightRow(name, StripKind, plan, StripTooltip(plan));
         }
 
-        public const string StripNotInstalled = "Its profile is not in SimHub.";
-
         /// <summary>The flag box profile's row, drawn when the rig has a matrix.</summary>
+        /// <param name="extractedPath">Where OpenDash left the profile, which the tooltip names while SimHub's
+        /// matrix settings cannot be reached and the by-hand route under the table is the way in.</param>
         public static UpdatesRow FlagBoxRow(string name, FlagBoxPlan plan, string extractedPath)
+        {
+            return LightRow(name, MatrixKind, plan, FlagBoxTooltip(plan, extractedPath));
+        }
+
+        /// <summary>
+        /// A light profile's row, in PanelCopy.LightRow's words, with its dot from the same words: the Matrix
+        /// page's pill reads PanelLightRows.DotHex beside words of its own (PanelMatrix.ProfileRow), so this
+        /// table does not take its dot from there.
+        /// </summary>
+        private static UpdatesRow LightRow(string name, string kind, FlagBoxPlan plan, string tooltip)
         {
             var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
             var words = PanelCopy.LightRow(state, plan == null ? null : plan.InstalledVersion);
-            return new UpdatesRow(name, MatrixKind, VersionText(plan == null ? null : plan.InstalledVersion), words.State, words.StateHex,
-                PanelLightRows.DotHex(state), FlagBoxInstallPlan.Summary(plan ?? new FlagBoxPlan { State = state }, extractedPath),
-                state == FlagBoxInstallState.Outdated);
+            return new UpdatesRow(name, kind, VersionText(plan == null ? null : plan.InstalledVersion), words.State, words.StateHex,
+                Dot(words.StateHex), tooltip, state == FlagBoxInstallState.Outdated);
         }
+
+        /// <summary>
+        /// A strip row's tooltip in each state. Up to date says no more than the state, since the version has a
+        /// column of its own; an older profile says what the row's Update does; a missing one names the press
+        /// on this page that installs it.
+        /// </summary>
+        public static string StripTooltip(FlagBoxPlan plan)
+        {
+            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
+            switch (state)
+            {
+                case FlagBoxInstallState.NotInstalled:
+                    return StripNotInstalled;
+                case FlagBoxInstallState.UpToDate:
+                    return InstalledUpToDate;
+                default:
+                    return PanelLightRows.Tooltip(1, plan);
+            }
+        }
+
+        /// <summary>A row is one strip of the rig, so the census rows' "no strip of this shape" does not
+        /// apply to it: the strip is there and its profile is not.</summary>
+        public const string StripNotInstalled = "Its profile is not in SimHub. " + PanelConfirmation.ReinstallLabel + " installs it.";
+
+        public const string InstalledUpToDate = "Installed and up to date.";
+
+        /// <summary>
+        /// The flag box row's tooltip in each state. Not FlagBoxInstallPlan.Summary whole, which was written
+        /// for a row with a press beside it: this row has only Update, so an up-to-date profile is not told
+        /// about a Reinstall it does not offer, and a missing one names the press on this page.
+        /// </summary>
+        public static string FlagBoxTooltip(FlagBoxPlan plan, string extractedPath)
+        {
+            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
+            switch (state)
+            {
+                case FlagBoxInstallState.NotInstalled:
+                    return FlagBoxNotInstalled;
+                case FlagBoxInstallState.UpToDate:
+                    return InstalledUpToDate;
+                default:
+                    return FlagBoxInstallPlan.Summary(plan, extractedPath);
+            }
+        }
+
+        public const string FlagBoxNotInstalled = "Not installed. " + PanelConfirmation.ReinstallLabel + " installs it, then select it on your device.";
+
+        /// <summary>A light row's Update press: what it costs, in the words the Matrix and LEDs pages warn with.</summary>
+        public const string RowUpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         private static UpdatesRow Row(string name, string kind, string version, string state, string hex, string tooltip)
         {
-            var dot = string.Equals(hex, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : hex;
-            return new UpdatesRow(name, kind, version, state, hex, dot, tooltip, false);
+            return new UpdatesRow(name, kind, version, state, hex, Dot(hex), tooltip, false);
+        }
+
+        /// <summary>The dot beside words in this ink: the same colour, except that an uninstalled state's
+        /// words are text.label and its dot status.notInstalled, as the canvas draws the pair.</summary>
+        private static string Dot(string hex)
+        {
+            return string.Equals(hex, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : hex;
         }
 
         // --- Reinstall everything -------------------------------------------------------------------
@@ -455,39 +573,71 @@ namespace OpenDashPlugin
                 + ". Reinstalling replaces your version. A copy is kept, and \"" + PutMineBack + "\" restores it.";
         }
 
+        /// <summary>Reinstall everything's tooltip: what it writes, and what that costs a profile somebody
+        /// changed, which its question (about dashboards) does not cover.</summary>
+        public const string ReinstallTooltip = "Installs every dashboard on your rig again, and each older or missing LED and matrix profile. A profile you have edited is replaced.";
+
         /// <summary>
-        /// What Reinstall everything says when it has run: the dashboards it wrote and left alone, then the
-        /// light profiles it brought forward, then the step OpenDash does not take (voice.md).
+        /// Whether Reinstall everything writes a light profile SimHub holds in this state (ruling 70): an
+        /// older one, and one that is missing or whose install failed. Never one that is current, since a
+        /// rewrite could only cost the edits made to it in SimHub, and never where SimHub cannot be reached
+        /// or the build carries no profile.
+        /// </summary>
+        public static bool BringsForward(FlagBoxInstallState state)
+        {
+            return state == FlagBoxInstallState.Outdated || state == FlagBoxInstallState.NotInstalled || state == FlagBoxInstallState.Failed;
+        }
+
+        /// <summary>The flag box profile too, but only on a rig with a matrix: the table draws its row only
+        /// there, and a run must not report a row the page does not show.</summary>
+        public static bool BringsFlagBoxForward(bool hasMatrix, FlagBoxInstallState state)
+        {
+            return hasMatrix && BringsForward(state);
+        }
+
+        /// <summary>
+        /// What Reinstall everything says when it has run: the dashboards it wrote and left alone and the step
+        /// OpenDash does not take for them (voice.md), then the light profiles it brought forward, then what
+        /// could not be written and where to look.
         /// </summary>
         /// <param name="replaced">Dashboards written.</param>
         /// <param name="held">Dashboards left alone because they were edited and nobody said to replace them.</param>
         /// <param name="wroteFonts">Whether a font went into DashFonts, which only a restart shows.</param>
-        /// <param name="stripsUpdated">Strip profiles brought to this build's version.</param>
-        /// <param name="stripsFailed">Strip profiles that were older and could not be rewritten.</param>
+        /// <param name="lights">What the run did to each light profile it wrote.</param>
         /// <param name="flagBoxName">The flag box profile's name in SimHub.</param>
-        /// <param name="flagBox">What updating the flag box profile left, or null when it was not older.</param>
-        public static string ReinstallSummary(int replaced, int held, bool wroteFonts, int stripsUpdated, int stripsFailed, string flagBoxName, FlagBoxInstallState? flagBox)
+        public static string ReinstallSummary(int replaced, int held, bool wroteFonts, UpdatesLightsTally lights, string flagBoxName)
         {
+            lights = lights ?? new UpdatesLightsTally();
             var line = new StringBuilder();
             line.Append(replaced == 1 ? "Reinstalled 1 dashboard." : "Reinstalled " + replaced + " dashboards.");
             if (held == 1) line.Append(" The one you edited was left alone.");
             else if (held > 1) line.Append(" The " + held + " you edited were left alone.");
-            if (stripsUpdated == 1) line.Append(" Updated 1 LED profile.");
-            else if (stripsUpdated > 1) line.Append(" Updated " + stripsUpdated + " LED profiles.");
+            // Straight after the dashboards, so "it" is one of them whatever the profiles did.
+            if (replaced > 0) line.Append(" " + UpdateWording.ToSee(wroteFonts));
+            Profiles(line, "Updated", lights.StripsUpdated);
+            Profiles(line, "Installed", lights.StripsInstalled);
             var name = string.IsNullOrWhiteSpace(flagBoxName) ? FlagBoxProfile.ProfileName : flagBoxName;
-            if (flagBox == FlagBoxInstallState.UpToDate) line.Append(" Updated " + name + ".");
-            if (stripsFailed == 1) line.Append(" 1 LED profile could not be updated.");
-            else if (stripsFailed > 1) line.Append(" " + stripsFailed + " LED profiles could not be updated.");
-            if (flagBox.HasValue && flagBox != FlagBoxInstallState.UpToDate) line.Append(" " + name + " could not be updated.");
-            if (stripsFailed > 0 || (flagBox.HasValue && flagBox != FlagBoxInstallState.UpToDate)) line.Append(" See SimHub's log.");
-            else if (replaced > 0) line.Append(" " + UpdateWording.ToSee(wroteFonts));
+            if (lights.FlagBoxAfter == FlagBoxInstallState.UpToDate) line.Append(" " + (lights.FlagBoxWasOlder ? "Updated " : "Installed ") + name + ".");
+            NotWritten(line, lights.StripsNotUpdated, "updated");
+            NotWritten(line, lights.StripsNotInstalled, "installed");
+            if (lights.FlagBoxAfter.HasValue && lights.FlagBoxAfter != FlagBoxInstallState.UpToDate)
+            {
+                line.Append(" " + name + " could not be " + (lights.FlagBoxWasOlder ? "updated." : "installed."));
+            }
+            if (!lights.Ok) line.Append(" See SimHub's log.");
             return line.ToString();
         }
 
-        /// <summary>Whether that run is said in the ordinary ink: nothing it tried failed.</summary>
-        public static bool ReinstallOk(int stripsFailed, FlagBoxInstallState? flagBox)
+        private static void Profiles(StringBuilder line, string verb, int count)
         {
-            return stripsFailed <= 0 && (!flagBox.HasValue || flagBox == FlagBoxInstallState.UpToDate);
+            if (count == 1) line.Append(" " + verb + " 1 LED profile.");
+            else if (count > 1) line.Append(" " + verb + " " + count + " LED profiles.");
+        }
+
+        private static void NotWritten(StringBuilder line, int count, string participle)
+        {
+            if (count == 1) line.Append(" 1 LED profile could not be " + participle + ".");
+            else if (count > 1) line.Append(" " + count + " LED profiles could not be " + participle + ".");
         }
 
         /// <summary>What Reinstall everything says when the dashboards could not be written.</summary>
