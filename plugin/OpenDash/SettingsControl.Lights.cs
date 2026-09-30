@@ -212,6 +212,14 @@ namespace OpenDashPlugin
             return Ui.SettingRow(title, control, caption, tags);
         }
 
+        /// <summary>A greyed row spaced as LedsRow spaces a live one, its control 20 from the title: the kit's
+        /// SoonRow would give it 24, and its title would wrap sooner than the rows around it.</summary>
+        private static Border LedsSoonRow(SoonItem item, FrameworkElement control)
+        {
+            control.Margin = new Thickness(PanelKit.RowGapLeds - PanelShell.RowGap, 0, 0, 0);
+            return Ui.SoonRow(item, control);
+        }
+
         /// <summary>Two blocks side by side, 40 apart, where two columns fit, and one under the other where not.</summary>
         private FrameworkElement LedsColumns(FrameworkElement left, FrameworkElement right)
         {
@@ -730,7 +738,7 @@ namespace OpenDashPlugin
                 }
                 rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));
             }
-            rows.Add(Ui.SoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));
+            rows.Add(LedsSoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));
 
             return Ui.VStack(0,
                 Ui.Anchor(LedsHeading(PanelLeds.ThisStripTitle), PanelLeds.AnchorThisStrip),
@@ -831,8 +839,8 @@ namespace OpenDashPlugin
             return LedsBlock(Ui.VStack(0,
                 Ui.Anchor(LedsHeading(PanelLeds.EveryStripTitle), PanelLeds.AnchorEveryStrip),
                 Ui.Rows(
-                    Ui.SoonRow(PanelSoon.IdleSweep, Ui.Switch(true, on => { })),
-                    Ui.SoonRow(PanelSoon.EngineStartAnimation, Ui.Switch(true, on => { })),
+                    LedsSoonRow(PanelSoon.IdleSweep, Ui.Switch(true, on => { })),
+                    LedsSoonRow(PanelSoon.EngineStartAnimation, Ui.Switch(true, on => { })),
                     Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables),
                     Ui.Soon(carData, PanelSoon.CarDataForAcAccLmu))));
         }
@@ -1476,6 +1484,9 @@ namespace OpenDashPlugin
         private static FrameworkElement LedsSheetRow(string label, FrameworkElement control, string caption = null)
         {
             var text = Ui.Text(label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            // Wrapped rather than cut where a narrow sheet leaves the label less than the control beside it does:
+            // "LEDs at each end" beside the six ends is about 378 px.
+            text.TextWrapping = TextWrapping.Wrap;
             FrameworkElement words = text;
             if (!string.IsNullOrEmpty(caption))
             {

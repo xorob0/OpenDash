@@ -422,9 +422,9 @@ namespace OpenDashPlugin.Tests
                 var columns = PanelLeds.PreviewColumns(ends, centre);
                 var labels = PanelLeds.PreviewLabels(ends, centre);
                 var widths = labels.Select(Width).ToArray();
-                // Full size (in no less room than the narrowest tried), the narrow column's inside (527 less the
-                // preview's 22 each side and its border), and narrower still.
-                foreach (var room in new[] { Math.Max(columns.Sum(), 360), 700, 481, 400, 360 })
+                // Full size (in no less room than the narrowest tried), the narrow column's inside (587 at a 700 px
+                // control, less the preview's 22 each side and its border: 541), and narrower still.
+                foreach (var room in new[] { Math.Max(columns.Sum(), 360), 700, 541, 481, 400, 360 })
                 {
                     var lefts = PanelLeds.PreviewLabelLefts(columns, widths, room);
                     var scale = Math.Min(1, room / columns.Sum());
@@ -903,6 +903,26 @@ namespace OpenDashPlugin.Tests
         }
 
         // --- The Add LEDs sheet -------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Every row on the page is spaced as the artboard's .row is, its control 20 from its title: the greyed
+        /// rows through LedsSoonRow, never the kit's SoonRow at 24. And the sheet's shape labels wrap rather than
+        /// being cut beside the ends' six buttons in a narrow sheet. Read as text because the page is WPF.
+        /// </summary>
+        [Fact]
+        public void Every_row_is_spaced_as_the_artboard_spaces_it()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Equal(1, Occurrences(leds, "Ui.SoonRow("));
+            Assert.Equal(2, Occurrences(leds, "control.Margin = new Thickness(PanelKit.RowGapLeds - PanelShell.RowGap, 0, 0, 0);"));
+            foreach (var soon in new[] { "PanelSoon.EachLedInTurn", "PanelSoon.IdleSweep", "PanelSoon.EngineStartAnimation" })
+            {
+                Assert.Contains("LedsSoonRow(" + soon + ",", leds);
+            }
+            var row = leds.Substring(leds.IndexOf("private static FrameworkElement LedsSheetRow(", StringComparison.Ordinal));
+            row = row.Substring(0, row.IndexOf("private static Button LedsHardwareTile(", StringComparison.Ordinal));
+            Assert.Contains("text.TextWrapping = TextWrapping.Wrap;", row);
+        }
 
         /// <summary>The sheet takes the artboard's words, and voice.md's name for the press that opens it.</summary>
         [Fact]
