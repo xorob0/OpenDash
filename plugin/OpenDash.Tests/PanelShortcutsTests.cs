@@ -549,6 +549,10 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelShortcuts.RowStacks(Column(3840)));
             Assert.False(PanelShortcuts.RowStacks(712));
             Assert.True(PanelShortcuts.RowStacks(711));
+            // Nothing a row draws moves from RowStackBelow up, which is why the page reads the width only
+            // that far: a row there is laid out as one in a 4K column.
+            Assert.Equal(PanelShortcuts.RowStacks(Column(3840)), PanelShortcuts.RowStacks(PanelShortcuts.RowStackBelow));
+            Assert.Equal(PanelShortcuts.BinderSlot(Column(3840), PanelShortcuts.RowStacks(Column(3840))), PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, PanelShortcuts.RowStacks(PanelShortcuts.RowStackBelow)));
             // The rail's content at the narrowest full-sidebar width: the binder goes under the name there.
             Assert.True(PanelShortcuts.RowStacks(679));
             Assert.True(PanelShortcuts.RowStacks(400));
@@ -829,7 +833,10 @@ namespace OpenDashPlugin.Tests
 
             // Every row's binder in one slot of the model's width, the gap on the slot, never on SimHub's editor,
             // whose template draws its own Margin a second time; the editor names nothing of its own.
-            Assert.Contains("var layout = new ShortcutsLayout(ContentWidth);", code);
+            // The width is read only up to RowStackBelow, where the drawing stops changing (the shell's rule
+            // 11): past it a resize would re-create every SimHub editor on the page for nothing.
+            Assert.Contains("var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowStackBelow));", code);
+            Assert.DoesNotMatch(@"\bContentWidth\b", code);
             Assert.Contains("Stacks = PanelShortcuts.RowStacks(contentWidth);", code);
             Assert.Contains("Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);", code);
             Assert.Contains("control.Margin = new Thickness(0);", code);

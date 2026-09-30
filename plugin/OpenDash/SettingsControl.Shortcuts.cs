@@ -88,7 +88,9 @@ namespace OpenDashPlugin
                 shortcutsLanding = false;
             }
             OnLeave("Shortcuts.filterLanding", () => shortcutsLanding = true);
-            var layout = new ShortcutsLayout(ContentWidth);
+            // Read only up to where a row stops changing: from RowStackBelow up a row lies flat with the
+            // fixed slot, so a resize past it leaves the page, and every SimHub editor on it, alone.
+            var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowStackBelow));
 
             var screens = new List<ShortcutsGroupState>();
             foreach (var screen in Settings.RigScreens())
