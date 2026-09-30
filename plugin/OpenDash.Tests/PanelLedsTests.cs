@@ -759,12 +759,34 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelLeds.HasFullStripSpotter("mystery"));
         }
 
-        /// <summary>Three effect tiles hold the longest label on one line: "Speeding in the pit lane" is 141 at
-        /// 14 px, with the 12 gap, the 40 switch and 24 of padding.</summary>
+        /// <summary>
+        /// An effect tile at its narrowest holds every label on one line beside its switch, each measured at the
+        /// tile's 14 px from the bundled fonts' advances: the label, the 12 gap, the switch and the tile's 24 of
+        /// padding.
+        /// </summary>
+        /// <remarks>
+        /// The tile draws Barlow Regular, which advances.ts does not carry; Barlow Medium, the narrowest face it
+        /// does, is at least as wide, so a label that fits measured in it fits as drawn. "Speeding in the pit lane"
+        /// is the widest, at about 142.
+        /// </remarks>
         [Fact]
         public void An_effect_tile_holds_the_longest_label_beside_its_switch()
         {
-            Assert.True(PanelLeds.EffectTileMinWidth >= 141 + 12 + 40 + 24);
+            var medium = Advances("BarlowMedium");
+            double Width(string text) => text.Sum(ch => medium.TryGetValue(ch, out var em) ? em : 0.75) * Theme.SizeBody;
+            foreach (var effect in PanelLeds.Effects)
+            {
+                var room = PanelLeds.EffectTileMinWidth - 12 - PanelShell.SwitchWidth - 24;
+                Assert.True(Width(effect.Label) <= room, effect.Label + " is " + Width(effect.Label) + " in a tile that leaves it " + room);
+            }
+            Assert.Equal("Speeding in the pit lane", PanelLeds.Effects.OrderByDescending(effect => Width(effect.Label)).First().Label);
+            // The tile is drawn with those numbers.
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var tile = leds.Substring(leds.IndexOf("private static Border LedsEffectTile(", StringComparison.Ordinal));
+            tile = tile.Substring(0, tile.IndexOf("private FrameworkElement LedsEveryStripSection(", StringComparison.Ordinal));
+            Assert.Contains("toggle.Margin = new Thickness(12, 0, 0, 0);", tile);
+            Assert.Contains("Ui.Text(label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);", tile);
+            Assert.Contains("Padding = new Thickness(12, 10, 12, 10),", tile);
         }
 
         /// <summary>A card's picture shrinks to the card: the widest shape the build embeds, a 25-LED run at the
@@ -1018,11 +1040,28 @@ namespace OpenDashPlugin.Tests
                 "picker.MaxWidth = pickerWidth;",
                 "link.Click += (sender, args) => Go(PanelPage.Rig);",
                 "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
+                // Ruling 47: the width row only while the switch is on.
+                "width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;",
+                // Ruling 48: the car line only while the switch is on, in the game the tables cover.
+                "var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));",
+                "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, PanelLeds.TablesCoverGame(live.GameName))",
+                // Ruling 49: Live draws the car's run only where the profile does.
+                "var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));",
+                // The fix box, for a profile SimHub holds and has not selected.
+                "var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace);",
+                "if (fix != null) parts.Add(fix);",
+                // The car tables' button greys out while a download is out.
+                "carTablesButton.IsEnabled = !carTablesDownloading;",
             })
             {
                 Assert.True(leds.Contains(read), "the page no longer carries: " + read);
             }
             Assert.DoesNotContain("PanelLeds.Effects)", leds);
+            // NEW on Brightness, Reverse direction and the Effects heading, for one release: taking them off at the
+            // next cut moves this count, deliberately.
+            Assert.Equal(3, Occurrences(leds, "Ui.NewTag()"));
+            Assert.Contains("LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag())", leds);
+            Assert.Contains("LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag())", leds);
         }
 
         /// <summary>Every anchor the page model names is one the page attaches to a row, so search, Home's fix rows

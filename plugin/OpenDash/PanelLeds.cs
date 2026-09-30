@@ -713,9 +713,9 @@ namespace OpenDashPlugin
         public const string EffectsTitle = "Effects";
         public const string EffectsCaption = "This strip only";
 
-        /// <summary>The narrowest an effect's tile is laid at: the longest label, "Speeding in the pit lane" (141
-        /// at 14 px), the 12 gap, the 40 switch and the tile's 24 of padding, so three tiles hold every label on
-        /// one line.</summary>
+        /// <summary>The narrowest an effect's tile is laid at: the longest label, "Speeding in the pit lane" (about
+        /// 142 at 14 px), the 12 gap, the 40 switch and the tile's 24 of padding, so three tiles hold every label on
+        /// one line. PanelLedsTests measures every label from the bundled fonts.</summary>
         public const double EffectTileMinWidth = 220;
 
         /// <summary>The artboard's gap between effect tiles.</summary>
