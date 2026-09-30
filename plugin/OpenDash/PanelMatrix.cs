@@ -748,17 +748,21 @@ namespace OpenDashPlugin
         /// <summary>
         /// The line under Car-specific shift points, which says what the LEDs page's line under its car switch
         /// says (PanelLeds.CarLine on the LEDs branch) and in the same cases: only while the switch is on and a
-        /// car is loaded in a game the tables cover. Then, with no tables on disk, that they are not downloaded
+        /// car is loaded in a game the tables cover. Then, with no tables ever downloaded, that they are not
         /// and where the download is, since this page has none; else whether the tables have measured the
         /// car, which says whether the gear takes the car's own points or falls back to openDash's. Null
         /// otherwise, since then there is nothing true to say: the plugin reads iRacing's tables alone
         /// (CarLightLibrary), so in any other game every car would read as missing from a dataset that may well
-        /// measure it, and a download sent for from there could never apply.
+        /// measure it, and a download sent for from there could never apply. Null too while tables that are on
+        /// disk are still being read, or when the copy on disk could not be read: the LEDs page's Lovely Car
+        /// Data row then says "Loading" or "Could not read", and a line saying they were never downloaded would
+        /// contradict it, and be false.
         /// </summary>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesCoverGame)
+        /// <param name="tablesMissing">Whether no tables were ever downloaded (<see cref="TablesMissing"/>).</param>
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)
         {
             if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
-            if (!tablesLoaded) return CarTablesMissing;
+            if (!tablesLoaded) return tablesMissing ? CarTablesMissing : null;
             return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
         }
 
@@ -766,6 +770,16 @@ namespace OpenDashPlugin
         /// (ADR 0018), under the section every strip shares, named here by that page's own constants.</summary>
         public const string CarTablesMissing = "Lovely Car Data is not downloaded yet. Download it on the "
             + PanelLeds.Title + " page, under " + PanelLeds.EveryStripTitle + ".";
+
+        /// <summary>Whether no tables were ever downloaded: none read, and the service's status opens with the
+        /// sentence it gives a rig with none (a failed download adds its reason after it), rather than saying
+        /// that it is still reading them or could not read the copy on disk. PanelLeds.TablesMissing on the LEDs
+        /// branch; this page calls that once LEDs lands.</summary>
+        public static bool TablesMissing(int carCount, string status)
+        {
+            var none = CarLightService.Describe(0, null, DateTime.UtcNow, null);
+            return carCount <= 0 && (status ?? string.Empty).Trim().StartsWith(none, StringComparison.Ordinal);
+        }
 
         /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing",
         /// "IRacing"). PanelLeds.TablesGame on the LEDs branch; this page calls that once LEDs lands.</summary>

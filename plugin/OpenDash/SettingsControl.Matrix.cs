@@ -502,9 +502,11 @@ namespace OpenDashPlugin
                 {
                     var live = plugin.Live ?? LiveStatus.None;
                     var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null;
-                    var tables = plugin.CarLights.CarCount > 0;
+                    var count = plugin.CarLights.CarCount;
+                    var tables = count > 0;
+                    var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status);
                     var covers = PanelMatrix.TablesCoverGame(live.GameName);
-                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, covers);
+                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers);
                     carLine.Text = text ?? string.Empty;
                     carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables)));
                     carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible;

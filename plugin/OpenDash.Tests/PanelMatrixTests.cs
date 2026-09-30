@@ -803,34 +803,46 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The line under Car-specific shift points says what LEDs says (PanelLeds.CarLine), and only
-        /// while the switch is on and a car is loaded in the game the tables cover: with no tables on disk it
-        /// says so and where the download is, rather than that the car is missing from them; in any other game,
-        /// or with no car, it says nothing.</summary>
+        /// while the switch is on and a car is loaded in the game the tables cover: with no tables ever
+        /// downloaded it says so and where the download is, rather than that the car is missing from them; while
+        /// tables on disk are still being read, or could not be read, in any other game, or with no car, it says
+        /// nothing.</summary>
         [Fact]
         public void The_car_line_follows_its_switch_and_says_whether_the_tables_have_the_car()
         {
             const string car = "Porsche 911 GT3 R (992)";
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, car, true, true, true));
-            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, car, false, true, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, car, true, true, false, true));
+            Assert.Equal("Porsche 911 GT3 R (992) is not in Lovely Car Data.", PanelMatrix.CarLine(true, car, false, true, false, true));
             // A fresh install: a new matrix has the switch on, and the tables arrive only from the LEDs page,
             // named by that page's own constants.
             Assert.Equal("Lovely Car Data is not downloaded yet. Download it on the LEDs page, under Every strip.", PanelMatrix.CarTablesMissing);
             Assert.Contains(PanelLeds.Title + " page", PanelMatrix.CarTablesMissing);
             Assert.Contains("under " + PanelLeds.EveryStripTitle + ".", PanelMatrix.CarTablesMissing);
-            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, car, false, false, true));
+            Assert.Equal(PanelMatrix.CarTablesMissing, PanelMatrix.CarLine(true, car, false, false, true, true));
+            // Tables on disk still being read at the start, or a copy that could not be read: nothing, since the
+            // LEDs page's Lovely Car Data row says Loading or Could not read, and "not downloaded" would be false.
+            Assert.Null(PanelMatrix.CarLine(true, car, false, false, false, true));
+            Assert.True(PanelMatrix.TablesMissing(0, PanelLights.CarTablesNone));
+            Assert.True(PanelMatrix.TablesMissing(0, PanelLights.CarTablesNone + " " + PanelLights.CarTablesFailed("timed out")));
+            Assert.True(PanelMatrix.TablesMissing(0, CarLightService.Describe(0, null, DateTime.UtcNow, null)));
+            Assert.False(PanelMatrix.TablesMissing(0, "not loaded"));
+            Assert.False(PanelMatrix.TablesMissing(0, "could not read the car light tables: bad json"));
+            Assert.False(PanelMatrix.TablesMissing(0, "the car light tables could not be loaded"));
+            Assert.False(PanelMatrix.TablesMissing(0, null));
+            Assert.False(PanelMatrix.TablesMissing(12, PanelLights.CarTablesNone));
             // No car loaded, or a game whose tables the plugin does not read: nothing, tables or not.
-            Assert.Null(PanelMatrix.CarLine(true, null, false, false, true));
-            Assert.Null(PanelMatrix.CarLine(true, null, false, true, true));
-            Assert.Null(PanelMatrix.CarLine(true, " ", true, true, true));
+            Assert.Null(PanelMatrix.CarLine(true, null, false, false, true, true));
+            Assert.Null(PanelMatrix.CarLine(true, null, false, true, false, true));
+            Assert.Null(PanelMatrix.CarLine(true, " ", true, true, false, true));
             // SimHub's padding round a car's name is not drawn.
-            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, "  " + car + " ", true, true, true));
-            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, true, false));
-            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, false, false));
-            Assert.Null(PanelMatrix.CarLine(true, car, true, true, false));
+            Assert.Equal("Porsche 911 GT3 R (992) is in Lovely Car Data.", PanelMatrix.CarLine(true, "  " + car + " ", true, true, false, true));
+            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, true, false, false));
+            Assert.Null(PanelMatrix.CarLine(true, "Ferrari 296 GT3", false, false, true, false));
+            Assert.Null(PanelMatrix.CarLine(true, car, true, true, false, false));
             // The switch off: nothing.
-            Assert.Null(PanelMatrix.CarLine(false, car, true, true, true));
-            Assert.Null(PanelMatrix.CarLine(false, car, false, true, true));
-            Assert.Null(PanelMatrix.CarLine(false, car, false, false, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, true, true, false, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, true, false, true));
+            Assert.Null(PanelMatrix.CarLine(false, car, false, false, true, true));
             // The game the tables cover, as SimHub names it or codes it.
             Assert.True(PanelMatrix.TablesCoverGame("iRacing"));
             Assert.True(PanelMatrix.TablesCoverGame("IRacing"));
@@ -850,9 +862,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Action readCar = () => { "
                 + "var live = plugin.Live ?? LiveStatus.None; "
                 + "var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null; "
-                + "var tables = plugin.CarLights.CarCount > 0; "
+                + "var count = plugin.CarLights.CarCount; "
+                + "var tables = count > 0; "
+                + "var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status); "
                 + "var covers = PanelMatrix.TablesCoverGame(live.GameName); "
-                + "var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, covers); "
+                + "var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers); "
                 + "carLine.Text = text ?? string.Empty; "
                 + "carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables))); "
                 + "carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible; "
