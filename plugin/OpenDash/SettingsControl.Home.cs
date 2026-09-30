@@ -25,7 +25,12 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildHomePage(PanelRoute to)
         {
-            DrawsLighting();
+            var screens = Settings.RigScreens();
+            var strips = Settings.LedBarList();
+            var matrices = Settings.MatrixPanels().ToList();
+            var empty = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count);
+            // Only the rig's quick controls draw night mode and a brightness, and an empty rig has none.
+            if (!empty) DrawsLighting();
             // The answer has already refreshed the issues when this runs; RebuildPage keeps the lines and the scroll.
             // Only an answer that moved what the headline, the fix rows and the lines were drawn from rebuilds:
             // "you have the newest release" lands mid-drag as often as any other, and a rebuild then takes the
@@ -41,19 +46,22 @@ namespace OpenDashPlugin
             head.Children.Add(eyebrow);
             head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));
 
-            var screens = Settings.RigScreens();
-            var strips = Settings.LedBarList();
-            var matrices = Settings.MatrixPanels().ToList();
-            // An empty rig's state stands in place of Right now, which has nothing to show, and takes its
-            // anchor, so search's "Right now" lands on it. The quick controls stay: brightness and night mode
-            // are the rig's settings, not a device's, and search's entries for them land there. What needs
-            // fixing stays too: an empty rig can still wait on an update, and the headline counts it, so a
-            // count over no rows would be a number nobody can read.
+            // What needs fixing stays on an empty rig: it can still wait on an update, and the headline counts
+            // it, so a count over no rows would be a number nobody can read. Otherwise the empty rig is the
+            // only thing on the page (voice.md), in place of Right now and the quick controls, which have
+            // nothing to show or to change: it takes Right now's anchor, so search's "Right now" lands on it,
+            // and an entry for the quick controls lands at the top of a page short enough to show it all.
             var sections = new List<FrameworkElement>();
             if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));
-            var rightNow = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count) ? HomeEmptyRig() : HomeRightNow(screens, strips, matrices);
-            sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow));
-            sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
+            if (empty)
+            {
+                sections.Add(Ui.Anchor(HomeEmptyRig(), PanelHome.AnchorRightNow));
+            }
+            else
+            {
+                sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow));
+                sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
+            }
 
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);

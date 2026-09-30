@@ -549,7 +549,8 @@ namespace OpenDashPlugin
             return text.Length == 0 || text.EndsWith(".", StringComparison.Ordinal) ? text : text + ".";
         }
 
-        /// <summary>Whether the rig has nothing at all, in which case the empty rig stands in place of Right now and the quick controls.</summary>
+        /// <summary>Whether the rig has no screen, no strip and no matrix, in which case the empty rig stands in
+        /// place of Right now and the quick controls, and only what needs fixing stays above it.</summary>
         public static bool RigEmpty(int screens, int strips, int matrices)
         {
             return screens + strips + matrices == 0;

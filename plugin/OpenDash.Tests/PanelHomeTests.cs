@@ -632,7 +632,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("No x.", PanelHome.EmptyLine(" No x "));
             Assert.Equal("No x.", PanelHome.EmptyLine("No x."));
             Assert.True(PanelHome.RigEmpty(0, 0, 0));
+            // Any one device of any kind is a rig with something to show.
+            Assert.False(PanelHome.RigEmpty(1, 0, 0));
             Assert.False(PanelHome.RigEmpty(0, 1, 0));
+            Assert.False(PanelHome.RigEmpty(0, 0, 1));
+            Assert.False(PanelHome.RigEmpty(2, 1, 3));
         }
 
         // --- Quick controls ----------------------------------------------------------------------------------
@@ -681,12 +685,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var night = Ui.Switch(nightOn, on =>", code);
         }
 
-        /// <summary>Home draws night mode and a brightness as controls, so it says so before anything else:
-        /// without it a wheel's press leaves the slider on the other brightness's label and value.</summary>
+        /// <summary>Home draws night mode and a brightness as controls, so it says so before it draws
+        /// anything: without it a wheel's press leaves the slider on the other brightness's label and value. An
+        /// empty rig draws neither, and does not ask to be rebuilt for them.</summary>
         [Fact]
         public void The_page_says_it_draws_lighting_first()
         {
-            Assert.Contains("private FrameworkElement BuildHomePage(PanelRoute to) { DrawsLighting();", PageCode());
+            Assert.Contains("private FrameworkElement BuildHomePage(PanelRoute to) { var screens = Settings.RigScreens(); var strips = Settings.LedBarList(); var matrices = Settings.MatrixPanels().ToList(); var empty = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count); if (!empty) DrawsLighting();", PageCode());
+            Assert.Single(Regex.Matches(PageCode(), @"DrawsLighting\(\);"));
         }
 
         /// <summary>The pictures are live only where PanelHome says so: the car's run on a strip StripLive
@@ -827,17 +833,30 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The empty rig is the add tile with its sentence, in place of Right now and under its anchor,
-        /// and the quick controls stay, anchored, since brightness and night mode are the rig's and search lands
-        /// on them. Only an issue the headline counts (an update, the one kind an empty rig can have) is drawn
-        /// above it, so the count is never over no rows. Every Home search entry lands on something drawn.</summary>
+        /// and it is the only thing on the page (voice.md; the inventory's "in place of the three sections"):
+        /// only an issue the headline counts (an update, the one kind an empty rig can have) is drawn above it,
+        /// so the count is never over no rows. A rig with anything draws Right now and the quick controls, and
+        /// each Home search entry lands on its own section's anchor.</summary>
         [Fact]
         public void The_empty_rig_stands_in_place_of_right_now()
         {
             var code = PageCode();
-            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention)); var rightNow = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count) ? HomeEmptyRig() : HomeRightNow(screens, strips, matrices); sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow)); sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));", code);
-            Assert.All(PanelHome.Search, entry => Assert.True(entry.Route.Anchor == null || code.Contains(entry.Route.Anchor == PanelHome.AnchorRightNow ? "sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow));" : "sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));"), entry.Label));
-            Assert.Contains("Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize)", code);
-            Assert.Contains("new Thickness(0, PanelHome.EmptyRigGap, 0, 0)", code);
+            var rightNow = "sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow));";
+            var quick = "sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));";
+            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention)); if (empty) { sections.Add(Ui.Anchor(HomeEmptyRig(), PanelHome.AnchorRightNow)); } else { " + rightNow + " " + quick + " }", code);
+            var drawnAt = new Dictionary<string, string>
+            {
+                { PanelHome.AnchorRightNow, rightNow },
+                { PanelHome.AnchorQuickControls, quick },
+            };
+            Assert.All(PanelHome.Search.Where(entry => entry.Route.Anchor != null), entry =>
+            {
+                Assert.True(drawnAt.ContainsKey(entry.Route.Anchor), entry.Label);
+                Assert.Contains(drawnAt[entry.Route.Anchor], code);
+            });
+            Assert.Single(Regex.Matches(code, Regex.Escape("Ui.Anchor(HomeQuickControls(),")));
+            Assert.Contains("foreach (var section in sections) { section.Margin = new Thickness(0, PanelShell.SectionGapFor(PanelPage.Home), 0, 0); stack.Children.Add(section); } return stack;", code);
+            Assert.Contains("var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize); line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0); return Ui.VStack(0, Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax, tile), line);", code);
         }
 
         /// <summary>The quick controls sit side by side only on TwoColumns, never on !Narrow; an issue's press
