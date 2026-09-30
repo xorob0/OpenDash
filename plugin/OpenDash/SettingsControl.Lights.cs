@@ -105,6 +105,8 @@ namespace OpenDashPlugin
                 var facts = StripFacts(ns);
                 var profile = facts == null ? null : facts.Profile;
                 var selected = facts == null ? null : facts.Selected;
+                // Lit only while SimHub shows the profile, so the picture never contradicts the state under it.
+                var lit = PanelLeds.CardLit(profile, selected);
                 // A longer strip than the card holds at 9 px shrinks to it rather than being cut at its edge.
                 var fitted = new Viewbox
                 {
@@ -116,7 +118,7 @@ namespace OpenDashPlugin
                 Action paint = () =>
                 {
                     var live = Settings.LedBarByNamespace(ns) ?? bar;
-                    picture = Ui.Strip(PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))), StripStyle.Card, LedsDim(ns));
+                    picture = Ui.Strip(PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)), lit), StripStyle.Card, LedsDim(ns));
                     fitted.Child = picture;
                 };
                 paint();
@@ -228,10 +230,17 @@ namespace OpenDashPlugin
             title.VerticalAlignment = VerticalAlignment.Center;
             // The gap is the name's, so a chip the WrapPanel drops to a second line starts under the name.
             title.Margin = new Thickness(0, 0, 12, 0);
+            // The hardware trims before the shape's numerals are cut, where a very narrow column leaves the chip less
+            // than it needs.
             var lead = Ui.Text(PanelLeds.HardwareLead(bar.Shape), 13, FontWeights.Medium, Theme.TextPrimary);
             lead.VerticalAlignment = VerticalAlignment.Center;
+            lead.TextTrimming = TextTrimming.CharacterEllipsis;
             var numerals = Ui.Text(PanelLeds.ShapeDots(bar.Shape), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
             numerals.VerticalAlignment = VerticalAlignment.Center;
+            var inChip = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(numerals, Dock.Right);
+            inChip.Children.Add(numerals);
+            inChip.Children.Add(lead);
             var chip = new Border
             {
                 Height = 26,
@@ -239,13 +248,18 @@ namespace OpenDashPlugin
                 Background = Ui.Brush(Theme.SurfaceRaised),
                 CornerRadius = new CornerRadius(Theme.Radius),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = Ui.HStack(0, lead, numerals),
+                Child = inChip,
             };
+            chip.ToolTip = PanelLeds.HardwareLead(bar.Shape) + PanelLeds.ShapeDots(bar.Shape);
             var name = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             name.Children.Add(title);
             name.Children.Add(chip);
             var blocked = LedsProfileBlocked(bar);
-            var row = Ui.Row(name, BuildLedBarActions(bar.Namespace, blocked));
+            // Beside the name where two columns fit, and under it where they do not: the state and three or four
+            // presses take up to 388 px, which beside the name and its chip ran past a single column.
+            var stacked = !TwoColumns;
+            var actions = BuildLedBarActions(bar.Namespace, blocked, stacked);
+            var row = stacked ? (FrameworkElement)Ui.VStack(8, name, actions) : Ui.Row(name, actions);
             if (blocked == null) return row;
             return Ui.VStack(6, row, LedsCaptionLine(blocked));
         }
@@ -591,7 +605,7 @@ namespace OpenDashPlugin
             return Ui.VStack(0,
                 Ui.Anchor(LedsHeading(PanelLeds.RevLightsTitle), PanelLeds.AnchorRevLights),
                 Ui.Rows(
-                    Ui.Anchor(LedsRow(PanelLeds.CarRevLightsTitle, style, PanelLeds.CarRevLightsCaption), PanelLeds.AnchorRevStyle),
+                    Ui.Anchor(LedsRow(PanelLeds.CarRevLightsTitle, style), PanelLeds.AnchorRevStyle),
                     carLine,
                     width,
                     Ui.Anchor(LedsRow(PanelLeds.CentreDisplayTitle, centre), PanelLeds.AnchorCentre)));
@@ -941,7 +955,10 @@ namespace OpenDashPlugin
 
         /// <summary>What SimHub shows of the strip's profile, in the card's words and ink, then the presses on the
         /// strip: Install or Update where its profile needs one and the page can install it, Rename and Remove.</summary>
-        private FrameworkElement BuildLedBarActions(string ns, string blocked)
+        /// <remarks>A WrapPanel, so where the header is <paramref name="stacked"/> under the name the presses drop to
+        /// a second line rather than running out of the column; beside the name it is one line, as the artboard
+        /// draws it.</remarks>
+        private FrameworkElement BuildLedBarActions(string ns, string blocked, bool stacked)
         {
             var presses = new List<UIElement>();
             var facts = StripFacts(ns);
@@ -957,7 +974,6 @@ namespace OpenDashPlugin
                 word.VerticalAlignment = VerticalAlignment.Center;
                 var shown = Ui.HStack(0, dot, word);
                 shown.VerticalAlignment = VerticalAlignment.Center;
-                shown.Margin = new Thickness(0, 0, 6, 0);
                 presses.Add(shown);
             }
             var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;
@@ -976,7 +992,18 @@ namespace OpenDashPlugin
             remove.ToolTip = PanelLeds.RemoveTooltip;
             remove.Click += (sender, args) => ShowRemoveLedBar(ns);
             presses.Add(remove);
-            return Ui.HStack(6, presses.ToArray());
+            var actions = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            if (stacked) actions.HorizontalAlignment = HorizontalAlignment.Left;
+            var line = stacked ? 3 : 0;
+            for (var i = 0; i < presses.Count; i++)
+            {
+                var press = (FrameworkElement)presses[i];
+                // The state sits 12 from the first press, as the artboard spaces it, and the presses 6 apart.
+                var after = i == presses.Count - 1 ? 0 : i == 0 && state != null ? 12 : 6;
+                press.Margin = new Thickness(0, line, after, line);
+                actions.Children.Add(press);
+            }
+            return actions;
         }
 
         /// <summary>Installs the strip's profile, or this build's newer version of it, into its device.</summary>
@@ -1223,7 +1250,14 @@ namespace OpenDashPlugin
                 var note = Ui.Prose(string.Empty);
                 Action showPicture = () =>
                 {
-                    picture.Child = Ui.Strip(PanelLeds.ShapeFrame(side, centre), StripStyle.AddLeds);
+                    // A 25-LED run is 438 wide at the sheet's size: it shrinks to a narrow sheet rather than being cut.
+                    picture.Child = new Viewbox
+                    {
+                        Stretch = Stretch.Uniform,
+                        StretchDirection = StretchDirection.DownOnly,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Child = Ui.Strip(PanelLeds.ShapeFrame(side, centre), StripStyle.AddLeds),
+                    };
                     note.Text = PanelLights.BarShapeNote(side, centre, fanatec);
                 };
                 // Drawn again after a pick, so the list marks the count now chosen, and keyboard focus goes back
@@ -1406,7 +1440,15 @@ namespace OpenDashPlugin
             name.TextTrimming = TextTrimming.CharacterEllipsis;
             name.ToolTip = title;
             head.Children.Add(name);
-            var tile = Ui.ChoiceTile(Ui.VStack(10, head, Ui.Strip(frame, StripStyle.Card), Ui.Prose(note, PanelKit.CardMetaSize)), selected, pick);
+            // The picture shrinks to the tile rather than being cut at its edge, as a strip's card does.
+            var picture = new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = Ui.Strip(frame, StripStyle.Card),
+            };
+            var tile = Ui.ChoiceTile(Ui.VStack(10, head, picture, Ui.Prose(note, PanelKit.CardMetaSize)), selected, pick);
             if (tooltip != null) tile.ToolTip = tooltip;
             AutomationProperties.SetName(tile, title);
             return tile;

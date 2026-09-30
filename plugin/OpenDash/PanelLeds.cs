@@ -444,10 +444,23 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on, in a centre that
-        /// shows them.</summary>
-        public static string[][] CardFrame(string shapeId, StripOptions options, bool centreShowsRevs = true)
+        /// shows them, while the strip is showing in SimHub (<see cref="CardLit"/>); every LED dark otherwise.</summary>
+        public static string[][] CardFrame(string shapeId, StripOptions options, bool centreShowsRevs = true, bool lit = true)
         {
-            return CentreAtRest(PanelEmulation.StripFrame(Ends(shapeId), Centre(shapeId), PanelEmulation.Mid, options), PanelEmulation.Mid, centreShowsRevs);
+            var ends = Ends(shapeId);
+            var centre = Centre(shapeId);
+            if (!lit) return ends > 0 ? new[] { new string[ends], new string[centre], new string[ends] } : new[] { new string[centre] };
+            return CentreAtRest(PanelEmulation.StripFrame(ends, centre, PanelEmulation.Mid, options), PanelEmulation.Mid, centreShowsRevs);
+        }
+
+        /// <summary>
+        /// Whether a card draws its strip lit: only while SimHub shows the profile. A card that says "Not
+        /// selected in SimHub" or "Not installed" beside lit LEDs contradicts its own state line, which is the fake
+        /// output ruling 20 keeps off Home's pictures; the artboard draws the unselected brow dark.
+        /// </summary>
+        public static bool CardLit(FlagBoxInstallState? profile, bool? selected)
+        {
+            return StateText(profile, selected) == Showing;
         }
 
         /// <summary>Whether a strip's centre shows the revs (Centre display on RPM), which is the only centre the
@@ -498,7 +511,6 @@ namespace OpenDashPlugin
         /// (voice.md), so the artboard's instruction "Use the car's own rev lights" is the departure
         /// docs/design/plugin.md records; search still finds the row by it.</summary>
         public const string CarRevLightsTitle = "Car's own rev lights";
-        public const string CarRevLightsCaption = "Off fills the strip left to right.";
 
         /// <summary>Whether a strip's stored style reads as the switch on. A retired style (meetInMiddle, f1)
         /// normalises to left to right, and reads as off.</summary>
@@ -827,8 +839,10 @@ namespace OpenDashPlugin
 
         public const string HardwareStep = "Hardware";
 
-        /// <summary>The hardware tiles, two to a row 8 apart, as the sheet lays them.</summary>
-        public const double HardwareTileMinWidth = 180;
+        /// <summary>The hardware tiles, two to a row 8 apart, as the sheet lays them, and never narrower than the
+        /// Fanatec tile's 3 · 9 · 3 at the card's 9 px LEDs (171) inside the tile's 12 of padding and its border:
+        /// a grid that laid two tiles narrower cut the picture at its right edge.</summary>
+        public const double HardwareTileMinWidth = 200;
         public const double HardwareTileGap = 8;
 
         public const string ShapeStep = "Shape";

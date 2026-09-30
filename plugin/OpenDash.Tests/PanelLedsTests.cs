@@ -23,7 +23,11 @@ namespace OpenDashPlugin.Tests
             // A switch names the thing: the artboard's "Use the car's own rev lights" is the departure
             // docs/design/plugin.md records (#369).
             Assert.Equal("Car's own rev lights", PanelLeds.CarRevLightsTitle);
-            Assert.Equal("Off fills the strip left to right.", PanelLeds.CarRevLightsCaption);
+            // No caption: the artboard draws none on the row, and the one there was described off while the
+            // switch was on, and wrongly, since the revs fill only the centre and not at all on a brake centre.
+            Assert.Null(typeof(PanelLeds).GetField("CarRevLightsCaption"));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("LedsRow(PanelLeds.CarRevLightsTitle, style)", leds);
             Assert.Equal("Rev lights", PanelLeds.RevLightsTitle);
             // voice.md's own example: "Centre display", never the artboard's "Centre shows".
             Assert.Equal("Centre display", PanelLeds.CentreDisplayTitle);
@@ -469,6 +473,37 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, Occurrences(leds, "PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))"));
         }
 
+        /// <summary>A card draws its strip lit only while SimHub shows the profile: a card that says it is not
+        /// selected or not installed draws every LED dark, as the artboard draws the unselected brow.</summary>
+        [Theory]
+        [InlineData(FlagBoxInstallState.UpToDate, true, true)]
+        [InlineData(FlagBoxInstallState.UpToDate, false, false)]
+        [InlineData(FlagBoxInstallState.UpToDate, null, false)]
+        [InlineData(FlagBoxInstallState.Outdated, true, false)]
+        [InlineData(FlagBoxInstallState.Outdated, false, false)]
+        [InlineData(FlagBoxInstallState.NotInstalled, null, false)]
+        [InlineData(FlagBoxInstallState.Unavailable, null, false)]
+        [InlineData(null, null, false)]
+        public void A_card_is_lit_only_while_SimHub_shows_its_strip(FlagBoxInstallState? profile, bool? selected, bool lit)
+        {
+            Assert.Equal(lit, PanelLeds.CardLit(profile, selected));
+            var options = PanelLeds.OptionsFor(false, null);
+            var frame = PanelLeds.CardFrame("3-9-3", options, true, PanelLeds.CardLit(profile, selected));
+            Assert.Equal(new[] { 3, 9, 3 }, frame.Select(group => group.Length));
+            if (lit) Assert.Contains(frame.SelectMany(group => group), c => c != null);
+            else Assert.All(frame.SelectMany(group => group), c => Assert.Null(c));
+        }
+
+        [Fact]
+        public void A_dark_card_keeps_its_shape_and_the_page_passes_whether_it_is_lit()
+        {
+            Assert.Equal(new[] { 15 }, PanelLeds.CardFrame("0-15-0", null, true, false).Select(group => group.Length));
+            Assert.Equal(PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null)), PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null), true, true));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("var lit = PanelLeds.CardLit(profile, selected);", leds);
+            Assert.Contains("PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)), lit)", leds);
+        }
+
         [Fact]
         public void The_pictures_dim_at_night_to_the_brightness_in_force()
         {
@@ -746,6 +781,50 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("StretchDirection = StretchDirection.DownOnly", cards);
         }
 
+        /// <summary>
+        /// The sheet's pictures shrink to the room rather than being cut: the tiles' and the shape step's, as a
+        /// card's does, and the grid never lays a tile narrower than the Fanatec tile's picture inside its padding
+        /// and border. Read as text because the page is WPF.
+        /// </summary>
+        [Fact]
+        public void The_sheets_pictures_fit_the_sheet()
+        {
+            var style = StripStyle.Card;
+            double Group(int n) => n * style.Led + (n - 1) * style.Gap;
+            var fanatec = Group(PanelLights.FanatecSide) * 2 + Group(PanelLights.FanatecCentre) + 2 * style.GroupGap + 2 * style.PadX;
+            Assert.Equal(171, fanatec);
+            Assert.True(PanelLeds.HardwareTileMinWidth >= fanatec + 2 * (PanelKit.ChoiceTilePadding + PanelMetrics.BorderWeight));
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var tile = leds.Substring(leds.IndexOf("private static Button LedsHardwareTile(", StringComparison.Ordinal));
+            tile = tile.Substring(0, tile.IndexOf("Ui.ChoiceTile(", StringComparison.Ordinal));
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly", tile);
+            Assert.Contains("Child = Ui.Strip(frame, StripStyle.Card),", tile);
+            var shape = leds.Substring(leds.IndexOf("Action showPicture = () =>", StringComparison.Ordinal));
+            shape = shape.Substring(0, shape.IndexOf("note.Text = ", StringComparison.Ordinal));
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly", shape);
+            Assert.Contains("Child = Ui.Strip(PanelLeds.ShapeFrame(side, centre), StripStyle.AddLeds),", shape);
+        }
+
+        /// <summary>
+        /// The header puts the state and its presses under the name where two columns do not fit, in a WrapPanel so
+        /// they drop to a second line rather than running out of the column, and the chip trims its hardware
+        /// before its numerals are cut. Read as text because the page is WPF.
+        /// </summary>
+        [Fact]
+        public void The_header_stacks_where_it_would_not_fit()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var header = leds.Substring(leds.IndexOf("private FrameworkElement LedsHeader(", StringComparison.Ordinal));
+            header = header.Substring(0, header.IndexOf("private static string LedsProfileBlocked(", StringComparison.Ordinal));
+            Assert.Contains("var stacked = !TwoColumns;", header);
+            Assert.Contains("var row = stacked ? (FrameworkElement)Ui.VStack(8, name, actions) : Ui.Row(name, actions);", header);
+            Assert.Contains("lead.TextTrimming = TextTrimming.CharacterEllipsis;", header);
+            Assert.Contains("DockPanel.SetDock(numerals, Dock.Right);", header);
+            var actions = leds.Substring(leds.IndexOf("private FrameworkElement BuildLedBarActions(", StringComparison.Ordinal));
+            actions = actions.Substring(0, actions.IndexOf("private void InstallLedBarProfile(", StringComparison.Ordinal));
+            Assert.Contains("var actions = new WrapPanel", actions);
+        }
+
         // --- The Add LEDs sheet -------------------------------------------------------------------------------
 
         /// <summary>The sheet takes the artboard's words, and voice.md's name for the press that opens it.</summary>
@@ -974,7 +1053,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelLeds.EffectTileGap);
             Assert.Equal(3, PanelLeds.EffectColumns);
             Assert.Equal(220, PanelLeds.EffectTileMinWidth);
-            Assert.Equal(180, PanelLeds.HardwareTileMinWidth);
+            Assert.Equal(200, PanelLeds.HardwareTileMinWidth);
             Assert.Equal(8, PanelLeds.HardwareTileGap);
             Assert.Equal(22, PanelLeds.PreviewGroupGap);
             Assert.Equal(10, PanelLeds.FoundInSimHubSize);
