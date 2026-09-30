@@ -393,11 +393,11 @@ namespace OpenDashPlugin
             new LedEffectSwitch("LedEffectAbs", "ABS", RoleAid),
             new LedEffectSwitch("LedEffectDrs", "DRS", RoleAid),
             new LedEffectSwitch("LedEffectPushToPass", "Push to pass", RoleAid),
-            new LedEffectSwitch("LedEffectLowFuel", "Low fuel", RoleCar),
+            new LedEffectSwitch(LowFuelSetting, "Low fuel", RoleCar),
             new LedEffectSwitch("LedEffectTemperature", "Temperature", RoleCar),
             new LedEffectSwitch("LedEffectOilPressure", "Oil pressure", RoleCar),
-            new LedEffectSwitch("LedEffectTurnLeft", "Turn signal left", RoleSide),
-            new LedEffectSwitch("LedEffectTurnRight", "Turn signal right", RoleSide),
+            new LedEffectSwitch(TurnLeftSetting, "Turn signal left", RoleSide),
+            new LedEffectSwitch(TurnRightSetting, "Turn signal right", RoleSide),
         };
 
         /// <summary>
@@ -412,25 +412,37 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The effect switches a shape carries, in the grid's order: what the generator draws on it, so a
-        /// switch for something the strip can never show is not offered.
+        /// The effect switches a shape carries, in the grid's order: exactly the switches the shape's profile
+        /// reads, so a switch for something the strip can never show is not offered and nothing the strip
+        /// shows goes without its switch. PanelLedsTests holds this to every profile the build embeds.
         /// </summary>
         /// <remarks>
         /// rpmStrip.ts effects(): every lamp at the ends carries its roles, and the pit family is drawn over the
-        /// whole run on every shape. A shape with no ends has no lamp to put anything on, so it draws the flags,
-        /// a car alongside and the turn signals over the whole run instead, and drops the aids and the car's own
-        /// warnings, which would be the rev LEDs flashing for ABS. A side of one or two has no aid lamp.
+        /// whole run on every shape. A side of one or two has no aid lamp. On a side of one, lampConditions in
+        /// effects.ts drops the turn signal, which is drawn as the green flag is, so that side's turn switch
+        /// governs nothing and is not offered. A shape with no ends has no lamp to put anything on, so it draws
+        /// the flags, a car alongside and the turn signals over the whole run instead, and drops the aids and
+        /// the car's own warnings, which would be the rev LEDs flashing for ABS. Its centre can show the fuel,
+        /// though, and the fuel centre flashes for low fuel, so a bare run keeps that one switch.
         /// </remarks>
         public static IList<LedEffectSwitch> EffectsFor(int left, int right)
         {
+            var bare = left <= 0 && right <= 0;
             var roles = new HashSet<string>(RolesOfSide(left).Concat(RolesOfSide(right)), StringComparer.Ordinal) { RoleStrip };
-            if (left <= 0 && right <= 0)
+            if (bare)
             {
                 roles.Add(RoleRace);
                 roles.Add(RoleSide);
             }
-            return Effects.Where(effect => roles.Contains(effect.Role)).ToList();
+            return Effects
+                .Where(effect => roles.Contains(effect.Role) || (bare && effect.Setting == LowFuelSetting))
+                .Where(effect => !(effect.Setting == TurnLeftSetting && left == 1) && !(effect.Setting == TurnRightSetting && right == 1))
+                .ToList();
         }
+
+        private const string LowFuelSetting = "LedEffectLowFuel";
+        private const string TurnLeftSetting = "LedEffectTurnLeft";
+        private const string TurnRightSetting = "LedEffectTurnRight";
 
         /// <summary>The same, for a strip's shape id.</summary>
         public static IList<LedEffectSwitch> EffectsFor(string shapeId)

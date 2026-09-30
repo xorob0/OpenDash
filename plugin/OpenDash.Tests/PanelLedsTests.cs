@@ -338,44 +338,80 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A shape is offered the switches of what the generator draws on it: rpmStrip.ts effects() and the lamps
-        /// of lamps.ts. The rules are read here so a change there fails this rather than offering a switch for
-        /// something the strip never shows.
+        /// A shape is offered the switches of what the generator draws on it. The shapes are pinned here in the
+        /// grid's words; the next test holds the rule to every profile the build embeds.
         /// </summary>
         [Fact]
         public void A_shape_carries_the_effects_its_lamps_draw()
         {
-            var strip = File.ReadAllText(Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "rpmStrip.ts"));
-            Assert.Contains("placed.length === 0 ? ['strip', 'race', 'side'] : ['strip']", strip);
-            var lamps = System.Text.RegularExpressions.Regex.Replace(
-                File.ReadAllText(Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "lamps.ts")), @"\s+", " ");
-            Assert.Contains("[lamp('side', 'side, flag and car', ['side', 'race', 'car'])]", lamps);
-            Assert.Contains("[SIDE, lamp('car', 'car and flag', ['car', 'race'])]", lamps);
-            Assert.Contains("[SIDE, RACE, lamp('car', 'car and aid', ['car', 'aid'])]", lamps);
-
             string[] Labels(int left, int right) => PanelLeds.EffectsFor(left, right).Select(effect => effect.Label).ToArray();
             // Three or more at each end: every lamp, so every switch.
             Assert.Equal(PanelLeds.Effects.Select(effect => effect.Label), Labels(3, 3));
             Assert.Equal(PanelLeds.Effects.Select(effect => effect.Label), Labels(4, 4));
-            // One or two: no aid lamp.
+            // Two: no aid lamp.
             Assert.Equal(new[]
             {
                 "Flags", "Spotter left", "Spotter right", "Pit lane", "Pit limiter", "Speeding in the pit lane",
                 "Low fuel", "Temperature", "Oil pressure", "Turn signal left", "Turn signal right",
             }, Labels(2, 2));
-            Assert.Equal(Labels(2, 2), Labels(1, 1));
-            // A bare run: the flags, a car alongside and the turn signals over the whole run, and the pit lane;
-            // never the aids or the car's warnings, which would be the rev LEDs flashing for ABS.
+            // One: no aid lamp, and no turn signal, which a side of one draws as the green flag and so drops.
             Assert.Equal(new[]
             {
                 "Flags", "Spotter left", "Spotter right", "Pit lane", "Pit limiter", "Speeding in the pit lane",
-                "Turn signal left", "Turn signal right",
+                "Low fuel", "Temperature", "Oil pressure",
+            }, Labels(1, 1));
+            // A bare run: the flags, a car alongside and the turn signals over the whole run, the pit lane, and
+            // the low fuel its fuel centre flashes for; never the aids or the other warnings, which would be the
+            // rev LEDs flashing for ABS.
+            Assert.Equal(new[]
+            {
+                "Flags", "Spotter left", "Spotter right", "Pit lane", "Pit limiter", "Speeding in the pit lane",
+                "Low fuel", "Turn signal left", "Turn signal right",
             }, Labels(0, 0));
             Assert.Equal(Labels(0, 0), PanelLeds.EffectsFor("0-15-0").Select(effect => effect.Label));
             Assert.Equal(Labels(3, 3), PanelLeds.EffectsFor("3-9-3-fanatec").Select(effect => effect.Label));
             // An id it cannot read is offered everything rather than nothing.
             Assert.Equal(PanelLeds.Effects.Count, PanelLeds.EffectsFor("mystery").Count);
         }
+
+        /// <summary>
+        /// Every profile the build embeds reads exactly the switches its shape is offered: a switch the profile
+        /// never reads changes nothing, and an effect the profile reads with no switch cannot be turned off.
+        /// </summary>
+        /// <remarks>
+        /// Off the files the plugin embeds, gunzipped as the plugin reads them, as PanelLedBarFormTests walks
+        /// the census: each profile's OpenDash.LedEffect* reads against EffectsFor of its shape id.
+        /// </remarks>
+        [Fact]
+        public void Every_profile_reads_exactly_the_switches_its_shape_is_offered()
+        {
+            var folder = new[] { RepoPaths.EmbeddedResources(), RepoPaths.BuildOutput() }
+                .FirstOrDefault(f => Directory.Exists(f) && Directory.GetFiles(f, "*" + FlagBoxProfile.ProfileExtension)
+                    .Any(p => FlagBoxProfile.ShapeIdOf(Path.GetFileName(p)) != null));
+            if (folder == null)
+            {
+                Assert.False(OnCI, "no *" + FlagBoxProfile.ProfileExtension + " in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
+            var read = new System.Text.RegularExpressions.Regex(@"\bLedEffect[A-Za-z]+");
+            var checkedShapes = 0;
+            foreach (var path in Directory.GetFiles(folder, "*" + FlagBoxProfile.ProfileExtension))
+            {
+                var id = FlagBoxProfile.ShapeIdOf(Path.GetFileName(path));
+                if (id == null) continue;
+                var json = FlagBoxProfile.ReadFile(path);
+                var reads = read.Matches(json).Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value)
+                    .Distinct().OrderBy(s => s, StringComparer.Ordinal).ToArray();
+                var offered = PanelLeds.EffectsFor(id).Select(effect => effect.Setting).OrderBy(s => s, StringComparer.Ordinal).ToArray();
+                Assert.True(offered.SequenceEqual(reads), id + " reads [" + string.Join(", ", reads) + "] but is offered [" + string.Join(", ", offered) + "]");
+                checkedShapes++;
+            }
+            Assert.True(checkedShapes > 0);
+        }
+
+        private static bool OnCI =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
 
         [Fact]
         public void The_full_strip_spotter_is_offered_only_where_an_end_carries_the_spotter()
