@@ -59,19 +59,68 @@ namespace OpenDashPlugin
                 lights.Count > 0, hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);
             foreach (var note in notes) children.Add(UpdatesNote(note));
             // The by-hand route for the flag box, only when the matrix driver cannot be reached at all.
-            if (flagBoxPlan != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable)
+            if (PanelUpdates.ShowsImportFallback(flagBoxPlan))
             {
-                var fallback = BuildFlagBoxImportFallback(flagBoxPlan);
+                var fallback = UpdatesFlagBoxFallback(flagBoxPlan);
                 fallback.Margin = new Thickness(0, PanelUpdates.SectionGap, 0, 0);
-                // The shared fallback's row is a button and a 320 box that do not wrap, wider than a narrow
-                // column; held to the column, only its box's end is clipped, rather than the whole page being
-                // arranged at the row's width and every card losing its right edge.
-                fallback.MaxWidth = width;
                 children.Add(fallback);
             }
             var reinstall = Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall);
             children.Add(keptAnchorHere ? Ui.Anchor(new Border { Child = reinstall }, PanelUpdates.AnchorKept) : reinstall);
             return PageSection(PanelUpdates.InSimHubTitle, false, PanelUpdates.SectionGap, children.ToArray());
+        }
+
+        /// <summary>The by-hand route's line and the path it names, which a copy rewrites.</summary>
+        private TextBlock updatesImportLine;
+        private TextBox updatesImportPath;
+
+        /// <summary>
+        /// The by-hand route for the flag box, drawn by this page so that it fits its column: the copy press
+        /// and the path box share a row whose box gives up width down to what the column leaves it, never
+        /// wider than the artboard's 320, rather than the shared helper's fixed 320 beside a press, which is
+        /// about 555 px and wider than the narrow column (527 to 544).
+        /// </summary>
+        private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)
+        {
+            updatesImportLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
+            var copy = Ui.Button(PanelUpdates.CopyForImport, PanelButtonKind.Outline);
+            copy.MinWidth = ButtonMinWidth;
+            copy.ToolTip = PanelUpdates.CopyForImportTooltip;
+            copy.Click += (sender, args) => UpdatesCopyForImport();
+            copy.Margin = new Thickness(0, 0, PanelUpdates.ImportGap, 0);
+            updatesImportPath = new TextBox
+            {
+                IsReadOnly = true,
+                Text = plugin.FlagBox?.Path ?? string.Empty,
+                ToolTip = PanelUpdates.ImportPathTooltip,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Ui.Field(updatesImportPath, Theme.ControlHeightSm);
+
+            // The box's column takes the room the press leaves, up to 320; the last column takes the rest, so
+            // the box keeps its left edge beside the press on a wide page.
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelUpdates.ImportBoxWeight, GridUnitType.Star), MaxWidth = PanelUpdates.ImportPathWidth });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(copy, 0);
+            Grid.SetColumn(updatesImportPath, 1);
+            row.Children.Add(copy);
+            row.Children.Add(updatesImportPath);
+            return Ui.VStack(PanelUpdates.ImportLineGap, updatesImportLine, row);
+        }
+
+        /// <summary>Copies the flag box profile to where SimHub's import dialog opens, and says where on the
+        /// route's line.</summary>
+        private void UpdatesCopyForImport()
+        {
+            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
+            if (updatesImportPath != null && copied?.Path != null) updatesImportPath.Text = copied.Path;
+            var ok = copied != null && copied.Status != FlagBoxStatus.Failed && copied.Status != FlagBoxStatus.NotEmbedded;
+            // Not every refusal reaches the log by itself (no Documents folder), and the line points there.
+            if (!ok) Log.Warn("Copying the flag box profile for import failed: " + (copied?.Message ?? "no result"));
+            if (updatesImportLine != null) updatesImportLine.Text = ok ? PanelUpdates.CopiedForImport(copied.Path) : PanelUpdates.CopyForImportFailed;
         }
 
         /// <summary>A sentence under the table, 12 below what is above it.</summary>

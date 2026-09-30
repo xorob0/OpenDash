@@ -434,9 +434,31 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelUpdates.DrawsFlagBoxRow(true, true));
             Assert.False(PanelUpdates.DrawsFlagBoxRow(false, true));
             Assert.False(PanelUpdates.DrawsFlagBoxRow(true, false));
-            // The shared import fallback does not wrap, so the table holds it to the column rather than
-            // letting it widen the whole page past the gutter.
-            Assert.Contains("fallback.MaxWidth = width;", PageCode());
+        }
+
+        /// <summary>The flag box's by-hand route is drawn only while SimHub's matrix settings are out of reach,
+        /// and by this page, so it fits its column: the path box gives up width to the press beside it, never
+        /// wider than 320, where the shared route's fixed 320 beside the press is about 555 px and clipped in
+        /// the narrow column.</summary>
+        [Fact]
+        public void The_flag_box_s_by_hand_route_fits_its_column()
+        {
+            Assert.True(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
+            Assert.False(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }));
+            Assert.False(PanelUpdates.ShowsImportFallback(null));
+            Assert.Equal(320, PanelUpdates.ImportPathWidth);
+            Assert.Equal(12, PanelUpdates.ImportGap);
+            Assert.Equal(8, PanelUpdates.ImportLineGap);
+            Assert.Equal("Could not copy the profile. See SimHub's log.", PanelUpdates.CopyForImportFailed);
+            Assert.Equal(@"Copied to C:\Users\Rim\Documents\SimHub\flag-box.json. In SimHub, open your device's profiles and press Import.",
+                PanelUpdates.CopiedForImport(@"C:\Users\Rim\Documents\SimHub\flag-box.json"));
+            var code = PageCode();
+            Assert.Contains("if (PanelUpdates.ShowsImportFallback(flagBoxPlan))", code);
+            Assert.Contains("var fallback = UpdatesFlagBoxFallback(flagBoxPlan);", code);
+            Assert.DoesNotContain("BuildFlagBoxImportFallback(", code);
+            Assert.DoesNotContain("MaxWidth = width", code);
+            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelUpdates.ImportBoxWeight, GridUnitType.Star), MaxWidth = PanelUpdates.ImportPathWidth }", code);
+            Assert.DoesNotContain("Width = 320", code);
         }
 
         [Fact]
