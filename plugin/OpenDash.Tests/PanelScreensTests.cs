@@ -624,6 +624,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("18 of 21", PanelScreens.ModuleCount(modules));
             Assert.Equal("0 of 21", PanelScreens.ModuleCount(null));
             Assert.Equal(Modules.All.Select(m => m.Name), PanelScreens.ModuleNames());
+            // First module offers the modules the rotation has on, since Save moves the start past one that
+            // is off: Energy, off by default, is not offered, and nothing ticked offers everything.
+            var choices = PanelScreens.FirstModuleChoices(modules);
+            Assert.Equal(18, choices.Length);
+            Assert.DoesNotContain(Modules.All.ToList().FindIndex(m => m.Id == "energy"), choices);
+            Assert.All(choices, i => Assert.True(modules[i]));
+            Assert.Contains(Contract.DefaultCompanionStart, choices);
+            Assert.Equal(Modules.Count, PanelScreens.FirstModuleChoices(new bool[Modules.Count]).Length);
+            Assert.Equal(Modules.Count, PanelScreens.FirstModuleChoices(null).Length);
             // A module's hover is its number and what it shows.
             Assert.Equal("01 · " + Modules.All[0].Description, PanelScreens.ModuleTooltip(Modules.All[0]));
             Assert.Equal("21 · " + Modules.All[20].Description, PanelScreens.ModuleTooltip(Modules.All[20]));

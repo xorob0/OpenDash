@@ -18,8 +18,8 @@ namespace OpenDashPlugin
         /// The companion's editor, drawn again in place after a First module pick or a module tick.
         /// </summary>
         /// <remarks>
-        /// Save normalises the screen, which moves CompanionStart past a module the rotation has off: picking
-        /// one stores the next module on, and unticking the First module moves it. The choice has to say what
+        /// Save normalises the screen, which moves CompanionStart past a module the rotation has off, so First
+        /// module offers only the ones on, and unticking the First module moves it. The choice has to say what
         /// the setting now holds, and a list reopened has to mark it, so both redraw.
         /// </remarks>
         private FrameworkElement BuildCompanionPane(ScreenInstance screen)
@@ -40,8 +40,13 @@ namespace OpenDashPlugin
             head.Children.Add(count);
             head.Children.Add(Ui.Heading(PanelScreens.ModulesTitle));
 
-            var first = Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionStart(screen.Namespace), value =>
+            // Only the modules the rotation has on: Save moves the start past one that is off.
+            var choices = PanelScreens.FirstModuleChoices(screen.Modules);
+            var names = PanelScreens.ModuleNames();
+            var first = Ui.ChoiceButton(choices.Select(i => names[i]).ToArray(), Array.IndexOf(choices, Settings.ScreenCompanionStart(screen.Namespace)), index =>
             {
+                if (index < 0 || index >= choices.Length) return;
+                var value = choices[index];
                 screen.CompanionStart = value;
                 // And force it now, so the screen in front of you moves rather than waiting for the next
                 // SimHub start. Somebody choosing where it opens is looking at the thing. The force lets go by

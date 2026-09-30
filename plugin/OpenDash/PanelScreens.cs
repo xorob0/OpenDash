@@ -669,6 +669,21 @@ namespace OpenDashPlugin
             return Modules.All.Select(module => module.Name).ToArray();
         }
 
+        /// <summary>
+        /// The modules First module offers, as indexes into Modules.All: the ones ticked in the rotation, and
+        /// every module where none is.
+        /// </summary>
+        /// <remarks>
+        /// Save moves CompanionStart forward to the next module the rotation has on, so a module that is off
+        /// was offered only to be replaced by another the driver did not pick: Energy, off by default, stored
+        /// Tyres.
+        /// </remarks>
+        public static int[] FirstModuleChoices(bool[] modules)
+        {
+            var on = Enumerable.Range(0, Modules.Count).Where(i => modules != null && i < modules.Length && modules[i]).ToArray();
+            return on.Length > 0 ? on : Enumerable.Range(0, Modules.Count).ToArray();
+        }
+
         /// <summary>A module's hover in the grid: its number and what it shows, "07 · ...".</summary>
         public static string ModuleTooltip(Module module)
         {
