@@ -135,28 +135,28 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a light profile's row says and offers, from the state the install plan found it in.
+        /// What a light profile's row on the Updates page says, and the press it offers, from the state the
+        /// install plan found it in.
         /// </summary>
         /// <remarks>
-        /// The Updates page's: its census rows and PanelLightRows read it, and the Updates agent may reword
-        /// it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow.
+        /// The Updates page's: its "In SimHub" table and PanelLightRows.DotHex read it, and the Updates agent
+        /// may reword it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow.
         ///
-        /// One function rather than a label here and a style there, so that the panel cannot pair a verb
-        /// with the wrong button: an update is the one accented action on the page, and everything else is
-        /// an outline. The canvas draws two of these rows, the older profile and the uninstalled one. A
-        /// profile already at this version takes the panel's own Reinstall wording, which the "This
-        /// plugin" section draws as an outline; a failed install says what the status pill says and offers
-        /// the same press again. Nothing is embedded and SimHub being unreachable have no row of their
-        /// own, the section's own sentence covering both, so they read as not installed.
+        /// The state is a word and the version has a column of its own, so the words are the four the
+        /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
+        /// ink, as the artboard draws "Out of date", and the one press the table carries is its Update. No
+        /// pairing is the primary: the page's one accented press is the update card's Download. Nothing
+        /// embedded and SimHub being unreachable read as not installed, the section's own sentences covering
+        /// both.
         /// </remarks>
         public static RowAction LightRow(FlagBoxInstallState state, string installedVersion)
         {
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Update", PanelButton.Primary);
+                    return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, "Update", PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                    return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
                     return new RowAction(InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
                 default:

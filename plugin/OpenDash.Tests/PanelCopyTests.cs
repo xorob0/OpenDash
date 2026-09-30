@@ -87,17 +87,18 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The pairing the canvas draws: an older profile is the one thing on the page worth an accented
-        /// button, and everything else asks with an outline.
+        /// The Updates table's words for an older profile: "Update available" in the update ink, as the
+        /// artboard draws "Out of date", with the version in a column of its own and the row's Update press
+        /// an outline, since the page's one primary is the update card's Download.
         /// </summary>
         [Fact]
-        public void An_older_light_profile_offers_an_update_and_it_is_the_primary()
+        public void An_older_light_profile_says_an_update_is_available_and_offers_an_outline_update()
         {
             var row = PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0");
-            Assert.Equal("Installed · 0.4.0", row.State);
-            Assert.Equal(Theme.StatusUpToDate, row.StateHex);
+            Assert.Equal("Update available", row.State);
+            Assert.Equal(Theme.StatusUpdateAvailable, row.StateHex);
             Assert.Equal("Update", row.Button);
-            Assert.Equal(PanelButton.Primary, row.Style);
+            Assert.Equal(PanelButton.Outline, row.Style);
         }
 
         [Fact]
@@ -111,10 +112,11 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_profile_already_at_this_version_offers_a_reinstall_rather_than_an_update()
+        public void A_profile_already_at_this_version_is_up_to_date_and_offers_a_reinstall_rather_than_an_update()
         {
             var row = PanelCopy.LightRow(FlagBoxInstallState.UpToDate, "0.5.0");
-            Assert.Equal("Installed · 0.5.0", row.State);
+            Assert.Equal("Up to date", row.State);
+            Assert.Equal(Theme.StatusUpToDate, row.StateHex);
             Assert.Equal("Reinstall", row.Button);
             Assert.Equal(PanelButton.Outline, row.Style);
         }
@@ -127,6 +129,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusFailed, row.StateHex);
             Assert.Equal("Install", row.Button);
             Assert.Equal(PanelButton.Outline, row.Style);
+        }
+
+        /// <summary>One word per thing (voice.md): a light profile's state is said in the words a
+        /// dashboard's is, InstallStatus.Label, and the version is not part of it.</summary>
+        [Fact]
+        public void A_light_row_says_its_state_in_the_dashboards_words()
+        {
+            Assert.Equal(InstallStatus.UpdateAvailable.Label(), PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0").State);
+            Assert.Equal(InstallStatus.UpToDate.Label(), PanelCopy.LightRow(FlagBoxInstallState.UpToDate, "0.4.0").State);
+            Assert.Equal(InstallStatus.Failed.Label(), PanelCopy.LightRow(FlagBoxInstallState.Failed, "0.4.0").State);
+            Assert.Equal(InstallStatus.NotInstalled.Label(), PanelCopy.LightRow(FlagBoxInstallState.NotInstalled, "0.4.0").State);
+            Assert.DoesNotContain("0.4.0", PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0").State);
         }
 
         /// <summary>Neither has a row of its own on the canvas, the section's own sentence covering both,
@@ -213,9 +227,10 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>One primary per panel: of every pairing the table holds, exactly one is accented.</summary>
+        /// <summary>One primary per page: the Updates page's is the update card's Download, so no pairing in
+        /// the table is accented, a row's Update included.</summary>
         [Fact]
-        public void Only_one_pairing_in_the_table_is_a_primary()
+        public void No_pairing_in_the_table_is_a_primary()
         {
             var primaries = 0;
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
@@ -224,7 +239,7 @@ namespace OpenDashPlugin.Tests
             }
             if (PanelCopy.ScreenRow(true).Style == PanelButton.Primary) primaries++;
             if (PanelCopy.ScreenRow(false).Style == PanelButton.Primary) primaries++;
-            Assert.Equal(1, primaries);
+            Assert.Equal(0, primaries);
         }
     }
 }

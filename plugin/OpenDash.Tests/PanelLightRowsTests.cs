@@ -239,7 +239,7 @@ namespace OpenDashPlugin.Tests
             // Read off PanelCopy.LightRow rather than from a table of its own, except for the one pairing
             // that table cannot carry: the uninstalled dot is status.notInstalled and its label text.label.
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.UpToDate));
-            Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
+            Assert.Equal(Theme.StatusUpdateAvailable, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
             Assert.Equal(Theme.StatusFailed, PanelLightRows.DotHex(FlagBoxInstallState.Failed));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.NotInstalled));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.Unavailable));

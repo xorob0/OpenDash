@@ -1,6 +1,7 @@
-// PanelConfirmationTests.cs: the question Update and Reinstall ask before replacing a dashboard somebody has edited.
+// PanelConfirmationTests.cs: the question Download and Reinstall everything ask before replacing a dashboard
+// somebody has edited.
 //
-// Each test drives the confirmation the way the Install tab does: a press is given the folders edited at that
+// Each test drives the confirmation the way the Updates page does: a press is given the folders edited at that
 // moment, the question it would ask, and what the update line shows, and when it asks the line is then made to show
 // that question. The line is the whole of what binds a yes to its question, so every test keeps it in step.
 using Xunit;
@@ -16,7 +17,7 @@ namespace OpenDashPlugin.Tests
 
         private static readonly string[] OneEdited = { "OpenDash" };
 
-        /// <summary>The Install tab's side of a press: the line shows the question whenever the press asks.</summary>
+        /// <summary>The Updates page's side of a press: the line shows the question whenever the press asks.</summary>
         private sealed class Tab
         {
             public readonly PanelConfirmation Confirmation = new PanelConfirmation();
@@ -38,22 +39,22 @@ namespace OpenDashPlugin.Tests
         public void Each_button_asks_once_and_replaces_on_the_second_press()
         {
             var tab = new Tab();
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             tab.Line = "Downloading 0.3.1…";
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
 
             tab.Line = Offer;
-            Assert.Equal("Reinstall", tab.Reinstall);
+            Assert.Equal("Reinstall everything", tab.Reinstall);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
 
             // The run wrote a sentence of its own; the same sentence written back by some later writer is no yes.
             tab.Line = AskReinstall;
-            Assert.Equal("Reinstall", tab.Reinstall);
+            Assert.Equal("Reinstall everything", tab.Reinstall);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
         }
 
@@ -69,13 +70,13 @@ namespace OpenDashPlugin.Tests
 
             // Reinstall does not take Update's yes for its own: it asks its question, which takes the line.
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Reinstall);
 
             Assert.Equal(PressOutcome.RunReplacingEdited, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
             tab.Line = Reinstalled;
-            Assert.Equal("Update", tab.Update);
-            Assert.Equal("Reinstall", tab.Reinstall);
+            Assert.Equal("Download", tab.Update);
+            Assert.Equal("Reinstall everything", tab.Reinstall);
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
@@ -90,11 +91,11 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PanelConfirmation.ReplaceAnyway, tab.Update);
-            Assert.Equal("Reinstall", tab.Reinstall);
+            Assert.Equal("Reinstall everything", tab.Reinstall);
 
             // Reinstall's question has gone from the line, so its button asks it again rather than running.
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Reinstall, OneEdited, AskReinstall));
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
         }
 
         /// <summary>A second press replaces exactly the folders the question named, and a list that has moved is asked
@@ -128,13 +129,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
 
             tab.Line = "Checking for updates…";
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
             tab.Line = Offer;
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
 
             // The tab being left takes the line away altogether.
-            Assert.Equal("Update", tab.Confirmation.Label(ReplacingAction.Update, null));
+            Assert.Equal("Download", tab.Confirmation.Label(ReplacingAction.Update, null));
             Assert.Equal(PressOutcome.Ask, tab.Confirmation.Press(ReplacingAction.Update, OneEdited, AskUpdate, null));
         }
 
@@ -149,7 +150,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
             Assert.Equal(PressOutcome.Run, tab.Press(ReplacingAction.Reinstall, new string[0], AskReinstall));
             // Nothing was written over the question yet, and the label already lets it go.
-            Assert.Equal("Update", tab.Update);
+            Assert.Equal("Download", tab.Update);
             Assert.Equal(PressOutcome.Ask, tab.Press(ReplacingAction.Update, OneEdited, AskUpdate));
         }
     }
