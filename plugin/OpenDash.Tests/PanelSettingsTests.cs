@@ -77,7 +77,8 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>voice.md: no contractions, no question for a heading, and every label in sentence case.</summary>
+        /// <summary>voice.md: no contractions and no question anywhere in the page's words, the alert rows'
+        /// included, and every title, column and option in sentence case, where an acronym keeps its capitals.</summary>
         [Fact]
         public void The_words_follow_the_voice()
         {
@@ -87,14 +88,35 @@ namespace OpenDashPlugin.Tests
                 .Concat(typeof(PanelSettings).GetFields(BindingFlags.Public | BindingFlags.Static)
                     .Where(field => field.FieldType == typeof(string[]))
                     .SelectMany(field => (string[])field.GetValue(null)))
+                .Concat(PanelSettings.Alerts.SelectMany(alert => new[] { alert.Title, alert.Op, alert.Unit, alert.Example }))
                 .Where(text => text != null)
                 .ToList();
             Assert.DoesNotContain(words, text => Regex.IsMatch(text, @"n't|'re\b|'ll\b|'ve\b|'m\b|'d\b"));
             Assert.DoesNotContain(words, text => text.EndsWith("?", StringComparison.Ordinal));
-            foreach (var title in PanelSettings.SectionTitles.Concat(new[] { PanelSettings.UnitsTitle, PanelSettings.FlagsInPitLaneTitle, PanelSettings.NightModeButtonTitle }))
+            var labels = PanelSettings.SectionTitles
+                .Concat(new[]
+                {
+                    PanelSettings.UnitsTitle, PanelSettings.FlagsInPitLaneTitle, PanelSettings.BrightnessTitle,
+                    PanelSettings.NightBrightnessTitle, PanelSettings.NightModeTitle, PanelSettings.NightModeButtonTitle,
+                    PanelSettings.PreviewTitle, PanelSettings.AlertColumn, PanelSettings.WhenColumn, PanelSettings.TryLabel,
+                })
+                .Concat(PanelSettings.Alerts.Select(alert => alert.Title))
+                .Concat(PanelSettings.SurfaceColumns)
+                .Concat(PanelSettings.PreviewLabels)
+                .Concat(PanelSettings.TyreDisplayLabels)
+                .Concat(PanelSettings.YellowFlagLabels)
+                .Concat(PanelSettings.ThemeLabels)
+                .Concat(PanelSettings.ColourVisionLabels)
+                .Concat(PanelSettings.ColoursLabels)
+                .Concat(new[] { PanelSettings.FirstNameHint, PanelSettings.SurnameHint, PanelSettings.LogoButton, PanelSettings.IdleBackgroundButton });
+            foreach (var label in labels)
             {
-                Assert.True(char.IsUpper(title[0]), title);
-                Assert.Equal(title.Substring(1), title.Substring(1).ToLowerInvariant());
+                Assert.True(char.IsUpper(label[0]), label);
+                foreach (var word in label.Split(' ').Skip(1))
+                {
+                    var acronym = Regex.IsMatch(word, @"^[A-Z]{2,}s?…?$");
+                    Assert.True(acronym || word == word.ToLowerInvariant(), label);
+                }
             }
         }
 
@@ -359,6 +381,83 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Settings.SetLightsOilTemp(v); Save();", page);
             Assert.Contains("Settings.SetLightsWaterTemp(v); Save();", page);
             Assert.Contains("Settings.FlagBoxLowFuelLaps = v; Save();", page);
+        }
+
+        /// <summary>The page's code from a control's call to the end of its handler.</summary>
+        private static string Handler(string page, string start)
+        {
+            var at = page.IndexOf(start, StringComparison.Ordinal);
+            Assert.True(at >= 0, start);
+            var end = page.IndexOf("});", at, StringComparison.Ordinal);
+            Assert.True(end > at, start);
+            return page.Substring(at, end - at);
+        }
+
+        /// <summary>The settings a handler writes, in its order.</summary>
+        private static string[] Writes(string handler)
+        {
+            return Regex.Matches(handler, @"(?<![\w.])Settings\.(\w+) = ").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
+        }
+
+        /// <summary>
+        /// Every live control writes its own setting and nothing else, and saves: a control that reads one
+        /// setting and writes another, or writes nothing, would otherwise pass every other test on the page.
+        /// </summary>
+        [Fact]
+        public void Every_live_control_writes_its_own_setting_and_saves()
+        {
+            var page = Page();
+            foreach (var pair in new[]
+            {
+                new[] { "BuildSegmented(Contract.PositionModes,", "PositionMode" },
+                new[] { "BuildSegmented(Contract.DeltaReferences,", "DeltaReference" },
+                new[] { "BuildSegmented(Contract.DeltaPrecisions,", "DeltaPrecision" },
+                new[] { "BuildSegmented(Contract.SessionProgressModes,", "SessionProgress" },
+                new[] { "BuildSegmented(Contract.DriverNameFormats,", "DriverNameFormat" },
+                new[] { "BuildSegmented(Contract.ClockFormats,", "ClockFormat" },
+                new[] { "BuildSegmented(Contract.BlueFlagDetails,", "BlueFlagDetail" },
+                new[] { "BuildToggle(Settings.DriverNameTeam,", "DriverNameTeam" },
+                new[] { "BuildToggle(Settings.FlagsInPitLane,", "FlagsInPitLane" },
+                new[] { "BuildToggle(Settings.LightsNightMode,", "LightsNightMode" },
+            })
+            {
+                var handler = Handler(page, pair[0]);
+                Assert.Equal(new[] { pair[1] }, Writes(handler));
+                var value = pair[0].StartsWith("BuildToggle", StringComparison.Ordinal) ? "on" : "value";
+                Assert.Contains("Settings." + pair[1] + " = " + value + ";", handler);
+                Assert.Contains("Save();", handler);
+            }
+            // Each segmented control reads the setting it writes.
+            Assert.Contains("BuildSegmented(Contract.PositionModes, PanelDataTab.PositionLabels, Settings.PositionMode,", page);
+            Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels, Settings.DeltaReference,", page);
+            Assert.Contains("BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels, Settings.DeltaPrecision,", page);
+            Assert.Contains("BuildSegmented(Contract.SessionProgressModes, PanelDataTab.SessionLabels, Settings.SessionProgress,", page);
+            Assert.Contains("BuildSegmented(Contract.DriverNameFormats, PanelDataTab.DriverNameLabels, Settings.DriverNameFormat,", page);
+            Assert.Contains("BuildSegmented(Contract.ClockFormats, PanelDataTab.ClockLabels, Settings.ClockFormat,", page);
+            Assert.Contains("BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels, Settings.BlueFlagDetail,", page);
+            // The preview's Day and Night write nothing and save nothing.
+            var pick = Handler(page, "BuildSegmented(PanelSettings.PreviewValues,");
+            Assert.Empty(Writes(pick));
+            Assert.DoesNotContain("Save()", pick);
+        }
+
+        /// <summary>
+        /// SimHub's units are read in the order the page uses them -- speed, temperature, pressure, fuel -- and
+        /// each temperature box shows its own default: the oil's on the oil box and the water's on the water's.
+        /// </summary>
+        [Fact]
+        public void Each_unit_and_default_goes_where_it_belongs()
+        {
+            var page = Page();
+            var order = new[] { "units.LocalSpeedUnit", "units.LocalTemperatureUnit", "units.LocalPressureUnit", "units.LocalFuelUnit" }
+                .Select(read => page.IndexOf(read, StringComparison.Ordinal)).ToList();
+            Assert.All(order, index => Assert.True(index >= 0));
+            Assert.Equal(order.OrderBy(i => i), order);
+            Assert.Contains("PanelSettings.UnitsLine(units[0], units[1], units[2], units[3])", page);
+            Assert.Contains("var temperature = units[1];", page);
+            Assert.Contains("PanelSettings.FuelUnit(units[3])", page);
+            Assert.Contains("SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature),", page);
+            Assert.Contains("SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature),", page);
         }
 
         /// <summary>
