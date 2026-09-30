@@ -321,7 +321,7 @@ namespace OpenDashPlugin
             var box = Ui.Input(text, PanelShell.NumberInputWidth);
             box.Padding = new Thickness(PanelShell.NumberInputPaddingX - PanelMetrics.BorderWeight, 0, PanelShell.NumberInputPaddingX - PanelMetrics.BorderWeight, 0);
             box.FontFamily = PanelFonts.Data;
-            box.FontWeight = FontWeights.SemiBold;
+            box.FontWeight = FontWeight.FromOpenTypeWeight(PanelSettings.NumberFieldFontWeight);
             box.FontSize = PanelShell.NumberInputTextSize;
             box.HorizontalContentAlignment = HorizontalAlignment.Right;
             box.TextAlignment = TextAlignment.Right;
@@ -343,7 +343,7 @@ namespace OpenDashPlugin
                 TextAlignment = box.TextAlignment,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = box.TextAlignment == TextAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-                Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + 2, 0, box.Padding.Right + PanelMetrics.BorderWeight + 2, 0),
+                Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0),
                 IsHitTestVisible = false,
             };
             Action show = () => text.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;
@@ -476,7 +476,7 @@ namespace OpenDashPlugin
             // SimHub's own units, which OpenDash follows and never sets; where it cannot be asked, the caption
             // alone says where they are set.
             var line = PanelSettings.UnitsLine(units[0], units[1], units[2], units[3]);
-            var unitsLine = line == null ? null : Ui.Text(line, PanelSettings.UnitsTextSize, FontWeights.Normal, Theme.TextPrimary);
+            var unitsLine = line == null ? null : Ui.Text(line, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary);
 
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
                 SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
@@ -748,7 +748,7 @@ namespace OpenDashPlugin
         {
             var strip = Ui.Strip(PanelSettings.PreviewStripFrame(), PanelSettings.PreviewStrip);
             var matrix = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelSettings.PreviewMatrixScenario, PanelSettings.PreviewMatrixOptions()), PanelSettings.PreviewMatrix);
-            var percent = Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            var percent = Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeight.FromOpenTypeWeight(PanelSettings.PreviewPercentFontWeight), Theme.TextSecondary, PanelFonts.Data);
             percent.Width = PanelSettings.PreviewPercentWidth;
             percent.TextAlignment = TextAlignment.Right;
             Typography.SetNumeralAlignment(percent, FontNumeralAlignment.Tabular);
@@ -793,7 +793,8 @@ namespace OpenDashPlugin
             for (var i = 0; i < pictures.Length; i++)
             {
                 pictures[i].VerticalAlignment = VerticalAlignment.Center;
-                pictures[i].Margin = new Thickness(0, 0, i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0, 0);
+                var gap = i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0;
+                pictures[i].Margin = new Thickness(0, 0, gap, 0);
                 stage.Children.Add(pictures[i]);
             }
             var fit = new Viewbox

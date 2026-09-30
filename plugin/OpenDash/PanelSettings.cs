@@ -192,6 +192,16 @@ namespace OpenDashPlugin
 
         public const double UnitsTextSize = 14;
 
+        /// <summary>The Units line in the regular 400, as the artboard's row value.</summary>
+        public const int UnitsFontWeight = 400;
+
+        /// <summary>The .num-in's 600, SemiBold, which a placeholder over it takes too.</summary>
+        public const int NumberFieldFontWeight = 600;
+
+        /// <summary>How far inside a text box's padding its placeholder sits: WPF draws a TextBox's text 2 in
+        /// from its padding, so the placeholder is set in as far to sit where typed text would.</summary>
+        public const double HintInset = 2;
+
         /// <summary>The greyed fuel target's box and its unit, 8 apart as the artboard's row.</summary>
         public const double FuelTargetGap = 8;
 
@@ -514,6 +524,9 @@ namespace OpenDashPlugin
         public const double PreviewStageGap = 40;
 
         public const double PreviewPercentSize = 22;
+
+        /// <summary>The .num's 600, SemiBold.</summary>
+        public const int PreviewPercentFontWeight = 600;
         public const double PreviewPercentWidth = 56;
 
         /// <summary>The brightness sliders' width, with their numeral, as the artboard's.</summary>

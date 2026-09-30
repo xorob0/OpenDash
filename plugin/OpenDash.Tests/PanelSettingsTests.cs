@@ -318,9 +318,10 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// Every metric the page draws with is PanelSettings', held to Settings.dc.html where the artboard has
         /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the Threshold cell's gap 8, the
-        /// Units line 14, the preview card's padding 16/18 with gap 16 and 8 under it, the name inputs 150 with
-        /// gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre buttons' 6 and the .idx's 500. The page
-        /// types no gap, padding or weight of its own.
+        /// Units line 14 in 400, the .num-in's and the .num's 600, the preview card's padding 16/18 with gap 16
+        /// and 8 under it, the name inputs 150 with gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre
+        /// buttons' 6 and the .idx's 500. The page types no gap, padding or weight of its own: no numeral but 0
+        /// in a Thickness, and no FontWeights; and each metric is pinned where it is drawn.
         /// </summary>
         [Fact]
         public void Every_metric_is_the_artboards()
@@ -344,6 +345,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelSettings.TyreButtonGap);
             Assert.Equal(8, PanelSettings.FuelTargetGap);
             Assert.Equal(500, PanelSettings.IndexLinkFontWeight);
+            Assert.Equal(400, PanelSettings.UnitsFontWeight);
+            Assert.Equal(600, PanelSettings.NumberFieldFontWeight);
+            Assert.Equal(600, PanelSettings.PreviewPercentFontWeight);
             // The build's own, where the artboard has no counterpart: a native tick's box, the tag under a
             // surface column's name, the gap over a stacked control and over the folded row, and the names'
             // star weight against each surface column's 1.
@@ -352,13 +356,36 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelSettings.StackedControlGap);
             Assert.Equal(8, PanelSettings.AlertFoldGap);
             Assert.Equal(3, PanelSettings.AlertNameWeight);
+            // WPF's own inset of a text box's text, which a placeholder over it matches.
+            Assert.Equal(2, PanelSettings.HintInset);
 
             var page = Page();
             Assert.DoesNotMatch(@"HStack\(\d", page);
-            Assert.DoesNotMatch(@"new Thickness\(\d+, 0, 0, 0\)", page);
-            Assert.DoesNotContain("FontWeights.Medium", page);
+            Assert.DoesNotContain("FontWeights.", page);
+            foreach (Match thickness in Regex.Matches(page, @"new Thickness\([^\n]*"))
+            {
+                Assert.DoesNotMatch(@"(?<![\w.])[1-9]\d*(?![\w.])", thickness.Value);
+            }
+            Assert.Matches(@"(?<![\w.])[1-9]\d*(?![\w.])", "new Thickness(0, 0, 0, 12),");
+            Assert.DoesNotMatch(@"(?<![\w.])[1-9]\d*(?![\w.])", "new Thickness(0, PanelKit.SectionHeadingGapSettings, 0, 0),");
+            // Each metric where it is drawn.
             Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap,", page);
             Assert.Contains("folded.Margin = new Thickness(0, PanelSettings.AlertFoldGap, 0, 0);", page);
+            Assert.Contains("Margin = new Thickness(0, PanelSettings.IndexTop - PanelShell.SectionGapFor(PanelPage.Settings), 0, 0),", page);
+            Assert.Contains("Padding = new Thickness(0, 0, 0, PanelSettings.IndexPaddingBottom - PanelSettings.IndexGap),", page);
+            Assert.Contains("link.Margin = new Thickness(0, 0, PanelSettings.IndexGap, PanelSettings.IndexGap);", page);
+            Assert.Matches(@"var heading = Ui\.HStack\(PanelSettings\.AlertsHeadingTagGap, Ui\.Heading\(PanelSettings\.AlertsTitle, true\), Ui\.NewTag\(\)\);\s*heading\.HorizontalAlignment = HorizontalAlignment\.Left;\s*heading\.Margin = new Thickness\(0, 0, 0, PanelKit\.SectionHeadingGapSettings\);", page);
+            Assert.Contains("Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0),", page);
+            Assert.Contains("box.FontWeight = FontWeight.FromOpenTypeWeight(PanelSettings.NumberFieldFontWeight);", page);
+            Assert.Contains("Ui.Text(line, PanelSettings.UnitsTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.UnitsFontWeight), Theme.TextPrimary)", page);
+            Assert.Contains("Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeight.FromOpenTypeWeight(PanelSettings.PreviewPercentFontWeight), Theme.TextSecondary, PanelFonts.Data)", page);
+            Assert.Contains("Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.AlertNameFontWeight), Theme.TextPrimary)", page);
+            Assert.Contains("Ui.Text(text, PanelSettings.IndexLinkTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.IndexLinkFontWeight), Theme.TextSecondary)", page);
+            Assert.Contains("SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);", page);
+            // The tick's look: the accent with the tick when on, the border and no fill when off.
+            Assert.Contains("BorderBrush = Ui.Brush(on ? Theme.Accent : Theme.Border),", page);
+            Assert.Contains("Background = on ? Ui.Brush(Theme.Accent) : Brushes.Transparent,", page);
+            Assert.Matches(@"if \(on\)\s*\{\s*var tick = Ui\.Icon\(PanelIcons\.Check, Theme\.OnAccent, PanelSettings\.AlertCheckIcon, PanelIcons\.Box\);", page);
         }
 
         [Fact]
