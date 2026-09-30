@@ -598,17 +598,18 @@ namespace OpenDashPlugin
         public const double ColumnGap = 40;
 
         /// <summary>
-        /// The widest the picker is drawn in the room its row has: at most half of it, beside the row's gap,
-        /// so the title and the caption keep the other half, and never wider than <see cref="DevicePickerMaxWidth"/>.
+        /// The widest the picker is drawn in a row <paramref name="rowWidth"/> wide: at most half of it, beside
+        /// the row's gap, so the title and the caption keep the other half, and never wider than
+        /// <see cref="DevicePickerMaxWidth"/>.
         /// </summary>
         /// <remarks>
         /// The row sits in one of two columns where they fit, and those start at 360 wide: a fixed 260 there left
-        /// "SimHub device" 80 px and broke it onto two lines.
+        /// "SimHub device" 80 px and broke it onto two lines. The page sets it from the row's own width as the row
+        /// is laid out, so a resize never has to build the page again for it: the page walks SimHub's devices.
         /// </remarks>
-        public static double DevicePickerWidth(double contentWidth, bool twoColumns)
+        public static double DevicePickerWidth(double rowWidth)
         {
-            var column = twoColumns ? (contentWidth - ColumnGap) / 2 : contentWidth;
-            return Math.Min(DevicePickerMaxWidth, Math.Max(DevicePickerMinWidth, (column - PanelKit.RowGapLeds) / 2));
+            return Math.Min(DevicePickerMaxWidth, Math.Max(DevicePickerMinWidth, (rowWidth - PanelKit.RowGapLeds) / 2));
         }
 
         /// <summary>

@@ -616,7 +616,7 @@ namespace OpenDashPlugin
         private FrameworkElement LedsThisStrip(LedBar bar, IList<LedTarget> targets, IList<string> declined, Action redrawPreview)
         {
             var ns = bar.Namespace;
-            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), PanelLeds.DevicePickerWidth(ContentWidth, TwoColumns), value => MoveLedBar(ns, value));
+            var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value));
             if (ledsFocusDevice)
             {
                 ledsFocusDevice = false;
@@ -895,7 +895,7 @@ namespace OpenDashPlugin
         /// reason in SimHub's log: a wheel missing from the picker with nothing said about it is how #437 was
         /// reported, and the line would have answered it.
         /// </remarks>
-        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, double pickerWidth, Action<string> chosen)
+        private static Border BuildLedDeviceRow(IList<LedTarget> targets, IList<string> declined, string current, Action<string> chosen)
         {
             var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);
             if (!row.HasPicker) return LedsRow(PanelLights.BarDeviceTitle, null, row.Caption);
@@ -906,10 +906,13 @@ namespace OpenDashPlugin
                 if (!string.Equals(ids[i], current, StringComparison.Ordinal)) chosen(ids[i]);
             }, PanelLeds.DevicePickerMinWidth);
             // Bounded by the room the row has, so a long device name trims inside the button rather than crushing
-            // the row's title or running out of its column; the whole name is the hover.
-            picker.MaxWidth = pickerWidth;
+            // the row's title or running out of its column; the whole name is the hover. Set as the row is laid
+            // out rather than from the content width, which would have a resize build the page again.
+            picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;
             if (row.Selected >= 0) picker.ToolTip = labels[row.Selected];
-            return LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);
+            var drawn = LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);
+            drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);
+            return drawn;
         }
 
         /// <summary>

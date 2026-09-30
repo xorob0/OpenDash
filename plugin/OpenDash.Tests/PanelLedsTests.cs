@@ -1035,9 +1035,9 @@ namespace OpenDashPlugin.Tests
                 "Ui.Switch(Settings.BarSpotterWhole(ns),",
                 "PanelLeds.CentreIndex(Settings.BarCentre(ns))",
                 "BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,",
-                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), PanelLeds.DevicePickerWidth(ContentWidth, TwoColumns), value => MoveLedBar(ns, value))",
+                "BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), value => MoveLedBar(ns, value))",
                 "var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);",
-                "picker.MaxWidth = pickerWidth;",
+                "drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);",
                 "link.Click += (sender, args) => Go(PanelPage.Rig);",
                 "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
                 // Ruling 47: the width row only while the switch is on.
@@ -1153,18 +1153,23 @@ namespace OpenDashPlugin.Tests
         public void The_device_picker_leaves_the_row_its_title()
         {
             Assert.Equal(40, PanelLeds.ColumnGap);
-            Assert.Equal(170, PanelLeds.DevicePickerWidth(760, true));
-            Assert.Equal(260, PanelLeds.DevicePickerWidth(1600, true));
-            Assert.Equal(193, PanelLeds.DevicePickerWidth(406, false));
-            Assert.Equal(PanelLeds.DevicePickerMinWidth, PanelLeds.DevicePickerWidth(200, false));
+            // Two columns in 760 of content are 360 each.
+            Assert.Equal(170, PanelLeds.DevicePickerWidth((760 - PanelLeds.ColumnGap) / 2));
+            Assert.Equal(260, PanelLeds.DevicePickerWidth(780));
+            Assert.Equal(193, PanelLeds.DevicePickerWidth(406));
+            Assert.Equal(PanelLeds.DevicePickerMinWidth, PanelLeds.DevicePickerWidth(200));
             var medium = Advances("BarlowMedium");
             var title = PanelLights.BarDeviceTitle.Sum(ch => medium.TryGetValue(ch, out var em) ? em : 0.75) * 15;
             foreach (var (content, two) in new[] { (760.0, true), (1000.0, true), (1600.0, true), (406.0, false), (527.0, false), (744.0, false) })
             {
-                var column = two ? (content - PanelLeds.ColumnGap) / 2 : content;
-                var left = column - PanelKit.RowGapLeds - PanelLeds.DevicePickerWidth(content, two);
+                var row = two ? (content - PanelLeds.ColumnGap) / 2 : content;
+                var left = row - PanelKit.RowGapLeds - PanelLeds.DevicePickerWidth(row);
                 Assert.True(left >= title, "at " + content + " the title has " + left + " for " + title);
             }
+            // Set from the row as it is laid out: reading the content width would have a resize rebuild a page
+            // that walks SimHub's devices.
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.DoesNotContain("ContentWidth", leds);
         }
 
         /// <summary>
