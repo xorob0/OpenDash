@@ -456,6 +456,33 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// A tick or an untick in the zone list. A page ticked joins the cycle after the last page already in
+        /// it, where the list draws it and the zone's button reaches it last, as Screens.dc.html appends it;
+        /// an untick only takes it out.
+        /// </summary>
+        /// <remarks>
+        /// Ticking the mask alone put the page back at its old place in the stored order, so a page ticked at
+        /// the foot of Show all jumped up the list and into the middle of the cycle. The page is moved in the
+        /// stored order itself, next to the last ticked page, which is the same place in the cycle without
+        /// turning the order: the position the dash publishes counts from the order's head. The start is not
+        /// written, so the running zone stays where it is.
+        /// </remarks>
+        public static void Tick(FaceSettings settings, string letter, int page, bool on)
+        {
+            if (settings == null) return;
+            if (!on || settings.PageEnabled(letter, page))
+            {
+                settings.SetPageEnabled(letter, page, on);
+                return;
+            }
+            var last = CycleFromStart(settings, letter).LastOrDefault(p => p != page && settings.PageEnabled(letter, p));
+            var order = settings.Order(letter).Where(p => p != page).ToList();
+            order.Insert(order.IndexOf(last) + 1, page);
+            settings.SetOrder(letter, order.ToArray());
+            settings.SetPageEnabled(letter, page, true);
+        }
+
+        /// <summary>
         /// All ticks every page; None unticks every page but the one the zone opens on, because a zone with an
         /// empty cycle has nothing to draw. Neither moves the start.
         /// </summary>

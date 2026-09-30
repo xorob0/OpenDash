@@ -478,7 +478,7 @@ namespace OpenDashPlugin
                 var page = row.Page;
                 rows.Add(BuildZonePageRow(row, on =>
                 {
-                    face.SetPageEnabled(letter, page, on);
+                    PanelScreens.Tick(face, letter, page, on);
                     settle();
                 }));
             }

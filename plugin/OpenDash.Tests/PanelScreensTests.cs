@@ -537,6 +537,51 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(whole.Length, whole.Distinct().Count());
         }
 
+        /// <summary>A page ticked in the list joins the cycle after the last ticked page, where the list drew
+        /// it, as the artboard appends it; the start, the running zone and the order's head stay.</summary>
+        [Fact]
+        public void A_page_ticked_in_the_list_joins_the_end_of_the_cycle()
+        {
+            var settings = new FaceSettings();
+            settings.Normalise();
+            var head = settings.Order("A")[0];
+            settings.SetPageEnabled("A", 1, false);
+            // Gear alone, unticked, is drawn last under Show all; ticked, it stays last rather than going
+            // back to second.
+            Assert.Equal(new[] { 0, 2, 3, 1 }, PanelScreens.ZoneRows(settings, "A", true).Select(r => r.Page));
+            settings.Cycle("A");
+            var showing = settings.Zone("A");
+            PanelScreens.Tick(settings, "A", 1, true);
+            Assert.Equal(new[] { 0, 2, 3, 1 }, PanelScreens.ZoneRows(settings, "A", false).Select(r => r.Page));
+            Assert.Equal(0, settings.Start("A"));
+            Assert.Equal(showing, settings.Zone("A"));
+            Assert.Equal(head, settings.Order("A")[0]);
+
+            // Zone C opens on Relative, which is not the order's head: the page goes after the last ticked
+            // page of the cycle read from there, and the order keeps its head.
+            var zoneC = new FaceSettings();
+            zoneC.Normalise();
+            var cHead = zoneC.Order("C")[0];
+            var energy = FacePages.For("C").First(p => p.Id == "energy").Number;
+            var track = FacePages.For("C").First(p => p.Id == "track").Number;
+            zoneC.SetPageEnabled("C", energy, false);
+            zoneC.SetPageEnabled("C", track, false);
+            PanelScreens.Tick(zoneC, "C", energy, true);
+            var ticked = PanelScreens.ZoneRows(zoneC, "C", false).Select(r => r.Page).ToList();
+            Assert.Equal(energy, ticked[ticked.Count - 1]);
+            Assert.Equal(14, ticked[0]);
+            Assert.Equal(cHead, zoneC.Order("C")[0]);
+            Assert.Equal(FacePages.For("C").Count, zoneC.Order("C").Distinct().Count());
+
+            // An untick only takes the page out, and a tick of a page already on moves nothing.
+            var order = zoneC.Order("C");
+            PanelScreens.Tick(zoneC, "C", energy, true);
+            Assert.Equal(order, zoneC.Order("C"));
+            PanelScreens.Tick(zoneC, "C", energy, false);
+            Assert.False(zoneC.PageEnabled("C", energy));
+            Assert.Equal(order, zoneC.Order("C"));
+        }
+
         /// <summary>A row's controls wrap before the title beside them is squeezed below its least: a row measures
         /// its control unbounded, so the wrap is given the column less the gap and the title's room.</summary>
         [Fact]
