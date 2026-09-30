@@ -361,6 +361,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(8, PanelShortcuts.TagGap);
             Assert.Equal(90, PanelShortcuts.PressWidth);
             Assert.Equal(260, PanelShortcuts.BinderMinWidth);
+            Assert.Equal(300, PanelShortcuts.BinderWidth);
             // The header: 8 from the title to the caption, the filter's 30 px bar on the caption's foot.
             Assert.Equal(8, PanelShortcuts.IntroGap);
             Assert.Equal(11, PanelShortcuts.FilterRaise);
@@ -379,14 +380,34 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_row_puts_its_binder_under_its_name_only_where_the_three_cannot_sit_side_by_side()
         {
-            // 2 of card rules, 32 of padding, 160 of name, 16 + 90 + 16 + 260 of press and binder.
-            Assert.Equal(576, PanelShortcuts.RowStackBelow);
+            // 2 of card rules, 32 of padding, 160 of name, 16 + 90 + 16 + 300 of press and binder.
+            Assert.Equal(616, PanelShortcuts.RowStackBelow);
+            Assert.Equal(PanelShortcuts.RowStackBelow, 2 + 2 * PanelShortcuts.RowPaddingX + PanelShortcuts.NameMinWidth
+                + PanelShortcuts.RowGap + PanelShortcuts.PressWidth + PanelShortcuts.RowGap + PanelShortcuts.BinderWidth);
             Assert.False(PanelShortcuts.RowStacks(PanelShell.ContentMax));
             // The rail's content at the narrowest full-sidebar width, where TwoColumns is still false.
             Assert.False(PanelShortcuts.RowStacks(679));
-            Assert.False(PanelShortcuts.RowStacks(576));
-            Assert.True(PanelShortcuts.RowStacks(575));
+            Assert.False(PanelShortcuts.RowStacks(616));
+            Assert.True(PanelShortcuts.RowStacks(615));
             Assert.True(PanelShortcuts.RowStacks(400));
+        }
+
+        [Fact]
+        public void Every_row_gives_simhubs_editor_one_slot_of_fixed_width()
+        {
+            // SimHub's editor is never given less than BuildBinder's floor, so the slot is no narrower.
+            Assert.True(PanelShortcuts.BinderWidth >= PanelShortcuts.BinderMinWidth);
+            var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
+            Assert.Contains("MinWidth = " + PanelShortcuts.BinderMinWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }", shell);
+            // Beside the name, the same slot on every row, whatever the content's width.
+            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, false));
+            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShell.ContentMax, false));
+            // Under it, no wider than the row inside its padding.
+            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(600, true));
+            Assert.Equal(266, PanelShortcuts.BinderSlot(300, true));
+            Assert.Equal(0, PanelShortcuts.BinderSlot(20, true));
+            // SimHub's editor draws no name of its own: the row's beside it says what it binds.
+            Assert.Empty(PanelShortcuts.EditorName);
         }
 
         [Fact]
@@ -430,11 +451,25 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Crumbs(PanelShortcuts.PagingCrumbs(", code);
             Assert.Contains("Ui.Anchor(row, PanelBindings.Anchor(binding.Action));", code);
             Assert.Contains("Ui.Soon(row, item)", code);
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, stacks);", code);
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal, stacks);", code);
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", code);
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal, layout);", code);
             Assert.Contains("padding: PanelKit.SegmentedPaddingShortcuts", code);
             // Columns follow the room a row has, never the sidebar's state.
             Assert.DoesNotContain("!Narrow", code);
+
+            // Every row's binder in one slot of the model's width, the gap on the slot, never on SimHub's editor,
+            // whose template draws its own Margin a second time; the editor names nothing of its own.
+            Assert.Contains("var layout = new ShortcutsLayout(ContentWidth);", code);
+            Assert.Contains("Stacks = PanelShortcuts.RowStacks(contentWidth);", code);
+            Assert.Contains("Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);", code);
+            Assert.Contains("control.Margin = new Thickness(0);", code);
+            Assert.DoesNotContain("control.Margin = new Thickness(PanelShortcuts", code);
+            Assert.Contains("var slot = new Border { Child = control, Width = layout.Binder,", code);
+            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + layout.Binder) }", code);
+            Assert.DoesNotContain("GridLength.Auto });\n                    control", code.Replace("\r\n", "\n"));
+            Assert.Contains("control.FriendlyName = PanelShortcuts.EditorName;", code);
+            // A card's name is measured at the header's width, so a long one ends in an ellipsis.
+            Assert.Contains("var titleLine = new WrapPanel", code);
 
             // What the model decides from the bindings read, each drawn through it: the row's state, the
             // page's readability, the filter, the counts (and none for the companion), and ruling 60's three

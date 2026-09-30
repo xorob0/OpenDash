@@ -64,6 +64,20 @@ namespace OpenDashPlugin
             public readonly List<ShortcutsRowState> Rows = new List<ShortcutsRowState>();
         }
 
+        /// <summary>How this build lays a row out: its binder beside the name and the press or under them, and
+        /// the width of the slot SimHub's editor is given, the same in every row so their columns line up.</summary>
+        private sealed class ShortcutsLayout
+        {
+            public ShortcutsLayout(double contentWidth)
+            {
+                Stacks = PanelShortcuts.RowStacks(contentWidth);
+                Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);
+            }
+
+            public readonly bool Stacks;
+            public readonly double Binder;
+        }
+
         private FrameworkElement BuildShortcutsPage(PanelRoute to)
         {
             if (shortcutsLanding)
@@ -72,19 +86,19 @@ namespace OpenDashPlugin
                 shortcutsLanding = false;
             }
             OnLeave("Shortcuts.filterLanding", () => shortcutsLanding = true);
-            var stacks = PanelShortcuts.RowStacks(ContentWidth);
+            var layout = new ShortcutsLayout(ContentWidth);
 
             var screens = new List<ShortcutsGroupState>();
             foreach (var screen in Settings.RigScreens())
             {
                 if (screen == null) continue;
-                if (screen.IsFace) screens.Add(BuildShortcutsFace(screen, stacks));
-                else if (screen.IsPitWall) screens.Add(BuildShortcutsPitWall(screen, stacks));
-                else if (screen.IsCompanion) screens.Add(BuildShortcutsCompanion(screen, stacks));
+                if (screen.IsFace) screens.Add(BuildShortcutsFace(screen, layout));
+                else if (screen.IsPitWall) screens.Add(BuildShortcutsPitWall(screen, layout));
+                else if (screen.IsCompanion) screens.Add(BuildShortcutsCompanion(screen, layout));
                 // A round screen cycles nothing, so it has no card.
             }
-            var lights = BuildShortcutsLights(stacks);
-            var alerts = BuildShortcutsAlerts(stacks);
+            var lights = BuildShortcutsLights(layout);
+            var alerts = BuildShortcutsAlerts(layout);
             var groups = screens.Concat(new[] { lights, alerts }).ToList();
 
             if (screens.Count > 0) Ui.Anchor(screens[0].Card, PanelShortcuts.AnchorScreens);
@@ -174,33 +188,33 @@ namespace OpenDashPlugin
         /// cycles (ADR 0017). A face whose size OpenDash does not know still lists every zone, in
         /// Contract.FaceZoneLetters' order, so that none of its actions goes without a row.
         /// </remarks>
-        private ShortcutsGroupState BuildShortcutsFace(ScreenInstance screen, bool stacks)
+        private ShortcutsGroupState BuildShortcutsFace(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
             var face = screen.FaceSize;
             IList<string> order = face != null ? PanelFacePlan.ZoneOrder(face.Value) : Contract.FaceZoneLetters;
             foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name, order))
             {
-                ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, stacks);
+                ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);
             }
             var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
-            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), stacks);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);
             return group;
         }
 
         /// <summary>A pit wall's card: the glance and nothing else. A key beside the monitor is the likelier
         /// gesture, since nobody drives a pit wall.</summary>
-        private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, bool stacks)
+        private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
             var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
-            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), stacks);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);
             return group;
         }
 
         /// <summary>A companion's card: where SimHub binds its paging, which is not OpenDash's to bind, and
         /// the glance, which is.</summary>
-        private ShortcutsGroupState BuildShortcutsCompanion(ScreenInstance screen, bool stacks)
+        private ShortcutsGroupState BuildShortcutsCompanion(ScreenInstance screen, ShortcutsLayout layout)
         {
             var crumbs = Ui.Crumbs(PanelShortcuts.PagingCrumbs(screen.Name));
             crumbs.Margin = new Thickness(0, PanelShortcuts.LeadGap, 0, 0);
@@ -211,26 +225,26 @@ namespace OpenDashPlugin
             };
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), lead);
             var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
-            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), stacks);
+            ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);
             return group;
         }
 
         /// <summary>The rig's own actions (Contract.RigActionNames), and the Rig test, which is coming.</summary>
-        private ShortcutsGroupState BuildShortcutsLights(bool stacks)
+        private ShortcutsGroupState BuildShortcutsLights(ShortcutsLayout layout)
         {
             var group = ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);
             foreach (var binding in PanelShortcuts.LightsBindings())
             {
-                ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, stacks);
+                ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);
             }
-            ShortcutsSoon(group, PanelSoon.RigTest, stacks);
+            ShortcutsSoon(group, PanelSoon.RigTest, layout);
             return group;
         }
 
-        private ShortcutsGroupState BuildShortcutsAlerts(bool stacks)
+        private ShortcutsGroupState BuildShortcutsAlerts(ShortcutsLayout layout)
         {
             var group = ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);
-            ShortcutsSoon(group, PanelSoon.AlertDismissal, stacks);
+            ShortcutsSoon(group, PanelSoon.AlertDismissal, layout);
             return group;
         }
 
@@ -238,16 +252,19 @@ namespace OpenDashPlugin
         /// right, over a rule; then the lead line, if any, and the rows.</summary>
         private static ShortcutsGroupState ShortcutsCard(string title, string detail, FrameworkElement lead)
         {
+            // A wrap panel, so the name is measured at the header's width (a horizontal stack panel measured it
+            // at infinity, and the ellipsis never came): a long name ends in one, and the kind and size go
+            // under it rather than past the count.
             var name = Ui.Text(title ?? string.Empty, PanelShortcuts.GroupTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
             name.TextTrimming = TextTrimming.CharacterEllipsis;
             name.VerticalAlignment = VerticalAlignment.Center;
-            var titleLine = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            var titleLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             titleLine.Children.Add(name);
             if (!string.IsNullOrEmpty(detail))
             {
+                name.Margin = new Thickness(0, 0, PanelShortcuts.GroupDetailGap, 0);
                 var line = Ui.Text(detail, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
                 line.VerticalAlignment = VerticalAlignment.Center;
-                line.Margin = new Thickness(PanelShortcuts.GroupDetailGap, 0, 0, 0);
                 titleLine.Children.Add(line);
             }
             var count = new Border { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0) };
@@ -272,31 +289,42 @@ namespace OpenDashPlugin
 
         /// <summary>A live row: the binding's name and its New tag, the press, SimHub's editor, and the glance's
         /// caption under the name. Anchored at the binding, where every other page's chip lands.</summary>
-        private static void ShortcutsBinding(ShortcutsGroupState group, string place, PanelShortcuts.Binding binding, FrameworkElement editor, FrameworkElement caption, bool stacks)
+        private static void ShortcutsBinding(ShortcutsGroupState group, string place, PanelShortcuts.Binding binding, FrameworkElement editor, FrameworkElement caption, ShortcutsLayout layout)
         {
+            // SimHub's editor fills the row's binder slot, and its own name column says nothing: the row's name
+            // beside it already does, and a second copy wrapped in its 2* column squeezed its bindings.
+            var control = editor as ControlsEditor;
+            if (control != null) control.FriendlyName = PanelShortcuts.EditorName;
+            var fallback = editor as TextBlock;
+            if (fallback != null) fallback.TextWrapping = TextWrapping.Wrap;
+            if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;
             var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];
-            var row = ShortcutsRow(binding.Label, binding.Press, editor, stacks, caption, tags);
+            var row = ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);
             Ui.Anchor(row, PanelBindings.Anchor(binding.Action));
             group.Rows.Add(new ShortcutsRowState { Action = binding.Action, Editor = editor, Row = row, Shown = row, Bindable = true, Place = place, Does = binding.Does });
             group.Body.Children.Add(row);
         }
 
         /// <summary>A greyed row: the registry's entry, tapped, and a Not bound key that nothing answers.</summary>
-        private static void ShortcutsSoon(ShortcutsGroupState group, SoonItem item, bool stacks)
+        private static void ShortcutsSoon(ShortcutsGroupState group, SoonItem item, ShortcutsLayout layout)
         {
-            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, Ui.BindingChip(Ui.NotBound, false, key: true), stacks, null);
+            // The key sits at the slot's left, where the artboard's .key starts in every row.
+            var chip = Ui.BindingChip(Ui.NotBound, false, key: true);
+            chip.HorizontalAlignment = HorizontalAlignment.Left;
+            var row = ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);
             var shown = Ui.Soon(row, item);
             group.Rows.Add(new ShortcutsRowState { Row = row, Shown = shown, Bindable = false });
             group.Body.Children.Add(shown);
         }
 
         /// <summary>
-        /// The artboard's .r: the name with its tags, the press in a 90 px column and the binder after it, 16
-        /// apart, padded 10 by 16 under a rule. Where the content cannot give the name room beside a 260 px
-        /// binder, the binder goes under the name and the press.
+        /// The artboard's .r: the name with its tags, the press in a 90 px column and the binder in a slot of
+        /// fixed width after it, 16 apart, padded 10 by 16 under a rule. The columns are fixed rather than
+        /// sized by each row's control, so press and binder line up down a card, greyed rows included. Where
+        /// the content cannot give the name room beside them, the binder goes under the name and the press.
         /// </summary>
         /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name.</remarks>
-        private static Border ShortcutsRow(string label, string press, FrameworkElement control, bool stacks, FrameworkElement caption, params FrameworkElement[] tags)
+        private static Border ShortcutsRow(string label, string press, FrameworkElement control, ShortcutsLayout layout, FrameworkElement caption, params FrameworkElement[] tags)
         {
             var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             var name = Ui.Text(label, PanelShortcuts.RowNameSize, FontWeights.Normal, Theme.TextPrimary);
@@ -329,24 +357,26 @@ namespace OpenDashPlugin
             grid.Children.Add(pressText);
             if (control != null)
             {
+                // The gap is the slot's and the control keeps no margin: SimHub's editor template binds its own
+                // border's Margin to the control's, so a margin set on the editor is drawn twice.
+                control.Margin = new Thickness(0);
                 control.VerticalAlignment = VerticalAlignment.Center;
-                if (stacks)
+                var slot = new Border { Child = control, Width = layout.Binder, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+                if (layout.Stacks)
                 {
                     grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                     grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                    control.HorizontalAlignment = HorizontalAlignment.Left;
-                    control.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);
-                    Grid.SetRow(control, 1);
-                    Grid.SetColumnSpan(control, 2);
+                    slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);
+                    Grid.SetRow(slot, 1);
+                    Grid.SetColumnSpan(slot, 2);
                 }
                 else
                 {
-                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                    control.HorizontalAlignment = HorizontalAlignment.Right;
-                    control.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);
-                    Grid.SetColumn(control, 2);
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + layout.Binder) });
+                    slot.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);
+                    Grid.SetColumn(slot, 2);
                 }
-                grid.Children.Add(control);
+                grid.Children.Add(slot);
             }
             return new Border
             {

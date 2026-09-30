@@ -452,8 +452,22 @@ namespace OpenDashPlugin
         public const double PressWidth = 90;
         public const double CaptionGap = 4;
 
-        /// <summary>SimHub's ControlsEditor is given at least this much (SettingsControl.BuildBinder).</summary>
+        /// <summary>SimHub's ControlsEditor is given at least this much wherever it is drawn
+        /// (SettingsControl.BuildBinder's MinWidth).</summary>
         public const double BinderMinWidth = 260;
+
+        /// <summary>
+        /// The slot every row gives SimHub's editor, fixed so that the press and the binder line up down a card.
+        /// The artboard's binder column is 260, but SimHub's editor is not the artboard's binder: its template
+        /// splits its width 2* to 3* between a name and its bindings, each binding a 58 px press type then the
+        /// plugin and the input, so a bound wheel button needs more than 260 gives it. Not yet measured on the
+        /// VM; the page gives the editor no name (<see cref="EditorName"/>), so the 3* share is all it uses.
+        /// </summary>
+        public const double BinderWidth = 300;
+
+        /// <summary>The name SimHub's editor draws in its own 2* column. None: the row's name, beside it, already
+        /// says what it binds. BuildBinder's fallback text still uses the binding's BinderName.</summary>
+        public const string EditorName = "";
 
         /// <summary>The least a row's name is left beside the press and the binder before the binder moves
         /// under it.</summary>
@@ -478,8 +492,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether a row puts its binder under its name and press rather than beside them: when a card as wide
-        /// as the content cannot give the name <see cref="NameMinWidth"/> beside a 90 px press and a 260 px
-        /// binder. A row's width, not the sidebar's: TwoColumns is about two blocks of a page.
+        /// as the content cannot give the name <see cref="NameMinWidth"/> beside a 90 px press and the
+        /// <see cref="BinderWidth"/> slot. A row's width, not the sidebar's: TwoColumns is about two blocks of a
+        /// page.
         /// </summary>
         public static bool RowStacks(double contentWidth)
         {
@@ -487,8 +502,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The narrowest content a row lies flat in: the card's two rules, the row's padding, the name,
-        /// the press and the binder with the gaps between them.</summary>
-        public const double RowStackBelow = 2 + 2 * RowPaddingX + NameMinWidth + RowGap + PressWidth + RowGap + BinderMinWidth;
+        /// the press and the binder's slot with the gaps between them.</summary>
+        public const double RowStackBelow = CardRules + 2 * RowPaddingX + NameMinWidth + RowGap + PressWidth + RowGap + BinderWidth;
+
+        /// <summary>The card's border, left and right.</summary>
+        private const double CardRules = 2;
+
+        /// <summary>The width of the binder's slot: <see cref="BinderWidth"/> beside the name, and under it no
+        /// wider than the row has inside its padding.</summary>
+        public static double BinderSlot(double contentWidth, bool stacks)
+        {
+            if (!stacks) return BinderWidth;
+            return Math.Max(0, Math.Min(BinderWidth, contentWidth - CardRules - 2 * RowPaddingX));
+        }
 
         // --- Search -------------------------------------------------------------------------------------
 
