@@ -20,38 +20,46 @@ namespace OpenDashPlugin
     public partial class SettingsControl
     {
         /// <summary>
-        /// The strips' rows off one read of every LED device, then the flag box's when the rig has a matrix.
+        /// What SimHub holds for each of the rig's strips, off one read of every LED device, each strip with its
+        /// plan, or Unavailable for every strip when SimHub's LED settings cannot be read.
         /// </summary>
         /// <remarks>
         /// Only the rig's own strips' profiles are opened for the census, as the attention check does: the
         /// build runs on every resize and every return to the panel.
         /// </remarks>
-        private IList<FrameworkElement> BuildLightRows(double versionWidth, out bool stripsReachable, out FlagBoxPlan flagBoxPlan)
+        private IList<KeyValuePair<LedBar, FlagBoxPlan>> UpdatesStripPlans(out bool stripsReachable)
         {
-            var drawn = new List<FrameworkElement>();
+            var plans = new List<KeyValuePair<LedBar, FlagBoxPlan>>();
             stripsReachable = true;
             var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
-            if (bars.Count > 0)
+            if (bars.Count == 0) return plans;
+            bool reachable;
+            var census = BarCensus(EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId)), out reachable);
+            stripsReachable = reachable;
+            foreach (var entry in census)
             {
-                bool reachable;
-                var census = BarCensus(EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId)), out reachable);
-                stripsReachable = reachable;
-                // Every strip's row is repainted by a press on any of them, each from its own strip's plan:
-                // the press reads SimHub again, and a row only ever says what its own strip holds.
-                var painters = new List<Action<IDictionary<string, FlagBoxPlan>>>();
-                foreach (var entry in census)
-                {
-                    var plan = reachable ? entry.Value : new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
-                    drawn.Add(UpdatesStripRow(entry.Key, plan, versionWidth, painters));
-                }
+                plans.Add(new KeyValuePair<LedBar, FlagBoxPlan>(entry.Key, reachable ? entry.Value : new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
             }
+            return plans;
+        }
 
-            flagBoxPlan = null;
-            if (Settings.MatrixPanels().Any() && plugin.FlagBoxJson != null)
-            {
-                flagBoxPlan = SafePlan();
-                drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, versionWidth));
-            }
+        /// <summary>Whether the table draws the flag box profile's row (PanelUpdates.DrawsFlagBoxRow).</summary>
+        private bool UpdatesDrawsFlagBox()
+        {
+            return PanelUpdates.DrawsFlagBoxRow(Settings.MatrixPanels().Any(), plugin.FlagBoxJson != null);
+        }
+
+        /// <summary>
+        /// The strips' rows, then the flag box's when the table draws it (<paramref name="flagBoxPlan"/> not null).
+        /// </summary>
+        private IList<FrameworkElement> BuildLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, FlagBoxPlan flagBoxPlan, double versionWidth)
+        {
+            var drawn = new List<FrameworkElement>();
+            // Every strip's row is repainted by a press on any of them, each from its own strip's plan: the
+            // press reads SimHub again, and a row only ever says what its own strip holds.
+            var painters = new List<Action<IDictionary<string, FlagBoxPlan>>>();
+            foreach (var entry in strips) drawn.Add(UpdatesStripRow(entry.Key, entry.Value, versionWidth, painters));
+            if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, versionWidth));
             return drawn;
         }
 

@@ -21,7 +21,14 @@ namespace OpenDashPlugin
         /// than on nothing.</param>
         private FrameworkElement BuildInSimHubSection(double width, bool keptAnchorHere)
         {
-            var versionWidth = PanelUpdates.VersionWidth(width);
+            // The light rows are read first: a row with an Update press takes the press column from every row,
+            // and the version column goes sooner to leave the names their room.
+            bool stripsReachable;
+            FlagBoxPlan flagBoxPlan;
+            var strips = UpdatesStripPlans(out stripsReachable);
+            flagBoxPlan = UpdatesDrawsFlagBox() ? SafePlan() : null;
+            var versionWidth = PanelUpdates.VersionWidth(width,
+                PanelUpdates.TableHasPress(strips.Select(s => s.Value).Concat(new[] { flagBoxPlan })));
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             // Every row is a grid of its own, and the press column is as wide in all of them as in the widest,
             // so a row with an Update press keeps its version and state under the head's.
@@ -34,9 +41,7 @@ namespace OpenDashPlugin
                 rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));
                 rowFailed |= pair.Value.State == PanelCopy.InstallFailed;
             }
-            bool stripsReachable;
-            FlagBoxPlan flagBoxPlan;
-            var lights = BuildLightRows(versionWidth, out stripsReachable, out flagBoxPlan);
+            var lights = BuildLightRows(strips, flagBoxPlan, versionWidth);
             foreach (var row in lights) rows.Children.Add(row);
             if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());
             var table = Ui.CardBox(rows, 0);
@@ -55,6 +60,10 @@ namespace OpenDashPlugin
             {
                 var fallback = BuildFlagBoxImportFallback(flagBoxPlan);
                 fallback.Margin = new Thickness(0, PanelUpdates.SectionGap, 0, 0);
+                // The shared fallback's row is a button and a 320 box that do not wrap, wider than a narrow
+                // column; held to the column, only its box's end is clipped, rather than the whole page being
+                // arranged at the row's width and every card losing its right edge.
+                fallback.MaxWidth = width;
                 children.Add(fallback);
             }
             var reinstall = Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall);

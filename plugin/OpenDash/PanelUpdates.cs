@@ -451,17 +451,38 @@ namespace OpenDashPlugin
         public const double SectionGap = 12;
         public const double ReinstallLineGap = 14;
 
-        /// <summary>
-        /// Below this much content the version column goes and the name keeps its room: the row's padding and
-        /// the two fixed columns with their gaps take 324 of it (16 + 16 + 110 + 16 + 150 + 16) before a row
-        /// has a name.
-        /// </summary>
-        public const double TableVersionFrom = 480;
+        /// <summary>The table card's border, one on each side, which the rows are inside.</summary>
+        public const double TableBorder = 2 * PanelMetrics.BorderWeight;
 
-        /// <summary>The version's own width, the artboard's 110, or 0 where the column goes.</summary>
-        public static double VersionWidth(double contentWidth)
+        /// <summary>
+        /// The press column's width while a light row carries its Update: the small outline press's own width
+        /// and the 16 before it. Every row shares the column (SharedSizeGroup), the head included, so one
+        /// press takes this from every row's name.
+        /// </summary>
+        public const double TablePressColumn = 80;
+
+        /// <summary>The least a name keeps before the version column gives its room up.</summary>
+        public const double TableNameMin = 154;
+
+        /// <summary>
+        /// The version's own width, the artboard's 110, or 0 where the column goes: the column goes when the
+        /// name would keep less than <see cref="TableNameMin"/>. What the name keeps is the content less the
+        /// card's border, the row's padding, the two fixed columns with their gaps (2 + 16 + 16 + 110 + 16 +
+        /// 150 + 16 = 326) and the press column when any row has a press, so the version goes below 480
+        /// without a press and below 560 with one.
+        /// </summary>
+        public static double VersionWidth(double contentWidth, bool hasPress = false)
         {
-            return contentWidth >= TableVersionFrom ? TableVersionWidth : 0;
+            var name = contentWidth - TableBorder - 2 * TableRowPaddingX - ColumnWidth(TableVersionWidth) - ColumnWidth(TableStateWidth)
+                - (hasPress ? TablePressColumn : 0);
+            return name >= TableNameMin ? TableVersionWidth : 0;
+        }
+
+        /// <summary>Whether any light row draws its Update press, which takes the press column's room from
+        /// every row: a profile older than this build's.</summary>
+        public static bool TableHasPress(IEnumerable<FlagBoxPlan> lightPlans)
+        {
+            return (lightPlans ?? Enumerable.Empty<FlagBoxPlan>()).Any(plan => plan != null && plan.State == FlagBoxInstallState.Outdated);
         }
 
         /// <summary>
@@ -576,6 +597,13 @@ namespace OpenDashPlugin
         public static UpdatesRow StripRow(string name, FlagBoxPlan plan)
         {
             return LightRow(name, StripKind, plan, StripTooltip(plan));
+        }
+
+        /// <summary>Whether the table draws the flag box profile's row: on a rig with a matrix, and only when
+        /// this build carries the profile, since a row for one it cannot write could say nothing true.</summary>
+        public static bool DrawsFlagBoxRow(bool hasMatrix, bool embedded)
+        {
+            return hasMatrix && embedded;
         }
 
         /// <summary>The flag box profile's row, drawn when the rig has a matrix.</summary>

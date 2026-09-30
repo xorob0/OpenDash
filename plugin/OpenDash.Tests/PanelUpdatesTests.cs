@@ -344,11 +344,37 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(126, PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth));
             Assert.Equal(166, PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
             Assert.Equal(0, PanelUpdates.ColumnWidth(0));
-            Assert.Equal(324, 2 * PanelUpdates.TableRowPaddingX + PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth) + PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
+            // The card's border, the row's padding and the two fixed columns come off the content before a
+            // name has any room.
+            Assert.Equal(2, PanelUpdates.TableBorder);
+            Assert.Equal(326, PanelUpdates.TableBorder + 2 * PanelUpdates.TableRowPaddingX + PanelUpdates.ColumnWidth(PanelUpdates.TableVersionWidth) + PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth));
+            Assert.Equal(154, PanelUpdates.TableNameMin);
             Assert.Equal(110, PanelUpdates.VersionWidth(PanelShell.ContentMax));
             Assert.Equal(110, PanelUpdates.VersionWidth(480));
             Assert.Equal(0, PanelUpdates.VersionWidth(479));
             Assert.Equal(0, PanelUpdates.VersionWidth(340));
+            // A light row's Update takes the press column from every row, the name's included, so the version
+            // goes sooner: at 480 to 559 it would leave a name 75 to 153 wide beside a full version and state.
+            Assert.Equal(80, PanelUpdates.TablePressColumn);
+            Assert.Equal(110, PanelUpdates.VersionWidth(560, hasPress: true));
+            Assert.Equal(0, PanelUpdates.VersionWidth(559, hasPress: true));
+            Assert.Equal(110, PanelUpdates.VersionWidth(PanelShell.ContentMax, hasPress: true));
+        }
+
+        /// <summary>Only an older light profile draws a press, and only the flag box's row on a rig with a
+        /// matrix and a build that carries the profile.</summary>
+        [Fact]
+        public void The_table_s_press_column_and_flag_box_row_are_drawn_only_when_used()
+        {
+            Assert.True(PanelUpdates.TableHasPress(new[] { null, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }, new FlagBoxPlan { State = FlagBoxInstallState.Outdated } }));
+            Assert.False(PanelUpdates.TableHasPress(new[] { new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }, new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null }));
+            Assert.False(PanelUpdates.TableHasPress(null));
+            Assert.True(PanelUpdates.DrawsFlagBoxRow(true, true));
+            Assert.False(PanelUpdates.DrawsFlagBoxRow(false, true));
+            Assert.False(PanelUpdates.DrawsFlagBoxRow(true, false));
+            // The shared import fallback does not wrap, so the table holds it to the column rather than
+            // letting it widen the whole page past the gutter.
+            Assert.Contains("fallback.MaxWidth = width;", PageCode());
         }
 
         [Fact]

@@ -342,7 +342,7 @@ namespace OpenDashPlugin
                 .Select(m => new UpdatesReportItem(PanelUpdates.MatrixName(m), Settings.MatrixName(m), null, null))
                 .ToList();
             UpdatesReportItem flagBox = null;
-            if (matrices.Count > 0 && plugin.FlagBoxJson != null)
+            if (PanelUpdates.DrawsFlagBoxRow(matrices.Count > 0, plugin.FlagBoxJson != null))
             {
                 var row = PanelUpdates.FlagBoxRow(FlagBoxName(), SafePlan(), plugin.FlagBox?.Path);
                 flagBox = new UpdatesReportItem(row.Name, null, row.Version, row.State);
