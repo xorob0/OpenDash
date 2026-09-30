@@ -752,14 +752,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("HomeCard(PanelPage.Matrix, matrices.Select(m => HomeMatrixRow(m, dim)).ToList(), PanelMatrix.NoPanels));", code);
         }
 
-        /// <summary>The empty rig is the add tile with its sentence, in place of Right now and the quick
-        /// controls, which have nothing to show or act on. Only an issue the headline counts (an update, the
-        /// one kind an empty rig can have) is drawn above it, so the count is never over no rows.</summary>
+        /// <summary>The empty rig is the add tile with its sentence, in place of Right now and under its anchor,
+        /// and the quick controls stay, anchored, since brightness and night mode are the rig's and search lands
+        /// on them. Only an issue the headline counts (an update, the one kind an empty rig can have) is drawn
+        /// above it, so the count is never over no rows. Every Home search entry lands on something drawn.</summary>
         [Fact]
-        public void The_empty_rig_stands_in_place_of_right_now_and_the_quick_controls()
+        public void The_empty_rig_stands_in_place_of_right_now()
         {
             var code = PageCode();
-            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention)); if (PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count)) { sections.Add(HomeEmptyRig()); } else { sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow)); sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls)); }", code);
+            Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention)); var rightNow = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count) ? HomeEmptyRig() : HomeRightNow(screens, strips, matrices); sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow)); sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));", code);
+            Assert.All(PanelHome.Search, entry => Assert.True(entry.Route.Anchor == null || code.Contains(entry.Route.Anchor == PanelHome.AnchorRightNow ? "sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow));" : "sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));"), entry.Label));
             Assert.Contains("Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize)", code);
             Assert.Contains("new Thickness(0, PanelHome.EmptyRigGap, 0, 0)", code);
         }
@@ -777,14 +779,18 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("RefreshSidebar();", code);
         }
 
-        /// <summary>A long name trims before the size after it is cut, and a line with nothing to say takes its
-        /// gap with it.</summary>
+        /// <summary>A long name wraps beside its size, which is docked first and never cut, as the artboard's
+        /// name does; a long press label trims, whole on hover; and a line with nothing to say takes its gap
+        /// with it.</summary>
         [Fact]
-        public void A_long_name_trims_before_its_size_and_an_empty_line_takes_its_gap()
+        public void A_long_name_wraps_beside_its_size_and_an_empty_line_takes_its_gap()
         {
             var code = PageCode();
             Assert.Contains("var dock = new DockPanel { LastChildFill = true, HorizontalAlignment = HorizontalAlignment.Left };", code);
-            Assert.Contains("DockPanel.SetDock(figure, Dock.Right);", code);
+            Assert.Contains("DockPanel.SetDock(figure, Dock.Right); dock.Children.Add(figure);", code);
+            Assert.Contains("title.TextWrapping = TextWrapping.Wrap; title.VerticalAlignment = VerticalAlignment.Center; dock.Children.Add(title);", code);
+            Assert.DoesNotContain("title.TextTrimming", code);
+            Assert.Contains("press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis }; press.ToolTip = issue.ActionLabel;", code);
             Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
             Assert.Contains("text.Visibility = line.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;", code);

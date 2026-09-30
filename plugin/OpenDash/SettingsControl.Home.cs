@@ -37,20 +37,16 @@ namespace OpenDashPlugin
             var screens = Settings.RigScreens();
             var strips = Settings.LedBarList();
             var matrices = Settings.MatrixPanels().ToList();
-            // An empty rig's state stands in place of Right now and the quick controls, which have nothing to
-            // show or act on. What needs fixing stays: an empty rig can still wait on an update, and the
-            // headline counts it, so a count over no rows would be a number nobody can read.
+            // An empty rig's state stands in place of Right now, which has nothing to show, and takes its
+            // anchor, so search's "Right now" lands on it. The quick controls stay: brightness and night mode
+            // are the rig's settings, not a device's, and search's entries for them land there. What needs
+            // fixing stays too: an empty rig can still wait on an update, and the headline counts it, so a
+            // count over no rows would be a number nobody can read.
             var sections = new List<FrameworkElement>();
             if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));
-            if (PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count))
-            {
-                sections.Add(HomeEmptyRig());
-            }
-            else
-            {
-                sections.Add(Ui.Anchor(HomeRightNow(screens, strips, matrices), PanelHome.AnchorRightNow));
-                sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
-            }
+            var rightNow = PanelHome.RigEmpty(screens.Count, strips.Count, matrices.Count) ? HomeEmptyRig() : HomeRightNow(screens, strips, matrices);
+            sections.Add(Ui.Anchor(rightNow, PanelHome.AnchorRightNow));
+            sections.Add(Ui.Anchor(HomeQuickControls(), PanelHome.AnchorQuickControls));
 
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);
@@ -123,6 +119,11 @@ namespace OpenDashPlugin
             }
 
             var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);
+            // "Open " and a name the driver typed, which nothing caps: the label trims, whole on hover, so a
+            // stacked press shrinks to its column rather than losing its end and its right border. The title
+            // above it wraps, and is where the whole name is read.
+            press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis };
+            press.ToolTip = issue.ActionLabel;
             press.Click += (sender, args) => HomeAct(issue);
 
             var dock = new DockPanel { LastChildFill = true };
@@ -508,7 +509,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A name with its figure after it, as the Screens rows draw "Main dash 1280 × 480". The figure
-        /// is docked first, so a long name trims, with its whole text on hover, before the size is cut.</summary>
+        /// is docked first, so it is never cut, and a long name wraps beside it as Main.dc.html's does, as a
+        /// strip's and a matrix's name do.</summary>
         private static FrameworkElement HomeNameLine(string name, string meta)
         {
             var dock = new DockPanel { LastChildFill = true, HorizontalAlignment = HorizontalAlignment.Left };
@@ -521,9 +523,8 @@ namespace OpenDashPlugin
                 dock.Children.Add(figure);
             }
             var title = Ui.Text(name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);
-            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            title.TextWrapping = TextWrapping.Wrap;
             title.VerticalAlignment = VerticalAlignment.Center;
-            if (!string.IsNullOrEmpty(name)) title.ToolTip = name;
             dock.Children.Add(title);
             return dock;
         }
