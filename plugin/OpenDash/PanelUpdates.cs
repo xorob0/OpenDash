@@ -377,6 +377,16 @@ namespace OpenDashPlugin
         public const string UpToDate = "Up to date";
         public const string UpdateAvailable = "Update available";
 
+        /// <summary>A rig dashboard whose folder has gone from DashTemplates. The table's own word, as each
+        /// state word here is: the Screens card says the same states in words that are its page's to change.</summary>
+        public const string MissingFromSimHub = "Missing from SimHub";
+
+        /// <summary>A rig dashboard SimHub has not loaded since it was written (ruling 69).</summary>
+        public const string WaitingForRestart = "Waiting for a restart";
+
+        /// <summary>A rig dashboard this build ships nothing for, whose folder SimHub has.</summary>
+        public const string InSimHubState = "In SimHub";
+
         /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
         /// row would otherwise read as if Reinstall everything could write it.</summary>
         public const string NoDashboards = "This build of OpenDash ships no dashboards.";
@@ -470,9 +480,10 @@ namespace OpenDashPlugin
         /// <param name="installed">Whether the folder is in DashTemplates, or null when unknown.</param>
         /// <param name="waitsForRestart">Whether SimHub has yet to load it (ScreenFacts.AddedSinceStart).</param>
         /// <remarks>
-        /// A failure outranks everything; then a folder that has gone, in Home's and the Screens card's word
-        /// and ink; then one SimHub has not loaded yet, in the Screens card's phrase, known only when the
-        /// shell's facts say so; then the installer's own status. A screen this build ships nothing for is
+        /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
+        /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
+        /// state words are this table's own (<see cref="MissingFromSimHub"/>, <see cref="WaitingForRestart"/>,
+        /// <see cref="InSimHubState"/>), not read from another page. A screen this build ships nothing for is
         /// said from the facts alone, with a tooltip that says why no press here changes it.
         /// </remarks>
         public static UpdatesRow DashboardRow(ScreenInstance screen, PackageStatus package, bool? installed, bool? waitsForRestart)
@@ -482,8 +493,8 @@ namespace OpenDashPlugin
             if (package == null)
             {
                 var shipsNo = ShipsNo(screen);
-                if (installed == false) return Row(name, DashboardKind, string.Empty, PanelScreens.Missing, Theme.StatusFailed, shipsNo);
-                if (installed == true) return Row(name, DashboardKind, string.Empty, PanelScreens.InSimHub, Theme.TextLabel, shipsNo);
+                if (installed == false) return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, shipsNo);
+                if (installed == true) return Row(name, DashboardKind, string.Empty, InSimHubState, Theme.TextLabel, shipsNo);
                 return Row(name, DashboardKind, string.Empty, PanelCopy.NotInstalled, Theme.TextLabel, shipsNo);
             }
             if (package.Status == InstallStatus.Failed)
@@ -492,11 +503,11 @@ namespace OpenDashPlugin
             }
             if (installed == false)
             {
-                return Row(name, DashboardKind, string.Empty, PanelScreens.Missing, Theme.StatusFailed, MissingTooltip(name));
+                return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, MissingTooltip(name));
             }
             if (waitsForRestart == true)
             {
-                return Row(name, DashboardKind, version, PanelScreens.NotInSimHubYet, Theme.Caution, RestartStep(name));
+                return Row(name, DashboardKind, version, WaitingForRestart, Theme.Caution, RestartStep(name));
             }
             switch (package.Status)
             {

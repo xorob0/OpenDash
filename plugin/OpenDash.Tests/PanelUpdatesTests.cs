@@ -35,7 +35,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Read the guide", PanelUpdates.ReadGuide);
             Assert.Equal("Versions, devices and the last 200 log lines, copied to paste. Nothing is sent.", PanelUpdates.SupportCaption);
             Assert.Equal("OpenDash is free software under the MIT licence.", PanelUpdates.Licence);
-            Assert.Equal("No screens yet. Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
+            // The empty rig in the one phrase the panel has for it, which the Screens page owns and has frozen.
+            Assert.Equal(PanelScreens.NoScreens + ". Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
         }
 
         /// <summary>The names a label may capitalise after its first word.</summary>
@@ -371,8 +372,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A failure outranks everything, then a folder that has gone, then one SimHub has not loaded
-        /// yet, which is said only when the shell's facts know it, each in the words and ink the Screens card
-        /// and Home give the same state.</summary>
+        /// yet, which is said only when the shell's facts know it, each in the table's own words: none is read
+        /// from the Screens page, whose card words are its own to change.</summary>
         [Fact]
         public void A_dashboard_row_puts_a_failure_then_a_missing_folder_then_a_restart_first()
         {
@@ -382,15 +383,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Install failed. See SimHub's log.", failed.Tooltip);
 
             var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false, true);
-            Assert.Equal(PanelScreens.Missing, missing.State);
-            Assert.Equal("Missing", missing.State);
+            Assert.Equal("Missing from SimHub", missing.State);
             Assert.Equal(Theme.StatusFailed, missing.StateHex);
             Assert.Equal(string.Empty, missing.Version);
             Assert.Equal("Rim's dashboard is missing from SimHub. Reinstall everything installs it again.", missing.Tooltip);
 
             var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            Assert.Equal(PanelScreens.NotInSimHubYet, waiting.State);
-            Assert.Equal("Not in SimHub yet", waiting.State);
+            Assert.Equal("Waiting for a restart", waiting.State);
             Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
             Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", waiting.Tooltip);
@@ -409,7 +408,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("In SimHub", inSimHub.State);
             Assert.Equal("This build of OpenDash ships no 1280 × 480 face.", inSimHub.Tooltip);
             Assert.Equal(string.Empty, inSimHub.Version);
-            Assert.Equal("Missing", PanelUpdates.DashboardRow(Rim, null, false, false).State);
+            Assert.Equal("Missing from SimHub", PanelUpdates.DashboardRow(Rim, null, false, false).State);
             Assert.Equal("Not installed", PanelUpdates.DashboardRow(Rim, null, null, null).State);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
             Assert.Equal("This build of OpenDash ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
