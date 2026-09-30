@@ -148,6 +148,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelKit.SectionHeadingGapSettings);
         }
 
+        /// <summary>
+        /// New marks what the shipped plugin cannot do, for one release: the pit-lane switch and the Alerts
+        /// heading, as the artboard tags them; the night preview, which only the Map tags; and delta precision
+        /// (#322) and the clock (#324), which landed after v0.3.0-rc.7.
+        /// </summary>
+        [Fact]
+        public void Every_control_the_shipped_plugin_lacks_carries_New()
+        {
+            var page = Page();
+            Assert.Contains("Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag())", page);
+            Assert.Contains("Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag()", page);
+            Assert.Contains("Ui.HStack(8, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
+        }
+
         /// <summary>The row sits 18 under the title, as the artboard's nav, although PageLayout puts 28 over it.</summary>
         [Fact]
         public void The_on_this_page_row_is_the_artboards()

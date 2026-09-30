@@ -218,6 +218,25 @@ namespace OpenDashPlugin
             return row;
         }
 
+        /// <summary>
+        /// A finished row with the New tag after its title, for a row Ui.Row has to draw: the delta rows stay
+        /// literal Ui.Row calls (PanelDataTabTests), and Ui.Row takes no tags.
+        /// </summary>
+        /// <remarks>
+        /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322) and the clock
+        /// (#324) landed after v0.3.0-rc.7, whose contract has neither.
+        /// </remarks>
+        private static Border SettingsNew(Border row)
+        {
+            var parts = row.Tag as RowParts;
+            if (parts == null || parts.TitleLine == null) return row;
+            var tag = Ui.NewTag();
+            tag.Margin = new Thickness(8, 0, 0, 0);
+            tag.VerticalAlignment = VerticalAlignment.Center;
+            parts.TitleLine.Children.Add(tag);
+            return row;
+        }
+
         /// <summary>A segmented control that is drawn and not built: every option disabled, the first chosen.
         /// Only ever inside Ui.Soon, which carries its ticket.</summary>
         private static Segmented SettingsGreyedChoice(string[] labels)
@@ -378,11 +397,11 @@ namespace OpenDashPlugin
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
                 SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
                 SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),
-                SettingsFit(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision)),
+                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),
                 SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),
                 SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),
                 Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
-                SettingsFit(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock)),
+                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),
                 Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),
                 Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine));
@@ -634,7 +653,9 @@ namespace OpenDashPlugin
                 repaint();
             });
             var head = new DockPanel { LastChildFill = false };
-            var eyebrow = Ui.Eyebrow(PanelSettings.PreviewTitle);
+            // New on the control: the Map is the only artboard that tags the night preview, and a thing new
+            // only on the Map carries the tag where it is drawn.
+            var eyebrow = Ui.HStack(8, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag());
             DockPanel.SetDock(eyebrow, Dock.Left);
             DockPanel.SetDock(pick, Dock.Right);
             head.Children.Add(eyebrow);
