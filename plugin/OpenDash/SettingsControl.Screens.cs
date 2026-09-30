@@ -475,7 +475,7 @@ namespace OpenDashPlugin
                     tile.Uid = "screens.add.size." + i.ToString(CultureInfo.InvariantCulture);
                     tiles.Add(tile);
                 }
-                return Ui.CardGrid(96, 8, 4, tiles.ToArray());
+                return Ui.CardGrid(PanelAddScreen.SizeTileLeast, PanelAddScreen.TileGap, PanelAddScreen.SizeColumns, tiles.ToArray());
             });
             Action drawKinds = null;
             drawKinds = () => ScreensRedraw(kindsHost, () =>
@@ -498,7 +498,7 @@ namespace OpenDashPlugin
                     tiles.Add(tile);
                 }
                 tiles.Add(Ui.ChoiceTile(BuildKindTile(PanelSoon.FlagsScreen.Title, PanelAddScreen.FlagsScreenCaption, Ui.SoonTag(PanelSoon.FlagsScreen)), false, null, false, PanelSoon.FlagsScreen));
-                return Ui.CardGrid(140, 8, 3, tiles.ToArray());
+                return Ui.CardGrid(PanelAddScreen.KindTileLeast, PanelAddScreen.TileGap, PanelAddScreen.KindColumns, tiles.ToArray());
             });
             drawKinds();
             drawSizes();
@@ -549,7 +549,7 @@ namespace OpenDashPlugin
                 DockPanel.SetDock(tag, Dock.Right);
                 head.Children.Add(tag);
             }
-            var name = Ui.Text(title, 15, FontWeights.SemiBold, Theme.TextPrimary);
+            var name = Ui.Text(title, PanelAddScreen.KindTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
             name.TextTrimming = TextTrimming.CharacterEllipsis;
             head.Children.Add(name);
             var note = Ui.Prose(caption, Theme.SizeLabel);
@@ -574,15 +574,15 @@ namespace OpenDashPlugin
             }
             outline.HorizontalAlignment = HorizontalAlignment.Center;
             outline.VerticalAlignment = VerticalAlignment.Center;
-            var band = new Border { Height = 44, Child = outline };
-            var label = Ui.Text(PanelAddScreen.SizeLabel(type, entry, index), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
+            var band = new Border { Height = PanelAddScreen.SizeBand, Child = outline };
+            var label = Ui.Text(PanelAddScreen.SizeLabel(type, entry, index), PanelAddScreen.SizeLabelSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
             label.HorizontalAlignment = HorizontalAlignment.Center;
             label.Margin = new Thickness(0, 6, 0, 0);
             var stack = Ui.VStack(0, band, label);
             var hint = PanelAddScreen.SizeHint(type, entry);
             if (!string.IsNullOrEmpty(hint))
             {
-                var words = Ui.Text(hint, 11, FontWeights.Normal, Theme.TextSecondary);
+                var words = Ui.Text(hint, PanelAddScreen.SizeHintSize, FontWeights.Normal, Theme.TextSecondary);
                 words.HorizontalAlignment = HorizontalAlignment.Center;
                 words.Margin = new Thickness(0, 4, 0, 0);
                 stack.Children.Add(words);

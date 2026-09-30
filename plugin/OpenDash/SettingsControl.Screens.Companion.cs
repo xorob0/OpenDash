@@ -33,7 +33,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildCompanionEditor(ScreenInstance screen, Action redraw)
         {
-            var count = Ui.Text(PanelScreens.ModuleCount(screen.Modules), 15, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            var count = Ui.Text(PanelScreens.ModuleCount(screen.Modules), PanelScreens.HeadCountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
             count.VerticalAlignment = VerticalAlignment.Center;
             var head = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(count, Dock.Right);
@@ -129,7 +129,7 @@ namespace OpenDashPlugin
             line.Children.Add(box);
             if (PanelScreens.IsNotInIracing(module.Id))
             {
-                var none = Ui.Text(PanelScreens.NotInIracing, 11, FontWeights.Normal, Theme.TextSecondary);
+                var none = Ui.Text(PanelScreens.NotInIracing, PanelCompanionPlan.NoteSize, FontWeights.Normal, Theme.TextSecondary);
                 none.VerticalAlignment = VerticalAlignment.Center;
                 none.Margin = new Thickness(8, 0, 0, 0);
                 DockPanel.SetDock(none, Dock.Right);

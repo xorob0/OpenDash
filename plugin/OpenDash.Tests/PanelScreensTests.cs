@@ -532,6 +532,11 @@ namespace OpenDashPlugin.Tests
         public void A_rows_controls_wrap_before_its_title_is_squeezed()
         {
             Assert.Equal(140, PanelScreens.RowTitleLeast);
+            // The glance's two choices and the portrait wall's four, each as wide as its longest label.
+            Assert.Equal(110, PanelScreens.GlanceZoneWidth);
+            Assert.Equal(150, PanelScreens.GlancePageWidth);
+            Assert.Equal(96, PanelScreens.PortraitChoiceWidth);
+            Assert.Equal(15, PanelScreens.HeadCountSize);
             Assert.Equal(420 - PanelShell.RowGap - 140, PanelScreens.ControlsWidth(420));
             Assert.Equal(0, PanelScreens.ControlsWidth(100));
         }

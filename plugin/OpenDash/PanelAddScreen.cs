@@ -202,6 +202,31 @@ namespace OpenDashPlugin
         /// <summary>The greyed kind tile's note (#116).</summary>
         public const string FlagsScreenCaption = "A second display for flags";
 
+        // --- The sheet's tiles (AddScreen.dc.html) ------------------------------------------------------
+
+        /// <summary>The kind tiles: at least 140 wide, 8 apart, three to a row at most.</summary>
+        public const double KindTileLeast = 140;
+
+        public const int KindColumns = 3;
+
+        /// <summary>The size tiles: at least 96 wide, 8 apart, four to a row at most.</summary>
+        public const double SizeTileLeast = 96;
+
+        public const int SizeColumns = 4;
+
+        public const double TileGap = 8;
+
+        /// <summary>A kind tile's name at 15 SemiBold over its note.</summary>
+        public const double KindTitleSize = 15;
+
+        /// <summary>A size tile: the screen's outline in a 44 px band (<see cref="TileShape"/> fits it), its
+        /// size at 14 in the display family, and the design's name for it at 11.</summary>
+        public const double SizeBand = 44;
+
+        public const double SizeLabelSize = 14;
+
+        public const double SizeHintSize = 11;
+
         // --- The sheet's three steps and its foot -----------------------------------------------------
 
         public const string KindStep = "Kind";

@@ -158,6 +158,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new double[] { 25, 36 }, PanelAddScreen.TileShape(600, 686));
             Assert.Equal(new double[] { 36, 36 }, PanelAddScreen.TileShape(480, 480));
             Assert.Equal(new double[] { 40, 40 }, PanelAddScreen.TileShape(0, 0));
+            // Every outline fits the band it is drawn in.
+            Assert.Equal(44, PanelAddScreen.SizeBand);
+            foreach (var entry in Catalogue()) Assert.True(PanelAddScreen.TileShape(entry.Width, entry.Height)[1] <= PanelAddScreen.SizeBand);
+            // The tiles' grids and words, as AddScreen.dc.html draws them.
+            Assert.Equal(140, PanelAddScreen.KindTileLeast);
+            Assert.Equal(3, PanelAddScreen.KindColumns);
+            Assert.Equal(96, PanelAddScreen.SizeTileLeast);
+            Assert.Equal(4, PanelAddScreen.SizeColumns);
+            Assert.Equal(8, PanelAddScreen.TileGap);
+            Assert.Equal(15, PanelAddScreen.KindTitleSize);
+            Assert.Equal(14, PanelAddScreen.SizeLabelSize);
+            Assert.Equal(11, PanelAddScreen.SizeHintSize);
             foreach (var entry in Catalogue())
             {
                 var shape = PanelAddScreen.TileShape(entry.Width, entry.Height);

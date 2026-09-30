@@ -501,7 +501,19 @@ namespace OpenDashPlugin
             return Math.Max(0, column - PanelShell.RowGap - RowTitleLeast);
         }
 
+        /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 21").</summary>
+        public const double HeadCountSize = 15;
+
         // --- The quick glance ---------------------------------------------------------------------------
+
+        /// <summary>The two choices a glance is made with: its zone, then that zone's page, each as wide as its
+        /// longest label; the portrait wall's four zone choices, four to a line.</summary>
+        public const double GlanceZoneWidth = 110;
+
+        public const double GlancePageWidth = 150;
+
+        public const double PortraitChoiceWidth = 96;
+
 
         /// <summary>The zones a face's glance can borrow, in Contract.FaceZoneLetters order.</summary>
         public static string[] GlanceZoneLabels()

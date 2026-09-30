@@ -141,7 +141,7 @@ namespace OpenDashPlugin
                 screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);
                 Save(screen);
                 redraw();
-            }, 110);
+            }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.glance.zone";
             var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
             {
@@ -149,7 +149,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 // The clash line counts the glance among what shows a page twice.
                 redraw();
-            }, 150);
+            }, PanelScreens.GlancePageWidth);
             page.Uid = "screens.glance.page";
             return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }
@@ -457,7 +457,7 @@ namespace OpenDashPlugin
         {
             var face = screen.Face;
             var head = new DockPanel { LastChildFill = true };
-            var count = Ui.Text(PanelScreens.ZoneCount(face, letter), 15, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            var count = Ui.Text(PanelScreens.ZoneCount(face, letter), PanelScreens.HeadCountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
             count.VerticalAlignment = VerticalAlignment.Center;
             DockPanel.SetDock(count, Dock.Right);
             head.Children.Add(count);

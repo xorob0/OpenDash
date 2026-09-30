@@ -57,8 +57,8 @@ namespace OpenDashPlugin
             var picture = BuildRoundPicture(read);
             if (!TwoColumns) return Ui.VStack(16, picture, list);
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(RoundPictureSize) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelRoundPlan.PictureSize) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelRoundPlan.PictureGap) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             picture.VerticalAlignment = VerticalAlignment.Top;
             grid.Children.Add(picture);
@@ -66,9 +66,6 @@ namespace OpenDashPlugin
             grid.Children.Add(list);
             return grid;
         }
-
-        /// <summary>The artboard's 240 px disc.</summary>
-        private const double RoundPictureSize = 240;
 
         /// <summary>
         /// The rig-wide rev ring every round screen draws, which is the rig's `RevBar` and not a screen's own.
@@ -94,14 +91,14 @@ namespace OpenDashPlugin
         {
             var disc = new Ellipse
             {
-                Width = RoundPictureSize,
-                Height = RoundPictureSize,
+                Width = PanelRoundPlan.PictureSize,
+                Height = PanelRoundPlan.PictureSize,
                 Fill = Ui.Brush(Theme.SurfaceInset),
                 Stroke = Ui.Brush(Theme.Rule),
                 StrokeThickness = PanelMetrics.BorderWeight,
             };
-            var columns = read > 2 ? 2 : 1;
-            var cellWidth = columns == 1 ? 140 : 88;
+            var columns = PanelRoundPlan.Columns(read);
+            var cellWidth = PanelRoundPlan.CardWidth(columns);
             var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var rows = (read + columns - 1) / columns;
@@ -121,15 +118,15 @@ namespace OpenDashPlugin
                     BorderBrush = Ui.Brush(Theme.Rule),
                     BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                     CornerRadius = new CornerRadius(Theme.Radius),
-                    Padding = new Thickness(6, 7, 6, 7),
-                    Margin = new Thickness(i % columns == 0 ? 0 : 6, i < columns ? 0 : 6, 0, 0),
+                    Padding = new Thickness(PanelRoundPlan.CardPaddingX, PanelRoundPlan.CardPaddingY, PanelRoundPlan.CardPaddingX, PanelRoundPlan.CardPaddingY),
+                    Margin = new Thickness(i % columns == 0 ? 0 : PanelRoundPlan.CardGap, i < columns ? 0 : PanelRoundPlan.CardGap, 0, 0),
                     Child = Ui.VStack(0, label, name),
                 };
                 Grid.SetColumn(cell, i % columns);
                 Grid.SetRow(cell, i / columns);
                 grid.Children.Add(cell);
             }
-            var picture = new Grid { Width = RoundPictureSize, Height = RoundPictureSize, HorizontalAlignment = HorizontalAlignment.Left };
+            var picture = new Grid { Width = PanelRoundPlan.PictureSize, Height = PanelRoundPlan.PictureSize, HorizontalAlignment = HorizontalAlignment.Left };
             picture.Children.Add(disc);
             picture.Children.Add(grid);
             return picture;

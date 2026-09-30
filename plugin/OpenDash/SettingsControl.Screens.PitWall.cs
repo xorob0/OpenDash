@@ -112,8 +112,8 @@ namespace OpenDashPlugin
             foreach (var panel in PanelPitWallPlan.Scaled(page, width))
             {
                 var slot = Contract.PitWallZoneSlotByKey(page.Title + panel.Name);
-                var name = ScreensCellText(panel.Configurable ? PanelScreens.PitWallZoneLabel(slot) : panel.Name, Theme.SizeLabel, FontWeights.SemiBold, Theme.TextSecondary);
-                var what = ScreensCellText(slot == null ? string.Empty : ScreensZonePageName(slot, screen), Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
+                var name = ScreensCellText(panel.Configurable ? PanelScreens.PitWallZoneLabel(slot) : panel.Name, PanelPitWallPlan.ZoneNameSize, FontWeights.SemiBold, Theme.TextSecondary);
+                var what = ScreensCellText(slot == null ? string.Empty : ScreensZonePageName(slot, screen), PanelPitWallPlan.ZonePageSize, FontWeights.SemiBold, Theme.TextPrimary);
                 what.Margin = new Thickness(0, 4, 0, 0);
                 var box = new Border
                 {
@@ -123,7 +123,7 @@ namespace OpenDashPlugin
                     BorderBrush = Ui.Brush(Theme.Rule),
                     BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                     CornerRadius = new CornerRadius(Theme.Radius),
-                    Padding = new Thickness(8, 6, 8, 6),
+                    Padding = new Thickness(PanelPitWallPlan.ZonePaddingX, PanelPitWallPlan.ZonePaddingY, PanelPitWallPlan.ZonePaddingX, PanelPitWallPlan.ZonePaddingY),
                     Child = Ui.VStack(0, name, what),
                 };
                 // The fixed Board and Tower have no zone and so no place to describe; an empty hover is a box.
@@ -186,7 +186,7 @@ namespace OpenDashPlugin
                     screen.SetZonePage(captured.Key, index);
                     Save(screen);
                     redraw();
-                }, 96);
+                }, PanelScreens.PortraitChoiceWidth);
                 choice.Uid = "screens.pitwall.portrait." + captured.Key;
                 choice.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
                 choices.Add(choice);
@@ -208,14 +208,14 @@ namespace OpenDashPlugin
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(chosen, Contract.QuickGlancePage(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)));
                 Save(screen);
                 redraw();
-            }, 110);
+            }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.pitwall.glance.zone";
             var pages = Ui.ChoiceButton(ZonePages.Standard.Select(p => p.Name).ToArray(), page, chosen =>
             {
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(Contract.QuickGlanceZone(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)), chosen);
                 Save(screen);
                 redraw();
-            }, 150);
+            }, PanelScreens.GlancePageWidth);
             pages.Uid = "screens.pitwall.glance.page";
             return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), zone, pages, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
         }

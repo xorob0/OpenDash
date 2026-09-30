@@ -312,6 +312,41 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelCompanionPlan.ColumnsFor(406));
             Assert.Equal(1, PanelCompanionPlan.ColumnsFor(405));
             Assert.Equal(1, PanelCompanionPlan.ColumnsFor(0));
+            Assert.Equal(11, PanelCompanionPlan.NoteSize);
+        }
+
+        /// <summary>The pit wall picture's panels: the name at 12 over the page at 14, padded 8 by 6.</summary>
+        [Fact]
+        public void A_pit_wall_panel_names_its_zone_over_its_page()
+        {
+            Assert.Equal(12, PanelPitWallPlan.ZoneNameSize);
+            Assert.Equal(14, PanelPitWallPlan.ZonePageSize);
+            Assert.Equal(8, PanelPitWallPlan.ZonePaddingX);
+            Assert.Equal(6, PanelPitWallPlan.ZonePaddingY);
+        }
+
+        /// <summary>
+        /// The round screen's disc, as Screens.dc.html draws it: 240 across, 32 from the rows, its cards 6
+        /// apart and padded 6 by 7, one column of 140 for two cards and two of 88 for six or twelve, every
+        /// column of cards inside the disc.
+        /// </summary>
+        [Fact]
+        public void A_round_screens_picture_is_the_artboards_disc()
+        {
+            Assert.Equal(240, PanelRoundPlan.PictureSize);
+            Assert.Equal(32, PanelRoundPlan.PictureGap);
+            Assert.Equal(6, PanelRoundPlan.CardGap);
+            Assert.Equal(6, PanelRoundPlan.CardPaddingX);
+            Assert.Equal(7, PanelRoundPlan.CardPaddingY);
+            Assert.Equal(1, PanelRoundPlan.Columns(2));
+            Assert.Equal(2, PanelRoundPlan.Columns(6));
+            Assert.Equal(2, PanelRoundPlan.Columns(Contract.SlotCount));
+            Assert.Equal(140, PanelRoundPlan.CardWidth(1));
+            Assert.Equal(88, PanelRoundPlan.CardWidth(2));
+            foreach (var columns in new[] { 1, 2 })
+            {
+                Assert.True(columns * PanelRoundPlan.CardWidth(columns) + (columns - 1) * PanelRoundPlan.CardGap < PanelRoundPlan.PictureSize);
+            }
         }
 
         /// <summary>A companion's section binds one action of OpenDash's, the held glance: its paging is

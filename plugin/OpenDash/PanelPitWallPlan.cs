@@ -64,6 +64,17 @@ namespace OpenDashPlugin
             return outer - 2 * Frame;
         }
 
+        /// <summary>A panel of the picture: its name at 12 over what it shows at 14, padded 8 by 6. The
+        /// artboard writes a zone's bare letter at 16 in the display face; the page writes "Zone A" and
+        /// "Wide zone", which at 16 does not fit a Tower zone on a narrow page.</summary>
+        public const double ZoneNameSize = Theme.SizeLabel;
+
+        public const double ZonePageSize = Theme.SizeBody;
+
+        public const double ZonePaddingX = 8;
+
+        public const double ZonePaddingY = 6;
+
         /// <summary>The web view address box, as the artboard draws it.</summary>
         public const double AddressWidth = 320;
 
@@ -256,6 +267,36 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>The round screen's picture: the disc and the cards it carries, as Screens.dc.html draws it.</summary>
+    public static class PanelRoundPlan
+    {
+        /// <summary>The artboard's 240 px disc, and the 32 between it and the rows beside it.</summary>
+        public const double PictureSize = 240;
+
+        public const double PictureGap = 32;
+
+        /// <summary>Between two cards on the disc, across and down.</summary>
+        public const double CardGap = 6;
+
+        /// <summary>A card is padded 6 at the sides and 7 above and below.</summary>
+        public const double CardPaddingX = 6;
+
+        public const double CardPaddingY = 7;
+
+        /// <summary>The cards stand in one column for two, and in two columns of three for six or more.</summary>
+        public static int Columns(int read)
+        {
+            return read > 2 ? 2 : 1;
+        }
+
+        /// <summary>A card's width: 140 alone in its column, 88 beside another, which keeps two of them and
+        /// their gap inside the disc's chord at the height they are drawn.</summary>
+        public static double CardWidth(int columns)
+        {
+            return columns == 1 ? 140 : 88;
+        }
+    }
+
     /// <summary>The companion's grid of modules, which has no picture and so no plan beyond a few numbers.</summary>
     public static class PanelCompanionPlan
     {
@@ -270,6 +311,9 @@ namespace OpenDashPlugin
         public const double ModuleHeight = 34;
 
         public const double ModulePaddingX = 10;
+
+        /// <summary>"Not in iRacing" beside a module's name, smaller than the name: the artboard's 11.</summary>
+        public const double NoteSize = 11;
 
         /// <summary>The narrowest a column may be and still hold a name and "Not in iRacing" beside it.</summary>
         public const double ModuleLeast = 200;
