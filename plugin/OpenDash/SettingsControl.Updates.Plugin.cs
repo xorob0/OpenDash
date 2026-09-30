@@ -421,7 +421,19 @@ namespace OpenDashPlugin
 
             UpdateService.InBackground(() =>
             {
-                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
+                UpdateOutcome outcome;
+                try
+                {
+                    outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
+                }
+                catch (Exception ex)
+                {
+                    // A run that throws is still finished on the page: without a completion, applying would
+                    // stay true for the life of the control, the card would say "Downloading" until SimHub
+                    // restarts, and every press the run holds off would stay held off with it.
+                    Log.Error("Applying " + release.Version + " failed", ex);
+                    outcome = new UpdateOutcome { Reason = PanelUpdates.ApplyThrew };
+                }
                 // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
                 // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
                 // SimHub closing mid-download saves it in End even though the completion below never runs.
@@ -429,43 +441,69 @@ namespace OpenDashPlugin
                 // Posted, not Invoked: End runs on the interface thread and waits there for this run
                 // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
                 // and SimHub's close would hang the whole grace and then report an install that had finished.
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    applying = false;
-                    applyingLine = null;
-                    applyingFraction = 0;
-                    // An update writes the stock folders from their packages, so it brings the packages'
-                    // own titles with it; the names the driver gave their screens go back on top before
-                    // anything is saved. Nothing is rewritten where the title already reads that way.
-                    var titles = new SimHubInstallLog();
-                    foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
-                    // The record is written in memory by the installer and saved here, on the UI thread, which is
-                    // the moment it is safe to serialise the settings.
-                    Save();
-                    plugin.Installer.Refresh();
-                    // That read is this visit's, so the redraw below does not hash every folder again.
-                    if (updatesCardHost != null) updatesRead = true;
-                    // The idle screen's mark compares the release it offers with what the rig now runs, and
-                    // the dashboards have just moved.
-                    plugin.RefreshUpdateMark();
-                    updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
-                    if (updatesCardHost != null)
-                    {
-                        // The page is showing: draw it again in the state the run left, and say how it went.
-                        Redraw();
-                        Say(outcome.Line, outcome.Ok);
-                    }
-                    else
-                    {
-                        // The sidebar's badge and Home read the same answer.
-                        RefreshAttention();
-                        RefreshSidebar();
-                    }
-                    // The one thing the run cannot do for itself. Asked here rather than before the download,
-                    // because until the assembly is staged there is nothing for a restart to put in place.
-                    if (outcome.PluginStaged) OfferRestart(release.Version);
-                }));
+                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome)));
             }, new SimHubInstallLog(), mustFinish: true);
+        }
+
+        /// <summary>
+        /// A run's completion, on the interface thread: the run is over, the titles the driver gave their
+        /// screens go back on top, the settings are saved, and the page is drawn in the state the run left
+        /// when it is on screen.
+        /// </summary>
+        /// <remarks>
+        /// Posted, so nothing waits on it and nothing it throws reaches the run's own net: it keeps its own,
+        /// and clears the run first, so whatever throws cannot leave the page's presses held off until SimHub
+        /// restarts. The restart is offered outside that net, since a staged plugin waits for it whatever the
+        /// page did.
+        ///
+        /// A build's controls outlive SimHub showing another of its own pages, so an Updates build that is
+        /// there is not one the driver can see. While the panel is away the page is neither redrawn nor
+        /// counted as read: the return rebuilds it and reads the disk, so a dashboard edited in Dash Studio
+        /// meanwhile is drawn as it now is. Only the line is said, which the return keeps.
+        /// </remarks>
+        private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome)
+        {
+            applying = false;
+            applyingLine = null;
+            applyingFraction = 0;
+            try
+            {
+                // An update writes the stock folders from their packages, so it brings the packages' own
+                // titles with it; the names the driver gave their screens go back on top before anything is
+                // saved. Nothing is rewritten where the title already reads that way.
+                var titles = new SimHubInstallLog();
+                foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
+                // The record is written in memory by the installer and saved here, on the UI thread, which is
+                // the moment it is safe to serialise the settings.
+                Save();
+                plugin.Installer.Refresh();
+                // The idle screen's mark compares the release it offers with what the rig now runs, and the
+                // dashboards have just moved.
+                plugin.RefreshUpdateMark();
+                updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
+                var showing = updatesCardHost != null && IsLoaded;
+                if (showing)
+                {
+                    // That read is this visit's, so the redraw below does not hash every folder again.
+                    updatesRead = true;
+                    // The page is showing: draw it again in the state the run left, and say how it went.
+                    Redraw();
+                }
+                else
+                {
+                    // The sidebar's badge and Home read the same answer.
+                    RefreshAttention();
+                    RefreshSidebar();
+                }
+                if (updatesCardHost != null) Say(outcome.Line, outcome.Ok);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Finishing the update on the panel failed", ex);
+            }
+            // The one thing the run cannot do for itself. Asked here rather than before the download, because
+            // until the assembly is staged there is nothing for a restart to put in place.
+            if (outcome.PluginStaged) OfferRestart(release.Version);
         }
 
         /// <summary>

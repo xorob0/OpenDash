@@ -394,11 +394,47 @@ namespace OpenDashPlugin.Tests
             var apply = code.Substring(code.IndexOf("private void ApplyUpdate()", StringComparison.Ordinal));
             apply = apply.Substring(0, apply.IndexOf("private async void OfferRestart(", StringComparison.Ordinal));
             Assert.DoesNotContain("Dispatcher.Invoke(", apply);
-            var work = apply.IndexOf("var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);", StringComparison.Ordinal);
+            var work = apply.IndexOf("outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);", StringComparison.Ordinal);
             var consent = apply.IndexOf("if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;", StringComparison.Ordinal);
             var posted = apply.IndexOf("Dispatcher.BeginInvoke(new Action(() =>", work, StringComparison.Ordinal);
             Assert.True(work >= 0 && consent > work && posted > consent, "the consent is set on the pool thread before the completion is posted");
             Assert.Contains("}, new SimHubInstallLog(), mustFinish: true);", apply);
+
+            // A run that throws still posts a completion, carrying a failed outcome whose line points at the log.
+            var caught = apply.IndexOf("outcome = new UpdateOutcome { Reason = PanelUpdates.ApplyThrew };", StringComparison.Ordinal);
+            Assert.True(caught > work && caught < consent, "a throw inside Apply becomes a failed outcome before the completion is posted");
+            Assert.Contains("Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome)));", apply);
+            Assert.Equal("The update did not finish: see SimHub's log.", new UpdateOutcome { Reason = PanelUpdates.ApplyThrew }.Line);
+
+            // The completion clears the run before anything that can throw, keeps a net of its own, and offers
+            // the restart outside it.
+            var applied = apply.Substring(apply.IndexOf("private void UpdatesApplied(", StringComparison.Ordinal));
+            var cleared = applied.IndexOf("applying = false;", StringComparison.Ordinal);
+            var net = applied.IndexOf("try", StringComparison.Ordinal);
+            var logged = applied.IndexOf("Log.Error(\"Finishing the update on the panel failed\", ex);", StringComparison.Ordinal);
+            var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version);", StringComparison.Ordinal);
+            Assert.True(cleared >= 0 && net > cleared && logged > net && restart > logged, "applying is cleared first, the rest is caught, and the restart is offered after the net");
+        }
+
+        /// <summary>
+        /// A run that finishes while SimHub shows another of its pages leaves the page to the return: a build's
+        /// controls outlive the panel being away, so the completion redraws and counts the disk as read only
+        /// while the control is loaded, and the return rebuilds and reads it itself.
+        /// </summary>
+        [Fact]
+        public void A_run_that_finishes_while_the_panel_is_away_leaves_the_page_to_the_return()
+        {
+            var code = PageCode();
+            var applied = code.Substring(code.IndexOf("private void UpdatesApplied(", StringComparison.Ordinal));
+            applied = applied.Substring(0, applied.IndexOf("private async void OfferRestart(", StringComparison.Ordinal));
+            var showing = applied.IndexOf("var showing = updatesCardHost != null && IsLoaded;", StringComparison.Ordinal);
+            var guarded = applied.IndexOf("if (showing)", StringComparison.Ordinal);
+            var read = applied.IndexOf("updatesRead = true;", StringComparison.Ordinal);
+            var redraw = applied.IndexOf("Redraw();", StringComparison.Ordinal);
+            var otherwise = applied.IndexOf("else", guarded, StringComparison.Ordinal);
+            Assert.True(showing >= 0 && guarded > showing && read > guarded && redraw > read && otherwise > redraw, "the read and the redraw are the showing page's alone");
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(applied, @"updatesRead = true;"));
+            Assert.Contains("if (updatesCardHost != null) Say(outcome.Line, outcome.Ok);", applied);
         }
 
         // --- In SimHub --------------------------------------------------------------------------------

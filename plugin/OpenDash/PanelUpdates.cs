@@ -241,6 +241,10 @@ namespace OpenDashPlugin
         }
         public const string EveryRelease = "Every release on GitHub";
 
+        /// <summary>Why a run that threw did not finish, in UpdateOutcome.Line's "The update did not finish:
+        /// see SimHub's log.": the exception is in the log, and the line points there (voice.md).</summary>
+        public const string ApplyThrew = "see SimHub's log";
+
         /// <summary>The line over the bar while a release downloads.</summary>
         public static string Downloading(string version)
         {
