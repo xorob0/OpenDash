@@ -62,13 +62,13 @@ namespace OpenDashPlugin
                 var primary = action.Style == PanelButton.Primary;
                 var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);
                 if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);
-                button.ToolTip = PanelMatrix.ProfileTooltip;
+                button.ToolTip = PanelMatrix.ProfileTooltip(state);
                 button.Click += (sender, args) =>
                 {
                     var result = InstallFlagBox();
                     // Redraw asks what needs fixing again, so the sidebar's dot and Home move with it.
                     Redraw();
-                    var said = PanelMatrix.InstallSaid(result.State, FlagBoxName());
+                    var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());
                     if (said != null) Say(said);
                     if (!string.IsNullOrEmpty(result.Note)) Say(PanelMessage.Info(result.Note));
                 };
@@ -314,11 +314,11 @@ namespace OpenDashPlugin
             var flags = MatrixLayer(
                 MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.FlagsTitle), PanelMatrix.FlagsTitle, null, null,
                     BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[i] = on; Save(); repaint(); })),
-                MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, PanelMatrix.CriticalFlagsOnlyCaption,
+                MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, null,
                     BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint(); })));
 
             var pit = MatrixLayer(
-                MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, PanelMatrix.PitLaneCaption, null,
+                MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, null, null,
                     BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[i] = on; Save(); repaint(); })));
 
             var side = BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>
@@ -567,7 +567,7 @@ namespace OpenDashPlugin
             var cancel = Ui.Button(PanelMatrix.Cancel, PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
             var body = Ui.VStack(PanelMatrix.SheetGap,
-                Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName())),
+                Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), plugin.FlagBoxJson == null ? FlagBoxInstallState.NotEmbedded : FlagBoxInstallState.NotInstalled)),
                 Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption));
             ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));
         }
@@ -577,12 +577,16 @@ namespace OpenDashPlugin
             var current = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
             var name = Ui.Input(current, PanelMatrix.NameWidth);
             var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);
+            // A blank name is ignored by the settings, so the press waits for one.
+            name.TextChanged += (sender, args) => save.IsEnabled = PanelMatrix.CanRename(name.Text);
             save.Click += (sender, args) =>
             {
+                var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
                 Settings.RenameMatrixPanel(matrix, name.Text);
                 Save();
                 Redraw();
-                Say(PanelMatrix.Renamed(PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)));
+                var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix));
+                if (said != null) Say(said);
             };
             var cancel = Ui.Button(PanelMatrix.Cancel, PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
@@ -595,7 +599,7 @@ namespace OpenDashPlugin
         private void ShowRemoveMatrix(int matrix)
         {
             var name = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
-            var remove = Ui.Button(PanelMatrix.Remove, PanelButtonKind.Danger, PanelButtonSize.Large);
+            var remove = Ui.Button(PanelMatrix.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large);
             remove.Click += (sender, args) =>
             {
                 Settings.RemoveMatrixPanel(matrix);

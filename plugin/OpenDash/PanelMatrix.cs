@@ -79,17 +79,35 @@ namespace OpenDashPlugin
             return state != FlagBoxInstallState.NotEmbedded && state != FlagBoxInstallState.Unavailable;
         }
 
-        public const string ProfileTooltip = "Adds OpenDash's profile. Your own profiles are never changed.";
-
-        /// <summary>What is said once the press has run, or null when the line above already says it all.
-        /// Installing adds the profile and does not select it, so the sentence names that step.</summary>
-        public static PanelMessage InstallSaid(FlagBoxInstallState state, string profile)
+        /// <summary>The press's tooltip in the state it is drawn for: Install adds a profile beside the
+        /// driver's own, and Update and Reinstall replace the copy in SimHub, which is the cost they carry.</summary>
+        public static string ProfileTooltip(FlagBoxInstallState state)
         {
-            switch (state)
+            return InSimHub(state) ? FlagBoxInstallPlan.Replaces : InstallTooltip;
+        }
+
+        public const string InstallTooltip = "Adds OpenDash's profile to SimHub. Your own profiles are never changed.";
+
+        /// <summary>Whether SimHub holds a copy of the profile, which a press then replaces.</summary>
+        private static bool InSimHub(FlagBoxInstallState state)
+        {
+            return state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
+        }
+
+        /// <summary>
+        /// What is said once the press has run, or null when the line above already says it all. A first
+        /// install adds the profile and does not select it, so the sentence names that step; an Update or a
+        /// Reinstall leaves the selection where it was and says it updated, as Updates' Reinstall everything does.
+        /// </summary>
+        public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState after, string profile)
+        {
+            switch (after)
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
-                    return PanelMessage.Info("Installed \"" + profile + "\". Select it on each matrix device in SimHub.");
+                    return InSimHub(before)
+                        ? PanelMessage.Info("Updated \"" + profile + "\".")
+                        : PanelMessage.Info("Installed \"" + profile + "\". Select it on each matrix device in SimHub.");
                 case FlagBoxInstallState.Unavailable:
                     return PanelMessage.Caution("SimHub's matrix settings could not be reached. Import the profile by hand.");
                 case FlagBoxInstallState.NotEmbedded:
@@ -107,7 +125,8 @@ namespace OpenDashPlugin
 
         // --- The cards ---------------------------------------------------------------------------------
 
-        /// <summary>What the cards are, for a screen reader and for search: the artboard's tablist.</summary>
+        /// <summary>What the cards are, for a screen reader: the artboard's tablist. Never drawn, so search
+        /// lists it as a keyword of "Add a matrix" rather than as a label.</summary>
         public const string PanelsTitle = "Your matrices";
 
         public const string AddPanel = "Add a matrix";
@@ -223,18 +242,35 @@ namespace OpenDashPlugin
             return "Remove " + name;
         }
 
-        /// <summary>What the one question before a removal says: the consequence, not the reason.</summary>
-        public const string RemoveCaption = "Its settings go with it. The flag box profile stays in SimHub.";
+        /// <summary>What the one question before a removal says: the consequence, not the reason, in the shape
+        /// Screens and LEDs give theirs.</summary>
+        public const string RemoveCaption = "Removes the matrix and its settings. The flag box profile stays in SimHub.";
+
+        /// <summary>The sheet's Danger press, the verb Screens and LEDs confirm with.</summary>
+        public const string RemoveConfirm = "Remove it";
 
         public static string Renamed(string name)
         {
             return "Renamed to " + name + ".";
         }
 
-        /// <summary>What is said after a removal: the step it leaves, which is a device that now shows nothing.</summary>
+        /// <summary>Whether the Rename press does anything: a blank name is ignored by the settings.</summary>
+        public static bool CanRename(string typed)
+        {
+            return !string.IsNullOrWhiteSpace(typed);
+        }
+
+        /// <summary>What is said after the Rename press, or null when the stored name did not change.</summary>
+        public static string RenameSaid(string before, string after)
+        {
+            return string.Equals(before, after, StringComparison.Ordinal) ? null : Renamed(after);
+        }
+
+        /// <summary>What is said after a removal: the step it leaves, which is a device that now shows nothing.
+        /// SimHub's field is "Matrix content", spelt as everywhere on this page.</summary>
         public static string Removed(string name, int matrix)
         {
-            return "Removed " + name + ". A device set to matrix content " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
+            return "Removed " + name + ". A device set to Matrix content " + matrix.ToString(CultureInfo.InvariantCulture) + " stays dark.";
         }
 
         public const string NameTitle = "Name";
@@ -255,10 +291,11 @@ namespace OpenDashPlugin
         public const double NameWidth = 280;
 
         /// <summary>What the add sheet says above the name: the content number the matrix will be and the
-        /// step on the device that shows it.</summary>
-        public static string AddPanelCaption(int matrix, string profile)
+        /// step on the device that shows it, or, in a build with no profile, that there is none to select.</summary>
+        public static string AddPanelCaption(int matrix, string profile, FlagBoxInstallState state)
         {
             var n = matrix.ToString(CultureInfo.InvariantCulture);
+            if (state == FlagBoxInstallState.NotEmbedded) return "It will be matrix " + n + ". " + NoProfile;
             return "It will be matrix " + n + ". On the device, select \"" + profile + "\" and set Matrix content to " + n + ".";
         }
 
@@ -277,9 +314,9 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.Outdated:
                     return added + "On the device, select \"" + profile + "\" and set Matrix content to " + n + ".";
                 case FlagBoxInstallState.NotEmbedded:
-                    return added + "This build has no flag box profile to install, so it stays dark.";
+                    return added + NoProfile;
                 case FlagBoxInstallState.Unavailable:
-                    return added + "Import \"" + profile + "\" by hand from the top of this page, then set Matrix content to " + n + " on the device.";
+                    return added + "Import \"" + profile + "\" by hand from the top of this page, then select it on the device and set Matrix content to " + n + ".";
                 default:
                     return added + "Install \"" + profile + "\" at the top of this page, then select it on the device and set Matrix content to " + n + ".";
             }
@@ -436,8 +473,13 @@ namespace OpenDashPlugin
         public const string SpotterTitle = "Spotter";
         public const string WarningsTitle = "Warnings";
 
-        /// <summary>What may take the matrix over, first first. The flag box's own order, which is fixed
-        /// until #505 lets a driver change it.</summary>
+        /// <summary>
+        /// What may take the matrix over, first first, as ruling 56 and the artboard number it, fixed until
+        /// #505 lets a driver change it. This is not quite the box's own order: flag-box.md and profile.ts
+        /// (belowFlags) paint the spotter as an overlay over everything, a standing yellow included, and rank
+        /// the rest flags, pit lane, warnings, gear. The numbers are the ruling's; the disagreement is the
+        /// author's to settle, not this page's.
+        /// </summary>
         public static readonly string[] Layers = { FlagsTitle, PitLaneTitle, SpotterTitle, WarningsTitle };
 
         /// <summary>A layer's number in the list, 1 for the first.</summary>
@@ -447,11 +489,9 @@ namespace OpenDashPlugin
             return i < 0 ? string.Empty : (i + 1).ToString(CultureInfo.InvariantCulture);
         }
 
-        public const string PitLaneCaption = "Pit limiter and speeding.";
         public const string WarningsCaption = "Low fuel, oil temperature and water temperature.";
 
         public const string CriticalFlagsOnlyTitle = "Critical flags only";
-        public const string CriticalFlagsOnlyCaption = "Stays dark for the chequer, white, green and start gantry.";
         public const string MountingSideTitle = "Mounting side";
 
         /// <summary>The spotter's slide, which every matrix shares: the caption says so, since the row sits
@@ -550,8 +590,7 @@ namespace OpenDashPlugin
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(FlagBoxProfile.ProfileName, PanelPage.Matrix, AnchorProfile, "flag box profile", "install", "reinstall", "matrix profile", "8x8"),
-            new PanelSearch.Entry(PanelsTitle, PanelPage.Matrix, AnchorPanels, "8x8", "flag box", "pillar", "panels"),
-            new PanelSearch.Entry(AddPanel, PanelPage.Matrix, AnchorPanels, "new", "8x8", "panel"),
+            new PanelSearch.Entry(AddPanel, PanelPage.Matrix, AnchorPanels, "your matrices", "new", "8x8", "flag box", "pillar", "panel", "panels"),
             new PanelSearch.Entry(PriorityTitle, PanelPage.Matrix, AnchorPriority, "order", "layers", "takes over"),
             new PanelSearch.Entry(FlagsTitle, PanelPage.Matrix, AnchorFlags, "race flags", "yellow", "blue"),
             new PanelSearch.Entry(CriticalFlagsOnlyTitle, PanelPage.Matrix, AnchorFlags, "chequer", "white", "green"),

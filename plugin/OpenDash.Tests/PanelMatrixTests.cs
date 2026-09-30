@@ -25,7 +25,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Pit lane", PanelMatrix.PitLaneTitle);
             Assert.Equal("Spotter", PanelMatrix.SpotterTitle);
             Assert.Equal("Warnings", PanelMatrix.WarningsTitle);
-            Assert.Equal("Pit limiter and speeding.", PanelMatrix.PitLaneCaption);
             // The words the Alerts rows use for the two temperatures.
             Assert.Equal("Low fuel, oil temperature and water temperature.", PanelMatrix.WarningsCaption);
             Assert.Equal("Thresholds", PanelMatrix.ThresholdsLink);
@@ -36,7 +35,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Spotter bar animation", PanelMatrix.SpotterAnimationTitle);
             Assert.Equal("Every matrix.", PanelMatrix.SpotterAnimationCaption);
             Assert.Equal("Critical flags only", PanelMatrix.CriticalFlagsOnlyTitle);
-            Assert.Equal("Stays dark for the chequer, white, green and start gantry.", PanelMatrix.CriticalFlagsOnlyCaption);
             Assert.Equal("Shift colours", PanelMatrix.ShiftColoursTitle);
             Assert.Equal("Redline flash", PanelMatrix.RedlineFlashTitle);
             // Shift points, not thresholds, which is the settings model's word; and "Car-specific", the name
@@ -44,6 +42,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Car-specific shift points", PanelMatrix.CarShiftPointsTitle);
             Assert.DoesNotContain("threshold", PanelMatrix.CarShiftPointsTitle, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("Choose a device", PanelMatrix.SimHubDeviceButton);
+            // The artboard draws no caption under Pit lane or Critical flags only, and the page adds none.
+            var matrix = MatrixSource();
+            Assert.Contains("PanelMatrix.PitLaneTitle, null, null,", matrix);
+            Assert.Contains("MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, null,", matrix);
         }
 
         /// <summary>
@@ -64,7 +66,9 @@ namespace OpenDashPlugin.Tests
             foreach (var text in new[]
             {
                 PanelMatrix.NoPanels, PanelMatrix.PanelsTitle, PanelMatrix.AddPanel, PanelMatrix.AllInUse, PanelMatrix.AddTooltip,
-                PanelMatrix.RenameTooltip, PanelMatrix.RemoveTooltip, PanelMatrix.RemoveCaption, PanelMatrix.AddPanelCaption(2, "OpenDash Flag box"),
+                PanelMatrix.RenameTooltip, PanelMatrix.RemoveTooltip, PanelMatrix.RemoveCaption,
+                PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.UpToDate),
+                PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.NotEmbedded),
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.NotInstalled),
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.UpToDate),
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.NotEmbedded),
@@ -111,10 +115,32 @@ namespace OpenDashPlugin.Tests
                 Assert.True(PanelMatrix.ProfileHasButton(state));
             }
 
-            Assert.Equal("Installed \"OpenDash Flag box\". Select it on each matrix device in SimHub.", PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, "OpenDash Flag box").Text);
-            Assert.Equal(PanelTone.Danger, PanelMatrix.InstallSaid(FlagBoxInstallState.Failed, "OpenDash Flag box").Tone);
-            Assert.Equal("Install failed. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Failed, "x").Text);
-            Assert.Null(PanelMatrix.InstallSaid(FlagBoxInstallState.NotEmbedded, "x"));
+            // A first install names the step SimHub leaves; an Update or a Reinstall says it updated.
+            foreach (var before in new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed })
+            {
+                var first = PanelMatrix.InstallSaid(before, FlagBoxInstallState.UpToDate, "OpenDash Flag box");
+                Assert.Equal("Installed \"OpenDash Flag box\". Select it on each matrix device in SimHub.", first.Text);
+                Assert.Equal(PanelTone.Info, first.Tone);
+            }
+            foreach (var before in new[] { FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate })
+            {
+                var again = PanelMatrix.InstallSaid(before, FlagBoxInstallState.UpToDate, "OpenDash Flag box");
+                Assert.Equal("Updated \"OpenDash Flag box\".", again.Text);
+                Assert.Equal(PanelTone.Info, again.Tone);
+            }
+            Assert.Equal(PanelTone.Danger, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed, "OpenDash Flag box").Tone);
+            Assert.Equal("Install failed. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed, "x").Text);
+            var unreachable = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Unavailable, "x");
+            Assert.Equal("SimHub's matrix settings could not be reached. Import the profile by hand.", unreachable.Text);
+            Assert.Equal(PanelTone.Caution, unreachable.Tone);
+            Assert.Null(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotEmbedded, "x"));
+
+            // The press's tooltip: Install adds, Update and Reinstall replace.
+            Assert.Equal("Adds OpenDash's profile to SimHub. Your own profiles are never changed.", PanelMatrix.InstallTooltip);
+            Assert.Equal(PanelMatrix.InstallTooltip, PanelMatrix.ProfileTooltip(FlagBoxInstallState.NotInstalled));
+            Assert.Equal(PanelMatrix.InstallTooltip, PanelMatrix.ProfileTooltip(FlagBoxInstallState.Failed));
+            Assert.Equal(FlagBoxInstallPlan.Replaces, PanelMatrix.ProfileTooltip(FlagBoxInstallState.Outdated));
+            Assert.Equal(FlagBoxInstallPlan.Replaces, PanelMatrix.ProfileTooltip(FlagBoxInstallState.UpToDate));
 
             var matrix = MatrixSource();
             Assert.Contains("PanelMatrix.ProfileRow(", matrix);
@@ -187,9 +213,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove", PanelMatrix.Remove);
             Assert.Equal("Rename Left pillar", PanelMatrix.RenameTitle("Left pillar"));
             Assert.Equal("Remove Left pillar", PanelMatrix.RemoveTitle("Left pillar"));
-            Assert.Equal("Its settings go with it. The flag box profile stays in SimHub.", PanelMatrix.RemoveCaption);
-            Assert.Equal("Removed Left pillar. A device set to matrix content 2 stays dark.", PanelMatrix.Removed("Left pillar", 2));
+            Assert.Equal("Removes the matrix and its settings. The flag box profile stays in SimHub.", PanelMatrix.RemoveCaption);
+            Assert.Equal("Remove it", PanelMatrix.RemoveConfirm);
+            Assert.Equal("Removed Left pillar. A device set to Matrix content 2 stays dark.", PanelMatrix.Removed("Left pillar", 2));
             Assert.Equal("Renamed to Pillar.", PanelMatrix.Renamed("Pillar"));
+            // A blank name is ignored by the settings, so the press waits for one and says nothing unchanged.
+            Assert.False(PanelMatrix.CanRename(""));
+            Assert.False(PanelMatrix.CanRename("  "));
+            Assert.False(PanelMatrix.CanRename(null));
+            Assert.True(PanelMatrix.CanRename("Pillar"));
+            Assert.Equal("Renamed to Pillar.", PanelMatrix.RenameSaid("Left pillar", "Pillar"));
+            Assert.Null(PanelMatrix.RenameSaid("Left pillar", "Left pillar"));
             Assert.Equal("Name", PanelMatrix.NameTitle);
             Assert.Equal("OpenDash's own label. It is not shown in SimHub's profile list.", PanelMatrix.NameCaption);
             // Remove is a sheet with one press; Rename is a sheet; neither acts on the first press.
@@ -197,22 +231,28 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShowSheet(PanelMatrix.RemoveTitle(name),", matrix);
             Assert.Contains("ShowSheet(PanelMatrix.RenameTitle(current),", matrix);
             Assert.Contains("remove.Click += (sender, args) => ShowRemoveMatrix(m);", matrix);
+            Assert.Contains("Ui.Button(PanelMatrix.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large)", matrix);
+            Assert.Contains("name.TextChanged += (sender, args) => save.IsEnabled = PanelMatrix.CanRename(name.Text);", matrix);
+            Assert.Contains("var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix));", matrix);
         }
 
         [Fact]
         public void Adding_says_the_steps_left_on_the_device()
         {
             Assert.Equal("It will be matrix 2. On the device, select \"OpenDash Flag box\" and set Matrix content to 2.",
-                PanelMatrix.AddPanelCaption(2, "OpenDash Flag box"));
+                PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.UpToDate));
+            Assert.Equal(PanelMatrix.AddPanelCaption(2, "P", FlagBoxInstallState.UpToDate), PanelMatrix.AddPanelCaption(2, "P", FlagBoxInstallState.NotInstalled));
+            Assert.Equal("It will be matrix 2. This build ships no flag box profile.",
+                PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.NotEmbedded));
             Assert.Equal("Added Left pillar. On the device, select \"OpenDash Flag box\" and set Matrix content to 2.",
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.UpToDate));
             Assert.Equal(PanelMatrix.PanelAdded("Left pillar", 2, "P", FlagBoxInstallState.UpToDate), PanelMatrix.PanelAdded("Left pillar", 2, "P", FlagBoxInstallState.Outdated));
             Assert.Equal("Added Left pillar. Install \"OpenDash Flag box\" at the top of this page, then select it on the device and set Matrix content to 2.",
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.NotInstalled));
             Assert.Equal(PanelMatrix.PanelAdded("A", 2, "P", FlagBoxInstallState.NotInstalled), PanelMatrix.PanelAdded("A", 2, "P", FlagBoxInstallState.Failed));
-            Assert.Equal("Added Left pillar. Import \"OpenDash Flag box\" by hand from the top of this page, then set Matrix content to 2 on the device.",
+            Assert.Equal("Added Left pillar. Import \"OpenDash Flag box\" by hand from the top of this page, then select it on the device and set Matrix content to 2.",
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.Unavailable));
-            Assert.Equal("Added Left pillar. This build has no flag box profile to install, so it stays dark.",
+            Assert.Equal("Added Left pillar. This build ships no flag box profile.",
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.NotEmbedded));
             Assert.False(PanelMatrix.NeedsInstall(FlagBoxInstallState.UpToDate));
             Assert.False(PanelMatrix.NeedsInstall(FlagBoxInstallState.Outdated));
@@ -446,7 +486,7 @@ namespace OpenDashPlugin.Tests
             var labels = PanelMatrix.Search.Select(entry => entry.Label).ToList();
             foreach (var title in new[]
             {
-                FlagBoxProfile.ProfileName, PanelMatrix.PanelsTitle, PanelMatrix.AddPanel, PanelMatrix.PriorityTitle,
+                FlagBoxProfile.ProfileName, PanelMatrix.AddPanel, PanelMatrix.PriorityTitle,
                 PanelMatrix.FlagsTitle, PanelMatrix.CriticalFlagsOnlyTitle, PanelMatrix.PitLaneTitle, PanelMatrix.SpotterTitle,
                 PanelMatrix.MountingSideTitle, PanelMatrix.SpotterAnimationTitle, PanelMatrix.WarningsTitle,
                 PanelMatrix.IdleDisplayTitle, PanelMatrix.ShiftColoursTitle, PanelMatrix.CarShiftPointsTitle, PanelMatrix.RedlineFlashTitle,
@@ -455,10 +495,13 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains(title, labels);
             }
             Assert.Equal(labels.Count, labels.Distinct().Count());
+            // "Your matrices" is the cards' name for a screen reader and is never drawn, so it is a keyword.
+            Assert.DoesNotContain(PanelMatrix.PanelsTitle, labels);
+            Assert.Contains("your matrices", PanelMatrix.Search.Single(entry => entry.Label == PanelMatrix.AddPanel).Keywords);
             var matrix = MatrixSource();
             foreach (var name in new[]
             {
-                "PanelMatrix.PanelsTitle", "PanelMatrix.AddPanel", "PanelMatrix.PriorityTitle", "PanelMatrix.FlagsTitle",
+                "PanelMatrix.AddPanel", "PanelMatrix.PriorityTitle", "PanelMatrix.FlagsTitle",
                 "PanelMatrix.CriticalFlagsOnlyTitle", "PanelMatrix.PitLaneTitle", "PanelMatrix.SpotterTitle", "PanelMatrix.MountingSideTitle",
                 "PanelMatrix.SpotterAnimationTitle", "PanelMatrix.WarningsTitle", "PanelMatrix.IdleDisplayTitle", "PanelMatrix.ShiftColoursTitle",
                 "PanelMatrix.CarShiftPointsTitle", "PanelMatrix.RedlineFlashTitle",
