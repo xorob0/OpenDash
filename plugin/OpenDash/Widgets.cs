@@ -14,7 +14,7 @@ using System.Windows.Shapes;
 
 namespace OpenDashPlugin
 {
-    internal static class Ui
+    internal static partial class Ui
     {
         // Every path lives in PanelIcons, which a test holds against PluginComponents.dc.html
         // character for character; this file is the one no test compiles, so a path written here
@@ -213,19 +213,14 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>A settings row: title and caption on the left, the control on the right, 32 px apart.
-        /// The text column caps at the canvas's 460 and the room between the two grows with the page, so
-        /// a wider window moves the control right rather than stretching the prose after it.
-        /// A null or empty caption draws the title alone, which is the answer for a row whose control
-        /// already says everything there is to say; see docs/design/voice.md.</summary>
-        public static Grid Row(string title, string caption, FrameworkElement control)
+        /// <summary>A settings row: title and caption on the left, the control on the right. Since #503 it is
+        /// the redesign's .row, drawn by <see cref="SettingRow"/> -- a rule on top, 12 above and below, the
+        /// title at 15 -- so that a page still calling it matches the pages rebuilt around it. A null or
+        /// empty caption draws the title alone, which is the answer for a row whose control already says
+        /// everything there is to say; see docs/design/voice.md.</summary>
+        public static Border Row(string title, string caption, FrameworkElement control)
         {
-            var text = string.IsNullOrEmpty(caption)
-                ? VStack(0, Body(title))
-                : VStack(4, Body(title), Caption(caption));
-            text.MaxWidth = 460;
-            text.HorizontalAlignment = HorizontalAlignment.Left;
-            return Row(text, control);
+            return SettingRow(title, control, caption);
         }
 
         public static Grid Row(FrameworkElement left, FrameworkElement right)
@@ -243,31 +238,6 @@ namespace OpenDashPlugin
             grid.Children.Add(left);
             grid.Children.Add(right);
             return grid;
-        }
-
-        /// <summary>A section: 1 px rule on top, 28 px of padding above it, a tracked label and its rows
-        /// 20 px apart, which is the canvas's .sec. Every tab is built out of these, so the numbers reflow
-        /// the panel.</summary>
-        public static Border Section(string label, params UIElement[] rows)
-        {
-            return Section(label, PanelMetrics.SectionGap, rows);
-        }
-
-        /// <summary>The same section with a gap of its own, for a tab whose rows are shorter than the rest
-        /// and would otherwise drift apart.</summary>
-        public static Border Section(string label, double gap, params UIElement[] rows)
-        {
-            var children = new List<UIElement> { Label(label) };
-            children.AddRange(rows);
-            return new Border
-            {
-                BorderBrush = Brush(PanelMetrics.SectionRule),
-                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
-                // Padding above the rule only: the gap between two sections is the next one's padding, so
-                // padding underneath as well would count it twice and put 56 px where the canvas draws 28.
-                Padding = new Thickness(0, PanelMetrics.SectionPadding, 0, 0),
-                Child = VStack(gap, children.ToArray()),
-            };
         }
 
         /// <summary>
@@ -709,145 +679,14 @@ namespace OpenDashPlugin
             }
             // The whole button rather than its chrome, so that what is drawn beside the chrome fades with
             // it: the dashed frame is a sibling of the ground it outlines.
-            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
-            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
-            template.Triggers.Add(disabled);
+            template.Triggers.Add(DisabledFade());
             return template;
         }
 
-        // Tabs, cards and groups
+        // Cards and groups
         //
-        // #176 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
-        // design/tokens.json, and design/ is the author's rather than something a build writes into, so
-        // these compose from the tokens that do exist and docs/design/plugin.md records that the three
-        // are still owed. Nothing here invents a colour: every value is a Theme constant. The card's own
-        // geometry is in PanelMetrics.cs, where a test can hold it against the canvas; the tab's is here,
-        // because nothing but this file has asked for it yet.
-
-        public const double TabHeight = 44;
-        public const double TabUnderline = 2;
-
-        /// <summary>
-        /// One tab. Selected carries the accent underline and the primary ink; the rest are secondary.
-        /// </summary>
-        /// <remarks>
-        /// A button rather than a ToggleButton in a group: SimHub's ToggleButton style is a switch
-        /// (Widgets' drop button hit the same thing), and what is wanted here is a label with a rule
-        /// under it.
-        ///
-        /// The name is the tracked label rather than body copy, so a tab reads as the label it is; that
-        /// makes it a stack of one block per character, which is wider than the same word set solid, and
-        /// the underline takes its width from the stack rather than from a fixed number. The tab that is
-        /// not selected keeps a transparent rule rather than one painted in the ground, which reads the
-        /// same on the base and stays right wherever the strip is put.
-        /// </remarks>
-        public static Button Tab(string text, bool selected, Action clicked)
-        {
-            var label = Label(text, selected ? Theme.TextPrimary : Theme.TextLabel);
-            label.Margin = new Thickness(0, 0, 0, 8);
-            var underline = new Rectangle
-            {
-                Height = TabUnderline,
-                Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent,
-                VerticalAlignment = VerticalAlignment.Bottom,
-            };
-            var stack = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(underline, Dock.Bottom);
-            stack.Children.Add(underline);
-            stack.Children.Add(label);
-
-            var button = new Button
-            {
-                Content = stack,
-                Background = System.Windows.Media.Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(0, 10, 0, 0),
-                Margin = new Thickness(0, 0, 28, 0),
-                Height = TabHeight,
-                Cursor = Cursors.Hand,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-            };
-            button.Template = BareButtonTemplate();
-            button.Click += (sender, args) => clicked();
-            return button;
-        }
-
-        /// <summary>
-        /// A screen's card: the kind as an icon, the name over the size, and a dot when something is wrong.
-        /// </summary>
-        /// <remarks>
-        /// The card says what a rig is made of and nothing more. Everything about the screen -- the
-        /// folder, the namespace, the zones -- is in the pane below it, because a row of cards is read
-        /// at a glance and a card carrying four facts is not.
-        ///
-        /// The kind used to be a tracked word along the card's foot, which is what made the card 66 tall.
-        /// It is the icon on the left now, and the two things the foot carried have moved to the size line:
-        /// the dot a failed install shows, and the word for the one kind the canvas draws no icon for.
-        ///
-        /// Selected decides the ink as well as the brushes, so the rows are built here, where the flag is
-        /// in hand, rather than in the shell.
-        /// </remarks>
-        public static Button Card(string name, string size, string kind, bool selected, string dot, Action clicked)
-        {
-            var colours = PanelMetrics.Card(selected);
-            var title = Text(name, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
-            title.TextTrimming = TextTrimming.CharacterEllipsis;
-            title.TextWrapping = TextWrapping.NoWrap;
-
-            UIElement line = Label(PanelCopy.SizeLine(kind, size), colours.SizeLabel);
-            if (dot != null) line = HStack(6, Dot(dot), line);
-            var rows = VStack(PanelMetrics.CardLineGap, title, line);
-
-            var body = new DockPanel { LastChildFill = true };
-            var kindIcon = PanelMetrics.KindIcon(kind);
-            if (kindIcon != null)
-            {
-                var icon = Icon(kindIcon, colours.Icon);
-                icon.Margin = new Thickness(0, 0, PanelMetrics.CardIconGap, 0);
-                DockPanel.SetDock(icon, Dock.Left);
-                body.Children.Add(icon);
-            }
-            body.Children.Add(rows);
-
-            var background = colours.Fill == null ? System.Windows.Media.Brushes.Transparent : Brush(colours.Fill);
-            return CardShell(body, clicked, background, Brush(colours.Border), PanelMetrics.CardMinWidth);
-        }
-
-        /// <summary>The add card: the one card that is an action rather than a thing, and the only one with
-        /// a dashed frame, because nothing is installed until a screen is chosen.</summary>
-        public static Button AddCard(Action clicked)
-        {
-            var row = HStack(PanelMetrics.AddCardGap,
-                Icon(PlusIcon, Theme.Accent),
-                Text(PanelCopy.AddScreen, Theme.SizeBody, FontWeights.Medium, Theme.Accent));
-            row.HorizontalAlignment = HorizontalAlignment.Center;
-            var card = CardShell(row, clicked, System.Windows.Media.Brushes.Transparent,
-                System.Windows.Media.Brushes.Transparent, PanelMetrics.AddCardMinWidth);
-            card.Template = DashedCardTemplate();
-            return card;
-        }
-
-        private static Button CardShell(UIElement content, Action clicked, Brush background, Brush border, double minWidth)
-        {
-            var button = new Button
-            {
-                MinWidth = minWidth,
-                Height = PanelMetrics.CardHeight,
-                Margin = new Thickness(0, 0, 10, 10),
-                Padding = new Thickness(PanelMetrics.CardPaddingX, 0, PanelMetrics.CardPaddingX, 0),
-                Background = background,
-                BorderBrush = border,
-                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
-                Cursor = Cursors.Hand,
-                Content = content,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                FocusVisualStyle = FocusRing(),
-            };
-            button.Template = CardTemplate();
-            button.Click += (sender, args) => clicked();
-            return button;
-        }
+        // The tab bar and the old screen card went with #503: the sidebar replaced the one, and the kit's
+        // DeviceCard and DashedAddCard (Widgets.Kit.cs) the other. The templates below are shared by both.
 
         /// <summary>A border around the content and nothing else, as the drop button's template is, and with
         /// the same outline under the pointer: SimHub's button styles paint a chrome these do not want.</summary>
@@ -883,7 +722,10 @@ namespace OpenDashPlugin
             var host = new FrameworkElementFactory(typeof(Grid));
             host.AppendChild(presenter);
             host.AppendChild(DashedFrame());
-            return new ControlTemplate(typeof(Button)) { VisualTree = host };
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = host };
+            // A tile that cannot add another (Matrix at four) fades as a disabled button does, frame and all.
+            template.Triggers.Add(DisabledFade());
+            return template;
         }
 
         /// <summary>
@@ -924,7 +766,9 @@ namespace OpenDashPlugin
         /// follows is that such a setting is kept and moved out of the way, never dropped: somebody owns
         /// two flag boxes and their rig has to be configurable.
         /// </remarks>
-        public static FrameworkElement Collapsible(string title, string caption, bool open, Func<FrameworkElement> build)
+        /// <param name="toggled">Told when a hand opens or shuts the group, so a page can remember which is
+        /// open across a redraw.</param>
+        public static FrameworkElement Collapsible(string title, string caption, bool open, Func<FrameworkElement> build, Action<bool> toggled = null)
         {
             var chevron = Icon(ChevronIcon, Theme.TextSecondary);
             var head = HStack(8, chevron, Text(title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary));
@@ -954,6 +798,7 @@ namespace OpenDashPlugin
             {
                 open = !open;
                 apply();
+                if (toggled != null) toggled(open);
             };
             apply();
             return VStack(0, button, host);

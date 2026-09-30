@@ -46,10 +46,6 @@ namespace OpenDashPlugin
 
         public const double CaptionGap = 8;
 
-        /// <summary>Between one zone row and the next, which is wider than the twelve a pane's own rows
-        /// take because a zone row is a title over a caption rather than a single line.</summary>
-        public const double RowGap = 14;
-
         /// <summary>Every control in the list is the same box: the four zones, the wide zone and the web
         /// view address, at the full control height and so at the body size rather than the label size.
         ///
@@ -62,6 +58,10 @@ namespace OpenDashPlugin
         public const double SelectHeight = Theme.ControlHeight;
 
         public const double AddressWidth = SelectWidth;
+
+        /// <summary>What sits above each page's group of zone rows: the 18 the artboard's section column puts
+        /// between its blocks.</summary>
+        public const double GroupGap = 18;
 
         /// <summary>What an empty address box shows. A watermark and never a value: Contract.NormaliseUrl
         /// keeps only an absolute address, so a bare scheme stored in the setting is blanked on the first

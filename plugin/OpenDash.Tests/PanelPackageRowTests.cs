@@ -1,4 +1,4 @@
-// PanelPackageRowTests.cs: what a package row on the Install tab says, and what it counts.
+// PanelPackageRowTests.cs: what a package row on Updates says, and what it counts.
 //
 // The wording is pinned verbatim for the reason PanelCopyTests pins the rest of the panel's words: what a
 // user reads is the deliverable as much as what the panel does. The counting is pinned because it is the
@@ -27,6 +27,14 @@ namespace OpenDashPlugin.Tests
             return new ScreenInstance { Kind = kind, Width = width, Height = height, Package = package };
         }
 
+        /// <summary>The caption over the rows sends somebody to the page that adds a screen, which is
+        /// Screens now that the tabs have gone (#503), named the way every page names another.</summary>
+        [Fact]
+        public void The_section_sends_somebody_to_Screens_to_add_one()
+        {
+            Assert.Equal("To use one, add a screen on the Screens page.", PanelPackageRow.SectionCaption);
+        }
+
         /// <summary>A package the design names reads by that name; one it does not keeps its folder.</summary>
         [Fact]
         public void The_row_names_the_package_and_captions_it_with_the_size()
@@ -48,7 +56,7 @@ namespace OpenDashPlugin.Tests
             // The round face is the one package whose caption the design writes itself, so it reads
             // "480 round" rather than its kind and its pixels; the kind is carried by that word.
             Assert.Equal("480 round", PanelPackageRow.Caption(Package("OpenDash 480 round", Contract.KindSlots, 480, 480)));
-            Assert.Equal("Slots · 800 × 800", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 800, 800)));
+            Assert.Equal("Round · 800 × 800", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 800, 800)));
             Assert.Equal("1920 × 1080", PanelPackageRow.Caption(Package("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080)));
         }
 
@@ -57,7 +65,7 @@ namespace OpenDashPlugin.Tests
         public void A_package_with_no_readable_size_shows_no_size()
         {
             Assert.Equal(string.Empty, PanelPackageRow.Caption(Package("OpenDash Companion", Contract.KindCompanion, 0, 0)));
-            Assert.Equal("Slots", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 0, 0)));
+            Assert.Equal("Round", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 0, 0)));
             Assert.Equal(string.Empty, PanelPackageRow.Caption(null));
             Assert.Equal(string.Empty, PanelPackageRow.Name(null));
         }

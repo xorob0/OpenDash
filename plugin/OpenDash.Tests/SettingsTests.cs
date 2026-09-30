@@ -1745,6 +1745,46 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_strip_and_a_matrix_keep_their_places_on_the_rig_canvas()
+        {
+            var settings = new OpenDashSettings();
+            var bar = settings.AddLedBar("3-9-3", "Rim", null);
+            var second = settings.AddLedBar("3-9-3", "Brow", null);
+            // Unplaced until dragged, like a screen.
+            Assert.Null(bar.LayoutX);
+            Assert.Equal(4, settings.MatrixLayoutX.Length);
+            Assert.All(settings.MatrixLayoutX, x => Assert.Null(x));
+            bar.LayoutX = 40;
+            bar.LayoutY = 300;
+            second.LayoutX = -1;
+            settings.MatrixLayoutX[1] = 520;
+            settings.MatrixLayoutY[1] = -5;
+            settings.Normalise();
+            Assert.Equal(40, bar.LayoutX);
+            Assert.Null(second.LayoutX);
+            Assert.Equal(520, settings.MatrixLayoutX[1]);
+            Assert.Null(settings.MatrixLayoutY[1]);
+
+            // Carried by the panel's copy and by Json.NET, and a short array from disk is four slots again.
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal(300, copy.LedBarList()[0].LayoutY);
+            Assert.Equal(520, copy.MatrixLayoutX[1]);
+            settings.MatrixLayoutX = new int?[] { 10 };
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.Equal(40, back.LedBarList()[0].LayoutX);
+            Assert.Equal(new int?[] { 10, null, null, null }, back.MatrixLayoutX);
+
+            // A removed panel's slot is laid out afresh for the next one.
+            back.MatrixLayoutX[0] = 10;
+            back.RemoveMatrixPanel(1);
+            Assert.Null(back.MatrixLayoutX[0]);
+            // The panel's, not a property.
+            Assert.DoesNotContain(settings.DeclaredProperties(), name => name.Contains("Layout"));
+        }
+
+        [Fact]
         public void A_screen_keeps_its_place_on_the_rig_canvas()
         {
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };

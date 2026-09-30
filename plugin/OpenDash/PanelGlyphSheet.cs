@@ -27,11 +27,12 @@ namespace OpenDashPlugin
     /// <summary>One glyph of the sheet: what it is called, what family it belongs to, and its frames.</summary>
     public sealed class PanelGlyph
     {
-        public PanelGlyph(string name, string kind, string[][][] frames)
+        public PanelGlyph(string name, string kind, string[][][] frames, int[] durationsMs = null)
         {
             Name = name;
             Kind = kind;
             Frames = frames;
+            DurationsMs = durationsMs != null && frames != null && durationsMs.Length == frames.Length ? durationsMs : null;
         }
 
         /// <summary>The generator's name for it, which is what the panel asks <see cref="PanelGlyphSheet"/> for,
@@ -46,6 +47,32 @@ namespace OpenDashPlugin
         /// glyph that holds, more for one that moves, in the order the box plays them.
         /// </summary>
         public string[][][] Frames { get; private set; }
+
+        /// <summary>How long the box holds each frame, one to a frame, or null when the sheet did not say.</summary>
+        public int[] DurationsMs { get; private set; }
+
+        /// <summary>
+        /// The frame a still picture of the glyph shows: the one the box holds longest.
+        /// </summary>
+        /// <remarks>
+        /// A red flag grows over three frames of a tenth of a second and then holds for twenty, so its first
+        /// frame is a sliver of what a driver sees and the fourth is the flag. The earliest of equal holds
+        /// wins, which for a blink is its lit half. Without durations it is the first frame.
+        /// </remarks>
+        public string[][] Still
+        {
+            get
+            {
+                if (Frames == null || Frames.Length == 0) return null;
+                if (DurationsMs == null) return Frames[0];
+                var best = 0;
+                for (var i = 1; i < DurationsMs.Length; i++)
+                {
+                    if (DurationsMs[i] > DurationsMs[best]) best = i;
+                }
+                return Frames[best];
+            }
+        }
     }
 
     /// <summary>The whole sheet, in glyphCatalogue() order.</summary>
@@ -173,7 +200,23 @@ namespace OpenDashPlugin
             var frames = new List<string[][]>();
             foreach (var frame in framesElement.Elements()) frames.Add(Frame(frame, name, rows, columns));
             if (frames.Count == 0) throw new FormatException("Glyph " + name + " has no frames.");
-            return new PanelGlyph(name, kind, frames.ToArray());
+            return new PanelGlyph(name, kind, frames.ToArray(), Durations(Member(item, "durationsMs"), frames.Count));
+        }
+
+        /// <summary>The holds, when the sheet carries one whole number for every frame; otherwise null, and
+        /// the glyph's still is its first frame. Optional, because a sheet written before the holds were
+        /// read is still a sheet this can draw.</summary>
+        private static int[] Durations(XElement element, int frames)
+        {
+            if (element == null || !IsArray(element)) return null;
+            var values = new List<int>();
+            foreach (var item in element.Elements())
+            {
+                int value;
+                if (Type(item) != "number" || !int.TryParse(item.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value)) return null;
+                values.Add(value);
+            }
+            return values.Count == frames ? values.ToArray() : null;
         }
 
         private static string[][] Frame(XElement frame, string name, int rows, int columns)

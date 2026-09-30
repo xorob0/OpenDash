@@ -27,7 +27,8 @@ namespace OpenDashPlugin
         /// <summary>Nothing reported yet: no game, not running, and no car or track to name.</summary>
         public static readonly LiveStatus None = new LiveStatus(null, false, null, null, null, null);
 
-        /// <summary>SimHub's name for the game it is set to read, which it knows with the game closed.</summary>
+        /// <summary>The game SimHub is set to read, by the name a person reads ("iRacing", not SimHub's code
+        /// "IRacing"), which SimHub knows with the game closed.</summary>
         public string GameName { get; private set; }
 
         /// <summary>Whether that game is running and sending data.</summary>

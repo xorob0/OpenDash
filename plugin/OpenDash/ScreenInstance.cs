@@ -45,12 +45,12 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A rig built from a settings file written before ADR 0017 holds one screen per folder the old
         /// plugin wrote, which was every package it embedded, so most of them are screens nobody owns, and
-        /// only the driver can say which. The Rig tab asks the driver to remove those for as long as any
-        /// screen on the rig says this (PanelRig), which is why the fact is carried here rather than
+        /// only the driver can say which. The Screens page asks the driver to remove those for as long as any
+        /// screen on the rig says this (PanelScreens), which is why the fact is carried here rather than
         /// guessed from how many screens the rig holds: a rig of five added by hand was told to remove
         /// dashboards it had just asked for, and a migrated rig of four was never told at all (#478).
         ///
-        /// True from the migration until <see cref="Keep"/>, false on a screen added from the Rig tab.
+        /// True from the migration until <see cref="Keep"/>, false on a screen added from the Screens page.
         /// Null only in a settings file written before it was recorded, which OpenDashSettings.Normalise
         /// answers from what such a rig still holds.
         /// </remarks>

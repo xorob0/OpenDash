@@ -3,6 +3,9 @@
 // Apart from Widgets.cs for the reason PanelMetrics.cs is: the panel is WPF and the net8.0 test project
 // cannot compile it, so the words live where PanelCopyTests can pin them character for character, as
 // UpdateWordingTests pins the update sentences. Pure: no WPF types.
+//
+// Shared by every page, and not divided into per-page regions: a page adds the constants it needs and changes
+// only those its own page alone draws, never one another page reads (SettingsControl.cs's ownership table).
 using System;
 using System.Globalization;
 
@@ -44,8 +47,6 @@ namespace OpenDashPlugin
         /// "PluginDescription_OpenDash" (#475). It is the first sentence of OpenDash a driver reads.
         /// </remarks>
         public const string PluginDescription = "Dashboards for the screens on your rig, and a page to choose what each one shows.";
-
-        public const string AddScreen = "Add a screen";
 
         /// <summary>The sentence under the empty rig's pill, which the pill has already said is empty.</summary>
         /// <remarks>
@@ -118,10 +119,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The word a kind needs because the canvas gives it no icon, and null for the three that
-        /// have one. A kind is either drawn or written, never neither.</summary>
+        /// have one. A kind is either drawn or written, never neither, and written by its one name,
+        /// PanelAddScreen.KindName ("Round"), never the settings model's "Slots".</summary>
         public static string KindWord(string kind)
         {
-            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : null;
+            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? PanelAddScreen.KindName(kind) : null;
         }
 
         /// <summary>The card's second line: the size OpenDash installed, behind the kind when the kind has
@@ -136,6 +138,9 @@ namespace OpenDashPlugin
         /// What a light profile's row says and offers, from the state the install plan found it in.
         /// </summary>
         /// <remarks>
+        /// The Updates page's: its census rows and PanelLightRows read it, and the Updates agent may reword
+        /// it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow.
+        ///
         /// One function rather than a label here and a style there, so that the panel cannot pair a verb
         /// with the wrong button: an update is the one accented action on the page, and everything else is
         /// an outline. The canvas draws two of these rows, the older profile and the uninstalled one. A

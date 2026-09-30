@@ -386,7 +386,7 @@ namespace OpenDashPlugin
 
                 Directory.CreateDirectory(folder);
                 File.WriteAllText(path, embedded, new UTF8Encoding(false));
-                log.Info("Wrote the flag box profile to " + path + ". Install it from the OpenDash settings page under Lights.");
+                log.Info("Wrote the flag box profile to " + path + ". Install it at the top of OpenDash's Matrix page.");
                 return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Json = embedded, Message = "Written" };
             }
             catch (Exception e)
@@ -458,7 +458,7 @@ namespace OpenDashPlugin
                     return "Flag box: could not write the profile (" + result.Message + ")";
                 default:
                     return "Flag box: " + (result.ProfileName ?? "profile") + " is at " + result.Path
-                        + ". Install it from the OpenDash settings page under Lights.";
+                        + ". Install it at the top of OpenDash's Matrix page.";
             }
         }
     }

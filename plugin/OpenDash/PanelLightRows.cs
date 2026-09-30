@@ -459,7 +459,7 @@ namespace OpenDashPlugin
         /// row's shapes.
         /// </summary>
         /// <remarks>
-        /// A strip row has no Install press, since a strip is added on the Lights tab, so the uninstalled
+        /// A strip row has no Install press, since a strip is added on the LEDs page, so the uninstalled
         /// row says where to go rather than what to press. The one press it can have is Update, while a
         /// strip of its shapes is older than this build, and that sentence carries the warning the flag
         /// box's carries: an update replaces the copy in SimHub by id, edits and all. The flag box keeps
@@ -475,7 +475,7 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.Unavailable:
                     return Unavailable;
                 case FlagBoxInstallState.NotInstalled:
-                    return (members <= 1 ? "No strip of this shape" : "No strip of these shapes") + " is in SimHub. Add one on the Lights tab.";
+                    return (members <= 1 ? "No strip of this shape" : "No strip of these shapes") + " is in SimHub. Add one on the LEDs page.";
                 case FlagBoxInstallState.UpToDate:
                     return "Installed and up to date" + (plan.InstalledVersion == null ? "." : " (" + plan.InstalledVersion + ").");
                 case FlagBoxInstallState.Outdated:

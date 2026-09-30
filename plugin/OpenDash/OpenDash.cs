@@ -16,6 +16,7 @@
 // whether the car is one the tables have measured (#503). Copied out of the frame when one of them
 // changes and nothing is computed from them; no dashboard reads them, so they are not properties.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Controls;
@@ -53,6 +54,14 @@ namespace OpenDashPlugin
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
+
+        /// <summary>
+        /// The dashboard folders in DashTemplates when Init had finished writing the rig's own, which are the
+        /// templates SimHub loaded: it reads that list once, at startup. A screen whose folder is not in it was
+        /// added in this session and waits for a restart (PackageExtractor.WaitsForRestart). Null when the
+        /// folder could not be read, which says nothing rather than guess.
+        /// </summary>
+        public ISet<string> TemplatesAtStart { get; private set; }
 
         /// <summary>
         /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
@@ -122,6 +131,16 @@ namespace OpenDashPlugin
         /// with its answer, or with null when the service declined to ask after all.
         /// </summary>
         public event Action<UpdateStatus> UpdateChecked;
+
+        /// <summary>Whether a check is in flight now, whose answer <see cref="UpdateChecked"/> will carry.</summary>
+        public bool UpdateCheckInFlight => System.Threading.Volatile.Read(ref checking) != 0;
+
+        /// <summary>
+        /// Raised on the interface thread after one of the rig's own actions -- night mode, brightness up or
+        /// down, pressed on the wheel -- has changed the settings and been saved, so an open panel can show
+        /// the state the rig is now in rather than the one it drew.
+        /// </summary>
+        public event Action RigLightingPressed;
 
         /// <summary>1 while a check is in flight, so that the panel opening during the one Init queued waits for
         /// its answer rather than asking GitHub a second time.</summary>
@@ -270,6 +289,17 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Dashboard installation failed", ex);
+            }
+            try
+            {
+                // After Init's own writes, which are taken as loaded: whether SimHub reads its templates before
+                // or after them is not something the plugin can see, and this errs on the side of saying nothing.
+                TemplatesAtStart = PackageExtractor.InstalledFolders(Installer.SimHubRoot);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not list the dashboards SimHub loaded at startup: " + ex.Message);
+                TemplatesAtStart = null;
             }
             try
             {
@@ -495,6 +525,25 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The game as a person names it ("iRacing", "Assetto Corsa Competizione"), which SimHub's game
+        /// manager carries beside the code GameData.GameName holds ("IRacing", "AssettoCorsaCompetizione");
+        /// the code when the display name is not there.
+        /// </summary>
+        private static string GameDisplayName(PluginManager pluginManager, GameData data)
+        {
+            if (data == null) return null;
+            try
+            {
+                var shown = pluginManager == null || pluginManager.GameManager == null ? null : pluginManager.GameManager.GameDisplayName;
+                return string.IsNullOrWhiteSpace(shown) ? data.GameName : shown;
+            }
+            catch (Exception)
+            {
+                return data.GameName;
+            }
+        }
+
+        /// <summary>
         /// One frame of what OpenDash reads from SimHub. Each frame it copies the class best lap out
         /// of the leaderboard, compares the game, car, track and session names the panel shows with
         /// the copy it holds and replaces that copy only when one of them moved, and runs the car's own
@@ -520,7 +569,7 @@ namespace OpenDashPlugin
                 // something in it moved, so a frame in which nothing did allocates nothing for the
                 // panel's copy and the interface thread is not handed a new object sixty times a second.
                 var named = data == null ? null : data.NewData;
-                var gameName = data == null ? null : data.GameName;
+                var gameName = GameDisplayName(pluginManager, data);
                 var gameRunning = data != null && data.GameRunning;
                 var carId = named == null ? null : named.CarId;
                 var carModel = named == null ? null : named.CarModel;
@@ -620,6 +669,14 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Saving the settings failed", ex);
+            }
+            try
+            {
+                RigLightingPressed?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Showing a wheel press on the panel failed", ex);
             }
         }
 

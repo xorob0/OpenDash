@@ -16,10 +16,10 @@ namespace OpenDashPlugin
         /// <remarks>
         /// It used to say "adding one here makes it a screen", which was true and was the problem: a
         /// screen has a name, a size and settings of its own, and a row that knows only the package could
-        /// offer none of them. Adding is the Rig tab's now, and this sentence is what sends somebody
-        /// there rather than leaving them to find the other tab.
+        /// offer none of them. Adding is the Screens page's now, and this sentence is what sends
+        /// somebody there from Updates rather than leaving them to find it.
         /// </remarks>
-        public const string SectionCaption = "Add a screen on the Rig tab to use one.";
+        public const string SectionCaption = "To use one, add a screen on the Screens page.";
 
         /// <summary>
         /// The row's first line.

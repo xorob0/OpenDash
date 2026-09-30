@@ -103,7 +103,7 @@ export function ScreenPicker({ faces, initial }: ScreenPickerProps) {
         <Link href={INSTALL.href} className={styles.install}>
           {INSTALL.label} the plugin
         </Link>
-        <span className={styles.file}>Every size comes with it. Add yours on the Rig tab.</span>
+        <span className={styles.file}>Every size comes with it. Add yours on the Screens page.</span>
       </p>
     </div>
   );

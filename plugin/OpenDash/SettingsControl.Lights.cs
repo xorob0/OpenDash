@@ -1,16 +1,13 @@
-// SettingsControl.Lights.cs: the Lights tab -- the flag box, the four matrix contents, the strips, and
-// the three settings that answer for every light on the rig rather than for one device.
+// SettingsControl.Lights.cs: the LEDs page -- one group per strip, adding one, the rev light width and
+// the car light tables. The file keeps its name because PanelLedBarFormTests reads the Add LEDs form here.
 //
-// A tab rather than a card in the rig's row. #282 settles that a light device "is the same shape of
-// thing as a screen", which is true of the settings model and not of a user: a screen is a rectangle
-// with zones, a box is 64 LEDs with a mounting side, and one row of cards mixing them would have to
-// explain itself. docs/design/plugin.md records the divergence from the canvas.
+// Re-hosted by the #503 foundation from the old Lights tab's strip section, so every control keeps working
+// while the LEDs page agent rebuilds it to Leds.dc.html and AddLeds.dc.html. Installing, moving and the census
+// are in SettingsControl.Profiles.cs, shared with Matrix, Updates and Home; every one of them finds a strip's
+// embedded profile by the strip's profile shape, which is the reversed twin for a strip wired from the far end.
 //
-// The install row is NOT here. The twenty light profiles are one list and they are installed from the
-// Install tab (SettingsControl.Install.Lights.cs), beside the packages: this tab is where a driver sets
-// what a light already installed shows, and the two questions were never the same one.
-//
-// ADR 0013 is why the page exists; docs/design/flag-box.md is what the box draws.
+// #369 turns the four-value rev light style into one switch, the car's own rev lights on or off: on writes
+// the car's own style and off the plain ladder. The switch is drawn below, in the group.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -22,62 +19,47 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        /// <summary>The car tables' button and the line under it. Dropped with the tab, like every other
-        /// control here, so a download that finishes after the tab has gone writes nowhere.</summary>
+        /// <summary>The car tables' button and the line under it. Dropped with the page, so a download that
+        /// finishes after the page has gone writes nowhere.</summary>
         private Button carTablesButton;
 
         private TextBlock carTablesLine;
 
-        private FrameworkElement BuildLightsTab()
+        /// <summary>Whether the car tables are downloading, held outside the build so a rebuild meanwhile draws
+        /// the button disabled and the line saying so rather than a press that looks ready.</summary>
+        private bool carTablesDownloading;
+
+        private FrameworkElement BuildLedsPage(PanelRoute to)
         {
-            var matrices = new List<UIElement>();
-            foreach (var matrix in Settings.MatrixPanels()) matrices.Add(BuildMatrixGroup(matrix));
-
-            var box = Ui.Section("The flag box",
-                // It names the profile. A panel below carries the name its driver gave it and SimHub's
-                // matrix list carries this one, so a page that mentioned neither left somebody looking
-                // for their own name on SimHub's Arduino page and finding an OpenDash profile instead.
-                Ui.Caption(PanelLights.BoxCaption(FlagBoxName())),
-                // Critical flags only, the gear and the two temperature thresholds used to sit here, one
-                // value for every panel. They belong to a panel: a rig with a box in each corner wants the
-                // catalogue on one and the gear alone on the other, which is what the group below is for.
-                // One number under two names. The contract reads LightsLowFuelLaps first and falls back to
-                // FlagBoxLowFuelLaps, which is the name that shipped; the field below therefore keeps the
-                // old name, because ADR 0003 makes a published property a public interface and a rig set up
-                // against rc.2 has to keep the number its driver chose. It stays on the tab rather than
-                // moving with the other four: it is the rig's one answer to "am I low", read by the strip
-                // and the faces as well, and a per-box copy would be four more places to disagree.
-                Ui.Row("Low fuel warning", "Warns below this many laps of fuel.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
-                // Off by default, unlike the flags' own switch on the strips: movement on this box
-                // means act, and a car alongside is something you live with for half a straight.
-                Ui.Row("Spotter bar animation", "The bar slides in from the edge.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
-
-            var panels = Ui.Section(PanelLights.PanelsTitle, Ui.Caption(PanelLights.PanelsCaption));
-            var panelRows = (StackPanel)panels.Child;
-            if (matrices.Count == 0) panelRows.Children.Add(Ui.Caption(PanelLights.NoPanels));
-            foreach (var row in matrices) panelRows.Children.Add(row);
-            panelRows.Children.Add(BuildAddMatrixRow());
-
-            var strips = Ui.Section(PanelLights.BarsTitle, Ui.Caption(PanelLights.BarsCaption));
-            var stripRows = (StackPanel)strips.Child;
+            // No DrawsLighting(): the open strip group walks SimHub's LED devices, so the page is not rebuilt
+            // by a wheel press. Each picture re-dims in place through OnLighting instead.
+            OnDrop(() =>
+            {
+                carTablesButton = null;
+                carTablesLine = null;
+            });
             var bars = Settings.LedBarList();
-            if (bars.Count == 0) stripRows.Children.Add(Ui.Caption(PanelLights.NoBars));
-            foreach (var bar in bars) stripRows.Children.Add(BuildLedBarGroup(bar, bars[0]));
-            stripRows.Children.Add(BuildAddLedBarRow());
-            stripRows.Children.Add(Ui.Row("Car shift light width", "Only for the Car-specific rev light style.",
+            var selected = Selected(PanelPage.Leds);
+            var groups = new List<UIElement>();
+            var caption = Ui.Caption(PanelLights.BarsCaption);
+            caption.Margin = new Thickness(0, 0, 0, 12);
+            groups.Add(caption);
+            if (bars.Count == 0) groups.Add(Ui.Caption(PanelLeds.NoStrips));
+            foreach (var bar in bars)
+            {
+                var open = selected == null ? ReferenceEquals(bar, bars[0]) : string.Equals(selected, bar.Namespace, StringComparison.Ordinal);
+                groups.Add(BuildLedBarGroup(bar, open));
+            }
+            groups.Add(BuildAddLedBarRow());
+
+            // Rig-wide: what a mirrored bar does on a strip that is not the car's length.
+            var fit = Ui.Anchor(Ui.Row(PanelLeds.MirrorFitTitle, PanelLeds.MirrorFitCaption,
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
-                    value => { Settings.LedMirrorFit = value; Save(); })));
-            stripRows.Children.Add(BuildCarTablesRow());
+                    value => { Settings.LedMirrorFit = value; Save(); })), PanelLeds.AnchorMirrorFit);
 
-            // Brightness and night mode are the rig's rather than the box's -- Contract.cs says so in their
-            // names -- so they sit under everything a device owns rather than inside the first device that
-            // happened to want them.
-            var everyLight = Ui.Section(PanelLights.RigWideTitle,
-                Ui.Row("Brightness", "SimHub's device brightness applies on top.", BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; Save(); })),
-                Ui.Row("Night brightness", "Used while night mode is on.", BuildPercentBox(Settings.LightsNightBrightness, v => { Settings.LightsNightBrightness = v; Save(); })),
-                Ui.Row("Night mode", null, BuildToggle(Settings.LightsNightMode, on => { Settings.LightsNightMode = on; Save(); })));
-
-            return Ui.VStack(0, box, panels, strips, everyLight);
+            return PageLayout(PanelLeds.Title, null,
+                Ui.Anchor(PageSection(PanelLights.BarsTitle, groups.ToArray()), PanelLeds.AnchorStrips),
+                PageSection(PanelLeds.EveryStripTitle, fit, Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables)));
         }
 
         /// <summary>
@@ -117,8 +99,12 @@ namespace OpenDashPlugin
             // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
             // refetches on its own any more, so the invitation is the whole of what staleness now does.
             if (service.Stale(DateTime.UtcNow)) line += " " + PanelLights.CarTablesStale;
-            carTablesLine.Text = line;
-            if (carTablesButton != null) carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+            carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
+            if (carTablesButton != null)
+            {
+                carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+                carTablesButton.IsEnabled = !carTablesDownloading;
+            }
         }
 
         /// <summary>
@@ -130,197 +116,27 @@ namespace OpenDashPlugin
         /// </remarks>
         private void DownloadCarTables()
         {
-            if (carTablesButton == null) return;
-            carTablesButton.IsEnabled = false;
-            if (carTablesLine != null) carTablesLine.Text = PanelLights.CarTablesDownloading;
+            if (carTablesButton == null || carTablesDownloading) return;
+            carTablesDownloading = true;
+            RefreshCarTables();
 
             UpdateService.InBackground(() =>
             {
                 plugin.CarLights.Download(DateTime.UtcNow);
                 Dispatcher.Invoke(() =>
                 {
-                    if (carTablesButton != null) carTablesButton.IsEnabled = true;
+                    carTablesDownloading = false;
                     RefreshCarTables();
                 });
             }, new SimHubInstallLog());
         }
 
-        /// <summary>
-        /// One matrix: what it shows at rest, what may take it over, and which side it is on.
-        /// </summary>
-        /// <remarks>
-        /// Matrix 1 is open and 2 to 4 are shut, because four groups of ten rows is forty rows of
-        /// settings for hardware almost nobody owns. They are kept rather than dropped: somebody does own
-        /// two boxes, one in each corner of a monitor stand, and that rig has to be configurable. This is
-        /// the "less often used, but kept" rule applied where it costs the most scroll.
-        /// </remarks>
-        /// <summary>
-        /// The button that adds a panel, and nothing else: the name is asked for on the panel it opens.
-        /// </summary>
-        /// <remarks>
-        /// It disappears when all four slots are taken rather than failing on the press, because SimHub
-        /// composes four contents and not five, and a button that cannot work is worse than none.
-        /// </remarks>
-        private FrameworkElement BuildAddMatrixRow()
-        {
-            if (Settings.FreeMatrixSlot() == 0)
-            {
-                var full = Ui.Caption("All four matrix panels are in use.");
-                full.Margin = new Thickness(0, 8, 0, 0);
-                return full;
-            }
-            var add = Ui.AddButton(PanelLights.AddPanel, PanelMetrics.RowButtonHeight);
-            add.HorizontalAlignment = HorizontalAlignment.Left;
-            add.Margin = new Thickness(0, 8, 0, 0);
-            add.ToolTip = "Adds a matrix panel.";
-            add.Click += (sender, args) => ShowAddMatrixPanel();
-            return add;
-        }
-
-        /// <summary>Naming the panel, in place, the way a screen is named when it is added.</summary>
-        private void ShowAddMatrixPanel()
-        {
-            var slot = Settings.FreeMatrixSlot();
-            if (slot == 0) return;
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = "Matrix " + slot,
-            };
-            var add = Ui.OutlineButton(PanelLights.AddPanel, PanelMetrics.RowButtonHeight);
-            add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) =>
-            {
-                var added = Settings.AddMatrixPanel(name.Text);
-                Save();
-                Redraw();
-                if (added == 0) return;
-                // Said for the reason the bar flow says its own line: adding is not the last step, and
-                // the step that is left is on SimHub's page rather than this one. Unlike a bar, nothing
-                // was installed here -- the flag box profile paints all four panels and is installed
-                // once -- so the line names that profile and says whether SimHub has it.
-                var state = SafePlan().State;
-                AnnounceLights(
-                    PanelLights.PanelAdded(Settings.MatrixName(added), added, FlagBoxName(), state),
-                    PanelLights.PanelNeedsInstall(state) ? Theme.Caution : Theme.TextSecondary);
-            };
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.Click += (sender, args) => Redraw();
-            var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddPanel,
-                Ui.Caption(PanelLights.AddPanelCaption(slot, FlagBoxName())),
-                nameRow,
-                Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
-        }
-
-        private FrameworkElement BuildMatrixGroup(int matrix)
-        {
-            var m = matrix;
-            var summary = PanelLights.PanelSlot(m);
-            return Ui.Collapsible(Settings.MatrixName(m) ?? ("Matrix " + m), summary, Settings.MatrixPanels().First() == m, () =>
-            {
-                var rest = BuildSegmented(Contract.FlagBoxRests, PanelLights.RestLabels, Settings.MatrixRest(m), value =>
-                {
-                    // Through the setter rather than into the array, because the deprecated Gear switch
-                    // has to move with it or the collapse in Normalise() undoes this on the next load.
-                    Settings.SetMatrixRest(m, value);
-                    Save();
-                });
-                var side = BuildSegmented(Contract.FlagBoxSides, PanelLights.SideLabels, Settings.MatrixSide(m), value =>
-                {
-                    Settings.FlagBoxSide[m - 1] = value;
-                    Save();
-                });
-                return Ui.VStack(4,
-                    Ui.Row("Idle display", null, rest),
-                    Ui.Row("Race flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
-                    Ui.Row("Pit status", "Limiter, pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
-                    Ui.Row("Spotter", "Warns about cars alongside.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
-                    Ui.Row("Car warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
-                    // Which side the box is physically on. One to the left of the wheel lighting for a car
-                    // on the right is worse than no box at all, so it is asked rather than guessed.
-                    Ui.Row("Mounting side", "Only lights for cars on this side.", side),
-                    BuildMatrixPanelActions(m),
-                    // The four that moved off the tab header, less the gear switch: it asked the same
-                    // question as "Idle display" above, whose Dark is the answer that switch called off,
-                    // and two controls over one decision is a pair nobody can tell apart.
-                    Ui.Row("Critical flags only", "Stays dark for the chequer, white, green and start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
-                    // Per panel, because a box on the wheel and a box on a monitor stand do not want the
-                    // same answer: the one at the edge of vision strobing through the redline is what a
-                    // driver who already has a rev bar turns off. Off leaves the digit in the redline
-                    // colour, which is still the whole of the message.
-                    // Above the flash, because it decides whether there is a band to flash on. A driver
-                    // with a rev bar in front of them may want the panel to say the gear and nothing
-                    // else; off leaves the digit in one colour at any engine speed.
-                    Ui.Row("Shift colours", "Off keeps the gear one colour as the revs rise.", BuildToggle(Settings.MatrixGearBands(m), on => { Settings.FlagBoxMatrixGearBands[m - 1] = on; Save(); })),
-                    Ui.Row("Redline flash", "Off keeps the gear steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
-                    // The same answer the strips give, offered here because the digit is the one other
-                    // thing on the rig those tables can colour.
-                    Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
-                    Ui.Row("Oil temperature warning", "Warns above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
-                    Ui.Row("Water temperature warning", "Warns above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
-            });
-        }
-        /// <summary>Renaming a panel and taking it away, at the foot of its own group.</summary>
-        private FrameworkElement BuildMatrixPanelActions(int matrix)
-        {
-            var m = matrix;
-            var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Renames this panel.";
-            rename.Click += (sender, args) => ShowRenameMatrixPanel(m);
-            var remove = Ui.LinkButton("Remove", Theme.Danger);
-            remove.ToolTip = "Removes this panel and frees its slot.";
-            remove.Click += (sender, args) =>
-            {
-                Settings.RemoveMatrixPanel(m);
-                Save();
-                Redraw();
-            };
-            var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
-            return row;
-        }
-
-        private void ShowRenameMatrixPanel(int matrix)
-        {
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = Settings.MatrixName(matrix) ?? string.Empty,
-            };
-            var save = Ui.OutlineButton("Rename", PanelMetrics.RowButtonHeight);
-            save.MinWidth = ButtonMinWidth;
-            save.Click += (sender, args) =>
-            {
-                Settings.RenameMatrixPanel(matrix, name.Text);
-                Save();
-                Redraw();
-            };
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.Click += (sender, args) => Redraw();
-            var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + (Settings.MatrixName(matrix) ?? ("Matrix " + matrix)),
-                nameRow,
-                Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
-        }
-        // --- The LED bars ------------------------------------------------------------------------
-
         /// <summary>One bar: what its middle shows, how its ladder fills, whether its flags move, and the
         /// two actions on the bar itself.</summary>
-        private FrameworkElement BuildLedBarGroup(LedBar bar, LedBar first)
+        private FrameworkElement BuildLedBarGroup(LedBar bar, bool open)
         {
             var ns = bar.Namespace;
-            return Ui.Collapsible(bar.Name, PanelLightRows.ShapeLabel(bar.Shape), ReferenceEquals(bar, first), () =>
+            return Ui.Collapsible(bar.Name, PanelLightRows.ShapeLabel(bar.Shape), open, () =>
             {
                 var centre = BuildChoice(Contract.LedCentres, PanelLights.CentreLabels, Settings.BarCentre(ns), 220,
                     value =>
@@ -329,36 +145,48 @@ namespace OpenDashPlugin
                         if (live != null) live.Centre = value;
                         Save();
                     });
-                var style = BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.BarRpmStyle(ns), 220,
-                    value =>
-                    {
-                        var live = Settings.LedBarByNamespace(ns);
-                        if (live != null) live.RpmStyle = value;
-                        Save();
-                    });
+                // #369: one switch, the car's own rev lights or not. On writes the car's own style and off the
+                // plain left-to-right ladder. Those two literals are what keep a retired style from being
+                // written: the contract's set still holds meetInMiddle and f1 so an old file reads, and the
+                // NormaliseChoice through it returns either value unchanged. The set is named so the panel
+                // writes against the contract's list in view (contract.test.ts pins it). A strip carrying a
+                // retired style has been normalised to left to right and reads as off.
+                var style = BuildToggle(Settings.BarRpmStyle(ns) == Contract.LedRpmStyleCar, on =>
+                {
+                    var live = Settings.LedBarByNamespace(ns);
+                    if (live != null) live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+                    Save();
+                });
                 IList<string> notOffered;
                 var targets = LedTargets.All(out notOffered);
-                return Ui.VStack(4,
-                    BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
-                    Ui.Row("Centre display", "The LEDs at each end are not affected.", centre),
-                    Ui.Row("Rev light style", "Car-specific copies the car you are driving.", style),
-                    Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
+                // What the strip shows with the revs half way, from the rules the Rig page paints with.
+                var shape = LightShape.Parse(bar.Shape);
+                var preview = Ui.Strip(PanelEmulation.StripFrame(shape == null ? 0 : shape.Left, shape == null ? 0 : shape.Centre, PanelEmulation.Mid), StripStyle.Home,
+                    PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness));
+                preview.Margin = new Thickness(0, 0, 0, 12);
+                OnLighting(() => Ui.Redim(preview, PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness)));
+                return Ui.VStack(0,
+                    preview,
+                    Ui.Anchor(BuildLedDeviceRow(targets, notOffered, Settings.BarDevice(ns), value => MoveLedBar(ns, value)), PanelLeds.AnchorDevice),
+                    Ui.Anchor(Ui.Row(PanelLeds.CentreDisplayTitle, "The LEDs at each end are not affected.", centre), PanelLeds.AnchorCentre),
+                    Ui.Anchor(Ui.Row(PanelLeds.CarRevLightsTitle, PanelLeds.CarRevLightsCaption, style), PanelLeds.AnchorRevStyle),
+                    Ui.Anchor(Ui.Row(PanelLeds.FlagAnimationTitle, "Off shows each flag as a steady colour.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
                             if (live != null) live.FlagAnimation = on;
                             Save();
-                        })),
+                        })), PanelLeds.AnchorFlagAnimation),
                     // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
-                    Ui.Row("Full-strip spotter", "Off lights only the end nearest the car alongside.",
+                    Ui.Anchor(Ui.Row(PanelLeds.SpotterTitle, "Off lights only the end nearest the car alongside.",
                         BuildToggle(Settings.BarSpotterWhole(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
                             if (live != null) live.SpotterWhole = on;
                             Save();
-                        })),
+                        })), PanelLeds.AnchorSpotter),
                     BuildLedBarActions(ns));
-            });
+            }, opened => { if (opened) Select(PanelPage.Leds, ns); });
         }
 
         /// <summary>
@@ -399,10 +227,8 @@ namespace OpenDashPlugin
                     PanelLights.DeviceRowCaption(targets.Count, PanelLights.OneDevice(labels[0]), declined), new Border());
             }
 
-            var row = Ui.Row(PanelLights.BarDeviceTitle, PanelLights.DeviceRowCaption(targets.Count, PanelLights.BarDeviceCaption, declined),
+            return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.DeviceRowCaption(targets.Count, PanelLights.BarDeviceCaption, declined),
                 BuildChoice(ids.ToArray(), labels.ToArray(), current, 260, chosen));
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
-            return row;
         }
 
         /// <summary>
@@ -419,33 +245,36 @@ namespace OpenDashPlugin
             if (bar == null) return;
             bar.Device = LedBar.NormaliseDevice(device);
             Save();
-            var found = EmbeddedShapes().FirstOrDefault(entry => string.Equals(entry.Id, bar.Shape, StringComparison.Ordinal));
+            // By the profile the bar installs, which is the reversed twin for a strip wired from the far end.
+            var found = EmbeddedProfileOf(bar);
             if (found == null)
             {
-                AnnounceLights(PanelLights.BarAddFailed(bar.Name), Theme.Caution);
+                Say(PanelMessage.Caution(PanelLights.BarMoveFailed(bar.Name)));
                 return;
             }
             var plan = InstallBar(bar, found.Json);
             var ok = plan.State == FlagBoxInstallState.UpToDate;
             var target = LedTargets.Find(bar.Device);
             var where = target == null ? "that device" : target.Name;
-            var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarAddFailed(bar.Name);
+            var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarMoveFailed(bar.Name);
             if (ok && plan.Note != null) line += " " + plan.Note;
-            AnnounceLights(line, ok && plan.Note == null ? Theme.TextSecondary : Theme.Caution);
+            Say(line, ok && plan.Note == null);
+            // The strip's device, and so whether its profile is selected, moved with the press.
+            RefreshAttention();
+            RefreshSidebar();
         }
 
         private FrameworkElement BuildLedBarActions(string ns)
         {
-            var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Renames this strip. Install it again to rename it in SimHub.";
+            var rename = Ui.Button("Rename", PanelButtonKind.Outline, PanelButtonSize.Small);
+            rename.ToolTip = PanelLights.RenameBarTooltip;
             rename.Click += (sender, args) => ShowRenameLedBar(ns);
-            // "Remove" and not "Remove this bar": a group is indented inside its section and the longer
-            // words were cut off at the panel's edge.
-            var remove = Ui.LinkButton("Remove", Theme.Danger);
+            var remove = Ui.Button("Remove", PanelButtonKind.GhostDanger, PanelButtonSize.Small);
             remove.ToolTip = "Removes this strip and its profile from SimHub.";
             remove.Click += (sender, args) => RemoveLedBar(ns);
-            var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
+            var row = Ui.HStack(6, rename, remove);
+            row.HorizontalAlignment = HorizontalAlignment.Right;
+            row.Margin = new Thickness(0, 12, 0, 8);
             return row;
         }
 
@@ -464,17 +293,14 @@ namespace OpenDashPlugin
         /// </remarks>
         private void ShowAddLedBar()
         {
-            var shapes = EmbeddedShapes();
-            var census = shapes.Select(entry => entry.Id).ToList();
+            var census = EmbeddedShapeIds();
             // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
             // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
             // "3/9/3" among every other geometry and to know that is what their wheel is called.
             var sides = PanelLights.BarSides(census);
             if (sides.Length == 0)
             {
-                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar,
-                    Ui.Caption("This build ships no strip profiles."),
-                    BackRow()));
+                ShowSheet(PanelLights.AddBar, Ui.Caption("This build ships no strip profiles."), null);
                 return;
             }
 
@@ -486,14 +312,9 @@ namespace OpenDashPlugin
             var fanatec = false;
 
             var note = Ui.Caption(string.Empty);
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
+            note.Margin = new Thickness(0, 4, 0, 8);
+            var picture = new ContentControl { Margin = new Thickness(0, 0, 0, 12) };
+            var name = BuildNameBox(string.Empty);
             var typed = false;
             name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
             var endsHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Right };
@@ -502,6 +323,10 @@ namespace OpenDashPlugin
             Action refresh = () =>
             {
                 note.Text = PanelLights.BarShapeNote(side, centre, fanatec);
+                // The shape, drawn: the ends and the centre the two numbers make, at rest.
+                var drawnSide = fanatec ? PanelLights.FanatecSide : side;
+                var drawnCentre = fanatec ? PanelLights.FanatecCentre : centre;
+                picture.Content = Ui.Strip(PanelEmulation.StripFrame(drawnSide, drawnCentre, PanelEmulation.Idle), StripStyle.AddLeds);
                 if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec));
             };
             Action showCentres = () =>
@@ -559,38 +384,33 @@ namespace OpenDashPlugin
             // that installs nothing.
             if (PanelLights.OffersFanatec(census))
             {
-                var fanatecRow = Ui.Row(PanelLights.BarFanatecTitle, PanelLights.BarFanatecCaption,
+                rows.Add(Ui.Row(PanelLights.BarFanatecTitle, PanelLights.BarFanatecCaption,
                     BuildToggle(false, on =>
                     {
                         fanatec = on;
                         showEnds();
                         showCentres();
-                    }));
-                fanatecRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-                rows.Add(fanatecRow);
+                    })));
             }
             var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption, endsHost);
-            endsRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             var centreRow = Ui.Row(PanelLights.BarCentreTitle, PanelLights.BarCentreCaption, centreHost);
-            centreRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             showEnds();
             showCentres();
 
-            var add = Ui.OutlineButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
+            var add = Ui.Button(PanelLights.AddBar, PanelButtonKind.Primary, PanelButtonSize.Large);
             add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device, shapes);
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.Click += (sender, args) => Redraw();
+            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device);
+            var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
+            cancel.Click += (sender, args) => CloseSheet();
 
+            rows.Insert(0, picture);
             rows.Add(endsRow);
             rows.Add(centreRow);
             rows.Add(note);
             rows.Add(nameRow);
             rows.Add(deviceRow);
-            rows.Add(Ui.Row(new Border(), Ui.HStack(8, cancel, add)));
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, rows.ToArray()));
+            ShowSheet(PanelLights.AddBar, Ui.VStack(0, rows.ToArray()), SheetFooter(null, cancel, add));
         }
 
         /// <summary>A list of lengths with one more in it, in order: what a locked control shows, so that
@@ -605,7 +425,7 @@ namespace OpenDashPlugin
         {
             var add = Ui.AddButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
             add.HorizontalAlignment = HorizontalAlignment.Left;
-            add.Margin = new Thickness(0, 8, 0, 0);
+            add.Margin = new Thickness(0, 12, 0, 0);
             add.ToolTip = "Adds a strip and installs its profile.";
             add.Click += (sender, args) => ShowAddLedBar();
             return add;
@@ -619,55 +439,12 @@ namespace OpenDashPlugin
             return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
         }
 
-        /// <summary>One shape this build embedded: its id, and the profile written for it.</summary>
-        private sealed class EmbeddedShape
-        {
-            public EmbeddedShape(string id, string json)
-            {
-                Id = id;
-                Json = json;
-            }
-
-            public string Id { get; private set; }
-            public string Json { get; private set; }
-        }
-
-        /// <summary>
-        /// Every strip profile this build embedded, by the id the generator wrote it under.
-        /// </summary>
-        /// <remarks>
-        /// The census is what is embedded, which is the rule the Install tab's rows already follow: a
-        /// shape this build does not carry is not offered and cannot be added as a bar whose profile does
-        /// not exist.
-        ///
-        /// Every id, the wirings included. This is the lookup AddLedBar and MoveLedBar resolve a bar's
-        /// profile through as well as the census the add form is drawn from, and it used to drop every
-        /// id with a wiring suffix, so a bar whose shape was `3-9-3-fanatec` found nothing here and a move
-        /// reported that its profile could not be installed (#436). The geometry question still leaves the
-        /// wirings out, where the two numbers are offered: PanelLights.BarSides and BarCentres.
-        /// </remarks>
-        private static IList<EmbeddedShape> EmbeddedShapes()
-        {
-            var log = new SimHubInstallLog();
-            var assembly = typeof(OpenDash).Assembly;
-            var shapes = new List<EmbeddedShape>();
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
-            {
-                var id = FlagBoxProfile.ShapeIdOf(resource);
-                if (id == null || !seen.Add(id)) continue;
-                var text = FlagBoxProfile.ResourceText(assembly, resource, log);
-                if (text == null) continue;
-                shapes.Add(new EmbeddedShape(id, text));
-            }
-            return shapes;
-        }
-
-        private void AddLedBar(string shape, string name, string device, IList<EmbeddedShape> shapes)
+        private void AddLedBar(string shape, string name, string device)
         {
             var bar = Settings.AddLedBar(shape, name, device);
             Save();
-            var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, shape, StringComparison.Ordinal));
+            Select(PanelPage.Leds, bar.Namespace);
+            var found = EmbeddedProfileOf(bar);
             var embedded = found == null ? null : found.Json;
             var ok = embedded != null;
             string note = null;
@@ -684,24 +461,7 @@ namespace OpenDashPlugin
             var target = LedTargets.Find(bar.Device);
             var line = ok ? PanelLights.BarAdded(bar.Name, target == null ? null : target.Name) : PanelLights.BarAddFailed(bar.Name);
             if (ok && note != null) line += " " + note;
-            AnnounceLights(line, ok && note == null ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        private static FlagBoxPlan InstallBar(LedBar bar, string embedded)
-        {
-            try
-            {
-                // Out of wherever it was first. A bar that has moved from the Arduino to a wheel must not
-                // leave a copy behind reading properties that now drive the wheel's, and the install only
-                // knows about the device it is going to.
-                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(bar.Namespace));
-                return StripInstaller.Install(LedBarProfile.For(bar, embedded), bar.Device);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Installing the profile for " + bar.Name + " failed", ex);
-                return new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-            }
+            Say(line, ok && note == null);
         }
 
         private void RemoveLedBar(string ns)
@@ -722,24 +482,17 @@ namespace OpenDashPlugin
             }
             Settings.RemoveLedBar(ns);
             Save();
+            Select(PanelPage.Leds, null);
             Redraw();
-            AnnounceLights("Removed " + name + " and its profile.", Theme.TextSecondary);
+            Say(PanelMessage.Info("Removed " + name + " and its profile."));
         }
 
         private void ShowRenameLedBar(string ns)
         {
             var bar = Settings.LedBarByNamespace(ns);
             if (bar == null) return;
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = bar.Name,
-            };
-            var save = Ui.OutlineButton("Rename", PanelMetrics.RowButtonHeight);
+            var name = BuildNameBox(bar.Name);
+            var save = Ui.Button("Rename", PanelButtonKind.Primary, PanelButtonSize.Large);
             save.MinWidth = ButtonMinWidth;
             save.Click += (sender, args) =>
             {
@@ -747,36 +500,12 @@ namespace OpenDashPlugin
                 Save();
                 Redraw();
             };
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.Click += (sender, args) => Redraw();
-            var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + bar.Name,
-                nameRow,
-                Ui.Caption("Install the strip again to rename it in SimHub."),
-                Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
+            var cancel = Ui.Button("Cancel", PanelButtonKind.Ghost, PanelButtonSize.Large);
+            cancel.Click += (sender, args) => CloseSheet();
+            ShowSheet("Rename " + bar.Name,
+                Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name),
+                SheetFooter(null, cancel, save));
         }
 
-        /// <summary>What SimHub's own list calls OpenDash's matrix profile: the name the build stamped
-        /// into it, and the constant only when this build carries no profile to read it from. One
-        /// answer, because two places spelling it differently is the confusion this fixes.</summary>
-        private string FlagBoxName()
-        {
-            return plugin.FlagBox?.ProfileName ?? FlagBoxProfile.ProfileName;
-        }
-
-        /// <summary>A line at the top of the tab saying what just happened, until the next thing happens.</summary>
-        private void AnnounceLights(string line, string colour)
-        {
-            var stack = bodyHost.Content as StackPanel;
-            var section = stack?.Children.Count > 0 ? stack.Children[0] as Border : null;
-            var rows = section?.Child as StackPanel;
-            if (rows == null) return;
-            var text = Ui.Text(line, Theme.SizeSmall, System.Windows.FontWeights.Normal, colour);
-            text.TextWrapping = TextWrapping.Wrap;
-            text.MaxWidth = BodyWidth;
-            text.Margin = new Thickness(0, 8, 0, 0);
-            rows.Children.Insert(Math.Min(1, rows.Children.Count), text);
-        }
     }
 }

@@ -1,4 +1,4 @@
-// PanelRigTests.cs: when the Rig tab tells a driver to remove the dashboards they have no screen for.
+// PanelScreensTests.cs: when the Screens page tells a driver to remove the dashboards they have no screen for.
 //
 // The line is for a rig the migration made, and whether a screen is one of those is carried by the screen
 // rather than guessed from how many the rig holds (#478). What is held here is that fact through every path
@@ -11,10 +11,10 @@ using Xunit;
 
 namespace OpenDashPlugin.Tests
 {
-    public class PanelRigTests
+    public class PanelScreensTests
     {
         [Fact]
-        public void A_rig_of_five_screens_added_on_the_rig_tab_is_never_told_to_remove_any()
+        public void A_rig_of_five_screens_added_on_the_screens_page_is_never_told_to_remove_any()
         {
             // The rig of the #459 walk-through: built from nothing, one screen at a time, five by the end,
             // two of them at one size.
@@ -29,11 +29,11 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
 
             Assert.Equal(5, settings.RigScreens().Count);
-            Assert.False(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
             // Nor once written and read back, which is where a sixth start would find it.
             var read = RoundTrip(settings);
             Assert.Equal(5, read.RigScreens().Count);
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         [Fact]
@@ -44,33 +44,33 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             Assert.Equal(4, settings.RigScreens().Count);
             Assert.All(settings.RigScreens(), screen => Assert.True(screen.Unclaimed));
-            Assert.True(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
 
             // It survives being written and read back, and the copy the panel works on.
             var read = RoundTrip(settings);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
             var copy = new OpenDashSettings();
             copy.CopyFrom(read);
-            Assert.True(PanelRig.ShowsUnclaimedNote(copy.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(copy.RigScreens()));
 
             // A screen the driver adds beside them answers for itself and for none of the others.
             var rim = read.AddScreen(Entry("OpenDash 1280x480", Contract.KindFace, 1280, 480), "Rim");
             read.Normalise();
             Assert.False(rim.Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Removing some of them is not the end of it while one is left that nobody has answered for.
             Assert.True(read.RemoveScreen("Face850x480"));
             Assert.True(read.RemoveScreen(Contract.PitWallPrefix));
             read.Normalise();
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
             read.ScreenByNamespace(Contract.CompanionPrefix).Keep();
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Keeping the last one is the moment the line stops being true, and it stays gone.
             read.ScreenByNamespace("Face1280x480").Keep();
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
-            Assert.False(PanelRig.ShowsUnclaimedNote(RoundTrip(read).RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(RoundTrip(read).RigScreens()));
         }
 
         [Fact]
@@ -80,9 +80,9 @@ namespace OpenDashPlugin.Tests
             // has a card they did not choose, and it is theirs to keep or remove.
             var settings = Upgraded("OpenDash 1280x480");
             settings.Normalise();
-            Assert.True(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
             Assert.True(settings.RemoveScreen("Face1280x480"));
-            Assert.False(PanelRig.ShowsUnclaimedNote(settings.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(settings.RigScreens()));
         }
 
         [Fact]
@@ -100,14 +100,14 @@ namespace OpenDashPlugin.Tests
             Assert.True(read.ScreenByNamespace("Face1280x480").Unclaimed);
             Assert.True(read.ScreenByNamespace("Face850x480").Unclaimed);
             Assert.False(read.ScreenByNamespace(Contract.CompanionPrefix).Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
 
             // Answered once, and from then on carried like any other: removing one leaves a folder on record
             // that no screen holds, and the other is still unanswered for all that.
             Assert.True(read.RemoveScreen("Face850x480"));
             read = RoundTrip(read);
             Assert.True(read.ScreenByNamespace("Face1280x480").Unclaimed);
-            Assert.True(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.True(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         [Fact]
@@ -128,11 +128,11 @@ namespace OpenDashPlugin.Tests
                 new[] { "OpenDash 1280x480", "OpenDash 850x480", "OpenDash 800x480" },
                 Face("Face1280x480", "1280 × 480", 1280, "OpenDash 1280x480", null),
                 Face("Face850x480", "850 × 480", 850, "OpenDash 850x480", null));
-            Assert.False(PanelRig.ShowsUnclaimedNote(pruned.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(pruned.RigScreens()));
         }
 
         [Fact]
-        public void A_rig_a_released_build_wrote_from_screens_added_on_the_rig_tab_is_never_told()
+        public void A_rig_a_released_build_wrote_from_screens_added_on_the_screens_page_is_never_told()
         {
             // The #459 rig as the build it was made on wrote it: five screens, every one carrying the
             // package it was added from, and no word from any of them on where they came from.
@@ -147,7 +147,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(5, read.RigScreens().Count);
             Assert.All(read.RigScreens(), screen => Assert.False(screen.Unclaimed));
-            Assert.False(PanelRig.ShowsUnclaimedNote(read.RigScreens()));
+            Assert.False(PanelScreens.ShowsUnclaimedNote(read.RigScreens()));
         }
 
         private static string Package(string folder) => "OpenDashPlugin.Resources." + folder + ".simhubdash";
@@ -199,6 +199,81 @@ namespace OpenDashPlugin.Tests
             var read = JsonConvert.DeserializeObject<OpenDashSettings>(JsonConvert.SerializeObject(settings));
             read.Normalise();
             return read;
+        }
+
+        /// <summary>The page's title, the anchors its rows carry, and what search finds on it.</summary>
+        [Fact]
+        public void The_screens_page_is_titled_and_its_rows_are_found_where_they_are()
+        {
+            Assert.Equal("Screens", PanelScreens.Title);
+            // One phrase for one state, a state and not an instruction: the card and the fix box under it
+            // both say it, as Main's Right now and the Screens fix box do, and Home says it of the screen.
+            Assert.Equal("Not in SimHub yet", PanelScreens.NotInSimHubYet);
+            var waiting = new AttentionInput();
+            waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
+            Assert.Equal("Rim is not in SimHub yet", System.Linq.Enumerable.Single(PanelAttention.Find(waiting)).Title);
+            // The empty rig's pill, which Home's card says too, with the stop a sentence takes.
+            Assert.Equal("No screens yet", PanelScreens.NoScreens);
+            // A failure points at the log (voice.md), in the words its siblings use.
+            Assert.Equal("Could not duplicate Rim. See SimHub's log.", PanelAddScreen.DuplicateFailed("Rim"));
+            var anchors = new[]
+            {
+                PanelScreens.AnchorCards, PanelScreens.AnchorRevBar, PanelScreens.AnchorFlagDisplay, PanelScreens.AnchorLapReview,
+                PanelScreens.AnchorZones, PanelScreens.AnchorPitWallPage, PanelScreens.AnchorWebView, PanelScreens.AnchorModules,
+                PanelScreens.AnchorFirstModule, PanelScreens.AnchorSlots,
+            };
+            Assert.All(anchors, anchor => Assert.StartsWith("screens.", anchor, System.StringComparison.Ordinal));
+            Assert.Equal(anchors.Length, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(anchors)));
+            Assert.All(PanelScreens.Search, entry => Assert.Contains(entry.Route.Anchor, anchors));
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.Title && entry.Route.Anchor == PanelScreens.AnchorCards);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelDataTab.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
+            // The rows' titles, which the panes draw and search lists by the same constants.
+            Assert.Equal("Flag display", PanelScreens.FlagDisplayTitle);
+            Assert.Equal("Lap review", PanelScreens.LapReviewTitle);
+            Assert.Equal("Zones", PanelScreens.ZonesTitle);
+            Assert.Equal("Page", PanelScreens.PitWallPageTitle);
+            Assert.Equal("Web view address", PanelScreens.WebViewTitle);
+            Assert.Equal("Modules", PanelScreens.ModulesTitle);
+            Assert.Equal("First module", PanelScreens.FirstModuleTitle);
+            // The round pane's heading is the artboard's noun, and "slots" still finds it.
+            Assert.Equal("Cards", PanelScreens.CardsTitle);
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
+            // The round pane's Revbar writes the rig-wide setting, and its caption names everything that
+            // follows it: the round screens, the phone's speedo, and a face that never set its own.
+            Assert.Equal("Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.", PanelScreens.RigRevBarCaption);
+            var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
+            Assert.Contains("PanelScreens.RigRevBarCaption,", round);
+            Assert.Contains("Settings.SetRevBar(value);", round);
+            // The card's states, the header's Duplicate, and the fix box under a screen that is gone, whose
+            // detail is Home's too.
+            Assert.Equal("In SimHub", PanelScreens.InSimHub);
+            Assert.Equal("Missing", PanelScreens.Missing);
+            Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.Equal("This screen's dashboard is missing from SimHub", PanelScreens.MissingTitle);
+            Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
+            // The note an upgrading user meets, in the noun and verbs Home uses.
+            Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
+        }
+
+        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
+        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        [Fact]
+        public void Its_anchor_ids_are_pinned()
+        {
+            Assert.Equal(new[]
+            {
+                "AnchorCards = screens.cards",
+                "AnchorFirstModule = screens.first-module",
+                "AnchorFlagDisplay = screens.flag-display",
+                "AnchorLapReview = screens.lap-review",
+                "AnchorModules = screens.modules",
+                "AnchorPitWallPage = screens.pitwall-page",
+                "AnchorRevBar = screens.revbar",
+                "AnchorSlots = screens.slots",
+                "AnchorWebView = screens.webview",
+                "AnchorZones = screens.zones",
+            }, AnchorTable.Of(typeof(PanelScreens)));
         }
     }
 }

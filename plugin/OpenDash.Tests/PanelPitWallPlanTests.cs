@@ -257,11 +257,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_zone_list_is_the_size_the_canvas_draws()
         {
-            Assert.Equal(14, PanelPitWallPlan.RowGap);
             Assert.Equal(260, PanelPitWallPlan.SelectWidth);
             Assert.Equal(260, PanelPitWallPlan.AddressWidth);
             Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);
             Assert.Equal(32, PanelPitWallPlan.SelectHeight);
+            // Each page's group of zone rows, 18 below the one before.
+            Assert.Equal(18, PanelPitWallPlan.GroupGap);
         }
 
         /// <summary>A watermark and not a value: what the empty box shows is exactly what

@@ -19,17 +19,6 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>
-        /// One label per <see cref="Contract.LedRpmStyles"/> value, in its order. Car-specific heads the
-        /// list because the value does, and it is the one a driver is offered first.
-        /// </summary>
-        /// <remarks>
-        /// It used to read "The car's own", which is a possessive with no head noun: the reader has to
-        /// guess what it owns, and the three names beside it are patterns rather than owners, so there is
-        /// nothing to guess from. Car-specific is what Lovely Sim Racing calls these tables, so a driver
-        /// who met them there recognises the word. docs/design/voice.md keeps the rule.
-        /// </remarks>
-        public static readonly string[] RpmStyleLabels = { "Car-specific", "Left to right", "Meet in middle", "F1" };
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
         public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
@@ -54,8 +43,6 @@ namespace OpenDashPlugin
         /// into SimHub.
         /// </remarks>
         public const string BarsCaption = "Add one for each RGB strip you have.";
-
-        public const string NoBars = "No strips yet.";
 
         public const string AddBar = "Add an LED strip";
 
@@ -273,10 +260,25 @@ namespace OpenDashPlugin
             return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
         }
 
+        /// <summary>
+        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form):
+        /// no page offers a press that installs it again -- the Updates row for a profile that is not in SimHub
+        /// has none, and its hover sends the driver back to LEDs -- until the LEDs header carries ReinstallBar's.
+        /// </summary>
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See the Install tab.";
+            return "Added " + name + ", but its profile could not be installed. See SimHub's log.";
         }
+
+        /// <summary>A strip whose profile could not be moved to another device: nothing was added.</summary>
+        public static string BarMoveFailed(string name)
+        {
+            return "Could not move " + name + "'s profile. See SimHub's log.";
+        }
+
+        /// <summary>The strip's Rename press. It renames the strip; no page reinstalls a profile yet, so the
+        /// tooltip does not send the driver to one.</summary>
+        public const string RenameBarTooltip = "Renames this strip.";
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
         public const string CarTablesTitle = "Car light tables";
@@ -299,7 +301,7 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, "
+            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
             + "so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
@@ -350,8 +352,6 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PanelsCaption = "Add one for each panel you have. Four at most.";
 
-        public const string NoPanels = "No panels yet.";
-
         public const string AddPanel = "Add a matrix panel";
 
         public const string PanelNameTitle = "Name";
@@ -384,16 +384,31 @@ namespace OpenDashPlugin
         /// profile and a panel is a content number inside one. The sentence therefore names the profile
         /// the driver is to select, and says whose name is on it, rather than leaving them to search
         /// SimHub's list for the name they just typed.
+        ///
+        /// When SimHub has no copy, the sentence sends the driver where the top of the Matrix page can help
+        /// in that state: its Install for a profile SimHub lacks, the copy to import by hand when SimHub's
+        /// matrix settings could not be reached (its Install is disabled then), and nowhere when this build
+        /// has no profile at all (the page says so, and has nothing to install).
         /// </remarks>
         public static string PanelAdded(string name, int matrix, string profile, FlagBoxInstallState state)
         {
             var known = state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
             var where = "Added " + name + ". It is " + PanelSlot(matrix) + ": pick that content number on the device";
-            return known
-                ? where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
-                    + " SimHub's list carries its name rather than yours."
-                : where + ". \"" + profile + "\" is the profile that paints it, and SimHub has not got it:"
-                    + " install it from the Install tab.";
+            if (known)
+            {
+                return where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
+                    + " SimHub's list carries its name rather than yours.";
+            }
+            var paints = where + ". \"" + profile + "\" is the profile that paints it, ";
+            switch (state)
+            {
+                case FlagBoxInstallState.NotEmbedded:
+                    return paints + "and this build has none to install, so the panel stays dark.";
+                case FlagBoxInstallState.Unavailable:
+                    return paints + "and SimHub's matrix settings could not be reached: import it by hand from the top of this page.";
+                default:
+                    return paints + "and SimHub has not got it: install it at the top of this page.";
+            }
         }
 
         /// <summary>Whether <see cref="PanelAdded"/> is asking for something to be done before the panel
@@ -403,12 +418,14 @@ namespace OpenDashPlugin
             return state != FlagBoxInstallState.UpToDate && state != FlagBoxInstallState.Outdated;
         }
 
-        /// <summary>The line under the flag box heading: one profile, named, and where it comes from.
-        /// It names the profile because the panels below do not carry their own.</summary>
+        /// <summary>The line under the flag box heading: one profile, named. It names the profile because
+        /// the panels below do not carry their own, and says nothing of where to install it: the profile's
+        /// own row, with its press, is directly above.</summary>
+        /// <summary>The flag box section's caption. The profile row directly above already says "8 × 8
+        /// matrix", so the caption does not say it again.</summary>
         public static string BoxCaption(string profile)
         {
-            return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below;"
-                + " install it from the Install tab.";
+            return "\"" + profile + "\" is the one profile that paints every panel below.";
         }
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
@@ -417,9 +434,5 @@ namespace OpenDashPlugin
         {
             return "SimHub matrix " + matrix;
         }
-
-        /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
-        /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
-        public const string RigWideTitle = "All lights";
     }
 }

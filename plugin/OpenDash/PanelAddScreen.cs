@@ -95,6 +95,15 @@ namespace OpenDashPlugin
         public const string AddButton = "Add screen";
 
         /// <summary>
+        /// A Duplicate that made nothing. DuplicateScreen returns null only when no package in this build makes
+        /// the screen, and that reason is logged; the line points at the log, as voice.md's failure rule asks.
+        /// </summary>
+        public static string DuplicateFailed(string name)
+        {
+            return "Could not duplicate " + name + ". See SimHub's log.";
+        }
+
+        /// <summary>
         /// The one place a screen already on the rig is changed.
         /// </summary>
         /// <remarks>
@@ -130,12 +139,11 @@ namespace OpenDashPlugin
         /// What the caption says instead once this screen's folder has been edited.
         /// </summary>
         /// <remarks>
-        /// The Install tab asks before it replaces authored work and keeps the copy under a name no
-        /// later install claims. A reinstall of one screen costs exactly the same thing, so it says the
-        /// same thing and keeps the copy the same way; "Put mine back" on the Install tab is what
-        /// restores it.
+        /// Updates asks before it replaces authored work and keeps the copy under a name no later
+        /// install claims. A reinstall of one screen costs exactly the same thing, so it says the same
+        /// thing and keeps the copy the same way; "Put mine back" on the Updates page is what restores it.
         /// </remarks>
-        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Install tab restores it.";
+        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Updates page restores it.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -164,8 +172,22 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Card face";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return KindName(kind);
             return "Dash or wheel";
+        }
+
+        /// <summary>
+        /// A kind's name where a screen already has one: the card's facts and the header under its name
+        /// ("Round · 480 × 480"), as Screens.dc.html writes them. The Add sheet's tile says the same for the
+        /// three the sheet asks about in the same words, and asks about a face as "Dash or wheel", which is
+        /// the question rather than the name. Never the internal kind id: "Slots" is the settings model's.
+        /// </summary>
+        public static string KindName(string kind)
+        {
+            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
+            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Round";
+            return "Face";
         }
 
         public static string CaptionOf(string kind)

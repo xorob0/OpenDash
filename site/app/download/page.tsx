@@ -56,7 +56,7 @@ export default function Download() {
         </div>
       </Section>
 
-      <Section id="packages" title="What the zip carries" lede={`${ONLY_WAY_IN} No screen is a file of its own: add the ones your rig has on the Rig tab.`}>
+      <Section id="packages" title="What the zip carries" lede={`${ONLY_WAY_IN} No screen is a file of its own: add the ones your rig has on the Screens page.`}>
         <div className={styles.groups}>
           <div className={styles.group}>
             <h3 className="h3">Faces</h3>

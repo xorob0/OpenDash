@@ -80,12 +80,27 @@ namespace OpenDashPlugin.Tests
             };
         }
 
+        /// <summary>A kind is named one way on its card, under its name and on the Add sheet's tile:
+        /// Screens.dc.html's Face, Pit wall, Companion and Round, never the internal id "Slots".</summary>
+        [Fact]
+        public void A_kind_has_one_name()
+        {
+            Assert.Equal("Face", PanelAddScreen.KindName(Contract.KindFace));
+            Assert.Equal("Companion", PanelAddScreen.KindName(Contract.KindCompanion));
+            Assert.Equal("Pit wall", PanelAddScreen.KindName(Contract.KindPitWall));
+            Assert.Equal("Round", PanelAddScreen.KindName(Contract.KindSlots));
+            foreach (var kind in new[] { Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots })
+            {
+                Assert.Equal(PanelAddScreen.KindName(kind), PanelAddScreen.LabelOf(kind));
+            }
+        }
+
         [Fact]
         public void The_first_question_is_what_kind_of_screen_it_is()
         {
             var types = PanelAddScreen.Types(Catalogue());
             Assert.Equal(new[] { Contract.KindFace, Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots }, types.Select(t => t.Kind));
-            Assert.Equal(new[] { "Dash or wheel", "Companion", "Pit wall", "Card face" }, types.Select(t => t.Label));
+            Assert.Equal(new[] { "Dash or wheel", "Companion", "Pit wall", "Round" }, types.Select(t => t.Label));
             // Every one says what it is: two words on a button cannot, and a driver adding their first
             // screen has nowhere else to find out.
             foreach (var type in types) Assert.NotEmpty(type.Caption);
@@ -264,10 +279,12 @@ namespace OpenDashPlugin.Tests
         public void The_reinstall_says_what_it_replaces()
         {
             Assert.DoesNotContain("edited", PanelAddScreen.ReinstallCaption);
-            // The Install tab's own promise, in the same words, because it is the same copy and the same
+            // The Updates page's own promise, in the same words, because it is the same copy and the same
             // button that puts it back.
             Assert.Contains("a copy is kept", PanelAddScreen.ReinstallEditedCaption);
             Assert.Contains("Put mine back", PanelAddScreen.ReinstallEditedCaption);
+            // Where "Put mine back" is now that the tabs have gone (#503).
+            Assert.EndsWith("\"Put mine back\" on the Updates page restores it.", PanelAddScreen.ReinstallEditedCaption);
         }
     }
 }

@@ -1,8 +1,9 @@
-// SettingsControl.Preview.cs: where the live screen goes in the Rig tab, and when it is taken away.
+// SettingsControl.Preview.cs: where the live screen goes on the Screens page, and when it is taken away.
 //
-// It sits under the screen's name and above the pane that configures it, which is the order the tab
-// already reads in: the cards choose a screen, the header names it, and now the screen itself is
-// between that name and the controls that change it. Every kind gets one, because a preview is a
+// It sits under the screen's name and above the pane that configures it, which is the order the page
+// reads in: the cards choose a screen, the header names it, and the screen itself is between that name
+// and the controls that change it. The shell owns this file, because Go lets the preview go on every
+// page change. Every kind gets one, because a preview is a
 // function of an installed package and nothing about a companion or a pit wall makes it less useful
 // than a face.
 //
@@ -17,8 +18,8 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        /// <summary>The preview the Rig tab is showing, or null. Owned here because it holds SimHub's
-        /// renderer and has to be let go when the tab is left.</summary>
+        /// <summary>The preview the Screens page is showing, or null. Owned here because it holds SimHub's
+        /// renderer and has to be let go when the page is left.</summary>
         private ScreenPreview screenPreview;
 
         /// <summary>
@@ -28,8 +29,12 @@ namespace OpenDashPlugin
         /// A missing package draws nothing on purpose. The pane already carries a warning row saying
         /// that this screen's dashboard is gone from SimHub, with a button that writes it again, and a
         /// second notice directly above it would say the same thing twice (docs/design/voice.md).
+        ///
+        /// It is fitted to <paramref name="available"/>, which a page passes as the room its column has
+        /// (ContentWidth, less an aside beside it in two columns), and never wider than
+        /// <see cref="BodyWidth"/>: a fixed 880 was clipped in every layout narrower than that.
         /// </remarks>
-        private FrameworkElement BuildScreenPreview(ScreenInstance screen)
+        private FrameworkElement BuildScreenPreview(ScreenInstance screen, double available = BodyWidth)
         {
             DropPreview();
             if (screen == null || screen.Folder == null) return null;
@@ -49,7 +54,8 @@ namespace OpenDashPlugin
             // The screen's own namespace is what makes this preview's remembered screen its own. Two
             // screens of the same package are two instances (ADR 0017), and neither of them is the
             // dashboard the driver has open.
-            screenPreview = ScreenPreview.Load(file, PreviewContextId(screen), BodyWidth);
+            var width = Math.Max(120, Math.Min(BodyWidth, available));
+            screenPreview = ScreenPreview.Load(file, PreviewContextId(screen), width);
             return screenPreview.Element;
         }
 
@@ -61,7 +67,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Lets go of the renderer the previous build was holding. Called from every build of
-        /// the preview and from ForgetTabControls, so leaving the tab stops the drawing.</summary>
+        /// the preview, from Go and when the panel is unloaded, so leaving the page stops the drawing.</summary>
         private void DropPreview()
         {
             if (screenPreview == null) return;

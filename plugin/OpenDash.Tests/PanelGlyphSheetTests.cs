@@ -38,6 +38,32 @@ namespace OpenDashPlugin.Tests
             "{\"name\":\"yellow\",\"kind\":\"flag\",\"frames\":[" + Frame(Y) + "]},"
             + "{\"name\":\"spotter-left\",\"kind\":\"spotter\",\"frames\":[" + Frame(Y) + "," + Frame("\"#ff8000\"") + "]}");
 
+        /// <summary>
+        /// A still picture of a glyph is the frame the box holds longest.
+        /// </summary>
+        /// <remarks>
+        /// The red flag grows over three frames of a tenth of a second and holds the fourth for twenty, so a
+        /// Rig tile painted from its first frame would show a sliver. Holds that do not cover every frame are
+        /// ignored rather than guessed at, and without them the still is the first frame.
+        /// </remarks>
+        [Fact]
+        public void A_glyphs_still_is_the_frame_it_holds_longest()
+        {
+            var sheet = PanelGlyphSheet.Parse(Sheet(
+                "{\"name\":\"red\",\"kind\":\"flag\",\"durationsMs\":[100,100,20000],\"frames\":[" + Frame(Y) + "," + Frame(Y) + "," + Frame("\"#FF2D46\"") + "]},"
+                + "{\"name\":\"blink\",\"kind\":\"flag\",\"durationsMs\":[250,250],\"frames\":[" + Frame(Y) + "," + Frame("\"#FF2D46\"") + "]},"
+                + "{\"name\":\"short\",\"kind\":\"flag\",\"durationsMs\":[250],\"frames\":[" + Frame(Y) + "," + Frame("\"#FF2D46\"") + "]},"
+                + "{\"name\":\"bare\",\"kind\":\"flag\",\"frames\":[" + Frame(Y) + "]}"));
+            Assert.Equal(new[] { 100, 100, 20000 }, sheet.Find("red").DurationsMs);
+            Assert.Equal("#FF2D46", sheet.Find("red").Still[0][1]);
+            // Equal holds: the first, which is a blink's lit half.
+            Assert.Equal("#FFD400", sheet.Find("blink").Still[0][1]);
+            Assert.Null(sheet.Find("short").DurationsMs);
+            Assert.Equal("#FFD400", sheet.Find("short").Still[0][1]);
+            Assert.Null(sheet.Find("bare").DurationsMs);
+            Assert.Same(sheet.Find("bare").Frames[0], sheet.Find("bare").Still);
+        }
+
         [Fact]
         public void A_sheet_of_two_glyphs_reads_as_the_build_wrote_it()
         {

@@ -16,7 +16,6 @@ namespace OpenDashPlugin.Tests
         public void Every_value_set_the_tab_draws_has_one_label_per_value()
         {
             Assert.Equal(Contract.LedCentres.Length, PanelLights.CentreLabels.Length);
-            Assert.Equal(Contract.LedRpmStyles.Length, PanelLights.RpmStyleLabels.Length);
             Assert.Equal(Contract.LedMirrorFits.Length, PanelLights.MirrorFitLabels.Length);
             Assert.Equal(Contract.FlagBoxRests.Length, PanelLights.RestLabels.Length);
             Assert.Equal(Contract.FlagBoxSides.Length, PanelLights.SideLabels.Length);
@@ -26,7 +25,6 @@ namespace OpenDashPlugin.Tests
         public void No_label_is_blank()
         {
             var every = PanelLights.CentreLabels
-                .Concat(PanelLights.RpmStyleLabels)
                 .Concat(PanelLights.MirrorFitLabels)
                 .Concat(PanelLights.RestLabels)
                 .Concat(PanelLights.SideLabels);
@@ -97,31 +95,57 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OpenDash Flag box", installed);
             // The clause that answers the report: the list carries the profile's name, not the panel's.
             Assert.Contains("rather than yours", installed);
-            Assert.DoesNotContain("Install tab", installed);
+            Assert.DoesNotContain("Matrix page", installed);
 
+            // The tabs went with #503: the profile is installed from its own row, directly above this caption
+            // on the Matrix page, so the caption says nothing of where.
+            // And the profile row above it already says "8 × 8 matrix", so the caption does not.
             Assert.Equal(
-                "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below;"
-                    + " install it from the Install tab.",
+                "\"OpenDash Flag box\" is the one profile that paints every panel below.",
                 PanelLights.BoxCaption("OpenDash Flag box"));
+            Assert.Equal("8 × 8 matrix", PanelLightRows.FlagBoxCaption);
         }
 
         /// <summary>
-        /// A panel added on a rig where SimHub has no profile of ours is sent to the Install tab, and
-        /// every state that is not a profile in SimHub says the same thing.
+        /// A panel added on a rig where SimHub has no profile of ours is sent to what the top of the page it
+        /// was added on, the Matrix page, can do in that state: its Install when SimHub lacks the profile or
+        /// installing failed, the copy to import by hand when SimHub's matrix settings could not be reached
+        /// and Install is disabled, and nowhere when this build has no profile, where the page has nothing to
+        /// install.
         /// </summary>
         /// <remarks>
         /// Outdated counts as installed: an old copy paints the box, so the driver is told to select it
-        /// rather than told SimHub has nothing. The Install tab's own row is what offers the update.
+        /// rather than told SimHub has nothing. The Matrix page's header is what offers the update.
         /// </remarks>
         [Theory]
-        [InlineData(FlagBoxInstallState.NotInstalled)]
-        [InlineData(FlagBoxInstallState.Unavailable)]
-        [InlineData(FlagBoxInstallState.NotEmbedded)]
-        [InlineData(FlagBoxInstallState.Failed)]
-        public void A_panel_added_without_the_profile_is_sent_to_the_Install_tab(FlagBoxInstallState state)
+        [InlineData(FlagBoxInstallState.NotInstalled, "and SimHub has not got it: install it at the top of this page.")]
+        [InlineData(FlagBoxInstallState.Failed, "and SimHub has not got it: install it at the top of this page.")]
+        [InlineData(FlagBoxInstallState.Unavailable, "and SimHub's matrix settings could not be reached: import it by hand from the top of this page.")]
+        [InlineData(FlagBoxInstallState.NotEmbedded, "and this build has none to install, so the panel stays dark.")]
+        public void A_panel_added_without_the_profile_is_sent_where_the_Matrix_page_can_help(FlagBoxInstallState state, string tail)
         {
             Assert.True(PanelLights.PanelNeedsInstall(state));
-            Assert.Contains("Install tab", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+            var said = PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state);
+            Assert.EndsWith(". \"OpenDash Flag box\" is the profile that paints it, " + tail, said);
+            Assert.DoesNotContain("Matrix page", said);
+        }
+
+        /// <summary>A strip whose profile could not be installed is sent to SimHub's log (voice.md's failure
+        /// form): Updates offers no press for a profile that is not in SimHub and its hover sends the driver
+        /// back to LEDs, so "See the Updates page" led nowhere. A failed move says "move", not "Added", and
+        /// Rename, its hover or its sheet, no longer promises an "Install it again" no page has.</summary>
+        [Fact]
+        public void A_strip_whose_profile_failed_is_sent_to_the_log()
+        {
+            Assert.Equal("Added Rim, but its profile could not be installed. See SimHub's log.", PanelLights.BarAddFailed("Rim"));
+            Assert.Equal("Could not move Rim's profile. See SimHub's log.", PanelLights.BarMoveFailed("Rim"));
+            Assert.Equal("Renames this strip.", PanelLights.RenameBarTooltip);
+            // Nor does the Rename sheet one click later: its footer has no note, since no page reinstalls a
+            // strip's profile yet.
+            var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var rename = leds.Substring(leds.IndexOf("ShowSheet(\"Rename \"", System.StringComparison.Ordinal));
+            Assert.StartsWith("SheetFooter(null, cancel, save)", rename.Substring(rename.IndexOf("SheetFooter(", System.StringComparison.Ordinal)));
+            Assert.DoesNotContain("Install the strip again", leds);
         }
 
         [Theory]

@@ -72,6 +72,15 @@ namespace OpenDashPlugin
         public int? Brightness { get; set; }
 
         /// <summary>
+        /// Where the Rig page's canvas draws this strip's tile, as ScreenInstance.LayoutX and LayoutY are
+        /// for a screen: the panel's to read and write, never a property. Null, or a negative position the
+        /// canvas cannot draw, is a tile the page lays out itself.
+        /// </summary>
+        public int? LayoutX { get; set; }
+
+        public int? LayoutY { get; set; }
+
+        /// <summary>
         /// The effects this bar does not draw, by effect id; everything else it draws. A switch is stored
         /// under the first id its setting answers for (<see cref="Contract.LedEffectPrimaryId"/>), so the
         /// eight flag rows are one entry. Null or empty is every effect on.
@@ -194,6 +203,8 @@ namespace OpenDashPlugin
             RpmStyle = Contract.NormaliseLedRpmStyle(RpmStyle);
             Device = NormaliseDevice(Device);
             if (Brightness.HasValue) Brightness = Contract.NormaliseBrightness(Brightness.Value);
+            if (LayoutX < 0) LayoutX = null;
+            if (LayoutY < 0) LayoutY = null;
             var off = new List<string>();
             if (EffectsOff != null)
             {
@@ -222,6 +233,8 @@ namespace OpenDashPlugin
                 Device = Device,
                 Reversed = Reversed,
                 Brightness = Brightness,
+                LayoutX = LayoutX,
+                LayoutY = LayoutY,
                 EffectsOff = EffectsOff == null ? null : new List<string>(EffectsOff),
             };
         }

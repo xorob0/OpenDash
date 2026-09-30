@@ -1,9 +1,8 @@
-// SettingsControl.Install.Packages.cs: the package rows on the Install tab -- one row per package the
-// build carries, drawn in the shape the canvas gives it.
+// SettingsControl.Updates.Packages.cs: the package rows on the Updates page -- one row per package the build
+// carries, and whether the rig has it.
 //
-// Lifted out of SettingsControl.Install.cs so that the rest of that file stays about the plugin itself,
-// its reinstall and its update check. What a row says and what it counts is in PanelPackageRow.cs, which
-// the test project compiles; this file is the drawing and nothing else.
+// What a row says and what it counts is in PanelPackageRow.cs, which the test project compiles; this file is
+// the drawing and nothing else.
 using System.Collections.Generic;
 using System.Windows;
 
@@ -33,7 +32,7 @@ namespace OpenDashPlugin
             var caption = Ui.Caption(PanelPackageRow.SectionCaption, BodyWidth);
             if (catalogue.Count == 0)
             {
-                return Ui.Section("Screens OpenDash can install",
+                return PageSection(PanelUpdates.PackagesTitle,
                     caption,
                     Ui.Caption("This build of OpenDash ships no dashboards.", BodyWidth));
             }
@@ -42,7 +41,8 @@ namespace OpenDashPlugin
             foreach (var entry in catalogue) rows.Add(BuildPackageRow(entry));
             // The rows go in as one child rather than as a child each: a section holds what it is given
             // twenty apart, and an install row is separated by its own rule and by nothing else.
-            return Ui.Section("Screens OpenDash can install", caption, Ui.VStack(0, rows.ToArray()));
+            caption.Margin = new Thickness(0, 0, 0, 8);
+            return PageSection(PanelUpdates.PackagesTitle, caption, Ui.VStack(0, rows.ToArray()));
         }
 
         private FrameworkElement BuildPackageRow(PackageEntry entry)

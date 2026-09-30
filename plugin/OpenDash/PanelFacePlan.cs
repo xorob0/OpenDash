@@ -78,15 +78,9 @@ namespace OpenDashPlugin
 
         public const double CountChevronSize = 12;
 
-        /// <summary>Between one wheel binding and the next, across and down: they wrap into two columns
-        /// rather than stacking into four rows.</summary>
-        public const double BindingGap = 22;
-
-        /// <summary>The glance is one choice and not two, so it is one select, with its binder beside it
-        /// rather than under a label of its own.</summary>
+        /// <summary>The glance is one choice and not two, so it is one select. (Its binder moved to
+        /// Shortcuts with #503, and the gap it sat at went with it.)</summary>
         public const double GlanceSelectWidth = 200;
-
-        public const double GlanceBinderGap = 12;
 
         private PanelFacePlan(Contract.FaceSize face)
         {
