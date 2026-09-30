@@ -48,7 +48,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_full_build_draws_a_row_per_named_device_and_a_row_per_side_length()
+        public void A_full_build_groups_into_one_group_per_named_device_and_one_per_side_length()
         {
             var rows = PanelLightRows.Rows(FullBuild());
             Assert.Equal(
@@ -363,11 +363,12 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A row reads Outdated while any strip of its shapes that is in SimHub is older than this build,
-        /// and its Update rewrites exactly those.
+        /// A group's plan (the frozen RowPlan) reads Outdated while any strip of its shapes that is in SimHub
+        /// is older than this build, and OutdatedBars names exactly those strips. No page draws the group or
+        /// presses on it; the Updates page's row per strip is PanelUpdatesTests'.
         /// </summary>
         [Fact]
-        public void A_row_reports_an_older_strip_and_its_update_rewrites_only_that_one()
+        public void A_group_s_plan_is_older_while_one_strip_is_and_only_that_strip_is_outdated()
         {
             var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
             var dash = new LedBar { Name = "Dash", Namespace = "LedDash", Shape = "3-12-3" };
@@ -551,7 +552,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_rows_a_real_build_produces_are_the_rows_the_canvas_draws()
+        public void The_embedded_build_falls_into_the_groups_the_generator_emits()
         {
             // The whole census end to end, off the files the plugin actually embeds: the file name gives
             // the shape id and the profile's own Name gives the row its title, as FlagBoxProfile reads them
