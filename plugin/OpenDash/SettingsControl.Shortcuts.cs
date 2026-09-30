@@ -620,7 +620,7 @@ namespace OpenDashPlugin
         {
             var rows = groups.SelectMany(group => group.Rows).ToList();
             var at = rows.IndexOf(from);
-            var near = rows.Skip(at + 1).Concat(rows.Take(Math.Max(0, at)).Reverse());
+            var near = rows.Skip(at + 1).Concat(Enumerable.Reverse(rows.Take(Math.Max(0, at))));
             foreach (var row in near.Where(row => row.Bindable && row.Shown.Visibility == Visibility.Visible))
             {
                 if (row.Row.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)) && row.Row.IsKeyboardFocusWithin) return;

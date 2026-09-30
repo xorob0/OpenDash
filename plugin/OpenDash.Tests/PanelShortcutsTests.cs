@@ -797,6 +797,10 @@ namespace OpenDashPlugin.Tests
             Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
             var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
             Assert.Contains("row.Bindable && row.Shown.Visibility == Visibility.Visible", keep);
+            // Rows after it, then the ones before it nearest first, reversed in the spelling hooks section 0
+            // asks for: SpanOverloadTests cannot see a .Reverse() whose receiver is a call.
+            Assert.Contains("var near = rows.Skip(at + 1).Concat(Enumerable.Reverse(rows.Take(Math.Max(0, at))));", keep);
+            Assert.DoesNotContain(".Reverse()", code);
             Assert.Contains("filter.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));", keep);
         }
 
