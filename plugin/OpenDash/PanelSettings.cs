@@ -40,7 +40,8 @@ namespace OpenDashPlugin
         /// <summary>The unit after the box, or null for a temperature, whose unit is SimHub's.</summary>
         public string Unit { get; private set; }
 
-        /// <summary>What a greyed row's box shows, faded, so the row reads as the setting it will be.</summary>
+        /// <summary>What a greyed row's box holds as its value, in the field's own ink and faded with the row,
+        /// so the row reads as the setting it will be. Not a placeholder: the artboard sets it as the value.</summary>
         public string Example { get; private set; }
 
         public bool HasThreshold { get { return !string.IsNullOrEmpty(Op); } }

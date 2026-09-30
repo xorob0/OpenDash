@@ -627,7 +627,9 @@ namespace OpenDashPlugin
             if (alert.HasThreshold)
             {
                 when.Add(Ui.Caption(alert.Op));
-                when.Add(box ?? SettingsHinted(SettingsNumberField(string.Empty), alert.Example));
+                // A greyed row's example is the box's value, in the field's own ink, as the artboard sets it;
+                // the box is disabled inside the row's Soon, so it cannot be edited.
+                when.Add(box ?? SettingsNumberField(alert.Example ?? string.Empty));
                 var unit = alert.Unit ?? PanelSettings.TemperatureUnit(temperature);
                 if (!string.IsNullOrEmpty(unit)) when.Add(Ui.Caption(unit));
             }
