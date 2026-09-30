@@ -105,7 +105,7 @@ Four more dashboards are not faces for the wheel but second screens, described b
 a ring before 1.0 (#487) -- the rev arc it already has, one zone in the middle of the disc, its card
 rectangles as small zones of their own, and the flag on the ring -- and until that work is done the
 two ship as they are. Of the dashboards the plugin installs they are the only ones set up on the
-Screens page in a Slots section rather than in zones, and they number their slots the left side first, then
+Screens page in a Cards section rather than in zones, and they number their slots the left side first, then
 the right side, then the bottom.
 
 **Every screen keeps its own settings.** A rig with a face on the wheel and another beside it
@@ -254,8 +254,8 @@ nothing to save and no restart.
 | Screens page, a face's Zones | Revbar | On (the car's own shift lights, SimHub's bands where the car publishes none), Off (gives the bar's room back to the zones; pick it if your wheel has shift lights of its own) |
 | Shortcuts page, a face's rows | Zone A to Zone D, next and previous page | the wheel button that cycles that zone |
 | Screens page, a face's Quick glance | Quick glance | the zone and page a held button shows; the button is bound on the Shortcuts page |
-| Screens page, a round face's Slots | Slot 01 to Slot 12 | any of the thirteen cards |
-| Screens page, a round face's Slots | Revbar | On, Off, for every round face at once |
+| Screens page, a round face's Cards | Slot 01 to Slot 12 | any of the thirteen cards |
+| Screens page, a round face's Cards | Revbar | On, Off, for every round screen at once, the phone's speedo, and any screen whose own Revbar you have not set |
 | Screens page, a companion's Modules | Each of the twenty-one modules | on, off; an off module is skipped when you page |
 | Screens page, a pit wall's Zones | Page | Race, Tower, Telemetry |
 | Screens page, a pit wall's Zones | Zones A and B of each page, and C of Telemetry | any of the eleven zone pages |
@@ -269,7 +269,7 @@ nothing to save and no restart.
 | Updates page, This plugin | Reinstall | writes every dashboard on your rig again; your settings are kept |
 
 The same page may sit in two zones at once. The page says so in amber and does not stop you: two
-zones on the relative is a choice, not a mistake. The Slots section says the same of a card
+zones on the relative is a choice, not a mistake. The Cards section says the same of a card
 assigned to two slots of a round face.
 
 The settings are stored by SimHub in `PluginsData\Common\OpenDash.GeneralSettings.json` and are
@@ -291,8 +291,9 @@ the release that gives them zones is the one that will say what happens to the t
 `OpenDash slots <size>` faces that earlier releases published read them as well, four to twelve each,
 so one you installed by hand from such a release is reading the twelve too.
 
-`OpenDash.RevBar` is `shift` or `off`, and it is what the Revbar row of a round face writes; a zone
-face reads its own, `OpenDash.Face1920x480RevBar` on the reference face. A settings file that still
+`OpenDash.RevBar` is `shift` or `off`, and it is what the Revbar row of a round face writes. The round
+faces and the companion's speedo read it; a zone face reads its own, `OpenDash.Face1920x480RevBar` on the
+reference face, once its own Revbar row has been set, and the rig's until then. A settings file that still
 says `rpm`, the plain bar earlier releases offered, reads as `shift`. `OpenDash.ShiftLights` is the
 deprecated alias kept beside it, true only in the `shift` state, so a dashboard or an LED profile
 written against it still reads.

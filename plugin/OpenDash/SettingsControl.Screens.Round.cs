@@ -77,7 +77,7 @@ namespace OpenDashPlugin
             });
             return Ui.Row(
                 PanelDataTab.RevBarTitle,
-                "Applies to every round face on your rig.",
+                PanelScreens.RigRevBarCaption,
                 control);
         }
 

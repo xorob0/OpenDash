@@ -47,7 +47,7 @@ pages say so rather than inventing a file.
 | `/` | which sim, which host, what it costs; find your screen; download |
 | `/screens` | every size, to scale; the anatomy; the companion; the pit wall |
 | `/pages` | the 21 pages, captured; the face's other catalogues |
-| `/lights` | the car's own shift lights, the strip shapes, the flag box, the Lights tab |
+| `/lights` | the car's own shift lights, the strip shapes, the flag box, In the plugin (which page holds what) |
 | `/compare` | openDash beside the two competitors, dated |
 | `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |
 | `/download` | the plugin, what it carries, the release notes |

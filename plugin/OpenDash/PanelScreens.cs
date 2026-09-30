@@ -65,6 +65,16 @@ namespace OpenDashPlugin
         /// "Slots", which search still takes as a keyword.</summary>
         public const string CardsTitle = "Cards";
 
+        /// <summary>
+        /// The caption under the round pane's Revbar, which writes the rig-wide OpenDash.RevBar. It reaches
+        /// further than the round screens: the companion's speedo reads it, and so does every face whose own
+        /// Revbar was never set, since ScreenRevBar falls back to the rig's while a screen's is null and a new
+        /// face starts null. "Applies to every round face on your rig." let a driver turn off the main face's
+        /// rev bar from the round pane unawares; ruling 38's "Every round screen and the phone's speedo." left
+        /// those faces out too.
+        /// </summary>
+        public const string RigRevBarCaption = "Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.";
+
         // Anchors the page's rows carry, so search can scroll to them.
         public const string AnchorCards = "screens.cards";
         public const string AnchorRevBar = "screens.revbar";

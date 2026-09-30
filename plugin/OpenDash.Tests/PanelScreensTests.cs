@@ -239,6 +239,12 @@ namespace OpenDashPlugin.Tests
             // The round pane's heading is the artboard's noun, and "slots" still finds it.
             Assert.Equal("Cards", PanelScreens.CardsTitle);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.CardsTitle && System.Array.IndexOf(entry.Keywords, "slots") >= 0);
+            // The round pane's Revbar writes the rig-wide setting, and its caption names everything that
+            // follows it: the round screens, the phone's speedo, and a face that never set its own.
+            Assert.Equal("Every round screen, the phone's speedo, and any screen whose own Revbar you have not set.", PanelScreens.RigRevBarCaption);
+            var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
+            Assert.Contains("PanelScreens.RigRevBarCaption,", round);
+            Assert.Contains("Settings.SetRevBar(value);", round);
             // The card's states, the header's Duplicate, and the fix box under a screen that is gone, whose
             // detail is Home's too.
             Assert.Equal("In SimHub", PanelScreens.InSimHub);
