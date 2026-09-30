@@ -146,9 +146,11 @@ namespace OpenDashPlugin
                         Save();
                     });
                 // #369: one switch, the car's own rev lights or not. On writes the car's own style and off the
-                // plain left-to-right ladder, each through the contract's style set, so nothing the contract
-                // has retired can be written; a strip carrying a retired style has been normalised to left to
-                // right and reads as off.
+                // plain left-to-right ladder. Those two literals are what keep a retired style from being
+                // written: the contract's set still holds meetInMiddle and f1 so an old file reads, and the
+                // NormaliseChoice through it returns either value unchanged. The set is named so the panel
+                // writes against the contract's list in view (contract.test.ts pins it). A strip carrying a
+                // retired style has been normalised to left to right and reads as off.
                 var style = BuildToggle(Settings.BarRpmStyle(ns) == Contract.LedRpmStyleCar, on =>
                 {
                     var live = Settings.LedBarByNamespace(ns);
@@ -502,7 +504,7 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => CloseSheet();
             ShowSheet("Rename " + bar.Name,
                 Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name),
-                SheetFooter("Install the strip again to rename it in SimHub.", cancel, save));
+                SheetFooter(null, cancel, save));
         }
 
     }

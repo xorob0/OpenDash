@@ -388,16 +388,31 @@ namespace OpenDashPlugin
         /// profile and a panel is a content number inside one. The sentence therefore names the profile
         /// the driver is to select, and says whose name is on it, rather than leaving them to search
         /// SimHub's list for the name they just typed.
+        ///
+        /// When SimHub has no copy, the sentence sends the driver where the top of the Matrix page can help
+        /// in that state: its Install for a profile SimHub lacks, the copy to import by hand when SimHub's
+        /// matrix settings could not be reached (its Install is disabled then), and nowhere when this build
+        /// has no profile at all (the page says so, and has nothing to install).
         /// </remarks>
         public static string PanelAdded(string name, int matrix, string profile, FlagBoxInstallState state)
         {
             var known = state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
             var where = "Added " + name + ". It is " + PanelSlot(matrix) + ": pick that content number on the device";
-            return known
-                ? where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
-                    + " SimHub's list carries its name rather than yours."
-                : where + ". \"" + profile + "\" is the profile that paints it, and SimHub has not got it:"
-                    + " install it at the top of this page.";
+            if (known)
+            {
+                return where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
+                    + " SimHub's list carries its name rather than yours.";
+            }
+            var paints = where + ". \"" + profile + "\" is the profile that paints it, ";
+            switch (state)
+            {
+                case FlagBoxInstallState.NotEmbedded:
+                    return paints + "and this build has none to install, so the panel stays dark.";
+                case FlagBoxInstallState.Unavailable:
+                    return paints + "and SimHub's matrix settings could not be reached: import it by hand from the top of this page.";
+                default:
+                    return paints + "and SimHub has not got it: install it at the top of this page.";
+            }
         }
 
         /// <summary>Whether <see cref="PanelAdded"/> is asking for something to be done before the panel

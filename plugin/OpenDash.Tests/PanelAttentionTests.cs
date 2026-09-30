@@ -143,13 +143,15 @@ namespace OpenDashPlugin.Tests
             var outdated = PanelAttention.Find(input).Single();
             Assert.Equal(PanelLeds.StripUpdateRoute.Page, outdated.Page);
             Assert.Equal(PanelLeds.StripUpdateRoute.Anchor, outdated.Anchor);
-            Assert.Equal("Update it to the version this OpenDash carries.", outdated.Detail);
+            // The title and the press say it all; the detail described the plugin's mechanism.
+            Assert.Null(outdated.Detail);
             Assert.Equal("Open " + PanelNav.Label(PanelLeds.StripUpdateRoute.Page), outdated.ActionLabel);
             Assert.Equal("Open Updates", outdated.ActionLabel);
             Assert.True(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
             input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });
             Assert.Equal("OpenDash Flag box has an update", PanelAttention.Find(input).Last().Title);
             Assert.Equal("Open Matrix", PanelAttention.Find(input).Last().ActionLabel);
+            Assert.Null(PanelAttention.Find(input).Last().Detail);
         }
 
         [Fact]

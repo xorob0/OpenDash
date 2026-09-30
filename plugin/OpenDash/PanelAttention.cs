@@ -229,7 +229,7 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     StripOutdated + strip.Namespace, route.Page, strip.Namespace,
                     strip.Name + "'s profile has an update",
-                    OutdatedDetail,
+                    null,
                     null, Open(PanelNav.Label(route.Page)), PanelIssueAction.Navigate, route.Anchor));
             }
             if (matrices.Count > 0 && input.FlagBox == FlagBoxInstallState.Outdated)
@@ -238,7 +238,7 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     FlagBoxOutdated, PanelPage.Matrix, null,
                     name + " has an update",
-                    OutdatedDetail,
+                    null,
                     null, Open(PanelMatrix.Title), PanelIssueAction.Navigate));
             }
 
@@ -297,7 +297,9 @@ namespace OpenDashPlugin
 
         public const string InstallAgain = "Install it again";
         public const string CheckAgain = "Check again";
-        public const string OutdatedDetail = "Update it to the version this OpenDash carries.";
+        // An outdated profile's issue has no detail: its title says there is an update and its press says
+        // where the Update is. "Update it to the version this OpenDash carries." described the mechanism, a
+        // newer profile inside the plugin, which 8a410ed took out of DuplicateFailed for the same reason.
 
         /// <summary>
         /// Under a screen whose dashboard is gone, on Home and in the Screens page's fix box alike. Only what
