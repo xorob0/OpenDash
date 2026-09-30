@@ -165,34 +165,54 @@ namespace OpenDashPlugin
         /// <summary>
         /// What Home says after Check again, from the issues and the strip's facts as SimHub gave them the second
         /// time: what is still to fix, in the caution's ink; that the profile is selected, only when SimHub said
-        /// so; what the strip's row now says when the profile is no longer there; and otherwise that SimHub could
-        /// not be asked.
+        /// so; the step that is left when the profile is no longer installed; and otherwise what could not be
+        /// read, in the words the other pages use for it.
         /// </summary>
         /// <remarks>
-        /// An issue also goes from the list when a fact could not be read: the device was unplugged, SimHub's
-        /// LED settings were out of reach, or working the list out failed. Saying "fixed" then would tell a
-        /// driver who changed nothing that the problem is gone, so only a read of Selected == true on an
-        /// installed profile says it.
+        /// An issue also goes from the list when a fact could not be read: SimHub's LED settings were out of
+        /// reach, the strip's device is not in SimHub's device list, or the selection could not be read.
+        /// Saying "fixed" then would tell a driver who changed nothing that the problem is gone, so only a
+        /// read of Selected == true on an installed profile says it. A profile that failed to install reads as
+        /// one that is not installed, as the LEDs card reads it: Check again installs nothing, so "failed"
+        /// would report an install nobody tried.
         /// </remarks>
         /// <param name="strip">What was read about the issue's strip the second time, or null.</param>
         public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after, AttentionStrip strip)
         {
             var still = before == null ? null : PanelAttention.Of(after, before.Id, null);
             if (still != null) return PanelMessage.Caution(Checked + still.Title + ".");
-            if (strip == null || string.IsNullOrWhiteSpace(strip.Name)) return PanelMessage.Caution(CheckedUnknown);
-            var name = strip.Name.Trim();
-            var installed = strip.Profile == FlagBoxInstallState.UpToDate || strip.Profile == FlagBoxInstallState.Outdated;
-            if (installed && strip.Selected == true) return PanelMessage.Info(Checked + name + CheckedSelected);
-            if (strip.Profile == FlagBoxInstallState.NotInstalled) return PanelMessage.Caution(Checked + name + CheckedNotInstalled);
-            if (strip.Profile == FlagBoxInstallState.Failed) return PanelMessage.Caution(Checked + name + CheckedFailed);
-            return PanelMessage.Caution(CheckedUnknown);
+            var profile = strip == null ? null : strip.Profile;
+            var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            var missing = profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed;
+            // SimHub's LED settings could not be read, or say nothing about this strip's profile.
+            if (!installed && !missing) return PanelMessage.Caution(Checked + PanelLightRows.Unavailable);
+            var name = string.IsNullOrWhiteSpace(strip.Name) ? ThisStrip : strip.Name.Trim();
+            if (missing) return PanelMessage.Info(Checked + name + CheckedNotInstalled);
+            if (strip.Selected == true) return PanelMessage.Info(Checked + name + CheckedSelected);
+            if (strip.Selected == false) return PanelMessage.Caution(Checked + name + CheckedNotSelected);
+            if (string.IsNullOrWhiteSpace(strip.DeviceName)) return PanelMessage.Caution(Checked + name + CheckedNoDevice);
+            return PanelMessage.Caution(Checked + CheckedUnread + name + CheckedUnreadTail);
         }
 
         public const string Checked = "Checked again. ";
         public const string CheckedSelected = "'s profile is selected.";
-        public const string CheckedNotInstalled = "'s profile is not installed.";
-        public const string CheckedFailed = "'s profile failed to install.";
-        public const string CheckedUnknown = "Checked again. SimHub could not be asked.";
+
+        /// <summary>The step that is left, named where it is taken (voice.md, Messages).</summary>
+        public const string CheckedNotInstalled = "'s profile is not installed. Install it on the LEDs page.";
+
+        public const string CheckedNotSelected = "'s profile is not selected.";
+
+        /// <summary>The strip's device is not in SimHub's list of LED devices, so SimHub was asked and has no
+        /// device to read the selection from.</summary>
+        public const string CheckedNoDevice = "'s LED device is not in SimHub.";
+
+        /// <summary>The device is there and its selection could not be read, which SimHub's log has the
+        /// reason for (SettingsControl.Status.cs writes it).</summary>
+        public const string CheckedUnread = "SimHub could not say whether ";
+        public const string CheckedUnreadTail = "'s profile is selected. See SimHub's log.";
+
+        /// <summary>A strip with no name, which a hand-edited settings file can leave.</summary>
+        public const string ThisStrip = "This strip";
 
         // --- Right now: screens ----------------------------------------------------------------------------
 
@@ -340,17 +360,19 @@ namespace OpenDashPlugin
 
         // --- Right now: LEDs -------------------------------------------------------------------------------
 
-        /// <summary>The #369 switch's noun: the car's own rev lights, never just "lights".</summary>
-        public const string CarLightsLine = "Car's own rev lights";
+        /// <summary>The #369 switch's noun, read from the switch itself (voice ruling 6): the car's own rev
+        /// lights, never just "lights", and renamed with the switch if it is.</summary>
+        public const string CarLightsLine = PanelLeds.CarRevLightsTitle;
 
-        // A strip's state, in the LEDs cards' words (Leds.dc.html): one word per thing, so a strip reads the
-        // same on Home as on its card. Copied here until the LEDs page's PanelLeds.StateText lands.
+        // A strip's state. Showing, Not selected in SimHub and Update available are the LEDs cards' words
+        // (Leds.dc.html), copied here until the LEDs page's PanelLeds.StateText lands; Installed and Not
+        // installed are PanelCopy's, which the Updates page's rows say too. A failed install reads as Not
+        // installed, as the LEDs card reads it.
         public const string StripShowing = "Showing";
         public const string StripNotSelected = "Not selected in SimHub";
         public const string StripUpdateAvailable = "Update available";
         public const string StripInstalled = PanelCopy.Installed;
         public const string StripNotInstalled = PanelCopy.NotInstalled;
-        public const string StripInstallFailed = PanelCopy.InstallFailed;
 
         /// <summary>The ends and the centre a strip is drawn with. A shape the panel cannot read is drawn as the
         /// Rig page draws it, 3/9/3.</summary>
@@ -404,13 +426,13 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Amber only where the attention card has a row for it (StripUnselected, StripOutdated), so an amber
         /// line never sits under "Nothing to fix". A profile that is not installed is the LEDs card's Install
-        /// press, in the secondary ink, and one that failed to install is in the failed ink; neither has a dot.
-        /// The green dot is for a selection SimHub reported, never for one nobody could read.
+        /// press, in the secondary ink and with no dot; a failed install is one that is not installed, since
+        /// nothing Home reads ever says Failed and the LEDs card says Not installed for it. The green dot is
+        /// for a selection SimHub reported, never for one nobody could read.
         /// </remarks>
         public static HomeLine StripLine(bool live, string carName, FlagBoxInstallState? profile, bool? selected)
         {
-            if (profile == FlagBoxInstallState.NotInstalled) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
-            if (profile == FlagBoxInstallState.Failed) return new HomeLine(StripInstallFailed, Theme.StatusFailed, null);
+            if (profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
             var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
             if (installed && selected == false) return new HomeLine(StripNotSelected, Theme.Caution, Theme.Caution);
             if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripUpdateAvailable, Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
@@ -501,8 +523,6 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(Title, PanelPage.Home, null, "things to fix", "nothing to fix", "attention", "problem", "warning"),
             new PanelSearch.Entry(RightNowTitle, PanelPage.Home, AnchorRightNow, "live", "showing"),
             new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness", "night mode"),
-            new PanelSearch.Entry(PanelSettings.BrightnessTitle, PanelPage.Home, AnchorQuickControls, "lights", "leds", "dim"),
-            new PanelSearch.Entry(PanelSettings.NightBrightnessTitle, PanelPage.Home, AnchorQuickControls, "night", "dim"),
             new PanelSearch.Entry(PanelSettings.NightModeTitle, PanelPage.Home, AnchorQuickControls, "dark", "dim"),
             new PanelSearch.Entry(TryTitle, PanelPage.Home, AnchorQuickControls, "try", "emulate", "rig"),
         };
@@ -511,12 +531,10 @@ namespace OpenDashPlugin
         /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
         public static readonly SoonItem[] SoonDrawn = new SoonItem[0];
 
-        /// <summary>Search labels this page draws through something other than the constant: the slider's label,
-        /// which is whichever brightness is in force (BrightnessLabel).</summary>
-        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>
-        {
-            { PanelSettings.BrightnessTitle, "PanelHome.BrightnessLabel(" },
-            { PanelSettings.NightBrightnessTitle, "PanelHome.BrightnessLabel(" },
-        };
+        /// <summary>Search labels this page draws through something other than the constant: none. The slider's
+        /// label is whichever brightness is in force (BrightnessLabel), so neither brightness is a Home entry: a
+        /// result is labelled by what it lands on, and a fixed "Night brightness · Home" would land on the day
+        /// slider by day. Settings lists both, on the page that draws both; Quick controls carries the word.</summary>
+        public static readonly IReadOnlyDictionary<string, string> SearchDrawnOtherwise = new Dictionary<string, string>();
     }
 }

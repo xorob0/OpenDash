@@ -37,16 +37,18 @@ namespace OpenDashPlugin.Tests
                 PanelHome.Title,
                 PanelHome.RightNowTitle,
                 PanelHome.QuickControlsTitle,
-                PanelSettings.BrightnessTitle,
-                PanelSettings.NightBrightnessTitle,
                 PanelSettings.NightModeTitle,
                 PanelHome.TryTitle,
             }, labels);
             Assert.Equal(labels.Count, labels.Distinct().Count());
             Assert.All(PanelHome.Search.Skip(3), entry => Assert.Equal(PanelHome.AnchorQuickControls, entry.Route.Anchor));
-            // The slider's label is whichever brightness is in force, so it is drawn through BrightnessLabel.
-            Assert.Equal("PanelHome.BrightnessLabel(", PanelHome.SearchDrawnOtherwise[PanelSettings.BrightnessTitle]);
-            Assert.Equal("PanelHome.BrightnessLabel(", PanelHome.SearchDrawnOtherwise[PanelSettings.NightBrightnessTitle]);
+            // The slider's label is whichever brightness is in force, so neither brightness is a Home entry: a
+            // fixed one would land on the other brightness's slider half the time. Settings lists both, and
+            // Quick controls carries the word.
+            Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == PanelSettings.BrightnessTitle || entry.Label == PanelSettings.NightBrightnessTitle);
+            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelSettings.BrightnessTitle);
+            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelSettings.NightBrightnessTitle);
+            Assert.Empty(PanelHome.SearchDrawnOtherwise);
             Assert.Empty(PanelHome.SoonDrawn);
         }
 
@@ -58,8 +60,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "things to fix", "nothing to fix", "attention", "problem", "warning" }, keywords(PanelHome.Title));
             Assert.Equal(new[] { "live", "showing" }, keywords(PanelHome.RightNowTitle));
             Assert.Equal(new[] { "brightness", "night mode" }, keywords(PanelHome.QuickControlsTitle));
-            Assert.Equal(new[] { "lights", "leds", "dim" }, keywords(PanelSettings.BrightnessTitle));
-            Assert.Equal(new[] { "night", "dim" }, keywords(PanelSettings.NightBrightnessTitle));
             Assert.Equal(new[] { "dark", "dim" }, keywords(PanelSettings.NightModeTitle));
             Assert.Equal(new[] { "try", "emulate", "rig" }, keywords(PanelHome.TryTitle));
         }
@@ -148,6 +148,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(HomePress.Go, PanelHome.Press(Issue(PanelAttention.ScreensUnclaimed, PanelPage.Screens, null, PanelIssueAction.Navigate)));
             Assert.Equal(HomePress.Go, PanelHome.Press(Issue(PanelAttention.UpdateRestart, PanelPage.Updates, null, PanelIssueAction.Navigate)));
             Assert.Equal(HomePress.Go, PanelHome.Press(null));
+            // Check again asks SimHub about the whole rig, so it needs no subject.
+            Assert.Equal(HomePress.CheckAgain, PanelHome.Press(Issue(PanelAttention.StripUnselected + "x", PanelPage.Leds, null, PanelIssueAction.CheckAgain)));
         }
 
         [Fact]
@@ -157,15 +159,15 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelHome.PressBeside(false));
         }
 
-        private static AttentionStrip Brow(FlagBoxInstallState? profile, bool? selected)
+        private static AttentionStrip Brow(FlagBoxInstallState? profile, bool? selected, string device = "Wheel")
         {
-            return new AttentionStrip { Name = "Dash brow", Namespace = "LedBar1", Profile = profile, Selected = selected };
+            return new AttentionStrip { Name = "Dash brow", Namespace = "LedBar1", DeviceName = device, Profile = profile, Selected = selected };
         }
 
         /// <summary>
         /// Check again says the profile is selected only when SimHub said so. An issue also leaves the list when
-        /// a fact could not be read -- the device unplugged, SimHub's LED settings out of reach, the list failing
-        /// to work out -- and then nothing is claimed fixed.
+        /// a fact could not be read, and then nothing is claimed fixed: each unread fact is said in the words the
+        /// other pages use for it, and the log is pointed at only where a warning was written.
         /// </summary>
         [Fact]
         public void Check_again_says_fixed_only_when_SimHub_says_it_is()
@@ -182,27 +184,55 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelTone.Info, selected.Tone);
             Assert.Equal(PanelTone.Info, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Outdated, true)).Tone);
 
-            // The profile is gone from SimHub: the row now says Not installed, and so does the line.
+            // The profile is gone from SimHub: the step that is left, where it is taken, and not in the caution's
+            // ink. A failed install reads the same, since Check again installs nothing.
             var deleted = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotInstalled, null));
-            Assert.Equal("Checked again. Dash brow's profile is not installed.", deleted.Text);
-            Assert.Equal(PanelTone.Caution, deleted.Tone);
-            Assert.Equal("Checked again. Dash brow's profile failed to install.", PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Failed, null)).Text);
+            Assert.Equal("Checked again. Dash brow's profile is not installed. Install it on the LEDs page.", deleted.Text);
+            Assert.Equal(PanelTone.Info, deleted.Tone);
+            Assert.Equal(deleted.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Failed, null)).Text);
 
-            // Nothing SimHub said confirms it: the device could not be read, LED settings were out of reach, or
-            // working the list out failed and left no facts at all.
-            var unknown = new[]
+            // SimHub's LED settings could not be read, or said nothing of the profile: the Updates page's words.
+            var unavailable = new[]
             {
-                PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null)),
                 PanelHome.CheckedAgain(before, none, Brow(null, true)),
                 PanelHome.CheckedAgain(before, none, Brow(null, null)),
+                PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Unavailable, null)),
+                PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotEmbedded, null)),
                 PanelHome.CheckedAgain(before, none, null),
                 PanelHome.CheckedAgain(null, none, null),
             };
-            Assert.All(unknown, message =>
+            Assert.All(unavailable, message =>
             {
-                Assert.Equal("Checked again. SimHub could not be asked.", message.Text);
+                Assert.Equal("Checked again. SimHub's LED settings are not available.", message.Text);
+                Assert.Equal("Checked again. " + PanelLightRows.Unavailable, message.Text);
                 Assert.Equal(PanelTone.Caution, message.Tone);
             });
+
+            // SimHub answered, and has no such device to read the selection from.
+            var gone = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null, null));
+            Assert.Equal("Checked again. Dash brow's LED device is not in SimHub.", gone.Text);
+            Assert.Equal(PanelTone.Caution, gone.Tone);
+            // The device is there and its selection could not be read, which is logged.
+            var unread = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null));
+            Assert.Equal("Checked again. SimHub could not say whether Dash brow's profile is selected. See SimHub's log.", unread.Text);
+            Assert.Equal(PanelTone.Caution, unread.Tone);
+            // A read of "not selected" with no issue left says so rather than calling it fixed.
+            Assert.Equal("Checked again. Dash brow's profile is not selected.", PanelHome.CheckedAgain(null, none, Brow(FlagBoxInstallState.UpToDate, false)).Text);
+
+            // A strip with no name is still named.
+            var blank = new AttentionStrip { Name = " ", Namespace = "LedBar1", DeviceName = "Wheel", Profile = FlagBoxInstallState.UpToDate, Selected = true };
+            Assert.Equal("Checked again. This strip's profile is selected.", PanelHome.CheckedAgain(before, none, blank).Text);
+            blank.Name = " Dash brow ";
+            Assert.Equal("Checked again. Dash brow's profile is selected.", PanelHome.CheckedAgain(before, none, blank).Text);
+
+            // No sentence says "failed", which is for something that failed.
+            foreach (var profile in Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>())
+            {
+                foreach (var pick in new bool?[] { null, true, false })
+                {
+                    Assert.DoesNotContain("fail", PanelHome.CheckedAgain(before, none, Brow(profile, pick)).Text, StringComparison.OrdinalIgnoreCase);
+                }
+            }
         }
 
         // --- Right now: screens ------------------------------------------------------------------------------
@@ -225,6 +255,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Lap times · Gear, speed, revs · Relative · Fuel", PanelHome.ScreenShows(new OpenDashSettings(), face));
             face.Face.Zones[Array.IndexOf(Contract.FaceZoneLetters, "A")] = 1;
             Assert.Equal("Lap times · Gear alone · Relative · Fuel", PanelHome.ScreenShows(new OpenDashSettings(), face));
+            // A copy of a screen with no zones of its own reads the rig's screen of the same namespace, and one
+            // at a size no face ships is drawn at the reference face.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            var held = Screen(Contract.KindFace, 1280, 480);
+            held.Face.Zones[Array.IndexOf(Contract.FaceZoneLetters, "A")] = 1;
+            settings.Rig.Add(held);
+            var copy = Screen(Contract.KindFace, 1280, 480);
+            copy.Face = null;
+            Assert.Equal("Lap times · Gear alone · Relative · Fuel", PanelHome.ScreenShows(settings, copy));
+            Assert.Equal(string.Empty, PanelHome.ScreenShows(null, copy));
+            var odd = Screen(Contract.KindFace, 1000, 500);
+            Assert.Null(odd.FaceSize);
+            Assert.Equal(string.Join(PanelHome.Separator, PanelFacePlan.ZoneOrder(Contract.ReferenceFace).Select(letter => FacePages.NameOf(letter, odd.Face.Zone(letter)))),
+                PanelHome.ScreenShows(new OpenDashSettings(), odd));
+            Assert.NotEqual(string.Empty, PanelHome.ScreenShows(new OpenDashSettings(), odd));
             // A portrait face draws its body as a column, A first.
             var portrait = Screen(Contract.KindFace, 600, 686);
             Assert.StartsWith("Gear, speed, revs · Lap times · ", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
@@ -262,6 +307,9 @@ namespace OpenDashPlugin.Tests
             var some = new bool[Modules.Count];
             some[0] = some[4] = some[16] = true;
             Assert.Equal("3 of 21 modules", PanelHome.ModulesLine(some));
+            // A rotation longer than the catalogue, as an older settings file can carry, counts the catalogue's.
+            var longer = Enumerable.Repeat(true, Modules.Count + 4).ToArray();
+            Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(longer));
             var phone = Screen(Contract.KindCompanion, 1080, 2400);
             // A new companion's rotation is Contract.DefaultModules: the catalogue without the three it leaves off.
             Assert.Equal("18 of 21 modules", PanelHome.ScreenShows(new OpenDashSettings(), phone));
@@ -319,6 +367,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelHome.SlotsRead(800, 800));
             Assert.Equal(0, PanelHome.SlotsRead(0, 0));
             Assert.All(PanelHome.SlotFaces, face => Assert.InRange(face[2], 1, Contract.SlotCount));
+            // And the other way: no row here that the manifest does not pin.
+            Assert.All(PanelHome.SlotFaces, face => Assert.Contains(pinned, p => p[0] == face[0] && p[1] == face[1] && p[2] == face[2]));
         }
 
         /// <summary>What SimHub is missing outranks what the screen shows, in the Screens cards' own words and
@@ -388,6 +438,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("15", PanelHome.StripShape(new LedBar { Shape = "0-15-0" }));
             Assert.Equal("3 · 9 · 3", PanelHome.StripShape(new LedBar { Shape = PanelLights.FanatecShapeId }));
             Assert.Equal(string.Empty, PanelHome.StripShape(new LedBar()));
+            // An id the panel cannot read is written as the Updates page writes it, never dropped.
+            Assert.Equal(PanelLightRows.ShapeLabel("x"), PanelHome.StripShape(new LedBar { Shape = "x" }));
+            Assert.NotEqual(string.Empty, PanelHome.StripShape(new LedBar { Shape = "x" }));
         }
 
         /// <summary>
@@ -408,6 +461,10 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.UpToDate, false));
             Assert.False(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.NotInstalled, null));
             Assert.False(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.Failed, null));
+            // An update waiting, or SimHub not saying, does not stop the car's own lights.
+            Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.Outdated, true));
+            Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.Unavailable, true));
+            Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.NotEmbedded, true));
         }
 
         private static void Line(HomeLine line, string text, string textHex, string dotHex)
@@ -426,6 +483,9 @@ namespace OpenDashPlugin.Tests
         {
             Line(PanelHome.StripLine(true, "Porsche 911 GT3 R (992)", FlagBoxInstallState.UpToDate, true), "Car's own rev lights · Porsche 911 GT3 R (992)", Theme.TextSecondary, Theme.StatusUpToDate);
             Line(PanelHome.StripLine(true, " ", FlagBoxInstallState.UpToDate, true), "Car's own rev lights", Theme.TextSecondary, Theme.StatusUpToDate);
+            Line(PanelHome.StripLine(true, " Porsche ", FlagBoxInstallState.UpToDate, true), "Car's own rev lights · Porsche", Theme.TextSecondary, Theme.StatusUpToDate);
+            // The #369 switch's own noun, read from the switch.
+            Assert.Equal(PanelLeds.CarRevLightsTitle, PanelHome.CarLightsLine);
             // Live, but nobody could read the selection: the car's lights, and no dot.
             Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.UpToDate, null), "Car's own rev lights · Car", Theme.TextSecondary, null);
             Line(PanelHome.StripLine(true, "Car", null, null), "Car's own rev lights · Car", Theme.TextSecondary, null);
@@ -438,10 +498,11 @@ namespace OpenDashPlugin.Tests
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, true), "Showing", Theme.TextSecondary, Theme.StatusUpToDate);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, null), "Installed", Theme.TextSecondary, null);
 
-            // Not there: the LEDs card's Install press, in the secondary ink; a failed install in the failed ink.
+            // Not there: the LEDs card's Install press, in the secondary ink. A failed install is one that is not
+            // installed, as the LEDs card says it: nothing Home reads ever reports Failed.
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotInstalled, null), "Not installed", Theme.TextSecondary, null);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotInstalled, false), "Not installed", Theme.TextSecondary, null);
-            Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Failed, null), "Install failed", Theme.StatusFailed, null);
+            Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Failed, null), "Not installed", Theme.TextSecondary, null);
 
             // SimHub could not be asked, or this build carries no profile: nothing is said, and no dot.
             Line(PanelHome.StripLine(false, null, null, null), string.Empty, Theme.TextSecondary, null);
@@ -452,7 +513,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(PanelCopy.Installed, PanelHome.StripInstalled);
             Assert.Equal(PanelCopy.NotInstalled, PanelHome.StripNotInstalled);
-            Assert.Equal(PanelCopy.InstallFailed, PanelHome.StripInstallFailed);
+            Assert.Null(typeof(PanelHome).GetField("StripInstallFailed"));
         }
 
         /// <summary>
@@ -495,6 +556,9 @@ namespace OpenDashPlugin.Tests
             Line(PanelHome.MatrixLine(1, null, "gear", null), "Matrix 1 · Gear", Theme.TextSecondary, null);
             Assert.Equal("Matrix 3 · Dark", PanelHome.MatrixLine(3, "Pit board", "dark", null).Text);
             Assert.Equal("Dark", PanelHome.MatrixLine(3, "Matrix 3", "dark", null).Text);
+            // Only its own name, exactly: a name that differs in case is the driver's, and keeps the number.
+            Assert.Equal("Matrix 3 · Dark", PanelHome.MatrixLine(3, "matrix 3", "dark", null).Text);
+            Assert.Equal("Dark", PanelHome.MatrixLine(3, " Matrix 3 ", "dark", null).Text);
             Assert.Equal(Theme.StatusUpToDate, PanelHome.MatrixLine(1, "Matrix 1", "gear", true).DotHex);
             Line(PanelHome.MatrixLine(2, "Pit board", "gear", false), "Matrix 2 · Not shown in SimHub", Theme.Caution, Theme.Caution);
             Line(PanelHome.MatrixLine(2, "Matrix 2", "gear", false), "Not shown in SimHub", Theme.Caution, Theme.Caution);
