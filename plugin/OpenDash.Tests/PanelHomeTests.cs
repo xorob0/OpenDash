@@ -185,9 +185,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelTone.Info, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Outdated, true)).Tone);
 
             // The profile is gone from SimHub: the step that is left, where it is taken, and not in the caution's
-            // ink. A failed install reads the same, since Check again installs nothing.
+            // ink. A failed install reads the same, since Check again installs nothing. A result and its step
+            // are two sentences, the ceiling, so "Checked again." goes.
             var deleted = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotInstalled, null));
-            Assert.Equal("Checked again. Dash brow's profile is not installed. Install it on the LEDs page.", deleted.Text);
+            Assert.Equal("Dash brow's profile is not installed. Install it on the LEDs page.", deleted.Text);
             Assert.Equal(PanelTone.Info, deleted.Tone);
             Assert.Equal(deleted.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Failed, null)).Text);
 
@@ -208,22 +209,54 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(PanelTone.Caution, message.Tone);
             });
 
-            // SimHub answered, and has no such device to read the selection from.
+            // SimHub answered, and has no such device to read the selection from: the LEDs page's fact, and its
+            // step, where it is taken, in the "SimHub device" of that page and never the old "LED device".
             var gone = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null, null));
-            Assert.Equal("Checked again. Dash brow's LED device is not in SimHub.", gone.Text);
+            Assert.Equal("SimHub does not list Dash brow's device. Choose one on the LEDs page.", gone.Text);
             Assert.Equal(PanelTone.Caution, gone.Tone);
+            // Removing the device takes its profiles with it, so the profile reads as not installed too; the
+            // device comes first, since the LEDs page has no Install for a strip whose device is not listed.
+            Assert.Equal(gone.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.NotInstalled, null, null)).Text);
+            Assert.Equal(gone.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.Failed, null, " ")).Text);
+            Assert.Equal(gone.Text, PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, true, null)).Text);
             // The device is there and its selection could not be read, which is logged.
             var unread = PanelHome.CheckedAgain(before, none, Brow(FlagBoxInstallState.UpToDate, null));
-            Assert.Equal("Checked again. SimHub could not say whether Dash brow's profile is selected. See SimHub's log.", unread.Text);
+            Assert.Equal("Dash brow's selection could not be read. See SimHub's log.", unread.Text);
             Assert.Equal(PanelTone.Caution, unread.Tone);
-            // A read of "not selected" with no issue left says so rather than calling it fixed.
-            Assert.Equal("Checked again. Dash brow's profile is not selected.", PanelHome.CheckedAgain(null, none, Brow(FlagBoxInstallState.UpToDate, false)).Text);
+            // A read of "not selected" with no issue left says so rather than calling it fixed, in the caution's ink.
+            var notSelected = PanelHome.CheckedAgain(null, none, Brow(FlagBoxInstallState.UpToDate, false));
+            Assert.Equal("Checked again. Dash brow's profile is not selected.", notSelected.Text);
+            Assert.Equal(PanelTone.Caution, notSelected.Tone);
 
-            // A strip with no name is still named.
+            // A strip with no name is still named, capitalised only where the name starts the sentence.
             var blank = new AttentionStrip { Name = " ", Namespace = "LedBar1", DeviceName = "Wheel", Profile = FlagBoxInstallState.UpToDate, Selected = true };
             Assert.Equal("Checked again. This strip's profile is selected.", PanelHome.CheckedAgain(before, none, blank).Text);
+            blank.Selected = null;
+            Assert.Equal("This strip's selection could not be read. See SimHub's log.", PanelHome.CheckedAgain(before, none, blank).Text);
+            blank.Profile = FlagBoxInstallState.NotInstalled;
+            Assert.Equal("This strip's profile is not installed. Install it on the LEDs page.", PanelHome.CheckedAgain(before, none, blank).Text);
+            blank.DeviceName = null;
+            Assert.Equal("SimHub does not list this strip's device. Choose one on the LEDs page.", PanelHome.CheckedAgain(before, none, blank).Text);
             blank.Name = " Dash brow ";
+            blank.DeviceName = "Wheel";
+            blank.Profile = FlagBoxInstallState.UpToDate;
+            blank.Selected = true;
             Assert.Equal("Checked again. Dash brow's profile is selected.", PanelHome.CheckedAgain(before, none, blank).Text);
+
+            // Two sentences at most, and "Checked again." only before a single one.
+            foreach (var profile in new FlagBoxInstallState?[] { null }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>()))
+            {
+                foreach (var pick in new bool?[] { null, true, false })
+                {
+                    foreach (var device in new[] { "Wheel", null })
+                    {
+                        var text = PanelHome.CheckedAgain(before, none, Brow(profile, pick, device)).Text;
+                        var sentences = Regex.Matches(text, @"\.( |$)").Count;
+                        Assert.InRange(sentences, 1, 2);
+                        if (text.StartsWith(PanelHome.Checked, StringComparison.Ordinal)) Assert.Equal(2, sentences);
+                    }
+                }
+            }
 
             // No sentence says "failed", which is for something that failed.
             foreach (var profile in Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>())

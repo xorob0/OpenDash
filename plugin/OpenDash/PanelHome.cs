@@ -180,16 +180,18 @@ namespace OpenDashPlugin
         /// <summary>
         /// What Home says after Check again, from the issues and the strip's facts as SimHub gave them the second
         /// time: what is still to fix, in the caution's ink; that the profile is selected, only when SimHub said
-        /// so; the step that is left when the profile is no longer installed; and otherwise what could not be
-        /// read, in the words the other pages use for it.
+        /// so; and otherwise what could not be read or is left, with the step that is left, where it is taken.
         /// </summary>
         /// <remarks>
         /// An issue also goes from the list when a fact could not be read: SimHub's LED settings were out of
         /// reach, the strip's device is not in SimHub's device list, or the selection could not be read.
         /// Saying "fixed" then would tell a driver who changed nothing that the problem is gone, so only a
-        /// read of Selected == true on an installed profile says it. A profile that failed to install reads as
-        /// one that is not installed, as the LEDs card reads it: Check again installs nothing, so "failed"
-        /// would report an install nobody tried.
+        /// read of Selected == true on an installed profile says it. A device SimHub no longer lists comes
+        /// before the profile: removing a device takes its profiles with it, so the profile then reads as not
+        /// installed, and the LEDs page offers no Install for a strip whose device is not listed. A profile
+        /// that failed to install reads as one that is not installed, as the LEDs card reads it: Check again
+        /// installs nothing, so "failed" would report an install nobody tried. A result with its step is
+        /// two sentences and drops "Checked again.", which two is the ceiling for (voice.md).
         /// </remarks>
         /// <param name="strip">What was read about the issue's strip the second time, or null.</param>
         public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after, AttentionStrip strip)
@@ -201,12 +203,20 @@ namespace OpenDashPlugin
             var missing = profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed;
             // SimHub's LED settings could not be read, or say nothing about this strip's profile.
             if (!installed && !missing) return PanelMessage.Caution(Checked + PanelLightRows.Unavailable);
-            var name = string.IsNullOrWhiteSpace(strip.Name) ? ThisStrip : strip.Name.Trim();
-            if (missing) return PanelMessage.Info(Checked + name + CheckedNotInstalled);
+            if (string.IsNullOrWhiteSpace(strip.DeviceName)) return PanelMessage.Caution(CheckedNoDevice + StripName(strip, false) + CheckedNoDeviceTail);
+            var name = StripName(strip, true);
+            if (missing) return PanelMessage.Info(name + CheckedNotInstalled);
             if (strip.Selected == true) return PanelMessage.Info(Checked + name + CheckedSelected);
             if (strip.Selected == false) return PanelMessage.Caution(Checked + name + CheckedNotSelected);
-            if (string.IsNullOrWhiteSpace(strip.DeviceName)) return PanelMessage.Caution(Checked + name + CheckedNoDevice);
-            return PanelMessage.Caution(Checked + CheckedUnread + name + CheckedUnreadTail);
+            return PanelMessage.Caution(name + CheckedUnread);
+        }
+
+        /// <summary>A strip's name for a sentence, or <see cref="ThisStrip"/> where it has none, capitalised
+        /// only where it starts the sentence.</summary>
+        private static string StripName(AttentionStrip strip, bool starts)
+        {
+            if (!string.IsNullOrWhiteSpace(strip.Name)) return strip.Name.Trim();
+            return starts ? ThisStrip : ThisStrip.ToLowerInvariant();
         }
 
         public const string Checked = "Checked again. ";
@@ -217,14 +227,15 @@ namespace OpenDashPlugin
 
         public const string CheckedNotSelected = "'s profile is not selected.";
 
-        /// <summary>The strip's device is not in SimHub's list of LED devices, so SimHub was asked and has no
-        /// device to read the selection from.</summary>
-        public const string CheckedNoDevice = "'s LED device is not in SimHub.";
+        /// <summary>The strip's device is not in SimHub's device list: the LEDs page's fact for it
+        /// (PanelLeds.DeviceNotListed on the LEDs branch), and the step, which is taken there under SimHub
+        /// device.</summary>
+        public const string CheckedNoDevice = "SimHub does not list ";
+        public const string CheckedNoDeviceTail = "'s device. Choose one on the LEDs page.";
 
         /// <summary>The device is there and its selection could not be read, which SimHub's log has the
-        /// reason for (SettingsControl.Status.cs writes it).</summary>
-        public const string CheckedUnread = "SimHub could not say whether ";
-        public const string CheckedUnreadTail = "'s profile is selected. See SimHub's log.";
+        /// reason for (SettingsControl.Status.cs writes it): voice.md's failure form, the fact and the log.</summary>
+        public const string CheckedUnread = "'s selection could not be read. See SimHub's log.";
 
         /// <summary>A strip with no name, which a hand-edited settings file can leave.</summary>
         public const string ThisStrip = "This strip";
