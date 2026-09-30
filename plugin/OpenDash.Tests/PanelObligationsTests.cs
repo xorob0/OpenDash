@@ -117,6 +117,25 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A rebuild in place has the text box being typed in save before the new page is built from the
+        /// settings: the old box lost focus only after the new one showed the old value, and the new one then
+        /// saved that old value over the typed one.
+        /// </summary>
+        [Fact]
+        public void A_rebuild_keeps_what_was_being_typed()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
+            var start = code.IndexOf("private void RebuildPage()", StringComparison.Ordinal);
+            Assert.True(start >= 0, "RebuildPage is in the shell");
+            var body = code.Substring(start, code.IndexOf("pageHost.Content = BuildPage(route);", start, StringComparison.Ordinal) - start);
+            Assert.Contains("CommitTyping();", body);
+            var commit = code.Substring(code.IndexOf("private void CommitTyping()", StringComparison.Ordinal));
+            commit = commit.Substring(0, commit.IndexOf("private void ShowLightingChange()", StringComparison.Ordinal));
+            Assert.Contains("FocusManager.SetFocusedElement(scope, null);", commit);
+            Assert.Contains("pageHost.IsAncestorOf(typing)", commit);
+        }
+
+        /// <summary>
         /// An undo a page registers while it is built runs once on Go, however many times the page was built
         /// in place since: OnLeave takes a key, and a key registered again replaces its action.
         /// </summary>

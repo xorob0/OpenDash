@@ -407,6 +407,7 @@ namespace OpenDashPlugin
         private void RebuildPage()
         {
             var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
+            CommitTyping();
             DropPreview();
             ClearTicks();
             ClearUpdateHandlers();
@@ -415,6 +416,32 @@ namespace OpenDashPlugin
             pageHost.Content = BuildPage(route);
             mainScroll.ScrollToVerticalOffset(offset);
             if (focus != null) RestoreFocus(pageHost, focus);
+        }
+
+        /// <summary>
+        /// Has the page's text box that is being typed in save what it holds, before a rebuild draws the page
+        /// again from the settings.
+        /// </summary>
+        /// <remarks>
+        /// A number box saves on Enter or on losing focus, and the box being replaced lost focus only after
+        /// the new page was built: the new box showed the old value, took focus, and saved that old value
+        /// over the typed one when the driver clicked away. A resize settling or a wheel's lighting press on
+        /// Home or Settings lost an edit without a word. Taking logical focus off the box raises its
+        /// LostFocus now, so the settings hold the typed value when the rebuild reads them; RestoreFocus
+        /// then puts keyboard focus back at the same place in the new build.
+        /// </remarks>
+        private void CommitTyping()
+        {
+            var typing = Keyboard.FocusedElement as TextBox;
+            if (typing == null)
+            {
+                var pageScope = FocusManager.GetFocusScope(pageHost);
+                typing = pageScope == null ? null : FocusManager.GetFocusedElement(pageScope) as TextBox;
+            }
+            if (typing == null || !pageHost.IsAncestorOf(typing)) return;
+            var scope = FocusManager.GetFocusScope(typing);
+            if (scope != null) FocusManager.SetFocusedElement(scope, null);
+            if (typing.IsKeyboardFocused) Keyboard.ClearFocus();
         }
 
         /// <summary>
