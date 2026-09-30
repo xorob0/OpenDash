@@ -388,15 +388,26 @@ export function parseActivation(text: string): PluginActivation[] {
   });
 }
 
-/** The activation list with one plugin enabled, added at the end when SimHub has never seen it. */
+/**
+ * The activation list with one plugin enabled, added at the end when SimHub has never seen it.
+ *
+ * `showInMainMenu` puts a plugin SimHub already knows into the left menu as well, and never takes
+ * one out. `bun run vm plugin --menu` and `bun run panel-shots` ask for the entry because they click
+ * it, and a plugin somebody had taken out of the menu used to come back enabled and still out of it,
+ * which left nothing there to click.
+ */
 export function withPluginActivated(entries: readonly PluginActivation[], className: string, showInMainMenu = false): PluginActivation[] {
-  if (entries.some((e) => e.ClassName === className)) return entries.map((e) => (e.ClassName === className ? { ...e, IsEnabled: true } : e));
+  if (entries.some((e) => e.ClassName === className)) {
+    return entries.map((e) => (e.ClassName === className ? { ...e, IsEnabled: true, ShowInMainMenu: e.ShowInMainMenu || showInMainMenu } : e));
+  }
   return [...entries, { ClassName: className, IsEnabled: true, ShowInMainMenu: showInMainMenu, ShowInMainMenuPosition: 0 }];
 }
 
 /**
- * Edits SimHub's PluginsActivation.json, which it reads once at startup, so this has to run while
- * it is stopped.
+ * Edits one of SimHub's JSON files, which it reads once at startup, so this has to run while it is
+ * stopped. `edit` is handed the file's text and returns the text to write back, or null when nothing
+ * needs to change, in which case nothing is written. `missing` is what a file that does not exist
+ * yet is read as; without it, a missing file is a failure.
  *
  * The file travels through the share and is edited here rather than in PowerShell. PowerShell 5.1's
  * `ConvertTo-Json` wraps an array it is handed in `{"value": [...], "Count": n}`, which SimHub reads
@@ -404,31 +415,48 @@ export function withPluginActivated(entries: readonly PluginActivation[], classN
  * it draws anything. A round trip through a real JSON parser cannot do that. Should it happen
  * anyway, SimHub keeps copies of the file under `PluginsData\\_Backups`.
  */
-function editActivation(host: Host, what: string, edit: (entries: PluginActivation[]) => PluginActivation[]): RunResult {
-  // The file name is written out rather than taken from the Windows path, which node's path module
+function editGuestJson(host: Host, guestPath: string, name: string, what: string, edit: (text: string) => string | null, missing?: string): RunResult {
+  // The file name is passed in rather than taken from the Windows path, which node's path module
   // reads as one long file name on anything that is not Windows.
-  const name = ACTIVATION_FILE;
   const local = path.join(repoRoot, 'build', name);
   const out = powershell(host, `$ErrorActionPreference = 'Stop'
-Copy-Item ${psq(SIMHUB_ACTIVATION)} ${psq(`${SHARE_UNC}\\${name}`)} -Force
-'copied'`, 180);
+if (Test-Path -LiteralPath ${psq(guestPath)}) { Copy-Item -LiteralPath ${psq(guestPath)} -Destination ${psq(`${SHARE_UNC}\\${name}`)} -Force; 'copied' } else { 'missing' }`, 180);
   if (!out.ok) return out;
-  const back = fromShare(host, name, local);
-  if (!back.ok) return back;
 
-  let entries: PluginActivation[];
-  try {
-    entries = edit(parseActivation(readFileSync(local, 'utf8')));
-  } catch (e) {
-    return { ok: false, code: 1, stdout: '', stderr: `${SIMHUB_ACTIVATION}: ${e instanceof Error ? e.message : String(e)}` };
+  let text: string;
+  if (out.stdout.trim() === 'missing') {
+    if (missing === undefined) return { ok: false, code: 1, stdout: '', stderr: `${guestPath} does not exist` };
+    text = missing;
+  } else {
+    const back = fromShare(host, name, local);
+    if (!back.ok) return back;
+    text = readFileSync(local, 'utf8');
   }
-  writeFileSync(local, `${JSON.stringify(entries, null, 2)}\n`, 'utf8');
+
+  let edited: string | null;
+  try {
+    edited = edit(text);
+  } catch (e) {
+    return { ok: false, code: 1, stdout: '', stderr: `${guestPath}: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  if (edited === null) return { ok: true, code: 0, stdout: `${what} (it already was)`, stderr: '' };
+  mkdirSync(path.dirname(local), { recursive: true });
+  writeFileSync(local, edited, 'utf8');
 
   const sent = toShare(host, local, name);
   if (!sent.ok) return sent;
   return powershell(host, `$ErrorActionPreference = 'Stop'
-Copy-Item ${psq(`${SHARE_UNC}\\${name}`)} ${psq(SIMHUB_ACTIVATION)} -Force
+Copy-Item ${psq(`${SHARE_UNC}\\${name}`)} -Destination ${psq(guestPath)} -Force
 "${what}"`, 180);
+}
+
+/** Edits SimHub's PluginsActivation.json as a list of plugins; see {@link editGuestJson}. */
+function editActivation(host: Host, what: string, edit: (entries: PluginActivation[]) => PluginActivation[]): RunResult {
+  return editGuestJson(host, SIMHUB_ACTIVATION, ACTIVATION_FILE, what, (text) => {
+    const before = parseActivation(text);
+    const after = edit(before);
+    return JSON.stringify(after) === JSON.stringify(before) ? null : `${JSON.stringify(after, null, 2)}\n`;
+  });
 }
 
 /**
@@ -529,63 +557,109 @@ export function inputMapping(action: string, key: string, pressType: number = PR
 }
 
 /**
+ * The action, key pairs of `bun run vm bind`, or null when they do not pair up. A bare action is
+ * OpenDash's, since that is the plugin every binding here is for: `CycleZoneC F9` binds
+ * `OpenDash.CycleZoneC`.
+ */
+export function bindPairs(args: readonly string[]): { action: string; key: string }[] | null {
+  if (args.length === 0 || args.length % 2 !== 0) return null;
+  const pairs: { action: string; key: string }[] = [];
+  for (let i = 0; i < args.length; i += 2) {
+    const action = args[i]!;
+    pairs.push({ action: action.includes('.') ? action : `OpenDash.${action}`, key: args[i + 1]! });
+  }
+  return pairs;
+}
+
+/** What every trigger the keyboard reader raises starts with, and so every trigger `bind` writes. */
+export const KEYBOARD_TRIGGER = 'KeyboardReaderPlugin.';
+
+/**
+ * PluginManagerSettings.json as SimHub writes it: an object whose `InputActionMapping` is the list
+ * of bindings, beside `EventMessageSettings` and `EventActionMapping`, which are carried through
+ * untouched. Read off the VM's own file on 2026-09-30 (the #459 and #475 backups on the share).
+ */
+export type InputSettings = Record<string, unknown> & { InputActionMapping: Record<string, unknown>[] };
+
+/** Reads the settings, refusing anything that is not the object SimHub writes. */
+export function parseInputSettings(text: string): InputSettings {
+  const parsed: unknown = JSON.parse(text.replace(/^﻿/, ''));
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('PluginManagerSettings.json is not an object');
+  const settings = parsed as Record<string, unknown>;
+  const mappings = settings.InputActionMapping ?? [];
+  if (!Array.isArray(mappings)) throw new Error('its InputActionMapping is not a list of bindings');
+  mappings.forEach((m, i) => {
+    if (typeof m !== 'object' || m === null || typeof (m as { Target?: unknown }).Target !== 'string') throw new Error(`binding ${i} names no target`);
+  });
+  return { ...settings, InputActionMapping: mappings as Record<string, unknown>[] };
+}
+
+/**
+ * The settings with these bindings in them. Every existing mapping for the same targets is replaced
+ * rather than added to, so binding twice leaves one binding per action rather than two.
+ */
+export function withBindings(settings: InputSettings, mappings: readonly InputMapping[]): InputSettings {
+  const targets = new Set(mappings.map((m) => m.Target));
+  return { ...settings, InputActionMapping: [...settings.InputActionMapping.filter((m) => !targets.has(m.Target as string)), ...mappings.map((m) => ({ ...m }))] };
+}
+
+/**
+ * The settings without the bindings `bind` writes for a plugin: every one whose target is the
+ * plugin's and whose trigger is a key. A binding somebody made to a wheel button in SimHub's own
+ * dialog is theirs and is left alone.
+ */
+export function withoutBindings(settings: InputSettings, pluginName: string): { settings: InputSettings; removed: number } {
+  const ours = (m: Record<string, unknown>): boolean =>
+    (m.Target as string).startsWith(`${pluginName}.`) && typeof m.Trigger === 'string' && m.Trigger.startsWith(KEYBOARD_TRIGGER);
+  const kept = settings.InputActionMapping.filter((m) => !ours(m));
+  return { settings: { ...settings, InputActionMapping: kept }, removed: settings.InputActionMapping.length - kept.length };
+}
+
+/** The activation list with the keyboard reader on, which is all a key binding needs of it. */
+export const withKeyboardReader = (entries: readonly PluginActivation[]): PluginActivation[] => withPluginActivated(entries, KEYBOARD_PLUGIN);
+
+/**
  * Binds keys to actions and restarts SimHub so it reads them.
  *
- * Every existing mapping for the same targets is replaced rather than added to, so running this
- * twice leaves one binding per action rather than two. The keyboard input plugin is switched on
- * with it: it ships off, and a binding to a key it is not reading does nothing at all.
+ * Both files go through the share and are edited here, for the reason {@link editGuestJson} gives:
+ * this used to round-trip them through PowerShell's ConvertTo-Json, which is the one tool on the
+ * guest that can turn SimHub's plugin list into something SimHub dies on. The keyboard input plugin
+ * is switched on when it is not already: it ships off, and a binding to a key it is not reading
+ * does nothing at all.
  */
 export function bindActions(host: Host, pairs: readonly { action: string; key: string; pressType?: number }[]): RunResult {
   if (pairs.length === 0) return { ok: false, code: 1, stdout: '', stderr: 'nothing to bind' };
-  const mappings = pairs.map((p) => inputMapping(p.action, p.key, p.pressType));
-  const targets = mappings.map((m) => m.Target);
+  let mappings: InputMapping[];
+  try {
+    mappings = pairs.map((p) => inputMapping(p.action, p.key, p.pressType));
+  } catch (e) {
+    return { ok: false, code: 2, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
+  }
 
   simhubStop(host);
-  const written = powershell(
-    host,
-    `$ErrorActionPreference = 'Stop'
-$settings = ${psq(SIMHUB_SETTINGS)}
-$activation = ${psq(SIMHUB_ACTIVATION)}
-$adding = ${psq(JSON.stringify(mappings))} | ConvertFrom-Json
-$targets = ${psq(JSON.stringify(targets))} | ConvertFrom-Json
-
-$j = Get-Content $settings -Raw | ConvertFrom-Json
-$kept = @($j.InputActionMapping | Where-Object { $targets -notcontains $_.Target })
-$j.InputActionMapping = @($kept + $adding)
-$j | ConvertTo-Json -Depth 12 | Set-Content $settings -Encoding UTF8
-
-# The keyboard reader ships disabled, and a binding to a key nothing reads is silently inert.
-$a = Get-Content $activation -Raw | ConvertFrom-Json
-$entry = $a | Where-Object { $_.ClassName -eq ${psq(KEYBOARD_PLUGIN)} }
-if ($entry) { $entry.IsEnabled = $true }
-else { $a += [pscustomobject]@{ ClassName = ${psq(KEYBOARD_PLUGIN)}; IsEnabled = $true; ShowInMainMenu = $false; ShowInMainMenuPosition = 0 } }
-$a | ConvertTo-Json -Depth 6 | Set-Content $activation -Encoding UTF8
-'bound'`,
-    120,
+  const written = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'bound', (text) =>
+    `${JSON.stringify(withBindings(parseInputSettings(text), mappings), null, 2)}\n`,
   );
   if (!written.ok) return written;
+  const reader = editActivation(host, `enabled ${KEYBOARD_PLUGIN}`, withKeyboardReader);
+  if (!reader.ok) return reader;
   const started = simhubStart(host);
   if (!started.ok) return started;
-  return { ...written, stdout: mappings.map((m) => `${m.Target} <- ${m.Trigger.split('.')[1]}${m.PressType === PRESS.during ? ' (held)' : ''}`).join('\n') };
+  return { ...written, stdout: mappings.map((m) => `${m.Target} <- ${m.Trigger.slice(KEYBOARD_TRIGGER.length)}${m.PressType === PRESS.during ? ' (held)' : ''}`).join('\n') };
 }
 
-/** Removes every mapping whose target belongs to a plugin, and restarts SimHub. */
+/** Removes every key binding `bindActions` makes for a plugin's actions, and restarts SimHub. */
 export function unbindActions(host: Host, pluginName: string): RunResult {
   simhubStop(host);
-  const cleared = powershell(
-    host,
-    `$ErrorActionPreference = 'Stop'
-$settings = ${psq(SIMHUB_SETTINGS)}
-$j = Get-Content $settings -Raw | ConvertFrom-Json
-$before = @($j.InputActionMapping).Count
-$j.InputActionMapping = @($j.InputActionMapping | Where-Object { -not $_.Target.StartsWith(${psq(`${pluginName}.`)}) })
-$j | ConvertTo-Json -Depth 12 | Set-Content $settings -Encoding UTF8
-"removed $($before - @($j.InputActionMapping).Count)"`,
-    120,
-  );
+  let removed = 0;
+  const cleared = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'unbound', (text) => {
+    const result = withoutBindings(parseInputSettings(text), pluginName);
+    removed = result.removed;
+    return removed === 0 ? null : `${JSON.stringify(result.settings, null, 2)}\n`;
+  });
   if (!cleared.ok) return cleared;
   const started = simhubStart(host);
-  return started.ok ? cleared : started;
+  return started.ok ? { ...cleared, stdout: `removed ${removed} binding${removed === 1 ? '' : 's'} of ${pluginName}` } : started;
 }
 
 // --------------------------------------------------------------------------------- the lock
@@ -680,8 +754,9 @@ const USAGE = `vm: drive the Windows test VM and its SimHub.
   bun run vm shot [file]            screenshot the VM display (default: build/vm.png)
 
   bun run vm bind <action> <key>    bind a key to a SimHub action, restart SimHub
-                                    e.g. 'OpenDash.CycleZoneC F9'; repeatable as action,key pairs
-  bun run vm unbind [plugin]        drop every binding of a plugin (default OpenDash)
+                                    e.g. 'CycleZoneC F9' or 'OpenDash.CycleZoneC F9'; a bare action is
+                                    OpenDash's; Hold* actions are bound as held; repeatable as pairs
+  bun run vm unbind [plugin]        drop every key binding bind made for a plugin (default OpenDash)
 
   bun run vm claim [note]           take the VM (there is one, and two sessions will fight)
   bun run vm release                give it back
@@ -728,9 +803,8 @@ export async function main(argv: readonly string[]): Promise<void> {
       return report(screenshot(host, out));
     }
     case 'bind': {
-      const pairs: { action: string; key: string }[] = [];
-      for (let i = 0; i + 1 < rest.length; i += 2) pairs.push({ action: rest[i]!, key: rest[i + 1]! });
-      if (pairs.length === 0) {
+      const pairs = bindPairs(rest);
+      if (!pairs) {
         console.error('usage: bun run vm bind <action> <key> [<action> <key>...]');
         process.exit(2);
       }

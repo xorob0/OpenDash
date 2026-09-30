@@ -5,7 +5,24 @@
  * Everything else in that file is a remote side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { claimLost, cleanClixml, inputMapping, parseActivation, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
+import {
+  bindPairs,
+  claimLost,
+  cleanClixml,
+  inputMapping,
+  parseActivation,
+  parseInputSettings,
+  PRESS,
+  psq,
+  resolveHost,
+  shq,
+  withBindings,
+  withKeyboardReader,
+  withoutBindings,
+  withPluginActivated,
+  type Claim,
+  type PluginActivation,
+} from './vm.ts';
 
 describe('quoting', () => {
   test('a shell argument survives a quote in a path', () => {
@@ -214,5 +231,100 @@ describe("SimHub's record of which plugins are enabled", () => {
     // from being written back a second time.
     expect(() => parseActivation(JSON.stringify({ value: [entries], Count: 1 }))).toThrow(/not an array/);
     expect(() => parseActivation(JSON.stringify([{ IsEnabled: true }]))).toThrow(/names no plugin class/);
+  });
+});
+
+describe('the menu entry a capture clicks', () => {
+  const hidden: PluginActivation[] = [{ ClassName: 'OpenDashPlugin.OpenDash', IsEnabled: false, ShowInMainMenu: false, ShowInMainMenuPosition: 3 }];
+
+  test('asking for it puts a plugin SimHub already knows into the left menu, where it keeps its place', () => {
+    expect(withPluginActivated(hidden, 'OpenDashPlugin.OpenDash', true)).toEqual([
+      { ClassName: 'OpenDashPlugin.OpenDash', IsEnabled: true, ShowInMainMenu: true, ShowInMainMenuPosition: 3 },
+    ]);
+  });
+
+  test('not asking for it never takes one out', () => {
+    const shown = [{ ...hidden[0]!, ShowInMainMenu: true }];
+    expect(withPluginActivated(shown, 'OpenDashPlugin.OpenDash')[0]!.ShowInMainMenu).toBe(true);
+    expect(withPluginActivated(hidden, 'OpenDashPlugin.OpenDash')[0]!.ShowInMainMenu).toBe(false);
+  });
+});
+
+describe('`bun run vm bind` on the command line', () => {
+  test('a bare action is OpenDash', () => {
+    expect(bindPairs(['CycleZoneC', 'F9'])).toEqual([{ action: 'OpenDash.CycleZoneC', key: 'F9' }]);
+  });
+
+  test('a named plugin is kept, and pairs repeat', () => {
+    expect(bindPairs(['OpenDash.HoldQuickGlance', 'F8', 'Rim.CycleZoneB', 'F7'])).toEqual([
+      { action: 'OpenDash.HoldQuickGlance', key: 'F8' },
+      { action: 'Rim.CycleZoneB', key: 'F7' },
+    ]);
+  });
+
+  test('an action without its key is refused rather than half bound', () => {
+    expect(bindPairs([])).toBeNull();
+    expect(bindPairs(['CycleZoneC'])).toBeNull();
+    expect(bindPairs(['CycleZoneC', 'F9', 'CycleZoneB'])).toBeNull();
+  });
+});
+
+describe("SimHub's record of what each input does", () => {
+  // The shape of PluginsData/PluginManagerSettings.json on the VM, read off the #475 backup on the
+  // share: two event tables carried through untouched, and the bindings, a serial dash's among them.
+  const file = {
+    EventMessageSettings: { 'Pit limiter': { Duration: 5, Enabled: false } },
+    EventActionMapping: [{ GameRestriction: { SupportedGames: [] }, Target: 'SerialDashPlugin.DisplayScreenFor1s_RPMStartChanged', Trigger: 'SerialDashPlugin.RPMStartOffsetChanged' }],
+    InputActionMapping: [
+      { Target: 'SerialDashPlugin.NextScreen', PressType: 1, GameRestriction: { SupportedGames: [] }, Trigger: 'SerialDashPlugin.SCREEN1_BUTTON2' },
+      { Target: 'OpenDash.CycleZoneB', PressType: 4, GameRestriction: { SupportedGames: [] }, Trigger: 'KeyboardReaderPlugin.F7' },
+      { Target: 'OpenDash.CycleZoneC', PressType: 4, GameRestriction: { SupportedGames: [] }, Trigger: 'SomeWheel.Button12' },
+    ],
+  };
+  const text = `﻿${JSON.stringify(file, null, 2)}`;
+
+  test('reads back as itself, byte order mark included', () => {
+    expect(parseInputSettings(text)).toEqual(file);
+  });
+
+  test('a file with no bindings yet reads as an empty list', () => {
+    expect(parseInputSettings('{}').InputActionMapping).toEqual([]);
+    expect(parseInputSettings('{"InputActionMapping":null}').InputActionMapping).toEqual([]);
+  });
+
+  test('anything but the object SimHub writes is refused', () => {
+    expect(() => parseInputSettings('[]')).toThrow(/not an object/);
+    expect(() => parseInputSettings('{"InputActionMapping":{"value":[],"Count":0}}')).toThrow(/not a list/);
+    expect(() => parseInputSettings('{"InputActionMapping":[{"Trigger":"x"}]}')).toThrow(/names no target/);
+  });
+
+  test('binding replaces what the action was bound to and leaves the rest where it was', () => {
+    const bound = withBindings(parseInputSettings(text), [inputMapping('OpenDash.CycleZoneB', 'F9'), inputMapping('OpenDash.HoldQuickGlance', 'F8')]);
+    expect(bound.EventMessageSettings).toEqual(file.EventMessageSettings);
+    expect(bound.EventActionMapping).toEqual(file.EventActionMapping);
+    expect(bound.InputActionMapping.map((m) => `${m.Target}<-${m.Trigger}/${m.PressType}`)).toEqual([
+      'SerialDashPlugin.NextScreen<-SerialDashPlugin.SCREEN1_BUTTON2/1',
+      'OpenDash.CycleZoneC<-SomeWheel.Button12/4',
+      'OpenDash.CycleZoneB<-KeyboardReaderPlugin.F9/4',
+      'OpenDash.HoldQuickGlance<-KeyboardReaderPlugin.F8/3',
+    ]);
+  });
+
+  test('binding twice leaves one binding per action', () => {
+    const once = withBindings(parseInputSettings(text), [inputMapping('OpenDash.CycleZoneB', 'F9')]);
+    expect(withBindings(once, [inputMapping('OpenDash.CycleZoneB', 'F9')])).toEqual(once);
+  });
+
+  test("unbinding takes the plugin's key bindings and leaves a wheel button somebody bound by hand", () => {
+    const { settings, removed } = withoutBindings(withBindings(parseInputSettings(text), [inputMapping('OpenDash.HoldQuickGlance', 'F8')]), 'OpenDash');
+    expect(removed).toBe(2);
+    expect(settings.InputActionMapping.map((m) => m.Target)).toEqual(['SerialDashPlugin.NextScreen', 'OpenDash.CycleZoneC']);
+    expect(settings.EventActionMapping).toEqual(file.EventActionMapping);
+  });
+
+  test('the keyboard reader is switched on in place, or added when SimHub has never listed it', () => {
+    const off: PluginActivation[] = [{ ClassName: 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin', IsEnabled: false, ShowInMainMenu: false, ShowInMainMenuPosition: 0 }];
+    expect(withKeyboardReader(off)).toEqual([{ ...off[0]!, IsEnabled: true }]);
+    expect(withKeyboardReader([])).toEqual([{ ...off[0]!, IsEnabled: true }]);
   });
 });
