@@ -27,7 +27,8 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == "Things to fix");
         }
 
-        /// <summary>Every section heading and every label in the quick controls is found, and lands on Home.</summary>
+        /// <summary>Every section heading and every quick-controls label but the brightness's is found, and lands
+        /// on Home: the brightness's label is whichever brightness is in force, so neither is an entry.</summary>
         [Fact]
         public void Every_heading_and_label_it_draws_is_searchable()
         {
@@ -77,9 +78,10 @@ namespace OpenDashPlugin.Tests
             }, AnchorTable.Of(typeof(PanelHome)));
         }
 
-        /// <summary>Main.dc.html's numbers, which the page draws and nothing else holds. Three besides: the
+        /// <summary>Main.dc.html's numbers, which the page draws and nothing else holds. Two besides: the
         /// cards' 280 floor is the brief's (the artboard's grid is repeat(3, minmax(0, 1fr))), and the empty
-        /// rig's 12, which the artboard does not draw.</summary>
+        /// rig's 12, which the artboard does not draw. The press's ceiling and threshold are held with the
+        /// rule they serve.</summary>
         [Fact]
         public void Its_geometry_is_the_artboards()
         {
@@ -370,6 +372,8 @@ namespace OpenDashPlugin.Tests
                 PanelHome.ScreenShows(new OpenDashSettings(), Screen(Contract.KindSlots, 1280, 480)));
             Assert.Equal("Speed · Current lap · Last lap · Best lap · Delta · Position · Session · Fuel · Fuel laps · TC · ABS · Tyre temps",
                 PanelHome.ScreenShows(new OpenDashSettings(), Screen(Contract.KindSlots, 1920, 480)));
+            // With no settings to read the slots from, a card face names nothing rather than guessing.
+            Assert.Equal(string.Empty, PanelHome.ScreenShows(null, Screen(Contract.KindSlots, 480, 480)));
             // A size no package is drawn at names nothing rather than twelve cards it may not draw.
             Assert.Equal(string.Empty, PanelHome.ScreenShows(new OpenDashSettings(), Screen(Contract.KindSlots, 1024, 600)));
             Assert.Equal(string.Empty, PanelHome.ScreenShows(new OpenDashSettings(), null));
@@ -426,8 +430,11 @@ namespace OpenDashPlugin.Tests
             var face = Screen(Contract.KindFace, 1280, 480);
             var settings = new OpenDashSettings();
             var missing = PanelHome.ScreenLine(settings, face, false, true);
-            // The Screens card's own constant, not a copy: when the card's word moves, Home's moves with it.
+            // The Screens card's own constant, not a copy: when the card's word moves, Home's moves with it. The
+            // ruled word is held here too (the inventory's "Missing", scenario HM-04), so a Screens page that
+            // says otherwise fails Home until the page and the ruling agree.
             Assert.Equal(PanelScreens.Missing, missing.Text);
+            Assert.Equal("Missing", missing.Text);
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
@@ -457,13 +464,49 @@ namespace OpenDashPlugin.Tests
             Assert.Null(typeof(PanelHome).GetField("NotInSimHubYet"));
         }
 
+        /// <summary>
+        /// Home's strip and matrix words are copies until the LEDs and Matrix pages carry their own
+        /// (PanelLeds.StateText and its words, PanelMatrix.NotShown). The moment they do, Home's must be
+        /// them, state for state, so the two pages cannot say different things for one strip.
+        /// </summary>
+        [Fact]
+        public void Home_names_a_strips_and_a_matrixs_state_as_their_cards_do()
+        {
+            Action<Type, string, string> same = (type, field, home) =>
+            {
+                var theirs = type.GetField(field);
+                if (theirs != null) Assert.Equal(home, (string)theirs.GetValue(null));
+            };
+            same(typeof(PanelLeds), "Showing", PanelHome.StripShowing);
+            same(typeof(PanelLeds), "NotSelected", PanelHome.StripNotSelected);
+            same(typeof(PanelLeds), "UpdateAvailable", PanelHome.StripUpdateAvailable);
+            same(typeof(PanelLeds), "Installed", PanelHome.StripInstalled);
+            same(typeof(PanelLeds), "NotInstalled", PanelHome.StripNotInstalled);
+            same(typeof(PanelMatrix), "NotShown", PanelHome.MatrixNotShown);
+
+            var stateText = typeof(PanelLeds).GetMethod("StateText", new[] { typeof(FlagBoxInstallState?), typeof(bool?) });
+            if (stateText == null) return;
+            var states = new FlagBoxInstallState?[] { null }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>());
+            foreach (var profile in states)
+            {
+                foreach (var selected in new bool?[] { null, true, false })
+                {
+                    var card = (string)stateText.Invoke(null, new object[] { profile, selected }) ?? string.Empty;
+                    Assert.True(card == PanelHome.StripLine(false, null, profile, selected).Text,
+                        "The LEDs card says \"" + card + "\" for " + profile + "/" + selected + ", and Home \"" + PanelHome.StripLine(false, null, profile, selected).Text + "\".");
+                }
+            }
+        }
+
         /// <summary>A size nobody knows is not drawn, and nor is one the name already says.</summary>
         [Fact]
         public void A_screen_gives_its_size_unless_nobody_knows_it_or_its_name_says_it()
         {
             Assert.Equal("1280 × 480", PanelHome.ScreenSize(Screen(Contract.KindFace, 1280, 480)));
-            // A migrated face whose folder named no size.
+            // A migrated face whose folder named no size, or named only one side of it.
             Assert.Equal(string.Empty, PanelHome.ScreenSize(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.Equal(string.Empty, PanelHome.ScreenSize(new ScreenInstance { Kind = Contract.KindFace, Width = 1280 }));
+            Assert.Equal(string.Empty, PanelHome.ScreenSize(new ScreenInstance { Kind = Contract.KindFace, Height = 480 }));
             Assert.Equal(string.Empty, PanelHome.ScreenSize(null));
             // An unnamed package's screen is named by its size, and would say it twice.
             var bySize = new ScreenInstance { Namespace = "Face1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
@@ -831,6 +874,40 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelHome.TryTitle), rig),", code);
             Assert.DoesNotContain("StripStyle.Card", code);
             Assert.DoesNotContain("MatrixStyle.Card", code);
+        }
+
+        /// <summary>
+        /// Every control and every row is put where it is drawn: a statement that builds a part and one that
+        /// adds it to the page are pinned together, so a part built and never placed (an issue with no press,
+        /// a card with its head and no rows, a slider with no track) fails here.
+        /// </summary>
+        [Fact]
+        public void Every_part_it_builds_is_placed_on_the_page()
+        {
+            var code = PageCode();
+            // The fix rows, ruled apart, in the card.
+            Assert.Contains("var row = HomeIssueRow(issues[i]); if (i > 0) { row.BorderBrush = Ui.Brush(Theme.Rule); row.BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0); } rows.Children.Add(row); } return Ui.CardBox(rows, 0);", code);
+            // A Right now card: its head, then its page's empty state or its rows.
+            Assert.Contains("stack.Children.Add(head); if (rows.Count == 0) { var none = Ui.Prose(PanelHome.EmptyLine(empty), PanelHome.DetailSize); none.Margin = new Thickness(PanelHome.RowPaddingX, 0, PanelHome.RowPaddingX, PanelHome.RowPaddingY + PanelHome.CardHeadPaddingBottom); stack.Children.Add(none); } foreach (var row in rows) stack.Children.Add(row); return Ui.CardBox(stack, 0);", code);
+            // Each screen's row on its card, painted before the first tick.
+            Assert.Contains("var row = HomeScreenRow(screen); shown.Add(row.Key); rows.Add(row.Value);", code);
+            Assert.Contains("Restart = restart, Line = HomeLineText(false), Dot = HomeDot(null), }; HomePaintScreen(row);", code);
+            Assert.Contains("DockPanel.SetDock(row.Dot, Dock.Right); dock.Children.Add(row.Dot); dock.Children.Add(text);", code);
+            // Each strip's picture in its host, painted before the first tick, and repainted on it.
+            Assert.Contains("Child = strip.Picture, }; strip.Host = host; HomePaintStrip(strip); live.Add(strip);", code);
+            Assert.Contains("top.Children.Add(strip.Dot);", code);
+            Assert.Contains("top.Children.Add(name);", code);
+            // Each matrix's picture, dot and text.
+            Assert.Contains("dock.Children.Add(picture); dock.Children.Add(dot); dock.Children.Add(text);", code);
+            // The brightness cell: the label and its figure over the slider.
+            Assert.Contains("DockPanel.SetDock(numeral, Dock.Right); labelLine.Children.Add(numeral); labelLine.Children.Add(label);", code);
+            Assert.Contains("Ui.VStack(PanelHome.QuickGap, labelLine, slider),", code);
+            // The three cells side by side on TwoColumns, stacked otherwise, each in the card.
+            Assert.Contains("var beside = TwoColumns; Panel body; if (beside) { var grid = new Grid(); foreach (var share in PanelHome.QuickColumns) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(share, GridUnitType.Star) }); body = grid; } else { body = new StackPanel { Orientation = Orientation.Vertical }; }", code);
+            Assert.Contains("BorderThickness = beside ? new Thickness(rule, 0, 0, 0) : new Thickness(0, rule, 0, 0), Child = cells[i], }; if (beside) Grid.SetColumn(cell, i); body.Children.Add(cell);", code);
+            // The page's head over its sections.
+            Assert.Contains("head.Children.Add(eyebrow); head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));", code);
+            Assert.Contains("var stack = new StackPanel { Orientation = Orientation.Vertical }; stack.Children.Add(head); foreach (var section in sections)", code);
         }
 
         /// <summary>What each press does: the issue's own call, and each row and link to its own page.</summary>

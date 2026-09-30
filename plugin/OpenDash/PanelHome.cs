@@ -3,7 +3,7 @@
 //
 // Home says what needs fixing (PanelAttention decides that), what each device is showing, and the two
 // controls a driver reaches for between sessions. SettingsControl.Home.cs only draws what this file decides,
-// to Main.dc.html. Pure: no WPF, no SimHub. PanelHomeTests holds every string and every rule here.
+// to Main.dc.html. Pure: no WPF, no SimHub. PanelHomeTests holds its strings and its rules.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
