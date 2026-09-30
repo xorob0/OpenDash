@@ -248,7 +248,7 @@ namespace OpenDashPlugin
                 Height = height,
                 Background = Ui.Brush(Theme.SurfaceBase),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Padding = new Thickness(5, 3, 5, 3),
+                Padding = new Thickness(PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY, PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY),
                 Child = grid,
                 IsHitTestVisible = false,
             };
@@ -258,9 +258,9 @@ namespace OpenDashPlugin
         private Button BuildInfoBarCell(ScreenInstance screen, Contract.FaceSize face, double height, bool selected, Action pick)
         {
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarMiddleShare, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
             var left = ScreensCellText(PanelScreens.BarEnd(screen.Face, face, true), PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
             var middle = ScreensCellText(PanelScreens.InfoBarMiddle, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextLabel);
             middle.TextAlignment = TextAlignment.Center;
@@ -271,7 +271,7 @@ namespace OpenDashPlugin
             grid.Children.Add(left);
             grid.Children.Add(middle);
             grid.Children.Add(right);
-            var cell = ScreensZoneButton(grid, selected, pick, new Thickness(8, 0, 8, 0));
+            var cell = ScreensZoneButton(grid, selected, pick, new Thickness(PanelFacePlan.BarPaddingX, 0, PanelFacePlan.BarPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
             cell.ToolTip = PanelScreens.InfoBarTitle;
@@ -344,18 +344,18 @@ namespace OpenDashPlugin
         {
             var dock = new DockPanel { LastChildFill = true };
             var letter = ScreensCellText("D", PanelFacePlan.BandLetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data);
-            letter.Margin = new Thickness(0, 0, 12, 0);
+            letter.Margin = new Thickness(0, 0, PanelFacePlan.BandGap, 0);
             DockPanel.SetDock(letter, Dock.Left);
             dock.Children.Add(letter);
             var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, "D")));
             var button = ScreensCellText(buttonLine, PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
-            button.Margin = new Thickness(12, 0, 0, 0);
+            button.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
             // The page is what the band shows; a long binding is cut short before it is.
             button.MaxWidth = buttonMax;
             DockPanel.SetDock(button, Dock.Right);
             dock.Children.Add(button);
             var count = ScreensCellText(PanelScreens.ZoneCount(screen.Face, "D"), PanelFacePlan.CountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
-            count.Margin = new Thickness(12, 0, 0, 0);
+            count.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
             DockPanel.SetDock(count, Dock.Right);
             dock.Children.Add(count);
             dock.Children.Add(ScreensCellText(FacePages.NameOf("D", PanelScreens.FirstTicked(screen.Face, "D")), PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary));
@@ -559,7 +559,7 @@ namespace OpenDashPlugin
             System.Windows.Automation.AutomationProperties.SetName(box, row.Name);
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);
-            var line = new DockPanel { LastChildFill = true, Height = 32 };
+            var line = new DockPanel { LastChildFill = true, Height = PanelScreens.PageRowHeight };
             ScreensLabelFor(line, box);
             DockPanel.SetDock(box, Dock.Left);
             line.Children.Add(box);
@@ -633,7 +633,7 @@ namespace OpenDashPlugin
         /// a real row's tick stands after its grip, so the ticks and the tags line up.</summary>
         private static FrameworkElement BuildSoonPageRow(string title, FrameworkElement tag)
         {
-            var line = new DockPanel { LastChildFill = true, Height = 32, Margin = new Thickness(16, 0, 0, 0) };
+            var line = new DockPanel { LastChildFill = true, Height = PanelScreens.PageRowHeight, Margin = new Thickness(16, 0, 0, 0) };
             tag.VerticalAlignment = VerticalAlignment.Center;
             DockPanel.SetDock(tag, Dock.Right);
             line.Children.Add(tag);

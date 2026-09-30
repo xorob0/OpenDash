@@ -351,6 +351,24 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>The selected screen's block and its header and Details, at the artboard's numbers: 20 under
+        /// the rule, 18 between its parts, 12 between the name and the facts, Details' labels 140 wide, and a
+        /// zone list's page 32 high.</summary>
+        [Fact]
+        public void The_selected_screen_is_laid_out_as_the_canvas_draws_it()
+        {
+            Assert.Equal(20, PanelScreens.SelectedTop);
+            Assert.Equal(18, PanelScreens.SelectedGap);
+            Assert.Equal(12, PanelScreens.HeaderGap);
+            Assert.Equal(140, PanelScreens.DetailsLabelWidth);
+            Assert.Equal(32, PanelScreens.PageRowHeight);
+            var page = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("Padding = new Thickness(0, PanelScreens.SelectedTop, 0, 0)", page);
+            Assert.Contains("Ui.VStack(PanelScreens.SelectedGap, selected.ToArray())", page);
+            Assert.Contains("new ScreensNameLine(PanelScreens.HeaderGap)", page);
+            Assert.Contains("new GridLength(PanelScreens.DetailsLabelWidth)", page);
+        }
+
         /// <summary>The header's presses and the remove sheet: what removing costs, and the bound buttons
         /// that stop working where the kind has actions of its own.</summary>
         [Fact]
@@ -400,6 +418,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Off", "Races", "Always" }, PanelScreens.LapReviewLabels);
             Assert.Equal(Contract.LapReviewModes.Length, PanelScreens.LapReviewLabels.Length);
             Assert.Equal("Shows your last lap for four seconds after the line.", PanelScreens.LapReviewCaption);
+            // The caption's duration is the dash's: design/tokens.json's indicator.lapReview.durationMs, in words.
+            using (var tokens = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(RepoPaths.TokensJson())))
+            {
+                var duration = tokens.RootElement.GetProperty("indicator").GetProperty("lapReview").GetProperty("durationMs").GetDouble();
+                Assert.Equal(duration, PanelScreens.LapReviewSeconds * 1000.0);
+            }
+            var words = new[] { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" };
+            Assert.Contains(" " + words[PanelScreens.LapReviewSeconds] + " seconds ", PanelScreens.LapReviewCaption);
             Assert.Equal("OpenDash no longer ships a 1024 × 600 face. Your settings are kept.", PanelScreens.NoLongerShipped("1024 × 600"));
             // The seven greyed rows are the registry's, in the artboard's order, with voice.md's noun phrases.
             Assert.Equal(

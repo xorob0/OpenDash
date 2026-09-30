@@ -208,6 +208,22 @@ namespace OpenDashPlugin
         /// "Previous page" and its NEW tag their 131 px of the aside's 282.</summary>
         public const double AsideChipMax = 136;
 
+        /// <summary>The rev strip's padding round its segments: the artboard's 3 above and below, 5 at the sides.</summary>
+        public const double RevPaddingX = 5;
+
+        public const double RevPaddingY = 3;
+
+        /// <summary>The info bar's three cells, 3 : 4 : 3 across (the artboard's flex 3, 4 and 3), padded 8 at
+        /// its sides.</summary>
+        public const int BarEndShare = 3;
+
+        public const int BarMiddleShare = 4;
+
+        public const double BarPaddingX = 8;
+
+        /// <summary>Between band D's letter, its page, its count and its button line: the artboard's gap 12.</summary>
+        public const double BandGap = 12;
+
         /// <summary>The rev strip's segments: twenty, 3 apart, inside 3 by 5 of padding.</summary>
         public const int RevSegments = 20;
 

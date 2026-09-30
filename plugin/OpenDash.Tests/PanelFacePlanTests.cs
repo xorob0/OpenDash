@@ -216,6 +216,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(15, PanelFacePlan.PageSize);
             Assert.Equal(14, PanelFacePlan.BandPageSize);
             Assert.Equal(12, PanelFacePlan.ButtonLineSize);
+            // A count is set smaller than a page, which is what tells the two apart in a cell.
+            Assert.True(PanelFacePlan.CountSize < PanelFacePlan.PageSize);
+            // The rev strip padded 3 by 5 round its segments, the info bar's cells 3 : 4 : 3 padded 8 at its
+            // sides, and band D's parts 12 apart, as Screens.dc.html draws them; the editor draws these.
+            Assert.Equal(5, PanelFacePlan.RevPaddingX);
+            Assert.Equal(3, PanelFacePlan.RevPaddingY);
+            Assert.Equal(3, PanelFacePlan.BarEndShare);
+            Assert.Equal(4, PanelFacePlan.BarMiddleShare);
+            Assert.Equal(8, PanelFacePlan.BarPaddingX);
+            Assert.Equal(12, PanelFacePlan.BandGap);
+            var face = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Face.cs"));
+            Assert.Contains("new Thickness(PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY, PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY)", face);
+            Assert.Contains("new GridLength(PanelFacePlan.BarMiddleShare, GridUnitType.Star)", face);
+            Assert.Contains("new Thickness(PanelFacePlan.BarPaddingX, 0, PanelFacePlan.BarPaddingX, 0)", face);
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(face, @"PanelFacePlan\.BandGap").Count);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(face, @"Height = PanelScreens\.PageRowHeight").Count);
             Assert.Equal(11, PanelFacePlan.BarTextSize);
             Assert.Equal(2, PanelFacePlan.SelectedEdge);
             Assert.Equal(316, PanelFacePlan.AsideWidth);

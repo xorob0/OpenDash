@@ -87,8 +87,8 @@ namespace OpenDashPlugin
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
                 BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
-                Padding = new Thickness(0, 20, 0, 0),
-                Child = Ui.VStack(18, selected.ToArray()),
+                Padding = new Thickness(0, PanelScreens.SelectedTop, 0, 0),
+                Child = Ui.VStack(PanelScreens.SelectedGap, selected.ToArray()),
             };
             sections.Add(block);
             return PageLayout(PanelScreens.Title, null, sections.ToArray());
@@ -187,7 +187,7 @@ namespace OpenDashPlugin
             facts.TextWrapping = TextWrapping.NoWrap;
             facts.VerticalAlignment = VerticalAlignment.Bottom;
             facts.Margin = new Thickness(0, 0, 0, 3);
-            var name = new ScreensNameLine(12) { VerticalAlignment = VerticalAlignment.Center };
+            var name = new ScreensNameLine(PanelScreens.HeaderGap) { VerticalAlignment = VerticalAlignment.Center };
             name.Children.Add(title);
             name.Children.Add(facts);
 
@@ -301,7 +301,7 @@ namespace OpenDashPlugin
             var details = Ui.Collapsible(PanelScreens.DetailsTitle, null, screensDetailsOpen, () =>
             {
                 var grid = new Grid();
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelScreens.DetailsLabelWidth) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 var rows = new[]
                 {

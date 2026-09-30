@@ -209,6 +209,23 @@ namespace OpenDashPlugin
             return IsRound(screen) ? "round" : screen.Kind;
         }
 
+        // --- The selected screen's block ------------------------------------------------------------------
+
+        /// <summary>The block under the cards: 20 below its rule, its parts 18 apart (Screens.dc.html's
+        /// padding-top 20 and gap 18).</summary>
+        public const double SelectedTop = 20;
+
+        public const double SelectedGap = 18;
+
+        /// <summary>Between the screen's name and the facts after it in the header: the artboard's 12.</summary>
+        public const double HeaderGap = 12;
+
+        /// <summary>Details' label column: the artboard's grid-template-columns 140px 1fr.</summary>
+        public const double DetailsLabelWidth = 140;
+
+        /// <summary>One page of a zone list (.pg): 32 high, as the greyed pages under Show all are.</summary>
+        public const double PageRowHeight = 32;
+
         // --- The header's presses -----------------------------------------------------------------------
 
         public const string EditButton = "Edit";
@@ -297,7 +314,12 @@ namespace OpenDashPlugin
         /// <summary>In Contract.LapReviewModes order.</summary>
         public static readonly string[] LapReviewLabels = { "Off", "Races", "Always" };
 
-        /// <summary>What the label cannot say: what is shown, and for how long.</summary>
+        /// <summary>How long the dash shows the last lap: design/tokens.json's indicator.lapReview.durationMs,
+        /// which PanelScreensTests holds this to, in seconds.</summary>
+        public const int LapReviewSeconds = 4;
+
+        /// <summary>What the label cannot say: what is shown, and for how long, in the words for
+        /// <see cref="LapReviewSeconds"/>.</summary>
         public const string LapReviewCaption = "Shows your last lap for four seconds after the line.";
 
         /// <summary>The body of a face whose package this build no longer carries.</summary>
