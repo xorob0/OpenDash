@@ -48,6 +48,9 @@ namespace OpenDashPlugin.Tests
             // A default name says the kind or the size already, so the line leaves it out, as the artboard's
             // "Pit wall" card reads "1920×1080": nothing said twice.
             Assert.Equal("1920 × 1080", PanelShortcuts.GroupDetail("Pit wall", Contract.KindPitWall, 1920, 1080));
+            // Whatever the name's case: "pit wall" says the kind as well as "Pit wall" does.
+            Assert.Equal("1920 × 1080", PanelShortcuts.GroupDetail("pit wall", Contract.KindPitWall, 1920, 1080));
+            Assert.Equal("1920 × 1080", PanelShortcuts.GroupDetail(" PIT WALL ", Contract.KindPitWall, 1920, 1080));
             Assert.Equal("480 × 850", PanelShortcuts.GroupDetail("Companion", Contract.KindCompanion, 480, 850));
             Assert.Equal("Face", PanelShortcuts.GroupDetail("1920 × 480", Contract.KindFace, 1920, 480));
             Assert.Null(PanelShortcuts.GroupDetail("Companion", Contract.KindCompanion, 0, 0));
@@ -337,6 +340,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelShortcuts.FilterAll, PanelShortcuts.FilterFor(PanelShortcuts.FilterNotBound, null, false));
             Assert.Equal(PanelShortcuts.FilterAll, PanelShortcuts.FilterFor(null, null, true));
             Assert.Equal(PanelShortcuts.FilterAll, PanelShortcuts.FilterFor("nonsense", null, true));
+            // An empty anchor is no row to land on, and keeps the choice.
+            Assert.Equal(PanelShortcuts.FilterBound, PanelShortcuts.FilterFor(PanelShortcuts.FilterBound, "", true));
+            Assert.Equal(PanelShortcuts.FilterNotBound, PanelShortcuts.FilterFor(PanelShortcuts.FilterNotBound, "", true));
 
             Assert.Null(PanelShortcuts.FilterEmpty(PanelShortcuts.FilterAll));
             Assert.Equal("Nothing is bound yet.", PanelShortcuts.FilterEmpty(PanelShortcuts.FilterBound));
@@ -564,6 +570,11 @@ namespace OpenDashPlugin.Tests
         public void One_binding_per_row_is_no_clash_and_clashes_keep_the_page_order()
         {
             Assert.Empty(PanelShortcuts.Clashes(null));
+            // A missing use is passed over, and blank triggers are no binding, so two of them never clash.
+            Assert.Empty(PanelShortcuts.Clashes(new PanelShortcuts.BindingUse[] { null, Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes) }));
+            Assert.Empty(PanelShortcuts.Clashes(new[] { Use(" ", "Rim", PanelShortcuts.GlanceDoes), Use(" ", "Main dash", PanelShortcuts.GlanceDoes) }));
+            Assert.Empty(PanelShortcuts.Clashes(new[] { Use(null, "Rim", PanelShortcuts.GlanceDoes), Use(null, "Main dash", PanelShortcuts.GlanceDoes) }));
+            Assert.Empty(PanelShortcuts.Clashes(new[] { Use("", "Rim", PanelShortcuts.GlanceDoes), Use("", "Main dash", PanelShortcuts.GlanceDoes) }));
             Assert.Empty(PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes),
@@ -714,6 +725,26 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelShortcuts.Search, entry => Assert.Equal(PanelPage.Shortcuts, entry.Route.Page));
             Assert.NotEmpty(PanelSearch.Find(PanelShortcuts.Search, "wheel buttons"));
             Assert.Equal(PanelShortcuts.AnchorAlerts, PanelSearch.Find(PanelShortcuts.Search, "dismiss").First().Route.Anchor);
+            // Each lands on its own card: a screen's rows on the first screen's, the lights' on Lights, the
+            // alerts' on Alerts.
+            Assert.Equal(new[]
+            {
+                PanelShortcuts.AnchorScreens, PanelShortcuts.AnchorScreens, PanelShortcuts.AnchorScreens,
+                PanelShortcuts.AnchorRig, PanelShortcuts.AnchorRig, PanelShortcuts.AnchorRig, PanelShortcuts.AnchorRig,
+                PanelShortcuts.AnchorAlerts,
+            }, PanelShortcuts.Search.Select(entry => entry.Route.Anchor));
+            // And by the words a driver would type for it.
+            Assert.Equal(new[]
+            {
+                "wheel buttons|bind|button|key|zone",
+                "back|zone|bind",
+                "hold|bind|button",
+                "night|brightness|strip|matrix|bind",
+                "night mode button|bind|toggle",
+                "brightness buttons|brighter|bind",
+                "brightness buttons|dimmer|bind",
+                "dismiss|bind",
+            }, PanelShortcuts.Search.Select(entry => string.Join("|", entry.Keywords)));
         }
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
@@ -778,6 +809,14 @@ namespace OpenDashPlugin.Tests
             var body = code.Substring(code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal));
             Assert.Contains("args.PropertyName == \"Trigger\" || args.PropertyName == \"PressType\"", Between(body, "mappingChanged = (sender, args) =>", "};"));
             Assert.Contains("args.PropertyName != \"Triggers\"", Between(body, "modelChanged = (sender, args) =>", "};"));
+            // Each re-reads the page. A binding changed in place (SimHub's Change sets Trigger and PressType on
+            // the mapping already in the list) raises neither a collection change nor InputMappingsChanged,
+            // so the mapping's own watch is the only way the clash line hears of it; an Add or a Clear
+            // raises the collection's; a model replaced or taken up again reads at once.
+            Assert.Contains("args.PropertyName == \"PressType\") changed();", Between(body, "mappingChanged = (sender, args) =>", "};"));
+            Assert.Matches(@"collectionChanged = \(sender, args\) =>\s*\{\s*rewatchMappings\(\);\s*changed\(\);\s*\};", body);
+            Assert.Matches(@"modelChanged = \(sender, args\) =>\s*\{\s*if \(args\.PropertyName != null && args\.PropertyName != ""Triggers""\) return;\s*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
+            Assert.Matches(@"Action attach = \(\) =>\s*\{[^}]*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
             Assert.Contains("args.PropertyName == \"Model\") attach();", body);
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
@@ -855,6 +894,65 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// Every part the page builds is put where it is drawn: each greyed row on its own card, the
+        /// companion's paging line on the companion's card, the header and the clash lines above the cards
+        /// and the empty line under them, each row on its card and each part of a row in it, and the build's
+        /// drop that stops a stale read.
+        /// </summary>
+        [Fact]
+        public void The_page_puts_every_part_where_it_is_drawn()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;"));
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal, layout);", Between(code, "private ShortcutsGroupState BuildShortcutsAlerts(", "return group;"));
+            // Two greyed rows, each drawn once and only there.
+            Assert.Equal(2, Regex.Matches(code, @"ShortcutsSoon\(group, PanelSoon\.").Count);
+            var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
+            Assert.Contains("Child = Ui.VStack(0, Ui.Caption(PanelCopy.CompanionPaging, BodyWidth), crumbs),", companion);
+            Assert.Contains("var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), lead);", companion);
+
+            // The page's order: the header, the clash lines, the cards, the empty line.
+            var sections = Regex.Match(code, @"var sections = new List<UIElement> \{ header, banner \};\s*sections\.AddRange\(groups\.Select\(group => \(UIElement\)group\.Card\)\);\s*sections\.Add\(empty\);");
+            Assert.True(sections.Success, "the page is its header, the clash lines, the cards and the empty line, in that order");
+            Assert.Contains("OnDrop(() => dropped = true);", code);
+
+            // A card: its header's name, line and count, the lead under the header, and its rows.
+            var card = Between(code, "private static ShortcutsGroupState ShortcutsCard(", "return new ShortcutsGroupState");
+            Assert.Contains("titleLine.Children.Add(name);", card);
+            Assert.Contains("titleLine.Children.Add(line);", card);
+            Assert.Contains("head.Children.Add(titleLine);", card);
+            Assert.Contains("head.Children.Add(count);", card);
+            Assert.Contains("Grid.SetColumn(count, 1);", card);
+            Assert.Contains("if (lead != null) body.Children.Add(lead);", card);
+            Assert.Contains("return new ShortcutsGroupState { Card = Ui.CardBox(body, 0), Body = body, CountHost = count, HasLead = lead != null };", code);
+            Assert.Contains("group.Body.Children.Add(row);", Between(code, "private static void ShortcutsBinding(", "\n        }"));
+            Assert.Contains("group.Body.Children.Add(shown);", Between(code, "private static void ShortcutsSoon(", "\n        }"));
+
+            // A row: the name and its tags, the caption under them, the press, and the binder's slot; the
+            // Tag Ui.Soon reads to put its Soon tag after a greyed row's name.
+            var row = Between(code, "private static Border ShortcutsRow(", "private static void ShortcutsDropNameColumn(");
+            Assert.Contains("nameLine.Children.Add(name);", row);
+            Assert.Contains("nameLine.Children.Add(tag);", row);
+            Assert.Contains("left.Children.Add(nameLine);", row);
+            Assert.Contains("left.Children.Add(caption);", row);
+            Assert.Contains("grid.Children.Add(left);", row);
+            Assert.Contains("grid.Children.Add(pressText);", row);
+            Assert.Contains("Grid.SetColumn(pressText, 1);", row);
+            Assert.Contains("grid.Children.Add(slot);", row);
+            Assert.Contains("Grid.SetColumn(slot, 2);", row);
+            Assert.Contains("Grid.SetRow(slot, 1);", row);
+            Assert.Contains("Grid.SetColumnSpan(slot, 2);", row);
+            Assert.Contains("Tag = new RowParts(nameLine, control),", row);
+
+            // The header: the caption and the filter, the filter in the second column when two fit.
+            var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
+            Assert.Contains("Grid.SetColumn(filter, 1);", header);
+            Assert.Contains("grid.Children.Add(caption);", header);
+            Assert.Contains("grid.Children.Add(filter);", header);
+            Assert.Contains("header = Ui.VStack(0, caption, filter);", header);
+        }
+
+        /// <summary>
         /// A row the filter hides while it holds keyboard focus (bound under Not bound, cleared under Bound)
         /// hands focus to a row still shown, or the filter, rather than letting it leave the panel.
         /// </summary>
@@ -901,6 +999,32 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
             Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
+            // Every number the model takes from the artboard is drawn with: none is left for the view to
+            // spell as a literal of its own.
+            foreach (var name in new[]
+            {
+                "HeaderPaddingX", "HeaderPaddingY", "GroupTitleSize", "GroupDetailGap", "CountSize", "RowPaddingX", "RowPaddingY",
+                "RowGap", "RowNameSize", "TagGap", "PressWidth", "CaptionGap", "StackGap", "LeadPaddingX", "LeadPaddingY", "LeadGap",
+                "BannerPaddingX", "BannerPaddingY", "BannerGap", "BannerTextSize", "BannerIconSize", "BannerStackGap",
+                "IntroGap", "FilterRaise", "FilterGapStacked",
+            })
+            {
+                Assert.Matches(@"PanelShortcuts\." + name + @"\b", code);
+            }
+            Assert.Contains("Padding = new Thickness(PanelShortcuts.HeaderPaddingX, PanelShortcuts.HeaderPaddingY, PanelShortcuts.HeaderPaddingX, PanelShortcuts.HeaderPaddingY),", code);
+            Assert.Contains("Padding = new Thickness(PanelShortcuts.RowPaddingX, PanelShortcuts.RowPaddingY, PanelShortcuts.RowPaddingX, PanelShortcuts.RowPaddingY),", code);
+            Assert.Contains("Padding = new Thickness(PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY, PanelShortcuts.LeadPaddingX, PanelShortcuts.LeadPaddingY),", code);
+            Assert.Contains("Padding = new Thickness(PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY, PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY),", code);
+            Assert.Contains("var name = Ui.Text(title ?? string.Empty, PanelShortcuts.GroupTitleSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
+            Assert.Contains("name.Margin = new Thickness(0, 0, PanelShortcuts.GroupDetailGap, 0);", code);
+            Assert.Contains("var name = Ui.Text(label, PanelShortcuts.RowNameSize, FontWeights.Normal, Theme.TextPrimary);", code);
+            Assert.Contains("tag.Margin = new Thickness(PanelShortcuts.TagGap, 0, 0, 0);", code);
+            Assert.Contains("grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + PanelShortcuts.PressWidth) });", code);
+            Assert.Contains("pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", code);
+            Assert.Contains("icon.Margin = new Thickness(0, 1, PanelShortcuts.BannerGap, 0);", code);
+            Assert.Contains("var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);", code);
+            // A greyed row's chip is the artboard's .key, as every binder's slot starts.
+            Assert.Contains("var chip = Ui.BindingChip(Ui.NotBound, false, key: true);", code);
             // The clash sentence keeps a message line's measure in a column with no ceiling.
             var clash = Between(code, "private static Border ShortcutsClashLine(", "return line;");
             Assert.Contains("text.MaxWidth = BodyWidth;", clash);
@@ -1015,6 +1139,39 @@ namespace OpenDashPlugin.Tests
 
             // The anchor puts the filter back to All on the first build after the page is opened, and never on
             // a rebuild in place, which keeps the route and its anchor: OnLeave runs on Go alone.
+            // What the evaluation puts on screen: the filter's choice written and read again, every live row
+            // read and a greyed one not, each card's count, each clash line, and the banner and the empty
+            // line shown only with something in them.
+            Assert.Matches(@"value =>\s*\{\s*shortcutsFilter = value;\s*if \(evaluate != null\) evaluate\(\);\s*\}", code);
+            Assert.Contains("var read = row.Bindable ? ShortcutsUses(row) : null;", code);
+            Assert.Contains("uses[row] = read;", code);
+            Assert.Contains("group.CountHost.Child = count == null ? null : Ui.Numeral(count, PanelShortcuts.CountSize, Theme.TextSecondary);", code);
+            Assert.Contains("group.CountHost.Visibility = count == null ? Visibility.Collapsed : Visibility.Visible;", code);
+            Assert.Contains("row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;", code);
+            Assert.Contains("banner.Children.Add(line);", code);
+            Assert.Contains("if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);", code);
+            Assert.Contains("banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;", code);
+            Assert.Contains("empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;", code);
+            // The clash line is the trigger's name, strong, then the rest after a space, and nothing else:
+            // ruling 50's deleted aside ("Fine if you meant it.") cannot come back as a third run.
+            var clashLine = Between(code, "private static Border ShortcutsClashLine(", "return line;");
+            Assert.Contains("text.Inlines.Add(new Run(clash.Lead) { FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush(Theme.TextPrimary) });", clashLine);
+            Assert.Contains("text.Inlines.Add(new Run(\" \" + clash.Rest));", clashLine);
+            Assert.Equal(2, Regex.Matches(code, @"new Run\(").Count);
+            Assert.Contains("var icon = Ui.NavIcon(PanelIcons.Warning, Theme.Caution, PanelShortcuts.BannerIconSize);", clashLine);
+            Assert.Contains("BorderBrush = Ui.Brush(Theme.CautionDeep),", clashLine);
+            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(line, clash.Text);", clashLine);
+            var model = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelShortcuts.cs"));
+            Assert.DoesNotContain("meant it", code);
+            Assert.DoesNotContain("meant it", model);
+
+            // The rows' reads: each use carries its row's card and what it does, from the editor's model or
+            // the shell's read, and a blank trigger is no binding.
+            var usesOf = Between(code, "private IList<PanelShortcuts.BindingUse> ShortcutsUses(", "catch (Exception ex)");
+            Assert.Contains("read.Select(trigger => new PanelShortcuts.BindingUse(trigger, row.Place, row.Does)).ToList();", usesOf);
+            Assert.Contains(".Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger))", usesOf);
+            Assert.Contains(".Select(mapping => new PanelShortcuts.BindingUse(mapping.Trigger, row.Place, row.Does, PanelShortcuts.FiresOn(mapping.PressType.ToString())))", usesOf);
+
             var landing = Regex.Match(code, @"if \(shortcutsLanding\)\s*\{\s*shortcutsFilter = PanelShortcuts\.FilterFor\(shortcutsFilter, to == null \? null : to\.Anchor, true\);\s*shortcutsLanding = false;\s*\}\s*OnLeave\(""Shortcuts\.filterLanding"", \(\) => shortcutsLanding = true\);");
             Assert.True(landing.Success, "the filter's reset for an anchor is not gated on the page's first build");
             Assert.Single(Regex.Matches(code, @"PanelShortcuts\.FilterFor\(shortcutsFilter, to"));
