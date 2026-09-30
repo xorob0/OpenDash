@@ -125,19 +125,27 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EditCaption = "Your settings and bindings are kept.";
 
+        /// <summary>The edit sheet's foot for this screen: <see cref="EditCaption"/> where the screen has
+        /// settings of its own, and nothing for a round screen, whose cards are the rig's shared slots and
+        /// which no wheel button is bound to, as PanelScreens.RemoveBody leaves them out.</summary>
+        public static string EditCaptionFor(ScreenInstance screen)
+        {
+            return PanelScreens.OwnsSettings(screen) ? EditCaption : null;
+        }
+
         public const string SaveButton = "Save";
 
         /// <summary>The title of the row the reinstall sits on: it acts on the dashboard rather than on
         /// either of the answers above it.</summary>
         public const string ReinstallTitle = "Dashboard";
 
-        /// <summary>What a reinstall writes, which is the screen as it is saved: a name typed in the box above
-        /// and not yet saved is not in it, and a kind that ships one package draws no size row to point at.</summary>
-        public const string ReinstallCaption = "Writes this screen's dashboard into SimHub again, at its saved name and size.";
+        /// <summary>What a reinstall installs, which is the screen as it is saved: a name typed in the box above
+        /// and not yet saved is not in it, and a kind that ships one package draws no size row to point at. In
+        /// the verb the line after it uses ("Installed Rim's dashboard again."); the button has no hover, since
+        /// this caption beside it already says it.</summary>
+        public const string ReinstallCaption = "Installs this screen's dashboard again, at its saved name and size.";
 
         public const string ReinstallButton = "Reinstall";
-
-        public const string ReinstallTooltip = "Writes this screen's dashboard into SimHub again.";
 
         /// <summary>Save's hover, which does not name a row the sheet may not draw.</summary>
         public const string SaveTooltip = "Applies your changes and writes the dashboard.";
@@ -294,7 +302,8 @@ namespace OpenDashPlugin
             return typed ? current : PackageCatalogue.UniqueName(DefaultName(entry), rig);
         }
 
-        public const string AddTooltip = "Creates the screen and installs its dashboard.";
+        /// <summary>Add screen's hover, in its own verb and the one the line after it uses ("Added Rim.").</summary>
+        public const string AddTooltip = "Adds the screen and installs its dashboard.";
 
         public const string CancelButton = "Cancel";
 
@@ -418,9 +427,11 @@ namespace OpenDashPlugin
         /// The line under the questions, saying what pressing the button will do.
         /// </summary>
         /// <remarks>
-        /// The second screen at a size is the case worth saying out loud: it gets a copy of the
-        /// dashboard and a settings group of its own, which is the whole of ADR 0017 and is invisible
-        /// from the outside until somebody wonders why their two rims cycle together.
+        /// Another screen at a size is the case worth saying out loud: it gets a copy of the dashboard and a
+        /// settings group of its own, which is the whole of ADR 0017 and is invisible from the outside until
+        /// somebody wonders why their two rims cycle together. <paramref name="second"/> says only that the
+        /// size's own settings are taken, so the line counts nothing: the third screen at a size is not the
+        /// second, and a second added after the first was removed takes the first's place.
         /// </remarks>
         public static string Note(PackageEntry entry, bool second)
         {
@@ -429,7 +440,7 @@ namespace OpenDashPlugin
             // own and no settings at all, and the line would promise what it does not do (#474).
             if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return string.Empty;
             return second
-                ? "Your second " + entry.SizeLabel + " gets settings of its own."
+                ? "This " + entry.SizeLabel + " gets settings of its own."
                 : string.Empty;
         }
 
@@ -452,9 +463,12 @@ namespace OpenDashPlugin
             return name + " is now " + size + ". Restart SimHub, then assign \"" + title + "\" to this display again in Dash Studio.";
         }
 
-        public static string ResizeFailed(string name)
+        /// <summary>A resize whose dashboard was not installed. The resize itself happened -- the old folder is
+        /// gone and the screen holds its new size, which the header and the card then show -- so the line says
+        /// so and admits the half that did not land, as <see cref="AddFailed"/> does.</summary>
+        public static string ResizeFailed(string name, string size)
         {
-            return "Could not resize " + name + ". See SimHub's log.";
+            return name + " is now " + size + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
         /// <summary>
@@ -489,9 +503,11 @@ namespace OpenDashPlugin
             return "Renamed to " + title + ". Restart SimHub to see the new name in Dash Studio.";
         }
 
-        public static string RenameFailed(string name)
+        /// <summary>A rename whose dashboard was not installed, from the name the screen now has, as
+        /// <see cref="Renamed"/> writes it: "Renamed to Wheel", never "Renamed Wheel".</summary>
+        public static string RenameFailed(string title)
         {
-            return "Renamed " + name + ", but its dashboard could not be written. See SimHub's log.";
+            return "Renamed to " + title + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
         public static string Reinstalled(string name)

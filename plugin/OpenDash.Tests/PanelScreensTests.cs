@@ -281,7 +281,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelScreens.MissingTitle, PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
             Assert.Equal("Install it again", PanelAttention.InstallAgain);
-            Assert.Equal("Puts this screen's dashboard back into SimHub.", PanelScreens.InstallAgainTooltip);
+            // The hover says the button's verb, and a round screen, which has no settings of its own, is not
+            // told they are kept.
+            Assert.Equal("Installs this screen's dashboard again.", PanelScreens.InstallAgainTooltip);
+            Assert.Equal(PanelAttention.MissingDetail, PanelScreens.MissingDetailFor(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.Null(PanelScreens.MissingDetailFor(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
         }
 
         /// <summary>A card says the kind, and the header beside the name says the kind and the size.</summary>
@@ -636,8 +640,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash.Slot01 to OpenDash.Slot02", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
             Assert.Equal("OpenDash.Slot01 to OpenDash.Slot06", PanelScreens.Properties(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
             Assert.Equal(string.Empty, PanelScreens.Properties(null));
-            Assert.Equal(new[] { "Details", "SimHub name", "Folder", "Properties", "Version", "Not installed" },
-                new[] { PanelScreens.DetailsTitle, PanelScreens.SimHubNameLabel, PanelScreens.FolderLabel, PanelScreens.PropertiesLabel, PanelScreens.VersionLabel, PanelScreens.NotInstalled });
+            Assert.Equal(new[] { "Details", "SimHub name", "Folder", "Properties", "Version", "Not installed", "Unknown" },
+                new[] { PanelScreens.DetailsTitle, PanelScreens.SimHubNameLabel, PanelScreens.FolderLabel, PanelScreens.PropertiesLabel, PanelScreens.VersionLabel, PanelScreens.NotInstalled, PanelScreens.VersionUnknown });
+            // The version as a value in sentence case: never the "(unknown version)" written to follow a name.
+            Assert.Equal(PanelScreens.NotInstalled, PanelScreens.VersionShown(null));
+            Assert.Equal("Unknown", PanelScreens.VersionShown(Versioning.UnknownVersion));
+            Assert.Equal("Unknown", PanelScreens.VersionShown(string.Empty));
+            Assert.Equal("0.3.0", PanelScreens.VersionShown("0.3.0"));
         }
 
         /// <summary>A pit wall: the page on screen picks the zones the list names; a wall on end draws the

@@ -142,7 +142,7 @@ namespace OpenDashPlugin.Tests
                 PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, settings.RigScreens().Select(s => s.Name))));
             Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, null)));
             Assert.Equal("Add screen", PanelAddScreen.AddButton);
-            Assert.Equal("Creates the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
+            Assert.Equal("Adds the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
             Assert.Equal("Cancel", PanelAddScreen.CancelButton);
             Assert.Equal("Goes back without adding anything.", PanelAddScreen.CancelTooltip);
             Assert.Equal("This build ships no dashboards.", PanelAddScreen.NothingToAdd);
@@ -281,10 +281,11 @@ namespace OpenDashPlugin.Tests
             var entry = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
             // The ordinary case says nothing at all: a button reading "Add screen" has already said it.
             Assert.Equal(string.Empty, PanelAddScreen.Note(entry, false));
-            // The second screen at a size is the one case worth a line, since two rims that page
-            // together is what somebody would otherwise report as a bug.
-            Assert.Contains("second", PanelAddScreen.Note(entry, true));
-            Assert.Contains("settings of its own", PanelAddScreen.Note(entry, true));
+            // Another screen at a size is the one case worth a line, since two rims that page together is
+            // what somebody would otherwise report as a bug. It counts nothing: the third at a size is not
+            // "your second", and a second added after the first was removed is the only one.
+            Assert.Equal("This 850 × 480 gets settings of its own.", PanelAddScreen.Note(entry, true));
+            Assert.DoesNotContain("second", PanelAddScreen.Note(entry, true));
             // Except a card face, since every one of them reads the same twelve slots and a second gets none (#474).
             Assert.Equal(string.Empty, PanelAddScreen.Note(Package("OpenDash 480 round", Contract.KindSlots, 480, 480), true));
         }
@@ -323,15 +324,24 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Orientation", PanelAddScreen.OrientationTitle);
             Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
             Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
-            Assert.Equal("Writes this screen's dashboard into SimHub again.", PanelAddScreen.ReinstallTooltip);
             Assert.Equal("Save", PanelAddScreen.SaveButton);
             Assert.Equal("Applies your changes and writes the dashboard.", PanelAddScreen.SaveTooltip);
-            Assert.Equal("Writes this screen's dashboard into SimHub again, at its saved name and size.", PanelAddScreen.ReinstallCaption);
+            // In the verb of the line after it, and with no hover on the button beside it to say it again.
+            Assert.Equal("Installs this screen's dashboard again, at its saved name and size.", PanelAddScreen.ReinstallCaption);
+            Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim"));
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.DoesNotContain("reinstall.ToolTip", screens);
+            // A round screen keeps no settings and has no bindings, so its sheet promises neither.
+            Assert.Equal(PanelAddScreen.EditCaption, PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.Equal(PanelAddScreen.EditCaption, PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindPitWall }));
+            Assert.Null(PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
+            Assert.Contains("PanelAddScreen.EditCaptionFor(screen)", screens);
             Assert.Equal("Goes back without changing anything.", PanelAddScreen.EditCancelTooltip);
             // A failure says what happened and points at the log, where the installer's reason is written
             // (voice.md), as Duplicate and Remove do.
             Assert.Equal("Added Rim, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.AddFailed("Rim"));
-            Assert.Equal("Could not resize Rim. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim"));
+            // The resize happened before the write failed: the screen is its new size, and the line says so.
+            Assert.Equal("Rim is now 1280 × 480, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim", "1280 × 480"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }
@@ -392,9 +402,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Could not install Rim's dashboard. See SimHub's log.", PanelAddScreen.ReinstallFailed("Rim", slots));
             Assert.DoesNotContain("slots", PanelAddScreen.ReinstallFailed("Rim", slots));
             Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", slots));
-            // A rename whose dashboard could not be written did happen: the card says Wheel, and the
-            // line has to admit the half that did not land rather than report a plain failure.
-            Assert.Equal("Renamed Wheel, but its dashboard could not be written. See SimHub's log.", PanelAddScreen.RenameFailed("Wheel"));
+            // A rename whose dashboard could not be installed did happen: the card says Wheel, and the
+            // line has to admit the half that did not land rather than report a plain failure, from the
+            // name the screen now has, as the success line reads.
+            Assert.Equal("Renamed to Wheel, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.RenameFailed("Wheel"));
+            Assert.StartsWith("Renamed to Wheel", PanelAddScreen.Renamed("Wheel"));
         }
 
         /// <summary>The reinstall says what it costs, and says more when there is something to lose.</summary>

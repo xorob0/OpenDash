@@ -94,8 +94,15 @@ namespace OpenDashPlugin
         /// PanelAttention.MissingDetail.</summary>
         public const string MissingTitle = Missing;
 
-        /// <summary>The hover of the fix box's PanelAttention.InstallAgain.</summary>
-        public const string InstallAgainTooltip = "Puts this screen's dashboard back into SimHub.";
+        /// <summary>The hover of the fix box's PanelAttention.InstallAgain, in the button's verb.</summary>
+        public const string InstallAgainTooltip = "Installs this screen's dashboard again.";
+
+        /// <summary>The detail of the fix box under a missing dashboard: PanelAttention.MissingDetail where the
+        /// screen has settings to keep, and nothing for a round screen, which has none of its own.</summary>
+        public static string MissingDetailFor(ScreenInstance screen)
+        {
+            return OwnsSettings(screen) ? PanelAttention.MissingDetail : null;
+        }
 
         /// <summary>The step after the restart, under <see cref="RestartToLoad"/>: SimHub lists the dashboard
         /// under the screen's name, so that is the name to look for.</summary>
@@ -607,6 +614,19 @@ namespace OpenDashPlugin
         public const string PropertiesLabel = "Properties";
         public const string VersionLabel = "Version";
         public const string NotInstalled = "Not installed";
+
+        /// <summary>Details' Version for a dashboard that is installed but says no version, or whose sidecar
+        /// could not be read: a value in sentence case, where Versioning.UnknownVersion is written to follow a
+        /// name ("OpenDash (unknown version)").</summary>
+        public const string VersionUnknown = "Unknown";
+
+        /// <summary>The version Details prints for what DashboardInstaller.InstalledVersionFrom read: Not
+        /// installed for none, <see cref="VersionUnknown"/> for an unknown one, and the version otherwise.</summary>
+        public static string VersionShown(string read)
+        {
+            if (read == null) return NotInstalled;
+            return string.Equals(read, Versioning.UnknownVersion, StringComparison.Ordinal) || read.Length == 0 ? VersionUnknown : read;
+        }
 
         /// <summary>
         /// The properties the screen publishes, as a reader would type them: the namespace is frozen at

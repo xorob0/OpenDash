@@ -255,7 +255,7 @@ namespace OpenDashPlugin
                     var write = Ui.Button(PanelAttention.InstallAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
                     write.ToolTip = PanelScreens.InstallAgainTooltip;
                     write.Click += (sender, args) => InstallScreenAgain(screen);
-                    return Ui.FixBox(PanelScreens.MissingTitle, PanelAttention.MissingDetail, null, write);
+                    return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);
                 case ScreenState.Restart:
                     // The card above says this state in the same words: one phrase for one state.
                     return Ui.FixBox(PanelScreens.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);
@@ -354,12 +354,12 @@ namespace OpenDashPlugin
                 var exists = PackageExtractor.IsInstalled(root, screen.Folder);
                 var sidecar = PackageExtractor.InstalledSidecar(root, screen.Folder);
                 var text = exists && File.Exists(sidecar) ? File.ReadAllText(sidecar) : null;
-                return DashboardInstaller.InstalledVersionFrom(exists, text) ?? PanelScreens.NotInstalled;
+                return PanelScreens.VersionShown(DashboardInstaller.InstalledVersionFrom(exists, text));
             }
             catch (Exception ex)
             {
                 Log.Warn("Could not read the version of " + screen.Folder + ": " + ex.Message);
-                return string.Empty;
+                return PanelScreens.VersionUnknown;
             }
         }
 
@@ -769,7 +769,6 @@ namespace OpenDashPlugin
             var edited = Edited(screen);
             var reinstall = Ui.Button(PanelAddScreen.ReinstallButton, PanelButtonKind.Outline, PanelButtonSize.Small);
             reinstall.MinWidth = ButtonMinWidth;
-            reinstall.ToolTip = PanelAddScreen.ReinstallTooltip;
             reinstall.Click += (sender, args) => ReinstallScreen(screen);
             var reinstallRow = Ui.SettingRow(
                 PanelAddScreen.ReinstallTitle,
@@ -787,7 +786,7 @@ namespace OpenDashPlugin
             var rows = new List<UIElement> { Ui.SettingRow(PanelAddScreen.NameTitle, name, PanelAddScreen.NameCaption) };
             if (sizeRow != null) rows.Add(sizeRow);
             rows.Add(reinstallRow);
-            ShowSheet(PanelAddScreen.EditSheetTitle(screen.Name), Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaption, cancel, save));
+            ShowSheet(PanelAddScreen.EditSheetTitle(screen.Name), Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaptionFor(screen), cancel, save));
         }
 
         /// <summary>
@@ -892,7 +891,7 @@ namespace OpenDashPlugin
             Select(PanelPage.Screens, screen.Namespace);
             Redraw();
             if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name), result.Ok);
+            Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
         }
 
         private static string StockNamespaceOf(PackageEntry entry)
