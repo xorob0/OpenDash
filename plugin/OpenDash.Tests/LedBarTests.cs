@@ -329,32 +329,6 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void An_effect_switch_costs_nothing_to_read_with_effects_off()
-        {
-            // Every gated effect in a strip profile reads its switch first, so a profile asks all fifteen
-            // on every LED frame: with a switch off that must still be compares and nothing else. #503.
-            var settings = new OpenDashSettings();
-            settings.Normalise();
-            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
-            settings.SetBarEffect(bar.Namespace, "tc", false);
-            settings.SetBarEffect(bar.Namespace, "flag.yellow", false);
-            settings.SetBarEffect(bar.Namespace, "pit.lane", false);
-            var ns = bar.Namespace;
-            var effects = Contract.LedEffectSettings().Select(Contract.LedEffectPrimaryId).ToArray();
-            foreach (var effect in effects) settings.BarEffectEnabled(ns, effect);
-
-            var before = GC.GetAllocatedBytesForCurrentThread();
-            for (var frame = 0; frame < 100; frame++)
-            {
-                for (var i = 0; i < effects.Length; i++) settings.BarEffectEnabled(ns, effects[i]);
-            }
-            Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
-            Assert.False(settings.BarEffectEnabled(ns, "tc"));
-            Assert.False(settings.BarEffectEnabled(ns, "flag.chequered"));
-            Assert.True(settings.BarEffectEnabled(ns, "abs"));
-        }
-
-        [Fact]
         public void A_reversed_shape_is_the_plain_one_wired_from_the_far_end()
         {
             // The 4/14/4 that shipped as a shape of its own loads as its sibling with the switch on, and
@@ -573,5 +547,56 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(id, LedBar.NormaliseDevice(" " + id + " "));
         }
 
+    }
+    /// <summary>
+    /// The allocation measurements, alone: GetAllocatedBytesForCurrentThread counts whatever the runtime
+    /// allocates on the thread while it is measured, and with the whole suite running in parallel it saw
+    /// 3000 bytes in about one run in eight that the code under test never allocated. The class runs in a
+    /// collection that is not run beside any other, and each measurement takes the least of several passes:
+    /// a real allocation shows in every pass, a stray one in only some.
+    /// </summary>
+    [Collection(AllocationMeasurements.Name)]
+    public class LedBarAllocationTests
+    {
+        [Fact]
+        public void An_effect_switch_costs_nothing_to_read_with_effects_off()
+        {
+            // Every gated effect in a strip profile reads its switch first, so a profile asks all fifteen
+            // on every LED frame: with a switch off that must still be compares and nothing else. #503.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            settings.SetBarEffect(bar.Namespace, "tc", false);
+            settings.SetBarEffect(bar.Namespace, "flag.yellow", false);
+            settings.SetBarEffect(bar.Namespace, "pit.lane", false);
+            var ns = bar.Namespace;
+            var effects = Contract.LedEffectSettings().Select(Contract.LedEffectPrimaryId).ToArray();
+            foreach (var effect in effects) settings.BarEffectEnabled(ns, effect);
+
+            var least = long.MaxValue;
+            for (var pass = 0; pass < AllocationMeasurements.Passes; pass++)
+            {
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                for (var frame = 0; frame < 100; frame++)
+                {
+                    for (var i = 0; i < effects.Length; i++) settings.BarEffectEnabled(ns, effects[i]);
+                }
+                least = Math.Min(least, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+            Assert.Equal(0, least);
+            Assert.False(settings.BarEffectEnabled(ns, "tc"));
+            Assert.False(settings.BarEffectEnabled(ns, "flag.chequered"));
+            Assert.True(settings.BarEffectEnabled(ns, "abs"));
+        }
+    }
+
+    /// <summary>The collection an allocation measurement runs in: never beside another test.</summary>
+    [CollectionDefinition(Name, DisableParallelization = true)]
+    public class AllocationMeasurements
+    {
+        public const string Name = "Allocation measurements";
+
+        /// <summary>How many times a measurement is taken; the least is the one asserted.</summary>
+        public const int Passes = 5;
     }
 }
