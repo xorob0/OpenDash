@@ -420,8 +420,9 @@ namespace OpenDashPlugin.Tests
         /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the When cell's gap 8, the
         /// Units line 14 in 400, the .num-in's and the .num's 600, the preview card's padding 16/18 with gap 16
         /// and 8 under it, the name inputs 150 with gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre
-        /// buttons' 6 and the .idx's 500. The page types no gap, padding or weight of its own: no numeral but 0
-        /// in a Thickness, and no FontWeights; and each metric is pinned where it is drawn.
+        /// buttons' 6 and the .idx's 500. The page types no gap, padding, size or weight of its own: no numeral
+        /// but 0 in a Thickness, a Width, a Height, a FontSize, an HStack's or a VStack's gap, and no
+        /// FontWeights; and each metric is pinned where it is drawn.
         /// </summary>
         [Fact]
         public void Every_metric_is_the_artboards()
@@ -456,11 +457,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelSettings.StackedControlGap);
             Assert.Equal(8, PanelSettings.AlertFoldGap);
             Assert.Equal(3, PanelSettings.AlertNameWeight);
+            Assert.Equal(150, PanelSettings.AlertNameMinWidth);
             // WPF's own inset of a text box's text, which a placeholder over it matches.
             Assert.Equal(2, PanelSettings.HintInset);
 
             var page = Page();
             Assert.DoesNotMatch(@"HStack\(\d", page);
+            Assert.DoesNotMatch(@"VStack\(\d", page);
+            // A star column's 1 is a share, not a metric.
+            foreach (Match size in Regex.Matches(page.Replace("new GridLength(1, GridUnitType.Star)", "new GridLength(Share, GridUnitType.Star)"), @"(?<!\w)(?:Width|Height|FontSize) = [^,;\n}]*"))
+            {
+                Assert.DoesNotMatch(@"(?<![\w.])[1-9]\d*(?![\w.])", size.Value);
+            }
+            Assert.Matches(@"(?<!\w)(?:Width|Height|FontSize) = [^,;\n}]*", "link.FontSize = 18;");
             Assert.DoesNotContain("FontWeights.", page);
             foreach (Match thickness in Regex.Matches(page, @"new Thickness\([^\n]*"))
             {
@@ -470,6 +479,23 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotMatch(@"(?<![\w.])[1-9]\d*(?![\w.])", "new Thickness(0, PanelKit.SectionHeadingGapSettings, 0, 0),");
             // Each metric where it is drawn.
             Assert.Contains("Ui.HStack(PanelSettings.FuelTargetGap,", page);
+            Assert.Contains("var tyres = Ui.HStack(PanelSettings.TyreButtonGap,", page);
+            Assert.Contains("var name = Ui.HStack(PanelSettings.DriverInputGap,", page);
+            Assert.Contains("Height = PanelSettings.IndexLinkHeight,", page);
+            Assert.Contains("Padding = new Thickness(PanelSettings.IndexLinkPaddingX, 0, PanelSettings.IndexLinkPaddingX, 0),", page);
+            Assert.Contains("scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset + top - PanelSettings.IndexJumpMargin));", page);
+            Assert.Contains("parts.Control.Margin = new Thickness(0, PanelSettings.StackedControlGap, 0, 0);", page);
+            Assert.Contains("Padding = new Thickness(PanelSettings.AlertCellPaddingX, PanelSettings.AlertCellPaddingY, PanelSettings.AlertCellPaddingX, PanelSettings.AlertCellPaddingY),", page);
+            Assert.Matches(@"Width = PanelSettings\.AlertCheck,\s*Height = PanelSettings\.AlertCheck,", page);
+            Assert.Contains("link.FontSize = PanelSettings.AlertTryTextSize;", page);
+            Assert.Contains("tag.Margin = new Thickness(0, PanelSettings.AlertHeaderTagGap, 0, 0);", page);
+            Assert.Equal(2, Regex.Matches(page, Regex.Escape("tag.Margin = new Thickness(PanelSettings.TitleTagGap, 0, 0, 0);")).Count);
+            Assert.Contains("var card = Ui.CardBox(Ui.VStack(PanelSettings.PreviewGap, head, ground), 0);", page);
+            Assert.Contains("card.Padding = new Thickness(PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY, PanelSettings.PreviewPaddingX, PanelSettings.PreviewPaddingY);", page);
+            Assert.Contains("card.Margin = new Thickness(0, 0, 0, PanelSettings.PreviewMarginBottom);", page);
+            Assert.Matches(@"var ground = new Border\s*\{\s*Background = Ui\.Brush\(Theme\.SurfaceInset\),\s*CornerRadius = new CornerRadius\(Theme\.Radius\),\s*Padding = new Thickness\(PanelSettings\.PreviewStagePadding\),", page);
+            Assert.Contains("var gap = i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0;", page);
+            Assert.Contains("percent.Width = PanelSettings.PreviewPercentWidth;", page);
             Assert.Contains("folded.Margin = new Thickness(0, PanelSettings.AlertFoldGap, 0, 0);", page);
             Assert.Contains("Margin = new Thickness(0, PanelSettings.IndexTop - PanelShell.SectionGapFor(PanelPage.Settings), 0, 0),", page);
             Assert.Contains("Padding = new Thickness(0, 0, 0, PanelSettings.IndexPaddingBottom - PanelSettings.IndexGap),", page);
@@ -1009,6 +1035,37 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange();", page);
             Assert.Contains("if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange();", page);
             Assert.Contains("OnLighting(repaint);", page);
+
+            // The wiring: the repaint reads the day brightness then the night one, as PreviewLevel takes them;
+            // the paint dims the strip and the matrix alike and writes the numeral for the time it shows; and
+            // a press of Day or Night repaints at once.
+            Assert.Contains("Action repaint = () => paint(night(), Settings.LightsBrightness, Settings.LightsNightBrightness);", page);
+            Assert.Matches(@"Action<bool, int, int> paint = \(atNight, day, dark\) =>\s*\{\s*var level = PanelSettings\.PreviewLevel\(atNight, day, dark\);\s*Ui\.Redim\(strip, level\);\s*Ui\.Redim\(matrix, level\);\s*percent\.Text = PanelSettings\.PreviewPercent\(atNight, day, dark\);\s*\};", page);
+            Assert.Matches(@"settingsPreviewPickedUnder = Settings\.LightsNightMode;\s*repaint\(\);", page);
+            Assert.Matches(@"return PanelSettings\.ShowsNight\(settingsPreviewPick, Settings\.LightsNightMode\);", page);
+        }
+
+        /// <summary>
+        /// What the page's own helpers do, beyond where they are called: a placeholder shows only while its box
+        /// is empty and follows every keystroke; a stacked control goes on the row under its title across both
+        /// columns; the night-mode chip says "Shortcuts" rather than "Not bound" when SimHub's mappings cannot be
+        /// read, at the .key size either way; and the alert table sits in its card.
+        /// </summary>
+        [Fact]
+        public void The_pages_helpers_do_what_their_rows_rely_on()
+        {
+            var page = Page();
+            Assert.Contains("Action show = () => hint.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;", page);
+            Assert.Matches(@"show\(\);\s*box\.TextChanged \+= \(sender, args\) => show\(\);", page);
+            Assert.Contains("hint.IsHitTestVisible = false;", page);
+
+            Assert.Matches(@"grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*Grid\.SetRow\(parts\.Control, 1\);\s*Grid\.SetColumn\(parts\.Control, 0\);\s*Grid\.SetColumnSpan\(parts\.Control, 2\);", page);
+
+            Assert.Contains("if (triggers == null) chip = Ui.BindingChip(PanelShortcuts.Title, null, open, true);", page);
+            Assert.Contains("chip = Ui.BindingChip(text ?? Ui.NotBound, text != null, open, true);", page);
+            Assert.Contains("chip.ToolTip = PanelBindings.ChipTooltip;", page);
+
+            Assert.Contains("return PageSection(null, true, PanelKit.SectionHeadingGapSettings, heading, Ui.CardBox(grid, 0), folded);", page);
         }
 
         /// <summary>The artboard's preview: a 3·9·3 strip of 20 px LEDs, a yellow on the ends and the revs in the
