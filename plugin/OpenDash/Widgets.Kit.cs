@@ -1305,9 +1305,10 @@ namespace OpenDashPlugin
         /// A grid of cards that takes as many columns as fit (PanelShell.Columns), with the gap between them
         /// and every card in a row as tall as the tallest.
         /// </summary>
-        /// <param name="max">The most columns the page lays its cards in: the artboard's own count (Screens 6,
-        /// LEDs 4, Matrix 4, Home 3). The column has no ceiling, so once the columns are all in use the cards
-        /// stretch to fill the row rather than a seventh being added.</param>
+        /// <param name="max">The most columns the page lays its cards in: the artboard's own count (Screens 6 at
+        /// a 10 px gap, LEDs 3 and Matrix 3 at 12, Home 3 at 16; Matrix's "2 / 4" is its limit on matrices, not
+        /// a column count). The column has no ceiling, so once the columns are all in use the cards stretch to
+        /// fill the row rather than another column being added.</param>
         /// <remarks>
         /// A panel of its own rather than a UniformGrid with its Columns reset on SizeChanged: the count is
         /// decided at measure time from the width it is offered, so a resize never lays it out twice, and a
