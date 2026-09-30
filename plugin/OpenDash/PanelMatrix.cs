@@ -126,9 +126,10 @@ namespace OpenDashPlugin
             return count < MaxPanels;
         }
 
-        /// <summary>The artboard's three columns 12 apart, and the narrowest a card reads at: the 8x8, 12,
-        /// and "Not shown in SimHub" at 12 px inside 14 either side.</summary>
-        public const double CardMinWidth = 200;
+        /// <summary>The artboard's three columns 12 apart, and the narrowest a card reads at: its border and
+        /// 14 either side, the 55 px 8x8, 12, and "Not shown in SimHub" at 12 px (110.5 by the bundled Barlow),
+        /// 207.5 in all, so three columns appear only where that line fits.</summary>
+        public const double CardMinWidth = 208;
         public const double CardGap = 12;
         public const int CardColumns = 3;
 
@@ -318,6 +319,10 @@ namespace OpenDashPlugin
         public const double HeaderGap = 12;
         public const double ActionGap = 6;
 
+        /// <summary>How far above the name's foot the content number sits: 22 over 13 puts the smaller
+        /// line's baseline on the name's about 4 up.</summary>
+        public const double SlotCaptionLift = 4;
+
         // --- The preview -----------------------------------------------------------------------------
 
         /// <summary>
@@ -414,8 +419,9 @@ namespace OpenDashPlugin
         /// <summary>The gap between the preview and the priority list when they are stacked: the page's own.</summary>
         public const double StackedGap = 22;
 
-        /// <summary>How far into the preview's frame the New tag sits from its corner.</summary>
-        public const double NewTagInset = 8;
+        /// <summary>The gap between "All devices at once" and the New tag after it, as a title is followed
+        /// by its tag on Rig. The tag is kept out of the frame, whose padding is narrower than it is tall.</summary>
+        public const double NewTagGap = 12;
 
         // --- What may take the matrix over -------------------------------------------------------------
 
@@ -508,14 +514,19 @@ namespace OpenDashPlugin
 
         // The list, as Matrix.dc.html draws it: the heading 8 over the first rule; each layer a rule over a
         // 12-padded line of its number (16 in the display family, 14 wide), 12, its name at 15 and its switch;
-        // each option under it indented 46 and padded 7, at 14, its control 16 from its words; a line under an
-        // option at 12, 2 below; the Thresholds link 8 before the switch.
+        // each option under it padded 7, at 14, its control 16 from its words; a line under an option at 12,
+        // 2 below; the Thresholds link 8 before the switch. The artboard indents the options 46 because its
+        // lines start with a 10 px grip and 12; ruling 56 took the grips out, so the options and the rank-less
+        // SimHub device row start where a layer's name now does, the rank's 14 and 12 in.
         public const double PriorityHeadGap = 8;
         public const double LayerPaddingY = 12;
         public const double LayerGap = 12;
         public const double RankWidth = 14;
         public const double RankSize = 16;
-        public const double OptionIndent = 46;
+        public const double OptionIndent = RankWidth + LayerGap;
+
+        /// <summary>The dot in the rank column of the unranked Idle display, the artboard's '·'.</summary>
+        public const double UnrankedDotSize = 4;
         public const double OptionPaddingY = 7;
         public const double OptionTextSize = 14;
         public const double OptionGap = 16;

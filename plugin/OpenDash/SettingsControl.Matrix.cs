@@ -130,16 +130,16 @@ namespace OpenDashPlugin
             var m = matrix;
             var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);
             var title = Ui.SubHeading(name);
-            title.TextTrimming = TextTrimming.CharacterEllipsis;
-            var heading = new StackPanel { Orientation = Orientation.Horizontal };
+            // A WrapPanel, not a horizontal StackPanel, so the name is measured at the column's width and
+            // trims, and the content number wraps under a long name rather than being cut off.
+            var heading = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             heading.Children.Add(title);
             var slotCaption = PanelMatrix.SlotCaption(name, m);
             if (slotCaption != null)
             {
                 var slot = Ui.Text(slotCaption, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
                 slot.VerticalAlignment = VerticalAlignment.Bottom;
-                // On the name's baseline: 22 over 13 sits the smaller line about 3 above the bottom.
-                slot.Margin = new Thickness(PanelMatrix.HeaderGap, 0, 0, 4);
+                slot.Margin = new Thickness(PanelMatrix.HeaderGap, 0, 0, PanelMatrix.SlotCaptionLift);
                 heading.Children.Add(slot);
             }
             var rename = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Outline, PanelButtonSize.Small);
@@ -216,16 +216,6 @@ namespace OpenDashPlugin
             var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
-            // New in this release (the Map's "Live 8×8 preview"): the tag sits in the frame's corner, since
-            // the preview has no title to follow.
-            var tag = Ui.NewTag();
-            tag.HorizontalAlignment = HorizontalAlignment.Left;
-            tag.VerticalAlignment = VerticalAlignment.Top;
-            var inset = PanelMatrix.NewTagInset - PanelMatrix.PreviewFramePadding;
-            tag.Margin = new Thickness(inset, inset, 0, 0);
-            var inside = new Grid();
-            inside.Children.Add(preview);
-            inside.Children.Add(tag);
             var frame = new Border
             {
                 Padding = new Thickness(PanelMatrix.PreviewFramePadding),
@@ -233,7 +223,7 @@ namespace OpenDashPlugin
                 BorderBrush = Ui.Brush(Theme.Rule),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                 CornerRadius = new CornerRadius(Theme.Radius),
-                Child = inside,
+                Child = preview,
             };
 
             var all = Ui.LinkButton(PanelMatrix.AllDevices);
@@ -241,6 +231,10 @@ namespace OpenDashPlugin
             all.Height = double.NaN;
             all.HorizontalAlignment = HorizontalAlignment.Left;
             all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario));
+            // New in this release (the Map's "Live 8×8 preview"). The preview has no title to follow, and the
+            // frame's padding is narrower than the tag is tall, so the tag follows the line under the frame.
+            var links = Ui.HStack(PanelMatrix.NewTagGap, all, Ui.NewTag());
+            links.HorizontalAlignment = HorizontalAlignment.Left;
 
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
             AutomationProperties.SetName(chips, PanelMatrix.PreviewChipsName);
@@ -277,7 +271,7 @@ namespace OpenDashPlugin
             };
             drawChips();
 
-            var column = Ui.VStack(PanelMatrix.PreviewGap, frame, all, chips);
+            var column = Ui.VStack(PanelMatrix.PreviewGap, frame, links, chips);
             return new MatrixPreviewColumn(Ui.Anchor(column, PanelMatrix.AnchorPreview), repaint);
         }
 
@@ -361,7 +355,7 @@ namespace OpenDashPlugin
                 Save();
                 RebuildPage();
             }, PanelKit.SegmentedHeightMatrix);
-            var idle = new List<UIElement> { MatrixLayerHead(string.Empty, PanelMatrix.IdleDisplayTitle, null, null, restChoice) };
+            var idle = new List<UIElement> { MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle), PanelMatrix.IdleDisplayTitle, null, null, restChoice) };
             if (PanelMatrix.ShowsGearRows(rest))
             {
                 idle.Add(MatrixOption(PanelMatrix.ShiftColoursTitle, null,
@@ -427,9 +421,10 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The artboard's .lh: the layer's number in the display family, its name at 15, an optional caption,
-        /// an optional link and the control on the right. A null <paramref name="rank"/> drops the number and
-        /// indents the name to the options' line, as the SimHub device row is drawn. The row carries its parts,
-        /// so Ui.Soon appends its tag after the name.
+        /// an optional link and the control on the right. An empty <paramref name="rank"/> is an unranked
+        /// layer, drawn with the artboard's dot in the rank column; a null one drops the column and indents the
+        /// name to the options' line, as the SimHub device row is drawn. The row carries its parts, so Ui.Soon
+        /// appends its tag after the name.
         /// </summary>
         private static Border MatrixLayerHead(string rank, string title, string caption, FrameworkElement link, FrameworkElement control)
         {
@@ -452,7 +447,21 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            if (rank != null)
+            if (rank == string.Empty)
+            {
+                // The artboard's '·', drawn rather than typed so no text box holds a lone glyph.
+                var dot = new Ellipse
+                {
+                    Width = PanelMatrix.UnrankedDotSize,
+                    Height = PanelMatrix.UnrankedDotSize,
+                    Fill = Ui.Brush(Theme.TextSecondary),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                var cell = new Border { Width = PanelMatrix.RankWidth, Margin = new Thickness(0, 0, PanelMatrix.LayerGap, 0), Child = dot };
+                grid.Children.Add(cell);
+            }
+            else if (rank != null)
             {
                 var number = Ui.Text(rank, PanelMatrix.RankSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
                 number.Width = PanelMatrix.RankWidth;
@@ -490,7 +499,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The artboard's .opt: an option of the layer above, indented 46 and padded 7, its words at 14 with
+        /// The artboard's .opt: an option of the layer above, indented to its layer's name and padded 7, its words at 14 with
         /// an optional line under them, and the control 16 from them on the right. Carries its parts, so
         /// Ui.Soon appends its tag after the words.
         /// </summary>

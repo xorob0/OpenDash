@@ -158,7 +158,7 @@ namespace OpenDashPlugin.Tests
             // The grid is the artboard's three columns, 12 apart.
             Assert.Equal(3, PanelMatrix.CardColumns);
             Assert.Equal(12, PanelMatrix.CardGap);
-            Assert.Equal(200, PanelMatrix.CardMinWidth);
+            Assert.Equal(208, PanelMatrix.CardMinWidth);
             var matrix = MatrixSource();
             Assert.Contains("Ui.MatrixCard(picture,", matrix);
             Assert.Contains("MatrixStyle.Card", matrix);
@@ -413,7 +413,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(20, PanelMatrix.PreviewFramePadding);
             Assert.Equal(14, PanelMatrix.PreviewGap);
             Assert.Equal(6, PanelMatrix.ChipGap);
-            Assert.Equal(46, PanelMatrix.OptionIndent);
+            // Without the artboard's grips an option starts where its layer's name does, the rank's 14 and 12 in.
+            Assert.Equal(26, PanelMatrix.OptionIndent);
+            Assert.Equal(PanelMatrix.RankWidth + PanelMatrix.LayerGap, PanelMatrix.OptionIndent);
+            Assert.Equal(4, PanelMatrix.UnrankedDotSize);
+            Assert.Equal(12, PanelMatrix.NewTagGap);
+            Assert.Equal(4, PanelMatrix.SlotCaptionLift);
             Assert.Equal(7, PanelMatrix.OptionPaddingY);
             Assert.Equal(12, PanelMatrix.LayerPaddingY);
             Assert.Equal(14, PanelMatrix.RankWidth);
@@ -421,7 +426,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelMatrix.SectionGap);
             var matrix = MatrixSource();
             Assert.Contains("MatrixStyle.Preview", matrix);
-            Assert.Contains("Ui.NewTag()", matrix);
+            // The New tag follows the line under the frame, clear of the lamps.
+            Assert.Contains("var links = Ui.HStack(PanelMatrix.NewTagGap, all, Ui.NewTag());", matrix);
+            Assert.Contains("Ui.VStack(PanelMatrix.PreviewGap, frame, links, chips)", matrix);
+            Assert.Contains("Child = preview,", matrix);
+            // Idle display is unranked, drawn with the artboard's dot; the device row has no rank column.
+            Assert.Contains("MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle), PanelMatrix.IdleDisplayTitle,", matrix);
+            Assert.Contains("Width = PanelMatrix.UnrankedDotSize,", matrix);
+            Assert.Contains("words.Margin = new Thickness(PanelMatrix.OptionIndent, 0, 0, 0);", matrix);
+            Assert.Contains("Padding = new Thickness(PanelMatrix.OptionIndent, PanelMatrix.OptionPaddingY, 0, PanelMatrix.OptionPaddingY),", matrix);
+            // The selected matrix's name trims inside its column and its number wraps under it.
+            Assert.Contains("var heading = new WrapPanel { Orientation = Orientation.Horizontal", matrix);
+            Assert.DoesNotContain("new StackPanel { Orientation = Orientation.Horizontal }", matrix);
         }
 
         [Fact]
