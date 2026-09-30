@@ -92,6 +92,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(zones.Select(z => z + " · next page").Concat(zones.Select(z => z + " · previous page")), rows.Select(r => r.Label));
             Assert.Equal(order.Select(l => Contract.CycleZoneAction(Face, l)).Concat(order.Select(l => Contract.CycleZoneBackAction(Face, l))), rows.Select(r => r.Action));
             Assert.Equal(rows.Select(r => "Rim · " + r.Label), rows.Select(r => r.BinderName));
+            // What each row does in the clash line: a previous-page row cycles its zone back, never forward.
+            Assert.Equal(zones.Select(z => PanelShortcuts.ZoneDoes(z, true)).Concat(zones.Select(z => PanelShortcuts.ZoneDoes(z, false))), rows.Select(r => r.Does));
+            Assert.All(rows.Skip(zones.Count), r => Assert.EndsWith(" back", r.Does));
             // The previous page rows are this release's, and they alone carry the New tag.
             Assert.Equal(zones.Select(z => false).Concat(zones.Select(z => true)), rows.Select(r => r.IsNew));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
@@ -102,6 +105,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(glance.IsHold);
             Assert.False(glance.IsNew);
             Assert.Equal("Rim · quick glance", glance.BinderName);
+            Assert.Equal(PanelShortcuts.GlanceDoes, glance.Does);
+            Assert.Equal("holds the quick glance", glance.Does);
 
             // Every action the face registers has a row, and nothing else does: nine rows on a face.
             var drawn = rows.Select(r => r.Action).Concat(new[] { glance.Action }).OrderBy(a => a, StringComparer.Ordinal);
@@ -135,6 +140,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.RigActionNames(), rows.Select(r => r.Action));
             Assert.Equal(new[] { "Night mode", "Brightness up", "Brightness down" }, rows.Select(r => r.Label));
             Assert.Equal(new[] { false, true, true }, rows.Select(r => r.IsNew));
+            Assert.Equal(new[] { "Night mode", "Brightness up", "Brightness down" }, rows.Select(r => r.BinderName));
+            Assert.Equal(Contract.RigActionNames().Select(PanelShortcuts.RigActionDoes), rows.Select(r => r.Does));
+            Assert.Equal(new[] { "toggles night mode", "turns the brightness up", "turns the brightness down" }, rows.Select(r => r.Does));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
             // The rig test and the alert's dismissal are coming, and are the page's two greyed rows.
             Assert.Equal(new[] { PanelSoon.RigTest, PanelSoon.AlertDismissal }, PanelShortcuts.SoonDrawn);
@@ -363,11 +371,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(14, PanelShortcuts.RowNameSize);
             Assert.Equal(8, PanelShortcuts.TagGap);
             Assert.Equal(90, PanelShortcuts.PressWidth);
+            // The glance's caption 4 under its name, and a stacked binder 8 under the name and the press.
+            Assert.Equal(4, PanelShortcuts.CaptionGap);
+            Assert.Equal(8, PanelShortcuts.StackGap);
+            Assert.Equal(160, PanelShortcuts.NameMinWidth);
             Assert.Equal(260, PanelShortcuts.BinderMinWidth);
             Assert.Equal(300, PanelShortcuts.BinderWidth);
             // The header: 8 from the title to the caption, the filter's 30 px bar on the caption's foot.
             Assert.Equal(8, PanelShortcuts.IntroGap);
             Assert.Equal(11, PanelShortcuts.FilterRaise);
+            // Under the caption when the header stacks: the artboard's 12 px header gap.
+            Assert.Equal(12, PanelShortcuts.FilterGapStacked);
             Assert.Equal(14, PanelKit.SegmentedPaddingShortcuts);
             // The external line and the role=status line.
             Assert.Equal(16, PanelShortcuts.LeadPaddingX);
@@ -378,6 +392,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelShortcuts.BannerGap);
             Assert.Equal(14, PanelShortcuts.BannerTextSize);
             Assert.Equal(16, PanelShortcuts.BannerIconSize);
+            // Two clash lines, 8 apart.
+            Assert.Equal(8, PanelShortcuts.BannerStackGap);
         }
 
         [Fact]
@@ -438,9 +454,53 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The page draws: one hold binder per kind, each with its glance caption; every greyed row through the
-        /// registry; every live row anchored where another page's binding chip lands; and the filter at the
-        /// artboard's padding.
+        /// The watch the page puts on every live row's editor is let go of, as HoldWhilePressed's is
+        /// (PanelObligationsTests.A_glance_rebound_in_place_is_held_again): SimHub's mappings live for the
+        /// session and hold their handlers strongly, and each handler here leads through the page's evaluation
+        /// to every card it drew, so one left behind keeps every discarded Shortcuts build alive.
+        /// </summary>
+        [Fact]
+        public void The_bindings_watch_lets_go_when_the_editor_leaves_and_the_page_is_dropped()
+        {
+            var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
+            var start = code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal);
+            Assert.True(start >= 0, "ShortcutsWatch is on the page");
+            var body = code.Substring(start);
+            Assert.Contains("mapping.PropertyChanged += mappingChanged;", body);
+            Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
+            Assert.Contains("watched.PropertyChanged += modelChanged;", body);
+
+            var rewatch = Between(body, "Action rewatchMappings = () =>", "};");
+            Assert.Contains("mapping.PropertyChanged -= mappingChanged;", rewatch);
+            Assert.Contains("watchedMappings.Clear();", rewatch);
+
+            var detach = Between(body, "Action detach = () =>", "};");
+            Assert.Contains("mapping.PropertyChanged -= mappingChanged;", detach);
+            Assert.Contains("watchedMappings.Clear();", detach);
+            Assert.Contains("watchedTriggers.CollectionChanged -= collectionChanged;", detach);
+            Assert.Contains("watchedTriggers = null;", detach);
+            Assert.Contains("watched.PropertyChanged -= modelChanged;", detach);
+            Assert.Contains("watched = null;", detach);
+
+            // Let go of when the editor leaves the tree, and when the build is replaced or the page left.
+            Assert.Contains("editor.Unloaded += (sender, args) => detach();", body);
+            Assert.Contains("OnDrop(detach);", body);
+        }
+
+        private static string Between(string text, string from, string to)
+        {
+            var start = text.IndexOf(from, StringComparison.Ordinal);
+            Assert.True(start >= 0, from);
+            var end = text.IndexOf(to, start, StringComparison.Ordinal);
+            Assert.True(end > start, to);
+            return text.Substring(start, end - start);
+        }
+
+        /// <summary>
+        /// The page draws what PanelShortcuts decides, through PanelShortcuts: one hold binder per kind, each with
+        /// its glance caption; every greyed row through the registry; every live row anchored where another
+        /// page's binding chip lands and every card where search lands; the filter, the counts, the clash line
+        /// and the empty line from the model's evaluation; and the rows at the model's geometry.
         /// </summary>
         [Fact]
         public void The_page_draws_what_its_model_decides()
@@ -459,6 +519,33 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("padding: PanelKit.SegmentedPaddingShortcuts", code);
             // Columns follow the room a row has, never the sidebar's state.
             Assert.DoesNotContain("!Narrow", code);
+
+            // The page's frame: its intro, the filter's labels and its hook into the evaluation, the empty line,
+            // the header's two columns only where TwoColumns says, and every anchor id AnchorTable pins drawn.
+            Assert.Contains("Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth)", code);
+            Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
+            Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);", code);
+            Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);
+            Assert.Contains("            evaluate();\n", code.Replace("\r\n", "\n"));
+            Assert.Contains("var line = ShortcutsClashLine(clash);", code);
+            Assert.Contains("empty.Text = emptyText ?? string.Empty;", code);
+            Assert.Contains("if (TwoColumns)", code);
+            Assert.Contains("if (screens.Count > 0) Ui.Anchor(screens[0].Card, PanelShortcuts.AnchorScreens);", code);
+            Assert.Contains("Ui.Anchor(lights.Card, PanelShortcuts.AnchorRig);", code);
+            Assert.Contains("Ui.Anchor(alerts.Card, PanelShortcuts.AnchorAlerts);", code);
+            foreach (var id in AnchorTable.Of(typeof(PanelShortcuts)))
+            {
+                Assert.Contains("PanelShortcuts." + id.Substring(0, id.IndexOf(" =", StringComparison.Ordinal)) + ");", code);
+            }
+
+            // The rows as the model gives them: its label and press, the New tag where the model says, the
+            // greyed rows by their registry title, and each card's line beside its name.
+            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, tags);", code);
+            Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
+            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null);", code);
+            Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height)")).Count);
+            Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
+            Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);
 
             // Every row's binder in one slot of the model's width, the gap on the slot, never on SimHub's editor,
             // whose template draws its own Margin a second time; the editor names nothing of its own.
