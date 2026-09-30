@@ -329,7 +329,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultWebViewUrl, Contract.NormaliseUrl(PanelPitWallPlan.AddressPlaceholder));
         }
 
-        /// <summary>The companion's grid: three columns of seven where they fit (ruling 36), fewer where a
+        /// <summary>The companion's grid: three columns of seven where they fit, as the artboard draws them, fewer where a
         /// module and "Not in iRacing" beside it would not.</summary>
         [Fact]
         public void The_companion_grid_is_three_columns_where_they_fit()

@@ -260,7 +260,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// A card's three states and the fix box under the two that need one: one phrase for one state, a
-        /// missing folder before a waiting restart, since restarting will not bring a folder back (ruling 27).
+        /// missing folder before a waiting restart, since restarting will not bring a folder back (#503).
         /// </summary>
         [Fact]
         public void A_card_says_whether_SimHub_has_its_screen_in_the_words_the_fix_box_uses()
@@ -336,7 +336,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
         }
 
-        /// <summary>A face's rows, in voice.md's words where the artboard's differ (findings 10 to 15).</summary>
+        /// <summary>A face's rows, in voice.md's words where the artboard's differ, which voice.md wins (#503).</summary>
         [Fact]
         public void A_faces_rows_are_named_as_voice_md_names_them()
         {
@@ -417,7 +417,7 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// A zone's list: the ticked pages in the zone's cycle from the page it opens on, which is the First,
         /// then under Show all the rest; the last ticked page locked; Energy, Damage and Track rivals said to
-        /// be empty in iRacing and still tickable (rulings 29 and 30).
+        /// be empty in iRacing and still tickable, since other sims fill them.
         /// </summary>
         [Fact]
         public void A_zones_list_is_its_ticked_pages_in_order_and_the_first_is_where_it_opens()
@@ -597,7 +597,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, PanelScreens.ControlsWidth(100));
         }
 
-        /// <summary>The quick glance is picked zone first, then only the pages that zone carries (ruling 32); a
+        /// <summary>The quick glance is picked zone first, then only the pages that zone carries, in the order a driver decides; a
         /// new zone keeps the page where it has it and opens on its first otherwise.</summary>
         [Fact]
         public void The_glance_offers_only_the_pages_its_zone_carries()
@@ -626,7 +626,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>Details name what a reader could type exactly: the name SimHub lists, the folder as stored,
-        /// and the properties by the frozen namespace, never derived from the name (ruling 38).</summary>
+        /// and the properties by the frozen namespace, never derived from the name, which is not the namespace (ADR 0017).</summary>
         [Fact]
         public void Details_name_the_properties_by_the_namespace()
         {
@@ -641,7 +641,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A pit wall: the page on screen picks the zones the list names; a wall on end draws the
-        /// portrait layout's four instead (ruling 34), each choice naming its zone.</summary>
+        /// portrait layout's four instead, each choice naming its zone.</summary>
         [Fact]
         public void A_pit_wall_lists_the_zones_of_the_page_on_screen()
         {

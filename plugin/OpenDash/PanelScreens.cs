@@ -327,7 +327,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The page a zone opens on, which the list draws first and tags First (ruling 29): the zone's
+        /// The page a zone opens on, which the list draws first and tags First: the zone's
         /// Start, the setting the dash reads, and never simply the first ticked page of its stored order.
         /// </summary>
         /// <remarks>

@@ -131,7 +131,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Two choices in the order a driver makes them, and the second offers only the pages the first zone
-        /// carries (ruling 32). The value stays zone × 100 + page.
+        /// carries, so no pair the dash does not draw can be picked. The value stays zone × 100 + page.
         /// </remarks>
         private FrameworkElement BuildFaceGlance(ScreenInstance screen, Action redraw, double column)
         {
@@ -467,8 +467,8 @@ namespace OpenDashPlugin
 
             // A tick or an untick leaves the start where it is unless it unticked the start itself, which
             // FaceSettings moves on to the next ticked page; a drag moves it only when it puts another page
-            // first (ruling 29). Never a SetStart per press: that would put the running zone back on its first
-            // page every time a box was ticked.
+            // first, since the page drawn first is the one the zone opens on. Never a SetStart per press:
+            // that would put the running zone back on its first page every time a box was ticked.
             Action settle = () =>
             {
                 ScreensSave(screen, redraw);
