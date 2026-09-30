@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { propertiesRead } from '../packages/dash/src/properties.ts';
-import { scenarios } from './emulator.ts';
+import { tracedScenarioNames, UNTRACED_SCENARIOS } from './emulator.ts';
 import {
   DEFAULT_FRAMES,
   DEFAULT_HZ,
@@ -17,6 +17,7 @@ import {
   parseSimHubVersion,
   recordedProperties,
   toTrace,
+  untracedWarnings,
 } from './record.ts';
 import { TRACE_DIR, TRACE_VERSION } from './trace.ts';
 import type { RecordOptions } from './record.ts';
@@ -139,8 +140,23 @@ describe('what a recording asks SimHub for', () => {
 });
 
 describe('the command line', () => {
-  test('with no argument it records every scenario the emulator ships', () => {
-    expect(parseArgs([])).toEqual({ scenarios: scenarios(), hz: DEFAULT_HZ, frames: DEFAULT_FRAMES, warmUpSeconds: DEFAULT_WARM_UP_SECONDS, noBuild: false, keep: false, outDir: TRACE_DIR });
+  test('with no argument it records every scenario a committed trace is expected for', () => {
+    expect(parseArgs([])).toEqual({ scenarios: tracedScenarioNames(), hz: DEFAULT_HZ, frames: DEFAULT_FRAMES, warmUpSeconds: DEFAULT_WARM_UP_SECONDS, noBuild: false, keep: false, outDir: TRACE_DIR });
+  });
+
+  test('with no argument it leaves out the scenarios meant to have no trace', () => {
+    // Each would cost the VM two and a half minutes and write a file trace.test.ts refuses (#519).
+    const recorded = opts([]).scenarios;
+    for (const name of UNTRACED_SCENARIOS) expect({ name, recorded: recorded.includes(name) }).toEqual({ name, recorded: false });
+    expect(untracedWarnings(recorded)).toEqual([]);
+  });
+
+  test('an untraced scenario named on its own is recorded, and warned about', () => {
+    // Naming one is how a scenario leaves UNTRACED_SCENARIOS, so it is not refused.
+    expect(opts(['alerts', 'green']).scenarios).toEqual(['alerts', 'green']);
+    const warnings = untracedWarnings(['alerts', 'green']);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(/^alerts is in UNTRACED_SCENARIOS/);
   });
 
   test('scenarios are positional and flags are not mistaken for them', () => {

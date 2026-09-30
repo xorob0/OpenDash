@@ -16,7 +16,7 @@
  * has to move, then the correct state last: `Pit limiter` is information and everything above it is
  * a mistake. The pit alerts are not ranked against the race alerts, because the two draw in
  * different rectangles and never contend: band D holds the flag while this rectangle holds the pit
- * state, and a driver serving a stop under a full-course caution needs both. In the full-screen flag
+ * state, and a driver serving a stop under a full course yellow needs both. In the full-screen flag
  * format the block does cover this rectangle, and the face draws the pit alert over it deliberately,
  * for the same reason.
  *
@@ -27,7 +27,7 @@
  * both places. The catalogue's half also asks whether anybody is in the car, since on the circuit
  * SimHub's reading of the ignition is off whenever nobody is.
  *
- * Two of `alertBand`'s three shapes, at the artboards' border: a filled band for the correct state,
+ * Two of `alertBand`'s five shapes, at the artboards' border: a filled band for the correct state,
  * outlined bands for the four that are not. `purpose.pitLimiter` and `purpose.flag.white` are both
  * `#FFFFFF`, so the mistake and the correct state differ in shape rather than in colour, which is
  * the same reasoning the flag box writes down for the same pair of states.

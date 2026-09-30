@@ -15,7 +15,7 @@
  * `Flag_*` properties, which is the whole of what this file is for. Those six are a lossy summary:
  * `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one band, and
  * `Flag_Black` is only the `black` bit, so a red flag, a disqualification, a furled black, a
- * meatball, a full-course caution, the debris flag and the start gantry were invisible on the face
+ * meatball, a full course yellow, the debris flag and the start gantry were invisible on the face
  * and visible on the 8x8 box. The face, the box and the pit wall header now rank one list, so the
  * three cannot disagree about which of two live conditions wins.
  *
@@ -25,7 +25,8 @@
  * property is not a boolean.
  *
  * The nano's 12 px strip is too thin for a name, so its style drops the names and thins the
- * outline to 2 px; at that size a debris flag and a yellow are one band, which flags.ts records.
+ * outline to 2 px. What tells two conditions apart there is their shape and colour alone, which is
+ * why the debris flag draws its stripes rather than being a yellow with a name on it (#498).
  *
  * One condition says more than its own name. A blue flag is thrown for a car that is about to
  * arrive, and which car that is decides whether a driver lifts or holds the line, so
@@ -37,8 +38,8 @@
 import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
-import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
-import { ALERT_CATALOGUE, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
+import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, discBand, filledBand, outlinedBand, stripedBand, type AlertBandStyle } from './alertBand.ts';
+import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { CHIP_WIDEST } from '../second/chip.ts';
@@ -73,15 +74,39 @@ export function flagVisible(flag: FlagProperty): Expr {
   return and(flagsAllowedHere(), ...higher, eq(game(flag), num(1)));
 }
 
+/**
+ * A name fits the rectangle it would be centred on, with the band's own border cleared at each end.
+ *
+ * Strictly, and measured in Bold, which is the face the name is drawn in: SimHub hands the box to
+ * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph.
+ */
+const nameFits = (frame: Rect, text: string): boolean =>
+  measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < frame.width;
+
+/**
+ * The name a band writes over `frame`: the longest of the condition's names that fits it. That is the
+ * label on every band the build draws, the full course yellow's included, whose FCY is for a band too
+ * narrow for FULL COURSE YELLOW, #497. Where none fits it is the shortest, and `textFit.test.ts` is
+ * what refuses that rather than WPF clipping it.
+ */
+const nameOver = (frame: Rect, spec: AlertBandSpec): string => {
+  const names = bandNames(spec);
+  return names.find((text) => nameFits(frame, text)) ?? names.at(-1)!;
+};
+
 /** The shape the condition asks for, drawn over `frame`, with the name as a style asks for it. */
 const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
   switch (spec.shape) {
     case 'filled':
-      return filledBand(name, frame, style, spec.colour, spec.label, spec.flash ?? false);
+      return filledBand(name, frame, style, spec.colour, nameOver(frame, spec), spec.flash ?? false);
     case 'outlined':
-      return outlinedBand(name, frame, style, spec.colour, spec.label);
+      return outlinedBand(name, frame, style, spec.colour, nameOver(frame, spec));
     case 'chequer':
       return chequerBand(name, frame);
+    case 'striped':
+      return stripedBand(name, frame, style, spec.colour, spec.stripe, spec.label);
+    case 'disc':
+      return discBand(name, frame, spec.colour);
   }
 };
 
@@ -91,7 +116,7 @@ const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: Aler
  * writes no run, and the settled corner blocks draw `shapeParts` alone, so the run is the takeover's.
  */
 const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
-  if (spec.shape === 'chequer' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
+  if (spec.shape === 'chequer' || spec.shape === 'striped' || spec.shape === 'disc' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
   const ink = spec.shape === 'filled' ? ds.purpose.flag.onFlag : spec.colour;
   return [
     ...shapeParts(name, frame, { ...style, labels: false }, spec),
@@ -110,12 +135,13 @@ export const BLUE_FLAG_ID = 'blue';
  * The canvas draws the detail as part of the sentence -- "Blue flag · GT3 behind" -- so what the
  * band writes is one centred string in all three cases, and a name pinned to the centre with a
  * detail hung off its end would be two boxes fighting over the same middle. Each run declares the
- * widest string it can draw, which is what `textFit.test.ts` measures against the band: the
- * longest is the label, a two-digit place and the widest chip, and a run that stopped fitting some
- * face's band would fail there rather than be clipped by WPF.
+ * widest string it can draw, which is what `textFit.test.ts` measures against the band and what a
+ * settled corner block is measured against before it writes the runs at all: the longest is the
+ * label, a two-digit place and the widest chip, and a run that stopped fitting some face's band
+ * would fail there rather than be clipped by WPF.
  *
  * The separator goes with the detail rather than before it, so a lap with nothing behind reads
- * `BLUE FLAG` and not `BLUE FLAG · `.
+ * `BLUE` and not `BLUE · `.
  *
  * It lives here and not in `FLAG_CATALOGUE` because the catalogue is also the 8x8 box's list, the
  * LED strips' and the pit wall header's, and none of those three can draw a second run: a picture
@@ -238,32 +264,35 @@ export interface FlagCornerBlocks {
   right: Rect;
 }
 
-/**
- * The flag's name fits the block it would be centred on, with the band's own border cleared at each
- * end.
- *
- * Strictly, and measured in Bold, which is the face the name is drawn in: SimHub hands the box to
- * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph. A name
- * that does not fit is not shrunk and not clipped; it is simply not written, and the block is colour
- * alone, which is what the nano's twelve-pixel strip already is.
- *
- * All nineteen names fit all four corner-block sizes and none fits the sixteen pixels of side padding,
- * so the answer comes out per face rather than per condition: on the four faces with no corner block a
- * settled flag is a colour, and a colour is a family rather than a member -- the three blacks are one
- * outlined sliver and the debris flag is a yellow. zones.md §6 weighs that against holding the whole
- * band for the length of a caution, and §10 records what the canvas still owes those four faces. A
- * neutral alert is the exception that has no colour to fall back on, and draws nothing there.
- */
-const cornerNameFits = (block: Rect, text: string): boolean =>
-  measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;
+/** Whether the blue flag's three runs fit `block`, each measured from its `widest` as a name is. */
+const blueDetailFits = (block: Rect, spec: AlertBandSpec): boolean =>
+  spec.shape === 'filled' && blueFlagRuns(spec.label).every((run) => nameFits(block, run.widest));
 
 /**
  * One end of the settled condition: its own shape, with its name where the block has room, and never
- * the run the whole band writes in place of the name.
+ * the incident's count, which the whole band writes in place of the name.
+ *
+ * The name is the longest of the condition's names that fits the block, by the same measure as the
+ * whole band's. A name that does not fit is not shrunk and not clipped; it is simply not written, and
+ * the block is colour alone, which is what the nano's twelve-pixel strip already is. The blue flag
+ * writes its detail by that measure too, #497: the three runs the whole band draws where the widest of
+ * them fits the block, and BLUE where only the name does.
+ *
+ * All eighteen labels, which are every condition's but the chequer's and the meatball's, fit all four
+ * corner-block sizes, FULL COURSE YELLOW being the widest of them, and none of the names fits the
+ * sixteen pixels of side padding, FCY included, so the answer comes out per face rather than per
+ * condition: on the four faces with no corner block a settled flag is a colour, and a colour is a
+ * family rather than a member -- the three blacks are one outlined sliver. The debris flag is not a
+ * yellow there, since #498: its stripes are never fewer than three, so sixteen pixels still hold one
+ * red between two yellow. The meatball loses nothing there, having no name anywhere: its disc is sized
+ * from the block, ten pixels across in sixteen. zones.md §6 weighs that against holding the whole band
+ * for the length of a caution, and §10 records what the canvas still owes those four faces. A neutral
+ * alert is the exception that has no colour to fall back on, and draws nothing there.
  */
 const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
   const spec = condition.band;
-  const labels = style.labels && spec.shape !== 'chequer' && cornerNameFits(block, spec.label);
+  if (condition.id === BLUE_FLAG_ID && style.labels && blueDetailFits(block, spec)) return blueFlagParts(name, block, style, spec);
+  const labels = style.labels && bandNames(spec).some((text) => nameFits(block, text));
   if (!labels && !drawnWithoutName(condition)) return [];
   return shapeParts(name, block, { ...style, labels }, spec);
 };
@@ -276,11 +305,11 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
- * One thing the takeover has that this does not: the blue flag's detail. Naming the class of the car
- * behind takes a whole band -- "BLUE FLAG · P4 GT3" is wider than any corner block at any size --
- * and a block that wrote it on the widest face and not on the others would be a different drawing
- * per face. The blue block writes BLUE FLAG where that fits, and the detail belongs to the seconds
- * the flag has the band. The incident's count is the same: the block writes INCIDENT.
+ * The blue flag keeps its detail, #497: the block writes it as the whole band does, under the same
+ * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 LMP2" is narrower than
+ * FULL COURSE YELLOW, so that is every corner block there is, and the sixteen pixels of the four faces
+ * without one write neither the detail nor BLUE. One thing the takeover has that this does not: the
+ * incident's count against its limit. The block writes INCIDENT.
  *
  * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has
  * no layer here at all rather than an empty one.

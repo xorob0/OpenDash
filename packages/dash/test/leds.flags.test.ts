@@ -266,7 +266,7 @@ describe('what one flag looks like beside another', () => {
     expect(chequer.blinkDelayMs).toBe(SLOW_BLINK_MS);
   });
 
-  test('the full-course caution alternates two lit colours, to say the whole track rather than this corner', () => {
+  test('the full course yellow alternates two lit colours, to say the whole track rather than this corner', () => {
     const caution = effect('flag.caution');
     expect(new Set([caution.color, caution.blinkColor])).toEqual(new Set([ds.color.caution.primary, ds.purpose.flag.yellow]));
     // The amber is the steady half: the caution and the plain yellow share a lamp and a rate, so the
@@ -275,10 +275,22 @@ describe('what one flag looks like beside another', () => {
     expect(effect('flag.yellow').color).toBe(ds.purpose.flag.yellow);
   });
 
+  test('the debris flag alternates its yellow with its stripes’ red, so the lamp is never the yellow flag', () => {
+    // The band draws the stripes and the lamp alternates their two colours, at the fast rate the
+    // debris flag already had. The yellow alone at that rate was the yellow flag to a glance (#498).
+    const debris = effect('flag.debris');
+    expect({ color: debris.color, blink: debris.blinkColor, delay: debris.blinkDelayMs }).toEqual({
+      color: ds.purpose.flag.debris,
+      blink: ds.purpose.flag.debrisStripe,
+      delay: FAST_BLINK_MS,
+    });
+    expect(debris.blinkWhen).toBe(debris.when);
+    expect(new Set([debris.color, debris.blinkColor])).not.toEqual(new Set([effect('flag.yellow').color, BLINK_OFF]));
+  });
+
   test('every flag draws its own token, and the ones with no second colour blink against the ground', () => {
     const drawn: Record<string, string> = {
       'flag.yellow': ds.purpose.flag.yellow,
-      'flag.debris': ds.purpose.flag.debris,
       'flag.blue': ds.purpose.flag.blue,
       'flag.white': ds.purpose.flag.white,
       'flag.green': ds.purpose.flag.green,

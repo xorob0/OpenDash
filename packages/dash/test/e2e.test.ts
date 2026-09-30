@@ -412,7 +412,7 @@ describe('the emitted JSON', () => {
     }
   });
 
-  test('the round faces write ellipses and rotated rectangles; Rotation follows Height and is never 0; the rectangular faces write neither', () => {
+  test('the round faces write ellipses and rotated rectangles; Rotation follows Height and is never 0; the rectangular faces write no rotation and no ellipse but the meatball’s disc', () => {
     const round = LAYOUTS.filter((l) => l.shape === 'round');
     expect(round.map((l) => l.folder)).toEqual(['OpenDash 480 round', 'OpenDash 800 round']);
     for (const layout of round) {
@@ -441,7 +441,21 @@ describe('the emitted JSON', () => {
     }
     for (const layout of LAYOUTS.filter((l) => l.shape === 'rect')) {
       const items = itemsOfDocument(readJson(join(widget.out, layout.folder, `${layout.folder}.djson`)));
-      expect(items.some((i) => 'Rotation' in i || i.$type === ITEM_TYPES.ellipse)).toBe(false);
+      expect(items.some((i) => 'Rotation' in i)).toBe(false);
+      // The one ellipse a rectangular face draws is the meatball's disc, which the author ruled on
+      // #498: filled in its orange, with no stroke and nothing behind it, since on an ellipse the
+      // background is the square it is drawn in.
+      const ellipses = items.filter((i) => i.$type === ITEM_TYPES.ellipse);
+      expect({ layout: layout.folder, discs: ellipses.length > 0 }).toEqual({ layout: layout.folder, discs: true });
+      for (const e of ellipses) {
+        expect({ name: e.Name, fill: e.FillColor, stroke: e.EllipseThickness, behind: e.BackgroundColor }).toEqual({
+          name: e.Name,
+          fill: '#FFFFB300',
+          stroke: 0,
+          behind: '#00FFFFFF',
+        });
+        expect({ layout: layout.folder, name: e.Name, meatball: String(e.Name).endsWith('.meatball.disc') }).toEqual({ layout: layout.folder, name: e.Name, meatball: true });
+      }
     }
   });
 

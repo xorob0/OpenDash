@@ -23,7 +23,7 @@ import { buildLayout, buildPackage } from '../src/dashboard.ts';
 import { centre, contains, distance, overlaps, rect, type Rect } from '../src/design/geometry.ts';
 import { FONT_METRICS, WPF_BASELINE } from '../src/design/metrics.ts';
 import { rungForSlot, rungSpec, type Rung } from '../src/design/rung.ts';
-import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type TextItem } from '../src/generator.ts';
+import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type RectangleItem, type TextItem } from '../src/generator.ts';
 import { gearItems, hero, type HeroGeometry } from '../src/hero/hero.ts';
 import {
   cardRung,
@@ -581,21 +581,22 @@ describe('800 x 286 nano', () => {
 
   test('the 12 px flag strip has no labels, a 2 px outline and 6 px checks', () => {
     // The strip draws the whole catalogue, one layer per condition, rather than the six properties
-    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full-course
-    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now, and so
+    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full course
+    // yellow, a waved yellow, the debris flag and the start gantry are on the nano too now, and so
     // are the car alerts. Push to pass and the headlight flash are not: they are white, which without
     // a name is the white flag or the black flag, and the strip writes no names.
     const flags = items.filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.'));
     expect(flags.map((f) => f.name)).toEqual(ALERT_CATALOGUE.filter((c) => !('neutral' in c && c.neutral)).map((c) => `flag.${c.id}`));
     for (const f of flags) {
       for (const child of walkItems(f.children)) {
-        expect(child.kind).toBe('rect');
+        // Rectangles, and the meatball's disc, which is the one ellipse a flag strip draws.
+        expect({ name: child.name, kind: child.kind }).toEqual({ name: child.name, kind: child.name === 'flag.meatball.disc' ? 'ellipse' : 'rect' });
         expect(child.name.endsWith('.label')).toBe(false);
         if (hasRect(child)) expect(contains(rect(0, 274, 800, 12), child.rect)).toBe(true);
       }
     }
     // A filled band with nothing to say at this size is one rectangle; a flashing one is two.
-    for (const id of ['red', 'meatball', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    for (const id of ['red', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
     expect(layerNamed(items, 'flag.yellowWaving').children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.flash']);
     // The outlined form, which the black family and the start gantry share.
     for (const id of ['black', 'disqualify', 'furled']) {
@@ -611,11 +612,26 @@ describe('800 x 286 nano', () => {
       if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
       expect({ id, colour: outlined.border?.color, ground: outlined.backgroundColor }).toEqual({ id, colour: '#00D96A', ground: '#0A0B0D' });
     }
+    // And the meatball, which is a black flag with an orange disc and is drawn as one: the near-black
+    // ground with no border, and a disc of its orange in the middle, two thirds of the strip's twelve
+    // pixels, rather than a band of the caution amber (#498).
+    const [meatballGround, meatballDisc, ...meatballRest] = layerNamed(items, 'flag.meatball').children;
+    if (meatballGround?.kind !== 'rect' || meatballDisc?.kind !== 'ellipse') throw new Error('meatball ground and disc');
+    expect({ rest: meatballRest, ground: meatballGround.backgroundColor, border: meatballGround.border, rect: meatballGround.rect }).toEqual({ rest: [], ground: '#0A0B0D', border: undefined, rect: rect(0, 274, 800, 12) });
+    expect({ fill: meatballDisc.fillColor, stroke: meatballDisc.strokeThickness, rect: meatballDisc.rect }).toEqual({ fill: '#FFB300', stroke: 0, rect: rect(396, 276, 8, 8) });
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
     for (const c of checks) expect(c.rect.height).toBe(6);
     expect(checks.map((c) => c.rect.width).filter((w) => w !== 6)).toEqual([2]);
+    // The debris flag is its stripes rather than a yellow, since the strip writes no name to tell it
+    // from the yellow flag: 133 stripes as near 6 px as 800 divides, every other one red, the first
+    // and last yellow.
+    const [debrisGround, ...debrisStripes] = layerNamed(items, 'flag.debris').children.filter((c): c is RectangleItem => c.kind === 'rect');
+    expect({ rect: debrisGround?.rect, fill: debrisGround?.backgroundColor }).toEqual({ rect: rect(0, 274, 800, 12), fill: '#FFD400' });
+    expect(debrisStripes).toHaveLength(66);
+    for (const s of debrisStripes) expect({ name: s.name, fill: s.backgroundColor, height: s.rect.height, wide: s.rect.width === 6 || s.rect.width === 7 }).toEqual({ name: s.name, fill: '#FF2D46', height: 12, wide: true });
+    expect({ first: debrisStripes[0]!.rect.left, last: debrisStripes.at(-1)!.rect.left + debrisStripes.at(-1)!.rect.width }).toEqual({ first: 6, last: 794 });
     // The flash is a band over the fill and not the layer: a blinking layer draws nothing for half
     // of every cycle, and what a flag covers has to stay covered.
     expect(layerNamed(items, 'flag.yellowWaving').blink).toBeUndefined();
@@ -633,10 +649,10 @@ describe('800 x 286 nano', () => {
     // run a condition writes in its place while it has the band, which opens with the label.
     for (const condition of ALERT_CATALOGUE) {
       const spec = condition.band;
-      if (spec.shape === 'chequer') continue;
+      if (spec.shape === 'chequer' || spec.shape === 'disc') continue;
       const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
       if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
-      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: spec.run?.sample ?? spec.label });
+      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: ('run' in spec ? spec.run?.sample : undefined) ?? spec.label });
       expect({ id: condition.id, opens: label.text.startsWith(spec.label) }).toEqual({ id: condition.id, opens: true });
     }
   });

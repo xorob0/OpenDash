@@ -128,11 +128,11 @@ you can learn the box away from the car.
 | 1 | Red — the whole box red | ● |
 | 2 | Disqualified — a cross, blinking | ● |
 | 3 | Black — an outline | ● |
-| 4 | Black furled — a bar | ● |
+| 4 | Black — a bar | ● |
 | 5 | Meatball — an orange disc | ● |
 | 6 | Chequered — a checkerboard | |
-| 7 | Full-course caution — SC in black on yellow, blinking | ● |
-| 8 | Waved yellow — yellow, blinking | ● |
+| 7 | Full course yellow — SC in black on yellow, blinking | ● |
+| 8 | Yellow — blinking | ● |
 | 9 | Yellow — solid, steady | ● |
 | 10 | Debris — yellow with danger stripes | ● |
 | 11 | Blue — an arrow that moves | ● |
@@ -151,10 +151,11 @@ of the panel with a bar down one edge, which is two facts at once and is what yo
 moment.
 
 A black flag is an **outline** because black is the absence of light: a black panel is a box that
-is off. A waved yellow is the yellow flag **blinking**, which is how you tell it from a standing
-one without a second colour. A full-course caution blinks as well, with **SC** cut out of the
-yellow, so the letters are how you tell it from a waved yellow. The pit limiter is a **frame** in
-the lane and an **exclamation mark** out of it, so you never have to judge by colour alone.
+is off. A yellow being waved is the yellow flag **blinking**, which is how you tell it from a
+standing one without a second colour or a second name. A full course yellow blinks as well, with
+**SC** cut out of the yellow, so the letters are how you tell it from a yellow being waved. The pit
+limiter is a **frame** in the lane and an **exclamation mark** out of it, so you never have to judge
+by colour alone.
 
 ## What it does not do
 
@@ -167,7 +168,7 @@ for; the honest answer is that the data is not there, not that it was forgotten.
 | | |
 |---|---|
 | Yellow per sector | Not in iRacing's flag data at all. Eight pixels across could not say *which* sector anyway. |
-| Virtual safety car | iRacing has no VSC. The full-course caution is drawn and is a different thing. |
+| Virtual safety car | iRacing has no VSC. The full course yellow is drawn and is a different thing. |
 | White for a slow car | iRacing's white flag is the last lap and nothing else. |
 | Incident, penalty, drive through, stop and go | None is a flag in the data. iRacing says them with the black flag and with text; the box shows the black flag. |
 | A countdown to your pit box | The most loved thing on any flag box, and iRacing publishes no distance to your own stall. Working one out from track position is a calculation OpenDash refuses to do until a decision record says otherwise. |

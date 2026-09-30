@@ -13,7 +13,7 @@ export function Priority() {
         {FLAGS.map((f, i) => (
           <li key={f.id} className={styles.row}>
             <span className={`num ${styles.n}`}>{i + 1}</span>
-            <span className={styles.name}>{f.name}</span>
+            <span className={styles.name}>{f.blinks ? `${f.name}, blinking` : f.name}</span>
             <span className={styles.tag}>{f.critical ? 'Critical' : 'Dropped when quiet'}</span>
           </li>
         ))}

@@ -13,9 +13,15 @@ committed file.
 ## Recording
 
 ```bash
-bun run record                 # every scenario
+bun run record                 # every scenario that keeps a trace
 bun run record green pit       # some of them
 ```
+
+The bare form records the scenarios `scripts/trace.test.ts` expects a trace for, which is every
+scenario the emulator ships except the ones `UNTRACED_SCENARIOS` in
+[scripts/emulator.ts](../scripts/emulator.ts) names and says why for. Naming one of those records
+it anyway, since that is how a scenario comes off the list, and warns that the trace fails that test
+until the name is taken off.
 
 The command claims the VM, installs [the recorder plugin](../tools/trace-recorder/README.md) into
 SimHub, runs each scenario past it once and writes the file here. `--frames`, `--hz` and
@@ -83,64 +89,27 @@ anybody adding it anywhere. Until then the entry is a claim, `scripts/trace.test
 being a constant -- nobody hand-writes two hundred frames of a moving value honestly -- and a reader
 replaying the file can see which one line of it nobody watched.
 
-The seven traces committed on 2026-09-18 carry one such column, `DataCorePlugin.GameRunning` at a
-constant 1. Every one of them was recorded with the emulator attached and a session live, which is
-what 1 means, so a re-record will write the same value; it is the provenance and not the number that
-this field is about.
+All seven were recorded again on 2026-09-29 for #322, which observed every column they had been
+carrying by hand and left none asserted, and the observations bear the entries out where they said
+they would. `DataCorePlugin.GameRunning` was 1, `OpenDash.ClockFormat` `24h` and
+`OpenDash.DeltaPrecision` `hundredths`, and #109's `PushToPassActive`, `dcHeadlightFlash` and
+`EngineStarted` were `false`, `false` and 1, as asserted. The three entries that said they were not
+what a recording would write were not: `DataCorePlugin.GameData.BestLapOpponentSameClassPosition` is
+6 in the yellow scenario rather than -1, and iRacing's live delta to the last lap,
+`DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap`, moves through the lap with its
+`_OK` flag true from the first frame rather than standing at 0 and `false`. No replay had read any
+of those three, since every trace had been taken with the settings that do not read them, which is
+the argument each entry made and the only condition under which a column is worth typing at all.
 
-They carry a second since #433, `DataCorePlugin.GameData.BestLapOpponentSameClassPosition` at a
-constant -1, and this one is not what a re-record will write. It is the leaderboard row of the
-fastest car of the player's own class, which the session best reads when `OpenDash.PositionMode` is
-`class`, and the emulator's field is two classes of twelve with best laps drawn from a seeded random
-generator, so which row holds it is something only SimHub watching the scenario can say. -1 is the
-value SimHub itself publishes before it has one, "nobody yet", which in a replay draws the class
-session best as the empty placeholder rather than as a car nobody observed. Every trace was recorded
-with `PositionMode` at `overall`, so no replay of them reads the column at all; the next
-`bun run record` picks the property up by itself and drops the entry.
-
-#322 added two more, on the same argument and with the same caveat.
-`DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap` is iRacing's live delta to the
-last lap, at a constant 0, and `LapDeltaToSessionLastlLap_OK` is whether it has a lap to compare
-against, at a constant `false`. Neither is what a re-record will write: the emulator publishes the
-delta moving through the lap and the flag true once a lap has been completed, which in most of
-these scenarios is from the first frame. The pair is what the emulator publishes before a lap has
-been completed, and together they draw the level delta the other two references draw when they
-have nothing to compare against. Every trace was recorded with `OpenDash.DeltaReference` at
-`session`, so no replay of them reads either column; the next `bun run record` picks both up and
-drops the entries.
-
-It added a third, `OpenDash.DeltaPrecision` at a constant `hundredths`, and unlike the two above this
-one is what a re-record will write. It is a setting rather than telemetry, a plugin nobody has opened
-publishes its default, and the default is hundredths. The traces were taken before the setting
-existed, so none of them can say that for itself, but every one of them was taken while the delta
-could only be drawn to two places, which is what hundredths draws. The next `bun run record` reads it
-from the plugin and drops the entry.
-
-Every trace asserts `OpenDash.ClockFormat` since #324, at a constant `24h`, which is what the plugin
-publishes until a driver changes it and so what a re-record will write. It was added by hand because
-the idle screen every package carries reads it, and a trace that lacks a property a binding reads
-fails the check above.
-
-Three more since #109, because the alert catalogue and the pit family read them, and none is a guess
-about the value. `DataCorePlugin.GameData.PushToPassActive` is `false` in all seven: SimHub's iRacing
-reader fills it from `CarIdxP2P_Status` at the player's index and hands it through as a `bool?` rather
-than as 1 or 0, and the emulator publishes that array all `false`.
-`DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash` is `false`: a raw telemetry boolean the
-emulator publishes as `false`, the same type and default as `dcPitSpeedLimiterToggle`, which every
-trace recorded as `false`. `DataCorePlugin.GameData.EngineStarted` is 1: the reader computes it from
-its own ignition and the stalled bit of `EngineWarnings`, and every trace recorded `EngineIgnitionOn`
-at a constant 1 and an `EngineWarnings` that never carries the stalled bit, 8. They are asserted
-because the VM was held by another session when they were needed; the next recording of each
-scenario replaces them with what SimHub says.
-
-#503 added seventeen to each, and all of them are what a re-record will write. Sixteen are
-`OpenDash.Face<size>Zone{B,C}Position`, where the page a zone is showing sits in its cycle, which the
-plugin publishes because the panel lets a driver arrange a zone's pages and an expression cannot read
-an ordered list. They are null wherever the recording's page is null, which is every face but the
-850x480, and 1 and 15 on the 850x480, which is where pages 0 and 14 sit in a zone whose mask is
+#503 asserts seventeen in each, typed on top of that recording because the plugin it was taken with
+did not publish them yet, and all of them are what a re-record will write. Sixteen are
+`OpenDash.Face<size>Zone{B,C}Position`, where the page a zone is showing sits in its cycle, which
+the plugin publishes because the panel lets a driver arrange a zone's pages and an expression cannot
+read an ordered list. They are null wherever the recording's page is null, which is every face but
+the 850x480, and 1 and 15 on the 850x480, which is where pages 0 and 14 sit in a zone whose mask is
 full and whose order is the catalogue's -- the plugin's answer for a zone nobody has arranged. The
-seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened publishes.
-The next `bun run record` reads all of them from the plugin and drops the entries.
+seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened
+publishes. The next `bun run record` reads all of them from the plugin and drops the entries.
 
 ## Why a recording waits two minutes first
 

@@ -116,30 +116,61 @@ export const flagsAllowedHere = (): Expr => or(eq(setting.flagsInPitLane(), 'tru
 export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_Blue' | 'Flag_White' | 'Flag_Green';
 
 /**
- * How a band draws the condition: three shapes and no fourth, which is the canvas's own rule for
- * the alert catalogue. A filled bar carries its label in `purpose.flag.onFlag`; an outlined bar is
- * an opaque `surface.base` ground with a 3 px border and its label both in the alert's colour,
- * which is how a near-black flag is drawn on a near-black face; the chequer is the board, and it
- * is the one condition with no name to write on it.
+ * How a band draws the condition: five shapes and no sixth, which are the canvas's own four for the
+ * alert catalogue, bands, outlined bands and two patterns, and the meatball's disc. A filled bar
+ * carries its label in `purpose.flag.onFlag`; an outlined bar is an opaque `surface.base` ground with
+ * a 3 px border and its label both in the alert's colour, which is how a near-black flag is drawn on a
+ * near-black face; the chequer is the board, and it is one of the two conditions with no name to write
+ * on it; the stripes are the debris flag's, `stripe` over `colour`, with the label on a plate of
+ * `colour`; and the disc is an opaque `surface.base` ground with a disc of `colour` in its middle, and
+ * is the other condition that writes no name.
+ *
+ * The fourth exists because a name is written only where there is width for one. Drawn as a filled
+ * yellow named DEBRIS, the debris flag was the yellow flag on the nano, in a settled corner too
+ * narrow for the word and on the LED strip, which is to say wherever a driver was reading colour
+ * rather than words; #498 draws the pattern the flag is made of instead.
+ *
+ * The fifth is outside the canvas's rule and is the author's ruling on #498: the meatball is a black
+ * box with an orange disc in the middle and no text, which is the flag itself, as the chequer is. It
+ * carries no label for the reason the chequer carries none, the drawing being the whole of what it
+ * says, and the type refuses one rather than leaving a name that nothing would write.
  *
  * It lives beside the condition rather than in the component for the reason `motion` does: a
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
  * cannot draw, and the type is what refuses it.
+ *
+ * A filled bar may carry a `short` form of its label, which is the name where the label does not fit,
+ * or fits only too small to read. Band D and its corner blocks write the longest of the two that fits
+ * the room they have, so the name is as long as the room allows rather than as short as the smallest
+ * room; the full-screen block writes the label at a size of its own wherever that size is at least
+ * `FLAG_FULL_LONG_NAME_MIN_RATIO` of the one size its other names share, in `components/flagFull.ts`.
+ * One condition has one, the full course yellow, whose FULL COURSE YELLOW is FCY on a full-screen
+ * block where the whole name would be under half the size of the others, #497; the others are short
+ * enough everywhere they are written, and a second form nobody reads would be a second name to keep
+ * in step with the first.
  */
 export type AlertBandSpec =
-  | { shape: 'filled'; colour: Hex; label: string; flash?: true; run?: BandRun }
+  | { shape: 'filled'; colour: Hex; label: string; short?: string; flash?: true; run?: BandRun }
   | { shape: 'outlined'; colour: Hex; label: string; run?: BandRun }
-  | { shape: 'chequer' };
+  | { shape: 'chequer' }
+  | { shape: 'striped'; colour: Hex; stripe: Hex; label: string }
+  | { shape: 'disc'; colour: Hex };
+
+/** The names a band can write for the condition, longest first, and none for the chequer or the disc. */
+export const bandNames = (spec: AlertBandSpec): readonly string[] => {
+  if (spec.shape === 'chequer' || spec.shape === 'disc') return [];
+  return spec.shape === 'filled' && spec.short !== undefined ? [spec.label, spec.short] : [spec.label];
+};
 
 /**
  * What the whole band writes in place of its label, for the one condition with a number to say: the
  * incident, with its count and the limit it is counted against.
  *
  * Only the band writes it, and only while the condition has the whole band. A corner block writes the
- * label, and the nano writes nothing, which is the rule the blue flag's detail already keeps: the
- * detail belongs to the seconds a condition has the band. `sample` is what DashStudio draws and
- * `widest` is the longest string the binding can produce, which is what `textFit.test.ts` measures
- * the band against and what `widest.test.ts` holds the binding to.
+ * label, and the nano writes nothing. The blue flag's detail is not held to that rule since #497: a
+ * corner block writes it wherever it fits. `sample` is what DashStudio draws and `widest` is the
+ * longest string the binding can produce, which is what `textFit.test.ts` measures the band against
+ * and what `widest.test.ts` holds the binding to.
  */
 export interface BandRun {
   sample: string;
@@ -151,7 +182,10 @@ export interface BandRun {
 interface CatalogueEntry {
   /** Stable id: the container description in the profile and the key in the docs table. */
   id: string;
-  /** As the pit wall names it. */
+  /**
+   * As the site lists it, where it is listed at all. No dash draws it: the band and the full-screen
+   * block write names of their own.
+   */
   name: string;
   /** How band D draws it. Every condition has one, so that the band and the box cannot differ. */
   band: AlertBandSpec;
@@ -302,17 +336,21 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  * and nothing on a dashboard remembers it. The limit follows where the session has one, which is the
  * pit wall header's reading of the same two properties.
  *
- * Outlined, where the canvas fills it. Its colour is `purpose.alert.incident`, which is the caution
- * amber `#FFB300`, and so is the meatball's `purpose.flag.orange`: filled, the two would be one band
- * on the nano, and a driver who has just hit something is the driver a meatball is most likely to be
- * for. Outlined in amber is a drawing nothing else in the catalogue makes.
+ * Filled, as the canvas draws it. Its colour is `purpose.alert.incident`, which is the caution amber
+ * `#FFB300`, and so is the meatball's `purpose.flag.orange`, so the two can only be told apart by
+ * shape wherever the incident writes no name, which is the nano and a settled block too narrow for
+ * the word; and a driver who has just hit something is the driver a meatball is most likely to be
+ * for. While the meatball was a filled band the incident was outlined for that reason. Since #498 the
+ * meatball is drawn as the flag is, a black box with an orange disc in its middle and no name, so the
+ * incident takes the canvas's fill back and the pair stays apart at every size: a band of amber is
+ * the incident, and a disc of it on the near-black is the meatball.
  */
 const INCIDENT: CarAlert = {
   id: 'incident',
   name: 'Incident',
   when: and(changed(num(ALERT_EVENT_MS), incidentCount()), driving(), gt(incidentCount(), num(0))),
   band: {
-    shape: 'outlined',
+    shape: 'filled',
     colour: ds.purpose.alert.incident,
     label: 'INCIDENT',
     run: {
@@ -408,39 +446,59 @@ const HEADLIGHT_FLASH: CarAlert = {
 export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   IGNITION_OFF,
   ENGINE_OFF,
-  { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED FLAG' } },
+  { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED' } },
   { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
-  { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG · FURLED' } },
-  { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK FLAG' }, faceFlag: 'Flag_Black' },
-  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'filled', colour: ds.purpose.flag.orange, label: 'MEATBALL' } },
-  // Full-course caution: in iRacing this is the pace car being deployed, which is the closest
-  // honest reading of a safety car. It outranks a local yellow because it is the whole track.
+  // The furled black is named as the black flag is, #497, and neither flashes, so on the band and on
+  // the full-screen block the two are one drawing; the box alone tells them apart, by a bar that walks
+  // against an outline that waves.
+  { id: 'furled', name: 'Black', critical: true, motion: 'moves', bits: ['furled'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK' } },
+  { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'BLACK' }, faceFlag: 'Flag_Black' },
+  // The meatball is a black flag with an orange disc, and is drawn as one: the near-black ground, a
+  // disc of `purpose.flag.orange` in its middle, and no name, as the author ruled on #498. The canvas
+  // fills the band orange, which is the caution amber and neither colour of the flag.
+  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'], band: { shape: 'disc', colour: ds.purpose.flag.orange } },
+  // The full course yellow: iRacing's caution of the whole track, which is the pace car being
+  // deployed. It outranks a local yellow because it is the whole track. The canvas names it Safety
+  // car (7 · SafetyCar), and the name here is the one decided in #497, which docs/design/flag-box.md
+  // records against the canvas. It is the one name with a short form, since FULL COURSE YELLOW is
+  // too long for the full-screen block on the portrait screens to stay legible there.
   {
     id: 'caution',
-    name: 'Full-course caution',
+    name: 'Full course yellow',
     critical: true,
     motion: 'moves',
     bits: ['caution', 'cautionWaving'],
-    band: { shape: 'filled', colour: ds.purpose.alert.safetyCar, label: 'SAFETY CAR' },
+    band: { shape: 'filled', colour: ds.purpose.alert.safetyCar, label: 'FULL COURSE YELLOW', short: 'FCY' },
   },
   // The flash is the waved yellow's and not the standing yellow's, which is the rule the box keeps
   // under "waving is blinking". Band D used to flash on SimHub's `Flag_Yellow`, which folds the two
   // together, so a standing yellow strobed for as long as it was out.
+  //
+  // The flash is also all that tells the two apart, since both are named YELLOW, #497. A yellow
+  // being waved is the yellow flag, the canvas names no other, and a driver reads the difference in
+  // the band's movement rather than in a word.
   {
     id: 'yellowWaving',
-    name: 'Waved yellow',
+    name: 'Yellow',
     critical: true,
     motion: 'moves',
     bits: ['yellowWaving'],
-    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'WAVED YELLOW', flash: true },
+    band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW', flash: true },
   },
-  { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW FLAG' }, faceFlag: 'Flag_Yellow' },
-  // `purpose.flag.debris` is the yellow, and the canvas draws the band as that yellow under danger
-  // stripes. The stripes are a fourth shape and are not drawn: the name carries the difference on
-  // the standard band, and on the nano, which writes no name, a debris flag reads as a yellow.
-  { id: 'debris', name: 'Debris', critical: true, motion: 'moves', bits: ['debris'], band: { shape: 'filled', colour: ds.purpose.flag.debris, label: 'DEBRIS' } },
+  { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], band: { shape: 'filled', colour: ds.purpose.flag.yellow, label: 'YELLOW' }, faceFlag: 'Flag_Yellow' },
+  // `purpose.flag.debris` is the yellow and `debrisStripe` the red over it, which is the flag. The
+  // stripes are vertical where the canvas draws them at 135 degrees, `components/alertBand.ts` says
+  // why, and they are what tells it from the yellow flag wherever no name is written.
+  {
+    id: 'debris',
+    name: 'Debris',
+    critical: true,
+    motion: 'moves',
+    bits: ['debris'],
+    band: { shape: 'striped', colour: ds.purpose.flag.debris, stripe: ds.purpose.flag.debrisStripe, label: 'DEBRIS' },
+  },
   INCIDENT,
-  { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE FLAG' }, faceFlag: 'Flag_Blue' },
+  { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE' }, faceFlag: 'Flag_Blue' },
   // In iRacing the white bit is the last lap and nothing else, which is why the name says so.
   { id: 'white', name: 'White', critical: false, motion: 'held', bits: ['white'], band: { shape: 'filled', colour: ds.purpose.flag.white, label: 'WHITE · LAST LAP' }, faceFlag: 'Flag_White' },
   {
@@ -449,7 +507,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
     critical: false,
     motion: 'held',
     bits: ['green'],
-    band: { shape: 'filled', colour: ds.purpose.flag.green, label: 'GREEN FLAG' },
+    band: { shape: 'filled', colour: ds.purpose.flag.green, label: 'GREEN' },
     limiter: 'Flag_Green',
     faceFlag: 'Flag_Green',
   },
@@ -571,7 +629,7 @@ export const bandVisible = (condition: AlertCondition): Expr => conditionVisible
  * It exists so that "the flag has just changed" can be asked once instead of twenty times, and so
  * that it is asked of the right thing. A layer's own `conditionVisible` answers whether *this*
  * condition is winning; a clock needs a value that moves when the *winner* moves, and the two are
- * not the same question. A full-course caution clearing to the local yellow underneath it never
+ * not the same question. A full course yellow clearing to the local yellow underneath it never
  * moves the yellow's own bit, yet what the driver is being told has changed, so the yellow is owed
  * its moment on the whole band exactly as a fresh flag is.
  *

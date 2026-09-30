@@ -17,10 +17,11 @@
  * blinking the whole layer away.
  */
 import { describe, expect, test } from 'bun:test';
+import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
 import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
-import { ALERT_CATALOGUE, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
+import { ALERT_CATALOGUE, bandNames, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
@@ -258,10 +259,10 @@ describe('the waved yellow flash', () => {
  * What the flag does once its few seconds are up: it settles into the block at each end of the band
  * and gives the page back, #380.
  *
- * The ticket's own case is a safety car on the 850 x 480 face with 2.1 litres in the tank: the band
- * read SAFETY CAR and nothing on the face said fuel, for as long as the caution lasted, which is
- * several minutes, and a caution is exactly when a driver decides whether to pit. The flag has said
- * everything it has to say after two seconds.
+ * The ticket's own case is a full course yellow on the 850 x 480 face with 2.1 litres in the tank: the
+ * band read SAFETY CAR then, and nothing on the face said fuel, for as long as the caution lasted,
+ * which is several minutes, and a caution is exactly when a driver decides whether to pit. The flag
+ * has said everything it has to say after two seconds.
  *
  * The blocks are the band's own, not the flag's: `bandFlagBlocks` hands back the corner blocks on the
  * four faces that draw them and the side padding on the four that do not, so a settled flag can
@@ -375,7 +376,14 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       // A name too wide for the block is not shrunk and not clipped: it is not written, and the
       // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
       // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
-      // corner blocks hold every one of the nineteen names.
+      // corner blocks hold every one of the eighteen labels, the chequer and the meatball having none.
+      // Where a condition has two names, which is the full course yellow's FULL COURSE YELLOW and FCY,
+      // it writes the longest that fits the narrower block, and writes it at both ends: one settled flag
+      // carrying two names, or a name at one end and none at the other, would read as two conditions
+      // rather than one. The blue flag's detail is held to the same rule, #497: where the widest of its
+      // three runs fits the narrower block, both ends write the three, and where it does not, the name.
+      const wholeBlue = labelsOf(layerOf(face, BLUE_FLAG_ID).children);
+      const detail = wholeBlue.map((run) => run.text);
       for (const condition of ALERT_CATALOGUE) {
         const settled = cornerLayers(face).get(condition.id);
         if (!settled) continue;
@@ -386,17 +394,70 @@ describe('the flag settles into the blocks at the ends of the band', () => {
           expect({ item: name.name, drawn, box: name.rect.width, fits: drawn < name.rect.width }).toMatchObject({ fits: true });
         }
         const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
-        const text = condition.band.shape === 'chequer' ? undefined : condition.band.label;
-        const expected = text !== undefined && measureText('BarlowBold', text, ds.size.label) < room ? 2 : 0;
-        expect({ face: face.folder, id: condition.id, names: names.length }).toEqual({ face: face.folder, id: condition.id, names: expected });
+        const text = bandNames(condition.band).find((name) => measureText('BarlowBold', name, ds.size.label) < room);
+        const detailFits = condition.id === BLUE_FLAG_ID && wholeBlue.every((run) => measureText('BarlowBold', run.widest ?? run.text, ds.size.label) < room);
+        const expected = detailFits ? [...detail, ...detail] : text === undefined ? [] : [text, text];
+        expect({ face: face.folder, id: condition.id, names: names.map((n) => n.text) }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
-      // And the blue block writes its own name and never the car behind: "BLUE FLAG · P4 GT3" is
-      // wider than any block at any size, so the detail belongs to the seconds the flag has the band.
-      expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE FLAG · GT3');
-      // The incident likewise: the block writes INCIDENT, unbound, and its count against the limit
-      // is the whole band's for the seconds it has it.
+      // And where the blue block writes the car behind, it writes it exactly as the whole band does: each
+      // end carries the band's three runs, each shown by the same BlueFlagDetail, bound to the same
+      // expression and measured from the same widest. That is every face with corner blocks, and none
+      // of the four whose sixteen pixels hold no word.
+      const asWritten = (runs: readonly TextItem[]) => runs.map(({ text, widest, bindings }) => ({ text, widest, bindings }));
+      const settledBlue = labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children);
+      expect({ face: face.folder, detail: settledBlue.some((l) => l.bindings?.Text !== undefined) }).toEqual({ face: face.folder, detail: face.bandCorners });
+      if (face.bandCorners) {
+        for (const end of ['left', 'right'] as const) {
+          const runs = settledBlue.filter((l) => l.name.startsWith(`flagCorner.${BLUE_FLAG_ID}.${end}.`));
+          expect({ face: face.folder, end, runs: asWritten(runs) }).toEqual({ face: face.folder, end, runs: asWritten(wholeBlue) });
+        }
+      }
+      // The incident is the other way: the block writes INCIDENT, unbound, and its count against the
+      // limit is the whole band's for the seconds it has it.
       for (const label of labelsOf(cornerLayerOf(face, 'incident').children)) {
         expect({ item: label.name, text: label.text, bound: label.bindings?.Text !== undefined }).toEqual({ item: label.name, text: 'INCIDENT', bound: false });
+      }
+    });
+
+    test(`${face.folder} draws the debris flag's red stripes in both blocks, so a settled debris flag is never a yellow`, () => {
+      // Where a block holds no name, colour is all a driver has, and the debris flag's yellow alone
+      // was the yellow flag's. Its stripes are never fewer than three, so even sixteen pixels carry
+      // one red between two yellow, clear of both ends of the block (#498).
+      const layer = cornerLayerOf(face, 'debris');
+      for (const end of ['left', 'right'] as const) {
+        const parts = layer.children.filter((c): c is RectangleItem => c.kind === 'rect' && c.name.startsWith(`flagCorner.debris.${end}.`));
+        const stripes = parts.filter((p) => p.backgroundColor === ds.purpose.flag.debrisStripe);
+        expect({ face: face.folder, end, ground: parts[0]?.backgroundColor, stripes: stripes.length >= 1 }).toEqual({ face: face.folder, end, ground: ds.purpose.flag.debris, stripes: true });
+        for (const stripe of stripes) {
+          expect({
+            stripe: stripe.name,
+            fullHeight: stripe.rect.top === blocks[end].top && stripe.rect.height === blocks[end].height,
+            clearOfTheEnds: stripe.rect.left > blocks[end].left && stripe.rect.left + stripe.rect.width < blocks[end].left + blocks[end].width,
+          }).toEqual({ stripe: stripe.name, fullHeight: true, clearOfTheEnds: true });
+        }
+      }
+    });
+
+    test(`${face.folder} draws the meatball in both blocks as its disc on the near-black, with no name`, () => {
+      // A black box with an orange disc in the middle and no text, which is the author's ruling on
+      // #498, in a settled block as on the whole band. The disc is two thirds of the block's shorter
+      // side, which on the faces with no corner block is the sixteen or twelve pixels of its width.
+      const layer = cornerLayerOf(face, 'meatball');
+      for (const end of ['left', 'right'] as const) {
+        const parts = layer.children.filter((c) => c.name.startsWith(`flagCorner.meatball.${end}.`));
+        const [ground, disc] = parts;
+        if (parts.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${face.folder} draws the ${end} meatball as a ground and a disc`);
+        const block = blocks[end];
+        expect({
+          face: face.folder,
+          end,
+          ground: ground.rect,
+          fill: ground.backgroundColor,
+          border: ground.border,
+          disc: disc.fillColor,
+          inside: contains(block, disc.rect),
+          size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * Math.min(block.width, block.height)) <= 1,
+        }).toEqual({ face: face.folder, end, ground: block, fill: ds.color.surface.base, border: undefined, disc: ds.purpose.flag.orange, inside: true, size: true });
       }
     });
 
@@ -433,7 +494,7 @@ describe('the flag settles into the blocks at the ends of the band', () => {
  * this: the window is state, but it is SimHub's, kept and aged by SimHub, so a package installed
  * without the plugin evaluates the same window. What it watches is the *rank of the winning
  * condition* rather than any one condition's bits, and that distinction is the whole reason
- * `raisedRank` exists: a full-course caution clearing to the local yellow underneath it never moves
+ * `raisedRank` exists: a full course yellow clearing to the local yellow underneath it never moves
  * the yellow's bit, and the yellow is nonetheless a new thing to tell a driver.
  */
 describe('the window that decides which phase the band is in', () => {

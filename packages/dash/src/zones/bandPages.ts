@@ -937,7 +937,7 @@ const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, dens
  * On a face that draws corner blocks they *are* those blocks, each taken whole and to the band's own
  * edge: the flag covers the incidents and the track state at one end, the lamps and both clocks at
  * the other, and gives the page in the middle back. That is the trade the ticket makes deliberately.
- * A safety car period runs several minutes and the flag has said everything it has to say after two
+ * A full course yellow runs several minutes and the flag has said everything it has to say after two
  * seconds, whereas what a driver decides during one is whether to pit, so the fuel page outranks a
  * clock and the availability of DRS for the rest of the caution.
  *
