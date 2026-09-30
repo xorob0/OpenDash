@@ -27,7 +27,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Hold", PanelShortcuts.Hold);
             Assert.Equal("Band D · next page", PanelShortcuts.ZoneRow("Band D", true));
             Assert.Equal("Band D · previous page", PanelShortcuts.ZoneRow("Band D", false));
-            // The binder's name in SimHub's list is the row's words after the screen's name.
+            // The binder's name in BuildBinder's fallback text is the row's words after the screen's name.
             Assert.Equal("Rim · Band D · previous page", PanelShortcuts.ZoneBinderName("Rim", "Band D", false));
             Assert.Equal("Rim · quick glance", PanelShortcuts.GlanceBinderName("Rim"));
         }

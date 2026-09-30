@@ -2,8 +2,9 @@
 // screen and one for the rig's lights, drawn to Shortcuts.dc.html.
 //
 // Each binding is SimHub's own ControlsEditor (BuildBinder), so a button is bound here rather than by sending
-// the driver to Controls and events to find an action's name; SimHub draws the binding, its Bind, Change and
-// Clear, and its listening state. Around it the page draws what the artboard adds: the press each action
+// the driver to Controls and events to find an action's name; SimHub draws "Click to configure" or each
+// binding with its press type, and Change, Clear and Add on hover, in a slot of fixed width that every row
+// gives it. Around it the page draws what the artboard adds: the press each action
 // answers to, a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
 // things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
 // cleared, and are hidden when SimHub's mappings cannot be read. PanelShortcuts decides the rows, the words and

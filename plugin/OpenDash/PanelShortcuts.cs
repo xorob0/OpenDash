@@ -42,8 +42,9 @@ namespace OpenDashPlugin
         public const string Tap = "Tap";
         public const string Hold = "Hold";
 
-        /// <summary>A zone's row, and the name its binder gives the action in SimHub's own list, in the
-        /// same words: "Band D · next page", "Rim · Band D · previous page".</summary>
+        /// <summary>A zone's row, and the name BuildBinder's fallback text gives the action when SimHub's editor
+        /// cannot be drawn, in the same words: "Band D · next page", "Rim · Band D · previous page". SimHub's
+        /// editor itself is given <see cref="EditorName"/>.</summary>
         public static string ZoneRow(string zoneLabel, bool next)
         {
             return zoneLabel + Join + (next ? NextPageTitle : PreviousPageTitle).ToLowerInvariant();
@@ -54,7 +55,7 @@ namespace OpenDashPlugin
             return screenName + Join + ZoneRow(zoneLabel, next);
         }
 
-        /// <summary>The glance's name in SimHub's own list: "Rim · quick glance".</summary>
+        /// <summary>The glance's name in BuildBinder's fallback text: "Rim · quick glance".</summary>
         public static string GlanceBinderName(string screenName)
         {
             return screenName + Join + QuickGlanceTitle.ToLowerInvariant();
@@ -65,8 +66,8 @@ namespace OpenDashPlugin
         // --- Rows ---------------------------------------------------------------------------------------
 
         /// <summary>
-        /// One row of a card: the action it binds, its label, the name SimHub's list gives the binding, the
-        /// press it answers to, whether it carries the New tag, and what it does in the clash line's words.
+        /// One row of a card: the action it binds, its label, the name BuildBinder's fallback text gives it,
+        /// the press it answers to, whether it carries the New tag, and what it does in the clash line's words.
         /// </summary>
         public sealed class Binding
         {
