@@ -145,6 +145,17 @@ Two things make it usable from here:
 - The result field is one line and clips a long value, so ask for the part you want rather than the
   whole of it — `left(value, 18, 9)` rather than `value`.
 
+### Photographing the settings panel
+
+`OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
+plugin with its left-menu entry, seeds a rig of every kind of screen, strip and matrix
+(`bun scripts/rig.ts panel`; `empty` is a genuine first run), and photographs every page at SimHub
+widths of 700, 1000 and 1600 px and maximised into `build/panel/`, cropped to the panel. `--menu-y` is
+where OpenDash sits in SimHub's left menu, read off a `bun run vm shot`, and has no default. The
+panel's own width is measured by UI Automation and decides where each sidebar item is clicked, from a
+mirror of `PanelShell` that `scripts/panel-shots.test.ts` holds to the C#; `bun run panel-shots --help`
+has the rest.
+
 ## Pressing a wheel button
 
 Five OpenDash actions are bound to wheel buttons by a driver, and a test has to be able to press
@@ -153,7 +164,7 @@ ships disabled:
 
 ```bash
 bun run vm bind OpenDash.CycleZoneB F7 OpenDash.HoldQuickGlance F8
-bun run vm unbind          # drop every OpenDash binding again
+bun run vm unbind          # drop every OpenDash key binding again
 ```
 
 SimHub is restarted by both, because it reads `PluginsData/PluginManagerSettings.json` at startup.
