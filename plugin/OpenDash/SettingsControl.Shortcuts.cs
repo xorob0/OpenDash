@@ -211,7 +211,7 @@ namespace OpenDashPlugin
             {
                 ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);
             }
-            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);
             ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);
             return group;
         }
@@ -221,7 +221,7 @@ namespace OpenDashPlugin
         private ShortcutsGroupState BuildShortcutsPitWall(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);
-            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);
             ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.PitWallGlance), layout);
             return group;
         }
@@ -238,7 +238,7 @@ namespace OpenDashPlugin
                 Child = Ui.VStack(0, Ui.Caption(PanelCopy.CompanionPaging, BodyWidth), crumbs),
             };
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), lead);
-            var glance = PanelShortcuts.GlanceBinding(screen.Namespace, screen.Name);
+            var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);
             ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);
             return group;
         }

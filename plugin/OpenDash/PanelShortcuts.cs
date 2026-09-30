@@ -121,10 +121,17 @@ namespace OpenDashPlugin
             return rows;
         }
 
-        /// <summary>The quick glance's row, the same on a face, a pit wall and a companion: held.</summary>
-        public static Binding GlanceBinding(string ns, string screenName)
+        /// <summary>
+        /// The quick glance's row, the same on a face, a pit wall and a companion: held. New on a companion
+        /// alone, by the rule that marks what the shipped plugin cannot do (Delta precision, Clock, Night
+        /// mode): v0.3.0-rc.7's CompanionActionNames is an empty list, so no released plugin registers a
+        /// companion's glance, which came back with #362 after that cut. A face's and a pit wall's glance
+        /// are in rc.7 and carry no tag.
+        /// </summary>
+        public static Binding GlanceBinding(string kind, string ns, string screenName)
         {
-            return new Binding(Contract.HoldQuickGlanceActionFor(ns), QuickGlanceTitle, GlanceBinderName(screenName), true, false, GlanceDoes);
+            var isNew = string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal);
+            return new Binding(Contract.HoldQuickGlanceActionFor(ns), QuickGlanceTitle, GlanceBinderName(screenName), true, isNew, GlanceDoes);
         }
 
         /// <summary>

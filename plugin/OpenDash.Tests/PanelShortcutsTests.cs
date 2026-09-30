@@ -124,7 +124,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(zones.Select(z => false).Concat(zones.Select(z => true)), rows.Select(r => r.IsNew));
             Assert.All(rows, r => Assert.Equal("Tap", r.Press));
 
-            var glance = PanelShortcuts.GlanceBinding(Face, "Rim");
+            var glance = PanelShortcuts.GlanceBinding(Contract.KindFace, Face, "Rim");
             Assert.Equal("Quick glance", glance.Label);
             Assert.Equal("Hold", glance.Press);
             Assert.True(glance.IsHold);
@@ -155,8 +155,23 @@ namespace OpenDashPlugin.Tests
             foreach (var kind in new[] { Contract.KindPitWall, Contract.KindCompanion })
             {
                 var ns = kind == Contract.KindPitWall ? Contract.PitWallPrefix : Contract.CompanionPrefix;
-                Assert.Equal(Contract.ScreenActionNames(kind, ns), new[] { PanelShortcuts.GlanceBinding(ns, "Wall").Action });
+                Assert.Equal(Contract.ScreenActionNames(kind, ns), new[] { PanelShortcuts.GlanceBinding(kind, ns, "Wall").Action });
             }
+        }
+
+        [Fact]
+        public void A_companions_glance_is_new_and_a_face_or_pit_walls_is_not()
+        {
+            // v0.3.0-rc.7 registers no companion action (its CompanionActionNames is empty); the glance came
+            // back with #362 after that cut, so it carries New for this release, as night mode does.
+            Assert.True(PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone").IsNew);
+            Assert.False(PanelShortcuts.GlanceBinding(Contract.KindPitWall, Contract.PitWallPrefix, "Pit wall").IsNew);
+            Assert.False(PanelShortcuts.GlanceBinding(Contract.KindFace, Face, "Rim").IsNew);
+            // The one flag the kind decides: everything else about the row is the same on every kind.
+            var phone = PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone");
+            Assert.Equal("Quick glance", phone.Label);
+            Assert.Equal("Hold", phone.Press);
+            Assert.Equal("Phone · quick glance", phone.BinderName);
         }
 
         [Fact]
