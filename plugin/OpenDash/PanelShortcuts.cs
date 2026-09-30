@@ -93,14 +93,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A face's zone rows, in the order Shortcuts.dc.html lists them: every zone's next page in the
-        /// picture's order, then every zone's previous page (new in this release). The glance row, which is
-        /// the card's last, is <see cref="GlanceBinding"/>, because its binder is the one that holds.
+        /// A face's zone rows, in the order Shortcuts.dc.html lists them: every zone's next page, Zone A to
+        /// Band D, then every zone's previous page (new in this release). The glance row, which is the card's
+        /// last, is <see cref="GlanceBinding"/>, because its binder is the one that holds.
         /// </summary>
-        /// <param name="zoneOrder">PanelFacePlan.ZoneOrder(face), or Contract.FaceZoneLetters for a face
-        /// whose size OpenDash does not know, so that no action goes without a row.</param>
-        public static IList<Binding> FaceBindings(string ns, string screenName, IList<string> zoneOrder)
+        /// <remarks>
+        /// Contract.FaceZoneLetters' order for every face, whatever its size: the list reads by letter, as the
+        /// artboard's does, where the face picture on Screens draws a Row face's zones B, A, C
+        /// (PanelFacePlan.ZoneOrder). So two faces on one rig list their rows alike, and a face whose size
+        /// OpenDash does not know lists every zone as well.
+        /// </remarks>
+        public static IList<Binding> FaceBindings(string ns, string screenName)
         {
+            var zoneOrder = Contract.FaceZoneLetters;
             var rows = new List<Binding>();
             foreach (var letter in zoneOrder)
             {
@@ -121,11 +126,15 @@ namespace OpenDashPlugin
             return new Binding(Contract.HoldQuickGlanceActionFor(ns), QuickGlanceTitle, GlanceBinderName(screenName), true, false, GlanceDoes);
         }
 
-        /// <summary>The Lights card's live rows: night mode, and brightness up and down, which are new.</summary>
+        /// <summary>
+        /// The Lights card's live rows: night mode, and brightness up and down. All three are new: no released
+        /// plugin registers any of them (v0.3.0-rc.7 has none), and New marks what the shipped plugin cannot
+        /// do, as ruled for Delta precision and Clock. Shortcuts.dc.html draws Night mode untagged.
+        /// </summary>
         public static IList<Binding> LightsBindings()
         {
             return Contract.RigActionNames()
-                .Select(action => new Binding(action, RigActionLabel(action), RigActionLabel(action), false, action != Contract.ToggleNightModeAction, RigActionDoes(action)))
+                .Select(action => new Binding(action, RigActionLabel(action), RigActionLabel(action), false, true, RigActionDoes(action)))
                 .ToList();
         }
 

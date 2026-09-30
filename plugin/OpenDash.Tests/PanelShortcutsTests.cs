@@ -85,10 +85,15 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_face_lists_every_zone_forward_then_back_then_the_glance()
         {
-            var face = Contract.FaceSizes.First(size => size.Width == 1920 && size.Height == 480);
-            var order = PanelFacePlan.ZoneOrder(face);
-            var rows = PanelShortcuts.FaceBindings(Face, "Rim", order);
+            var order = Contract.FaceZoneLetters;
+            var rows = PanelShortcuts.FaceBindings(Face, "Rim");
             var zones = order.Select(PanelFacePlan.ZoneLabel).ToList();
+            // Shortcuts.dc.html's order, by letter: not the picture's, which draws a Row face's zones B, A, C.
+            Assert.Equal("Zone A · next page", rows[0].Label);
+            Assert.Equal("Zone B · next page", rows[1].Label);
+            Assert.Equal("Band D · next page", rows[3].Label);
+            Assert.Equal("Zone A · previous page", rows[4].Label);
+            Assert.Equal("Band D · previous page", rows[7].Label);
             Assert.Equal(zones.Select(z => z + " · next page").Concat(zones.Select(z => z + " · previous page")), rows.Select(r => r.Label));
             Assert.Equal(order.Select(l => Contract.CycleZoneAction(Face, l)).Concat(order.Select(l => Contract.CycleZoneBackAction(Face, l))), rows.Select(r => r.Action));
             Assert.Equal(rows.Select(r => "Rim · " + r.Label), rows.Select(r => r.BinderName));
@@ -115,12 +120,13 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_face_of_unknown_size_still_lists_every_zone()
+        public void Every_face_lists_its_zones_alike_whatever_its_picture_draws()
         {
-            var rows = PanelShortcuts.FaceBindings(Face, "Rim", Contract.FaceZoneLetters);
-            Assert.Equal(2 * Contract.FaceZoneLetters.Length, rows.Count);
-            Assert.Equal("Zone A · next page", rows[0].Label);
-            Assert.Equal("Band D · previous page", rows[rows.Count - 1].Label);
+            // A Row face's picture draws B, A, C; its card still reads A, B, C, D, as a face of unknown size does.
+            var row = Contract.FaceSizes.First(size => size.Width == 1920 && size.Height == 480);
+            Assert.Equal(new[] { "B", "A", "C", "D" }, PanelFacePlan.ZoneOrder(row));
+            Assert.Equal(new[] { "A", "B", "C", "D" }, Contract.FaceZoneLetters);
+            Assert.Equal(PanelShortcuts.FaceBindings("Face1280x480", "Main dash").Select(r => r.Label), PanelShortcuts.FaceBindings(Face, "Rim").Select(r => r.Label));
         }
 
         [Fact]
@@ -134,12 +140,14 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_lights_card_binds_the_rig_actions_and_brightness_is_new()
+        public void The_lights_card_binds_the_rig_actions_and_every_one_is_new()
         {
             var rows = PanelShortcuts.LightsBindings();
             Assert.Equal(Contract.RigActionNames(), rows.Select(r => r.Action));
             Assert.Equal(new[] { "Night mode", "Brightness up", "Brightness down" }, rows.Select(r => r.Label));
-            Assert.Equal(new[] { false, true, true }, rows.Select(r => r.IsNew));
+            // No released plugin registers any of the three (v0.3.0-rc.7 has none), so all three carry New,
+            // Night mode too, where the artboard draws it untagged.
+            Assert.Equal(new[] { true, true, true }, rows.Select(r => r.IsNew));
             Assert.Equal(new[] { "Night mode", "Brightness up", "Brightness down" }, rows.Select(r => r.BinderName));
             Assert.Equal(Contract.RigActionNames().Select(PanelShortcuts.RigActionDoes), rows.Select(r => r.Does));
             Assert.Equal(new[] { "toggles night mode", "turns the brightness up", "turns the brightness down" }, rows.Select(r => r.Does));
@@ -523,6 +531,9 @@ namespace OpenDashPlugin.Tests
             // The page's frame: its intro, the filter's labels and its hook into the evaluation, the empty line,
             // the header's two columns only where TwoColumns says, and every anchor id AnchorTable pins drawn.
             Assert.Contains("Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth)", code);
+            // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's does.
+            Assert.Contains("return ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
+            Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
             Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty);", code);
             Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);

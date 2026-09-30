@@ -143,7 +143,23 @@ namespace OpenDashPlugin
             var sections = new List<UIElement> { header, banner };
             sections.AddRange(groups.Select(group => (UIElement)group.Card));
             sections.Add(empty);
-            return PageLayout(PanelShortcuts.Title, null, sections.ToArray());
+            return ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));
+        }
+
+        /// <summary>
+        /// The page's title with the New tag beside it, as the Rig page draws its own: Map.dc.html tags "Every
+        /// button in one list" New, and a thing new only on the Map carries the tag on its control (ruling 7).
+        /// PageLayout draws the title alone, so its first child is put in a row with the tag.
+        /// </summary>
+        private static FrameworkElement ShortcutsTitleTagged(FrameworkElement page)
+        {
+            var stack = page as StackPanel;
+            if (stack == null || stack.Children.Count == 0) return page;
+            var title = stack.Children[0] as TextBlock;
+            if (title == null) return page;
+            stack.Children.RemoveAt(0);
+            stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));
+            return page;
         }
 
         /// <summary>
@@ -181,20 +197,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A face's card: each zone's next page in the order its picture draws the zones, each zone's previous
-        /// page, and the quick glance held on a button.
+        /// A face's card: each zone's next page, Zone A to Band D, each zone's previous page, and the quick
+        /// glance held on a button.
         /// </summary>
         /// <remarks>
         /// Per screen, which is what lets a second face stay still while the one in front of the driver
-        /// cycles (ADR 0017). A face whose size OpenDash does not know still lists every zone, in
-        /// Contract.FaceZoneLetters' order, so that none of its actions goes without a row.
+        /// cycles (ADR 0017).
         /// </remarks>
         private ShortcutsGroupState BuildShortcutsFace(ScreenInstance screen, ShortcutsLayout layout)
         {
             var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Kind, screen.Width, screen.Height), null);
-            var face = screen.FaceSize;
-            IList<string> order = face != null ? PanelFacePlan.ZoneOrder(face.Value) : Contract.FaceZoneLetters;
-            foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name, order))
+            foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name))
             {
                 ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);
             }
