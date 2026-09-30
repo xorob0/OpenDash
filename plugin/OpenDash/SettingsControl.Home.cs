@@ -4,9 +4,12 @@
 //
 // This file only draws. Every word, number and rule is PanelHome's (and PanelAttention's), where
 // PanelHomeTests holds it. What needs fixing is asked of SimHub on Go and on "Check again"
-// (SettingsControl.Status.cs), never on the tick. The tick repaints the strips from the car's own run, which
-// is a property the plugin already holds, and each screen's line from its live zone pages, which are settings a
-// wheel button writes: both reads, never a call into SimHub.
+// (SettingsControl.Status.cs), never on the tick, and each device's facts are copied at build from that one
+// answer, so a row never says something the headline and the attention card were not drawn from. The tick
+// repaints the strips from the car's own run, which is a property the plugin already holds, and each screen's
+// line from its live zone pages, which are settings a wheel button writes: both reads, never a call into
+// SimHub. An update check's answer can land while Home is showing, and adds or drops a row, so Home hears it
+// and draws itself again.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +17,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OpenDashPlugin
 {
@@ -22,6 +26,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildHomePage(PanelRoute to)
         {
             DrawsLighting();
+            // The answer has already refreshed the issues when this runs; RebuildPage keeps the lines and the scroll.
+            OnUpdate(null, manual => RebuildPage());
             var head = new StackPanel { Orientation = Orientation.Vertical };
             var eyebrow = Ui.Eyebrow(PanelHome.Title);
             eyebrow.Margin = new Thickness(0, 0, 0, PanelHome.HeaderGap);
@@ -189,7 +195,13 @@ namespace OpenDashPlugin
             var tile = Ui.DashedAddCard(PanelAddScreen.SectionTitle, () =>
             {
                 Go(PanelPage.Screens);
-                ShowAddScreen();
+                // Go puts focus on the Screens page's first control at Loaded. The sheet opens after that, at
+                // Input, so its own focus (queued at Normal as it opens) lands last and inside the sheet, and
+                // the opener it remembers is a control still on screen.
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (route.Page == PanelPage.Screens) ShowAddScreen();
+                }), DispatcherPriority.Input);
             });
             var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize);
             line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0);
@@ -300,6 +312,10 @@ namespace OpenDashPlugin
             public LedBar Bar;
             public int Ends;
             public int Centre;
+            public double Dim;
+            public FlagBoxInstallState? Profile;
+            public bool? Selected;
+            public Viewbox Host;
             public Border Picture;
             public TextBlock Line;
             public Ellipse Dot;
@@ -319,19 +335,23 @@ namespace OpenDashPlugin
             {
                 if (bar == null) continue;
                 var span = PanelHome.StripSpan(bar.Shape);
+                // The facts the headline and the attention card were drawn from, copied once: the tick reads
+                // only the car's run and the strip's own settings.
+                var facts = StripFacts(bar.Namespace);
                 var strip = new HomeStrip
                 {
                     Bar = bar,
                     Ends = span[0],
                     Centre = span[1],
+                    Dim = dim,
+                    Profile = facts == null ? null : facts.Profile,
+                    Selected = facts == null ? null : facts.Selected,
                     Line = HomeLineText(true),
                     Dot = HomeDot(null),
                 };
                 // The picture is built once, dark, and the tick sets its LEDs in place.
                 strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);
                 strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);
-                HomePaintStrip(strip);
-                live.Add(strip);
 
                 var top = new DockPanel { LastChildFill = true };
                 strip.Dot.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0);
@@ -360,6 +380,9 @@ namespace OpenDashPlugin
                     Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0),
                     Child = strip.Picture,
                 };
+                strip.Host = host;
+                HomePaintStrip(strip);
+                live.Add(strip);
                 // The line carries its own gap, so a line with nothing to say takes its gap with it.
                 var ns = bar.Namespace;
                 rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));
@@ -369,12 +392,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Draws a strip's picture and line from the car's own run as it is now, and only when either
-        /// moved: the run the plugin already holds, and the facts the last Go read.</summary>
+        /// moved: the run the plugin already holds, and the facts copied when the page was built.</summary>
         private void HomePaintStrip(HomeStrip strip)
         {
-            var facts = StripFacts(strip.Bar.Namespace);
-            var profile = facts == null ? null : facts.Profile;
-            var selected = facts == null ? null : facts.Selected;
+            var profile = strip.Profile;
+            var selected = strip.Selected;
             var cars = plugin.CarLights;
             var ns = strip.Bar.Namespace;
             var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);
@@ -384,7 +406,15 @@ namespace OpenDashPlugin
             if (runKey != strip.PaintedRun)
             {
                 strip.PaintedRun = runKey;
-                HomeRelight(strip.Picture, PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre), StripStyle.Home.UnlitHex);
+                var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre);
+                if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex))
+                {
+                    // Ui.Strip no longer draws the tree HomeRelight walks: draw the frame whole rather than
+                    // leave the picture dark, and say so once, since the in-place repaint wants fixing.
+                    HomeRelightMissed();
+                    strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim);
+                    strip.Host.Child = strip.Picture;
+                }
             }
             var lineKey = line.Text + "|" + line.TextHex + "|" + line.DotHex;
             if (lineKey == strip.PaintedLine) return;
@@ -393,23 +423,47 @@ namespace OpenDashPlugin
             HomeSetDot(strip.Dot, line.DotHex);
         }
 
-        /// <summary>Sets each LED of a picture Ui.Strip drew to a frame of the same shape, in place: the row,
-        /// its groups, and a Border per LED. A frame of another shape leaves the picture as it was.</summary>
-        private static void HomeRelight(Border picture, string[][] frame, string unlitHex)
+        /// <summary>
+        /// Sets each LED of a picture Ui.Strip drew to a frame of the same shape, in place: the row, its
+        /// groups, and a Border per LED. False, touching nothing, when the picture is not that tree or not
+        /// that shape, so the caller can draw the frame whole instead.
+        /// </summary>
+        /// <remarks>
+        /// The walk mirrors Ui.Strip's private tree (Widgets.Lights.cs), which the tests cannot build. Asked
+        /// of the kit as Ui.Relight beside Ui.Redim, so the walk lives beside the tree it walks.
+        /// </remarks>
+        private static bool HomeRelight(Border picture, string[][] frame, string unlitHex)
         {
             var row = picture == null ? null : picture.Child as Panel;
-            if (row == null || frame == null || row.Children.Count != frame.Length) return;
+            if (row == null || frame == null || row.Children.Count != frame.Length) return false;
+            var leds = new List<Border>();
             for (var g = 0; g < frame.Length; g++)
             {
                 var group = row.Children[g] as Panel;
-                var leds = frame[g] ?? new string[0];
-                if (group == null || group.Children.Count != leds.Length) return;
-                for (var i = 0; i < leds.Length; i++)
+                var lit = frame[g] ?? new string[0];
+                if (group == null || group.Children.Count != lit.Length) return false;
+                foreach (var child in group.Children)
                 {
-                    var led = group.Children[i] as Border;
-                    if (led != null) led.Background = Ui.Brush(leds[i] ?? unlitHex);
+                    var led = child as Border;
+                    if (led == null) return false;
+                    leds.Add(led);
                 }
             }
+            var at = 0;
+            foreach (var lit in frame)
+            {
+                foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex);
+            }
+            return true;
+        }
+
+        private static bool homeRelightWarned;
+
+        private static void HomeRelightMissed()
+        {
+            if (homeRelightWarned) return;
+            homeRelightWarned = true;
+            Log.Warn("Home could not repaint a strip in place, because Ui.Strip draws a different tree; it draws each frame whole instead.");
         }
 
         /// <summary>A matrix: its idle glyph (dark when no device shows it), its name and its content number.</summary>
@@ -573,9 +627,11 @@ namespace OpenDashPlugin
             System.Windows.Documents.Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular);
             numeral.VerticalAlignment = VerticalAlignment.Center;
             // The value is saved once, when the hand lets go or a key moves it; the figure follows every step.
+            // Writes the brightness the slider was built for, which its label names: a wheel's night-mode press
+            // mid-drag rebuilds the page, and the drag's last value must not land on the other brightness.
             var slider = Ui.Slider(value, v =>
             {
-                if (Settings.LightsNightMode)
+                if (nightOn)
                 {
                     if (v == Settings.LightsNightBrightness) return;
                     Settings.LightsNightBrightness = v;

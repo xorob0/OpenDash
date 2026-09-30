@@ -620,8 +620,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var nightOn = Settings.LightsNightMode;", code);
             Assert.Contains("PanelHome.BrightnessInForce(nightOn, Settings.LightsBrightness, Settings.LightsNightBrightness)", code);
             Assert.Contains("Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn))", code);
-            Assert.Contains("if (Settings.LightsNightMode) { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); } else { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); }", code);
+            // Branches on the brightness it was built for, never the live setting: a wheel's night-mode press
+            // mid-drag would otherwise write the dragged day value into the night brightness.
+            Assert.Contains("if (nightOn) { if (v == Settings.LightsNightBrightness) return; Settings.LightsNightBrightness = v; Save(); ShowLightingChange(); } else { if (v == Settings.LightsBrightness) return; Settings.LightsBrightness = v; Save(); ShowLightingChange(); }", code);
+            Assert.DoesNotContain("if (Settings.LightsNightMode)", code);
             Assert.Contains("Settings.LightsNightMode = on; Save(); ShowLightingChange();", code);
+            // It starts at that brightness, with its figure, which follows the drag; the switch starts where night mode is.
+            Assert.Contains("var slider = Ui.Slider(value, v =>", code);
+            Assert.Contains("var numeral = Ui.Text(PanelHome.Percent(value), PanelHome.QuickValueSize,", code);
+            Assert.Contains("}, v => numeral.Text = PanelHome.Percent(v), false);", code);
+            Assert.Contains("var night = Ui.Switch(nightOn, on =>", code);
         }
 
         /// <summary>Home draws night mode and a brightness as controls, so it says so before anything else:
@@ -638,19 +646,84 @@ namespace OpenDashPlugin.Tests
         public void The_page_draws_live_only_what_PanelHome_allows()
         {
             var code = PageCode();
+            // A strip's facts are the ones the attention card was drawn from, copied once at build.
+            Assert.Contains("var facts = StripFacts(bar.Namespace);", code);
+            Assert.Contains("Profile = facts == null ? null : facts.Profile, Selected = facts == null ? null : facts.Selected,", code);
+            Assert.Contains("var profile = strip.Profile; var selected = strip.Selected; var cars = plugin.CarLights;", code);
+            Assert.Equal(1, Regex.Matches(code, @"StripFacts\(").Count - Regex.Matches(code, @"StripFacts\(issue\.Subject\)").Count);
             Assert.Contains("var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
             Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
-            Assert.Contains("PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre)", code);
-            Assert.Contains("PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre)", code);
+            Assert.Contains("var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected);", code);
+            Assert.Contains("if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex)) {", code);
+            Assert.Contains("HomeRelightMissed(); strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim); strip.Host.Child = strip.Picture;", code);
+            Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex);", code);
+            Assert.Contains("HomeSetLine(strip.Line, line); HomeSetDot(strip.Dot, line.DotHex);", code);
+            Assert.Contains("strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);", code);
             Assert.Contains("OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });", code);
             Assert.Contains("if (live.Count > 0) OnTick(", code);
             Assert.Contains("OnTick(() => { foreach (var screen in shown) HomePaintScreen(screen); });", code);
             Assert.Contains("if (shown.Count > 0) OnTick(", code);
             Assert.Contains("var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);", code);
-            Assert.Contains("var shown = facts == null ? null : facts.Shown;", code);
-            Assert.Contains("if (PanelHome.MatrixDrawsGlyph(shown))", code);
-            Assert.Contains("PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options)", code);
-            Assert.Contains("PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown)", code);
+            Assert.Contains("var facts = MatrixFacts(slot); var shown = facts == null ? null : facts.Shown;", code);
+            Assert.Contains("var line = PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown); IList<string> cells = new string[64]; if (PanelHome.MatrixDrawsGlyph(shown)) { var options = new MatrixOptions { Rest = Settings.MatrixRest(slot), Side = Settings.MatrixSide(slot), Bands = Settings.MatrixGearBands(slot), CarLadder = Settings.MatrixGearCarLadder(slot), }; cells = PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options); }", code);
+            Assert.Contains("var picture = Ui.Matrix(cells, MatrixStyle.Home, dim);", code);
+            Assert.Contains("var lineText = HomeLineText(true); HomeSetLine(lineText, line);", code);
+            Assert.Contains("var dot = HomeDot(line.DotHex);", code);
+
+            // A screen's facts, copied at build; its line and dot repainted only when they move.
+            Assert.Contains("var facts = ScreenFacts(screen.Namespace); var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace); var row = new HomeScreen { Namespace = screen.Namespace, Installed = facts == null ? null : facts.Installed, Restart = restart,", code);
+            Assert.Contains("if (painted == row.Painted) return; row.Painted = painted; HomeSetLine(row.Line, line); HomeSetDot(row.Dot, line.DotHex);", code);
+            Assert.Contains("text.Text = line.Text; text.Foreground = Ui.Brush(line.TextHex);", code);
+            Assert.Contains("dot.Fill = hex == null ? null : Ui.Brush(hex); dot.Visibility = hex == null ? Visibility.Hidden : Visibility.Visible;", code);
+        }
+
+        /// <summary>An update check's answer can land while Home is showing and add or drop a row, so Home hears
+        /// it and draws itself again, headline and card together.</summary>
+        [Fact]
+        public void The_page_draws_itself_again_when_the_update_check_answers()
+        {
+            Assert.Contains("OnUpdate(null, manual => RebuildPage());", PageCode());
+        }
+
+        /// <summary>The attention card draws every part of each issue: the headline counts them, the well
+        /// wears the issue's icon, and the title, detail, steps and press are the issue's own.</summary>
+        [Fact]
+        public void The_attention_card_draws_each_issue_whole()
+        {
+            var code = PageCode();
+            Assert.Contains("head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));", code);
+            Assert.Contains("var eyebrow = Ui.Eyebrow(PanelHome.Title);", code);
+            Assert.Contains("var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize);", code);
+            Assert.Contains("var title = Ui.Text(issue.Title, PanelShell.RowTitleSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
+            Assert.Contains("if (!string.IsNullOrEmpty(issue.Detail)) { var detail = Ui.Prose(issue.Detail, PanelHome.DetailSize);", code);
+            Assert.Contains("text.Children.Add(detail);", code);
+            Assert.Contains("if (hasSteps) { var steps = Ui.Steps(issue.Steps); steps.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(steps); }", code);
+            Assert.Contains("var hasSteps = issue.Steps.Count > 0;", code);
+            Assert.Contains("var row = HomeIssueRow(issues[i]);", code);
+        }
+
+        /// <summary>The page draws PanelHome's words and numbers, not the values they are made from.</summary>
+        [Fact]
+        public void The_page_draws_PanelHomes_words_and_numbers()
+        {
+            var code = PageCode();
+            Assert.Contains("var text = Ui.VStack(0, HomeNameLine(screen.Name, PanelHome.ScreenSize(screen)), row.Line);", code);
+            Assert.Contains("var shape = PanelHome.StripShape(bar);", code);
+            Assert.Contains("var title = Settings.MatrixName(slot) ?? PanelHome.MatrixName(slot);", code);
+            Assert.Contains("var name = Ui.Text(title, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
+            Assert.Contains("var none = Ui.Prose(PanelHome.EmptyLine(empty), PanelHome.DetailSize);", code);
+            Assert.Contains("var eyebrow = Ui.Eyebrow(PanelNav.Label(page));", code);
+            Assert.Contains("var open = Ui.LinkButton(PanelHome.OpenLink);", code);
+            Assert.Contains("var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small);", code);
+            Assert.Contains("var dim = PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);", code);
+            Assert.Contains("var name = Ui.Text(bar.Name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
+            Assert.Contains("var grid = Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax,", code);
+            Assert.Contains("return PageSection(PanelHome.RightNowTitle, grid);", code);
+            Assert.Contains("return PageSection(PanelHome.QuickControlsTitle, Ui.CardBox(body, 0));", code);
+            Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelSettings.NightModeTitle), night),", code);
+            Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelHome.TryTitle), rig),", code);
+            Assert.DoesNotContain("StripStyle.Card", code);
+            Assert.DoesNotContain("MatrixStyle.Card", code);
         }
 
         /// <summary>What each press does: the issue's own call, and each row and link to its own page.</summary>
@@ -658,22 +731,25 @@ namespace OpenDashPlugin.Tests
         public void Each_press_makes_its_own_call()
         {
             var code = PageCode();
+            Assert.Contains("switch (PanelHome.Press(issue))", code);
+            Assert.Contains("press.Click += (sender, args) => HomeAct(issue);", code);
+            Assert.Contains("row.Click += (sender, args) => click();", code);
             Assert.Contains("case HomePress.CheckAgain: CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); return;", code);
-            Assert.Contains("InstallScreenAgain(screen); return;", code);
+            Assert.Contains("case HomePress.Reinstall: var screen = Settings.ScreenByNamespace(issue.Subject); if (screen != null) { InstallScreenAgain(screen); return; } Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("case HomePress.Open: Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("default: Go(issue.Route); return;", code);
-            Assert.Contains("HomeRow(dock, () => Open(PanelPage.Screens, ns))", code);
-            Assert.Contains("() => Open(PanelPage.Leds, ns)", code);
-            Assert.Contains("HomeRow(dock, () => Open(PanelPage.Matrix, id))", code);
+            Assert.Contains("var ns = screen.Namespace; return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, () => Open(PanelPage.Screens, ns)));", code);
+            Assert.Contains("var ns = bar.Namespace; rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
+            Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, () => Open(PanelPage.Matrix, id));", code);
             Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
-            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); ShowAddScreen(); })", code);
+            // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last.
+            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); Dispatcher.BeginInvoke(new Action(() => { if (route.Page == PanelPage.Screens) ShowAddScreen(); }), DispatcherPriority.Input); });", code);
+            Assert.DoesNotContain("Go(PanelPage.Screens); ShowAddScreen();", code);
             Assert.Contains("if (issues.Count > 0) sections.Add(Ui.Anchor(HomeAttentionCard(), PanelHome.AnchorAttention));", code);
-            Assert.Contains("PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace)", code);
-            Assert.Contains("Installed = facts == null ? null : facts.Installed,", code);
-            Assert.Contains("HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens)", code);
-            Assert.Contains("HomeCard(PanelPage.Leds, HomeStripRows(strips, dim), PanelLeds.NoStrips)", code);
-            Assert.Contains("PanelMatrix.NoPanels)", code);
+            Assert.Contains("HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens),", code);
+            Assert.Contains("HomeCard(PanelPage.Leds, HomeStripRows(strips, dim), PanelLeds.NoStrips),", code);
+            Assert.Contains("HomeCard(PanelPage.Matrix, matrices.Select(m => HomeMatrixRow(m, dim)).ToList(), PanelMatrix.NoPanels));", code);
         }
 
         /// <summary>The empty rig is the add tile with its sentence, in place of Right now and the quick
