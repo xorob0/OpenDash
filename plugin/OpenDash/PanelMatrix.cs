@@ -295,17 +295,26 @@ namespace OpenDashPlugin
             return panels[0];
         }
 
-        /// <summary>One label per <see cref="Contract.FlagBoxSides"/> value, in its order: the artboard's
-        /// "Both sides" for the one that is not a side.</summary>
-        public static readonly string[] SideLabels = { "Both sides", "Left", "Right" };
+        /// <summary>
+        /// Mounting side's choices in the artboard's order, Left | Right | Both sides, which is also the order
+        /// of the Rig page's spotter chips (Car left, Car right, Both sides); <see cref="Contract.FlagBoxSides"/>
+        /// lists the same values with "both" first, which is the stored default's order and not the driver's.
+        /// </summary>
+        public static readonly string[] SideValues = { "left", "right", "both" };
+
+        /// <summary>One label per <see cref="SideValues"/> value, in its order: the artboard's "Both sides" for
+        /// the one that is not a side.</summary>
+        public static readonly string[] SideLabels = { "Left", "Right", "Both sides" };
 
         /// <summary>One label per <see cref="Contract.FlagBoxRests"/> value, in its order.</summary>
         public static readonly string[] RestLabels = { "Dark", "Gear" };
 
+        /// <summary>A side's label, and the default side's for a value the contract does not have.</summary>
         public static string SideLabel(string side)
         {
-            var i = Array.IndexOf(Contract.FlagBoxSides, side);
-            return SideLabels[i < 0 ? 0 : i];
+            var i = Array.IndexOf(SideValues, side);
+            if (i < 0) i = Array.IndexOf(SideValues, Contract.DefaultFlagBoxSide);
+            return SideLabels[i];
         }
 
         public const string Showing = "Showing";
@@ -611,8 +620,9 @@ namespace OpenDashPlugin
             return scenario == PanelEmulation.Chequer || scenario == PanelEmulation.White || scenario == PanelEmulation.Green;
         }
 
-        /// <summary>What the chips are, for a screen reader: the artboard's group.</summary>
-        public const string PreviewChipsName = "What to preview";
+        /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
+        /// where the artboard's aria-label is the clause "What to preview".</summary>
+        public const string PreviewChipsName = "Preview scenarios";
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
         public const string AllDevices = "All devices at once";

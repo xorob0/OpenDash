@@ -152,12 +152,15 @@ namespace OpenDashPlugin
                 var picture = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());
                 OnLighting(() => Ui.Redim(picture, MatrixDim()));
                 if (m == selected) selectedPicture(picture);
-                cards.Add(Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown),
+                var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown),
                     PanelMatrix.CardLineHex(shown), m == selected, () =>
                     {
                         Select(PanelPage.Matrix, PanelMatrix.SlotId(m));
                         RebuildPage();
-                    }));
+                    });
+                // The card trims a long name to its column; the hover gives it whole.
+                card.ToolTip = name;
+                cards.Add(card);
             }
             var add = Ui.InlineAddCard(PanelMatrix.AddPanel, PanelKit.MatrixAddIcon, ShowAddMatrix, PanelMatrix.AddCount(panels.Count));
             if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot()))
@@ -187,8 +190,12 @@ namespace OpenDashPlugin
             var m = matrix;
             var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);
             var title = Ui.SubHeading(name);
-            // A WrapPanel, not a horizontal StackPanel, so the name is measured at the column's width and
-            // trims, and the content number wraps under a long name rather than being cut off.
+            // A long name wraps rather than trimming: nothing limits a name's length, and the Rename box was
+            // otherwise the only place it could be read in full. A WrapPanel, not a horizontal StackPanel, so
+            // the name is measured at the column's width, and the content number wraps under a long one
+            // rather than being cut off.
+            title.TextTrimming = TextTrimming.None;
+            title.TextWrapping = TextWrapping.Wrap;
             var heading = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             heading.Children.Add(title);
             var slotCaption = PanelMatrix.SlotCaption(name, m);
@@ -383,7 +390,7 @@ namespace OpenDashPlugin
                 MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, null, null,
                     BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[i] = on; Save(); repaint(); })));
 
-            var side = BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>
+            var side = BuildSegmented(PanelMatrix.SideValues, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>
             {
                 Settings.FlagBoxSide[i] = value;
                 Save();

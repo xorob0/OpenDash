@@ -70,7 +70,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
             Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
             Assert.Equal("Cancel", PanelMatrix.Cancel);
-            Assert.Equal("What to preview", PanelMatrix.PreviewChipsName);
+            Assert.Equal("Preview scenarios", PanelMatrix.PreviewChipsName);
             Assert.Equal("No strips yet.", PanelLeds.NoStrips);
             var home = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Home.cs"));
             Assert.Contains("PanelLeds.NoStrips", home);
@@ -290,8 +290,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Matrix 3", PanelMatrix.NameOf(null, 3));
             Assert.Equal("Matrix 3", PanelMatrix.NameOf("  ", 3));
             Assert.Equal("Left pillar", PanelMatrix.NameOf("Left pillar", 3));
-            Assert.Equal(new[] { "Both sides", "Left", "Right" }, PanelMatrix.SideLabels);
-            Assert.Equal(Contract.FlagBoxSides.Length, PanelMatrix.SideLabels.Length);
+            // Mounting side reads as the artboard and the Rig page's spotter chips read: Left | Right | Both
+            // sides, each label paired with its value, and every value the contract's.
+            Assert.Equal(new[] { "left", "right", "both" }, PanelMatrix.SideValues);
+            Assert.Equal(new[] { "Left", "Right", "Both sides" }, PanelMatrix.SideLabels);
+            Assert.Equal(PanelMatrix.SideValues.Length, PanelMatrix.SideLabels.Length);
+            Assert.Equal(Contract.FlagBoxSides.OrderBy(v => v), PanelMatrix.SideValues.OrderBy(v => v));
+            Assert.Equal("Left", PanelMatrix.SideLabel("left"));
+            Assert.Equal("Right", PanelMatrix.SideLabel("right"));
+            Assert.Equal("Both sides", PanelMatrix.SideLabel("both"));
+            Assert.Equal("Both sides", PanelMatrix.SideLabel(null));
             Assert.Equal(new[] { "Dark", "Gear" }, PanelMatrix.RestLabels);
             Assert.Equal(Contract.FlagBoxRests.Length, PanelMatrix.RestLabels.Length);
 
@@ -367,7 +375,7 @@ namespace OpenDashPlugin.Tests
                 "Settings.SetMatrixRest(m, value); Save(); RebuildPage();",
                 "Settings.FlagBoxSide[i] = value; Save(); RebuildPage();",
                 // The segmented controls, each with its own labels.
-                "BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>",
+                "BuildSegmented(PanelMatrix.SideValues, PanelMatrix.SideLabels, Settings.MatrixSide(m), value =>",
                 "BuildSegmented(Contract.FlagBoxRests, PanelMatrix.RestLabels, rest, value =>",
                 // The chips, each pressed only when it is the one drawn, and a press moves the preview to it.
                 // The add press saves at once and selects the new matrix; each sheet draws its body.
@@ -383,7 +391,7 @@ namespace OpenDashPlugin.Tests
                 "var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)); if (said != null) Say(said);",
                 "var shown = facts == null ? null : facts.Shown; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
-                "cards.Add(Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }));",
+                "var card = Ui.MatrixCard(picture, name, PanelMatrix.CardLine(name, m, Settings.MatrixSide(m), shown), PanelMatrix.CardLineHex(shown), m == selected, () => { Select(PanelPage.Matrix, PanelMatrix.SlotId(m)); RebuildPage(); }); card.ToolTip = name; cards.Add(card);",
                 "var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));",
                 "if (panels.Count > 0) return grid; return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
             })
@@ -559,7 +567,7 @@ namespace OpenDashPlugin.Tests
             {
                 "var flags = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.FlagsTitle), PanelMatrix.FlagsTitle, null, null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[i] = on; Save(); repaint(); })), MatrixOption(PanelMatrix.CriticalFlagsOnlyTitle, null, BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint(); })));",
                 "var pit = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.PitLaneTitle), PanelMatrix.PitLaneTitle, null, null, BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[i] = on; Save(); repaint(); })));",
-                "var side = BuildSegmented(Contract.FlagBoxSides, PanelMatrix.SideLabels, Settings.MatrixSide(m), value => { Settings.FlagBoxSide[i] = value; Save(); RebuildPage(); }, PanelKit.SegmentedHeightMatrix);",
+                "var side = BuildSegmented(PanelMatrix.SideValues, PanelMatrix.SideLabels, Settings.MatrixSide(m), value => { Settings.FlagBoxSide[i] = value; Save(); RebuildPage(); }, PanelKit.SegmentedHeightMatrix);",
                 "var spotter = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.SpotterTitle), PanelMatrix.SpotterTitle, null, null, BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[i] = on; Save(); repaint(); })), MatrixOption(PanelMatrix.MountingSideTitle, null, side), Ui.Anchor(MatrixOption(PanelMatrix.SpotterAnimationTitle, PanelMatrix.SpotterAnimationCaption, BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation));",
                 "var warnings = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix.WarningsTitle), PanelMatrix.WarningsTitle, PanelMatrix.WarningsCaption, thresholds, BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[i] = on; Save(); repaint(); })));",
                 "var rest = Settings.MatrixRest(m); var bands = Settings.MatrixGearBands(m); var restChoice = BuildSegmented(Contract.FlagBoxRests, PanelMatrix.RestLabels, rest, value => { Settings.SetMatrixRest(m, value); Save(); RebuildPage(); }, PanelKit.SegmentedHeightMatrix);",
@@ -900,8 +908,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Width = PanelMatrix.UnrankedDotSize,", matrix);
             Assert.Contains("words.Margin = new Thickness(PanelMatrix.OptionIndent, 0, 0, 0);", matrix);
             Assert.Contains("Padding = new Thickness(PanelMatrix.OptionIndent, PanelMatrix.OptionPaddingY, 0, PanelMatrix.OptionPaddingY),", matrix);
-            // The selected matrix's name trims inside its column and its number wraps under it.
+            // The selected matrix's name wraps inside its column rather than trimming, and its number wraps
+            // under it.
             Assert.Contains("var heading = new WrapPanel { Orientation = Orientation.Horizontal", matrix);
+            Assert.Contains("var title = Ui.SubHeading(name);", matrix);
+            Assert.Contains("title.TextTrimming = TextTrimming.None; title.TextWrapping = TextWrapping.Wrap;", FlatSource());
             Assert.DoesNotContain("new StackPanel { Orientation = Orientation.Horizontal }", matrix);
         }
 
