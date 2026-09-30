@@ -1312,23 +1312,28 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("SimHub.txt", PanelUpdates.LogFile);
             Assert.Equal(8, PanelUpdates.SupportButtonGap);
             Assert.Equal(8, PanelUpdates.NewTagGap);
-            Assert.Contains("press.Content = Ui.HStack(PanelUpdates.NewTagGap,", PageCode());
+            Assert.Contains("var tagged = Ui.HStack(PanelUpdates.NewTagGap, element, Ui.NewTag());", PageCode());
             Assert.Equal(12, PanelUpdates.SupportCaptionSize);
             Assert.Equal("SimHubWPF.exe", PanelUpdates.SimHubExe);
         }
 
-        /// <summary>The NEW tag marks the two Support presses new in this release, for that one release: the
-        /// artboard's Copy a support report, and Open the log, which no press did before this page.</summary>
+        /// <summary>The NEW tag marks what is new since the last cut, for that one release: the artboard's Copy
+        /// a support report, Open the log, which no press did before this page, and the offer card's link to
+        /// every release, which no card drew before it. Report an issue and Read the guide were rc.7's footer
+        /// links. Every tag is drawn by the one helper, from the one list.</summary>
         [Fact]
         public void Only_the_presses_new_in_this_release_carry_the_NEW_tag()
         {
-            Assert.Equal(new[] { PanelUpdates.CopyReport, PanelUpdates.OpenLog }, PanelUpdates.NewTagged);
+            Assert.Equal(new[] { PanelUpdates.CopyReport, PanelUpdates.OpenLog, PanelUpdates.EveryRelease }, PanelUpdates.NewTagged);
             Assert.True(PanelUpdates.IsNew(PanelUpdates.CopyReport));
+            Assert.True(PanelUpdates.IsNew(PanelUpdates.EveryRelease));
             Assert.False(PanelUpdates.IsNew(PanelUpdates.ReportIssue));
             Assert.False(PanelUpdates.IsNew(PanelUpdates.ReadGuide));
             var code = PageCode();
             Assert.Contains("if (PanelUpdates.IsNew(label))", code);
-            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(code, @"Ui\.NewTag\(").Count);
+            Assert.Contains("if (PanelUpdates.IsNew(PanelUpdates.EveryRelease)) link = UpdatesTagged(link);", code);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(code, @"Ui\.NewTag\("));
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(code, @"= UpdatesTagged\(").Count);
         }
 
         /// <summary>The caption promises the last 200 log lines, and they are OpenDash's own.</summary>

@@ -1266,12 +1266,13 @@ namespace OpenDashPlugin
         public const string Licence = "MIT licence";
 
         /// <summary>
-        /// The Support presses that carry the NEW tag, drawn for one release. The artboard tags Copy a support
-        /// report; Open the log is new in the same release, as no press opened SimHub's log before this page,
-        /// and the one-release rule marks every row unreleased since the last cut, as Delta precision and
-        /// Clock are.
+        /// The presses that carry the NEW tag, drawn for one release. The artboard tags Copy a support report;
+        /// the one-release rule marks every press unreleased since the last cut (rc.7), as Delta precision and
+        /// Clock are, and two more on this page are: Open the log, since no press opened SimHub's log before
+        /// this page, and the offer card's Every release on GitHub, since no card linked to the releases
+        /// before it. Report an issue and Read the guide are rc.7's footer links under the page's words.
         /// </summary>
-        public static readonly IReadOnlyList<string> NewTagged = new[] { CopyReport, OpenLog };
+        public static readonly IReadOnlyList<string> NewTagged = new[] { CopyReport, OpenLog, EveryRelease };
 
         public static bool IsNew(string label)
         {

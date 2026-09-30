@@ -300,8 +300,17 @@ namespace OpenDashPlugin
         private static Button UpdatesSupportPress(string label)
         {
             var press = Ui.Button(label, PanelButtonKind.Outline);
-            if (PanelUpdates.IsNew(label)) press.Content = Ui.HStack(PanelUpdates.NewTagGap, Ui.Text(label, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag());
+            if (PanelUpdates.IsNew(label)) press.Content = UpdatesTagged(Ui.Text(label, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary));
             return press;
+        }
+
+        /// <summary>What is new in this release with the artboard's NEW tag after it, 8 apart: the one place
+        /// the page draws the tag.</summary>
+        private static FrameworkElement UpdatesTagged(FrameworkElement element)
+        {
+            var tagged = Ui.HStack(PanelUpdates.NewTagGap, element, Ui.NewTag());
+            tagged.VerticalAlignment = VerticalAlignment.Center;
+            return tagged;
         }
 
         /// <summary>Copy a support report: gathered at the press, written by PanelUpdates.Report, and put on

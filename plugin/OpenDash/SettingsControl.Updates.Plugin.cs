@@ -144,7 +144,9 @@ namespace OpenDashPlugin
                 line.Margin = new Thickness(0, PanelUpdates.NotesGap, 0, 0);
                 notes.Children.Add(line);
             }
-            var link = BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl);
+            FrameworkElement link = BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl);
+            // The NEW tag after the link rather than inside it, where the link's own ink would take it.
+            if (PanelUpdates.IsNew(PanelUpdates.EveryRelease)) link = UpdatesTagged(link);
             link.HorizontalAlignment = HorizontalAlignment.Left;
             link.Margin = new Thickness(0, heading == null ? 0 : PanelUpdates.NotesGap, 0, 0);
             notes.Children.Add(link);
