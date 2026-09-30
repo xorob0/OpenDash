@@ -49,7 +49,8 @@ namespace OpenDashPlugin
                 faceWarningText = null;
                 faceWarningRow = null;
             });
-            var picture = BuildFacePicture(screen, face);
+            // Drawn at the artboard's 844 and shrunk to a narrower column, never clipped by it.
+            var picture = Ui.FitWidth(BuildFacePicture(screen, face));
             picture.Margin = new Thickness(0, 0, 0, 12);
             var warning = BuildFaceWarning(screen);
             warning.Margin = new Thickness(0, 0, 0, 12);

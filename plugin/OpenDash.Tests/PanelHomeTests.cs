@@ -169,9 +169,10 @@ namespace OpenDashPlugin.Tests
             // The rail's content, from a control of 760 with a scroll bar, keeps its presses beside, as the
             // full sidebar's does.
             Assert.Equal(PanelLayout.Rail, PanelShell.Layout(760));
-            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(760, false, 17)));
+            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(760, 17)));
             Assert.True(PanelHome.PressBeside(PanelShell.TwoColumnFrom));
-            Assert.True(PanelHome.PressBeside(1112));
+            // The column has no ceiling, and a 4K window's keeps its presses beside too.
+            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(3840, 17)));
             Assert.False(PanelHome.PressBeside(400));
         }
 
