@@ -175,16 +175,28 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost", matrix);
             Assert.Contains("button.ToolTip = PanelMatrix.ProfileTooltip(state);", matrix);
             Assert.Contains("PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null", matrix);
-            // The press installs, keeps a failure, redraws and says what it did.
+            // The press installs, keeps a failure for the redraw it starts, redraws and says what it did.
             Assert.Contains("var result = InstallFlagBox(); "
-                + "matrixPlan = PanelMatrix.KeepsPressResult(result.State) ? result : null; "
+                + "matrixFailed = PanelMatrix.KeepsPressResult(result.State) ? result : null; "
+                + "matrixFailedAsked = null; "
                 + "Redraw(); "
                 + "var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());", flat);
-            // SimHub is asked once while the page is open, and again once it is left.
-            Assert.Contains("OnLeave(\"Matrix.plan\", () => matrixPlan = null);", matrix);
-            Assert.Contains("if (matrixPlan == null) matrixPlan = SafePlan();", matrix);
+            // SimHub is asked again whenever the shell asks what needs fixing (Go, Redraw, Check again and the
+            // return to the panel all replace `issues`), and not on a rebuild in place, which keeps the list.
+            Assert.Contains("if (matrixPlan == null || !ReferenceEquals(matrixPlanAsked, issues)) { matrixPlan = SafePlan(); matrixPlanAsked = issues; }", flat);
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"SafePlan\(\)"));
             Assert.Contains("var plan = MatrixPlan();", matrix);
+            // A failed press's result outlives its own redraw and rebuilds in place, and nothing else.
+            Assert.Contains("if (matrixFailed != null) { if (matrixFailedAsked == null) matrixFailedAsked = issues; "
+                + "if (ReferenceEquals(matrixFailedAsked, issues)) return matrixFailed; matrixFailed = null; }", flat);
+            Assert.Contains("OnLeave(\"Matrix.plan\", () => { matrixPlan = null; matrixFailed = null; });", flat);
+            // The page's presses clear nothing by hand: their Redraw asks again.
+            Assert.DoesNotContain("matrixPlan = null; Redraw();", flat);
+            // The shell's return to the panel is what asks again: CatchUp replaces the list the plan is kept by.
+            var shell = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.cs"));
+            Assert.Contains("askedManually = false; } RefreshAttention(); RebuildPage(); RefreshSidebar(); }", System.Text.RegularExpressions.Regex.Replace(shell, @"\s+", " "));
+            var status = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs"));
+            Assert.Contains("issues = PanelAttention.Find(attentionFacts);", status);
             Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
             // A page that asks SimHub while it is built repaints its lighting in place.
             Assert.DoesNotContain("DrawsLighting()", matrix);
@@ -252,7 +264,7 @@ namespace OpenDashPlugin.Tests
                 "return Ui.VStack(PanelMatrix.EmptyGap, Ui.Caption(PanelMatrix.NoPanels), grid);",
                 // The selected matrix's presses.
                 "rename.Click += (sender, args) => ShowRenameMatrix(m);",
-                "check.Click += (sender, args) => { matrixPlan = null; CheckAgain(); };",
+                "check.Click += (sender, args) => CheckAgain();",
                 // The add sheet.
                 "var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);",
                 "var added = Settings.AddMatrixPanel(name.Text);",
@@ -261,8 +273,8 @@ namespace OpenDashPlugin.Tests
                 "PanelMatrix.PanelAdded(PanelMatrix.NameOf(Settings.MatrixName(added), added), added, FlagBoxName(), state), PanelMatrix.NeedsInstall(state) ? PanelTone.Caution : PanelTone.Info",
                 "ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 // The rename and remove sheets.
-                "Settings.RenameMatrixPanel(matrix, name.Text); Save(); matrixPlan = null; Redraw();",
-                "Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); matrixPlan = null; Redraw(); Say(PanelMatrix.Removed(name, matrix));",
+                "Settings.RenameMatrixPanel(matrix, name.Text); Save(); Redraw();",
+                "Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); Redraw(); Say(PanelMatrix.Removed(name, matrix));",
                 "cancel.Click += (sender, args) => CloseSheet();",
                 // The links.
                 "thresholds.Click += (sender, args) => Go(PanelMatrix.ThresholdsRoute);",

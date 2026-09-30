@@ -3,9 +3,9 @@
 // what it shows at rest.
 //
 // Every word, number and decision is PanelMatrix's; this file only draws. The profile's state is asked of
-// SimHub when the page is opened and again after each press that redraws it, and only a press writes it (ADR
-// 0013). The build reads SimHub's matrix profiles, so it
-// never asks to be rebuilt by a wheel's lighting press: every picture re-dims in place through OnLighting.
+// SimHub whenever the shell asks what needs fixing -- opening the page, a press that redraws it, Check again,
+// a return to the panel -- and only a press writes it (ADR 0013). The build reads SimHub's matrix profiles, so
+// it never asks to be rebuilt by a wheel's lighting press: every picture re-dims in place through OnLighting.
 // docs/design/flag-box.md is what the box draws.
 using System;
 using System.Collections.Generic;
@@ -23,23 +23,51 @@ namespace OpenDashPlugin
         private string matrixPreviewScenario = PanelMatrix.IdleScenario;
 
         /// <summary>
-        /// What SimHub holds for the flag box, asked once and kept while the page is open: asking parses the
-        /// whole embedded profile, and a card, a side or Shift colours rebuilds the page. It is let go of when
-        /// the page is left and before each press that redraws it, so each of those asks again.
+        /// What SimHub holds for the flag box, kept for as long as the shell's answer to what needs fixing
+        /// (<see cref="issues"/>) that it was read beside: asking parses the whole embedded profile, and a card,
+        /// a side or Shift colours rebuilds the page without asking. Every time the shell asks SimHub again --
+        /// Go, Redraw after a press, Check again, and the return to the panel from SimHub (CatchUp) -- it
+        /// replaces that list, and the page asks again with it, so the title's line never disagrees with the
+        /// sidebar's dot or Home.
         /// </summary>
         private FlagBoxPlan matrixPlan;
+        private IList<PanelIssue> matrixPlanAsked;
+
+        /// <summary>
+        /// A failed press's own result, which asking SimHub again cannot see (the plan never reads Failed), so
+        /// the title's line says "Install failed" through the redraw the press starts and any rebuild in place
+        /// after it. It is let go of when the shell asks again for a reason of its own (a return to the panel,
+        /// another press, Check again) and when the page is left. <see cref="matrixFailedAsked"/> is null until
+        /// the press's redraw adopts the answer it asked for.
+        /// </summary>
+        private FlagBoxPlan matrixFailed;
+        private IList<PanelIssue> matrixFailedAsked;
 
         private FlagBoxPlan MatrixPlan()
         {
             if (plugin.FlagBoxJson == null) return null;
-            if (matrixPlan == null) matrixPlan = SafePlan();
+            if (matrixFailed != null)
+            {
+                if (matrixFailedAsked == null) matrixFailedAsked = issues;
+                if (ReferenceEquals(matrixFailedAsked, issues)) return matrixFailed;
+                matrixFailed = null;
+            }
+            if (matrixPlan == null || !ReferenceEquals(matrixPlanAsked, issues))
+            {
+                matrixPlan = SafePlan();
+                matrixPlanAsked = issues;
+            }
             return matrixPlan;
         }
 
         private FrameworkElement BuildMatrixPage(PanelRoute to)
         {
             // No DrawsLighting(): the build reads the flag box plan from SimHub (SafePlan).
-            OnLeave("Matrix.plan", () => matrixPlan = null);
+            OnLeave("Matrix.plan", () =>
+            {
+                matrixPlan = null;
+                matrixFailed = null;
+            });
             var plan = MatrixPlan();
             var panels = Settings.MatrixPanels().ToList();
             var slot = PanelMatrix.SelectedSlot(panels, Selected(PanelPage.Matrix));
@@ -83,7 +111,8 @@ namespace OpenDashPlugin
                 {
                     var result = InstallFlagBox();
                     // Asked again on the redraw, unless it failed, which asking again cannot see.
-                    matrixPlan = PanelMatrix.KeepsPressResult(result.State) ? result : null;
+                    matrixFailed = PanelMatrix.KeepsPressResult(result.State) ? result : null;
+                    matrixFailedAsked = null;
                     // Redraw asks what needs fixing again, so the sidebar's dot and Home move with it.
                     Redraw();
                     var said = PanelMatrix.InstallSaid(state, result.State, FlagBoxName());
@@ -173,11 +202,7 @@ namespace OpenDashPlugin
             if (facts != null && facts.Shown == false)
             {
                 var check = Ui.Button(PanelAttention.CheckAgain, PanelButtonKind.Outline, PanelButtonSize.Small);
-                check.Click += (sender, args) =>
-                {
-                    matrixPlan = null;
-                    CheckAgain();
-                };
+                check.Click += (sender, args) => CheckAgain();
                 var fix = Ui.FixBox(PanelMatrix.FixTitle(m), null, PanelMatrix.FixSteps(m, FlagBoxName()), check);
                 fix.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);
                 parts.Add(fix);
@@ -577,7 +602,6 @@ namespace OpenDashPlugin
                 var added = Settings.AddMatrixPanel(name.Text);
                 Save();
                 if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added));
-                matrixPlan = null;
                 Redraw();
                 if (added == 0) return;
                 // Nothing was installed here: one profile paints every matrix and is installed once, so the
@@ -607,7 +631,6 @@ namespace OpenDashPlugin
                 var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
                 Settings.RenameMatrixPanel(matrix, name.Text);
                 Save();
-                matrixPlan = null;
                 Redraw();
                 var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix));
                 if (said != null) Say(said);
@@ -629,7 +652,6 @@ namespace OpenDashPlugin
                 Settings.RemoveMatrixPanel(matrix);
                 Save();
                 Select(PanelPage.Matrix, null);
-                matrixPlan = null;
                 Redraw();
                 Say(PanelMatrix.Removed(name, matrix));
             };
