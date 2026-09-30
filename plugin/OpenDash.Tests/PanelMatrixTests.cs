@@ -469,6 +469,10 @@ namespace OpenDashPlugin.Tests
                 "var title = Ui.SubHeading(name);",
                 "heading.Children.Add(title);",
                 "heading.Children.Add(slot); }",
+                // The number beside the name is the slot caption, the gap the name's, so a number that wraps
+                // under a long name starts at the column's edge.
+                "title.Margin = new Thickness(0, 0, PanelMatrix.HeaderGap, 0); var slot = Ui.Text(slotCaption, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary); "
+                    + "slot.VerticalAlignment = VerticalAlignment.Bottom; slot.Margin = new Thickness(0, 0, 0, PanelMatrix.SlotCaptionLift); heading.Children.Add(slot); }",
                 "var parts = new List<UIElement> { head };",
                 "var check = Ui.Button(PanelAttention.CheckAgain, PanelButtonKind.Outline, PanelButtonSize.Small);",
                 "parts.Add(fix); }",
@@ -990,7 +994,8 @@ namespace OpenDashPlugin.Tests
             {
                 "if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);",
                 "var slotCaption = PanelMatrix.SlotCaption(name, m); if (slotCaption != null) {",
-                "slot.Margin = new Thickness(PanelMatrix.HeaderGap, 0, 0, PanelMatrix.SlotCaptionLift);",
+                "title.Margin = new Thickness(0, 0, PanelMatrix.HeaderGap, 0);",
+                "slot.Margin = new Thickness(0, 0, 0, PanelMatrix.SlotCaptionLift);",
                 "var rename = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Outline, PanelButtonSize.Small); rename.ToolTip = PanelMatrix.RenameTooltip; rename.Click += (sender, args) => ShowRenameMatrix(m);",
                 "var remove = Ui.Button(PanelMatrix.Remove, PanelButtonKind.GhostDanger, PanelButtonSize.Small); remove.ToolTip = PanelMatrix.RemoveTooltip; remove.Click += (sender, args) => ShowRemoveMatrix(m);",
                 "var head = Ui.Row(heading, Ui.HStack(PanelMatrix.ActionGap, rename, remove));",

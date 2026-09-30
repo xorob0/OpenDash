@@ -208,9 +208,12 @@ namespace OpenDashPlugin
             var slotCaption = PanelMatrix.SlotCaption(name, m);
             if (slotCaption != null)
             {
+                // The gap is the name's, not the number's: a number that wraps under a long name starts at the
+                // column's edge rather than 12 in from it.
+                title.Margin = new Thickness(0, 0, PanelMatrix.HeaderGap, 0);
                 var slot = Ui.Text(slotCaption, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
                 slot.VerticalAlignment = VerticalAlignment.Bottom;
-                slot.Margin = new Thickness(PanelMatrix.HeaderGap, 0, 0, PanelMatrix.SlotCaptionLift);
+                slot.Margin = new Thickness(0, 0, 0, PanelMatrix.SlotCaptionLift);
                 heading.Children.Add(slot);
             }
             var rename = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Outline, PanelButtonSize.Small);
