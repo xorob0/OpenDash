@@ -18,8 +18,9 @@ namespace OpenDashPlugin
     /// <summary>The rows and the cells of one face's picture, at the width the page draws it.</summary>
     public sealed class PanelFacePlan
     {
-        /// <summary>The width a face is drawn at when nothing says otherwise: the canvas's own number inside
-        /// the 896 px the body of a pane used to be given.</summary>
+        /// <summary>The rows' width For(face) takes when nothing says otherwise: the old pane's body, kept so
+        /// every face's own proportions are held at one width. Not the width the page draws: that is
+        /// <see cref="PictureWidthFor"/> of the page, fitted by <see cref="FitWidth"/>.</summary>
         public const double PictureWidth = 844;
 
         /// <summary>The gap between two rows of the picture, and between two cells: the artboard's 5.</summary>
