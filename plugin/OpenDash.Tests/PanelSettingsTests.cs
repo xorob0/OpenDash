@@ -172,11 +172,12 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// New marks what the shipped plugin cannot do, for one release: the pit-lane switch and the Alerts
-        /// heading, as the artboard tags them; the night preview, which only the Map tags; and delta precision
-        /// (#322) and the clock (#324), which landed after v0.3.0-rc.7.
+        /// heading, as the artboard tags them; the night preview, which only the Map tags; and the rows that
+        /// landed after v0.3.0-rc.7, the tagged release, although no artboard tags them: delta precision
+        /// (#322), the clock (#324) and the night-mode button, whose action rc.7 does not register.
         /// </summary>
         [Fact]
-        public void Every_control_the_shipped_plugin_lacks_carries_New()
+        public void New_marks_what_the_artboards_tag_and_what_rc7_lacks()
         {
             var page = Page();
             Assert.Contains("Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag())", page);
@@ -184,6 +185,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.HStack(8, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))", page);
         }
 
         /// <summary>The row sits 18 under the title, as the artboard's nav, although PageLayout puts 28 over it.</summary>

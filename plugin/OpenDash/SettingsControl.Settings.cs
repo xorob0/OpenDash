@@ -283,8 +283,9 @@ namespace OpenDashPlugin
         /// literal Ui.Row calls (PanelDataTabTests), and Ui.Row takes no tags.
         /// </summary>
         /// <remarks>
-        /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322) and the clock
-        /// (#324) landed after v0.3.0-rc.7, whose contract has neither.
+        /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322), the clock
+        /// (#324) and the night-mode action the button row binds landed after v0.3.0-rc.7, whose contract has
+        /// none of them.
         /// </remarks>
         private static Border SettingsNew(Border row)
         {
@@ -802,7 +803,7 @@ namespace OpenDashPlugin
                 SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),
                 SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),
                 Ui.Row(PanelSettings.NightModeTitle, null, nightMode),
-                Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)),
+                SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction))),
                 Ui.SoonRow(PanelSoon.SimTimeOfDay),
                 Ui.SoonRow(PanelSoon.ScreenDimming));
         }
