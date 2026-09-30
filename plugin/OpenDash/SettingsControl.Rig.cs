@@ -550,9 +550,48 @@ namespace OpenDashPlugin
                 else Grid.SetColumn(cell, i);
                 zones.Children.Add(cell);
             }
-            dock.Children.Add(RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner));
+            var covered = RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner);
+            var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.ZoneWidth(list, "A", column, inner));
+            dock.Children.Add(RigOverZoneA(covered, list, column, limiter, PanelRigMap.PopUpPaint(scenario)));
 
             return RigScreenFrame(tile, dock);
+        }
+
+        /// <summary>
+        /// A face's body, and over its zone A what the dash draws there: the limiter's banner across the top,
+        /// and a pop-up over the whole of it. Both over a full-screen flag, as face.ts draws them last.
+        /// </summary>
+        private static UIElement RigOverZoneA(UIElement body, IList<RigZone> zones, bool column, RigPaint limiter, RigPaint popUp)
+        {
+            if (limiter == null && popUp == null) return body;
+            var over = new Grid { IsHitTestVisible = false };
+            var at = 0;
+            for (var i = 0; i < zones.Count; i++)
+            {
+                var length = new GridLength(zones[i].Weight, GridUnitType.Star);
+                if (column) over.RowDefinitions.Add(new RowDefinition { Height = length });
+                else over.ColumnDefinitions.Add(new ColumnDefinition { Width = length });
+                if (zones[i].Letter == "A") at = i;
+            }
+            var margin = column ? new Thickness(0, at == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0) : new Thickness(at == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0, 0);
+            foreach (var paint in new[] { limiter, popUp })
+            {
+                if (paint == null) continue;
+                var box = RigBand(paint);
+                box.Margin = margin;
+                if (paint == limiter)
+                {
+                    box.Height = PanelRigMap.LimiterHeight;
+                    box.VerticalAlignment = VerticalAlignment.Top;
+                }
+                if (column) Grid.SetRow(box, at);
+                else Grid.SetColumn(box, at);
+                over.Children.Add(box);
+            }
+            var grid = new Grid();
+            grid.Children.Add(body);
+            grid.Children.Add(over);
+            return grid;
         }
 
         /// <summary>A screen's body, and over it the flag's block when the screen draws its flags full screen.</summary>
@@ -646,6 +685,18 @@ namespace OpenDashPlugin
             gear.HorizontalAlignment = HorizontalAlignment.Center;
             gear.VerticalAlignment = VerticalAlignment.Center;
             grid.Children.Add(gear);
+            // The limiter's block above the gear, as the round face's hero draws it.
+            var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.RoundLimiterWidth);
+            if (limiter != null)
+            {
+                var banner = RigBand(limiter);
+                banner.Width = PanelRigMap.RoundLimiterWidth;
+                banner.Height = PanelRigMap.LimiterHeight;
+                banner.HorizontalAlignment = HorizontalAlignment.Center;
+                banner.VerticalAlignment = VerticalAlignment.Top;
+                banner.Margin = new Thickness(0, PanelRigMap.RoundLimiterTop, 0, 0);
+                grid.Children.Add(banner);
+            }
             return grid;
         }
 
@@ -665,8 +716,9 @@ namespace OpenDashPlugin
             if (paint.BorderHex != null)
             {
                 box.BorderBrush = Ui.Brush(paint.BorderHex);
-                box.BorderThickness = new Thickness(paint.BorderWidth);
+                box.BorderThickness = paint.RuleOnTop ? new Thickness(0, paint.BorderWidth, 0, 0) : new Thickness(paint.BorderWidth);
             }
+
             if (string.IsNullOrEmpty(paint.Words)) return box;
             FrameworkElement text;
             if (paint.Tracked) text = Ui.Tracked(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex, tracking);

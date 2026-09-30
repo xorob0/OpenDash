@@ -309,13 +309,68 @@ namespace OpenDashPlugin.Tests
                 "PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario)",
                 "Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Rig, RigLights())");
 
-            // A screen's flag by its own flag format: on the band, or over the body.
+            // Each kind of tile drawn by its own builder.
+            InOrder(picture,
+                "case RigTileKind.Round:", "return RigRound(tile, scenario);",
+                "case RigTileKind.Companion:", "return RigCompanion(tile, Settings.ScreenByNamespace(tile.Key), scenario);",
+                "case RigTileKind.PitWall:", "return RigPitWall(tile, Settings.ScreenByNamespace(tile.Key), scenario);",
+                "default:", "return RigFace(tile, Settings.ScreenByNamespace(tile.Key), scenario);");
+
+            // A screen's flag by its own flag format: on the band, or over the body; a face's rev strip by its
+            // own Revbar, its zones on the pages they are on, and over zone A the limiter and the pop-up.
             var face = RigMethod("private FrameworkElement RigFace(");
-            InOrder(face, "PanelRigMap.FaceFlagFormat(Settings, screen)", "PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner)", "RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner)");
-            Assert.Contains("PanelRigMap.FaceRevs(scenario, Settings, screen)", face);
+            InOrder(face,
+                "var revs = PanelRigMap.FaceRevs(scenario, Settings, screen);",
+                "Background = Ui.Brush(led ?? Theme.SurfaceRaised),",
+                "PanelRigMap.FaceFlagFormat(Settings, screen)",
+                "var inner = PanelRigMap.ScreenInner(tile.Width);",
+                "PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner)",
+                "var column = PanelRigMap.FaceColumn(screen);",
+                "var list = PanelRigMap.FaceZones(screen);",
+                "var covered = RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner);",
+                "var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.ZoneWidth(list, \"A\", column, inner));",
+                "dock.Children.Add(RigOverZoneA(covered, list, column, limiter, PanelRigMap.PopUpPaint(scenario)));",
+                "return RigScreenFrame(tile, dock);");
+            InOrder(RigMethod("private static UIElement RigOverZoneA("),
+                "if (limiter == null && popUp == null) return body;",
+                "if (zones[i].Letter == \"A\") at = i;",
+                "foreach (var paint in new[] { limiter, popUp })",
+                "box.Height = PanelRigMap.LimiterHeight;",
+                "box.VerticalAlignment = VerticalAlignment.Top;",
+                "grid.Children.Add(body);",
+                "grid.Children.Add(over);");
+            // A flag's block over a body where the screen draws its flags full screen, and nothing otherwise.
+            InOrder(RigMethod("private static UIElement RigCovered("), "if (block == null || !block.Alert) return body;", "grid.Children.Add(body);", "grid.Children.Add(RigBand(PanelRigMap.BandPaint(block, width)));");
             var wall = RigMethod("private FrameworkElement RigPitWall(");
-            InOrder(wall, "PanelRigMap.PitWallFlagFormat(Settings, screen)", "PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), inner)", "PanelRigMap.PitWallCells(screen)", "RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format), inner)");
-            InOrder(RigMethod("private FrameworkElement RigCompanion("), "PanelRigMap.CompanionFlagFormat(Settings, screen)", "PanelRigMap.CompanionBand(scenario, format)", "PanelRigMap.CompanionStrip(scenario, format)");
+            InOrder(wall, "PanelRigMap.PitWallFlagFormat(Settings, screen)", "var inner = PanelRigMap.ScreenInner(tile.Width);", "PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), inner)", "PanelRigMap.PitWallCells(screen)", "RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format), inner)");
+            InOrder(RigMethod("private FrameworkElement RigCompanion("), "PanelRigMap.CompanionFlagFormat(Settings, screen)", "PanelRigMap.CompanionPaint(PanelRigMap.CompanionBand(scenario, format), PanelRigMap.CompanionIdle(screen))", "PanelRigMap.CompanionStrip(scenario, format)");
+            // The round's ring by the scenario and the rig's rev ring, and the limiter's block above its gear.
+            var round = RigMethod("private FrameworkElement RigRound(");
+            InOrder(round,
+                "var ring = PanelRigMap.RingFor(scenario, Settings);",
+                "Stroke = ring.Chequer ? RigChequer : Ui.Brush(ring.Hex),",
+                "StrokeThickness = ring.Thickness,",
+                "var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.RoundLimiterWidth);",
+                "banner.Width = PanelRigMap.RoundLimiterWidth;",
+                "banner.Height = PanelRigMap.LimiterHeight;",
+                "banner.Margin = new Thickness(0, PanelRigMap.RoundLimiterTop, 0, 0);",
+                "grid.Children.Add(banner);");
+            // The screens do not dim (#128): only the lights take RigLights.
+            foreach (var screen in new[] { face, wall, round, RigMethod("private FrameworkElement RigCompanion("), RigMethod("private static Border RigScreenFrame(") })
+            {
+                Assert.DoesNotContain("RigLights()", screen);
+                Assert.DoesNotContain("Opacity", screen);
+            }
+            // A band's words drawn tracked where the paint says so, wrapped where it does not, and a rule along
+            // the top alone where the paint asks for one.
+            InOrder(RigMethod("private static Border RigPainted("),
+                "if (paint.Chequer) box.Background = RigChequer;",
+                "else if (paint.FillHex != null) box.Background = Ui.Brush(paint.FillHex);",
+                "if (paint.BorderHex != null)",
+                "box.BorderThickness = paint.RuleOnTop ? new Thickness(0, paint.BorderWidth, 0, 0) : new Thickness(paint.BorderWidth);",
+                "if (paint.Tracked) text = Ui.Tracked(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex, tracking);",
+                "block.TextWrapping = TextWrapping.Wrap;");
+            Assert.Contains("return RigPainted(paint, PanelRigMap.BandTextSize, PanelRigMap.BandTracking);", RigMethod("private static Border RigBand("));
 
             // Real hardware (#506) is drawn greyed, a switch with no handler, and nothing on the page
             // installs or writes to a device: the page emulates.
@@ -778,7 +833,6 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(before[id].X, after[id].X);
                 Assert.Equal(before[id].Y, after[id].Y);
             }
-
             // A place is kept to the pixel and never negative.
             PanelRigMap.SavePlaces(settings, new[] { tiles["matrix:2"].At(-30, 70.6) });
             Assert.Equal(0, settings.MatrixLayoutX[1]);
@@ -843,6 +897,7 @@ namespace OpenDashPlugin.Tests
                 }
             }
         }
+
         [Fact]
         public void A_drop_on_a_shrunk_arrangement_keeps_the_arrangement()
         {
@@ -1148,9 +1203,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("YELLOW", PanelRigMap.FaceBlockFor(yellow, PanelRigMap.FaceFlagFormat(settings, main)).Text);
             Assert.Equal("WHITE", PanelRigMap.FaceBlockFor(PanelEmulation.White, PanelRigMap.FlagFormatFull).Text);
             Assert.Equal("WHITE · LAST LAP", PanelRigMap.FaceBandFor(PanelEmulation.White, PanelRigMap.FlagFormatBand).Text);
-            // The limiter is the face's band whatever its flags do.
-            Assert.Equal("Pit limiter", PanelRigMap.FaceBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatFull).Text);
+            // The limiter is never on band D: the dash draws it over zone A (LimiterPaint).
+            Assert.False(PanelRigMap.FaceBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatFull).Alert);
+            Assert.False(PanelRigMap.FaceBandFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatBand).Alert);
             Assert.False(PanelRigMap.FaceBlockFor(PanelEmulation.Limiter, PanelRigMap.FlagFormatFull).Alert);
+            // Nothing but a flag takes band D.
+            foreach (var id in PanelEmulation.Scenarios().Select(s => s.Id).Where(id => !PanelEmulation.IsFlag(id)))
+            {
+                Assert.False(PanelRigMap.FaceBandFor(id, PanelRigMap.FlagFormatBand).Alert, id);
+            }
 
             // A pit wall: a band under its header by default, a block over its body in full, nothing when off.
             Assert.Equal(PanelRigMap.FlagFormatBand, PanelRigMap.PitWallFlagFormat(settings, wall));
@@ -1238,6 +1299,64 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_limiter_and_the_low_fuel_pop_up_are_drawn_over_zone_a_as_the_dash_draws_them()
+        {
+            // The limiter: the dash's neutral block, its words in the base ground, untracked (pitLimiter.ts).
+            var limiter = PanelRigMap.LimiterPaint(PanelEmulation.Limiter, 80);
+            Assert.Equal("Pit limiter", limiter.Words);
+            Assert.Equal(Theme.PitLimiter, limiter.FillHex);
+            Assert.Equal(Theme.SurfaceBase, limiter.InkHex);
+            Assert.False(limiter.Tracked);
+            Assert.Null(limiter.BorderHex);
+            // Too narrow for its words: the block alone, never the words cut.
+            Assert.Null(PanelRigMap.LimiterPaint(PanelEmulation.Limiter, 30).Words);
+            Assert.Equal(Theme.PitLimiter, PanelRigMap.LimiterPaint(PanelEmulation.Limiter, 30).FillHex);
+            // The low-fuel pop-up: the pop-up's ground and rule along its top, its one word in fuel.low.
+            var fuel = PanelRigMap.PopUpPaint(PanelEmulation.LowFuel);
+            Assert.Equal("Fuel", fuel.Words);
+            Assert.Equal(Theme.SurfaceZone, fuel.FillHex);
+            Assert.Equal(Theme.Danger, fuel.InkHex);
+            Assert.Equal(Theme.TextPrimary, fuel.BorderHex);
+            Assert.Equal(PanelRigMap.PopUpRule, fuel.BorderWidth);
+            Assert.True(fuel.RuleOnTop);
+            // Nothing else takes zone A.
+            foreach (var id in PanelEmulation.Scenarios().Select(s => s.Id))
+            {
+                Assert.Equal(id == PanelEmulation.Limiter, PanelRigMap.LimiterPaint(id, 80) != null);
+                Assert.Equal(id == PanelEmulation.LowFuel, PanelRigMap.PopUpPaint(id) != null);
+            }
+            Assert.Equal(12, PanelRigMap.LimiterHeight);
+            Assert.Equal(56, PanelRigMap.RoundLimiterWidth);
+            Assert.Equal(18, PanelRigMap.RoundLimiterTop);
+            Assert.Equal(2, PanelRigMap.PopUpRule);
+
+            // Zone A's width: its share of the body less the gap before it, or the whole body when stacked.
+            var wide = Screen(Contract.KindFace, "MainDash", "Main dash", 1280, 480);
+            var zones = PanelRigMap.FaceZones(wide);
+            var inner = PanelRigMap.ScreenInner(300);
+            Assert.Equal(Math.Floor(inner * 340 / 1278 - 3), PanelRigMap.ZoneWidth(zones, "A", false, inner));
+            Assert.Equal(Math.Floor(inner * 469 / 1278), PanelRigMap.ZoneWidth(zones, "B", false, inner));
+            Assert.Equal(inner, PanelRigMap.ZoneWidth(zones, "A", true, inner));
+            Assert.Equal(0, PanelRigMap.ZoneWidth(zones, "D", false, inner));
+            Assert.Equal(0, PanelRigMap.ZoneWidth(null, "A", false, inner));
+
+            // "Pit limiter" is drawn on the zone A of every face the rig can draw a row of zones on, and
+            // inside the round's banner.
+            Assert.NotNull(PanelRigMap.LimiterPaint(PanelEmulation.Limiter, PanelRigMap.RoundLimiterWidth).Words);
+            foreach (var size in Contract.FaceSizes)
+            {
+                double w, h;
+                PanelRigMap.FaceTileSize(size.Width, size.Height, out w, out h);
+                var screen = Screen(Contract.KindFace, "F", "F", size.Width, size.Height);
+                var room = PanelRigMap.ZoneWidth(PanelRigMap.FaceZones(screen), "A", PanelRigMap.FaceColumn(screen), PanelRigMap.ScreenInner(w));
+                var words = PanelRigMap.LimiterPaint(PanelEmulation.Limiter, room).Words;
+                if (words != null) Assert.True(PanelRigMap.TrackedWidth(words, PanelRigMap.BandTextSize, 0) <= room, size.Width + "x" + size.Height);
+            }
+            var reference = PanelRigMap.ZoneWidth(zones, "A", false, inner);
+            Assert.Equal("Pit limiter", PanelRigMap.LimiterPaint(PanelEmulation.Limiter, reference).Words);
+        }
+
+        [Fact]
         public void A_bands_words_fit_the_band_of_every_screen_they_are_drawn_on()
         {
             // "WHITE · LAST LAP" is 16 glyphs; tracked at 10 px it is wider than a portrait pit wall's band.
@@ -1280,7 +1399,6 @@ namespace OpenDashPlugin.Tests
                 }
             }
         }
-
         [Fact]
         public void A_tile_that_wears_the_warning_dot_says_so_in_words()
         {
@@ -1482,6 +1600,7 @@ namespace OpenDashPlugin.Tests
                 noLimiter.EffectsOff.Add("pit.limiter");
                 Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, noLimiter), centre, PanelEmulation.Limiter, noLimiter)[1], led => Assert.Null(led));
             }
+
             // Held to StripFrame: over every shape, scenario and switch, an LED the picture darkens is one the
             // rev ladder lit, and an LED it keeps is kept as the frame drew it.
             var variants = new List<StripOptions> { new StripOptions(), whole };

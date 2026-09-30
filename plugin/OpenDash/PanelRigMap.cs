@@ -115,7 +115,7 @@ namespace OpenDashPlugin
     /// </summary>
     public sealed class RigPaint
     {
-        public RigPaint(string words, string fillHex, bool chequer, string inkHex, string borderHex, double borderWidth, bool tracked)
+        public RigPaint(string words, string fillHex, bool chequer, string inkHex, string borderHex, double borderWidth, bool tracked, bool ruleOnTop = false)
         {
             Words = words;
             FillHex = fillHex;
@@ -124,7 +124,11 @@ namespace OpenDashPlugin
             BorderHex = borderHex;
             BorderWidth = borderWidth;
             Tracked = tracked;
+            RuleOnTop = ruleOnTop;
         }
+
+        /// <summary>The outline drawn along the top edge alone, as the dash's pop-up draws its rule.</summary>
+        public bool RuleOnTop { get; private set; }
 
         /// <summary>What it says, or null for none: the chequer and a strip say nothing.</summary>
         public string Words { get; private set; }
@@ -1324,14 +1328,95 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A face's band D under a scenario: the flag where the face draws its flags on the band, the pit
-        /// limiter, and otherwise nothing. A face whose flags fill the screen leaves band D to its page and
-        /// puts the flag over its zones (<see cref="FaceBlockFor"/>), as zones/face.ts does.
+        /// A face's band D under a scenario: the flag where the face draws its flags on the band, and
+        /// otherwise nothing. A face whose flags fill the screen leaves band D to its page and puts the flag
+        /// over its zones (<see cref="FaceBlockFor"/>), as zones/face.ts does.
         /// </summary>
+        /// <remarks>
+        /// Flags only. The dash draws the pit limiter as a banner over the top of zone A, never on band D
+        /// (zones/layout.ts: "drawn over zone A and nowhere else"; pitAlerts.ts: "band D holds the flag
+        /// while this rectangle holds the pit state"), so it is <see cref="LimiterPaint"/>'s, and a face
+        /// under the limiter keeps its band. The artboard writes PIT LIMITER on the band; the tile is a
+        /// picture of the dash.
+        /// </remarks>
         public static FaceBand FaceBandFor(string scenarioId, string flagFormat)
         {
-            if (PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatFull) return FaceBand.Idle;
+            if (!PanelEmulation.IsFlag(scenarioId) || flagFormat == FlagFormatFull) return FaceBand.Idle;
             return PanelEmulation.Band(scenarioId);
+        }
+
+        // --- What the dash draws over zone A ---------------------------------------------------------
+
+        /// <summary>The pit limiter's banner: across the top of a face's zone A, and above the gear inside a
+        /// round face's ring, 12 high so its words can be read at the tile's scale.</summary>
+        public const double LimiterHeight = 12;
+
+        /// <summary>The round face's banner: 56 across, 18 down from the top of the tile, which keeps it
+        /// inside the ring and clear of the gear's ink (layouts/480round.ts draws it at 100 of 480, over
+        /// the gear, 150 across; the tile widens it so its words fit).</summary>
+        public const double RoundLimiterWidth = 56;
+        public const double RoundLimiterTop = 18;
+
+        /// <summary>The pop-up's rule along its top edge, as components/popUp.ts's POP_UP_RULE.</summary>
+        public const double PopUpRule = 2;
+
+        /// <summary>The low-fuel pop-up's label (FUEL_POP_UP in components/popUp.ts). Its value, the laps
+        /// left, is a figure the panel does not have, as the idle band's "Fuel · 12.4 L" was.</summary>
+        public const string FuelPopUp = "Fuel";
+
+        /// <summary>
+        /// The pit limiter's banner under a scenario, <paramref name="width"/> across, or null when the
+        /// limiter is off: the dash's neutral block in purpose.pitLimiter, "Pit limiter" in the base ground
+        /// (components/pitLimiter.ts), the words left out where they do not fit rather than cut.
+        /// </summary>
+        /// <remarks>
+        /// Drawn over the top of zone A on a face, over a full-screen flag too, since face.ts draws the pit
+        /// family last so that a driver serving a stop under a flag still sees it; and above the gear on a
+        /// round face, whose hero draws the same block (hero/hero.ts).
+        /// </remarks>
+        public static RigPaint LimiterPaint(string scenarioId, double width)
+        {
+            if (scenarioId != PanelEmulation.Limiter) return null;
+            var band = PanelEmulation.Band(scenarioId);
+            var words = TrackedWidth(band.Text, BandTextSize, 0) <= width ? band.Text : null;
+            return new RigPaint(words, band.FillHex, false, Theme.SurfaceBase, null, 0, false);
+        }
+
+        /// <summary>
+        /// What covers a face's zone A under a scenario, or null: under Low fuel, the dash's pop-up
+        /// (FUEL_POP_UP), on purpose.popUp.surface with its rule in purpose.popUp.rule along the top and its
+        /// one word in purpose.fuel.low, which is the one colour a pop-up takes.
+        /// </summary>
+        /// <remarks>
+        /// face.ts draws the pop-ups over zone A, after the limiter and over a full-screen flag. The Warnings
+        /// chips reached only a matrix before, so on a rig with no matrix Low fuel drew what Mid revs drew,
+        /// and Settings' "Try" on the Low fuel row opened Rig on a picture that showed nothing. The face has
+        /// no oil or water temperature state, so those two chips still reach only a matrix.
+        /// </remarks>
+        public static RigPaint PopUpPaint(string scenarioId)
+        {
+            if (scenarioId != PanelEmulation.LowFuel) return null;
+            return new RigPaint(FuelPopUp, Theme.SurfaceZone, false, Theme.Danger, Theme.TextPrimary, PopUpRule, false, true);
+        }
+
+        /// <summary>
+        /// How wide a face's zone <paramref name="letter"/> is drawn inside a body <paramref name="inner"/>
+        /// across: its share of the body by weight, less the gap before it, or the whole body where the zones
+        /// are stacked down. 0 for a zone the face does not draw.
+        /// </summary>
+        public static double ZoneWidth(IList<RigZone> zones, string letter, bool column, double inner)
+        {
+            if (zones == null) return 0;
+            var index = -1;
+            for (var i = 0; i < zones.Count; i++)
+            {
+                if (zones[i].Letter == letter) { index = i; break; }
+            }
+            if (index < 0) return 0;
+            if (column) return inner;
+            var total = zones.Sum(z => z.Weight);
+            if (total <= 0) return 0;
+            return Math.Max(0, Math.Floor(inner * zones[index].Weight / total - (index == 0 ? 0 : ScreenGap)));
         }
 
         /// <summary>What covers a face's zones B, A and C: the flag's block where the face draws its flags full
@@ -1374,7 +1459,6 @@ namespace OpenDashPlugin
         {
             return PanelEmulation.IsFlag(scenarioId) && flagFormat == FlagFormatBand ? PanelEmulation.Band(scenarioId) : FaceBand.Idle;
         }
-
         /// <summary>A flag as the dash's full-screen block draws it: the band's colours and one word, the
         /// block's own name for the flag, and the chequer unnamed.</summary>
         public static FaceBand BlockFor(string scenarioId)
@@ -1452,6 +1536,7 @@ namespace OpenDashPlugin
             var cut = words.IndexOf(" · ", StringComparison.Ordinal);
             return cut > 0 ? words.Substring(0, cut) : words;
         }
+
         /// <summary>
         /// How wide Ui.Tracked draws a run: each glyph its own box, whole pixels up, and the tracking after
         /// every one of them, the last included.
