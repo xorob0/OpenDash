@@ -53,6 +53,10 @@ namespace OpenDashPlugin
         /// <summary>Reinstall everything's line beside it: its question, when it has one to ask.</summary>
         private TextBlock updatesReinstallLine;
 
+        /// <summary>The page this build drew, which keyboard focus falls back to when a redrawn press has
+        /// nothing to hand it to (UpdatesRefocus).</summary>
+        private FrameworkElement updatesPage;
+
         // --- What outlives the build ------------------------------------------------------------------
 
         /// <summary>Whether a Download pressed on a remembered offer is waiting for the listing it asked for.
@@ -88,9 +92,15 @@ namespace OpenDashPlugin
                 updatesCheckLine = null;
                 updatesReinstall = null;
                 updatesReinstallLine = null;
+                updatesPage = null;
                 updatesRunPresses.Clear();
             });
             OnLeave("Updates.applyWaiting", () => applyWaiting = false);
+            // A Download waiting for its listing waits only while the check it asked for is in flight: an
+            // answer that landed while SimHub's panel was closed never reached UpdateAnswered, and the build
+            // that follows the return is not a Go, so without this the press would outlive its answer and
+            // the next check the page heard would download by itself.
+            if (updateStatus.State != UpdateState.Checking) applyWaiting = false;
             // A check starting holds Check now and Download off and says so, on the card while an offer shows
             // and on the row otherwise (UpdatesRefreshCheck); its answer redraws the card.
             OnUpdate(UpdatesRefreshCheck, manual => UpdateAnswered());
@@ -100,20 +110,22 @@ namespace OpenDashPlugin
             // dashboards and the kept card both read it. Not on every build, since a resize or a return to
             // the panel rebuilds the page, and each read re-hashes every folder on this thread and logs a
             // line per package into the log the support report carries; every press that writes a folder
-            // reads it again itself.
-            if (!updatesRead)
+            // reads it again itself. Not during a download either: the run works over the same record and
+            // folders on the thread pool, and its completion reads them again before it redraws.
+            if (!updatesRead && !applying)
             {
                 plugin.Installer.Refresh();
                 updatesRead = true;
             }
             OnLeave("Updates.read", () => updatesRead = false);
             var kept = UpdatesKeptCard(updatesWidth);
-            return PageLayout(PanelUpdates.Title, null,
+            updatesPage = PageLayout(PanelUpdates.Title, null,
                 Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin),
                 Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck),
                 Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages),
                 kept,
                 Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));
+            return updatesPage;
         }
 
         /// <summary>A check's answer, which the shell has already taken: the card, the check row, and a
@@ -124,7 +136,24 @@ namespace OpenDashPlugin
             UpdatesRefreshCheck();
             var waiting = applyWaiting;
             applyWaiting = false;
-            if (waiting && updateStatus.State == UpdateState.UpdateAvailable && updatesCardHost != null) ApplyUpdate();
+            // Not over a staged plugin: the old one still runs until the restart, so the check offers the
+            // release it has already staged, and downloading it again finishes nothing.
+            if (PanelUpdates.AppliesWhenAnswered(waiting, updateStatus.State, UpdatesPending()) && updatesCardHost != null) ApplyUpdate();
+        }
+
+        /// <summary>Whether a plugin is staged and waits for SimHub to restart, read off the disk; false, with a
+        /// line in the log, when the disk cannot say.</summary>
+        private bool UpdatesPending()
+        {
+            try
+            {
+                return PluginUpdate.Pending(plugin.Installer.SimHubRoot);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not tell whether an update waits for a restart: " + ex.Message);
+                return false;
+            }
         }
 
         // --- The kept copy ----------------------------------------------------------------------------
@@ -288,7 +317,9 @@ namespace OpenDashPlugin
             // The log first: reading the folders logs a line per package, and those lines would push out the
             // older ones the report exists to carry.
             var log = UpdatesLogTail(root);
-            plugin.Installer.Refresh();
+            // Not while a release downloads: the run works over the same record and folders on the thread
+            // pool, so the report says what the page last read instead.
+            if (!applying) plugin.Installer.Refresh();
             var screens = UpdatesDashboardRows()
                 .Select(pair => new UpdatesReportItem(pair.Value.Name, PanelUpdates.ScreenDetail(pair.Key.Kind, pair.Key.Width, pair.Key.Height), pair.Value.Version, pair.Value.State))
                 .ToList();
@@ -331,7 +362,7 @@ namespace OpenDashPlugin
                 ChecksOn = Settings.CheckForUpdates,
                 LastCheckedTicks = Settings.LastUpdateCheckTicks,
                 UpdateLine = updateStatus.Line,
-                RestartPending = PendingRestart(),
+                RestartPending = UpdatesPending(),
                 Screens = screens,
                 Strips = strips,
                 Matrices = matrices,

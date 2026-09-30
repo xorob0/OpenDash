@@ -264,6 +264,44 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.5.0", stale.InstalledVersion);
         }
 
+        /// <summary>A Download waiting for its listing runs on the answer only onto an offer, and never over a
+        /// staged plugin, which the check offers again while the old one still runs.</summary>
+        [Fact]
+        public void An_answer_runs_a_waiting_download_only_onto_an_offer_nothing_has_staged()
+        {
+            Assert.True(PanelUpdates.AppliesWhenAnswered(true, UpdateState.UpdateAvailable, false));
+            Assert.False(PanelUpdates.AppliesWhenAnswered(true, UpdateState.UpdateAvailable, true));
+            Assert.False(PanelUpdates.AppliesWhenAnswered(false, UpdateState.UpdateAvailable, false));
+            Assert.False(PanelUpdates.AppliesWhenAnswered(true, UpdateState.UpToDate, false));
+        }
+
+        /// <summary>The page's own code, the draw files, as one string without comments.</summary>
+        private static string PageCode()
+        {
+            return string.Concat(RepoPaths.SettingsControlSources()
+                .Where(p => System.IO.Path.GetFileName(p).StartsWith("SettingsControl.Updates", StringComparison.Ordinal))
+                .Select(RepoPaths.Code));
+        }
+
+        /// <summary>
+        /// The page reaches the shell through its hooks alone: pageHost and PendingRestart are the shell's
+        /// internals, which it may change without a word to any page. A waiting Download is spent by the
+        /// release it finds and dropped when its answer was missed; the disk is not read under a download.
+        /// </summary>
+        [Fact]
+        public void The_page_reads_only_the_shell_s_hooks_and_leaves_the_disk_to_a_run_in_progress()
+        {
+            var code = PageCode();
+            Assert.DoesNotContain("pageHost", code);
+            Assert.DoesNotContain("PendingRestart(", code);
+            Assert.Contains("PluginUpdate.Pending(plugin.Installer.SimHubRoot)", code);
+            Assert.Contains("if (!updatesRead && !applying)", code);
+            Assert.Contains("if (!applying) plugin.Installer.Refresh();", code);
+            Assert.Contains("if (release != null) applyWaiting = false;", code);
+            Assert.Contains("if (updateStatus.State != UpdateState.Checking) applyWaiting = false;", code);
+            Assert.Contains("PanelUpdates.AppliesWhenAnswered(waiting, updateStatus.State, UpdatesPending())", code);
+        }
+
         [Fact]
         public void The_card_and_the_check_row_say_what_their_presses_do()
         {

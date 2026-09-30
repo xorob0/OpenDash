@@ -49,7 +49,7 @@ namespace OpenDashPlugin
             updatesCardLine = null;
             updatesDownload = null;
             updatesProgressHost = null;
-            updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, PendingRestart());
+            updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());
             if (updatesCard == UpdatesCard.None)
             {
                 updatesCardHost.Child = null;
@@ -122,7 +122,7 @@ namespace OpenDashPlugin
             {
                 var target = candidates.FirstOrDefault(c => c != null && c.Focusable && c.IsVisible && c.IsEnabled);
                 if (target != null) Keyboard.Focus(target);
-                else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                else if (updatesPage != null) updatesPage.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
             }), DispatcherPriority.Loaded);
         }
 
@@ -357,6 +357,9 @@ namespace OpenDashPlugin
             if (updateStatus.State == UpdateState.Checking) return;
 
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            // A release to act on spends a Download that was waiting for its listing, whichever press found
+            // it: left standing, the next answer the page heard would download again by itself.
+            if (release != null) applyWaiting = false;
             if (release == null && updateStatus.State == UpdateState.UpdateAvailable && !applyWaiting)
             {
                 // The offer is the remembered one (UpdateMark.Opening): the release is known and its assets are
@@ -437,6 +440,8 @@ namespace OpenDashPlugin
                     // the moment it is safe to serialise the settings.
                     Save();
                     plugin.Installer.Refresh();
+                    // That read is this visit's, so the redraw below does not hash every folder again.
+                    if (updatesCardHost != null) updatesRead = true;
                     // The idle screen's mark compares the release it offers with what the rig now runs, and
                     // the dashboards have just moved.
                     plugin.RefreshUpdateMark();

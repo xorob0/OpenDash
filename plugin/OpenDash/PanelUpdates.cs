@@ -190,6 +190,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether a check's answer runs the Download that was waiting for it: only a press that was waiting,
+        /// only onto an offer, and never over a staged plugin, which the check offers again because the old
+        /// one still runs until the restart.
+        /// </summary>
+        public static bool AppliesWhenAnswered(bool waiting, UpdateState state, bool pending)
+        {
+            return waiting && state == UpdateState.UpdateAvailable && !pending;
+        }
+
+        /// <summary>
         /// What the card shows. A run in progress outranks everything; a staged plugin outranks the offer
         /// that staged it, since pressing Download again would fetch the same release rather than finish
         /// anything; otherwise the card is there only while a release is offered.
