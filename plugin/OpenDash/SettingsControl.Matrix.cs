@@ -690,7 +690,7 @@ namespace OpenDashPlugin
             };
             var cancel = Ui.Button(PanelMatrix.Cancel, PanelButtonKind.Ghost, PanelButtonSize.Large);
             cancel.Click += (sender, args) => CloseSheet();
-            ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption), SheetFooter(null, cancel, remove));
+            ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));
         }
     }
 }

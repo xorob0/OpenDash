@@ -381,8 +381,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What the one question before a removal says: the consequence, not the reason, in the shape
-        /// Screens and LEDs give theirs.</summary>
-        public const string RemoveCaption = "Removes the matrix and its settings. The flag box profile stays in SimHub.";
+        /// Screens and LEDs give theirs. It names the matrix, since the sheet's title trims a long name and the
+        /// body wraps: the Danger press is never left under a sheet that does not say what it removes.</summary>
+        public static string RemoveCaption(string name)
+        {
+            return "Removes " + name + " and its settings. The flag box profile stays in SimHub.";
+        }
 
         /// <summary>The sheet's Danger press, the verb Screens and LEDs confirm with.</summary>
         public const string RemoveConfirm = "Remove it";

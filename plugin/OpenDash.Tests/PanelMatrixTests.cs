@@ -78,7 +78,7 @@ namespace OpenDashPlugin.Tests
             foreach (var text in new[]
             {
                 PanelMatrix.NoPanels, PanelMatrix.PanelsTitle, PanelMatrix.AddPanel, PanelMatrix.AllInUse, PanelMatrix.AddTooltip,
-                PanelMatrix.RenameTooltip, PanelMatrix.RemoveTooltip, PanelMatrix.RemoveCaption,
+                PanelMatrix.RenameTooltip, PanelMatrix.RemoveTooltip, PanelMatrix.RemoveCaption("Left pillar"),
                 PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.UpToDate),
                 PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.NotEmbedded),
                 PanelMatrix.PanelAdded("Left pillar", 2, "OpenDash Flag box", FlagBoxInstallState.NotInstalled),
@@ -419,7 +419,7 @@ namespace OpenDashPlugin.Tests
                 "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
                 "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
-                "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption), SheetFooter(null, cancel, remove));",
+                "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));",
                 "var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix)); if (said != null) Say(said);",
                 "var shown = facts == null ? null : facts.Shown; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m);",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
@@ -545,7 +545,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove", PanelMatrix.Remove);
             Assert.Equal("Rename Left pillar", PanelMatrix.RenameTitle("Left pillar"));
             Assert.Equal("Remove Left pillar", PanelMatrix.RemoveTitle("Left pillar"));
-            Assert.Equal("Removes the matrix and its settings. The flag box profile stays in SimHub.", PanelMatrix.RemoveCaption);
+            // The sheet's body names the matrix, since its title trims a long name and the body wraps.
+            Assert.Equal("Removes Left pillar and its settings. The flag box profile stays in SimHub.", PanelMatrix.RemoveCaption("Left pillar"));
             Assert.Equal("Remove it", PanelMatrix.RemoveConfirm);
             // SimHub's field, set to the number, in the form the rest of the page gives it.
             Assert.Equal("Removed Left pillar. A device with RGB Matrix content set to 2 stays dark.", PanelMatrix.Removed("Left pillar", 2));
