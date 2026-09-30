@@ -98,11 +98,13 @@ namespace OpenDashPlugin
                 screen.FlagFormat = value;
                 Save(screen);
             });
+            flags.Uid = "screens.flags";
             var lapReview = ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value =>
             {
                 screen.LapReview = value;
                 Save(screen);
             });
+            lapReview.Uid = "screens.lapreview";
 
             var rows = new List<UIElement>
             {
@@ -151,7 +153,9 @@ namespace OpenDashPlugin
                 redraw();
             }, PanelScreens.GlancePageWidth);
             page.Uid = "screens.glance.page";
-            return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            chip.Uid = "screens.glance.chip";
+            return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, chip);
         }
 
         /// <summary>Controls that sit side by side and wrap under each other past <paramref name="maxWidth"/>,
@@ -516,13 +520,18 @@ namespace OpenDashPlugin
                     Save(screen);
                 });
                 classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
+                classOnly.Uid = "screens.classonly";
                 var line = ScreensAsideLine(Ui.Text(PanelScreens.ClassOnlyTitle, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), classOnly);
                 stack.Children.Add(Ui.Anchor(ScreensRuled(line), PanelScreens.AnchorClassOnly));
             }
             var previous = Ui.HStack(8, Ui.Text(PanelScreens.PreviousPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.NewTag());
+            var nextChip = ScreensAsideChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)));
+            nextChip.Uid = "screens.zone.next";
+            var backChip = ScreensAsideChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)));
+            backChip.Uid = "screens.zone.back";
             stack.Children.Add(ScreensRuled(Ui.VStack(10,
-                ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), ScreensAsideChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)))),
-                ScreensAsideLine(previous, ScreensAsideChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)))))));
+                ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), nextChip),
+                ScreensAsideLine(previous, backChip))));
             return stack;
         }
 

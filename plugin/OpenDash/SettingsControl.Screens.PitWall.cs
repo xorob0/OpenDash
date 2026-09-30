@@ -56,9 +56,11 @@ namespace OpenDashPlugin
             // one dashboard file per rectangle, so two zones of one column are the same file.
             var classOnly = Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(screen); });
             classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
+            classOnly.Uid = "screens.pitwall.classonly";
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.ClassOnlyTitle, classOnly), PanelScreens.AnchorClassOnly));
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenPitWallFlagFormat(screen.Namespace),
                 value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(screen); });
+            flags.Uid = "screens.pitwall.flags";
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay));
             if (portrait)
             {
@@ -217,7 +219,9 @@ namespace OpenDashPlugin
                 redraw();
             }, PanelScreens.GlancePageWidth);
             pages.Uid = "screens.pitwall.glance.page";
-            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), zone, pages, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)));
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            chip.Uid = "screens.pitwall.glance.chip";
+            return ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), zone, pages, chip);
         }
 
         /// <summary>

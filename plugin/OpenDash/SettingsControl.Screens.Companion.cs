@@ -53,6 +53,7 @@ namespace OpenDashPlugin
             first.Uid = "screens.companion.first";
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace),
                 value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(screen); });
+            flags.Uid = "screens.companion.flags";
             // Any module, the ones the rotation has off included: a glance is asked for by holding a button,
             // and the rotation is about what a tap steps through.
             var glance = Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value =>
@@ -62,11 +63,13 @@ namespace OpenDashPlugin
                 redraw();
             });
             glance.Uid = "screens.companion.glance";
+            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
+            chip.Uid = "screens.companion.glance.chip";
 
             var rows = Ui.Rows(
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FirstModuleTitle, first), PanelScreens.AnchorFirstModule),
                 Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag()), PanelScreens.AnchorFlagDisplay),
-                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), glance, BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace))), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(PanelScreens.ControlsWidth(ContentWidth), glance, chip), PanelCopy.CompanionGlance), PanelScreens.AnchorGlance),
                 Ui.Anchor(BuildCompanionPaging(), PanelScreens.AnchorPaging));
             return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
         }

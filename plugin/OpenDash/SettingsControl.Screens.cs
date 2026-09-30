@@ -311,6 +311,7 @@ namespace OpenDashPlugin
                 }
                 return grid;
             }, open => screensDetailsOpen = open);
+            details.Uid = "screens.details";
             var block = new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -353,12 +354,19 @@ namespace OpenDashPlugin
         /// The control can be gone from the new drawing: a page unticked under Only ticked leaves the list.
         /// The keyboard then goes to the control that took its place -- the next one the old drawing named
         /// that is still drawn, else the one before it -- and never stays on a control that was removed.
+        ///
+        /// A focused control with no Uid, which a redraw can catch when a press that takes no focus (a
+        /// click on a zone page's name, a drag of its grip) redraws around it, is found again at the same
+        /// place in the new drawing, which a redraw draws in the same shape, and the host's first control
+        /// takes the keyboard when that place is gone.
         /// </remarks>
         private static void ScreensRedraw(ContentControl host, Func<object> build)
         {
             string uid = null;
             List<string> named = null;
-            if (host.IsKeyboardFocusWithin)
+            List<int> place = null;
+            var focused = host.IsKeyboardFocusWithin;
+            if (focused)
             {
                 var at = Keyboard.FocusedElement as DependencyObject;
                 while (at != null && !ReferenceEquals(at, host))
@@ -376,15 +384,27 @@ namespace OpenDashPlugin
                     named = new List<string>();
                     ScreensUids(host, named);
                 }
+                else
+                {
+                    place = FocusPath(host, Keyboard.FocusedElement as DependencyObject);
+                }
             }
             host.Content = build();
-            if (uid == null) return;
+            if (!focused) return;
             host.Dispatcher.BeginInvoke(new Action(() =>
             {
-                var target = ScreensFind(host, uid);
-                var at = named.IndexOf(uid);
-                for (var i = at + 1; target == null && at >= 0 && i < named.Count; i++) target = ScreensFind(host, named[i]);
-                for (var i = at - 1; target == null && i >= 0; i--) target = ScreensFind(host, named[i]);
+                UIElement target = null;
+                if (uid != null)
+                {
+                    target = ScreensFind(host, uid);
+                    var at = named.IndexOf(uid);
+                    for (var i = at + 1; target == null && at >= 0 && i < named.Count; i++) target = ScreensFind(host, named[i]);
+                    for (var i = at - 1; target == null && i >= 0; i--) target = ScreensFind(host, named[i]);
+                }
+                else if (place != null)
+                {
+                    target = ScreensAt(host, place);
+                }
                 if (target == null)
                 {
                     host.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
@@ -393,6 +413,22 @@ namespace OpenDashPlugin
                 if (target.Focusable) target.Focus();
                 else target.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
             }), DispatcherPriority.Loaded);
+        }
+
+        /// <summary>The deepest control that can take the keyboard along <paramref name="path"/> (FocusPath's
+        /// child indexes) under <paramref name="root"/>, or null where the path leads to none.</summary>
+        private static UIElement ScreensAt(DependencyObject root, List<int> path)
+        {
+            DependencyObject node = root;
+            UIElement last = null;
+            foreach (var index in path)
+            {
+                if (node == null || index >= VisualTreeHelper.GetChildrenCount(node)) break;
+                node = VisualTreeHelper.GetChild(node, index);
+                var element = node as UIElement;
+                if (element != null && element.Focusable && element.IsVisible && element.IsEnabled) last = element;
+            }
+            return last;
         }
 
         /// <summary>Every Uid under <paramref name="root"/>, in the order the drawing reads.</summary>
