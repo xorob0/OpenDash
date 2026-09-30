@@ -613,6 +613,10 @@ namespace OpenDashPlugin
             icon.Margin = new Thickness(0, 1, PanelShortcuts.BannerGap, 0);
             var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);
             text.TextWrapping = TextWrapping.Wrap;
+            // A message line keeps a measure, as the panel's every other does: the amber box stretches with
+            // the column like a card, and the sentence in it wraps at BodyWidth however wide that is.
+            text.MaxWidth = BodyWidth;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
             text.Inlines.Add(new Run(clash.Lead) { FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush(Theme.TextPrimary) });
             text.Inlines.Add(new Run(" " + clash.Rest));
             var dock = new DockPanel { LastChildFill = true };

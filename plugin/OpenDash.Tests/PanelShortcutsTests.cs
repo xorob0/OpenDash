@@ -775,6 +775,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
             Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
+            // The clash sentence keeps a message line's measure in a column with no ceiling.
+            var clash = Between(code, "private static Border ShortcutsClashLine(", "return line;");
+            Assert.Contains("text.MaxWidth = BodyWidth;", clash);
+            Assert.Contains("text.HorizontalAlignment = HorizontalAlignment.Left;", clash);
         }
 
         /// <summary>
