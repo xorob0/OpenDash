@@ -197,6 +197,66 @@ namespace OpenDashPlugin.Tests
         public void The_header_offers_the_press_the_profile_needs(FlagBoxInstallState? profile, string press)
         {
             Assert.Equal(press, PanelLeds.ProfileAction(profile));
+            Assert.Equal(press, PanelLeds.ProfileAction(profile, true, true));
+        }
+
+        /// <summary>
+        /// No press that could only fail: where the build carries no profile for the strip, or SimHub does not
+        /// list its device, the header offers neither Install nor Update, whatever the census says, and says why.
+        /// </summary>
+        /// <remarks>
+        /// A pre-grid brow compared against no embedded profile reads Outdated, and an install for a device
+        /// SimHub no longer lists takes the working copy out of every device and puts nothing back.
+        /// </remarks>
+        [Theory]
+        [InlineData(FlagBoxInstallState.Outdated)]
+        [InlineData(FlagBoxInstallState.NotInstalled)]
+        [InlineData(FlagBoxInstallState.Failed)]
+        [InlineData(FlagBoxInstallState.UpToDate)]
+        public void The_header_offers_no_press_it_cannot_carry_out(FlagBoxInstallState profile)
+        {
+            Assert.Null(PanelLeds.ProfileAction(profile, false, true));
+            Assert.Null(PanelLeds.ProfileAction(profile, true, false));
+            Assert.Null(PanelLeds.ProfileAction(profile, false, false));
+        }
+
+        [Fact]
+        public void The_header_says_why_it_offers_no_press()
+        {
+            Assert.Null(PanelLeds.ProfileBlocked(true, true));
+            Assert.Equal("This build ships no profile for this strip.", PanelLeds.ProfileBlocked(false, true));
+            // The build comes first: a device picked would not bring a profile the build lacks.
+            Assert.Equal(PanelLeds.NoProfileForStrip, PanelLeds.ProfileBlocked(false, false));
+            Assert.Equal("SimHub does not list this strip's device. Choose one under SimHub device.", PanelLeds.ProfileBlocked(true, false));
+            Assert.Contains(PanelLights.BarDeviceTitle, PanelLeds.DeviceNotListed);
+        }
+
+        /// <summary>
+        /// The page's presses go through one guarded install, UpdateBars' own guard, and never straight to
+        /// ReinstallBar or InstallBar: read as text because the page is WPF.
+        /// </summary>
+        [Fact]
+        public void Every_install_on_the_page_is_guarded()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.DoesNotContain("ReinstallBar(", leds);
+            var guard = leds.Substring(leds.IndexOf("private static FlagBoxPlan LedsReinstall(", StringComparison.Ordinal));
+            guard = guard.Substring(0, guard.IndexOf("return LedsLogged(bar, InstallBar(bar, found.Json));", StringComparison.Ordinal));
+            Assert.Contains("var found = EmbeddedProfileOf(bar);", guard);
+            Assert.Contains("if (found == null)", guard);
+            Assert.Contains("if (LedTargets.Find(bar.Device) == null)", guard);
+            // InstallBar is called in two places only: the guard, and a move, which installs on the device just
+            // picked from SimHub's own list.
+            Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json)"));
+            Assert.Contains("PanelLeds.ProfileBlocked(EmbeddedProfileOf(bar) != null, LedTargets.Find(bar.Device) != null)", leds);
+            Assert.Contains("var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;", leds);
+        }
+
+        private static int Occurrences(string text, string part)
+        {
+            var count = 0;
+            for (var at = text.IndexOf(part, StringComparison.Ordinal); at >= 0; at = text.IndexOf(part, at + part.Length, StringComparison.Ordinal)) count++;
+            return count;
         }
 
         // --- The preview --------------------------------------------------------------------------------------
@@ -659,8 +719,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Each_press_says_what_happened_and_the_step_SimHub_does_not_take()
         {
-            Assert.Equal("Installed Rim. Select \"Rim\" on Fanatec CSL Elite in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", "Fanatec CSL Elite"));
-            Assert.Equal("Installed Rim. Select \"Rim\" in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", null));
+            // One object for the header's press, whatever it did: the strip's profile.
+            Assert.Equal("Installed Rim's profile. Select \"Rim\" on Fanatec CSL Elite in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", "Fanatec CSL Elite"));
+            Assert.Equal("Installed Rim's profile. Select \"Rim\" in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", null));
             Assert.Equal("Updated Rim's profile.", PanelLeds.ProfileUpdated("Rim"));
             Assert.Equal("Could not install Rim's profile. See SimHub's log.", PanelLeds.ProfileFailed("Rim"));
             // A move installs the profile fresh on the other device, where it is not selected.
@@ -668,10 +729,62 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Moved Rim's profile. Select \"Rim\" in SimHub to use it.", PanelLeds.Moved("Rim", null));
             Assert.Equal("Renamed to Rim in OpenDash and SimHub.", PanelLeds.Renamed("Rim", true));
             Assert.Equal("Renamed to Rim.", PanelLeds.Renamed("Rim", false));
-            Assert.Equal("Renamed to Rim, but SimHub still lists the old name. See SimHub's log.", PanelLeds.RenameNotInSimHub("Rim"));
+            // The install takes the old copy out first, so a failure leaves no copy under the old name.
+            Assert.Equal("Renamed to Rim, but its profile could not be installed again. See SimHub's log.", PanelLeds.RenameNotInSimHub("Rim"));
             Assert.Equal("Removed Rim and its profile.", PanelLeds.Removed("Rim"));
             Assert.Equal("Reversed Rim.", PanelLeds.ReverseSaid("Rim", true));
             Assert.Equal("Rim runs in its usual direction again.", PanelLeds.ReverseSaid("Rim", false));
+        }
+
+        /// <summary>A note the install returned is a step the select waits on, so it comes before the select.</summary>
+        [Fact]
+        public void A_note_comes_before_the_select_it_enables()
+        {
+            const string note = "Turn off built-in profiles on your device, or OpenDash's will not be listed.";
+            Assert.Equal("Installed Rim's profile. " + note + " Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", "Wheel", note));
+            Assert.Equal("Updated Rim's profile. " + note, PanelLeds.ProfileUpdated("Rim", note));
+            Assert.Equal("Moved Rim's profile to Wheel. " + note + " Select \"Rim\" there in SimHub to use it.", PanelLeds.Moved("Rim", "Wheel", note));
+            Assert.Equal(PanelLeds.ProfileInstalled("Rim", "Wheel", note), PanelLeds.InstallSaid(true, FlagBoxInstallState.NotInstalled, "Rim", "Wheel", note));
+            Assert.Equal("Reversed Rim. " + note + " Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.ReverseSaid("Rim", true, false, "Wheel", note));
+        }
+
+        /// <summary>A Reverse replaces the copy SimHub held, or installs the twin fresh and unselected where it
+        /// held none, which is when the line names the select.</summary>
+        [Fact]
+        public void A_reverse_says_the_select_where_the_twin_is_new_to_SimHub()
+        {
+            Assert.Equal("Reversed Rim.", PanelLeds.ReverseSaid("Rim", true, true, "Wheel"));
+            Assert.Equal("Rim runs in its usual direction again.", PanelLeds.ReverseSaid("Rim", false, true, "Wheel"));
+            Assert.Equal("Reversed Rim. Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.ReverseSaid("Rim", true, false, "Wheel"));
+            Assert.Equal("Rim runs in its usual direction again. Select \"Rim\" in SimHub to use it.", PanelLeds.ReverseSaid("Rim", false, false, null));
+            Assert.True(PanelLeds.HeldInSimHub(FlagBoxInstallState.UpToDate));
+            Assert.True(PanelLeds.HeldInSimHub(FlagBoxInstallState.Outdated));
+            Assert.False(PanelLeds.HeldInSimHub(FlagBoxInstallState.NotInstalled));
+            Assert.False(PanelLeds.HeldInSimHub(FlagBoxInstallState.Failed));
+            Assert.False(PanelLeds.HeldInSimHub(null));
+        }
+
+        /// <summary>A Reverse or a Rename the page cannot follow with an install saves the setting and says what
+        /// is left, never the log.</summary>
+        [Fact]
+        public void A_press_that_cannot_install_says_why()
+        {
+            Assert.Equal("Reversed Rim. This build ships no profile for this strip.",
+                PanelLeds.WithReason(PanelLeds.ReverseSaid("Rim", true), PanelLeds.ProfileBlocked(false, true)));
+            Assert.Equal("Renamed to Rim. SimHub does not list this strip's device. Choose one under SimHub device.",
+                PanelLeds.WithReason(PanelLeds.Renamed("Rim", false), PanelLeds.ProfileBlocked(true, false)));
+            Assert.DoesNotContain("log", PanelLeds.WithReason(PanelLeds.Renamed("Rim", false), PanelLeds.ProfileBlocked(true, false)));
+        }
+
+        /// <summary>With no device SimHub lists, the sheet's press adds and promises no install, and the line after
+        /// it names the step left.</summary>
+        [Fact]
+        public void With_no_device_the_press_adds_and_says_the_device_is_left()
+        {
+            Assert.Equal("Add and install", PanelLeds.AddPress(true));
+            Assert.Equal("Add", PanelLeds.AddPress(false));
+            Assert.Equal("Added Rim. Choose its SimHub device to install its profile.", PanelLeds.AddedWithoutDevice("Rim"));
+            Assert.Contains(PanelLights.BarDeviceTitle, PanelLeds.AddedWithoutDevice("Rim"));
         }
 
         /// <summary>The header's press says an update where SimHub held an older copy, an install with the step

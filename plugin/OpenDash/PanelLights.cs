@@ -256,24 +256,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is said once a bar exists, which is the step SimHub does not take for you: installing
-        /// adds a profile, it does not select one on the device. Then the step OpenDash cannot take yet:
-        /// the plugin publishes a strip's own settings only for the strips it held when SimHub started, so
-        /// until SimHub restarts the new strip draws its defaults whatever this page sets.
+        /// What is said once a bar exists: the steps OpenDash does not take, in the order they are done, as
+        /// voice.md's own example has them. The restart comes first, since the plugin publishes a strip's own
+        /// settings only for the strips it held when SimHub started; then selecting the profile, which
+        /// installing adds and does not select. A note the install returned (the device lists only its maker's
+        /// profiles) comes before both, since nothing is listed to select until it is done.
         /// </summary>
         /// <remarks>
         /// It names the device, because "your LED device" was the whole confusion: a profile goes into
         /// one device's list and OpenDash used to always pick the Arduino's, so somebody reading this
         /// line went to their wheel and found nothing. Now the line says where to look.
         /// </remarks>
-        public static string BarAdded(string name, string device)
+        public static string BarAdded(string name, string device, string note = null)
         {
-            return "Added " + name + ". " + PanelLeds.SelectIt(name, device) + " " + BarAddedRestart;
+            var where = string.IsNullOrWhiteSpace(device) ? " in SimHub." : " on " + device + ".";
+            var steps = BarAddedRestart + "select \"" + name + "\"" + where;
+            return "Added " + name + ". " + (string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim() + " ") + steps;
         }
 
         /// <summary>The restart BarAdded asks for, pinned apart so it goes when the plugin attaches a strip's
         /// settings as the strip is added.</summary>
-        public const string BarAddedRestart = "Its settings here reach it once SimHub restarts.";
+        public const string BarAddedRestart = "Restart SimHub, then ";
 
         /// <summary>
         /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form);

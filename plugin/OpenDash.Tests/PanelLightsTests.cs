@@ -181,15 +181,19 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("Install the strip again", leds);
         }
 
-        /// <summary>A strip added is told the step SimHub does not take, on the device it went to, and the
-        /// restart its own settings wait on: the plugin publishes them only for the strips it held at start.</summary>
+        /// <summary>A strip added is told the steps OpenDash does not take, in the order they are done, as
+        /// voice.md's own example has them: the restart its own settings wait on (the plugin publishes them only
+        /// for the strips it held at start), then the select on the device it went to. A note the install
+        /// returned comes first, since nothing is listed to select until it is done.</summary>
         [Fact]
         public void A_strip_added_says_where_to_select_it_and_that_its_settings_wait_for_a_restart()
         {
-            Assert.Equal("Added Rim. Select \"Rim\" on Fanatec CSL Elite in SimHub to use it. Its settings here reach it once SimHub restarts.",
+            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" on Fanatec CSL Elite.",
                 PanelLights.BarAdded("Rim", "Fanatec CSL Elite"));
-            Assert.Equal("Added Rim. Select \"Rim\" in SimHub to use it. Its settings here reach it once SimHub restarts.",
+            Assert.Equal("Added Rim. Restart SimHub, then select \"Rim\" in SimHub.",
                 PanelLights.BarAdded("Rim", null));
+            Assert.Equal("Added Rim. " + FlagBoxInstallPlan.BuiltInModeNote + " Restart SimHub, then select \"Rim\" on Wheel.",
+                PanelLights.BarAdded("Rim", "Wheel", FlagBoxInstallPlan.BuiltInModeNote));
         }
 
         /// <summary>The status line and the stale note are two sentences, not one run-on.</summary>

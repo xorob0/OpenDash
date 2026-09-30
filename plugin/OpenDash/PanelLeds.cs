@@ -186,6 +186,39 @@ namespace OpenDashPlugin
             return null;
         }
 
+        /// <summary>
+        /// The same, where the press could only fail: no press at all when this build carries no profile for
+        /// the strip, or SimHub does not list the device it names, whatever the census says.
+        /// </summary>
+        /// <remarks>
+        /// An install takes the strip's profile out of every device before it writes the new one, so pressing it
+        /// for a device SimHub no longer lists would remove a profile that still lights and install nothing,
+        /// which is why Updates' UpdateBars leaves such a strip alone. And a strip whose profile the build does
+        /// not carry (a pre-grid brow, say) is compared against nothing, which the census reads as an update.
+        /// </remarks>
+        public static string ProfileAction(FlagBoxInstallState? profile, bool embedded, bool deviceListed)
+        {
+            return ProfileBlocked(embedded, deviceListed) == null ? ProfileAction(profile) : null;
+        }
+
+        /// <summary>
+        /// Why nothing on this page can install the strip's profile, said under the header in place of a press
+        /// and after a Reverse or a Rename that could not install it again; null where something can.
+        /// </summary>
+        public static string ProfileBlocked(bool embedded, bool deviceListed)
+        {
+            if (!embedded) return NoProfileForStrip;
+            if (!deviceListed) return DeviceNotListed;
+            return null;
+        }
+
+        /// <summary>The build carries no profile of the strip's shape: nothing here can install one.</summary>
+        public const string NoProfileForStrip = "This build ships no profile for this strip.";
+
+        /// <summary>SimHub does not list the device the strip names, which is also every strip added while SimHub
+        /// had no LED device: the one step is the device row's.</summary>
+        public const string DeviceNotListed = "SimHub does not list this strip's device. Choose one under SimHub device.";
+
         public const string InstallTooltip = "Installs this strip's profile in SimHub.";
         public const string UpdateTooltip = "Updates this strip's profile in SimHub.";
 
@@ -688,10 +721,11 @@ namespace OpenDashPlugin
         // --- What is said after a press ---------------------------------------------------------------------------
 
         /// <summary>A profile installed from the header: the step SimHub does not take, selecting it, on the
-        /// SimHub device it went to, or in SimHub where that device cannot be named.</summary>
-        public static string ProfileInstalled(string name, string device)
+        /// SimHub device it went to, or in SimHub where that device cannot be named. A note the install
+        /// returned (the device listing only its maker's profiles) comes first, since the select waits on it.</summary>
+        public static string ProfileInstalled(string name, string device, string note = null)
         {
-            return "Installed " + name + ". " + SelectIt(name, device);
+            return Steps("Installed " + name + "'s profile.", note, SelectIt(name, device));
         }
 
         /// <summary>The step SimHub does not take after an install, in the one form every press says it.</summary>
@@ -701,9 +735,9 @@ namespace OpenDashPlugin
             return "Select \"" + name + "\"" + on + " in SimHub to use it.";
         }
 
-        public static string ProfileUpdated(string name)
+        public static string ProfileUpdated(string name, string note = null)
         {
-            return "Updated " + name + "'s profile.";
+            return Steps("Updated " + name + "'s profile.", note);
         }
 
         public static string ProfileFailed(string name)
@@ -713,10 +747,10 @@ namespace OpenDashPlugin
 
         /// <summary>A strip moved to another SimHub device, which installs its profile there fresh and
         /// unselected: the step SimHub does not take, as after any install.</summary>
-        public static string Moved(string name, string device)
+        public static string Moved(string name, string device, string note = null)
         {
-            if (string.IsNullOrWhiteSpace(device)) return "Moved " + name + "'s profile. " + SelectIt(name, null);
-            return "Moved " + name + "'s profile to " + device + ". Select \"" + name + "\" there in SimHub to use it.";
+            if (string.IsNullOrWhiteSpace(device)) return Steps("Moved " + name + "'s profile.", note, SelectIt(name, null));
+            return Steps("Moved " + name + "'s profile to " + device + ".", note, "Select \"" + name + "\" there in SimHub to use it.");
         }
 
         /// <summary>A rename, which installs the profile again so SimHub's list carries the new name.</summary>
@@ -741,15 +775,24 @@ namespace OpenDashPlugin
 
         /// <summary>The line after the header's Install or Update: an update where SimHub held an older copy,
         /// else an install with the step SimHub does not take; the log where it failed.</summary>
-        public static string InstallSaid(bool ok, FlagBoxInstallState? before, string name, string device)
+        public static string InstallSaid(bool ok, FlagBoxInstallState? before, string name, string device, string note = null)
         {
             if (!ok) return ProfileFailed(name);
-            return before == FlagBoxInstallState.Outdated ? ProfileUpdated(name) : ProfileInstalled(name, device);
+            return before == FlagBoxInstallState.Outdated ? ProfileUpdated(name, note) : ProfileInstalled(name, device, note);
         }
 
+        /// <summary>A rename whose install failed. The install takes the old copy out of every device first, so
+        /// what is left is no copy, and the log says why.</summary>
         public static string RenameNotInSimHub(string name)
         {
-            return "Renamed to " + name + ", but SimHub still lists the old name. See SimHub's log.";
+            return "Renamed to " + name + ", but its profile could not be installed again. See SimHub's log.";
+        }
+
+        /// <summary>A line after a press that could not install the profile, with the reason
+        /// <see cref="ProfileBlocked"/> gives, which is the step left to the driver.</summary>
+        public static string WithReason(string said, string reason)
+        {
+            return Steps(said, reason);
         }
 
         public static string Removed(string name)
@@ -760,6 +803,39 @@ namespace OpenDashPlugin
         public static string ReverseSaid(string name, bool reversed)
         {
             return reversed ? "Reversed " + name + "." : name + " runs in its usual direction again.";
+        }
+
+        /// <summary>
+        /// The line after a Reverse that installed the other twin. Where SimHub held the strip's profile, the
+        /// twin replaces it; where it did not, the twin is installed fresh and unselected, so the line says the
+        /// step SimHub does not take.
+        /// </summary>
+        public static string ReverseSaid(string name, bool reversed, bool wasInSimHub, string device, string note = null)
+        {
+            return Steps(ReverseSaid(name, reversed), note, wasInSimHub ? null : SelectIt(name, device));
+        }
+
+        /// <summary>Whether SimHub held the profile before a press, up to date or not: the one state in which an
+        /// install replaces a copy rather than adding one the driver has still to select.</summary>
+        public static bool HeldInSimHub(FlagBoxInstallState? profile)
+        {
+            return profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+        }
+
+        /// <summary>The Add sheet's press where SimHub offers no LED device: the strip is added, and its profile
+        /// waits for a device, so the press promises no install.</summary>
+        public const string AddOnly = "Add";
+
+        /// <summary>The press's label: an install only where there is a device to install on.</summary>
+        public static string AddPress(bool hasDevice)
+        {
+            return hasDevice ? AddAndInstall : AddOnly;
+        }
+
+        /// <summary>A strip added with no device SimHub lists: the step left is the device row's.</summary>
+        public static string AddedWithoutDevice(string name)
+        {
+            return "Added " + name + ". Choose its SimHub device to install its profile.";
         }
 
 
@@ -815,6 +891,12 @@ namespace OpenDashPlugin
 
         /// <summary>The spaced dot the artboards join a shape's counts and a chip's parts with.</summary>
         public const string Dot = " · ";
+
+        /// <summary>The sentences of a line, each one there, joined with a space.</summary>
+        private static string Steps(params string[] sentences)
+        {
+            return string.Join(" ", sentences.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()));
+        }
 
         private static string Digits(int value)
         {
