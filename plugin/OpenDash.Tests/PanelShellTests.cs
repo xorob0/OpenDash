@@ -188,6 +188,36 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(700 - 56, PanelShell.SheetWidth(700));
         }
 
+        /// <summary>
+        /// Tab goes the way the eye does. The sheet is laid out as title, body, footer, and opens on the
+        /// body's first control, not on Close; the sidebar's foot follows its items; and neither scroll nor the
+        /// page's host is an invisible tab stop before the first control.
+        /// </summary>
+        [Fact]
+        public void The_sheet_and_the_sidebar_tab_in_reading_order()
+        {
+            string Code(string name) => RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == name));
+            var sheet = Code("SettingsControl.Sheet.cs");
+            Assert.DoesNotContain("DockPanel.SetDock(foot", sheet);
+            var head = sheet.IndexOf("sheet.Children.Add(head);", StringComparison.Ordinal);
+            var scroll = sheet.IndexOf("sheet.Children.Add(scroll);", StringComparison.Ordinal);
+            var foot = sheet.IndexOf("sheet.Children.Add(foot);", StringComparison.Ordinal);
+            Assert.True(head >= 0 && head < scroll && scroll < foot, "the sheet adds its title, then its body, then its footer");
+            Assert.Contains("bodyHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))", sheet);
+            Assert.Contains("Focusable = false,", sheet);
+            // The dim closes on a release over itself and not over the sheet.
+            Assert.Contains("if (!Within(args.GetPosition(dim), dim) || Within(args.GetPosition(sheetPanel), sheetPanel)) return;", sheet);
+
+            var sidebar = Code("SettingsControl.Sidebar.cs");
+            Assert.DoesNotContain("DockPanel.SetDock(foot", sidebar);
+            Assert.True(sidebar.IndexOf("Content = top,", StringComparison.Ordinal) < sidebar.IndexOf("dock.Children.Add(foot);", StringComparison.Ordinal), "the sidebar adds its items before its foot");
+
+            var shell = Code("SettingsControl.cs");
+            var mainScroll = shell.Substring(shell.IndexOf("private readonly ScrollViewer mainScroll", StringComparison.Ordinal));
+            Assert.Contains("Focusable = false,", mainScroll.Substring(0, mainScroll.IndexOf("};", StringComparison.Ordinal)));
+            Assert.Contains("new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch, Focusable = false, IsTabStop = false }", shell);
+        }
+
         [Fact]
         public void The_items_sit_where_the_sidebar_draws_them()
         {

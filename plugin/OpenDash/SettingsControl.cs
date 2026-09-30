@@ -51,10 +51,14 @@ namespace OpenDashPlugin
         private readonly Grid root = new Grid();
         private readonly DockPanel frame = new DockPanel { LastChildFill = true };
         private readonly Border sidebarHost = new Border();
+        /// <summary>The main column's scroll. Not a tab stop, nor is <see cref="pageHost"/>: WPF makes both
+        /// focusable by default, which put two invisible stops before a page's first control. The sidebar's
+        /// scroll is the same.</summary>
         private readonly ScrollViewer mainScroll = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Focusable = false,
         };
         private readonly Border mainFrame = new Border { HorizontalAlignment = HorizontalAlignment.Stretch };
 
@@ -63,7 +67,7 @@ namespace OpenDashPlugin
         /// MaxWidth of its own is centred in whatever is left.</summary>
         private readonly ColumnDefinition mainColumn = new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) };
         private readonly StackPanel messageHost = new StackPanel { Orientation = Orientation.Vertical };
-        private readonly ContentControl pageHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        private readonly ContentControl pageHost = new ContentControl { HorizontalContentAlignment = HorizontalAlignment.Stretch, Focusable = false, IsTabStop = false };
 
         /// <summary>
         /// Where the panel is. Held for the session and never persisted: somebody who came to change a zone

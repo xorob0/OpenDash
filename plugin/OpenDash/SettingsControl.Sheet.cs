@@ -36,11 +36,17 @@ namespace OpenDashPlugin
                 args.Handled = true;
                 dim.CaptureMouse();
             };
+            // While the dim holds the mouse every release comes to it, so it closes only on a release over
+            // itself: a press that landed on the dim by accident and was dragged back onto the sheet keeps
+            // the sheet and what was typed in it, as a segmented option keeps its choice.
             dim.MouseLeftButtonUp += (sender, args) =>
             {
                 if (!dim.IsMouseCaptured) return;
                 args.Handled = true;
                 dim.ReleaseMouseCapture();
+                // The sheet lies over the dim, and the dim holds the mouse, so over the sheet is asked of the
+                // sheet by position: under capture only the dim is ever the mouse's.
+                if (!Within(args.GetPosition(dim), dim) || Within(args.GetPosition(sheetPanel), sheetPanel)) return;
                 CloseSheet();
             };
             sheetPanel.HorizontalAlignment = HorizontalAlignment.Right;
@@ -54,6 +60,12 @@ namespace OpenDashPlugin
             sheetLayer.Children.Add(dim);
             sheetLayer.Children.Add(sheetPanel);
             return sheetLayer;
+        }
+
+        /// <summary>Whether a point, taken relative to an element, falls inside it.</summary>
+        private static bool Within(Point at, FrameworkElement element)
+        {
+            return at.X >= 0 && at.Y >= 0 && at.X <= element.ActualWidth && at.Y <= element.ActualHeight;
         }
 
         /// <summary>
@@ -76,19 +88,33 @@ namespace OpenDashPlugin
             heading.TextTrimming = TextTrimming.CharacterEllipsis;
             head.Children.Add(heading);
 
+            var bodyHost = new Border { Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, PanelShell.SheetBodyPaddingBottom), Child = body };
+            // Not a tab stop of its own: WPF's ScrollViewer is focusable by default, which put an invisible
+            // stop with the default focus visual before the body's first control.
             var scroll = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new Border { Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, PanelShell.SheetBodyPaddingBottom), Child = body },
+                Focusable = false,
+                Content = bodyHost,
             };
 
-            var dock = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(head, Dock.Top);
-            dock.Children.Add(head);
+            // Three rows in reading order -- the title, the body, the footer -- so Tab goes the way the eye
+            // does. A DockPanel had to take the footer before the body for the body to fill, which put Cancel
+            // and the primary press before the first field, and Tab then Space from Close could add a screen
+            // with its default answers.
+            var sheet = new Grid();
+            sheet.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            sheet.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            sheet.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(head, 0);
+            sheet.Children.Add(head);
+            Grid.SetRow(scroll, 1);
+            sheet.Children.Add(scroll);
+            Border foot = null;
             if (footer != null)
             {
-                var foot = new Border
+                foot = new Border
                 {
                     Background = Ui.Brush(Theme.SurfaceInset),
                     BorderBrush = Ui.Brush(Theme.Rule),
@@ -96,15 +122,21 @@ namespace OpenDashPlugin
                     Padding = new Thickness(PanelShell.SheetPaddingX, PanelShell.SheetFooterPaddingTop, PanelShell.SheetPaddingX, PanelShell.SheetFooterPaddingBottom),
                     Child = footer,
                 };
-                DockPanel.SetDock(foot, Dock.Bottom);
-                dock.Children.Add(foot);
+                Grid.SetRow(foot, 2);
+                sheet.Children.Add(foot);
             }
-            dock.Children.Add(scroll);
 
-            sheetPanel.Child = dock;
+            sheetPanel.Child = sheet;
             SizeSheet();
             sheetLayer.Visibility = Visibility.Visible;
-            Dispatcher.BeginInvoke(new Action(() => sheetPanel.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))));
+            // Focus opens on the body's first control, the first thing the sheet asks; a sheet that asks
+            // nothing opens on its footer's first press, and only one with neither on Close.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (bodyHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)) && sheetPanel.IsKeyboardFocusWithin) return;
+                if (foot != null && foot.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)) && sheetPanel.IsKeyboardFocusWithin) return;
+                sheetPanel.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }));
         }
 
         /// <summary>A sheet's footer as the artboards draw it: the presses on the right, 8 apart, with an

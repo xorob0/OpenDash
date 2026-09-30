@@ -76,7 +76,11 @@ namespace OpenDashPlugin
 
             var narrow = Narrow;
             var padX = narrow ? PanelShell.RailPaddingX : PanelShell.SidebarPaddingX;
-            var dock = new DockPanel { LastChildFill = true };
+            // Two rows, the items and then the foot, so Tab reaches search and the items before night mode and
+            // Updates, in the artboard's order: a DockPanel took the foot first for the items to fill.
+            var dock = new Grid();
+            dock.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            dock.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             navItems.Clear();
 
             var top = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Top };
@@ -86,10 +90,9 @@ namespace OpenDashPlugin
             top.Children.Add(BuildNavList(narrow));
 
             var foot = BuildFoot(narrow);
-            DockPanel.SetDock(foot, Dock.Bottom);
-            dock.Children.Add(foot);
-            // The flex-grow the artboard puts between the items and the foot: the dock's last child takes
-            // what is left, and scrolls when that is less than the items need.
+            Grid.SetRow(foot, 1);
+            // The flex-grow the artboard puts between the items and the foot: the star row takes what is
+            // left, and scrolls when that is less than the items need.
             //
             // A focus ring is drawn in the nearest ScrollContentPresenter's adorner layer, which is clipped to
             // the viewport, and the kit's ring stands FocusRingOutset outside the control. The items fill the
@@ -105,6 +108,7 @@ namespace OpenDashPlugin
                 Margin = new Thickness(-FocusRingOutset, 0, -FocusRingOutset, 0),
                 Content = top,
             });
+            dock.Children.Add(foot);
 
             sidebarHost.Background = Ui.Brush(Theme.SurfaceInset);
             sidebarHost.BorderBrush = Ui.Brush(Theme.Rule);
