@@ -36,8 +36,7 @@ namespace OpenDashPlugin
                 var choice = Ui.ChoiceButton(cards, Settings.Slot(captured), index =>
                 {
                     Settings.SetSlot(captured, index);
-                    Save(screen);
-                    redraw();
+                    ScreensSave(screen, redraw);
                 });
                 choice.Uid = "screens.card." + captured;
                 rows.Add(Ui.SettingRow(PanelScreens.CardLabel(captured), choice));
@@ -80,7 +79,7 @@ namespace OpenDashPlugin
             var control = ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);
-                Save(screen);
+                ScreensSave(screen);
             });
             return Ui.SettingRow(caption: PanelScreens.RigRevBarCaption, title: PanelScreens.RevRingTitle, control: control);
         }

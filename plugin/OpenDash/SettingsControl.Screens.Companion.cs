@@ -47,20 +47,18 @@ namespace OpenDashPlugin
                 // SimHub start. Somebody choosing where it opens is looking at the thing. The force lets go by
                 // itself after the same window Init's does, so the taps come back.
                 screen.OpenOnStartModule(DateTime.UtcNow);
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             });
             first.Uid = "screens.companion.first";
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace),
-                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(screen); });
+                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); ScreensSave(screen); });
             flags.Uid = "screens.companion.flags";
             // Any module, the ones the rotation has off included: a glance is asked for by holding a button,
             // and the rotation is about what a tap steps through.
             var glance = Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value =>
             {
                 screen.CompanionQuickGlance = value;
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             });
             glance.Uid = "screens.companion.glance";
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
@@ -120,8 +118,7 @@ namespace OpenDashPlugin
             {
                 if (screen.Modules == null || index >= screen.Modules.Length) return;
                 screen.Modules[index] = on;
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             };
             box.Checked += (sender, args) => ticked(true);
             box.Unchecked += (sender, args) => ticked(false);

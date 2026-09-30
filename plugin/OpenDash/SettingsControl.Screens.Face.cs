@@ -5,8 +5,8 @@
 // the face has one, zones B, A and C across the body (A over B over C on the portrait), and band D at the
 // foot. Each part is a press that opens what it shows in the aside: the Info bar's four fields, or a zone's
 // pages as a list to tick and drag. The aside stands beside the picture when the page has two columns and
-// under it otherwise. Every change is saved through Save(screen), because setting something on a screen is
-// the driver keeping it, and the editor redraws itself in place so the picture says what was just set.
+// under it otherwise. Every change is saved through ScreensSave(screen), because setting something on a screen
+// is the driver keeping it, and the editor redraws itself in place so the picture says what was just set.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -89,20 +89,19 @@ namespace OpenDashPlugin
             var revBar = ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(ns), value =>
             {
                 Settings.SetScreenRevBar(ns, value);
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             });
             revBar.Uid = "screens.revbar";
             var flags = ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value =>
             {
                 screen.FlagFormat = value;
-                Save(screen);
+                ScreensSave(screen);
             });
             flags.Uid = "screens.flags";
             var lapReview = ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value =>
             {
                 screen.LapReview = value;
-                Save(screen);
+                ScreensSave(screen);
             });
             lapReview.Uid = "screens.lapreview";
 
@@ -141,16 +140,14 @@ namespace OpenDashPlugin
             var zone = Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen =>
             {
                 screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.glance.zone";
             var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
             {
                 screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
-                Save(screen);
-                // The clash line counts the glance among what shows a page twice.
-                redraw();
+                // The clash line counts the glance among what shows a page twice, so the editor redraws.
+                ScreensSave(screen, redraw);
             }, PanelScreens.GlancePageWidth);
             page.Uid = "screens.glance.page";
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
@@ -430,8 +427,7 @@ namespace OpenDashPlugin
                 var choice = Ui.ChoiceButton(fields, screen.Face.BarField(slot), index =>
                 {
                     screen.Face.SetBarField(slot, index);
-                    Save(screen);
-                    redraw();
+                    ScreensSave(screen, redraw);
                 });
                 choice.Uid = "screens.bar." + slot;
                 stack.Children.Add(ScreensAsideLine(Ui.Text(row.Label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), choice));
@@ -473,8 +469,7 @@ namespace OpenDashPlugin
             // page every time a box was ticked.
             Action settle = () =>
             {
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             };
             var showAll = screensShowAll;
             var rows = new List<FrameworkElement>();
@@ -517,7 +512,7 @@ namespace OpenDashPlugin
                 var classOnly = Ui.Switch(face.IsClassOnly(letter), on =>
                 {
                     face.SetClassOnly(letter, on);
-                    Save(screen);
+                    ScreensSave(screen);
                 });
                 classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
                 classOnly.Uid = "screens.classonly";

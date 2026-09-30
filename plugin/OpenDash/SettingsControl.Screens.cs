@@ -343,6 +343,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Saves a change made in a screen's editor, which keeps the screen, then draws the editor again
+        /// through <paramref name="redraw"/> where it has one.
+        /// </summary>
+        /// <remarks>
+        /// Keeping a screen the migration made can end the line over the cards, the sidebar's warning and
+        /// Home's issue, none of which an editor's in-place redraw reaches; ADR 0017 has the line go when it
+        /// stops being true. So the first change to such a screen redraws the whole page, which asks what
+        /// needs fixing again, and every later one only its editor.
+        /// </remarks>
+        private void ScreensSave(ScreenInstance screen, Action redraw = null)
+        {
+            var unclaimed = screen.Unclaimed == true;
+            Save(screen);
+            if (unclaimed) Redraw();
+            else if (redraw != null) redraw();
+        }
+
+        /// <summary>
         /// Draws an editor again in place, and puts the keyboard back on the control it was on.
         /// </summary>
         /// <remarks>

@@ -40,8 +40,7 @@ namespace OpenDashPlugin
                     int chosen;
                     if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out chosen)) return;
                     screen.PitWallPage = Contract.NormalisePitWallPage(chosen);
-                    Save(screen);
-                    redraw();
+                    ScreensSave(screen, redraw);
                 });
                 pages.Uid = "screens.pitwall.page";
                 var pageRow = Ui.SettingRow(PanelScreens.PitWallPageTitle, pages);
@@ -54,12 +53,12 @@ namespace OpenDashPlugin
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.WebViewTitle, BuildWebViewBox(screen)), PanelScreens.AnchorWebView));
             // One answer for the screen and not one per zone, as a face has: the zones are widgets pointed at
             // one dashboard file per rectangle, so two zones of one column are the same file.
-            var classOnly = Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(screen); });
+            var classOnly = Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; ScreensSave(screen); });
             classOnly.ToolTip = PanelScreens.ClassOnlyTitle;
             classOnly.Uid = "screens.pitwall.classonly";
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.ClassOnlyTitle, classOnly), PanelScreens.AnchorClassOnly));
             var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenPitWallFlagFormat(screen.Namespace),
-                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(screen); });
+                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); ScreensSave(screen); });
             flags.Uid = "screens.pitwall.flags";
             rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay));
             if (portrait)
@@ -165,8 +164,7 @@ namespace OpenDashPlugin
                 var choice = Ui.ChoiceButton(pages, screen.ZonePage(captured.Key), index =>
                 {
                     screen.SetZonePage(captured.Key, index);
-                    Save(screen);
-                    redraw();
+                    ScreensSave(screen, redraw);
                 });
                 choice.Uid = "screens.pitwall.zone." + captured.Key;
                 var label = Ui.Text(PanelScreens.PitWallZoneLabel(captured), Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
@@ -186,8 +184,7 @@ namespace OpenDashPlugin
                 var choice = Ui.ChoiceButton(PanelScreens.PortraitLabels(captured.Slot), screen.ZonePage(captured.Key), index =>
                 {
                     screen.SetZonePage(captured.Key, index);
-                    Save(screen);
-                    redraw();
+                    ScreensSave(screen, redraw);
                 }, PanelScreens.PortraitChoiceWidth);
                 choice.Uid = "screens.pitwall.portrait." + captured.Key;
                 choice.ToolTip = PanelPitWallPlan.ZoneDescription(captured);
@@ -208,15 +205,13 @@ namespace OpenDashPlugin
             var zone = Ui.ChoiceButton(PanelScreens.PitWallGlanceZoneLabels(), zoneIndex, chosen =>
             {
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(chosen, Contract.QuickGlancePage(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)));
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.pitwall.glance.zone";
             var pages = Ui.ChoiceButton(ZonePages.Standard.Select(p => p.Name).ToArray(), page, chosen =>
             {
                 screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(Contract.QuickGlanceZone(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)), chosen);
-                Save(screen);
-                redraw();
+                ScreensSave(screen, redraw);
             }, PanelScreens.GlancePageWidth);
             pages.Uid = "screens.pitwall.glance.page";
             var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
@@ -254,7 +249,7 @@ namespace OpenDashPlugin
                 if (!string.Equals(normalised, screen.WebViewUrl ?? string.Empty, StringComparison.Ordinal) || !string.Equals(box.Text, normalised, StringComparison.Ordinal))
                 {
                     screen.WebViewUrl = normalised;
-                    Save(screen);
+                    ScreensSave(screen);
                 }
                 if (box.Text != screen.WebViewUrl) box.Text = screen.WebViewUrl ?? string.Empty;
             };
