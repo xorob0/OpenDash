@@ -636,6 +636,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (!grid.ColumnDefinitions[0].Width.IsStar || !grid.ColumnDefinitions[1].Width.IsStar) return;", drop);
             Assert.Contains("foreach (var child in named) child.Visibility = Visibility.Collapsed;", drop);
             Assert.Contains("grid.ColumnDefinitions[0].Width = new GridLength(0);", drop);
+            // Only a name column holding text: a template of another shape keeps its bindings where they are.
+            Assert.Contains("if (named.Any(child => !(child is TextBlock) && !(child is Label))) return;", drop);
+            Assert.Contains("if (named.Any(child => Grid.GetColumnSpan(child) != 1)) return;", drop);
+            // SimHub's "Trigger now" rides on the name; it moves to the editor's border before the name goes.
+            Assert.Contains("var menuOwner = named.Select(ShortcutsMenuOwner).FirstOrDefault(owner => owner != null);", drop);
+            Assert.Matches(@"var menu = menuOwner\.ContextMenu;\s*menuOwner\.ContextMenu = null;\s*border\.ContextMenu = menu;", drop);
+            Assert.True(drop.IndexOf("border.ContextMenu = menu;", StringComparison.Ordinal) < drop.IndexOf("child.Visibility = Visibility.Collapsed;", StringComparison.Ordinal), "the menu moves before the name is collapsed");
+            var owner = Between(code, "private static FrameworkElement ShortcutsMenuOwner(", "\n        }");
+            Assert.Contains("if (element != null && element.ContextMenu != null) return element;", owner);
+            Assert.Contains("var content = label == null ? null : label.Content as FrameworkElement;", owner);
         }
 
         [Fact]

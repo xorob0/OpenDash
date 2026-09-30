@@ -532,6 +532,13 @@ namespace OpenDashPlugin
         /// fifths of the slot and left the bindings the rest, clipping a bound key. Only a template of that
         /// shape is touched; any other keeps its column, empty, as before.
         /// </summary>
+        /// <remarks>
+        /// The name carries the template's only context menu, SimHub's "Trigger now" (a Label whose content,
+        /// the FriendlyName TextBlock, holds it, and ControlsEditor.OnApplyTemplate wires its item to
+        /// TriggerAction). Collapsed in a 0 px column it could no longer be reached, so it moves to the
+        /// editor's border first: a right-click anywhere on the binder still fires the action, to try a zone
+        /// or night mode without the wheel.
+        /// </remarks>
         private static void ShortcutsDropNameColumn(ControlsEditor editor)
         {
             try
@@ -544,6 +551,13 @@ namespace OpenDashPlugin
                 var named = grid.Children.OfType<UIElement>().Where(child => Grid.GetColumn(child) == 0).ToList();
                 if (named.Any(child => !(child is TextBlock) && !(child is Label))) return;
                 if (named.Any(child => Grid.GetColumnSpan(child) != 1)) return;
+                var menuOwner = named.Select(ShortcutsMenuOwner).FirstOrDefault(owner => owner != null);
+                if (menuOwner != null && border.ContextMenu == null)
+                {
+                    var menu = menuOwner.ContextMenu;
+                    menuOwner.ContextMenu = null;
+                    border.ContextMenu = menu;
+                }
                 // The name goes too, so its line no longer sets the editor's height.
                 foreach (var child in named) child.Visibility = Visibility.Collapsed;
                 grid.ColumnDefinitions[0].Width = new GridLength(0);
@@ -552,6 +566,17 @@ namespace OpenDashPlugin
             {
                 Log.Warn("Could not drop the name column of SimHub's binding editor: " + ex.Message);
             }
+        }
+
+        /// <summary>The element in the editor's name column that carries a context menu: the name itself, or
+        /// the element a Label shows as its content. Null when neither does.</summary>
+        private static FrameworkElement ShortcutsMenuOwner(UIElement named)
+        {
+            var element = named as FrameworkElement;
+            if (element != null && element.ContextMenu != null) return element;
+            var label = named as Label;
+            var content = label == null ? null : label.Content as FrameworkElement;
+            return content != null && content.ContextMenu != null ? content : null;
         }
 
         /// <summary>
