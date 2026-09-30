@@ -991,24 +991,68 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A strip's picture from its frame and its Centre display (OpenDashSettings.BarCentre): the frame as
-        /// PanelEmulation draws it on a strip whose centre shows the revs, and otherwise the centre unlit,
-        /// the ends as the frame has them.
+        /// PanelEmulation draws it on a strip whose centre shows the revs, and otherwise the frame with the
+        /// rev ladder taken out of its centre -- the centre unlit except where an effect the strip draws over
+        /// any centre has lit it, and the ends as the frame has them.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// StripFrame always puts the rev ladder in the centre, and StripOptions has no field for the centre
         /// display, so a strip set to Brake, Throttle and brake or Fuel was drawn with rev lights, and the
-        /// Idle, Mid revs and Shift point chips lit and flashed a centre that on the real strip shows the
-        /// pedals or the fuel gauge. Neither is a value the page has, so the centre is drawn dark rather than
-        /// as revs. On the real strip a flag, the limiter or the full-strip spotter composes over that centre
-        /// (rpmStrip.ts); drawing it here needs StripFrame to know the centre, which is PanelEmulation's.
+        /// Idle, Mid revs and Shift point chips lit a centre that on the real strip shows the pedals or the
+        /// fuel gauge. Neither is a value the page has, so those LEDs are drawn dark.
+        /// </para>
+        /// <para>
+        /// What an effect puts in the centre stays, since the real strip composes it over whatever the
+        /// centre shows (rpmStrip.ts): the limiter across the whole run, a flag and speeding across a bare
+        /// run, which has no ends to carry them, and the full-strip spotter's half. An effect the strip has
+        /// switched off puts nothing there, so the centre is dark under it. The LEDs are told apart by where
+        /// StripFrame paints each effect rather than by colour, since the flags' green is the first rev
+        /// stage's and the spotter's amber the second's.
+        /// </para>
         /// </remarks>
-        public static string[][] StripPicture(string[][] frame, string centreDisplay)
+        public static string[][] StripPicture(string[][] frame, string centreDisplay, string scenarioId, StripOptions options = null)
         {
             if (frame == null || StripCentreShowsRevs(centreDisplay)) return frame;
+            options = options ?? StripOptions.Default;
             var picture = (string[][])frame.Clone();
-            var centre = frame.Length == 3 ? 1 : 0;
-            if (centre < picture.Length && picture[centre] != null) picture[centre] = new string[picture[centre].Length];
+            var c = frame.Length == 3 ? 1 : 0;
+            if (c >= picture.Length || picture[c] == null) return picture;
+            var ends = frame.Length == 3 && frame[0] != null ? frame[0].Length : 0;
+            var centre = frame[c];
+            var drawn = new string[centre.Length];
+            for (var i = 0; i < centre.Length; i++)
+            {
+                if (EffectLightsCentre(scenarioId, ends, centre.Length, i, options)) drawn[i] = centre[i];
+            }
+            picture[c] = drawn;
             return picture;
+        }
+
+        /// <summary>
+        /// Whether StripFrame's LED <paramref name="index"/> of a centre <paramref name="count"/> long is an
+        /// effect's rather than the rev ladder's: the limiter's on every LED, a flag's and speeding's on a
+        /// bare run, and with the full-strip spotter the half of the centre on a lit side. The same rules as
+        /// StripFrame's, which PanelRigMapTests hold to it.
+        /// </summary>
+        private static bool EffectLightsCentre(string scenarioId, int ends, int count, int index, StripOptions options)
+        {
+            if (PanelEmulation.IsFlag(scenarioId)) return ends == 0 && options.Draws(StripFlagEffect(scenarioId));
+            if (scenarioId == PanelEmulation.Limiter) return options.Draws("pit.limiter");
+            if (scenarioId == PanelEmulation.Speeding) return ends == 0 && options.Draws("pit.speeding");
+            var car = scenarioId == PanelEmulation.CarLeft || scenarioId == PanelEmulation.CarRight || scenarioId == PanelEmulation.CarBoth;
+            if (!car || ends == 0 || !options.SpotterWhole) return false;
+            var lightLeft = scenarioId != PanelEmulation.CarRight && options.Draws("spotter.left");
+            var lightRight = scenarioId != PanelEmulation.CarLeft && options.Draws("spotter.right");
+            var half = count / 2;
+            var onLeft = index < half || (count % 2 == 1 && index == half && lightLeft && !lightRight);
+            return onLeft ? lightLeft : lightRight;
+        }
+
+        /// <summary>The strip effect a flag is drawn by (Contract.LedEffects).</summary>
+        private static string StripFlagEffect(string scenarioId)
+        {
+            return scenarioId == PanelEmulation.Chequer ? "flag.chequered" : "flag." + scenarioId;
         }
 
         /// <summary>A strip's Centre display, or the rig's for a strip the rig no longer has. The page reads it
