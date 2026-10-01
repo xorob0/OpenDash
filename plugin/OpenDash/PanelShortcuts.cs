@@ -69,10 +69,11 @@ namespace OpenDashPlugin
             return screenName + Join + ZoneRow(zoneLabel, next);
         }
 
-        /// <summary>The glance's name in BuildBinder's fallback text: "Rim · quick glance".</summary>
+        /// <summary>The glance's name in BuildBinder's fallback text, the row's own label after the screen's
+        /// name, as a zone's is: "Rim · Quick glance". A value is written the way its control names it.</summary>
         public static string GlanceBinderName(string screenName)
         {
-            return screenName + Join + QuickGlanceTitle.ToLowerInvariant();
+            return screenName + Join + QuickGlanceTitle;
         }
 
         private const string Join = " · ";

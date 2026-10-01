@@ -35,7 +35,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Band D · previous page", PanelShortcuts.ZoneRow("Band D", false));
             // The binder's name in BuildBinder's fallback text is the row's words after the screen's name.
             Assert.Equal("Rim · Band D · previous page", PanelShortcuts.ZoneBinderName("Rim", "Band D", false));
-            Assert.Equal("Rim · quick glance", PanelShortcuts.GlanceBinderName("Rim"));
+            Assert.Equal("Rim · Quick glance", PanelShortcuts.GlanceBinderName("Rim"));
+            Assert.Equal("Rim · " + PanelShortcuts.QuickGlanceTitle, PanelShortcuts.GlanceBinderName("Rim"));
         }
 
         [Fact]
@@ -148,7 +149,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Hold", glance.Press);
             Assert.True(glance.IsHold);
             Assert.False(glance.IsNew);
-            Assert.Equal("Rim · quick glance", glance.BinderName);
+            Assert.Equal("Rim · Quick glance", glance.BinderName);
             Assert.Equal(PanelShortcuts.GlanceDoes, glance.Does);
             Assert.Equal("holds the quick glance", glance.Does);
 
@@ -253,7 +254,7 @@ namespace OpenDashPlugin.Tests
             var phone = PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone");
             Assert.Equal("Quick glance", phone.Label);
             Assert.Equal("Hold", phone.Press);
-            Assert.Equal("Phone · quick glance", phone.BinderName);
+            Assert.Equal("Phone · Quick glance", phone.BinderName);
         }
 
         [Fact]
