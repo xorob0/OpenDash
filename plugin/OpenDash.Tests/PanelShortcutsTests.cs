@@ -328,8 +328,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "all", "bound", "not-bound" }, PanelShortcuts.FilterValues);
             Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterValues[1], NotBound));
             Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterValues[2], Bound));
-            // The group's name, which the artboard gives a screen reader alone (aria-label="Show").
-            Assert.Equal("Show", PanelShortcuts.FilterTitle);
+            // The group's name, which a screen reader alone reads: a noun, as voice.md has every label, where
+            // the artboard's aria-label is the bare verb "Show".
+            Assert.Equal("Filter", PanelShortcuts.FilterTitle);
 
             foreach (var row in new[] { Greyed, Unread, NotBound, Bound }) Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, row));
             Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterBound, Bound));
@@ -1138,14 +1139,15 @@ namespace OpenDashPlugin.Tests
 
             // The header: the caption and the filter, the filter in the second column when two fit.
             var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
-            Assert.Contains("Grid.SetColumn(filter, 1);", header);
             Assert.Contains("grid.Children.Add(caption);", header);
-            Assert.Contains("grid.Children.Add(filter);", header);
-            Assert.Contains("header = Ui.VStack(0, caption, filter);", header);
-            // The filter at the header's right in two columns, and the header built with it.
+            Assert.DoesNotContain("grid.Children.Add(filter);", header);
+            // The filter at the header's right in two columns, and at its left under the caption when the
+            // header stacks (Segmented's constructor sets Right); in either, its named wrapper is what the
+            // header holds.
             Assert.Contains("filter.HorizontalAlignment = HorizontalAlignment.Right;", Between(header, "if (TwoColumns)", "else"));
-            // And at its left under the caption when the header stacks: Segmented's constructor sets Right.
-            Assert.Matches(@"else\s*\{\s*filter\.HorizontalAlignment = HorizontalAlignment\.Left;\s*filter\.Margin = new Thickness\(0, PanelShortcuts\.FilterGapStacked, 0, 0\);\s*header = Ui\.VStack\(0, caption, filter\);\s*\}", header);
+            Assert.Matches(@"else\s*\{\s*filter\.HorizontalAlignment = HorizontalAlignment\.Left;\s*filter\.Margin = new Thickness\(0, PanelShortcuts\.FilterGapStacked, 0, 0\);\s*header = Ui\.VStack\(0, caption, group\);\s*\}", header);
+            Assert.Contains("Grid.SetColumn(group, 1);", header);
+            Assert.Contains("grid.Children.Add(group);", header);
             // The caption and the filter share a foot, which FilterRaise's 30 less 19 assumes.
             Assert.Contains("caption.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
             Assert.Contains("filter.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
@@ -1245,7 +1247,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + PanelShortcuts.PressWidth) });", code);
             Assert.Contains("pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", code);
             Assert.Matches(@"icon\.VerticalAlignment = VerticalAlignment\.Top;\s*icon\.Margin = new Thickness\(0, 1, PanelShortcuts\.BannerGap, 0\);", code);
-            Assert.Contains("var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);", code);
+            Assert.Contains("text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);", code);
             // A greyed row's chip is the artboard's .key, as every binder's slot starts.
             Assert.Contains("var chip = Ui.BindingChip(Ui.NotBound, false, key: true);", code);
             // The clash sentence keeps a message line's measure in a column with no ceiling.
@@ -1293,13 +1295,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
             Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
-            // The filter stands alone at the header's right, under no row title, so it carries the artboard's
-            // group name for a screen reader: its three choices are never read out bare.
-            Assert.Matches(@"padding: PanelKit\.SegmentedPaddingShortcuts\);\s*(//[^\n]*\s*)*System\.Windows\.Automation\.AutomationProperties\.SetName\(filter, PanelShortcuts\.FilterTitle\);", Between(code, "private FrameworkElement BuildShortcutsPage(", "var touch = new ShortcutsTouch();"));
+            // The filter stands alone at the header's right, under no row title, so it carries a group name for
+            // a screen reader: its three choices are never read out bare. The name is on a UserControl that
+            // holds the filter, because the filter is a Border, and a Border has no automation peer, so a name
+            // set on it would reach no screen reader; the wrapper takes no focus of its own.
+            var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
+            Assert.Matches(@"var group = new UserControl \{ Content = filter, Focusable = false, IsTabStop = false \};\s*AutomationProperties\.SetName\(group, PanelShortcuts\.FilterTitle\);", header);
+            // Two names on the page, the filter's wrapper's and each clash sentence's, both on elements with a peer.
+            Assert.Equal(2, Regex.Matches(code, @"AutomationProperties\.SetName\(").Count);
+            Assert.DoesNotContain("SetName(filter", code);
+            Assert.DoesNotContain("SetName(line", code);
             Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty, touch);", code);
             Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);
             Assert.Contains("            evaluate();\n", code.Replace("\r\n", "\n"));
-            Assert.Contains("var line = ShortcutsClashLine(clash);", code);
+            Assert.Contains("var line = ShortcutsClashLine(clash, out said);", code);
             Assert.Contains("empty.Text = emptyText ?? string.Empty;", code);
             Assert.Contains("if (TwoColumns)", code);
             Assert.Contains("if (screens.Count > 0) Ui.Anchor(screens[0].Card, PanelShortcuts.AnchorScreens);", code);
@@ -1397,7 +1406,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, Regex.Matches(code, @"new Run\(").Count);
             Assert.Contains("var icon = Ui.NavIcon(PanelIcons.Warning, Theme.Caution, PanelShortcuts.BannerIconSize);", clashLine);
             Assert.Contains("BorderBrush = Ui.Brush(Theme.CautionDeep),", clashLine);
-            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(line, clash.Text);", clashLine);
+            // The artboard's role=status, on the sentence, which has an automation peer where the line's Border
+            // has none: named, a polite live region, and read out when it is drawn new, never on the page's
+            // first pass, as a status says nothing of what it holds when the page opens.
+            Assert.Matches(@"AutomationProperties\.SetName\(text, clash\.Text\);\s*AutomationProperties\.SetLiveSetting\(text, AutomationLiveSetting\.Polite\);", clashLine);
+            Assert.Matches(@"var told = banner\.Tag as HashSet<string>;\s*var drawn = new HashSet<string>\(StringComparer\.Ordinal\);\s*foreach \(var clash in clashes\)\s*\{\s*TextBlock said;\s*var line = ShortcutsClashLine\(clash, out said\);\s*if \(banner\.Children\.Count > 0\) line\.Margin = [^;]*;\s*banner\.Children\.Add\(line\);\s*drawn\.Add\(clash\.Text\);\s*if \(told != null && !told\.Contains\(clash\.Text\)\) ShortcutsAnnounce\(said\);\s*\}\s*banner\.Tag = drawn;", code);
+            var announce = Between(code, "private void ShortcutsAnnounce(", "\n        }");
+            Assert.Contains("if (!AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged)) return;", announce);
+            Assert.Matches(@"var peer = UIElementAutomationPeer\.CreatePeerForElement\(text\);\s*if \(peer != null\) peer\.RaiseAutomationEvent\(AutomationEvents\.LiveRegionChanged\);", announce);
             var model = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelShortcuts.cs"));
             Assert.DoesNotContain("meant it", code);
             Assert.DoesNotContain("meant it", model);

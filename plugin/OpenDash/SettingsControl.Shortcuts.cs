@@ -19,6 +19,8 @@ using System.ComponentModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -130,10 +132,6 @@ namespace OpenDashPlugin
                 shortcutsFilter = value;
                 if (evaluate != null) evaluate();
             }, padding: PanelKit.SegmentedPaddingShortcuts);
-            // The artboard draws no words over the filter, and names its group "Show" for a screen reader alone:
-            // with no row title above it, as every other page's segmented control has, its three choices
-            // would otherwise be read out with nothing to say what they choose.
-            System.Windows.Automation.AutomationProperties.SetName(filter, PanelShortcuts.FilterTitle);
             var header = BuildShortcutsHeader(filter);
 
             var touch = new ShortcutsTouch();
@@ -273,6 +271,14 @@ namespace OpenDashPlugin
         private FrameworkElement BuildShortcutsHeader(FrameworkElement filter)
         {
             var caption = Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth);
+            // The artboard draws no words over the filter and names its group for a screen reader alone: with
+            // no row title above it, as every other page's segmented control has, its three choices would be
+            // read out with nothing to say what they choose. The name is on a wrapper, because the filter is
+            // a Border, and a Border has no automation peer, so a name set on it reaches no screen reader;
+            // a UserControl has one. The wrapper takes no focus and sizes to the filter, so the filter's own
+            // alignment and margins still lay the header out, and hiding the filter hides it whole.
+            var group = new UserControl { Content = filter, Focusable = false, IsTabStop = false };
+            AutomationProperties.SetName(group, PanelShortcuts.FilterTitle);
             FrameworkElement header;
             if (TwoColumns)
             {
@@ -283,16 +289,16 @@ namespace OpenDashPlugin
                 filter.VerticalAlignment = VerticalAlignment.Bottom;
                 filter.HorizontalAlignment = HorizontalAlignment.Right;
                 filter.Margin = new Thickness(PanelShell.RowGap, -PanelShortcuts.FilterRaise, 0, 0);
-                Grid.SetColumn(filter, 1);
+                Grid.SetColumn(group, 1);
                 grid.Children.Add(caption);
-                grid.Children.Add(filter);
+                grid.Children.Add(group);
                 header = grid;
             }
             else
             {
                 filter.HorizontalAlignment = HorizontalAlignment.Left;
                 filter.Margin = new Thickness(0, PanelShortcuts.FilterGapStacked, 0, 0);
-                header = Ui.VStack(0, caption, filter);
+                header = Ui.VStack(0, caption, group);
             }
             // The caption sits 8 under the title, where PageLayout sets every section the page's gap under the
             // one before it.
@@ -667,12 +673,21 @@ namespace OpenDashPlugin
             var clashes = readable
                 ? PanelShortcuts.Clashes(groups.SelectMany(group => group.Rows).Where(row => row.Bindable).SelectMany(row => uses[row]))
                 : new List<PanelShortcuts.Clash>();
+            // The lines the banner held before this pass, by their words, so that only a line the driver has
+            // not been told of is read out: none on the first pass, as a role=status says nothing of what it
+            // holds when the page opens.
+            var told = banner.Tag as HashSet<string>;
+            var drawn = new HashSet<string>(StringComparer.Ordinal);
             foreach (var clash in clashes)
             {
-                var line = ShortcutsClashLine(clash);
+                TextBlock said;
+                var line = ShortcutsClashLine(clash, out said);
                 if (banner.Children.Count > 0) line.Margin = new Thickness(0, PanelShortcuts.BannerStackGap, 0, 0);
                 banner.Children.Add(line);
+                drawn.Add(clash.Text);
+                if (told != null && !told.Contains(clash.Text)) ShortcutsAnnounce(said);
             }
+            banner.Tag = drawn;
             banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             // Each row the lines name has its binder outlined in caution, and every other loses its outline,
             // so a row cleared or rebound, or a page no longer readable, keeps no stale mark.
@@ -714,13 +729,14 @@ namespace OpenDashPlugin
             filter.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
         }
 
-        /// <summary>The artboard's role=status line: a button bound to two things, in caution, its name strong.</summary>
-        private static Border ShortcutsClashLine(PanelShortcuts.Clash clash)
+        /// <summary>The artboard's role=status line: a button bound to two things, in caution, its name strong.
+        /// Handed back with the sentence, which carries the line's name for a screen reader.</summary>
+        private static Border ShortcutsClashLine(PanelShortcuts.Clash clash, out TextBlock text)
         {
             var icon = Ui.NavIcon(PanelIcons.Warning, Theme.Caution, PanelShortcuts.BannerIconSize);
             icon.VerticalAlignment = VerticalAlignment.Top;
             icon.Margin = new Thickness(0, 1, PanelShortcuts.BannerGap, 0);
-            var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);
+            text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);
             text.TextWrapping = TextWrapping.Wrap;
             // A message line keeps a measure, as the panel's every other does: the amber box stretches with
             // the column like a card, and the sentence in it wraps at BodyWidth however wide that is.
@@ -728,6 +744,11 @@ namespace OpenDashPlugin
             text.HorizontalAlignment = HorizontalAlignment.Left;
             text.Inlines.Add(new Run(clash.Lead) { FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush(Theme.TextPrimary) });
             text.Inlines.Add(new Run(" " + clash.Rest));
+            // The artboard's role=status, on the sentence: a TextBlock has an automation peer, where the line's
+            // Border has none and a name set on it reached no screen reader. A polite live region, read out
+            // when ShortcutsEvaluate draws it new (ShortcutsAnnounce).
+            AutomationProperties.SetName(text, clash.Text);
+            AutomationProperties.SetLiveSetting(text, AutomationLiveSetting.Polite);
             var dock = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(icon, Dock.Left);
             dock.Children.Add(icon);
@@ -741,8 +762,21 @@ namespace OpenDashPlugin
                 Padding = new Thickness(PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY, PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY),
                 Child = dock,
             };
-            System.Windows.Automation.AutomationProperties.SetName(line, clash.Text);
             return line;
+        }
+
+        /// <summary>
+        /// Has a screen reader read a new clash line out, as a role=status is: a live region changed on the
+        /// sentence's own peer, once the line is laid out in the page. Nothing is made when no client listens.
+        /// </summary>
+        private void ShortcutsAnnounce(TextBlock text)
+        {
+            if (!AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged)) return;
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                var peer = UIElementAutomationPeer.CreatePeerForElement(text);
+                if (peer != null) peer.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            }));
         }
 
         /// <summary>

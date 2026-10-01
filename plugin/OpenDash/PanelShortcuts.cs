@@ -304,9 +304,10 @@ namespace OpenDashPlugin
         public static readonly string[] FilterValues = { FilterAll, FilterBound, FilterNotBound };
         public static readonly string[] FilterLabels = { "All", "Bound", PanelBindings.NotBound };
 
-        /// <summary>The filter's name, as Shortcuts.dc.html gives its group (aria-label="Show"): read by a screen
-        /// reader alone, since the artboard draws no words over it.</summary>
-        public const string FilterTitle = "Show";
+        /// <summary>The filter's name, read by a screen reader alone, since the artboard draws no words over it.
+        /// A noun, as voice.md has every label: the artboard's aria-label is the bare verb "Show", and a verb
+        /// is a button's, as ruled where "Centre shows" became "Centre display".</summary>
+        public const string FilterTitle = "Filter";
 
         /// <summary>
         /// Whether a row shows under the filter. A greyed row is not bound, and its chip says so, so it shows
