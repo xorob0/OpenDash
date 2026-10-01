@@ -22,6 +22,19 @@ namespace OpenDashPlugin.Tests
             return System.Text.RegularExpressions.Regex.Replace(MatrixSource(), @"\s+", " ");
         }
 
+        /// <summary>
+        /// One method's code in the flattened source, from its signature to the next one's: a pin taken inside
+        /// it can only be met by that method, where two helpers carry the same statements.
+        /// </summary>
+        private static string Slice(string flat, string from, string to)
+        {
+            var start = flat.IndexOf(from, StringComparison.Ordinal);
+            Assert.True(start >= 0, from);
+            var end = flat.IndexOf(to, start + from.Length, StringComparison.Ordinal);
+            Assert.True(end > start, to);
+            return flat.Substring(start, end - start);
+        }
+
         [Fact]
         public void The_matrix_rows_say_what_the_artboard_and_the_voice_rulings_say()
         {
@@ -580,6 +593,50 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(pin, flat);
             }
+            // The guards and loops that decide whether a part is added, each with what it adds: a guard flipped
+            // or a loop that skips its first item compiles to a page with a hole in it, or one that throws.
+            foreach (var pin in new[]
+            {
+                "foreach (var matrix in panels) { var m = matrix; var facts = MatrixFacts(m);",
+                "foreach (var row in rows) { if (row != null) stack.Children.Add(row); }",
+                "if (link != null) { link.VerticalAlignment = VerticalAlignment.Center; link.Margin = new Thickness(PanelMatrix.LayerGap, 0, PanelMatrix.ThresholdsGap, 0); Grid.SetColumn(link, 2); grid.Children.Add(link); }",
+                "if (control != null) { if (control is ToggleButton) AutomationProperties.SetName(control, title); control.VerticalAlignment = VerticalAlignment.Center; control.HorizontalAlignment = HorizontalAlignment.Right; control.Margin = new Thickness(PanelMatrix.LayerGap, 0, 0, 0); Grid.SetColumn(control, 3); grid.Children.Add(control); }",
+                "if (control != null) { if (control is ToggleButton) AutomationProperties.SetName(control, title); control.VerticalAlignment = VerticalAlignment.Center; control.HorizontalAlignment = HorizontalAlignment.Right; control.Margin = new Thickness(PanelMatrix.OptionGap, 0, 0, 0); Grid.SetColumn(control, 1); grid.Children.Add(control); }",
+                // The stacked layout is the two-column one's else: both would add the preview to two parents.
+                "parts.Add(body); } else { previewColumn.Element.MaxWidth = PanelMatrix.PreviewColumnWidth;",
+                // The plan the page draws is the one asked for, and the column hands back what it was built with.
+                "if (matrixPlan == null || !ReferenceEquals(matrixPlanAsked, issues)) { matrixPlan = SafePlan(); matrixPlanAsked = issues; } return matrixPlan; }",
+                "public MatrixPreviewColumn(FrameworkElement element, Action repaint) { Element = element; Repaint = repaint; }",
+                // The selected matrix's heading, the Rename sheet and the Remove sheet each read their own matrix's
+                // name, pinned with the method that reads it so the card's identical line cannot meet it.
+                "private FrameworkElement BuildMatrixSelected(int matrix, Border cardPicture) { var m = matrix; var name = PanelMatrix.NameOf(Settings.MatrixName(m), m); var title = Ui.SubHeading(name);",
+                "private void ShowRenameMatrix(int matrix) { var current = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); var name = Ui.Input(current, PanelMatrix.NameWidth);",
+                "private void ShowRemoveMatrix(int matrix) { var name = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); var remove = Ui.Button(PanelMatrix.RemoveConfirm,",
+            })
+            {
+                Assert.Contains(pin, flat);
+            }
+            // Each helper's own words, taken inside its own code, so neither can meet the other's pin: its name,
+            // wrapping, on the title line, the line in its words, and its caption under it only when it has one,
+            // wrapping, 2 below.
+            var head = Slice(flat, "private static Border MatrixLayerHead(", "private static Border MatrixOption(");
+            var option = Slice(flat, "private static Border MatrixOption(", "private void ShowAddMatrix(");
+            Assert.Contains("var name = Ui.Text(title, PanelShell.RowTitleSize, FontWeights.Medium, Theme.TextPrimary); name.TextWrapping = TextWrapping.Wrap; titleLine.Children.Add(name); "
+                + "var words = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center }; words.Children.Add(titleLine); "
+                + "if (!string.IsNullOrEmpty(caption)) { var line = Ui.Text(caption, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.TextSecondary); "
+                + "line.TextWrapping = TextWrapping.Wrap; line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(line); }", head);
+            Assert.Contains("var name = Ui.Text(title, PanelMatrix.OptionTextSize, FontWeights.Normal, Theme.TextPrimary); name.TextWrapping = TextWrapping.Wrap; titleLine.Children.Add(name); "
+                + "var words = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center }; words.Children.Add(titleLine); "
+                + "if (!string.IsNullOrEmpty(caption)) { var under = Ui.Text(caption, PanelMatrix.OptionLineSize, FontWeights.Normal, Theme.TextSecondary); "
+                + "under.TextWrapping = TextWrapping.Wrap; under.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(under); } "
+                + "if (line != null) { line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0); words.Children.Add(line); }", option);
+            foreach (var helper in new[] { head, option })
+            {
+                Assert.Contains("var titleLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };", helper);
+                Assert.Contains("Child = grid, Tag = new RowParts(titleLine, control), };", helper);
+            }
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("words.Children.Add(titleLine);")).Count);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("name.TextWrapping = TextWrapping.Wrap;")).Count);
             // Both helpers carry their parts, so Ui.Soon appends the SOON tag after a greyed row's name (#363,
             // #371).
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("Child = grid, Tag = new RowParts(titleLine, control), };")).Count);
@@ -1142,6 +1199,27 @@ namespace OpenDashPlugin.Tests
                 "line.Margin = new Thickness(0, PanelMatrix.OptionLineGap, 0, 0);",
                 "Ui.VStack(PanelMatrix.StackedGap, previewColumn.Element, priority)",
                 "var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);",
+                // The 8x8 centred in its frame, the links at the artboard's 13 and their own height, the New tag
+                // and the stacked preview at the column's left, and the chips wrapping across the column.
+                "preview.HorizontalAlignment = HorizontalAlignment.Center;",
+                "all.FontSize = Theme.SizeSmall; all.Height = double.NaN; all.HorizontalAlignment = HorizontalAlignment.Left;",
+                "thresholds.FontSize = Theme.SizeSmall; thresholds.Height = double.NaN;",
+                "tag.HorizontalAlignment = HorizontalAlignment.Left;",
+                "var chips = new WrapPanel { Orientation = Orientation.Horizontal };",
+                // The rank's 12 after it, which OptionIndent counts to line the options up under a layer's name,
+                // and the unranked dot, drawn in full, centred in the rank's column.
+                "number.VerticalAlignment = VerticalAlignment.Center; number.Margin = new Thickness(0, 0, PanelMatrix.LayerGap, 0);",
+                "var dot = new Ellipse { Width = PanelMatrix.UnrankedDotSize, Height = PanelMatrix.UnrankedDotSize, Fill = Ui.Brush(Theme.TextSecondary), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, };",
+                // The profile's dot and line centred on the title's line.
+                "Fill = Ui.Brush(action.StateHex), VerticalAlignment = VerticalAlignment.Center, };",
+                "line.VerticalAlignment = VerticalAlignment.Center; var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line);",
+                // The chip the page opens on, and no chip held focus until one is found to.
+                "private string matrixPreviewScenario = PanelMatrix.IdleScenario;",
+                "var focused = -1;",
+                // Each MatrixNamed is told about as the type it is given: without the assignments every one would
+                // be AutomationControlType's zero, Button.
+                "public MatrixNamed(AutomationControlType type) { this.type = type; }",
+                "public Peer(MatrixNamed owner, AutomationControlType type) : base(owner) { this.type = type; }",
             })
             {
                 Assert.Contains(pin, flatNumbers);
