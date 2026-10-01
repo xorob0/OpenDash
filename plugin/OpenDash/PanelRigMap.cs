@@ -1711,12 +1711,14 @@ namespace OpenDashPlugin
         /// The Screens page's plan of the landscape page at <paramref name="index"/> of
         /// Contract.PitWallPageNames: by its title, or at the same place in its list, which is in the same
         /// order, or null. Never throws: the two lists are typed apart, and a renamed page draws a tile with
-        /// no panels rather than failing the whole page.
+        /// no panels rather than failing the whole page. It reads only the plan's Pages and each page's
+        /// Title: the plan is the Screens page's, and the helpers around them are its to change.
         /// </summary>
         public static PanelPitWallPlan.Page PitWallPlanPage(int index)
         {
             if (index < 0 || index >= Contract.PitWallPageNames.Length) return null;
-            var page = PanelPitWallPlan.PageNamed(Contract.PitWallPageNames[index]);
+            var title = Contract.PitWallPageNames[index];
+            var page = PanelPitWallPlan.Pages.FirstOrDefault(p => p.Title == title);
             if (page != null) return page;
             return index < PanelPitWallPlan.Pages.Count ? PanelPitWallPlan.Pages[index] : null;
         }
