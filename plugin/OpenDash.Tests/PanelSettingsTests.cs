@@ -543,6 +543,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Text(string.Empty, PanelSettings.PreviewPercentSize, FontWeight.FromOpenTypeWeight(PanelSettings.PreviewPercentFontWeight), Theme.TextSecondary, PanelFonts.Data)", page);
             Assert.Contains("Ui.Text(alert.Title, PanelSettings.AlertTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.AlertNameFontWeight), Theme.TextPrimary)", page);
             Assert.Contains("Ui.Text(text, PanelSettings.IndexLinkTextSize, FontWeight.FromOpenTypeWeight(PanelSettings.IndexLinkFontWeight), Theme.TextSecondary)", page);
+            // The .ck's corner and border, the rule under a row (never over it), a caption's gap under its name,
+            // and the .idx's corner.
+            Assert.Matches(@"CornerRadius = new CornerRadius\(Theme\.Radius\),\s*BorderBrush = Ui\.Brush\(on \? Theme\.Accent : Theme\.Border\),\s*BorderThickness = new Thickness\(PanelMetrics\.BorderWeight\),", page);
+            Assert.Matches(@"var rule = new Border\s*\{\s*BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, 0, 0, PanelMetrics\.BorderWeight\),\s*IsHitTestVisible = false,\s*\};", page);
+            Assert.Contains("under.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);", page);
+            Assert.Contains("chrome.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));", page);
+            // The table's columns: the names, then the threshold sized to its content, the four surfaces sharing
+            // the slack, and Try sized to its content.
+            Assert.Matches(@"grid\.ColumnDefinitions\.Add\(names\);[^\n]*\n[^\n]*\n\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = GridLength\.Auto \}\);\s*if \(surfaces\)\s*\{\s*foreach \(var column in PanelSettings\.SurfaceColumns\) grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*\}\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = GridLength\.Auto \}\);", page);
             Assert.Contains("SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);", page);
             // The tick's look: the accent with the tick when on, the border and no fill when off.
             Assert.Contains("BorderBrush = Ui.Brush(on ? Theme.Accent : Theme.Border),", page);
@@ -1186,6 +1195,22 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"Background = Brushes\.Transparent,\s*Child = content,", page);
             Assert.Contains("SettingsAlertCell(grid, row, column++, nameCell, soon, false);", page);
 
+            // A link of the On this page row: a hand over it, the panel's focus ring, the zone ground under the
+            // pointer, and back to its mark when the pointer leaves.
+            Assert.Matches(@"Cursor = Cursors\.Hand,\s*Content = label,\s*Template = new ControlTemplate\(typeof\(Button\)\) \{ VisualTree = chrome \},\s*FocusVisualStyle = Ui\.FocusRing\(\),", page);
+            Assert.Contains("link.MouseEnter += (sender, args) => SettingsInkIndexLink(link, true);", page);
+            Assert.Contains("link.MouseLeave += (sender, args) => SettingsInkIndexLink(link, (bool)link.Tag);", page);
+            Assert.Contains("SettingsInkIndexLink(link, current || link.IsMouseOver);", page);
+            // A heading a link focuses shows the panel's focus ring.
+            Assert.Matches(@"KeyboardNavigation\.SetIsTabStop\(heading, false\);\s*heading\.FocusVisualStyle = Ui\.FocusRing\(\);", page);
+            // A stacked control goes under its title across both columns, against the left edge.
+            Assert.Matches(@"Grid\.SetRow\(parts\.Control, 1\);\s*Grid\.SetColumn\(parts\.Control, 0\);\s*Grid\.SetColumnSpan\(parts\.Control, 2\);\s*parts\.Control\.HorizontalAlignment = HorizontalAlignment\.Left;", page);
+            // A surface heading and its tag centred over their column; Try as tall as its text, not the link's
+            // own height; the preview's three pictures centred on one line.
+            Assert.Matches(@"var head = new StackPanel \{ Orientation = Orientation\.Vertical, HorizontalAlignment = HorizontalAlignment\.Center \};\s*var label = Ui\.Eyebrow\(name\);\s*label\.HorizontalAlignment = HorizontalAlignment\.Center;\s*var tag = Ui\.SoonTag\(PanelSoon\.AlertDisplay\);\s*tag\.HorizontalAlignment = HorizontalAlignment\.Center;", page);
+            Assert.Matches(@"link\.FontSize = PanelSettings\.AlertTryTextSize;\s*link\.Height = double\.NaN;", page);
+            Assert.Contains("pictures[i].VerticalAlignment = VerticalAlignment.Center;", page);
+
             // The preview's head: its name on the left and Day|Night against the right edge.
             Assert.Contains("var head = new DockPanel { LastChildFill = false };", page);
             Assert.Contains("DockPanel.SetDock(eyebrow, Dock.Left);", page);
@@ -1228,7 +1253,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelSettings.PreviewStagePadding);
             // The stage scales down where it does not fit, never up, and never wraps into a lopsided second line:
             // Ui.FitWidth, which PanelKitTests holds to Uniform, DownOnly and set left, as every fixed-size
-            // picture on the panel is. The artboard centres it; plugin.md records the departure.
+            // picture on the panel is. The artboard centres it: a departure for plugin.md to record.
             var page = Page();
             Assert.Contains("Child = Ui.FitWidth(stage),", page);
             Assert.DoesNotContain("new Viewbox", page);
@@ -1299,6 +1324,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelSettings.AnchorAlerts, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
             Assert.Equal(PanelSettings.AnchorRaceData, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.UnitsTitle).Route.Anchor);
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "night mode button"));
+            // The words a driver may search for a section by, where its title does not say them.
+            foreach (var pair in new[]
+            {
+                new[] { PanelSettings.UnitsTitle, "km/h", "mph", "celsius", "fahrenheit", "litres", "gallons" },
+                new[] { PanelSettings.AlertsTitle, "warning", "threshold" },
+                new[] { PanelSettings.LightingTitle, "lights", "preview" },
+                new[] { PanelSettings.AppearanceTitle, "look", "theme", "colours" },
+                new[] { PanelSettings.DriverTitle, "branding", "logo", "race number" },
+            })
+            {
+                Assert.Equal(pair.Skip(1), PanelSettings.Search.Single(entry => entry.Label == pair[0]).Keywords);
+            }
+            Assert.Equal(PanelSettings.AnchorRaceData, PanelSearch.Find(PanelSearch.All(), "fahrenheit").First().Route.Anchor);
+            Assert.Equal(PanelSettings.AnchorDriver, PanelSearch.Find(PanelSearch.All(), "branding").First().Route.Anchor);
 
             // Each entry lands on the section whose own method draws its label's constant, so a hit scrolls to
             // the row it names and marks that section's link.
