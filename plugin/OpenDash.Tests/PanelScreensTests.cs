@@ -422,7 +422,7 @@ namespace OpenDashPlugin.Tests
             using (var tokens = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(RepoPaths.TokensJson())))
             {
                 var duration = tokens.RootElement.GetProperty("indicator").GetProperty("lapReview").GetProperty("durationMs").GetDouble();
-                Assert.Equal(duration, PanelScreens.LapReviewSeconds * 1000.0);
+                Assert.Equal(PanelScreens.LapReviewSeconds * 1000.0, duration);
             }
             var words = new[] { "no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" };
             Assert.Contains(" " + words[PanelScreens.LapReviewSeconds] + " seconds ", PanelScreens.LapReviewCaption);
@@ -1022,7 +1022,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("InputManager.Current.PostProcessInput += released;", page);
             Assert.Contains("if (SheetOpen)", page);
             // The rebuild is reached only from the refresh: never inside the press that raised the save.
-            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(page, @"RefreshAttention\(\);\s*RebuildPage\(\);\s*RefreshSidebar\(\);").Count);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(page, @"RefreshAttention\(\);\s*RebuildPage\(\);\s*RefreshSidebar\(\);"));
             // A card press selects and rebuilds in place.
             Assert.Contains("Select(PanelPage.Screens, captured.Namespace);\n                        RebuildPage();", page.Replace("\r\n", "\n"));
             Assert.Contains("OnLeave(\"Screens.follow\"", page);
@@ -1045,8 +1045,11 @@ namespace OpenDashPlugin.Tests
         /// (the three quick glances outside a face, the companion's start, the shared slots).
         /// </summary>
         /// <remarks>
-        /// Each property is mapped to its writer here, and the map must cover the kind's names exactly, so a
-        /// property added to the contract turns this red until someone says where the page writes it.
+        /// Each property is mapped to the start of a writer here, and the map must cover the kind's names
+        /// exactly, so a property added to the contract turns this red until someone says where the page writes
+        /// it. This test holds only that each writer appears somewhere in the page's sources; which control
+        /// writes which setting, and from which reading, is held statement by statement in
+        /// Each_control_writes_and_reads_its_own_setting.
         /// </remarks>
         [Fact]
         public void Every_setting_a_screen_owns_is_written_from_the_screens_page()
@@ -1102,6 +1105,191 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.True(sources.Contains(writer), "no Screens file writes " + writer);
             }
+        }
+
+        /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>
+        private static string ScreensSource(string file)
+        {
+            var path = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", file);
+            return System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(path), @"\s+", " ");
+        }
+
+        private static void AssertOnce(string code, string pin, string file)
+        {
+            var count = System.Text.RegularExpressions.Regex.Matches(code, System.Text.RegularExpressions.Regex.Escape(pin)).Count;
+            Assert.True(count == 1, file + " has " + count + " of: " + pin);
+        }
+
+        /// <summary>
+        /// Each control writes its own setting and reads the one it writes: the control's reading and its
+        /// handler's statement are pinned together in the file that draws it, so a control that writes the
+        /// wrong key, every row writing one slot, or a face's rev bar reading the rig's turns this red.
+        /// </summary>
+        [Fact]
+        public void Each_control_writes_and_reads_its_own_setting()
+        {
+            var face = ScreensSource("SettingsControl.Screens.Face.cs");
+            foreach (var pin in new[]
+            {
+                "ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(ns), value => { Settings.SetScreenRevBar(ns, value);",
+                "ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value => { screen.FlagFormat = value;",
+                "ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value => { screen.LapReview = value;",
+                "Ui.ChoiceButton(fields, screen.Face.BarField(slot), index => { screen.Face.SetBarField(slot, index);",
+                "screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);",
+                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);",
+                "PanelScreens.Tick(face, letter, page, on);",
+                "PanelScreens.Reorder(face, letter, showAll, from, to);",
+                "PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true);",
+                "PanelScreens.NoPages, () => { PanelScreens.SetEveryPage(face, letter, false);",
+                "Ui.Switch(face.IsClassOnly(letter), on => { face.SetClassOnly(letter, on);",
+            })
+            {
+                AssertOnce(face, pin, "Face.cs");
+            }
+
+            var wall = ScreensSource("SettingsControl.Screens.PitWall.cs");
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(wall,
+                System.Text.RegularExpressions.Regex.Escape("screen.ZonePage(captured.Key), index => { screen.SetZonePage(captured.Key, index);")).Count);
+            foreach (var pin in new[]
+            {
+                "screen.PitWallPage = Contract.NormalisePitWallPage(chosen);",
+                "Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on;",
+                "Settings.ScreenPitWallFlagFormat(screen.Namespace), value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value);",
+                "screen.WebViewUrl = normalised;",
+            })
+            {
+                AssertOnce(wall, pin, "PitWall.cs");
+            }
+
+            var round = ScreensSource("SettingsControl.Screens.Round.cs");
+            foreach (var pin in new[]
+            {
+                "Ui.ChoiceButton(cards, Settings.Slot(captured), index => { Settings.SetSlot(captured, index);",
+                "ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value => { Settings.SetRevBar(value);",
+            })
+            {
+                AssertOnce(round, pin, "Round.cs");
+            }
+
+            var companion = ScreensSource("SettingsControl.Screens.Companion.cs");
+            foreach (var pin in new[]
+            {
+                "Array.IndexOf(choices, Settings.ScreenCompanionStart(screen.Namespace)), index =>",
+                "var value = choices[index]; screen.CompanionStart = value;",
+                "ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace), value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value);",
+                "Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value => { screen.CompanionQuickGlance = value;",
+                "screen.Modules[index] = on;",
+            })
+            {
+                AssertOnce(companion, pin, "Companion.cs");
+            }
+        }
+
+        /// <summary>
+        /// The page uses the decisions its models make: each press opens what it says, each state draws its own
+        /// fix box, a result is said as the result it was, the empty rig stops before a header it has no screen
+        /// for, and each editor draws what the model says its kind and orientation have.
+        /// </summary>
+        [Fact]
+        public void The_page_draws_what_its_models_decide()
+        {
+            var page = ScreensSource("SettingsControl.Screens.cs");
+            foreach (var pin in new[]
+            {
+                "if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());",
+                "if (rig.Count == 0) { sections.Add(Ui.Prose(PanelCopy.EmptyRig, Theme.SizeBody)); return PageLayout(PanelScreens.Title, null, sections.ToArray()); }",
+                "var fix = BuildScreenFix(screen); if (fix != null) selected.Add(fix);",
+                "cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));",
+                "Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray())",
+                "edit.Click += (sender, args) => ShowEdit(screen);",
+                "duplicate.Click += (sender, args) => DuplicateScreen(screen);",
+                "remove.Click += (sender, args) => ShowRemove(screen);",
+                "write.Click += (sender, args) => InstallScreenAgain(screen); return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);",
+                "case ScreenState.Restart:",
+                "return Ui.FixBox(PanelScreens.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);",
+                "ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),",
+                // Keep it keeps a migrated screen as well as going back.
+                "keep.Click += (sender, args) => { Save(screen); Redraw(); };",
+                "Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
+            })
+            {
+                AssertOnce(page, pin, "Screens.cs");
+            }
+            // The empty rig returns before anything that needs a selected screen.
+            Assert.True(page.IndexOf("Ui.Prose(PanelCopy.EmptyRig", System.StringComparison.Ordinal) < page.IndexOf("BuildScreenHeader(screen)", System.StringComparison.Ordinal));
+            Assert.Equal(6, PanelScreens.CardColumns);
+
+            var round = ScreensSource("SettingsControl.Screens.Round.cs");
+            AssertOnce(round, "var read = PanelScreens.CardsRead(screen); var rows = new List<UIElement>(); for (var slot = 1; slot <= read; slot++)", "Round.cs");
+            AssertOnce(round, "PanelScreens.CardClash(Settings.Slots, read)", "Round.cs");
+            var companion = ScreensSource("SettingsControl.Screens.Companion.cs");
+            AssertOnce(companion, "var choices = PanelScreens.FirstModuleChoices(screen.Modules);", "Companion.cs");
+
+            // A portrait wall draws only what matches its package: Page on screen and the page's picture are
+            // the landscape wall's, and the portrait layout and the glance are one or the other.
+            var wall = ScreensSource("SettingsControl.Screens.PitWall.cs");
+            var landscapeFrom = wall.IndexOf("if (!portrait) {", System.StringComparison.Ordinal);
+            var landscapeTo = wall.IndexOf("rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.WebViewTitle", System.StringComparison.Ordinal);
+            Assert.True(landscapeFrom >= 0 && landscapeTo > landscapeFrom);
+            var landscape = wall.Substring(landscapeFrom, landscapeTo - landscapeFrom);
+            Assert.Contains("Ui.SettingRow(PanelScreens.PitWallPageTitle, pages)", landscape);
+            Assert.Contains("blocks.Add(BuildPitWallLayout(screen, page, redraw, content));", landscape);
+            AssertOnce(wall, "PanelScreens.PitWallPageTitle", "PitWall.cs");
+            AssertOnce(wall, "BuildPitWallLayout(screen, page, redraw, content)", "PitWall.cs");
+            AssertOnce(wall, "if (portrait) { rows.Add(Ui.Anchor(Ui.SettingRow(PanelScreens.PortraitTitle, BuildPortraitLayout(screen, redraw, content), null, Ui.NewTag()), PanelScreens.AnchorPortrait)); } else { rows.Add(Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildPitWallGlance(screen, redraw, content), PanelCopy.PitWallGlance), PanelScreens.AnchorGlance)); }", "PitWall.cs");
+        }
+
+        /// <summary>
+        /// What the artboard and the rulings lay out, held where the page draws it: the face's four live rows in
+        /// the artboard's order, First on the opening page only, the class filter only on a zone that lists
+        /// cars, the face's flag display as two labels over its two values, and the NEW tags this release
+        /// carries -- six, counted per file, so one is added or taken away on purpose.
+        /// </summary>
+        [Fact]
+        public void The_page_lays_out_what_the_artboard_draws()
+        {
+            var face = ScreensSource("SettingsControl.Screens.Face.cs");
+            var order = new[]
+            {
+                "Ui.SettingRow(PanelScreens.RevBarTitle, revBar)",
+                "Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags)",
+                "Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption)",
+                "Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw, column), PanelCopy.FaceGlance)",
+                "rows.Add(Ui.SoonRow(PanelSoon.RevFill));",
+            };
+            var at = order.Select(pin => face.IndexOf(pin, System.StringComparison.Ordinal)).ToArray();
+            Assert.DoesNotContain(-1, at);
+            Assert.Equal(at.OrderBy(i => i), at);
+            AssertOnce(face, "if (row.First) {", "Face.cs");
+            AssertOnce(face, "if (FacePages.OffersClassFilter(letter)) {", "Face.cs");
+            Assert.Equal(PanelScreens.FlagLabels.Length, Contract.FlagFormats.Length);
+            Assert.Equal(PanelScreens.BarFlagLabels.Length, Contract.CompanionFlagFormats.Length);
+
+            // Duplicate; the drag hint and Previous page; the portrait layout; the companion's Flag display and
+            // Quick glance (the glance has no artboard: it is new on the companion in this release).
+            var tags = new Dictionary<string, int>
+            {
+                { "SettingsControl.Screens.cs", 1 },
+                { "SettingsControl.Screens.Face.cs", 2 },
+                { "SettingsControl.Screens.PitWall.cs", 1 },
+                { "SettingsControl.Screens.Companion.cs", 2 },
+                { "SettingsControl.Screens.Round.cs", 0 },
+            };
+            foreach (var file in tags)
+            {
+                var count = System.Text.RegularExpressions.Regex.Matches(ScreensSource(file.Key), System.Text.RegularExpressions.Regex.Escape("Ui.NewTag()")).Count;
+                Assert.True(file.Value == count, file.Key + " draws " + count + " NEW tags, not " + file.Value);
+            }
+            Assert.Contains("Ui.HStack(8, Ui.Text(PanelScreens.DuplicateButton, Theme.SizeSmall, FontWeights.Medium, Theme.TextPrimary), Ui.NewTag())", ScreensSource("SettingsControl.Screens.cs"));
+            Assert.Contains("Ui.Text(PanelScreens.DragHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary), Ui.NewTag()", face);
+            Assert.Contains("Ui.Text(PanelScreens.PreviousPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.NewTag()", face);
+            var companion = ScreensSource("SettingsControl.Screens.Companion.cs");
+            Assert.Contains("Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag())", companion);
+            Assert.Contains("Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(controls, glance, chip), PanelCopy.CompanionGlance, Ui.NewTag())", companion);
         }
 
         private static void AssertCovers(IEnumerable<string> names, Dictionary<string, string> writers, HashSet<string> published)

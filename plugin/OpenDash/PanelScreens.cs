@@ -209,6 +209,10 @@ namespace OpenDashPlugin
             return IsRound(screen) ? "round" : screen.Kind;
         }
 
+        /// <summary>The most cards the screens' grid lays in a row: Screens.dc.html's repeat(6, minmax(0, 1fr)),
+        /// 10 apart (PanelKit.CardGridGap). Fewer where a card would fall under PanelKit.CardMinWidth.</summary>
+        public const int CardColumns = 6;
+
         // --- The selected screen's block ------------------------------------------------------------------
 
         /// <summary>The block under the cards: 20 below its rule, its parts 18 apart (Screens.dc.html's

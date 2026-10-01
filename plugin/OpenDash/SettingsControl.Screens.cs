@@ -140,7 +140,7 @@ namespace OpenDashPlugin
                     }));
             }
             cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
-            return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, 6, cards.ToArray());
+            return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray());
         }
 
         /// <summary>Whether SimHub has the screen: its folder, then whether it was written after SimHub started
