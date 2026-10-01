@@ -318,9 +318,11 @@ namespace OpenDashPlugin.Tests
 
             var tile = RigMethod("private RigTileView BuildRigTile(");
             // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
-            // the tile following the default.
+            // the tile following the default, and a click with a pixel of jitter is still a click until the
+            // pointer has gone the system's drag distance.
             var delta = Handler(tile, "thumb.DragDelta +=");
             InOrder(delta,
+                "if (!moved && Math.Abs(args.HorizontalChange) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(args.VerticalChange) < SystemParameters.MinimumVerticalDragDistance) return;",
                 "moved = true;",
                 "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)",
                 "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)",

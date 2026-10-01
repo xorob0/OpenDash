@@ -439,6 +439,11 @@ namespace OpenDashPlugin
             thumb.DragDelta += (sender, args) =>
             {
                 if (args.HorizontalChange == 0 && args.VerticalChange == 0) return;
+                // A press is a click until the pointer has gone the system's drag distance: a pixel of jitter
+                // on a click that only focuses the tile would otherwise snap it to the grid and keep the whole
+                // default layout as an arrangement. The Thumb measures from the press while the tile has not
+                // moved, so the change is the whole distance so far.
+                if (!moved && Math.Abs(args.HorizontalChange) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(args.VerticalChange) < SystemParameters.MinimumVerticalDragDistance) return;
                 moved = true;
                 Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
                 Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
