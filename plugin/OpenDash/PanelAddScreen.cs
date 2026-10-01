@@ -357,13 +357,39 @@ namespace OpenDashPlugin
             return a.Width > 0 && a.Height > 0 && a.Width == b.Height && a.Height == b.Width && a.Width != a.Height;
         }
 
-        /// <summary>A type's packages in the order the control offers them: landscape first for a pair
-        /// that is one screen either way up, the catalogue's own order otherwise.</summary>
+        /// <summary>
+        /// The sizes in the order AddScreen.dc.html's step 2 draws them, width then height: the reference face,
+        /// the three 1280s, the 850 x 480, the Nano, the display dash, then the round.
+        /// </summary>
+        public static readonly int[][] SizeOrder =
+        {
+            new[] { 1920, 480 }, new[] { 1280, 480 }, new[] { 1280, 400 }, new[] { 1280, 720 },
+            new[] { 850, 480 }, new[] { 800, 286 }, new[] { 600, 686 }, new[] { 480, 480 },
+        };
+
+        /// <summary>
+        /// A type's packages in the order the control offers them: landscape first for a pair that is one
+        /// screen either way up, and the artboard's order of sizes otherwise.
+        /// </summary>
+        /// <remarks>
+        /// The catalogue's own order puts the packages the design names first (the Main DDU, the Rim, the
+        /// Nano), which is the order of the Install list and not of the Add sheet's tiles. A size the artboard
+        /// does not draw keeps its place in the catalogue, after the ones it does.
+        /// </remarks>
         public static IReadOnlyList<PackageEntry> Offered(ScreenType type)
         {
             if (type == null) return new PackageEntry[0];
-            if (Question(type) != SizeQuestion.Orientation) return type.Entries;
-            return type.Entries.OrderByDescending(e => e.Width).ToList();
+            if (Question(type) == SizeQuestion.Orientation) return type.Entries.OrderByDescending(e => e.Width).ToList();
+            return type.Entries.OrderBy(SizeRank).ToList();
+        }
+
+        private static int SizeRank(PackageEntry entry)
+        {
+            for (var i = 0; i < SizeOrder.Length; i++)
+            {
+                if (entry.Width == SizeOrder[i][0] && entry.Height == SizeOrder[i][1]) return i;
+            }
+            return SizeOrder.Length;
         }
 
         /// <summary>

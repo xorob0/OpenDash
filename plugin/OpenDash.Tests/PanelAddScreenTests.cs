@@ -242,12 +242,62 @@ namespace OpenDashPlugin.Tests
         {
             var faces = PanelAddScreen.Types(Catalogue()).First(t => t.Kind == Contract.KindFace);
             var offered = PanelAddScreen.Offered(faces);
-            Assert.Equal(faces.Entries, offered);
             Assert.Equal("1920 × 480", PanelAddScreen.SizeLabel(faces, offered[0], 0));
             // The design's own caption wins where a package has one, so a round face reads as the
             // product writes it rather than as its pixels, and so does the round screen it names none for.
             var round = PanelAddScreen.Types(Catalogue()).First(t => t.Kind == Contract.KindSlots);
-            Assert.Equal(new[] { "800 round", "480 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)));
+            Assert.Equal(new[] { "480 round", "800 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)));
+        }
+
+        /// <summary>
+        /// Step 2's tiles stand in AddScreen.dc.html's order, held against the catalogue a release builds
+        /// rather than a list made up here: PackageCatalogue.From puts the packages the design names first,
+        /// which is the Install list's order and not the sheet's.
+        /// </summary>
+        [Fact]
+        public void The_sizes_stand_in_the_artboards_order()
+        {
+            var source = new MemoryPackageSource();
+            foreach (var package in new[]
+            {
+                ("OpenDash 800 round", 800, 800), ("OpenDash Pit wall portrait", 1080, 1920), ("OpenDash Pit wall", 1920, 1080),
+                ("OpenDash Companion portrait", 480, 850), ("OpenDash Companion", 850, 480), ("OpenDash 480 round", 480, 480),
+                ("OpenDash 600x686", 600, 686), ("OpenDash 800x286", 800, 286), ("OpenDash 1280x720", 1280, 720),
+                ("OpenDash 800x480", 800, 480), ("OpenDash 850x480", 850, 480), ("OpenDash 1280x400", 1280, 400),
+                ("OpenDash 1280x480", 1280, 480), ("OpenDash", 1920, 480),
+            })
+            {
+                source.Add("OpenDashPlugin.Resources." + package.Item1 + ".simhubdash", Zip(package.Item1, package.Item2, package.Item3));
+            }
+            var types = PanelAddScreen.Types(PackageCatalogue.From(source));
+
+            var faces = types.First(t => t.Kind == Contract.KindFace);
+            Assert.Equal(SizeQuestion.Size, PanelAddScreen.Question(faces));
+            Assert.Equal(
+                new[] { "1920x480", "1280x480", "1280x400", "1280x720", "850x480", "800x286", "600x686", "800x480" },
+                PanelAddScreen.Offered(faces).Select(e => e.Width + "x" + e.Height).ToArray());
+            // The sheet still opens on the 850 x 480, which it finds by its size wherever it stands.
+            var opens = PanelAddScreen.Offered(faces)[PanelAddScreen.PreferredIndex(faces)];
+            Assert.Equal(Contract.PreferredFaceWidth + "x" + Contract.PreferredFaceHeight, opens.Width + "x" + opens.Height);
+
+            var round = types.First(t => t.Kind == Contract.KindSlots);
+            Assert.Equal(new[] { "480 round", "800 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)).ToArray());
+            // A way round is still landscape first.
+            var companion = types.First(t => t.Kind == Contract.KindCompanion);
+            Assert.Equal(new[] { 850, 480 }, PanelAddScreen.Offered(companion).Select(e => e.Width).ToArray());
+        }
+
+        private static System.IO.MemoryStream Zip(string folder, int width, int height)
+        {
+            var stream = new System.IO.MemoryStream();
+            using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, true))
+            {
+                SyntheticPackage.Add(zip, folder + "/" + folder + PackageExtractor.DashExtension, "{\"Version\":2}");
+                SyntheticPackage.Add(zip, folder + "/" + folder + PackageExtractor.MetadataExtension,
+                    "{\"Title\":\"" + folder + "\",\"Width\":" + width + ",\"Height\":" + height + "}");
+            }
+            stream.Position = 0;
+            return stream;
         }
 
         /// <summary>The name box opens on something a driver would recognise, not on a resource name, and a
