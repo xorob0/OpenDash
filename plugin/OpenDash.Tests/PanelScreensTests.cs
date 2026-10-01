@@ -1010,8 +1010,9 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// What a press on the page redraws, decided here and held in the page's sources: a change saved to a
-        /// screen the migration made rebuilds the page once the press is released and no sheet is open, the
-        /// first one only, and never once the panel is off screen or the page left; a card pressed is a
+        /// screen the migration made rebuilds the page once the press is released, nothing holds the mouse and
+        /// none of the page's own sheets is open, the first one only, and never once the panel is off screen or
+        /// the page left; a card pressed is a
         /// selection and rebuilds in place without asking SimHub again or clearing the line a press left; a
         /// zone picked opens on its ticked pages; and the page follows a route's anchor on the way in through
         /// OnLeave rather than the shell's own rebuild flag or focus walk, which are not hooks.
@@ -1040,9 +1041,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (!rebuilds) return;\n            ScreensRefreshAfterKeep();", page.Replace("\r\n", "\n"));
             Assert.Contains("OnLeave(\"Screens.keepRefresh\", () => screensKeepRefresh++);", page);
             Assert.Contains("if (ticket != screensKeepRefresh || !IsLoaded) return;", page);
-            Assert.Contains("if (Mouse.LeftButton == MouseButtonState.Pressed)", page);
+            // It waits while the button is down or anything holds the capture (an open list does), re-checked
+            // after every input, and for this page's own sheet, which it tracks through ShowSheet's closed.
+            Assert.Contains("return Mouse.LeftButton == MouseButtonState.Pressed || Mouse.Captured != null;", page);
+            Assert.Contains("if (ScreensMouseBusy) return;\n                        InputManager.Current.PostProcessInput -= released;", page.Replace("\r\n", "\n"));
             Assert.Contains("InputManager.Current.PostProcessInput += released;", page);
-            Assert.Contains("if (SheetOpen)", page);
+            Assert.Contains("if (screensSheetOpen)\n                {\n                    screensAfterSheet = () => ScreensRefreshWhenFree(ticket);", page.Replace("\r\n", "\n"));
+            Assert.Contains("ShowSheet(title, body, footer, ScreensSheetClosed);\n            screensSheetOpen = true;", page.Replace("\r\n", "\n"));
+            Assert.Contains("screensSheetOpen = false;\n            var after = screensAfterSheet;", page.Replace("\r\n", "\n"));
             // The rebuild is reached only from the refresh: never inside the press that raised the save.
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(page, @"RefreshAttention\(\);\s*RebuildPage\(\);\s*RefreshSidebar\(\);"));
             // A card press selects and rebuilds in place.
@@ -1055,6 +1061,10 @@ namespace OpenDashPlugin.Tests
                 var code = RepoPaths.Code(source);
                 Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\brebuilding\b"), source + " reads the shell's rebuild flag");
                 Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"(?<![A-Za-z])FocusPath\("), source + " calls the shell's FocusPath");
+                // The shell's sheet is reached only through its hooks: every sheet goes through ScreensShowSheet,
+                // whose closed callback is how the page knows one is open.
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\b(SheetOpen|sheetLayer|sheetPanel|sheetClosed|sheetOpener)\b"), source + " reads the shell's sheet internals");
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"(?<![A-Za-z])ShowSheet\((?!title, body, footer, ScreensSheetClosed\))"), source + " opens a sheet the page does not track");
                 Assert.DoesNotContain("\"pressed\"", code);
             }
         }

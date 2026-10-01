@@ -404,8 +404,9 @@ namespace OpenDashPlugin
         private int screensKeepRefresh;
 
         /// <summary>
-        /// Asks what needs fixing again and rebuilds the page and the sidebar, once nothing is pressed, no
-        /// sheet is open, and only while the panel is on screen and Screens is the page shown.
+        /// Asks what needs fixing again and rebuilds the page and the sidebar, once nothing is pressed or
+        /// holding the mouse, none of this page's sheets is open, and only while the panel is on screen and
+        /// Screens is the page shown.
         /// </summary>
         /// <remarks>
         /// A save runs inside the event that raised it, and the web view box saves on LostFocus, which a
@@ -414,8 +415,16 @@ namespace OpenDashPlugin
         /// rebuild then took the pressed control out of the tree mid-press, its capture went, and the release
         /// landed on a new copy that never saw the press, so Edit opened no sheet and a sidebar item did not
         /// navigate. So the refresh waits for the left button to be up, then is posted again, behind the
-        /// Click the release raised in the same input. It also waits for a sheet to close, since a rebuild
-        /// under a sheet detaches the control the sheet gives focus back to.
+        /// Click the release raised in the same input.
+        ///
+        /// It also waits while anything holds the mouse capture. A choice button's list is a Popup that does
+        /// not stay open, and such a Popup holds the capture while it is open: the release that ended the press
+        /// can be the one that opened it, and a rebuild then detached its toggle and WPF closed the list under
+        /// the driver's pointer. The wait re-checks after every input, so the refresh runs once the list closes.
+        ///
+        /// And it waits for a sheet this page opened to close, since a rebuild under a sheet detaches the
+        /// control the sheet gives focus back to. The page knows its own sheets through ShowSheet's closed
+        /// callback (ScreensShowSheet), not through the shell's sheet layer, which is not a hook.
         ///
         /// A refresh that lands after the panel was left is dropped, as the shell's own settles are: rebuilt
         /// off screen, Screens would start a live preview no Unloaded would ever dispose. Nothing is lost by
@@ -428,40 +437,72 @@ namespace OpenDashPlugin
             ScreensRefreshWhenFree(ticket);
         }
 
+        /// <summary>Whether the mouse is in the middle of something: its left button down, or its capture held
+        /// by a press, a drag or an open list.</summary>
+        private static bool ScreensMouseBusy
+        {
+            get { return Mouse.LeftButton == MouseButtonState.Pressed || Mouse.Captured != null; }
+        }
+
         private void ScreensRefreshWhenFree(int ticket)
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (ticket != screensKeepRefresh || !IsLoaded) return;
-                if (Mouse.LeftButton == MouseButtonState.Pressed)
+                if (ScreensMouseBusy)
                 {
-                    // Once the release has been processed, the Click it raised included.
+                    // Once the release, or the close that let the capture go, has been processed, the Click it
+                    // raised included.
                     ProcessInputEventHandler released = null;
                     released = (sender, args) =>
                     {
-                        if (Mouse.LeftButton == MouseButtonState.Pressed) return;
+                        if (ScreensMouseBusy) return;
                         InputManager.Current.PostProcessInput -= released;
                         ScreensRefreshWhenFree(ticket);
                     };
                     InputManager.Current.PostProcessInput += released;
                     return;
                 }
-                if (SheetOpen)
+                if (screensSheetOpen)
                 {
-                    DependencyPropertyChangedEventHandler closed = null;
-                    closed = (sender, args) =>
-                    {
-                        if (sheetLayer.IsVisible) return;
-                        sheetLayer.IsVisibleChanged -= closed;
-                        ScreensRefreshWhenFree(ticket);
-                    };
-                    sheetLayer.IsVisibleChanged += closed;
+                    screensAfterSheet = () => ScreensRefreshWhenFree(ticket);
                     return;
                 }
                 RefreshAttention();
                 RebuildPage();
                 RefreshSidebar();
             }), DispatcherPriority.Background);
+        }
+
+        /// <summary>Whether a sheet this page opened is open: set once ShowSheet has returned, cleared by the
+        /// sheet's closed callback, however it closes.</summary>
+        private bool screensSheetOpen;
+
+        /// <summary>What waits for this page's sheet to close: a refresh a keep asked for while it was open.</summary>
+        private Action screensAfterSheet;
+
+        /// <summary>
+        /// Opens one of this page's sheets through the shell's ShowSheet, and tracks it through its closed
+        /// callback.
+        /// </summary>
+        /// <remarks>
+        /// The flag is set after ShowSheet returns: a sheet replacing another runs the first one's closed
+        /// inside ShowSheet, which clears the flag and lets a waiting refresh post itself; set before the call,
+        /// the flag would be cleared with the new sheet still open. The posted refresh runs after this returns
+        /// and finds the flag set again, so it waits for the new sheet in turn.
+        /// </remarks>
+        private void ScreensShowSheet(string title, UIElement body, UIElement footer)
+        {
+            ShowSheet(title, body, footer, ScreensSheetClosed);
+            screensSheetOpen = true;
+        }
+
+        private void ScreensSheetClosed()
+        {
+            screensSheetOpen = false;
+            var after = screensAfterSheet;
+            screensAfterSheet = null;
+            if (after != null) after();
         }
 
         /// <summary>
@@ -638,7 +679,7 @@ namespace OpenDashPlugin
             var types = PanelAddScreen.Types(catalogue);
             if (types.Count == 0)
             {
-                ShowSheet(PanelAddScreen.SectionTitle, Ui.Prose(PanelAddScreen.NothingToAdd, Theme.SizeBody), null);
+                ScreensShowSheet(PanelAddScreen.SectionTitle, Ui.Prose(PanelAddScreen.NothingToAdd, Theme.SizeBody), null);
                 return;
             }
 
@@ -751,7 +792,7 @@ namespace OpenDashPlugin
                 sizeStep,
                 Ui.Step(3, PanelAddScreen.NameStep, Ui.VStack(8, name, note)));
             var footer = Ui.VStack(14, Ui.Eyebrow(PanelAddScreen.NextStepsTitle), nextStep, SheetFooter(null, cancel, add));
-            ShowSheet(PanelAddScreen.SectionTitle, body, footer);
+            ScreensShowSheet(PanelAddScreen.SectionTitle, body, footer);
         }
 
         /// <summary>The title of a step Ui.Step drew: the text beside its number ring.</summary>
@@ -911,7 +952,7 @@ namespace OpenDashPlugin
             var rows = new List<UIElement> { Ui.SettingRow(PanelAddScreen.NameTitle, name, PanelAddScreen.NameCaption) };
             if (sizeRow != null) rows.Add(sizeRow);
             rows.Add(reinstallRow);
-            ShowSheet(PanelAddScreen.EditSheetTitle(screen.Name), Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaptionFor(screen), cancel, save));
+            ScreensShowSheet(PanelAddScreen.EditSheetTitle(screen.Name), Ui.Rows(rows.ToArray()), SheetFooter(PanelAddScreen.EditCaptionFor(screen), cancel, save));
         }
 
         /// <summary>
@@ -1095,7 +1136,7 @@ namespace OpenDashPlugin
                 Save(screen);
                 Redraw();
             };
-            ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),
+            ScreensShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),
                 SheetFooter(null, keep, remove));
         }
     }
