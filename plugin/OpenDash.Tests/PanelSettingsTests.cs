@@ -582,7 +582,8 @@ namespace OpenDashPlugin.Tests
         /// On arriving, the row marks and holds the section the route lands in, so the landing scroll cannot mark
         /// the one above it; a rebuild in place starts from the last build's mark and hold, not the route's, and
         /// every build reads the view once it is loaded, since a rebuild raises no ScrollChanged it can hear. A
-        /// press focuses its section's heading, so a later focus restore or Tab does not scroll back up.
+        /// press focuses its section's heading, so Tab does not scroll back up to the row, and a rebuild's focus
+        /// restore pulls the view back to the heading rather than to the top of the page.
         /// </summary>
         [Fact]
         public void The_row_starts_from_where_the_view_is()
@@ -616,8 +617,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("KeyboardNavigation.SetIsTabStop(heading, false);", page);
             // A press holds its section, marks it, scrolls to it and focuses its heading, in that order.
             Assert.Matches(@"link\.Click \+= \(sender, args\) =>\s*\{\s*held = index;\s*mark\(index\);\s*SettingsJumpTo\(scroll, sections\[index\]\);\s*SettingsFocusHeading\(heading\);\s*\};", page);
-            // The heading takes the focus but is no tab stop, and is focused once the jump has been laid out.
-            Assert.Matches(@"heading\.Focusable = true;\s*KeyboardNavigation\.SetIsTabStop\(heading, false\);", page);
+            // The heading takes the focus but is no tab stop, and is focused once the jump has been laid out. It
+            // is as wide as its words, so its focus ring hugs them rather than running across the column.
+            Assert.Matches(@"heading\.Focusable = true;\s*heading\.HorizontalAlignment = HorizontalAlignment\.Left;\s*KeyboardNavigation\.SetIsTabStop\(heading, false\);", page);
             Assert.Matches(@"if \(heading\.IsVisible\) Keyboard\.Focus\(heading\);\s*\}\), DispatcherPriority\.Loaded\);", page);
             // A read lets go of the hold once the held section is no longer the one read, and a view scrolled to
             // its foot marks the short last section.

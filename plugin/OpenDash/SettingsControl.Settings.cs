@@ -95,7 +95,12 @@ namespace OpenDashPlugin
         /// when it is loaded. On arriving at an anchor it holds the section the route lands in
         /// (IndexStartHeld). A press moves keyboard focus to its section's heading, as an in-page link moves
         /// the focus start point: focus left on the link would scroll the view back up whenever something
-        /// brings it into view again -- a rebuild restoring focus, or Tab to the next link.
+        /// brings it into view again, as Tab to the next link does. Parked on the heading, it moves where a
+        /// rebuild in place pulls the view back to rather than ending the pull: the shell's RebuildPage
+        /// restores keyboard focus, and a focused element brings itself into view, so a wheel's lighting press
+        /// or a resize across a threshold keeps the view where the jump landed only while the driver stays in
+        /// that section. Once they have scrolled on, it scrolls back to the heading, as it would to any
+        /// control they last pressed; the restore is the shell's to change.
         /// </remarks>
         private FrameworkElement SettingsIndex(IList<FrameworkElement> sections, PanelRoute to)
         {
@@ -176,13 +181,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A section's heading, which a link's press focuses: the first thing a section draws.
-        /// Focusable but no tab stop, so Tab from it goes on into the section and never lands on it.</summary>
+        /// Focusable but no tab stop, so Tab from it goes on into the section and never lands on it. Set
+        /// against the left edge, so it is as wide as its words and its focus ring hugs them rather than
+        /// running across the empty column to their right, as the Alerts heading's does.</summary>
         private static FrameworkElement SettingsHeadingOf(FrameworkElement section)
         {
             var panel = section as Panel;
             var heading = panel == null || panel.Children.Count == 0 ? null : panel.Children[0] as FrameworkElement;
             if (heading == null) return null;
             heading.Focusable = true;
+            heading.HorizontalAlignment = HorizontalAlignment.Left;
             KeyboardNavigation.SetIsTabStop(heading, false);
             heading.FocusVisualStyle = Ui.FocusRing();
             return heading;
