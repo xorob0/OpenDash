@@ -724,26 +724,40 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelShortcuts.RowStacks(Column(3840)));
             Assert.False(PanelShortcuts.RowStacks(712));
             Assert.True(PanelShortcuts.RowStacks(711));
-            // Nothing a row draws moves from RowStackBelow up, which is why the page reads the width only
-            // that far: a row there is laid out as one in a 4K column.
-            Assert.Equal(PanelShortcuts.RowStacks(Column(3840)), PanelShortcuts.RowStacks(PanelShortcuts.RowStackBelow));
-            Assert.Equal(PanelShortcuts.BinderSlot(Column(3840), PanelShortcuts.RowStacks(Column(3840))), PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, PanelShortcuts.RowStacks(PanelShortcuts.RowStackBelow)));
+            // Nothing a row draws moves from RowWidest up, which is why the page reads the width only that
+            // far: a row there is laid out as one in a 4K column.
+            Assert.Equal(993, PanelShortcuts.RowWidest);
+            Assert.Equal(PanelShortcuts.RowStacks(Column(3840)), PanelShortcuts.RowStacks(PanelShortcuts.RowWidest));
+            Assert.Equal(PanelShortcuts.BinderSlot(Column(3840), PanelShortcuts.RowStacks(Column(3840))), PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest, PanelShortcuts.RowStacks(PanelShortcuts.RowWidest)));
+            Assert.True(PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest - 1, false) < PanelShortcuts.BinderMaxWidth);
             // The rail's content at the narrowest full-sidebar width: the binder goes under the name there.
             Assert.True(PanelShortcuts.RowStacks(679));
             Assert.True(PanelShortcuts.RowStacks(400));
         }
 
         [Fact]
-        public void Every_row_gives_simhubs_editor_one_slot_of_fixed_width()
+        public void Every_row_gives_simhubs_editor_one_slot_as_wide_as_the_row_allows()
         {
             // Beside the name the slot is never narrower than BuildBinder's floor.
             Assert.True(PanelShortcuts.BinderWidth >= PanelShortcuts.BinderMinWidth);
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
             Assert.Contains("MinWidth = " + PanelShortcuts.BinderMinWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }", shell);
-            // Beside the name, the same slot on every row, whatever the content's width.
+            // Beside the name, the artboard's slot where a row first lies flat, growing with the room past the
+            // name's floor to what a stacked slot had just under it, so a long joystick binding, whose button
+            // number is its last word, is not clipped at a wide window: 563 at the artboard's 1200 frame, and
+            // the cap from 993 of content up, a 4K column included. Every row of a build has the same one.
+            Assert.Equal(677, PanelShortcuts.BinderMaxWidth);
+            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow - 1, true));
             Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, false));
-            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(Column(1200), false));
-            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(Column(3840), false));
+            Assert.Equal(563, PanelShortcuts.BinderSlot(Column(1200), false));
+            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest, false));
+            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(Column(3840), false));
+            // The name keeps its floor all the way: the slot grows only by what the row has past it.
+            foreach (var content in new double[] { 712, 800, 879, 993, 1500 })
+            {
+                var name = content - 2 - 2 * PanelShortcuts.RowPaddingX - PanelShortcuts.RowGap - PanelShortcuts.PressWidth - PanelShortcuts.RowGap - PanelShortcuts.BinderSlot(content, false);
+                Assert.True(name >= PanelShortcuts.NameMinWidth, content.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
             // Under it, the whole row inside its padding, which may be less than the floor: the row lowers the
             // editor's MinWidth to the slot there, so SimHub's template is laid out in it rather than clipped.
             Assert.Equal(566, PanelShortcuts.BinderSlot(600, true));
@@ -1251,9 +1265,9 @@ namespace OpenDashPlugin.Tests
 
             // Every row's binder in one slot of the model's width, the gap on the slot, never on SimHub's editor,
             // whose template draws its own Margin a second time; the editor names nothing of its own.
-            // The width is read only up to RowStackBelow, where the drawing stops changing (the shell's rule
+            // The width is read only up to RowWidest, where the drawing stops changing (the shell's rule
             // 11): past it a resize would re-create every SimHub editor on the page for nothing.
-            Assert.Contains("var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowStackBelow));", code);
+            Assert.Contains("var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowWidest));", code);
             Assert.DoesNotMatch(@"\bContentWidth\b", code);
             Assert.Contains("Stacks = PanelShortcuts.RowStacks(contentWidth);", code);
             Assert.Contains("Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);", code);

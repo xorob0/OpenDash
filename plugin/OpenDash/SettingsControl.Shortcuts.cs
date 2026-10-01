@@ -3,8 +3,8 @@
 //
 // Each binding is SimHub's own ControlsEditor (BuildBinder), so a button is bound here rather than by sending
 // the driver to Controls and events to find an action's name; SimHub draws "Click to configure" or each
-// binding with its press type, and Change, Clear and Add on hover, in a slot of fixed width that every row
-// gives it, with its own name column dropped. Around it the page draws what the artboard adds: the press each action
+// binding with its press type, and Change, Clear and Add on hover, in a slot of one width that every row
+// of a build gives it, with its own name column dropped. Around it the page draws what the artboard adds: the press each action
 // answers to (until a binding's own press type says it, PanelShortcuts.ShowsPress), a card's "3 of 6", the All | Bound | Not bound filter, and the line naming a button bound to two
 // things. Those three read each editor's own Model.Triggers, again whenever a binding is made, changed or
 // cleared, here or anywhere SimHub reports it (ShortcutsFollowSimHub), and are hidden when SimHub's mappings
@@ -100,9 +100,9 @@ namespace OpenDashPlugin
                 shortcutsLanding = false;
             }
             OnLeave("Shortcuts.filterLanding", () => shortcutsLanding = true);
-            // Read only up to where a row stops changing: from RowStackBelow up a row lies flat with the
-            // fixed slot, so a resize past it leaves the page, and every SimHub editor on it, alone.
-            var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowStackBelow));
+            // Read only up to where a row stops changing: from RowWidest up a row lies flat with the widest
+            // slot, so a resize past it leaves the page, and every SimHub editor on it, alone.
+            var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowWidest));
 
             var screens = new List<ShortcutsGroupState>();
             foreach (var screen in Settings.RigScreens())
@@ -459,7 +459,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The artboard's .r: the name with its tags, the press in a 90 px column and the binder in a slot of
-        /// fixed width after it, 16 apart, padded 10 by 16 under a rule. The columns are fixed rather than
+        /// the build's width after it, 16 apart, padded 10 by 16 under a rule. The columns are fixed rather than
         /// sized by each row's control, so press and binder line up down a card, greyed rows included. Where
         /// the content cannot give the name room beside them, the binder goes under the name and the press,
         /// across the row's whole width.

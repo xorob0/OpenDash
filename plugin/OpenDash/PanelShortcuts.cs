@@ -694,15 +694,25 @@ namespace OpenDashPlugin
         public const double BinderMinWidth = 260;
 
         /// <summary>
-        /// The slot every row gives SimHub's editor, fixed so that the press and the binder line up down a card:
-        /// the room Shortcuts.dc.html gives its binder and the buttons after it, 260 + 16 + 120. SimHub's
-        /// editor is not the artboard's binder: each binding is a 58 px press type, the plugin and the input in
-        /// a StackPanel that never wraps, so a bound key or wheel button is clipped in a slot too narrow for
-        /// it. The page drops the editor's own name column (SettingsControl.ShortcutsDropNameColumn), so the
-        /// bindings have the whole slot. Not yet measured on the VM: a bound Keyboard F9 and a bound Fanatec
-        /// button are to be measured in it before this is settled.
+        /// The least slot a row gives SimHub's editor beside its name: the room Shortcuts.dc.html gives its
+        /// binder and the buttons after it, 260 + 16 + 120. SimHub's editor is not the artboard's binder: each
+        /// binding is a 58 px press type, the plugin and the input in a StackPanel that never wraps, so a bound
+        /// key or wheel button is clipped in a slot too narrow for it. The page drops the editor's own name
+        /// column (SettingsControl.ShortcutsDropNameColumn), so the bindings have the whole slot, and gives it
+        /// more where the row has the room (<see cref="BinderSlot"/>).
         /// </summary>
         public const double BinderWidth = 260 + 16 + 120;
+
+        /// <summary>
+        /// The most a row gives SimHub's editor beside its name: 677, what a stacked slot has just under
+        /// <see cref="RowStackBelow"/>, so a row never has less room for its bindings lying flat than it had
+        /// stacked a pixel narrower. A long joystick binding needs it: SimHub 9.12.6 prints
+        /// "JoystickPlugin" and the device's own name, such as
+        /// "Logitech_G923_Racing_Wheel_for_Xbox_One_and_PC_B05", on one line at 10 px, about 423 px of
+        /// Arial and more of Segoe UI, and the button's number is its last word. Past this the name column
+        /// takes the rest.
+        /// </summary>
+        public const double BinderMaxWidth = RowStackBelow - 1 - CardRules - 2 * RowPaddingX;
 
         /// <summary>The name SimHub's editor draws in its own 2* column. None: the row's name, beside it, already
         /// says what it binds, and the page drops the column where SimHub's template has the shape 9.12.6 draws;
@@ -751,17 +761,26 @@ namespace OpenDashPlugin
         /// <summary>The card's border, left and right.</summary>
         private const double CardRules = 2;
 
-        /// <summary>The width of the binder's slot: <see cref="BinderWidth"/> beside the name, and under it the
-        /// whole of what the row has inside its padding, as estimated for lowering the editor's MinWidth: the
-        /// stacked slot itself stretches across the row, so the scroll bar this counts and a page that does
-        /// not scroll leaves no gap at its right. Where that is less than BuildBinder's
+        /// <summary>
+        /// The width of the binder's slot. Beside the name, what the row has past the name's
+        /// <see cref="NameMinWidth"/> and the press, from <see cref="BinderWidth"/> at
+        /// <see cref="RowStackBelow"/> up to <see cref="BinderMaxWidth"/> at <see cref="RowWidest"/>: one width
+        /// for every row of a build, so press and binder still line up down a card. Under the name, the whole
+        /// of what the row has inside its padding, as estimated for lowering the editor's MinWidth: the stacked
+        /// slot itself stretches across the row, so the scroll bar this counts and a page that does not
+        /// scroll leaves no gap at its right. Where it is less than BuildBinder's
         /// <see cref="BinderMinWidth"/>, the row lowers the editor's MinWidth to the slot, so SimHub lays its
-        /// template out in the room it has rather than being clipped at the slot's edge.</summary>
+        /// template out in the room it has rather than being clipped at the slot's edge.
+        /// </summary>
         public static double BinderSlot(double contentWidth, bool stacks)
         {
-            if (!stacks) return BinderWidth;
+            if (!stacks) return Math.Max(BinderWidth, Math.Min(BinderMaxWidth, contentWidth - (RowStackBelow - BinderWidth)));
             return Math.Max(0, contentWidth - CardRules - 2 * RowPaddingX);
         }
+
+        /// <summary>The narrowest content at which the flat slot has reached <see cref="BinderMaxWidth"/>,
+        /// past which nothing a row draws moves, so the page reads the width only this far.</summary>
+        public const double RowWidest = RowStackBelow + BinderMaxWidth - BinderWidth;
 
         /// <summary>A row's caption (the glance's) keeps the measure every row caption in the panel keeps,
         /// as Ui.SettingRow draws it, rather than a paragraph's 620, however wide the name column grows.</summary>
