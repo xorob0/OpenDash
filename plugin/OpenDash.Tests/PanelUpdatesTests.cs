@@ -811,7 +811,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("See SimHub's log.", failed.Tooltip);
 
             var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false, true);
-            Assert.Equal("Missing from SimHub", missing.State);
+            Assert.Equal("Missing", missing.State);
+            Assert.Equal("Missing", PanelUpdates.Missing);
+            Assert.Equal(PanelScreens.Missing, PanelUpdates.Missing);
             Assert.Equal(Theme.StatusFailed, missing.StateHex);
             Assert.Equal(string.Empty, missing.Version);
             Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
@@ -843,7 +845,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(135, PanelUpdates.TableStateRoom);
             var states = new[]
             {
-                PanelUpdates.UpToDate, PanelUpdates.UpdateAvailable, PanelUpdates.MissingFromSimHub, PanelUpdates.WaitingForRestart,
+                PanelUpdates.UpToDate, PanelUpdates.UpdateAvailable, PanelUpdates.Missing, PanelUpdates.WaitingForRestart,
                 PanelUpdates.Unknown, PanelCopy.Installed, PanelCopy.NotInstalled, PanelCopy.InstallFailed,
             }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState>().Select(state => PanelCopy.LightRow(state, "0.4.0").State));
             foreach (var state in states)
@@ -875,7 +877,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusUpToDate, inSimHub.DotHex);
             Assert.Equal("This build ships no 1280 × 480 face.", inSimHub.Tooltip);
             Assert.Equal(string.Empty, inSimHub.Version);
-            Assert.Equal("Missing from SimHub", PanelUpdates.DashboardRow(Rim, null, false, false).State);
+            Assert.Equal("Missing", PanelUpdates.DashboardRow(Rim, null, false, false).State);
             var unread = PanelUpdates.DashboardRow(Rim, null, null, null);
             Assert.Equal("Unknown", unread.State);
             Assert.Equal(Theme.TextLabel, unread.StateHex);

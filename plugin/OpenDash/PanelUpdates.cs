@@ -450,9 +450,11 @@ namespace OpenDashPlugin
         public const string UpToDate = "Up to date";
         public const string UpdateAvailable = "Update available";
 
-        /// <summary>A rig dashboard whose folder has gone from DashTemplates. The table's own word, as each
-        /// state word here is: the Screens card says the same states in words that are its page's to change.</summary>
-        public const string MissingFromSimHub = "Missing from SimHub";
+        /// <summary>A rig dashboard whose folder has gone from DashTemplates, in the ruled word the Screens card
+        /// and Home use for the same state (ambiguity 27, PanelScreens.Missing), so the panel says it one way.
+        /// Held here as this table's own literal rather than read from PanelScreens, whose constants are that
+        /// page's to change; "from SimHub" would repeat the section's own heading.</summary>
+        public const string Missing = "Missing";
 
         /// <summary>
         /// A rig dashboard SimHub has not loaded since it was written, in ruling 69's words for this table. The
@@ -522,8 +524,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What the state cell leaves its words after the dot and its gap, 150 - 7 - 8 = 135: every state the
-        /// table writes fits on one line in it, measured in Barlow 13 (PanelUpdatesTests). The widest is
-        /// "Missing from SimHub" at about 119.
+        /// table writes fits on one line in it, measured in Barlow 13 (PanelUpdatesTests).
         /// </summary>
         public const double TableStateRoom = TableStateWidth - TableDot - TableDotGap;
 
@@ -655,7 +656,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
         /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
-        /// state words are held here (<see cref="MissingFromSimHub"/>, <see cref="WaitingForRestart"/>), not read
+        /// state words are held here (<see cref="Missing"/>, <see cref="WaitingForRestart"/>), not read
         /// from another page. A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
         /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
@@ -667,7 +668,7 @@ namespace OpenDashPlugin
             if (package == null)
             {
                 var shipsNo = ShipsNo(screen);
-                if (installed == false) return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, shipsNo);
+                if (installed == false) return Row(name, DashboardKind, string.Empty, Missing, Theme.StatusFailed, shipsNo);
                 if (installed == true) return Row(name, DashboardKind, string.Empty, PanelCopy.Installed, Theme.StatusUpToDate, shipsNo);
                 return Row(name, DashboardKind, string.Empty, Unknown, Theme.TextLabel, shipsNo);
             }
@@ -677,7 +678,7 @@ namespace OpenDashPlugin
             }
             if (installed == false)
             {
-                return Row(name, DashboardKind, string.Empty, MissingFromSimHub, Theme.StatusFailed, MissingTooltip);
+                return Row(name, DashboardKind, string.Empty, Missing, Theme.StatusFailed, MissingTooltip);
             }
             if (waitsForRestart == true)
             {
