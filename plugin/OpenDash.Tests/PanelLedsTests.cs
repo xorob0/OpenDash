@@ -301,6 +301,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var found = EmbeddedProfileOf(bar);", guard);
             Assert.Contains("if (found == null)", guard);
             Assert.Contains("if (LedsTargetOf(targets, bar.Device) == null)", guard);
+            // And each guard ends its block by returning, before the install: a guard that warned and went on would
+            // take a profile that still lights out of every device and install it nowhere.
+            foreach (var condition in new[] { "if (found == null)", "if (LedsTargetOf(targets, bar.Device) == null)" })
+            {
+                var block = guard.Substring(guard.IndexOf(condition, StringComparison.Ordinal));
+                block = block.Substring(0, block.IndexOf("}", StringComparison.Ordinal));
+                Assert.True(block.TrimEnd().EndsWith("return null;", StringComparison.Ordinal), condition + " does not return before the install");
+            }
+            // A device picked again is not a move: the picker calls back for the entry already selected, and a move
+            // onto the device the strip names, "Device not in SimHub" included, would uninstall and install nowhere.
+            Assert.Contains("if (!string.Equals(ids[i], current, StringComparison.Ordinal)) chosen(ids[i]);", leds);
             // InstallBar is called in two places only: the guard, and a move, which installs on the device just
             // picked from SimHub's own list.
             Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json)"));
@@ -334,10 +345,65 @@ namespace OpenDashPlugin.Tests
                 "save.Click += (sender, args) => RenameLedBar(ns, name.Text);",
                 "Ui.InlineAddCard(PanelLights.AddBar, PanelKit.StripAddIcon, ShowAddLedBar)",
                 "add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device);",
+                // Lovely Car Data's press, and the row's label and line, ruling 51.
+                "carTablesButton.Click += (sender, args) => DownloadCarTables();",
+                "carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);",
+                "carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;",
+                // The Add sheet's choices each change what the press adds.
+                "() => pickHardware(true)",
+                "() => pickHardware(false)",
+                "device = id;",
+                "side = int.Parse(value, CultureInfo.InvariantCulture);",
+                "centre = centres[i];",
+                // A preview chip changes the moment drawn.
+                "ledsScenario = id;",
             })
             {
                 Assert.True(leds.Contains(wiring), "the page no longer carries: " + wiring);
             }
+            // A card's press selects its strip and draws the page again to show it.
+            var card = leds.Substring(leds.IndexOf("Select(PanelPage.Leds, ns);", StringComparison.Ordinal));
+            Assert.StartsWith("Redraw();", card.Substring("Select(PanelPage.Leds, ns);".Length).TrimStart(), StringComparison.Ordinal);
+            // The download asks the service, off the interface thread.
+            var download = Body(leds, "private void DownloadCarTables()", "private static Border BuildLedDeviceRow(");
+            Assert.Contains("UpdateService.InBackground(() =>", download);
+            Assert.Contains("plugin.CarLights.Download(DateTime.UtcNow);", download);
+            // Ruling 50: every press says what it did, and the page chooses the success or the failure from what
+            // the install returned, in each press's own body.
+            foreach (var (method, next, said) in new[]
+            {
+                ("private void InstallLedBarProfile(", "private void ReverseLedBar(",
+                    "Say(PanelLeds.InstallSaid(ok, before, bar.Name, target == null ? null : target.Name, plan.Note), ok && plan.Note == null);"),
+                ("private void InstallLedBarProfile(", "private void ReverseLedBar(",
+                    "Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name)));"),
+                ("private void InstallLedBarProfile(", "private void ReverseLedBar(", "var ok = plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar(",
+                    "var line = ok ? PanelLeds.ReverseSaid(bar.Name, reversed, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ReversedNotInstalled(bar.Name, reversed);"),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar(",
+                    "Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked)));"),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "Say(line, ok && plan.Note == null);"),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "var ok = plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "var inSimHub = PanelLeds.RenameReinstalls(facts == null ? null : facts.Profile);"),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "ok = plan != null && plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "Say(ok ? PanelLeds.Renamed(bar.Name, inSimHub) : PanelLeds.RenameNotInSimHub(bar.Name), ok);"),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar(",
+                    "Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.Renamed(bar.Name, false), blocked)));"),
+                ("private void RemoveLedBar(", "private void ShowAddLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
+                ("private void RemoveLedBar(", "private void ShowAddLedBar(", "Say(PanelLeds.Removed(name, held, takenOut), PanelLeds.RemovedCleanly(held, takenOut));"),
+                ("private void RemoveLedBar(", "private void ShowAddLedBar(", "Select(PanelPage.Leds, null);"),
+                ("private void AddLedBar(", null, "Say(PanelMessage.Caution(PanelLeds.AddedWithoutDevice(bar.Name, declined)));"),
+                ("private void AddLedBar(", null, "var ok = plan != null && plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void AddLedBar(", null, "var note = ok ? plan.Note : null;"),
+                ("private void AddLedBar(", null, "var line = ok ? PanelLights.BarAdded(bar.Name, target.Name, note) : PanelLights.BarAddFailed(bar.Name);"),
+                ("private void AddLedBar(", null, "Say(line, ok && note == null);"),
+            })
+            {
+                Assert.True(Body(leds, method, next).Contains(said), method + " no longer carries: " + said);
+            }
+            // A new strip is saved and then selected, so the page opens on it.
+            var add = Body(leds, "private void AddLedBar(", null);
+            Assert.InRange(add.IndexOf("Save();", StringComparison.Ordinal), 0, add.IndexOf("Select(PanelPage.Leds, bar.Namespace);", StringComparison.Ordinal));
             // Install, Reverse, Rename and Add each install through the guard, once.
             Assert.Equal(4, Occurrences(leds, "LedsReinstall(bar, targets)"));
             foreach (var (method, next) in new[]
@@ -470,6 +536,15 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_tick_redraws_only_Live_and_only_a_changed_frame()
         {
+            // Ruling 49: the page ticks Live, and repaints only a frame that moved; the car line follows the car.
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            var preview = Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl(");
+            Assert.Contains("OnTick(()=>{if(PanelLeds.TickRedraws(ledsScenario))draw();});", string.Concat(preview.Where(ch => !char.IsWhiteSpace(ch))));
+            Assert.Contains("var key = PanelLeds.FrameKey(frame);", preview);
+            Assert.Contains("if (key == drawn) return;", preview);
+            Assert.InRange(preview.IndexOf("if (key == drawn) return;", StringComparison.Ordinal), 0, preview.IndexOf("LedsRepaint(groups[i], frame[i], StripStyle.Preview);", StringComparison.Ordinal));
+            var revLights = Body(leds, "private FrameworkElement LedsRevLights(", "private FrameworkElement LedsThisStrip(");
+            Assert.Contains("OnTick(show);", revLights);
             Assert.True(PanelLeds.TickRedraws(PanelLeds.LiveScenario));
             Assert.All(PanelLeds.Scenarios.Skip(1), s => Assert.False(PanelLeds.TickRedraws(s.Key)));
 
@@ -1272,10 +1347,66 @@ namespace OpenDashPlugin.Tests
                 "var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);",
                 "found ? PanelLeds.FoundInSimHub : null",
                 "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
+                // Rulings 53 and 54: the Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
+                // from the rule PanelLeds pins.
+                "var found = PanelLeds.FoundFanatec(targets.Select(t => t.Name));",
+                "var sides = PanelLights.BarSides(census);",
+                "var offersFanatec = PanelLights.OffersFanatec(census);",
+                "if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))",
+                "var side = PanelLeds.StartSide(sides);",
+                "var centre = PanelLeds.KeptCentre(centres, 9);",
+                "centre = PanelLeds.KeptCentre(centres, centre);",
+                "if (PanelLeds.ShowsNoDevices(targets.Count, passedOver.Count)) list.Children.Add(Ui.Prose(PanelLights.NoDevices));",
+                "var said = PanelLeds.InstallsOn(adds, target == null ? null : target.Name);",
+                "footerNote.Visibility = said == null ? Visibility.Collapsed : Visibility.Visible;",
+                "hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec)",
+                "Ui.RadioRow(target.Name, PanelLeds.DeviceMeta(target.Connected, onIt), chosen,",
+                // The sheet's note: the ringed i.
+                "Ui.Icon(PanelIcons.Info, Theme.TextSecondary, PanelIcons.Box)",
+                // Which strip the page shows, which card is marked, and the chip a strip opens on.
+                "var shown = PanelLeds.ShownStrip(bars.Select(bar => bar.Namespace).ToList(), Selected(PanelPage.Leds));",
+                "ReferenceEquals(bar, current),",
+                "ledsScenario = PanelLeds.ScenarioFor(ledsScenario, ledsScenarioFor, ns);",
+                "AutomationProperties.SetName(grid, PanelLights.BarsTitle);",
+                // Rulings 22 and 50: the pictures dim at night to the brightness in force.
+                "return PanelLeds.PreviewDim(Settings.LightsNightMode, Settings.LightsNightBrightness, Settings.BarBrightness(ns));",
+                // Ruling 48: the car line, its icon and its ink.
+                "carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;",
+                "var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);",
+                "var hex = PanelLeds.CarLineHex(known);",
+                "var loaded = PanelLeds.TablesLoaded(plugin.CarLights.CarCount);",
+                // The header's state word, and the Install or Update press with its own hover.
+                "var state = PanelLeds.StateText(profile, selected);",
+                "install.ToolTip = action == PanelLeds.UpdateProfile ? PanelLeds.UpdateTooltip : PanelLeds.InstallTooltip;",
+                // Rename waits for a name.
+                "name.TextChanged += (sender, args) => save.IsEnabled = PanelLeds.CanRename(name.Text);",
+                "save.IsEnabled = PanelLeds.CanRename(name.Text);",
+                "if (bar == null || !PanelLeds.CanRename(wanted)) return;",
+                // Rulings 46 and 47: the captions the width and spotter rows carry.
+                "}), PanelLeds.MirrorFitCaption), PanelLeds.AnchorMirrorFit));",
+                "PanelLeds.SpotterCaption), PanelLeds.AnchorSpotter)));",
+                // The greyed rows are drawn greyed: a live control whose writer writes nothing is a lie.
+                "rows.Add(Ui.SubRow(Ui.Soon(limiter, PanelSoon.PitLimiterLights)));",
+                "Ui.Soon(carData, PanelSoon.CarDataForAcAccLmu)",
+                "LedsSoonRow(PanelSoon.IdleSweep, Ui.Switch(true, on => { })),",
+                "LedsSoonRow(PanelSoon.EngineStartAnimation, Ui.Switch(true, on => { })),",
+                "rows.Add(LedsSoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));",
             })
             {
                 Assert.True(leds.Contains(read), "the page no longer carries: " + read);
             }
+            // The limiter and the AC, ACC and LMU car data rows are drawn nowhere but greyed.
+            Assert.Equal(1, Occurrences(leds, "Ui.SubRow(Ui.Soon(limiter,"));
+            Assert.DoesNotContain("rows.Add(Ui.SubRow(limiter));", leds);
+            // The car data row is declared and drawn once, inside Ui.Soon.
+            Assert.Equal(2, Occurrences(leds, "carData"));
+            Assert.Equal(1, Occurrences(leds, "var carData = "));
+            // Ruling 46: the flag animation row on every strip, ahead of the spotter's gate rather than inside it.
+            var effects = Body(leds, "private FrameworkElement LedsEffects(", "private static Border LedsEffectTile(");
+            Assert.InRange(effects.IndexOf("rows.Add(Ui.SubRow(Ui.Anchor(flags, PanelLeds.AnchorFlagAnimation)));", StringComparison.Ordinal),
+                0, effects.IndexOf("if (PanelLeds.HasFullStripSpotter(bar.Shape))", StringComparison.Ordinal));
+            // The rename's two guards: the press waits for a name, and a blank one that reached it renames nothing.
+            Assert.Equal(2, Occurrences(leds, "save.IsEnabled = PanelLeds.CanRename(name.Text);"));
             Assert.DoesNotContain("PanelLeds.Effects)", leds);
             // NEW on Brightness, Reverse direction and the Effects heading, for one release: taking them off at the
             // next cut moves this count, deliberately.
