@@ -337,9 +337,10 @@ namespace OpenDashPlugin.Tests
             // A sheet's press closes the sheet and draws the page again under the pointer, so the second press of
             // its double-click would land on whatever switch the new page puts there -- after Remove it, another
             // matrix's -- and flip it. Each of the three sets the flag first, the page's root ignores the next
-            // press while it is set and is a repeat, and any press clears it.
+            // press while it is set and is a repeat, and only a fresh press clears it: a triple-click's third press,
+            // which WPF counts as 3, is ignored too.
             Assert.Contains("private bool matrixSheetPressed;", flat);
-            Assert.Contains("private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args) { var repeat = matrixSheetPressed && args.ClickCount > 1; matrixSheetPressed = false; if (repeat) args.Handled = true; }", flat);
+            Assert.Contains("private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args) { if (matrixSheetPressed && args.ClickCount > 1) { args.Handled = true; return; } matrixSheetPressed = false; }", flat);
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat;")));
             foreach (var press in new[] { "add.Click += (sender, args) => { matrixSheetPressed = true;", "save.Click += (sender, args) => { matrixSheetPressed = true;", "remove.Click += (sender, args) => { matrixSheetPressed = true;" })
             {

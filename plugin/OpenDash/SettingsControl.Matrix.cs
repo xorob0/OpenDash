@@ -54,16 +54,21 @@ namespace OpenDashPlugin
         /// Set by a sheet's press, which closes the sheet and draws the page again under the pointer: the next
         /// press on the page is then the second of a double-click when WPF counts it so, and is ignored. WPF
         /// counts clicks by time and place, not by element, so without this it would land on whatever switch the
-        /// new page puts there -- after Remove it, on another matrix's -- and flip it. Cleared by the next press.
+        /// new page puts there -- after Remove it, on another matrix's -- and flip it. Cleared by the next press
+        /// that is not a repeat, so every further press of a triple-click is ignored as well.
         /// </summary>
         private bool matrixSheetPressed;
 
         /// <summary>The page's guard for <see cref="matrixSheetPressed"/>, on the page's root.</summary>
         private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args)
         {
-            var repeat = matrixSheetPressed && args.ClickCount > 1;
+            // Armed for as long as the presses keep counting: a triple-click's third press is a repeat too.
+            if (matrixSheetPressed && args.ClickCount > 1)
+            {
+                args.Handled = true;
+                return;
+            }
             matrixSheetPressed = false;
-            if (repeat) args.Handled = true;
         }
 
         private FlagBoxPlan MatrixPlan()
