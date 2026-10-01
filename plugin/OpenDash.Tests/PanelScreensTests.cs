@@ -1176,25 +1176,28 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// One phrase for one state across pages: a screen written after SimHub started is said the same way on
-        /// its card, in its fix box, and in Home's issue and the sidebar dot's item, which PanelAttention titles.
+        /// A screen written after SimHub started is said as the rulings word it on each page: its card and its fix
+        /// box say PanelScreens.RestartToLoad, one phrase for the one state (ambiguity 27), and Home's issue, which
+        /// PanelAttention titles, says "Rim is not in SimHub yet" (the voice ruling on Main.dc.html's "Rim isn't
+        /// in SimHub yet"), its detail naming the restart.
         /// </summary>
         /// <remarks>
-        /// Skipped, not deleted, while the pages disagree: the card and the fix box say
-        /// PanelScreens.RestartToLoad, and PanelAttention, which this page may not change, still titles the issue
-        /// "Rim is not in SimHub yet". The skip goes in the merge that builds that title from the same phrase,
-        /// or that Tim rules the other way.
+        /// Whether Home's title should take the card's phrase too is an open question for Tim, not a ruling, so
+        /// this holds the pair as ruled rather than a skipped test asserting the other way. A title built from
+        /// RestartToLoad would say Restart SimHub twice beside a detail that already does. If Tim rules one
+        /// phrase across the pages, both pins move together in that commit.
         /// </remarks>
-        [Fact(Skip = "Shared request: PanelAttention's ScreenRestart title still reads \"is not in SimHub yet\"; build it from PanelScreens.RestartToLoad at the merge.")]
-        public void A_screen_waiting_for_the_restart_is_said_one_way_on_every_page()
+        [Fact]
+        public void A_screen_waiting_for_the_restart_is_said_as_ruled_on_each_page()
         {
             Assert.Equal("Restart SimHub to load it", PanelScreens.RestartToLoad);
             Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
             var waiting = new AttentionInput();
             waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
-            var title = System.Linq.Enumerable.Single(PanelAttention.Find(waiting)).Title;
-            Assert.DoesNotContain("not in SimHub yet", title);
-            Assert.Contains("Restart SimHub", title);
+            var issue = System.Linq.Enumerable.Single(PanelAttention.Find(waiting));
+            Assert.Equal("Rim is not in SimHub yet", issue.Title);
+            Assert.StartsWith("Restart SimHub", issue.Detail);
+            Assert.DoesNotContain("Restart SimHub", issue.Title);
         }
 
         /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>
