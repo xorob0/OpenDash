@@ -355,7 +355,21 @@ namespace OpenDashPlugin.Tests
             var rounds = types.First(t => t.Kind == Contract.KindSlots);
             Assert.Equal(string.Empty, PanelAddScreen.Note(rounds, rounds.Entries[0], true));
             var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("var second = PanelAddScreen.SettingsTaken(entry, Settings.RigScreens());", screens);
             Assert.Contains("note.Text = PanelAddScreen.Note(type, entry, second);", screens);
+
+            // Which is the case once the kind and size's stock namespace is on the rig, and only then.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.False(PanelAddScreen.SettingsTaken(rim, settings.RigScreens()));
+            settings.AddScreen(rim, "Rim");
+            Assert.True(PanelAddScreen.SettingsTaken(rim, settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(faces.Entries.First(e => e.Width == 1920), settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(companions.Entries[0], settings.RigScreens()));
+            settings.AddScreen(companions.Entries[1], "Tablet");
+            // A companion is one screen either way up, so its other orientation shares the namespace.
+            Assert.True(PanelAddScreen.SettingsTaken(companions.Entries[0], settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(null, settings.RigScreens()));
         }
 
         /// <summary>

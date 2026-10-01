@@ -479,6 +479,18 @@ namespace OpenDashPlugin
             return "This " + thing + " can show different " + shows + " from any other " + thing + " on your rig.";
         }
 
+        /// <summary>
+        /// Whether adding <paramref name="entry"/> to <paramref name="rig"/> makes a screen with settings of its
+        /// own beside another of its size, which is <see cref="Note"/>'s <c>second</c>: the first screen of a
+        /// kind and size takes its stock namespace, so the stock namespace already being on the rig is the case.
+        /// </summary>
+        public static bool SettingsTaken(PackageEntry entry, IEnumerable<ScreenInstance> rig)
+        {
+            if (entry == null || rig == null) return false;
+            var stock = new ScreenInstance { Kind = entry.Kind, Width = entry.Width, Height = entry.Height, Folder = entry.Folder }.StockNamespace;
+            return rig.Any(screen => screen != null && string.Equals(screen.Namespace, stock, StringComparison.Ordinal));
+        }
+
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not
         /// take for you.</summary>
         public static string Added(string name, string title)

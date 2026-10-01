@@ -121,7 +121,7 @@ namespace OpenDashPlugin
                 var slot = Contract.PitWallZoneSlotByKey(page.Title + panel.Name);
                 var name = ScreensCellText(panel.Configurable ? PanelScreens.PitWallZoneLabel(slot) : panel.Name, PanelPitWallPlan.ZoneNameSize, FontWeights.SemiBold, Theme.TextSecondary);
                 // A zone's page, or what a fixed panel always shows.
-                var what = ScreensCellText(slot == null ? panel.Shows ?? string.Empty : ScreensZonePageName(slot, screen), PanelPitWallPlan.ZonePageSize, FontWeights.SemiBold, Theme.TextPrimary);
+                var what = ScreensCellText(slot == null ? panel.Shows ?? string.Empty : PanelScreens.PitWallZonePageName(screen, slot), PanelPitWallPlan.ZonePageSize, FontWeights.SemiBold, Theme.TextPrimary);
                 what.Margin = new Thickness(0, 4, 0, 0);
                 var box = new Border
                 {
@@ -147,13 +147,6 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = canvas,
             };
-        }
-
-        /// <summary>The page a zone shows, by name.</summary>
-        private static string ScreensZonePageName(Contract.PitWallZoneSlot slot, ScreenInstance screen)
-        {
-            var page = screen.ZonePage(slot.Key);
-            return slot.Wide ? ZonePages.WideName(page) : ZonePages.StandardName(page);
         }
 
         /// <summary>The card beside the picture: the page's zones, each a choice of what it shows. A choice

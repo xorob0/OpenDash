@@ -718,7 +718,7 @@ namespace OpenDashPlugin
             };
             Action refreshNote = () =>
             {
-                var second = Settings.RigScreens().Any(s => string.Equals(s.Namespace, StockNamespaceOf(entry), StringComparison.Ordinal));
+                var second = PanelAddScreen.SettingsTaken(entry, Settings.RigScreens());
                 note.Text = PanelAddScreen.Note(type, entry, second);
                 note.Visibility = note.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             };
@@ -1062,12 +1062,6 @@ namespace OpenDashPlugin
             Redraw();
             if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
             Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
-        }
-
-        private static string StockNamespaceOf(PackageEntry entry)
-        {
-            var probe = new ScreenInstance { Kind = entry.Kind, Width = entry.Width, Height = entry.Height, Folder = entry.Folder };
-            return probe.StockNamespace;
         }
 
         private void AddScreen(PackageEntry entry, string name)

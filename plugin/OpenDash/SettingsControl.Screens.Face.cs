@@ -202,8 +202,7 @@ namespace OpenDashPlugin
         {
             var plan = PanelFacePlan.For(face, PanelFacePlan.RowsWidth(width));
             var rows = new StackPanel { Orientation = Orientation.Vertical };
-            var revOn = !string.Equals(Settings.ScreenRevBar(screen.Namespace), Contract.RevBarOff, StringComparison.Ordinal);
-            rows.Children.Add(BuildRevStrip(plan.RevBar, revOn));
+            rows.Children.Add(BuildRevStrip(plan.RevBar, PanelScreens.RevStripOn(Settings.ScreenRevBar(screen.Namespace))));
             if (plan.HasBar)
             {
                 var bar = BuildInfoBarCell(screen, face, plan.Bar, key == PanelScreens.BarKey, () => pick(PanelScreens.BarKey));
@@ -325,7 +324,7 @@ namespace OpenDashPlugin
             top.Children.Add(count);
             top.Children.Add(ScreensCellText(letter, PanelFacePlan.LetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data));
 
-            var pageName = FacePages.NameOf(letter, PanelScreens.FirstTicked(screen.Face, letter));
+            var pageName = PanelScreens.OpensOnName(screen.Face, letter);
             var page = ScreensCellText(pageName, PanelFacePlan.PageSize, FontWeights.SemiBold, Theme.TextPrimary);
             page.VerticalAlignment = VerticalAlignment.Center;
             if (centred) page.TextAlignment = TextAlignment.Center;
@@ -367,7 +366,7 @@ namespace OpenDashPlugin
             count.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
             DockPanel.SetDock(count, Dock.Right);
             dock.Children.Add(count);
-            var pageName = FacePages.NameOf("D", PanelScreens.FirstTicked(screen.Face, "D"));
+            var pageName = PanelScreens.OpensOnName(screen.Face, "D");
             var page = ScreensCellText(pageName, PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary);
             dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, 0, PanelFacePlan.CellPaddingX, 0));

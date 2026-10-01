@@ -437,6 +437,21 @@ namespace OpenDashPlugin
             return Contract.FirstEnabledInOrder(start, face.Mask(letter), face.Order(letter));
         }
 
+        /// <summary>The name of the page a face's zone or band opens on, which its cell in the picture draws:
+        /// <see cref="FirstTicked"/>'s page, never the first of its order, which is Lap times in zone C where the
+        /// zone opens on Relative.</summary>
+        public static string OpensOnName(FaceSettings settings, string letter)
+        {
+            return FacePages.NameOf(letter, FirstTicked(settings, letter));
+        }
+
+        /// <summary>Whether a face's picture draws its rev strip lit: its own rev bar, as ScreenRevBar reads it,
+        /// is anything but off.</summary>
+        public static bool RevStripOn(string revBar)
+        {
+            return !string.Equals(revBar, Contract.RevBarOff, StringComparison.Ordinal);
+        }
+
         /// <summary>
         /// The zone's order read from the page it opens on: the cycle wraps, so this is the same cycle its
         /// button steps through, begun where a session begins.
@@ -872,6 +887,15 @@ namespace OpenDashPlugin
 
         /// <summary>Where a wheel button that pages the companion is bound, after the device is opened.</summary>
         public static readonly string[] CompanionPagingCrumbs = { "Controls and events", "NextScreen" };
+
+        /// <summary>The name of the page a pit wall's zone shows, which the picture draws in the zone: from the
+        /// wide pages for a wide slot and the standard ones otherwise, read from that zone's own setting.</summary>
+        public static string PitWallZonePageName(ScreenInstance screen, Contract.PitWallZoneSlot slot)
+        {
+            if (screen == null || slot == null) return string.Empty;
+            var page = screen.ZonePage(slot.Key);
+            return slot.Wide ? ZonePages.WideName(page) : ZonePages.StandardName(page);
+        }
 
         // --- A round screen ------------------------------------------------------------------------------
 

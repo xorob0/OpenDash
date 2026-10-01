@@ -1221,12 +1221,16 @@ namespace OpenDashPlugin.Tests
             var face = ScreensSource("SettingsControl.Screens.Face.cs");
             foreach (var pin in new[]
             {
-                "ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(ns), value => { Settings.SetScreenRevBar(ns, value);",
+                "ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(ns), value => { Settings.SetScreenRevBar(ns, value); ScreensSave(screen, redraw); });",
                 "ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value => { screen.FlagFormat = value;",
                 "ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value => { screen.LapReview = value;",
-                "Ui.ChoiceButton(fields, screen.Face.BarField(slot), index => { screen.Face.SetBarField(slot, index);",
-                "screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);",
-                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);",
+                "Ui.ChoiceButton(fields, screen.Face.BarField(slot), index => { screen.Face.SetBarField(slot, index); ScreensSave(screen, redraw); });",
+                "var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance); var zoneIndex = Contract.QuickGlanceZone(glance);",
+                "Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen => { screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen); ScreensSave(screen, redraw); }",
+                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen); ScreensSave(screen, redraw); }",
+                // A tick, a drag, All and None each settle, and settling redraws: the count, the First tag and
+                // the cell's page follow.
+                "Action settle = () => { ScreensSave(screen, redraw); };",
                 "PanelScreens.Tick(face, letter, page, on);",
                 "PanelScreens.Reorder(face, letter, showAll, from, to);",
                 "PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true);",
@@ -1239,10 +1243,18 @@ namespace OpenDashPlugin.Tests
 
             var wall = ScreensSource("SettingsControl.Screens.PitWall.cs");
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(wall,
-                System.Text.RegularExpressions.Regex.Escape("screen.ZonePage(captured.Key), index => { screen.SetZonePage(captured.Key, index);")).Count);
+                System.Text.RegularExpressions.Regex.Escape("screen.ZonePage(captured.Key), index => { screen.SetZonePage(captured.Key, index); ScreensSave(screen, redraw); }")).Count);
             foreach (var pin in new[]
             {
-                "screen.PitWallPage = Contract.NormalisePitWallPage(chosen);",
+                // Page on screen also drives the picture and the zone list, so it redraws.
+                "screen.PitWallPage = Contract.NormalisePitWallPage(chosen); ScreensSave(screen, redraw);",
+                // The glance's two choices, each keeping the other half of the value it read.
+                "var glance = Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance); var zoneIndex = Contract.QuickGlanceZone(glance); var page = Contract.QuickGlancePage(glance);",
+                "Ui.ChoiceButton(PanelScreens.PitWallGlanceZoneLabels(), zoneIndex, chosen => { screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(chosen, Contract.QuickGlancePage(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance))); ScreensSave(screen, redraw); }",
+                "Ui.ChoiceButton(ZonePages.Standard.Select(p => p.Name).ToArray(), page, chosen => { screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(Contract.QuickGlanceZone(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)), chosen); ScreensSave(screen, redraw); }",
+                // The web view commits on blur or Enter (ruling 35).
+                "box.LostFocus += (sender, args) => commit();",
+                "if (args.Key == Key.Enter) commit();",
                 "Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on;",
                 "Settings.ScreenPitWallFlagFormat(screen.Namespace), value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value);",
                 "screen.WebViewUrl = normalised;",
@@ -1254,7 +1266,7 @@ namespace OpenDashPlugin.Tests
             var round = ScreensSource("SettingsControl.Screens.Round.cs");
             foreach (var pin in new[]
             {
-                "Ui.ChoiceButton(cards, Settings.Slot(captured), index => { Settings.SetSlot(captured, index);",
+                "Ui.ChoiceButton(cards, Settings.Slot(captured), index => { Settings.SetSlot(captured, index); ScreensSave(screen, redraw); });",
                 "ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value => { Settings.SetRevBar(value);",
             })
             {
@@ -1265,14 +1277,152 @@ namespace OpenDashPlugin.Tests
             foreach (var pin in new[]
             {
                 "Array.IndexOf(choices, Settings.ScreenCompanionStart(screen.Namespace)), index =>",
-                "var value = choices[index]; screen.CompanionStart = value;",
+                "var value = choices[index]; screen.CompanionStart = value; screen.OpenOnStartModule(DateTime.UtcNow); ScreensSave(screen, redraw);",
                 "ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace), value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value);",
-                "Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value => { screen.CompanionQuickGlance = value;",
-                "screen.Modules[index] = on;",
+                "Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value => { screen.CompanionQuickGlance = value; ScreensSave(screen, redraw); });",
+                // A module tick reads its own module and redraws, so the count and First module follow it.
+                "IsChecked = screen.Modules != null && index < screen.Modules.Length && screen.Modules[index],",
+                "screen.Modules[index] = on; ScreensSave(screen, redraw);",
             })
             {
                 AssertOnce(companion, pin, "Companion.cs");
             }
+        }
+
+        /// <summary>
+        /// Each binding a control shows is the action it says: a zone's Next page chip and button line are its
+        /// forward action, Previous page its back action, band D's line its own, and each glance chip the
+        /// screen's hold.
+        /// </summary>
+        [Fact]
+        public void Each_chip_and_button_line_shows_its_own_action()
+        {
+            var face = ScreensSource("SettingsControl.Screens.Face.cs");
+            foreach (var pin in new[]
+            {
+                "var nextChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);",
+                "var backChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);",
+                "ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), nextChip), ScreensAsideLine(previous, backChip)",
+                "var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, letter)));",
+                "var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, \"D\")));",
+                "CycleZoneBackAction",
+            })
+            {
+                AssertOnce(face, pin, "Face.cs");
+            }
+            foreach (var file in new[] { "SettingsControl.Screens.Face.cs", "SettingsControl.Screens.PitWall.cs", "SettingsControl.Screens.Companion.cs" })
+            {
+                var code = ScreensSource(file);
+                AssertOnce(code, "var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);", file);
+                AssertOnce(code, "Contract.HoldQuickGlanceActionFor(", file);
+            }
+        }
+
+        /// <summary>
+        /// What the picture and the asides draw is read from the model that decides it: a cell's page is the page
+        /// its zone opens on, the strip is lit by the face's own rev bar, the bar's middle is the car's settings,
+        /// a pit wall zone names its own page, each card on the disc its own slot, the list's greyed pages only
+        /// under Show all, and the cards and the header the screen's own state and facts.
+        /// </summary>
+        [Fact]
+        public void The_picture_and_the_asides_draw_what_their_models_read()
+        {
+            // The composite readings, decided in the models.
+            var settings = new FaceSettings();
+            settings.Normalise();
+            Assert.Equal("Relative", PanelScreens.OpensOnName(settings, "C"));
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                Assert.Equal(FacePages.NameOf(letter, PanelScreens.FirstTicked(settings, letter)), PanelScreens.OpensOnName(settings, letter));
+            }
+            Assert.False(PanelScreens.RevStripOn(Contract.RevBarOff));
+            foreach (var value in PanelDataTab.RevBarValues.Where(v => v != Contract.RevBarOff)) Assert.True(PanelScreens.RevStripOn(value), value);
+            var wall = new ScreenInstance { Kind = Contract.KindPitWall, Width = 1920, Height = 1080, Namespace = "PitWall" };
+            wall.Normalise();
+            var raceA = Contract.PitWallZoneSlotByKey("RaceA");
+            var towerWide = Contract.PitWallZoneSlotByKey("TowerWide");
+            wall.SetZonePage(raceA.Key, 3);
+            Assert.Equal(ZonePages.StandardName(3), PanelScreens.PitWallZonePageName(wall, raceA));
+            Assert.Equal(ZonePages.WideName(wall.ZonePage(towerWide.Key)), PanelScreens.PitWallZonePageName(wall, towerWide));
+            Assert.NotEqual(PanelScreens.PitWallZonePageName(wall, raceA), PanelScreens.PitWallZonePageName(wall, Contract.PitWallZoneSlotByKey("RaceB")));
+
+            var face = ScreensSource("SettingsControl.Screens.Face.cs");
+            foreach (var pin in new[]
+            {
+                "rows.Children.Add(BuildRevStrip(plan.RevBar, PanelScreens.RevStripOn(Settings.ScreenRevBar(screen.Namespace))));",
+                "var leftFields = PanelScreens.BarEnd(screen.Face, face, true); var rightFields = PanelScreens.BarEnd(screen.Face, face, false);",
+                "var left = ScreensCellText(leftFields,",
+                "var middle = ScreensCellText(PanelScreens.InfoBarMiddle,",
+                "var right = ScreensCellText(rightFields,",
+                "var pageName = PanelScreens.OpensOnName(screen.Face, letter);",
+                "var pageName = PanelScreens.OpensOnName(screen.Face, \"D\");",
+                "ScreensCellText(PanelScreens.ZoneCount(screen.Face, letter),",
+                "ScreensCellText(PanelScreens.ZoneCount(screen.Face, \"D\"),",
+                "Ui.Text(PanelScreens.ZoneCount(face, letter), PanelScreens.HeadCountSize,",
+                "if (showAll && PanelScreens.ListsSoonModules(letter))",
+                "ToolTip = row.Locked ? PanelScreens.LastPageTooltip : null,",
+                "if (row.NotInIracing) {",
+                "if (row.First) {",
+            })
+            {
+                AssertOnce(face, pin, "Face.cs");
+            }
+            Assert.DoesNotContain("FirstTicked(", face);
+            var wallSource = ScreensSource("SettingsControl.Screens.PitWall.cs");
+            AssertOnce(wallSource, "var slot = Contract.PitWallZoneSlotByKey(page.Title + panel.Name);", "PitWall.cs");
+            AssertOnce(wallSource, "slot == null ? panel.Shows ?? string.Empty : PanelScreens.PitWallZonePageName(screen, slot)", "PitWall.cs");
+            AssertOnce(ScreensSource("SettingsControl.Screens.Companion.cs"), "if (PanelScreens.IsNotInIracing(module.Id)) {", "Companion.cs");
+            AssertOnce(ScreensSource("SettingsControl.Screens.Companion.cs"), "Ui.Text(PanelScreens.ModuleCount(screen.Modules), PanelScreens.HeadCountSize,", "Companion.cs");
+
+            var page = ScreensSource("SettingsControl.Screens.cs");
+            foreach (var pin in new[]
+            {
+                // A card's state is the screen's own, its dot in that state's colour; the header's facts are
+                // the screen's kind and size.
+                "var state = ScreensStateOf(captured);",
+                "PanelScreens.CardMeta(captured), PanelScreens.StateLabel(state), PanelScreens.StateHex(state),",
+                "var facts = Ui.Prose(PanelScreens.Facts(screen));",
+                "title.ToolTip = screen.Name;",
+                // Ruling 27: a screen written since SimHub started reads Restart SimHub to load it.
+                "return PanelScreens.StateOf(Installed(screen), PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace));",
+            })
+            {
+                AssertOnce(page, pin, "Screens.cs");
+            }
+            Assert.NotEqual(PanelScreens.StateHex(ScreenState.InSimHub), PanelScreens.StateHex(ScreenState.Missing));
+            Assert.NotEqual(PanelScreens.StateHex(ScreenState.InSimHub), PanelScreens.StateHex(ScreenState.Restart));
+        }
+
+        /// <summary>
+        /// The sheets' presses hand the models what the driver set: the name box only counts typing as the
+        /// driver's and a pick fills it only until then, Add and Save take the box and the size picked, the
+        /// second-copy note asks the model, a reinstall caption follows an edited folder, Duplicate selects the
+        /// copy, and Remove says the result it had and hovers in the screen's own words.
+        /// </summary>
+        [Fact]
+        public void The_sheets_hand_their_models_what_was_set()
+        {
+            var page = ScreensSource("SettingsControl.Screens.cs");
+            foreach (var pin in new[]
+            {
+                "typed = PanelAddScreen.Typed(typed, name.IsKeyboardFocusWithin, name.Text);",
+                "name.Text = PanelAddScreen.FilledName(name.Text, typed, entry, Settings.RigScreens().Select(s => s.Name));",
+                "var second = PanelAddScreen.SettingsTaken(entry, Settings.RigScreens()); note.Text = PanelAddScreen.Note(type, entry, second);",
+                "entry = option; drawSizes(); fillName(); refreshNote();",
+                "CloseSheet(); AddScreen(entry, name.Text);",
+                "sizeRow = BuildSizeRow(type, screen, choices, question, e => chosen = e);",
+                "save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);",
+                "var edited = Edited(screen);",
+                "edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption",
+                "reinstall.Click += (sender, args) => ReinstallScreen(screen);",
+                "Select(PanelPage.Screens, copy.Namespace);",
+                "Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);",
+            })
+            {
+                AssertOnce(page, pin, "Screens.cs");
+            }
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(page, System.Text.RegularExpressions.Regex.Escape("remove.ToolTip = PanelScreens.RemoveTooltipFor(screen);")).Count);
+            Assert.DoesNotContain("RemoveTooltip;", page);
         }
 
         /// <summary>
