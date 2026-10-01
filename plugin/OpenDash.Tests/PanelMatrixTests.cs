@@ -292,6 +292,18 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(guard)));
             }
+            // A sheet's press closes the sheet and draws the page again under the pointer, so the second press of
+            // its double-click would land on whatever switch the new page puts there -- after Remove it, another
+            // matrix's -- and flip it. Each of the three sets the flag first, the page's root ignores the next
+            // press while it is set and is a repeat, and any press clears it.
+            Assert.Contains("private bool matrixSheetPressed;", flat);
+            Assert.Contains("private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args) { var repeat = matrixSheetPressed && args.ClickCount > 1; matrixSheetPressed = false; if (repeat) args.Handled = true; }", flat);
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat;")));
+            foreach (var press in new[] { "add.Click += (sender, args) => { matrixSheetPressed = true;", "save.Click += (sender, args) => { matrixSheetPressed = true;", "remove.Click += (sender, args) => { matrixSheetPressed = true;" })
+            {
+                Assert.Contains(press, flat);
+            }
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("matrixSheetPressed = true;")).Count);
             // The note is said inside that one message, never as a line of its own.
             Assert.DoesNotContain("Say(PanelMessage.Info(result.Note))", matrix);
             // SimHub is asked again whenever the shell asks what needs fixing (Go, Redraw, Check again and the
@@ -420,7 +432,7 @@ namespace OpenDashPlugin.Tests
                 "ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 // The rename and remove sheets.
                 "Settings.RenameMatrixPanel(matrix, name.Text); Save(); Redraw();",
-                "Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); Redraw(); Say(PanelMatrix.Removed(name, matrix));",
+                "matrixSheetPressed = true; Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); Redraw(); Say(PanelMatrix.Removed(name, matrix));",
                 "cancel.Click += (sender, args) => CloseSheet();",
                 // The links.
                 "thresholds.Click += (sender, args) => Go(PanelMatrix.ThresholdsRoute);",
@@ -442,7 +454,7 @@ namespace OpenDashPlugin.Tests
                 "var device = MatrixLayer(Ui.Soon( MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.SimHubDevice));",
                 "foreach (var id in offered) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
                 "var offered = PanelMatrix.PreviewChips(PanelMatrix.OptionsFor(Settings, m)); var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m));",
-                "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
+                "matrixSheetPressed = true; var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
                 "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
                 "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));",
@@ -452,7 +464,7 @@ namespace OpenDashPlugin.Tests
                 // before the press with the one after it, never the typed one.
                 "var facts = MatrixFacts(m); var shown = facts == null ? null : facts.Shown;",
                 "var facts = MatrixFacts(m); if (facts != null && facts.Shown == false)",
-                "var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); Settings.RenameMatrixPanel(matrix, name.Text);",
+                "save.Click += (sender, args) => { matrixSheetPressed = true; var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); Settings.RenameMatrixPanel(matrix, name.Text);",
                 // The add tile's hover while it adds.
                 "if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot())) { add.ToolTip = PanelMatrix.AddTooltip; } else { add.IsEnabled = false;",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
@@ -483,12 +495,13 @@ namespace OpenDashPlugin.Tests
             foreach (var pin in new[]
             {
                 // The page: every matrix's card, the selected one handed its picture, and the add tile.
-                "return PageLayout(PanelMatrix.Title,",
+                "var page = PageLayout(PanelMatrix.Title,",
                 // The page's order: the profile on the title's line, the by-hand import under the title, the
                 // cards, then the selected matrix.
-                "return PageLayout(PanelMatrix.Title, Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile), "
+                "var page = PageLayout(PanelMatrix.Title, Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile), "
                     + "PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null, "
-                    + "Ui.Anchor(cards, PanelMatrix.AnchorPanels), slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));",
+                    + "Ui.Anchor(cards, PanelMatrix.AnchorPanels), slot == 0 ? null : BuildMatrixSelected(slot, selectedCard)); "
+                    + "page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat; return page; }",
                 "var panels = Settings.MatrixPanels().ToList();",
                 "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
                 "if (m == selected) selectedPicture(picture);",
@@ -562,7 +575,7 @@ namespace OpenDashPlugin.Tests
                 "Say(new PanelMessage( PanelMatrix.PanelAdded(",
                 "var name = Ui.Input(current, PanelMatrix.NameWidth); var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);",
                 "save.Click += (sender, args) =>",
-                "remove.Click += (sender, args) => { Settings.RemoveMatrixPanel(matrix);",
+                "remove.Click += (sender, args) => { matrixSheetPressed = true; Settings.RemoveMatrixPanel(matrix);",
             })
             {
                 Assert.Contains(pin, flat);

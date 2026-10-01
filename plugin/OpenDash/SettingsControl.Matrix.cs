@@ -50,6 +50,22 @@ namespace OpenDashPlugin
         /// (PanelMatrix.ProfileTooltip): SimHub may still hold the copy that press was made over.</summary>
         private FlagBoxInstallState matrixFailedFrom = FlagBoxInstallState.NotInstalled;
 
+        /// <summary>
+        /// Set by a sheet's press, which closes the sheet and draws the page again under the pointer: the next
+        /// press on the page is then the second of a double-click when WPF counts it so, and is ignored. WPF
+        /// counts clicks by time and place, not by element, so without this it would land on whatever switch the
+        /// new page puts there -- after Remove it, on another matrix's -- and flip it. Cleared by the next press.
+        /// </summary>
+        private bool matrixSheetPressed;
+
+        /// <summary>The page's guard for <see cref="matrixSheetPressed"/>, on the page's root.</summary>
+        private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args)
+        {
+            var repeat = matrixSheetPressed && args.ClickCount > 1;
+            matrixSheetPressed = false;
+            if (repeat) args.Handled = true;
+        }
+
         private FlagBoxPlan MatrixPlan()
         {
             if (plugin.FlagBoxJson == null) return null;
@@ -83,11 +99,13 @@ namespace OpenDashPlugin
             // The profile on the title's line; under the title the by-hand import, only when SimHub's matrix
             // settings could not be reached (the shell's, which Matrix and Updates both draw); the cards; and
             // the selected matrix.
-            return PageLayout(PanelMatrix.Title,
+            var page = PageLayout(PanelMatrix.Title,
                 Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile),
                 PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null,
                 Ui.Anchor(cards, PanelMatrix.AnchorPanels),
                 slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));
+            page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat;
+            return page;
         }
 
         /// <summary>
@@ -700,6 +718,7 @@ namespace OpenDashPlugin
             var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large);
             add.Click += (sender, args) =>
             {
+                matrixSheetPressed = true;
                 var added = Settings.AddMatrixPanel(name.Text);
                 Save();
                 if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added));
@@ -729,6 +748,7 @@ namespace OpenDashPlugin
             name.TextChanged += (sender, args) => save.IsEnabled = PanelMatrix.CanRename(name.Text);
             save.Click += (sender, args) =>
             {
+                matrixSheetPressed = true;
                 var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
                 Settings.RenameMatrixPanel(matrix, name.Text);
                 Save();
@@ -750,6 +770,7 @@ namespace OpenDashPlugin
             var remove = Ui.Button(PanelMatrix.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large);
             remove.Click += (sender, args) =>
             {
+                matrixSheetPressed = true;
                 Settings.RemoveMatrixPanel(matrix);
                 Save();
                 Select(PanelPage.Matrix, null);
