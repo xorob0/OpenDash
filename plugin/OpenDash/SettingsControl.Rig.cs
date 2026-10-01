@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -128,7 +129,11 @@ namespace OpenDashPlugin
             var nightGroup = Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(PanelSettings.NightModeTitle), night);
 
             var real = PanelSoon.RealHardware;
-            var hardware = Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), Ui.Switch(false, null)), real);
+            // Named on the switch itself: the name Ui.Soon gives goes on its Border, which has no automation
+            // peer, so a screen reader would otherwise reach an unnamed switch.
+            var realSwitch = Ui.Switch(false, null);
+            AutomationProperties.SetName(realSwitch, real.Title);
+            var hardware = Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real);
 
             var reset = Ui.Button(PanelRigMap.ResetLayout, PanelButtonKind.Outline, PanelButtonSize.Small);
             reset.Height = PanelRigMap.ResetButtonHeight;
@@ -847,7 +852,7 @@ namespace OpenDashPlugin
         /// it in place, and nothing else on the page.</summary>
         private FrameworkElement BuildRigScenarios(IList<RigTileView> views)
         {
-            var host = new Border();
+            var host = new RigGroup();
             AutomationProperties.SetName(host, PanelRigMap.ScenariosName);
             RigDrawChips(host, views, null);
             return host;
@@ -865,6 +870,10 @@ namespace OpenDashPlugin
                 {
                     var id = scenario.Id;
                     var chip = Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id));
+                    // A swatch chip's content is a panel, which gives the button no name of its own, and the
+                    // pressed chip is the artboard's aria-pressed: said as the kit's segmented control says it.
+                    AutomationProperties.SetName(chip, scenario.Label);
+                    AutomationProperties.SetItemStatus(chip, id == current ? "checked" : "unchecked");
                     chip.Margin = new Thickness(0, 0, PanelRigMap.ChipGap, PanelRigMap.ChipGap);
                     if (id == focus) focusChip = chip;
                     chips.Children.Add(chip);
@@ -882,6 +891,33 @@ namespace OpenDashPlugin
             {
                 var chip = focusChip;
                 chip.Dispatcher.BeginInvoke(new Action(() => chip.Focus()), DispatcherPriority.Input);
+            }
+        }
+
+        /// <summary>The chips' section as assistive technology reaches it: a Border has no automation peer, so a
+        /// name set on one is never announced. This one reports itself as a group, under its name.</summary>
+        private sealed class RigGroup : Border
+        {
+            protected override AutomationPeer OnCreateAutomationPeer()
+            {
+                return new RigGroupPeer(this);
+            }
+        }
+
+        private sealed class RigGroupPeer : FrameworkElementAutomationPeer
+        {
+            public RigGroupPeer(FrameworkElement owner) : base(owner)
+            {
+            }
+
+            protected override AutomationControlType GetAutomationControlTypeCore()
+            {
+                return AutomationControlType.Group;
+            }
+
+            protected override string GetClassNameCore()
+            {
+                return "RigGroup";
             }
         }
 

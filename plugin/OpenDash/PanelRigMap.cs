@@ -350,7 +350,9 @@ namespace OpenDashPlugin
         /// <summary>What assistive technology calls the chips' section. The artboard's aria-label is "What to
         /// emulate", a wh-clause posing as a heading; a heading is a noun (voice.md). Search matches a keyword
         /// that contains what is typed, so the entries carry "emulation" beside "emulate": the name a screen
-        /// reader announces finds the chips when it is typed back.</summary>
+        /// reader announces finds the chips when it is typed back. The same chips are "Preview" on Matrix and
+        /// Settings, so the group entries carry "preview" too, and a driver who learnt the word there finds
+        /// them here.</summary>
         public const string ScenariosName = "Emulation";
 
         /// <summary>Between groups across and down, under a group's title, and between two chips.</summary>
@@ -369,11 +371,11 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(Title, PanelPage.Rig, AnchorCanvas, "rig layout", "map", "arrange", "tiles", "emulate", "emulation"),
             new PanelSearch.Entry(PanelSettings.NightModeTitle, PanelPage.Rig, null, "dark", "dim"),
             new PanelSearch.Entry(ResetLayout, PanelPage.Rig, null, "arrange", "tiles", "rig layout"),
-            new PanelSearch.Entry(PanelEmulation.FlagsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "test", "yellow", "blue", "chequered"),
-            new PanelSearch.Entry(PanelEmulation.SpotterGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "car left", "car right"),
-            new PanelSearch.Entry(PanelEmulation.PitLaneGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "limiter", "speeding"),
-            new PanelSearch.Entry(PanelEmulation.WarningsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "fuel", "oil", "water"),
-            new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "shift point", "rpm"),
+            new PanelSearch.Entry(PanelEmulation.FlagsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "preview", "test", "yellow", "blue", "chequered"),
+            new PanelSearch.Entry(PanelEmulation.SpotterGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "preview", "car left", "car right"),
+            new PanelSearch.Entry(PanelEmulation.PitLaneGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "preview", "limiter", "speeding"),
+            new PanelSearch.Entry(PanelEmulation.WarningsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "preview", "fuel", "oil", "water"),
+            new PanelSearch.Entry(PanelEmulation.RevsGroup, PanelPage.Rig, AnchorScenarios, "emulate", "emulation", "preview", "shift point", "rpm"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one

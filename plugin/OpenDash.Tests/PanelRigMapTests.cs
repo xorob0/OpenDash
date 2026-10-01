@@ -152,11 +152,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "rig layout", "map", "arrange", "tiles", "emulate", "emulation" }, PanelRigMap.Search[0].Keywords);
             Assert.Equal(new[] { "dark", "dim" }, PanelRigMap.Search[1].Keywords);
             Assert.Equal(new[] { "arrange", "tiles", "rig layout" }, PanelRigMap.Search[2].Keywords);
-            Assert.Equal(new[] { "emulate", "emulation", "test", "yellow", "blue", "chequered" }, PanelRigMap.Search[3].Keywords);
-            Assert.Equal(new[] { "emulate", "emulation", "car left", "car right" }, PanelRigMap.Search[4].Keywords);
-            Assert.Equal(new[] { "emulate", "emulation", "limiter", "speeding" }, PanelRigMap.Search[5].Keywords);
-            Assert.Equal(new[] { "emulate", "emulation", "fuel", "oil", "water" }, PanelRigMap.Search[6].Keywords);
-            Assert.Equal(new[] { "emulate", "emulation", "shift point", "rpm" }, PanelRigMap.Search[7].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "preview", "test", "yellow", "blue", "chequered" }, PanelRigMap.Search[3].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "preview", "car left", "car right" }, PanelRigMap.Search[4].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "preview", "limiter", "speeding" }, PanelRigMap.Search[5].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "preview", "fuel", "oil", "water" }, PanelRigMap.Search[6].Keywords);
+            Assert.Equal(new[] { "emulate", "emulation", "preview", "shift point", "rpm" }, PanelRigMap.Search[7].Keywords);
         }
 
         /// <summary>The body of one method of the Rig page, comments stripped, up to its closing brace.</summary>
@@ -357,6 +357,10 @@ namespace OpenDashPlugin.Tests
                 "foreach (var group in PanelEmulation.Groups)",
                 "foreach (var scenario in group.Scenarios)",
                 "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",
+                // A swatch chip's content is a panel, which names no button: each is named, and says which
+                // is pressed as the kit's segmented control does.
+                "AutomationProperties.SetName(chip, scenario.Label);",
+                "AutomationProperties.SetItemStatus(chip, id == current ? \"checked\" : \"unchecked\");",
                 "if (id == focus) focusChip = chip;",
                 "Ui.Eyebrow(group.Title)",
                 "host.Child = wrap;",
@@ -365,7 +369,12 @@ namespace OpenDashPlugin.Tests
             InOrder(canvas, "var scenario = rigScenario;", "BuildRigTile(tile, extent, scenario, views)");
             Assert.Contains("return id != null && PanelEmulation.Find(id) != null ? id : PanelEmulation.Default;", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
 
-            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", "RigDrawChips(host, views, null);", "return host;");
+            // The chips' section is announced under its name: a plain Border has no automation peer, so the
+            // host is one that reports itself as a group.
+            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "var host = new RigGroup();", "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", "RigDrawChips(host, views, null);", "return host;");
+            var rigPage = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
+            InOrder(rigPage, "private sealed class RigGroup : Border", "protected override AutomationPeer OnCreateAutomationPeer()", "return new RigGroupPeer(this);",
+                "private sealed class RigGroupPeer : FrameworkElementAutomationPeer", "return AutomationControlType.Group;");
         }
 
 
@@ -465,7 +474,7 @@ namespace OpenDashPlugin.Tests
             // Real hardware (#506) is drawn greyed, a switch with no handler, and nothing on the page
             // installs or writes to a device: the page emulates.
             var header = RigMethod("private FrameworkElement BuildRigHeader(");
-            InOrder(header, "var real = PanelSoon.RealHardware;", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), Ui.Switch(false, null)), real)");
+            InOrder(header, "var real = PanelSoon.RealHardware;", "var realSwitch = Ui.Switch(false, null);", "AutomationProperties.SetName(realSwitch, real.Title);", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real)");
             var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
             foreach (var write in new[] { "InstallBar(", "ReinstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
             // The page calls DrawsLighting, so a wheel's lighting press rebuilds it on SimHub's interface
