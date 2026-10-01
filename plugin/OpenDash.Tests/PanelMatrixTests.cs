@@ -192,47 +192,53 @@ namespace OpenDashPlugin.Tests
             var none = new List<int>();
             foreach (var before in new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed })
             {
-                var first = PanelMatrix.InstallSaid(before, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
+                var first = PanelMatrix.InstallSaid(before, before, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
                 Assert.Equal("Installed OpenDash Flag box. Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2.", first.Text);
                 Assert.Equal(PanelTone.Info, first.Tone);
             }
             Assert.Equal("Installed OpenDash Flag box. Select \"OpenDash Flag box\" on each matrix's device in SimHub and set RGB Matrix content to the matrix's number.",
-                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, several).Text);
+                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, several).Text);
             // A rig with no matrix has no device to name.
-            Assert.Equal("Installed OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, none).Text);
-            Assert.Equal("Installed OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, null).Text);
+            Assert.Equal("Installed OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, none).Text);
+            Assert.Equal("Installed OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, null).Text);
             // The built-in profiles note comes before the select step it blocks, in caution, in one message.
-            var noted = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", FlagBoxInstallPlan.BuiltInModeNote, one);
+            var noted = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", FlagBoxInstallPlan.BuiltInModeNote, one);
             Assert.Equal("Installed OpenDash Flag box. Turn off built-in profiles on your device, or OpenDash's will not be listed. "
                 + "Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2.", noted.Text);
             Assert.Equal(PanelTone.Caution, noted.Tone);
             // The installer's note is said as it reads, without the space round it.
-            Assert.Equal(noted.Text, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", "  " + FlagBoxInstallPlan.BuiltInModeNote + " ", one).Text);
+            Assert.Equal(noted.Text, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", "  " + FlagBoxInstallPlan.BuiltInModeNote + " ", one).Text);
             // A first install that SimHub reads back as older (FlagBoxInstallPlan.Decide reads Outdated whenever
             // the versions differ) still installed it: the same message as a current one, never a failure.
-            var readOlder = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Outdated, "OpenDash Flag box", null, one);
-            Assert.Equal(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one).Text, readOlder.Text);
+            var readOlder = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Outdated, "OpenDash Flag box", null, one);
+            Assert.Equal(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one).Text, readOlder.Text);
             Assert.StartsWith("Installed OpenDash Flag box. ", readOlder.Text);
             Assert.Equal(PanelTone.Info, readOlder.Tone);
-            var updated = PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
+            var updated = PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
             Assert.Equal("Updated OpenDash Flag box.", updated.Text);
             Assert.Equal(PanelTone.Info, updated.Tone);
-            var reinstalled = PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
+            var reinstalled = PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
             Assert.Equal("Reinstalled OpenDash Flag box.", reinstalled.Text);
             Assert.Equal(PanelTone.Info, reinstalled.Tone);
-            var reinstalledNoted = PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, "OpenDash Flag box", FlagBoxInstallPlan.BuiltInModeNote, one);
+            var reinstalledNoted = PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, "OpenDash Flag box", FlagBoxInstallPlan.BuiltInModeNote, one);
             Assert.Equal("Reinstalled OpenDash Flag box. " + FlagBoxInstallPlan.BuiltInModeNote, reinstalledNoted.Text);
             Assert.Equal(PanelTone.Caution, reinstalledNoted.Tone);
             // A failure in the form the other pages give theirs.
-            Assert.Equal(PanelTone.Danger, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Tone);
-            Assert.Equal("Could not install OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
+            Assert.Equal(PanelTone.Danger, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Tone);
+            // A failure is said in the verb of the press that was made: the line's state when it was pressed,
+            // never the state SimHub held before an earlier failure.
+            Assert.Equal("Could not update OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
+            Assert.Equal("Could not reinstall OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.UpToDate, FlagBoxInstallState.UpToDate, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
+            Assert.Equal("Could not install OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
+            // The Install offered after a failed Update is an Install, though the copy it was made over was older.
+            Assert.Equal("Could not install OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
             // Out of reach, in the words the by-hand import uses for that state and StepsLeft for the step.
-            var unreachable = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Unavailable, "OpenDash Flag box", null, one);
+            var unreachable = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Unavailable, "OpenDash Flag box", null, one);
             Assert.Equal("SimHub's matrix settings are not available. Import OpenDash Flag box by hand from the top of this page.", unreachable.Text);
             Assert.Equal(PanelTone.Caution, unreachable.Tone);
             Assert.StartsWith("Import OpenDash Flag box by hand from the top of this page,", PanelMatrix.AddPanelCaption(2, "OpenDash Flag box", FlagBoxInstallState.Unavailable));
             Assert.StartsWith(PanelMatrix.Unreachable, FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null));
-            Assert.Null(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotEmbedded, "x", null, one));
+            Assert.Null(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotEmbedded, "x", null, one));
 
             // The hover on the title's line: one sentence, and none where the line or the import says it all.
             Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotEmbedded, null, "OpenDash Flag box", one));
@@ -250,7 +256,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "OpenDash Flag box", null));
             foreach (var rig in new[] { one, several, none })
             {
-                var installed = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, rig).Text;
+                var installed = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, rig).Text;
                 var hover = PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "OpenDash Flag box", rig);
                 Assert.Equal(PanelMatrix.SelectStep("OpenDash Flag box", rig), hover);
                 Assert.Equal("Installed OpenDash Flag box." + (hover == null ? string.Empty : " " + hover), installed);
@@ -312,7 +318,7 @@ namespace OpenDashPlugin.Tests
                 + "matrixFailedAsked = null; "
                 + "matrixFailedFrom = from; "
                 + "Redraw(); "
-                + "var said = PanelMatrix.InstallSaid(from, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList()); "
+                + "var said = PanelMatrix.InstallSaid(from, state, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList()); "
                 + "if (said != null) Say(said); };", flat);
             // A repeat of the one press is ignored: the redraw puts the next state's press where it was, with the
             // keyboard's focus, so a double-click's second press or a held Enter would install a second time.
@@ -790,12 +796,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("each matrix's device in SimHub", PanelMatrix.EachDevice);
             // The select step after a first install ends as the add steps do, on the one form.
             Assert.EndsWith("on " + PanelMatrix.YourDevice + " and set RGB Matrix content to 2.",
-                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "P", null, new List<int> { 2 }).Text);
+                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "P", null, new List<int> { 2 }).Text);
             // The same select step, in the same words, before the press that adds a matrix and after the one that
             // installs the profile: the profile quoted as the entry to pick in SimHub's list.
             Assert.Equal(PanelMatrix.SelectStep("P", new List<int> { 2 }), PanelMatrix.AddPanelCaption(2, "P", FlagBoxInstallState.UpToDate));
             Assert.EndsWith(PanelMatrix.SelectStep("P", new List<int> { 2 }),
-                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "P", FlagBoxInstallPlan.BuiltInModeNote, new List<int> { 2 }).Text);
+                PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "P", FlagBoxInstallPlan.BuiltInModeNote, new List<int> { 2 }).Text);
             Assert.StartsWith("Select \"P\" on ", PanelMatrix.SelectStep("P", new List<int> { 1, 3 }));
             Assert.Null(PanelMatrix.SelectStep("P", new List<int>()));
             Assert.False(PanelMatrix.NeedsInstall(FlagBoxInstallState.UpToDate));

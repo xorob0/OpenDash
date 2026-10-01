@@ -158,7 +158,7 @@ namespace OpenDashPlugin
                     // Redraw asks what needs fixing again, so the sidebar's dot and Home move with it.
                     Redraw();
                     // One message, the installer's note inside it in the order it has to be done.
-                    var said = PanelMatrix.InstallSaid(from, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList());
+                    var said = PanelMatrix.InstallSaid(from, state, result.State, FlagBoxName(), result.Note, Settings.MatrixPanels().ToList());
                     if (said != null) Say(said);
                 };
                 row.Children.Add(button);

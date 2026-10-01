@@ -150,8 +150,12 @@ namespace OpenDashPlugin
         /// than information, as the LEDs page says the same note. Then, after a first install, which adds the
         /// profile and does not select it, the select step in the form <see cref="StepsLeft"/> gives it
         /// (<see cref="SelectStep"/>): for the one matrix, for each of several, and none on a rig with none.
+        /// A press that failed is said in its own verb, the one on the press the line drew
+        /// (<paramref name="pressedIn"/>, the line's state): Could not update after Update, Could not
+        /// reinstall after Reinstall, Could not install after Install, the Install offered after a failure
+        /// included, as the LEDs and Updates pages word the same failure.
         /// </summary>
-        public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState after, string profile, string note, IList<int> panels)
+        public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState pressedIn, FlagBoxInstallState after, string profile, string note, IList<int> panels)
         {
             switch (after)
             {
@@ -171,7 +175,7 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.NotEmbedded:
                     return null;
                 default:
-                    return PanelMessage.Danger("Could not install " + profile + ". " + SeeLog);
+                    return PanelMessage.Danger("Could not " + ProfileRow(pressedIn, null).Button.ToLowerInvariant() + " " + profile + ". " + SeeLog);
             }
         }
 
