@@ -300,13 +300,15 @@ namespace OpenDashPlugin
         public const double ScreenRadius = 3;
 
         /// <summary>A face's rev strip: twenty segments, 9 high, 2 apart, corners of 1, on the base ground 1
-        /// down and 2 in.</summary>
+        /// down and 2 in. The artboard's row is `height: 9px; padding: 1px 2px` in the content box, so the
+        /// row is the segments' 9 and its padding, 11 high.</summary>
         public const int RevSegments = 20;
         public const double RevRadius = 1;
-        public const double RevRowHeight = 9;
+        public const double RevSegmentHeight = 9;
         public const double RevGap = 2;
         public const double RevPadX = 2;
         public const double RevPadY = 1;
+        public const double RevRowHeight = RevSegmentHeight + 2 * RevPadY;
 
         /// <summary>A zone's page name, and the band's words: 10 px, the band's tracked.</summary>
         public const double ZoneTextSize = 10;

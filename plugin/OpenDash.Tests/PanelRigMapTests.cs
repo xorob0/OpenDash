@@ -100,7 +100,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(44, PanelRigMap.HintClear);
             Assert.Equal(8, PanelRigMap.CompanionStripHeight);
             Assert.Equal(2, PanelRigMap.RingOutline);
-            Assert.Equal(9, PanelRigMap.RevRowHeight);
+            // The segments are the artboard's 9; its row is content-box, so the padding is outside them.
+            Assert.Equal(9, PanelRigMap.RevSegmentHeight);
+            Assert.Equal(11, PanelRigMap.RevRowHeight);
             Assert.Equal(2, PanelRigMap.RevGap);
             Assert.Equal(2, PanelRigMap.RevPadX);
             Assert.Equal(1, PanelRigMap.RevPadY);
@@ -421,6 +423,8 @@ namespace OpenDashPlugin.Tests
             InOrder(face,
                 "var revs = PanelRigMap.FaceRevs(scenario, Settings, screen);",
                 "Background = Ui.Brush(led ?? Theme.SurfaceRaised),",
+                "Height = PanelRigMap.RevRowHeight,",
+                "Padding = new Thickness(PanelRigMap.RevPadX - PanelRigMap.RevGap / 2, PanelRigMap.RevPadY, PanelRigMap.RevPadX - PanelRigMap.RevGap / 2, PanelRigMap.RevPadY),",
                 "PanelRigMap.FaceFlagFormat(Settings, screen)",
                 "var inner = PanelRigMap.ScreenInner(tile.Width);",
                 "PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner)",
