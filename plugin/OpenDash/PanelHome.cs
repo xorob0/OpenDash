@@ -199,9 +199,10 @@ namespace OpenDashPlugin
         /// column of words, and the press goes under the text instead.</summary>
         public const double PressTextMinWidth = 300;
 
-        /// <summary>The content width from which an issue's press sits beside its text: the row's padding, the
-        /// icon well and its gap, the press's gap and its widest, and the text column's narrowest.</summary>
-        public const double PressBesideFrom = IssuePaddingX * 2 + IconWell + IconGap + IconGap + PressMaxWidth + PressTextMinWidth;
+        /// <summary>The content width from which an issue's press sits beside its text: the attention card's
+        /// border on each side (Ui.CardBox), the row's padding, the icon well and its gap, the press's gap and
+        /// its widest, and the text column's narrowest.</summary>
+        public const double PressBesideFrom = PanelMetrics.BorderWeight * 2 + IssuePaddingX * 2 + IconWell + IconGap + IconGap + PressMaxWidth + PressTextMinWidth;
 
         /// <summary>Whether an issue's press sits beside its text, as a row's trailing action does at any width
         /// the text column keeps its room, the rail's included; where it would not, it goes under the text.</summary>

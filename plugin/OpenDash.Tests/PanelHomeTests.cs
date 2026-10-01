@@ -172,11 +172,16 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(200, PanelHome.PressMaxWidth);
             Assert.Equal(300, PanelHome.PressTextMinWidth);
-            Assert.Equal(600, PanelHome.PressBesideFrom);
+            Assert.Equal(602, PanelHome.PressBesideFrom);
+            // The card's 1 px border on each side counts: at the threshold, a press at its widest leaves the
+            // text exactly its 300.
             Assert.Equal(PanelHome.PressBesideFrom,
-                PanelHome.IssuePaddingX * 2 + PanelHome.IconWell + PanelHome.IconGap + PanelHome.IconGap + PanelHome.PressMaxWidth + PanelHome.PressTextMinWidth);
-            Assert.True(PanelHome.PressBeside(600));
-            Assert.False(PanelHome.PressBeside(599));
+                PanelMetrics.BorderWeight * 2 + PanelHome.IssuePaddingX * 2 + PanelHome.IconWell + PanelHome.IconGap + PanelHome.IconGap + PanelHome.PressMaxWidth + PanelHome.PressTextMinWidth);
+            Assert.Equal(PanelHome.PressTextMinWidth,
+                PanelHome.PressBesideFrom - PanelMetrics.BorderWeight * 2 - PanelHome.IssuePaddingX * 2 - PanelHome.IconWell - PanelHome.IconGap - PanelHome.IconGap - PanelHome.PressMaxWidth);
+            Assert.True(PanelHome.PressBeside(602));
+            Assert.False(PanelHome.PressBeside(601));
+            Assert.False(PanelHome.PressBeside(600));
             // The rail's content, from a control of 760 with a scroll bar, keeps its presses beside, as the
             // full sidebar's does.
             Assert.Equal(PanelLayout.Rail, PanelShell.Layout(760));
