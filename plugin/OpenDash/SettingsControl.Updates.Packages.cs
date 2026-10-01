@@ -19,7 +19,7 @@ namespace OpenDashPlugin
         /// <param name="keptAnchorHere">Whether Reinstall everything carries AnchorKept too: while no kept card
         /// is drawn, so search's "Put mine back" lands on the press whose question says what it is rather
         /// than on nothing.</param>
-        private FrameworkElement BuildInSimHubSection(double width, bool keptAnchorHere)
+        private FrameworkElement UpdatesInSimHubSection(double width, bool keptAnchorHere)
         {
             // The light rows are read first: a row with an Update press takes the press column from every row,
             // and the version column goes sooner to leave the names their room.
@@ -43,7 +43,7 @@ namespace OpenDashPlugin
                 rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));
                 rowFailed |= pair.Value.State == PanelCopy.InstallFailed;
             }
-            var lights = BuildLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth);
+            var lights = UpdatesLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth);
             foreach (var row in lights) rows.Children.Add(row);
             if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());
             var table = Ui.CardBox(rows, 0);

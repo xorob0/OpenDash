@@ -589,7 +589,7 @@ namespace OpenDashPlugin.Tests
         {
             var code = FlatCode();
             Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());", code);
-            Assert.Contains("Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages)", code);
+            Assert.Contains("Ui.Anchor(UpdatesInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages)", code);
             Assert.Contains("children.Add(keptAnchorHere ? Ui.Anchor(new Border { Child = reinstall }, PanelUpdates.AnchorKept) : reinstall);", code);
             Assert.Contains("var hasStrips = Settings.LedBarList().Any(bar => bar != null && bar.ProfileShapeId != null);", code);
             Assert.Contains("PanelUpdates.TableNotes(plugin.Installer.HasEmbeddedPackage, plugin.Installer.LastError, rowFailed, lights.Count > 0, hasStrips, !hasStrips || EmbeddedShapeIds().Count > 0, stripsReachable);", code);
@@ -1844,7 +1844,7 @@ namespace OpenDashPlugin.Tests
         public void The_page_draws_every_section_row_and_anchor_it_says()
         {
             var page = Method("private FrameworkElement BuildUpdatesPage(PanelRoute to)");
-            Assert.Contains("var kept = UpdatesKeptCard(updatesWidth); updatesPage = PageLayout(PanelUpdates.Title, null, Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin), Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck), Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages), kept, Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));", page);
+            Assert.Contains("var kept = UpdatesKeptCard(updatesWidth); updatesPage = PageLayout(PanelUpdates.Title, null, Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin), Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck), Ui.Anchor(UpdatesInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages), kept, Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));", page);
 
             var keptCard = Method("private FrameworkElement UpdatesKeptCard(double width)");
             InOrder(keptCard,
@@ -1854,11 +1854,11 @@ namespace OpenDashPlugin.Tests
                 "var restore = Ui.Button(PanelUpdates.PutMineBack,",
                 "return Ui.Anchor(card, PanelUpdates.AnchorKept);");
 
-            var section = Method("private FrameworkElement BuildInSimHubSection(double width, bool keptAnchorHere)");
+            var section = Method("private FrameworkElement UpdatesInSimHubSection(double width, bool keptAnchorHere)");
             InOrder(section,
                 "rows.Children.Add(UpdatesTableHead(versionWidth));",
                 "foreach (var pair in UpdatesDashboardRows()) { Action<UpdatesRow> paint; rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));",
-                "var lights = BuildLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth); foreach (var row in lights) rows.Children.Add(row); if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());",
+                "var lights = UpdatesLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth); foreach (var row in lights) rows.Children.Add(row); if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());",
                 "foreach (var note in notes) children.Add(UpdatesNote(note));",
                 "if (PanelUpdates.ShowsImportFallback(flagBoxPlan)) { var fallback = UpdatesFlagBoxFallback(flagBoxPlan);",
                 "children.Add(fallback);",
@@ -1866,7 +1866,7 @@ namespace OpenDashPlugin.Tests
                 "return PageSection(PanelUpdates.InSimHubTitle, false, PanelUpdates.SectionGap, children.ToArray());");
             Assert.Contains("var text = Ui.Caption(PanelUpdates.NothingInSimHub, BodyWidth);", Method("private static FrameworkElement UpdatesTableEmpty()"));
 
-            var lights = Method("private IList<FrameworkElement> BuildLightRows(");
+            var lights = Method("private IList<FrameworkElement> UpdatesLightRows(");
             Assert.Contains("for (var i = 0; i < strips.Count; i++) drawn.Add(UpdatesStripRow(strips[i].Key, stripRows[i], versionWidth, painters));", lights);
             Assert.Contains("if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, flagBoxRow, versionWidth));", lights);
 

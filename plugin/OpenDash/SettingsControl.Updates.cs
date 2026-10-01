@@ -138,7 +138,7 @@ namespace OpenDashPlugin
             updatesPage = PageLayout(PanelUpdates.Title, null,
                 Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin),
                 Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck),
-                Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages),
+                Ui.Anchor(UpdatesInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages),
                 kept,
                 Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));
             return updatesPage;

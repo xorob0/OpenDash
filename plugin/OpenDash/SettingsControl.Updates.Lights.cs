@@ -61,7 +61,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// The strips' rows, then the flag box's when the table draws it (<paramref name="flagBoxPlan"/> not null).
         /// </summary>
-        private IList<FrameworkElement> BuildLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, IList<UpdatesRow> stripRows, FlagBoxPlan flagBoxPlan, UpdatesRow flagBoxRow, double versionWidth)
+        private IList<FrameworkElement> UpdatesLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, IList<UpdatesRow> stripRows, FlagBoxPlan flagBoxPlan, UpdatesRow flagBoxRow, double versionWidth)
         {
             var drawn = new List<FrameworkElement>();
             // Every strip's row is repainted by a press on any of them, each from its own strip's plan: the
