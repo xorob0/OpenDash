@@ -203,6 +203,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Last checked yesterday, 18:40", PanelUpdates.LastChecked(new DateTime(2026, 9, 29, 18, 40, 0, DateTimeKind.Utc).Ticks, Now, utc));
             Assert.Equal("Last checked 3 March, 07:05", PanelUpdates.LastChecked(new DateTime(2026, 3, 3, 7, 5, 0, DateTimeKind.Utc).Ticks, Now, utc));
             Assert.Equal("Last checked 31 December 2025, 23:59", PanelUpdates.LastChecked(new DateTime(2025, 12, 31, 23, 59, 0, DateTimeKind.Utc).Ticks, Now, utc));
+            // A corrupt setting past DateTime's range reads as never checked: the build and every tick read it,
+            // and new DateTime(ticks) would throw in both.
+            Assert.Equal("Not checked yet", PanelUpdates.LastChecked(long.MaxValue, Now, utc));
+            Assert.Equal("Not checked yet", PanelUpdates.LastChecked(DateTime.MaxValue.Ticks + 1, Now, utc));
         }
 
         [Fact]
@@ -730,8 +734,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The flag box's by-hand route is drawn only while SimHub's matrix settings are out of reach,
         /// and by this page, so it fits its column: the path box gives up width to the press beside it, never
-        /// wider than 320, where the shared route's fixed 320 beside the press is about 555 px and clipped in
-        /// the narrow column.</summary>
+        /// wider than 320, where the shared route's fixed 320 beside the press is about 555 px and would clip
+        /// below 555 px.</summary>
         [Fact]
         public void The_flag_box_s_by_hand_route_fits_its_column()
         {
@@ -937,6 +941,9 @@ namespace OpenDashPlugin.Tests
             Assert.Empty(PanelUpdates.TableNotes(true, "disk full", true, false, false, true, true));
             Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.NoProfiles }, PanelUpdates.TableNotes(true, null, false, true, true, false, true));
             Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.Unavailable }, PanelUpdates.TableNotes(true, null, false, true, true, true, false));
+            // A build with no strip profile is the note for the strips even while SimHub's LED settings are out
+            // of reach as well: one sentence about them, the one a press could not change.
+            Assert.Equal(new[] { PanelLightRows.SectionCaption, PanelLightRows.NoProfiles }, PanelUpdates.TableNotes(true, null, false, true, true, false, false));
             // The flag box row alone is a light row, and the sentence is about it.
             Assert.Equal(new[] { PanelLightRows.SectionCaption }, PanelUpdates.TableNotes(true, null, false, true, false, false, false));
             // No strip and no matrix: no light row, so no sentence about profiles.
@@ -1010,6 +1017,9 @@ namespace OpenDashPlugin.Tests
             // A state no press writes from is said as it is, device or not.
             Assert.Null(PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, deviceListed: false).Tooltip);
             Assert.Null(PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, deviceListed: false).Tooltip);
+            // A build with no profile for the strip has nothing a device would let a press write, so the row
+            // says that, not the device step.
+            Assert.Equal(PanelUpdates.StripNotEmbedded, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, deviceListed: false).Tooltip);
 
             var devices = new Dictionary<string, string> { { LedBar.ArduinoDevice, "Arduino" } };
             var arduino = new LedBar { Name = "Rim", Device = LedBar.ArduinoDevice };
@@ -1115,6 +1125,14 @@ namespace OpenDashPlugin.Tests
             // The by-hand route under the table prints that sentence (UpdatesFlagBoxFallback), so the hover does not.
             Assert.Null(unreachable.Tooltip);
             Assert.True(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
+            Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.",
+                FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json"));
+            // And the route draws it, as its line over the press and the path: with the hover gone, it is the
+            // only place on the page that says why the row reads "Unknown" and where the file is.
+            var fallback = Method("private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)");
+            Assert.Contains("updatesImportLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);", fallback);
+            Assert.Contains("Text = plugin.FlagBox?.Path ?? string.Empty,", fallback);
+            Assert.Contains("return Ui.VStack(PanelUpdates.ImportLineGap, updatesImportLine, row);", fallback);
             // A build with no profile says so on the row, where no note under the table does.
             var notEmbedded = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, null);
             Assert.Equal("Unknown", notEmbedded.State);
@@ -1123,8 +1141,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
         }
 
-        /// <summary>A light row's Update press says what it costs, in the words the Matrix and LEDs pages
-        /// warn with.</summary>
+        /// <summary>A light row's Update press says what it costs, in the words the Matrix page's flag box
+        /// Update warns with (the LEDs page's strip Update is a shared request to follow).</summary>
         [Fact]
         public void A_light_row_s_update_says_it_replaces_the_driver_s_changes()
         {

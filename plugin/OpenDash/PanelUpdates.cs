@@ -1002,8 +1002,10 @@ namespace OpenDashPlugin
         /// <summary>The light row's one press, while its profile is older than this build's.</summary>
         public const string RowUpdate = "Update";
 
-        /// <summary>A light row's Update press: what it costs, in the words the Matrix and LEDs pages warn with.
-        /// The row's hover names the version the press brings; this is the press's own.</summary>
+        /// <summary>A light row's Update press: what it costs, in the words the Matrix page's flag box Update
+        /// warns with (FlagBoxInstallPlan.Replaces). The LEDs page's strip Update does not say it yet ("Updates
+        /// this strip's profile in SimHub."), which is a shared request. The row's hover names the version the
+        /// press brings; this is the press's own.</summary>
         public const string RowUpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         private static UpdatesRow Row(string name, string kind, string version, string state, string hex, string tooltip)

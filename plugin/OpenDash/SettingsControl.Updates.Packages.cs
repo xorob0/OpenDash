@@ -77,8 +77,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// The by-hand route for the flag box, drawn by this page so that it fits its column: the copy press
         /// and the path box share a row whose box gives up width down to what the column leaves it, never
-        /// wider than the artboard's 320, rather than the shared helper's fixed 320 beside a press, which is
-        /// about 555 px and wider than the narrow column (527 to 544).
+        /// wider than the artboard's 320, rather than the shared helper's fixed 320 beside a press (about
+        /// 555 px), which leaves nothing to spare in the 587 px narrow column and clips below it.
         /// </summary>
         private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)
         {
