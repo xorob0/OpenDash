@@ -988,7 +988,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// What a press on the page redraws, decided here and held in the page's sources: a change saved to a
-        /// screen the migration made rebuilds the page after the press, the first one only; a card pressed is a
+        /// screen the migration made rebuilds the page once the press is released and no sheet is open, the
+        /// first one only, and never once the panel is off screen or the page left; a card pressed is a
         /// selection and rebuilds in place without asking SimHub again or clearing the line a press left; a
         /// zone picked opens on its ticked pages; and the page follows a route's anchor on the way in through
         /// OnLeave rather than the shell's own rebuild flag or focus walk, which are not hooks.
@@ -1010,9 +1011,18 @@ namespace OpenDashPlugin.Tests
             var dir = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
             var page = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.cs"));
             var face = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.Face.cs"));
-            // The save asks the model before it keeps the screen, redraws the editor, and posts the rest.
+            // The save asks the model before it keeps the screen, redraws the editor, and leaves the rest to a
+            // refresh that waits for the press to end and for a sheet to close, and runs only while the panel
+            // is on screen and no Go has come since it was asked for.
             Assert.Contains("var rebuilds = PanelScreens.RebuildsPageAfterSave(screen);\n            Save(screen);", page.Replace("\r\n", "\n"));
-            Assert.Contains("DispatcherPriority.Background", page);
+            Assert.Contains("if (!rebuilds) return;\n            ScreensRefreshAfterKeep();", page.Replace("\r\n", "\n"));
+            Assert.Contains("OnLeave(\"Screens.keepRefresh\", () => screensKeepRefresh++);", page);
+            Assert.Contains("if (ticket != screensKeepRefresh || !IsLoaded) return;", page);
+            Assert.Contains("if (Mouse.LeftButton == MouseButtonState.Pressed)", page);
+            Assert.Contains("InputManager.Current.PostProcessInput += released;", page);
+            Assert.Contains("if (SheetOpen)", page);
+            // The rebuild is reached only from the refresh: never inside the press that raised the save.
+            Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(page, @"RefreshAttention\(\);\s*RebuildPage\(\);\s*RefreshSidebar\(\);").Count);
             // A card press selects and rebuilds in place.
             Assert.Contains("Select(PanelPage.Screens, captured.Namespace);\n                        RebuildPage();", page.Replace("\r\n", "\n"));
             Assert.Contains("OnLeave(\"Screens.follow\"", page);

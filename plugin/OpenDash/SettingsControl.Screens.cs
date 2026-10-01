@@ -385,12 +385,8 @@ namespace OpenDashPlugin
         /// Keeping a screen the migration made can end the line over the cards, the sidebar's warning and
         /// Home's issue, none of which an editor's in-place redraw reaches; ADR 0017 has the line go when it
         /// stops being true. So the first change to such a screen (PanelScreens.RebuildsPageAfterSave) also
-        /// asks what needs fixing again and rebuilds the page and the sidebar -- after the press has finished,
-        /// never inside it. A save runs inside the event that raised it, and the web view box saves on
-        /// LostFocus, which fires inside the next press's own focus change: a synchronous rebuild took the
-        /// pressed control out of the tree before it could capture the mouse, so Edit opened no sheet and a
-        /// Page on screen press wrote into the old editor. The editor itself redraws in place first, which
-        /// keeps the keyboard where it was.
+        /// asks what needs fixing again and rebuilds the page and the sidebar, through ScreensRefreshAfterKeep.
+        /// The editor itself redraws in place first, which keeps the keyboard where it was.
         /// </remarks>
         private void ScreensSave(ScreenInstance screen, Action redraw = null)
         {
@@ -398,8 +394,68 @@ namespace OpenDashPlugin
             Save(screen);
             if (redraw != null) redraw();
             if (!rebuilds) return;
+            ScreensRefreshAfterKeep();
+        }
+
+        /// <summary>Counts the page refreshes a keep has asked for: a refresh runs only while it is the last
+        /// one asked for, and a Go counts one more, so a refresh still waiting when the page is left never runs.</summary>
+        private int screensKeepRefresh;
+
+        /// <summary>
+        /// Asks what needs fixing again and rebuilds the page and the sidebar, once nothing is pressed, no
+        /// sheet is open, and only while the panel is on screen and Screens is the page shown.
+        /// </summary>
+        /// <remarks>
+        /// A save runs inside the event that raised it, and the web view box saves on LostFocus, which a
+        /// button raises when it takes focus in its mouse down, before its mouse up. Work posted at Background
+        /// runs whenever no input is queued, which is the case while a driver still holds the button: the
+        /// rebuild then took the pressed control out of the tree mid-press, its capture went, and the release
+        /// landed on a new copy that never saw the press, so Edit opened no sheet and a sidebar item did not
+        /// navigate. So the refresh waits for the left button to be up, then is posted again, behind the
+        /// Click the release raised in the same input. It also waits for a sheet to close, since a rebuild
+        /// under a sheet detaches the control the sheet gives focus back to.
+        ///
+        /// A refresh that lands after the panel was left is dropped, as the shell's own settles are: rebuilt
+        /// off screen, Screens would start a live preview no Unloaded would ever dispose. Nothing is lost by
+        /// dropping it: the screen is already kept, and a Go or the return to the panel asks again and rebuilds.
+        /// </remarks>
+        private void ScreensRefreshAfterKeep()
+        {
+            var ticket = ++screensKeepRefresh;
+            OnLeave("Screens.keepRefresh", () => screensKeepRefresh++);
+            ScreensRefreshWhenFree(ticket);
+        }
+
+        private void ScreensRefreshWhenFree(int ticket)
+        {
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                if (ticket != screensKeepRefresh || !IsLoaded) return;
+                if (Mouse.LeftButton == MouseButtonState.Pressed)
+                {
+                    // Once the release has been processed, the Click it raised included.
+                    ProcessInputEventHandler released = null;
+                    released = (sender, args) =>
+                    {
+                        if (Mouse.LeftButton == MouseButtonState.Pressed) return;
+                        InputManager.Current.PostProcessInput -= released;
+                        ScreensRefreshWhenFree(ticket);
+                    };
+                    InputManager.Current.PostProcessInput += released;
+                    return;
+                }
+                if (SheetOpen)
+                {
+                    DependencyPropertyChangedEventHandler closed = null;
+                    closed = (sender, args) =>
+                    {
+                        if (sheetLayer.IsVisible) return;
+                        sheetLayer.IsVisibleChanged -= closed;
+                        ScreensRefreshWhenFree(ticket);
+                    };
+                    sheetLayer.IsVisibleChanged += closed;
+                    return;
+                }
                 RefreshAttention();
                 RebuildPage();
                 RefreshSidebar();
