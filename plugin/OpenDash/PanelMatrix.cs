@@ -110,7 +110,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The press's tooltip in the state it is drawn for: Install adds a profile beside the driver's own,
+        /// The press's tooltip in the state it is drawn for: Install puts a profile beside the driver's own,
         /// and Update and Reinstall replace the copy in SimHub, which is the cost they carry. After a failed
         /// press the line says Install failed and offers Install, but SimHub may still hold the copy the
         /// press was made over, and pressing again removes it and adds the embedded one (FlagBoxInstaller),
@@ -130,7 +130,10 @@ namespace OpenDashPlugin
             return state == FlagBoxInstallState.Failed ? failedFrom : state;
         }
 
-        public const string InstallTooltip = "Adds OpenDash's profile to SimHub. Your own profiles are never changed.";
+        /// <summary>Install's hover, in the press's own verb (voice.md: "Removes this screen" beside "Remove this
+        /// screen"), the profile by the page's own noun for it, as <see cref="NoProfile"/> and
+        /// <see cref="RemoveCaption"/> name it; "Adds" is the add tile's verb on this page.</summary>
+        public const string InstallTooltip = "Installs the flag box profile in SimHub. Your own profiles are never changed.";
 
         /// <summary>Whether SimHub holds a copy of the profile, which a press then replaces.</summary>
         private static bool InSimHub(FlagBoxInstallState state)

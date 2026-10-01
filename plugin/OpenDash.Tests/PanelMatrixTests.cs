@@ -272,10 +272,13 @@ namespace OpenDashPlugin.Tests
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(hover, @"\.(\s|$)"));
             }
 
-            // The press's tooltip: Install adds, Update and Reinstall replace; and after a failed press, the
+            // The press's tooltip: Install installs, Update and Reinstall replace; and after a failed press, the
             // Install it offers is warned as the state the failed press was made in, since SimHub may still
             // hold the copy a press then replaces.
-            Assert.Equal("Adds OpenDash's profile to SimHub. Your own profiles are never changed.", PanelMatrix.InstallTooltip);
+            Assert.Equal("Installs the flag box profile in SimHub. Your own profiles are never changed.", PanelMatrix.InstallTooltip);
+            // One verb per press: the hover says the press's own, and "Adds" stays the add tile's.
+            Assert.StartsWith("Installs ", PanelMatrix.InstallTooltip);
+            Assert.StartsWith("Adds ", PanelMatrix.AddTooltip);
             foreach (FlagBoxInstallState from in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
                 Assert.Equal(PanelMatrix.InstallTooltip, PanelMatrix.ProfileTooltip(FlagBoxInstallState.NotInstalled, from));
