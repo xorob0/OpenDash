@@ -130,6 +130,10 @@ namespace OpenDashPlugin
                 shortcutsFilter = value;
                 if (evaluate != null) evaluate();
             }, padding: PanelKit.SegmentedPaddingShortcuts);
+            // The artboard draws no words over the filter, and names its group "Show" for a screen reader alone:
+            // with no row title above it, as every other page's segmented control has, its three choices
+            // would otherwise be read out with nothing to say what they choose.
+            System.Windows.Automation.AutomationProperties.SetName(filter, PanelShortcuts.FilterTitle);
             var header = BuildShortcutsHeader(filter);
 
             var touch = new ShortcutsTouch();

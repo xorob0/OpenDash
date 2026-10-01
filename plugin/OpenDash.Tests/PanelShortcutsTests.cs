@@ -323,6 +323,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "All", "Bound", "Not bound" }, PanelShortcuts.FilterLabels);
             Assert.Equal(PanelShortcuts.FilterValues.Length, PanelShortcuts.FilterLabels.Length);
             Assert.Equal(PanelBindings.NotBound, PanelShortcuts.FilterLabels[2]);
+            // The group's name, which the artboard gives a screen reader alone (aria-label="Show").
+            Assert.Equal("Show", PanelShortcuts.FilterTitle);
 
             foreach (var row in new[] { Greyed, Unread, NotBound, Bound }) Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterAll, row));
             Assert.True(PanelShortcuts.Shows(PanelShortcuts.FilterBound, Bound));
@@ -715,7 +717,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (named.Any(child => Grid.GetColumnSpan(child) != 1)) return;", drop);
             // SimHub's "Trigger now" rides on the name; it moves to the editor's border before the name goes.
             Assert.Contains("var menuOwner = named.Select(ShortcutsMenuOwner).FirstOrDefault(owner => owner != null);", drop);
-            Assert.Matches(@"var menu = menuOwner\.ContextMenu;\s*menuOwner\.ContextMenu = null;\s*border\.ContextMenu = menu;", drop);
+            Assert.Matches(@"if \(menuOwner != null && border\.ContextMenu == null\)\s*\{\s*var menu = menuOwner\.ContextMenu;\s*menuOwner\.ContextMenu = null;\s*border\.ContextMenu = menu;", drop);
             Assert.True(drop.IndexOf("border.ContextMenu = menu;", StringComparison.Ordinal) < drop.IndexOf("child.Visibility = Visibility.Collapsed;", StringComparison.Ordinal), "the menu moves before the name is collapsed");
             var owner = Between(code, "private static FrameworkElement ShortcutsMenuOwner(", "\n        }");
             Assert.Contains("if (element != null && element.ContextMenu != null) return element;", owner);
@@ -822,7 +824,8 @@ namespace OpenDashPlugin.Tests
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             var body = code.Substring(code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal));
-            Assert.Contains("args.PropertyName == \"Trigger\" || args.PropertyName == \"PressType\"", Between(body, "mappingChanged = (sender, args) =>", "};"));
+            // A notification that names no property (all of them changed) reads again too.
+            Assert.Contains("if (args.PropertyName == null || args.PropertyName == \"Trigger\" || args.PropertyName == \"PressType\") changed();", Between(body, "mappingChanged = (sender, args) =>", "};"));
             Assert.Contains("args.PropertyName != \"Triggers\"", Between(body, "modelChanged = (sender, args) =>", "};"));
             // Each re-reads the page. A binding changed in place (SimHub's Change sets Trigger and PressType on
             // the mapping already in the list) raises neither a collection change nor InputMappingsChanged,
@@ -832,7 +835,7 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"collectionChanged = \(sender, args\) =>\s*\{\s*rewatchMappings\(\);\s*changed\(\);\s*\};", body);
             Assert.Matches(@"modelChanged = \(sender, args\) =>\s*\{\s*if \(args\.PropertyName != null && args\.PropertyName != ""Triggers""\) return;\s*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
             Assert.Matches(@"Action attach = \(\) =>\s*\{[^}]*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
-            Assert.Contains("args.PropertyName == \"Model\") attach();", body);
+            Assert.Contains("if (args.PropertyName == null || args.PropertyName == \"Model\") attach();", body);
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
             Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);\s*if \(editor != null\) editors\.Add\(editor\);", page);
@@ -856,7 +859,8 @@ namespace OpenDashPlugin.Tests
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             Assert.Contains("ShortcutsFollowSimHub(page, editors, changed, () => dropped);", code);
             var follow = Between(code, "private void ShortcutsFollowSimHub(", "private static void ShortcutsReconcile(");
-            Assert.Matches(@"Dispatcher\.BeginInvoke\(DispatcherPriority\.Background, new Action\(\(\) =>\s*\{\s*pending = false;\s*if \(dropped\(\)\) return;\s*foreach \(var editor in editors\) ShortcutsReconcile\(editor\);\s*changed\(\);", follow);
+            // A burst of reports is reconciled once, after it, and never once the build is dropped.
+            Assert.Matches(@"mappingsChanged = \(sender, args\) =>\s*\{\s*if \(pending \|\| dropped\(\)\) return;\s*pending = true;\s*Dispatcher\.BeginInvoke\(DispatcherPriority\.Background, new Action\(\(\) =>\s*\{\s*pending = false;\s*if \(dropped\(\)\) return;\s*foreach \(var editor in editors\) ShortcutsReconcile\(editor\);\s*changed\(\);", follow);
             Assert.Contains("Action release = () => PluginManager.InputMappingsChanged -= mappingsChanged;", follow);
             Assert.Matches(@"page\.Loaded \+= \(sender, args\) =>\s*\{\s*release\(\);\s*if \(!dropped\(\)\) PluginManager\.InputMappingsChanged \+= mappingsChanged;", follow);
             Assert.Contains("page.Unloaded += (sender, args) => release();", follow);
@@ -864,7 +868,10 @@ namespace OpenDashPlugin.Tests
             Assert.Single(Regex.Matches(code, @"InputMappingsChanged \+="));
 
             var reconcile = Between(code, "private static void ShortcutsReconcile(", "catch (Exception ex)");
+            // An editor with no model, no list or no action is left alone, and so is a list SimHub cannot give.
+            Assert.Contains("if (model == null || model.Triggers == null || string.IsNullOrEmpty(editor.ActionName)) return;", reconcile);
             Assert.Contains("if (PluginManager.GetInstance() == null) return;", reconcile);
+            Assert.Contains("if (simhub == null) return;", reconcile);
             Assert.Contains("var simhub = new ControlsEditorModel(editor.ActionName, null).Triggers;", reconcile);
             Assert.Contains("model.Triggers.Where(mapping => !simhub.Any(kept => ReferenceEquals(kept, mapping))).ToList()", reconcile);
             Assert.Contains("model.Triggers.Remove(gone);", reconcile);
@@ -894,16 +901,24 @@ namespace OpenDashPlugin.Tests
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             var face = Between(code, "private ShortcutsGroupState BuildShortcutsFace(", "return group;");
+            // The card's name is the screen's, beside its kind and size; the glance is the screen's own, by
+            // its kind and its namespace, which is what ScreenInstance.ActionNames registers and the sidebar's
+            // count reads.
+            Assert.Contains("var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);", face);
+            Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", face);
             Assert.Contains("foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name))", face);
             Assert.Contains("ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", face);
             Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);", face);
             var wall = Between(code, "private ShortcutsGroupState BuildShortcutsPitWall(", "return group;");
+            Assert.Contains("var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);", wall);
+            Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", wall);
             Assert.Contains("var caption = PanelShortcuts.PitWallGlances(screen.Width, screen.Height) ? Ui.Caption(PanelCopy.PitWallGlance) : Ui.Caption(PanelShortcuts.PortraitGlanceCaption);", wall);
             Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), caption, layout);", wall);
             var bound = Between(code, "private bool ShortcutsGlanceBound(", "\n        }");
             Assert.Contains("var triggers = TriggersOf(PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name).Action);", bound);
             Assert.Contains("return triggers == null || triggers.Count > 0;", bound);
             var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
+            Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", companion);
             Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);", companion);
             var lights = Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;");
             Assert.Contains("foreach (var binding in PanelShortcuts.LightsBindings())", lights);
@@ -947,6 +962,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("head.Children.Add(count);", card);
             Assert.Contains("Grid.SetColumn(count, 1);", card);
             Assert.Contains("if (lead != null) body.Children.Add(lead);", card);
+            // The card's header, lead and rows go down it, one under another, as do the clash lines.
+            Assert.Contains("var body = new StackPanel { Orientation = Orientation.Vertical };", card);
+            Assert.Contains("var banner = new StackPanel { Orientation = Orientation.Vertical };", code);
             Assert.Contains("return new ShortcutsGroupState { Card = Ui.CardBox(body, 0), Body = body, CountHost = count, HasLead = lead != null };", code);
             Assert.Contains("group.Body.Children.Add(row);", Between(code, "private static void ShortcutsBinding(", "\n        }"));
             Assert.Contains("group.Body.Children.Add(shown);", Between(code, "private static void ShortcutsSoon(", "\n        }"));
@@ -966,6 +984,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Grid.SetRow(slot, 1);", row);
             Assert.Contains("Grid.SetColumnSpan(slot, 2);", row);
             Assert.Contains("Tag = new RowParts(nameLine, control),", row);
+            // The name takes what the press and the binder leave, so those two line up down a card.
+            Assert.Matches(@"var grid = new Grid\(\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth\) \}\);", row);
+            // A row is ruled above in the panel's rule colour, as the card's header is ruled under, and its
+            // binder's slot keeps the panel's corner, as the caution outline is drawn on it.
+            Assert.Equal(2, Regex.Matches(code, Regex.Escape("BorderBrush = Ui.Brush(Theme.Rule),")).Count);
+            Assert.Contains("BorderBrush = Ui.Brush(Theme.Rule),", Between(code, "private static Border ShortcutsRow(", "private static void ShortcutsDropNameColumn("));
+            Assert.Contains("CornerRadius = new CornerRadius(Theme.Radius),", Between(code.Replace("\r\n", "\n"), "slot = new Border\n", "};"));
             // A stacked row has two grid rows, or the slot set in the second would be drawn over the name; a
             // long name wraps; the binder is 16 after the press; the press word is the artboard's .cap.
             Assert.Matches(@"if \(layout\.Stacks\)\s*\{\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);", row);
@@ -988,6 +1013,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("header = Ui.VStack(0, caption, filter);", header);
             // The filter at the header's right in two columns, and the header built with it.
             Assert.Contains("filter.HorizontalAlignment = HorizontalAlignment.Right;", Between(header, "if (TwoColumns)", "else"));
+            // The caption and the filter share a foot, which FilterRaise's 30 less 19 assumes.
+            Assert.Contains("caption.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
+            Assert.Contains("filter.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
             Assert.Contains("var header = BuildShortcutsHeader(filter);", code);
             // The empty line keeps a message line's measure.
             Assert.Contains("var empty = Ui.Caption(string.Empty, BodyWidth);", code);
@@ -996,6 +1024,9 @@ namespace OpenDashPlugin.Tests
             // The title leaves the page's stack before it goes into the row with its tag: WPF will not give
             // an element a second parent, and the page would draw PageFailed.
             Assert.Matches(@"stack\.Children\.RemoveAt\(0\);\s*stack\.Children\.Insert\(0, Ui\.HStack\(12, title, Ui\.NewTag\(\)\)\);", code);
+            // The title is PageLayout's first child, and it alone is moved: the page's title carries the tag.
+            var tagged = Between(code, "private static FrameworkElement ShortcutsTitleTagged(", "\n        }");
+            Assert.Matches(@"var stack = page as StackPanel;\s*if \(stack == null \|\| stack\.Children\.Count == 0\) return page;\s*var title = stack\.Children\[0\] as TextBlock;\s*if \(title == null\) return page;\s*stack\.Children\.RemoveAt\(0\);", tagged);
         }
 
         /// <summary>
@@ -1121,6 +1152,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
             Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
+            // The filter stands alone at the header's right, under no row title, so it carries the artboard's
+            // group name for a screen reader: its three choices are never read out bare.
+            Assert.Matches(@"padding: PanelKit\.SegmentedPaddingShortcuts\);\s*(//[^\n]*\s*)*System\.Windows\.Automation\.AutomationProperties\.SetName\(filter, PanelShortcuts\.FilterTitle\);", Between(code, "private FrameworkElement BuildShortcutsPage(", "var touch = new ShortcutsTouch();"));
             Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty, touch);", code);
             Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);
             Assert.Contains("            evaluate();\n", code.Replace("\r\n", "\n"));
@@ -1179,7 +1213,7 @@ namespace OpenDashPlugin.Tests
             var mark = Between(code, "foreach (var row in groups.SelectMany(group => group.Rows).Where(row => row.Slot != null))", "var emptyText =");
             Assert.Contains("var marked = row.Bindable && PanelShortcuts.Marks(clashes, row.Place, row.Does);", mark);
             Assert.Contains("row.Slot.BorderBrush = marked ? Ui.Brush(Theme.CautionDeep) : null;", mark);
-            var slot = Between(code, "slot = new Border\n", "};");
+            var slot = Between(code.Replace("\r\n", "\n"), "slot = new Border\n", "};");
             Assert.Contains("BorderThickness = new Thickness(PanelMetrics.BorderWeight),", slot);
             // Each row's state as the reads and the marks use it: a live row bindable, placed on its screen's
             // card (so two screens' uses of one action stay apart) and saying what it does; a greyed row not.
@@ -1237,6 +1271,8 @@ namespace OpenDashPlugin.Tests
             // that failed and a read that threw each read as "cannot be read", never as nothing bound.
             var usesAll = Between(code, "private IList<PanelShortcuts.BindingUse> ShortcutsUses(", "private void ShortcutsWatch(");
             Assert.Contains("if (editor == null) return null;", usesAll);
+            // A model with no list falls back to the shell's read, rather than throwing into the catch.
+            Assert.Contains("if (model == null || model.Triggers == null)", usesAll);
             Assert.Contains("var read = TriggersOf(row.Action);", usesAll);
             Assert.Contains("return read == null ? null :", usesAll);
             Assert.Matches(@"catch \(Exception ex\)\s*\{\s*Log\.Warn\([^;]*\);\s*return null;\s*\}", usesAll);
