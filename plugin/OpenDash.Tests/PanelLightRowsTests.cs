@@ -247,22 +247,22 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The Matrix page's pill draws DotHex beside PanelMatrix.ProfileRow's words, so every state has an ink,
-        /// whatever ProfileRow carries: a null here reached Ui.Brush(null), which threw while the Matrix page
-        /// built. Where ProfileRow still gives its words an ink, the dot agrees with it, the uninstalled pairing
-        /// excepted (its label is text.label, its dot status.notInstalled).
+        /// Every state has a dot, whatever another page's table carries: when DotHex read PanelMatrix.ProfileRow
+        /// and the Matrix branch gave that table's words no ink, it returned null, and Ui.Brush(null) threw
+        /// while the Matrix page built. It reads no page's table, so neither ProfileRow nor LightRow can move
+        /// it; a page that wants its dot to follow its own words draws its own table's ink, as the Matrix
+        /// branch now does.
         /// </summary>
         [Fact]
-        public void The_matrix_pill_s_dot_has_an_ink_in_every_state_and_agrees_with_its_words()
+        public void The_dot_has_an_ink_in_every_state_and_reads_no_page_s_table()
         {
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
-                var dot = PanelLightRows.DotHex(state);
-                Assert.False(string.IsNullOrEmpty(dot), state + " has a dot");
-                var ink = PanelMatrix.ProfileRow(state, "0.4.0").StateHex;
-                if (ink != null && ink != Theme.TextLabel) Assert.Equal(ink, dot);
+                Assert.False(string.IsNullOrEmpty(PanelLightRows.DotHex(state)), state + " has a dot");
             }
-            Assert.DoesNotContain("PanelMatrix.ProfileRow(", RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelLightRows.cs")));
+            var code = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelLightRows.cs"));
+            Assert.DoesNotContain("PanelMatrix.ProfileRow(", code);
+            Assert.DoesNotContain("PanelCopy.LightRow(", code);
         }
 
         [Fact]

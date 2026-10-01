@@ -387,7 +387,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The colour of the flag box profile's status dot in the Matrix page's header pill.
+        /// The colour of a light profile's status dot, for a page that draws one beside words of its own (the
+        /// base's Matrix pill did).
         /// </summary>
         /// <remarks>
         /// A fixed ink per state, read off no page's table. It read PanelCopy.LightRow, then PanelMatrix.ProfileRow,
