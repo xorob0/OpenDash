@@ -1283,6 +1283,43 @@ namespace OpenDashPlugin
             return face.Zone("A") + "," + face.Zone("B") + "," + face.Zone("C") + "," + face.Zone("D");
         }
 
+        /// <summary>
+        /// The page a pit wall is on and the page each of its zones shows now, as one value that changes when
+        /// any of them does.
+        /// </summary>
+        /// <remarks>
+        /// A zone's page is live state, as a face's is: the pit wall's quick glance moves one zone to its page
+        /// on the press and back on the release, with no save and no rebuild. The page reads this on its clock
+        /// and repaints a pit wall's tile when it changes, so the tile names the page each zone is on now, and
+        /// a rebuild that landed while the glance was held does not keep the glanced page after the release.
+        /// Property reads only.
+        /// </remarks>
+        public static string PitWallState(ScreenInstance screen)
+        {
+            if (screen == null) return string.Empty;
+            var page = PitWallPortrait(screen) ? PortraitPage : Contract.NormalisePitWallPage(screen.PitWallPage).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return page + ":" + string.Join(",", PitWallZoneKeys(screen).Select(key => screen.ZonePage(key).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        /// <summary>
+        /// What the page watches on its clock for a tile whose picture follows live state: <see cref="FaceState"/>
+        /// for a face and <see cref="PitWallState"/> for a pit wall, and null for a tile that draws nothing a
+        /// wheel button or a glance moves.
+        /// </summary>
+        public static string LiveState(OpenDashSettings settings, RigTile tile)
+        {
+            if (settings == null || tile == null) return null;
+            switch (tile.Kind)
+            {
+                case RigTileKind.Face:
+                    return FaceState(settings.ScreenByNamespace(tile.Key));
+                case RigTileKind.PitWall:
+                    return PitWallState(settings.ScreenByNamespace(tile.Key));
+                default:
+                    return null;
+            }
+        }
+
         /// <summary>Whether a face stacks its zones down rather than across, as the 600 x 686 does.</summary>
         public static bool FaceColumn(ScreenInstance screen)
         {
@@ -1725,6 +1762,18 @@ namespace OpenDashPlugin
             var page = PanelPitWallPlan.Pages.FirstOrDefault(p => p.Title == title);
             if (page != null) return page;
             return index < PanelPitWallPlan.Pages.Count ? PanelPitWallPlan.Pages[index] : null;
+        }
+
+        /// <summary>The keys of the zones a pit wall draws on the page it is on, in the order
+        /// <see cref="PitWallCells"/> draws them.</summary>
+        private static IList<string> PitWallZoneKeys(ScreenInstance screen)
+        {
+            if (PitWallPortrait(screen)) return Contract.PitWallZoneLetters.Select(letter => PortraitPage + letter).ToList();
+            var index = Contract.NormalisePitWallPage(screen == null ? Contract.DefaultPitWallPage : screen.PitWallPage);
+            var page = PitWallPlanPage(index);
+            if (page == null) return new List<string>();
+            var title = Contract.PitWallPageNames[index];
+            return page.Panels.Where(panel => panel.Configurable).Select(panel => title + panel.Name).ToList();
         }
 
         /// <summary>The portrait page: the board across the top, and zones A to D two by two under the session

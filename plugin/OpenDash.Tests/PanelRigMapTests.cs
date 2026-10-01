@@ -371,8 +371,9 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("Snap(", place);
             // A press does not scroll the page to the tile under it.
             InOrder(Handler(tile, "root.RequestBringIntoView +="), "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
-            // A wheel button pages a face's zones with no save and no rebuild, so the clock repaints it.
-            InOrder(tile, "if (tile.Kind == RigTileKind.Face)", "OnTick(", "PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key))", "if (now == seen) return;", "paint(rigScenario);");
+            // A wheel button pages a face's zones, and the quick glance a face's or a pit wall's, with no save
+            // and no rebuild, so the clock repaints the tile.
+            InOrder(tile, "var seen = PanelRigMap.LiveState(Settings, tile);", "if (seen != null)", "OnTick(", "var now = PanelRigMap.LiveState(Settings, tile);", "if (now == seen) return;", "seen = now;", "paint(rigScenario);");
             // The warning dot is Home's list's.
             Assert.Contains("var warns = PanelRigMap.Warns(tile, issues);", tile);
 
@@ -1794,6 +1795,44 @@ namespace OpenDashPlugin.Tests
             }
             Assert.Null(PanelRigMap.PitWallPlanPage(-1));
             Assert.Null(PanelRigMap.PitWallPlanPage(Contract.PitWallPageNames.Length));
+        }
+
+        [Fact]
+        public void A_pit_wall_tile_follows_the_quick_glance_on_the_clock()
+        {
+            // The glance moves a zone's page on the press and back on the release, with no save and no
+            // rebuild; PitWallState changes with it, so the page's clock repaints the tile both ways.
+            var settings = Rig();
+            var wall = settings.ScreenByNamespace("PitWall");
+            wall.PitWallPage = 1;
+            var tile = PanelRigMap.Tiles(settings).Single(t => t.Kind == RigTileKind.PitWall);
+            var before = PanelRigMap.PitWallState(wall);
+            Assert.Equal(before, PanelRigMap.LiveState(settings, tile));
+            var named = PanelRigMap.PitWallCells(wall).Select(c => c.Text).ToList();
+
+            var key = Contract.PitWallPageNames[1] + "B";
+            Assert.NotNull(Contract.PitWallZoneSlotByKey(key));
+            var was = wall.ZonePage(key);
+            wall.SetZonePage(key, was == 0 ? 1 : 0);
+            var glanced = PanelRigMap.PitWallState(wall);
+            Assert.NotEqual(before, glanced);
+            Assert.NotEqual(named, PanelRigMap.PitWallCells(wall).Select(c => c.Text).ToList());
+            wall.SetZonePage(key, was);
+            Assert.Equal(before, PanelRigMap.PitWallState(wall));
+
+            // The page it is on is part of it, and so is a portrait pit wall's own page.
+            wall.PitWallPage = 0;
+            Assert.NotEqual(before, PanelRigMap.PitWallState(wall));
+            var portrait = Screen(Contract.KindPitWall, "PitWallPortrait", "Pit wall portrait", 1080, 1920);
+            var standing = PanelRigMap.PitWallState(portrait);
+            Assert.StartsWith(PanelRigMap.PortraitPage + ":", standing);
+            portrait.SetZonePage(PanelRigMap.PortraitPage + "A", portrait.ZonePage(PanelRigMap.PortraitPage + "A") == 0 ? 1 : 0);
+            Assert.NotEqual(standing, PanelRigMap.PitWallState(portrait));
+
+            Assert.Equal(string.Empty, PanelRigMap.PitWallState(null));
+            // A tile that draws nothing a glance moves is not watched.
+            Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Strip, "strip")));
+            Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Matrix, "matrix")));
         }
 
         [Fact]

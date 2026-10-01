@@ -376,13 +376,14 @@ namespace OpenDashPlugin
             var host = new Border { Width = tile.Width, Height = tile.Height, HorizontalAlignment = HorizontalAlignment.Left };
             Action<string> paint = id => host.Child = BuildRigPicture(tile, id);
             paint(scenario);
-            if (tile.Kind == RigTileKind.Face)
+            // A wheel button pages a face's zones, and the quick glance moves a face's or a pit wall's, without
+            // a save or a rebuild, so the clock looks.
+            var seen = PanelRigMap.LiveState(Settings, tile);
+            if (seen != null)
             {
-                // A wheel button pages a face's zones without a save or a rebuild, so the clock looks.
-                var seen = PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key));
                 OnTick(() =>
                 {
-                    var now = PanelRigMap.FaceState(Settings.ScreenByNamespace(tile.Key));
+                    var now = PanelRigMap.LiveState(Settings, tile);
                     if (now == seen) return;
                     seen = now;
                     paint(rigScenario);
