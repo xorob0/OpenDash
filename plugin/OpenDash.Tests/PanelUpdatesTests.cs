@@ -854,10 +854,12 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A state's width as the cell draws it: Barlow Regular at the state's 13, off the advances in
-        /// the TTF the panel embeds. Kerning is left out; it moves a word this short by well under a pixel.</summary>
+        /// the tracked source of the TTF the panel embeds, which the build and the packaging only copy, so the
+        /// measure needs no build: Resources/fonts is gitignored build output, and a fresh checkout has none.
+        /// Kerning is left out; it moves a word this short by well under a pixel.</summary>
         private static double StateWidth(string text)
         {
-            return TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.EmbeddedResources(), "fonts", "Barlow-Regular.ttf")).Width(text, PanelUpdates.TableStateSize);
+            return TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf")).Width(text, PanelUpdates.TableStateSize);
         }
 
         /// <summary>A screen this build ships nothing for is left as it is by the installer, so its row says
