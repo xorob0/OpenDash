@@ -248,7 +248,7 @@ namespace OpenDashPlugin.Tests
             // The round pane's Rev ring writes the rig-wide setting, and its caption names everything that
             // follows it: the round screens, a face that never set its own, and the Speedo module wherever it
             // is drawn, a face's zone B or C included.
-            Assert.Equal("Every round screen, any face whose own rev bar you have not set and the speedo wherever it is shown.", PanelScreens.RigRevBarCaption);
+            Assert.Equal("Every round screen, the speedo wherever it is shown and any face whose own rev bar you have not set.", PanelScreens.RigRevBarCaption);
             Assert.Contains(FacePages.For("B"), page => page.Name == "Speedo");
             Assert.Contains(Modules.All, module => module.Name == "Speedo");
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
@@ -260,7 +260,7 @@ namespace OpenDashPlugin.Tests
             var cardFace = new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 };
             Assert.Equal(PanelScreens.RigRevBarCaption, PanelScreens.RigRevBarCaptionFor(new[] { disc }));
             Assert.Equal(PanelScreens.CardsCaption, PanelScreens.CardsCaptionFor(new[] { disc }));
-            Assert.Equal("Every round screen and card face, any face whose own rev bar you have not set and the speedo wherever it is shown.",
+            Assert.Equal("Every round screen and card face, the speedo wherever it is shown and any face whose own rev bar you have not set.",
                 PanelScreens.RigRevBarCaptionFor(new[] { disc, cardFace }));
             Assert.Equal("Cards are shared by every round screen and card face.", PanelScreens.CardsCaptionFor(new[] { cardFace }));
             Assert.Contains(PanelScreens.CardFace.ToLowerInvariant(), PanelScreens.CardsCaptionFor(new[] { cardFace }));
@@ -296,7 +296,9 @@ namespace OpenDashPlugin.Tests
             // The hover says the button's verb, and a round screen, which has no settings of its own, is not
             // told they are kept.
             Assert.Equal("Installs this screen's dashboard again.", PanelScreens.InstallAgainTooltip);
-            Assert.Equal(PanelAttention.MissingDetail, PanelScreens.MissingDetailFor(new ScreenInstance { Kind = Contract.KindFace }));
+            // The box's title is one word, so its detail names whose settings it means; Home's issue, whose title
+            // names the screen, keeps "Its".
+            Assert.Equal("This screen's settings are kept.", PanelScreens.MissingDetailFor(new ScreenInstance { Kind = Contract.KindFace }));
             Assert.Null(PanelScreens.MissingDetailFor(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
         }
 
@@ -389,7 +391,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Edit", PanelScreens.EditButton);
             Assert.Equal("Duplicate", PanelScreens.DuplicateButton);
             Assert.Equal("Remove", PanelScreens.RemoveButton);
-            Assert.Equal("Adds a second screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.Equal("Adds another screen set up like this one.", PanelScreens.DuplicateTooltip);
+            Assert.DoesNotContain("second", PanelScreens.DuplicateTooltip);
             Assert.Equal("Changes this screen's name, size or orientation, or reinstalls its dashboard.", PanelScreens.EditTooltip);
             Assert.Contains(PanelAddScreen.ReinstallButton.ToLowerInvariant(), PanelScreens.EditTooltip);
             // The hover and the sheet list what goes in one order, and a round screen, whose cards are the
@@ -806,7 +809,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.IsPortrait(new ScreenInstance { Width = 1920, Height = 1080 }));
             Assert.Equal("Portrait layout", PanelScreens.PortraitTitle);
             Assert.Equal("Web view address", PanelScreens.WebViewTitle);
-            Assert.Equal("Sets the page the web view shows, from an http or https address.", PanelScreens.WebViewEmptyTooltip);
+            Assert.Equal("Sets what the web view shows, from an http or https address.", PanelScreens.WebViewEmptyTooltip);
+            Assert.DoesNotContain("page", PanelScreens.WebViewEmptyTooltip);
         }
 
         /// <summary>A companion's count, and a round screen's cards: one per slot its package reads.</summary>

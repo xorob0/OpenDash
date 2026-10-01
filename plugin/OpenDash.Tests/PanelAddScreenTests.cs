@@ -346,7 +346,8 @@ namespace OpenDashPlugin.Tests
             // A companion and a pit wall are asked as an orientation, and no pixels are drawn on the sheet:
             // a second landscape companion is not "This 850 × 480", which is the Rim face's size.
             Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(companions));
-            Assert.Equal("This companion can show different pages from any other companion on your rig.", PanelAddScreen.Note(companions, companions.Entries[0], true));
+            // A companion shows modules, in its own editor's word, never pages.
+            Assert.Equal("This companion can show different modules from any other companion on your rig.", PanelAddScreen.Note(companions, companions.Entries[0], true));
             Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(walls));
             Assert.Equal("This pit wall can show different pages from any other pit wall on your rig.", PanelAddScreen.Note(walls, walls.Entries[1], true));
             Assert.Equal(string.Empty, PanelAddScreen.Note(walls, walls.Entries[0], false));
@@ -392,11 +393,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
             Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
             Assert.Equal("Save", PanelAddScreen.SaveButton);
-            // In Save's own verb, and the page's one verb for a dashboard: every other line says install.
-            Assert.Equal("Saves your changes and installs the dashboard again.", PanelAddScreen.SaveTooltip);
+            // In Save's own verb, and only what every Save does: one with nothing changed installs nothing.
+            Assert.Equal("Saves your changes.", PanelAddScreen.SaveTooltip);
             Assert.DoesNotContain("writes", PanelAddScreen.SaveTooltip);
-            // In the verb of the line after it, and with no hover on the button beside it to say it again.
-            Assert.Equal("Installs this screen's dashboard again, at its saved name and size.", PanelAddScreen.ReinstallCaption);
+            // In the verb of the button beside it, which has no hover to say it again; the line after it and the
+            // fix box's Install it again keep theirs.
+            Assert.Equal("Reinstalls this screen's dashboard, at its saved name and size.", PanelAddScreen.ReinstallCaption);
+            Assert.StartsWith(PanelAddScreen.ReinstallButton + "s ", PanelAddScreen.ReinstallCaption);
             Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim"));
             var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
             Assert.DoesNotContain("reinstall.ToolTip", screens);

@@ -141,15 +141,16 @@ namespace OpenDashPlugin
 
         /// <summary>What a reinstall installs, which is the screen as it is saved: a name typed in the box above
         /// and not yet saved is not in it, and a kind that ships one package draws no size row to point at. In
-        /// the verb the line after it uses ("Installed Rim's dashboard again."); the button has no hover, since
-        /// this caption beside it already says it.</summary>
-        public const string ReinstallCaption = "Installs this screen's dashboard again, at its saved name and size.";
+        /// the verb of the button beside it, as a control's description is (voice.md); the button has no hover,
+        /// since this caption already says it.</summary>
+        public const string ReinstallCaption = "Reinstalls this screen's dashboard, at its saved name and size.";
 
         public const string ReinstallButton = "Reinstall";
 
-        /// <summary>Save's hover, in Save's own verb and the page's verb for a dashboard, which is install: it
-        /// does not name a row the sheet may not draw.</summary>
-        public const string SaveTooltip = "Saves your changes and installs the dashboard again.";
+        /// <summary>Save's hover, in Save's own verb and only what every Save does: a Save with nothing changed
+        /// installs nothing, and a resize installs another package, so the line after the press (Renamed,
+        /// Resized) says what was written.</summary>
+        public const string SaveTooltip = "Saves your changes.";
 
         /// <summary>The edit sheet's Cancel, which has nothing to add and so does not say "adding".</summary>
         public const string EditCancelTooltip = "Goes back without changing anything.";
@@ -457,10 +458,10 @@ namespace OpenDashPlugin
         /// Another screen of a size is the case worth saying out loud: it gets a copy of the dashboard and its
         /// own settings, which is the whole of ADR 0017 and is invisible from the outside until somebody
         /// wonders why their two rims cycle together. What the driver needs from that is the consequence, that
-        /// the two can show different pages, never the settings group behind it (voice.md, What never
-        /// appears). <paramref name="second"/> says only that the size's own settings are taken, so the line
-        /// counts nothing: the third screen at a size is not the second, and a second added after the first
-        /// was removed takes the first's place.
+        /// the two can show different pages (modules, on a companion), never the settings group behind it
+        /// (voice.md, What never appears). <paramref name="second"/> says only that the size's own settings are
+        /// taken, so the line counts nothing: the third screen at a size is not the second, and a second added
+        /// after the first was removed takes the first's place.
         ///
         /// The screen is named the way the sheet asked about it: by its size where the tiles show sizes, and
         /// by its kind where step 2 asked Landscape or Portrait and no size is drawn anywhere -- a second
@@ -473,7 +474,9 @@ namespace OpenDashPlugin
             // own and no settings at all, and the line would promise what it does not do (#474).
             if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return string.Empty;
             var thing = Question(type) == SizeQuestion.Orientation ? KindName(entry.Kind).ToLowerInvariant() : entry.SizeLabel;
-            return "This " + thing + " can show different pages from any other " + thing + " on your rig.";
+            // What it shows in its own editor's word: a companion shows modules, a face and a pit wall pages.
+            var shows = string.Equals(entry.Kind, Contract.KindCompanion, StringComparison.Ordinal) ? "modules" : "pages";
+            return "This " + thing + " can show different " + shows + " from any other " + thing + " on your rig.";
         }
 
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not

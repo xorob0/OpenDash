@@ -91,17 +91,22 @@ namespace OpenDashPlugin
         public const string Missing = "Missing";
 
         /// <summary>The fix box under a screen whose dashboard is gone, titled as its card is; its detail is
-        /// PanelAttention.MissingDetail.</summary>
+        /// <see cref="MissingDetailFor"/>.</summary>
         public const string MissingTitle = Missing;
 
         /// <summary>The hover of the fix box's PanelAttention.InstallAgain, in the button's verb.</summary>
         public const string InstallAgainTooltip = "Installs this screen's dashboard again.";
 
-        /// <summary>The detail of the fix box under a missing dashboard: PanelAttention.MissingDetail where the
-        /// screen has settings to keep, and nothing for a round screen, which has none of its own.</summary>
+        /// <summary>The detail of the fix box under a missing dashboard, which names whose settings are kept:
+        /// the box's one-word title gives "Its" nothing to point at. Home's issue keeps
+        /// PanelAttention.MissingDetail, whose title already names the screen.</summary>
+        public const string MissingDetail = "This screen's settings are kept.";
+
+        /// <summary>The fix box's detail under a missing dashboard: <see cref="MissingDetail"/> where the screen
+        /// has settings to keep, and nothing for a round screen, which has none of its own.</summary>
         public static string MissingDetailFor(ScreenInstance screen)
         {
-            return OwnsSettings(screen) ? PanelAttention.MissingDetail : null;
+            return OwnsSettings(screen) ? MissingDetail : null;
         }
 
         /// <summary>The step after the restart, under <see cref="RestartToLoad"/>: SimHub lists the dashboard
@@ -238,8 +243,9 @@ namespace OpenDashPlugin
         public const string EditTooltip = "Changes this screen's name, size or orientation, or reinstalls its dashboard.";
         public const string DuplicateButton = "Duplicate";
 
-        /// <summary>A screen's header press that copies it.</summary>
-        public const string DuplicateTooltip = "Adds a second screen set up like this one.";
+        /// <summary>A screen's header press that copies it. It counts nothing: duplicating Rim beside Rim (2) adds
+        /// a third.</summary>
+        public const string DuplicateTooltip = "Adds another screen set up like this one.";
 
         public const string RemoveButton = "Remove";
         public const string RemoveTooltip = "Removes this screen, its dashboard and its settings.";
@@ -775,8 +781,9 @@ namespace OpenDashPlugin
 
         public const string WebViewTitle = "Web view address";
 
-        /// <summary>The box's hover while it is empty, saying what it sets; its whole address once it has one.</summary>
-        public const string WebViewEmptyTooltip = "Sets the page the web view shows, from an http or https address.";
+        /// <summary>The box's hover while it is empty, saying what it sets; its whole address once it has one. Not
+        /// "the page": on this editor a page is Race, Tower or Telemetry, and a zone's page.</summary>
+        public const string WebViewEmptyTooltip = "Sets what the web view shows, from an http or https address.";
 
         public const string PortraitTitle = "Portrait layout";
 
@@ -971,9 +978,11 @@ namespace OpenDashPlugin
         /// Speedo page reads OpenDash.RevBar and never the face's own. "Applies to every round face on your
         /// rig." let a driver turn off the main face's rev bar from the round pane unawares, and "Every round
         /// screen and the phone's speedo." left those faces out. A page name is lower case after an article,
-        /// as the clash lines write them, and the list has no serial comma, as the page's others do not.
+        /// as the clash lines write them, and the list has no serial comma, as the page's others do not, so the
+        /// relative clause stands last: before "and the speedo" it read as though the speedo were something
+        /// the driver had not set, and straight after "card face" as a clause saying which card faces count.
         /// </summary>
-        public const string RigRevBarCaption = "Every round screen, any face whose own rev bar you have not set and the speedo wherever it is shown.";
+        public const string RigRevBarCaption = "Every round screen, the speedo wherever it is shown and any face whose own rev bar you have not set.";
 
         /// <summary>The Rev ring's or Rev bar's caption on <paramref name="rig"/>: <see cref="RigRevBarCaption"/>,
         /// naming the card faces beside the round screens where the rig holds one, since a card face's arc reads
@@ -981,7 +990,7 @@ namespace OpenDashPlugin
         public static string RigRevBarCaptionFor(IEnumerable<ScreenInstance> rig)
         {
             return HasCardFace(rig)
-                ? "Every round screen and card face, any face whose own rev bar you have not set and the speedo wherever it is shown."
+                ? "Every round screen and card face, the speedo wherever it is shown and any face whose own rev bar you have not set."
                 : RigRevBarCaption;
         }
 
