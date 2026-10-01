@@ -463,7 +463,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
-            // The ruled phrase for a dashboard SimHub has not read (voice ruling 23, scenario HM-03).
+            // The ruled phrase for a dashboard SimHub has not read (voice ruling 23). Scenario HM-03 asks the
+            // fix row to say it too, which PanelAttention's title does not yet: that waits on the Screens request.
             Assert.Equal("Restart SimHub to load it", restart.Text);
             Assert.Equal(PanelHome.RestartToLoad, restart.Text);
             Assert.Equal(Theme.Caution, restart.TextHex);
@@ -864,7 +865,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The pictures are live only where PanelHome says so: the car's run on a strip StripLive
-        /// allows, the idle glyph on a matrix MatrixDrawsGlyph allows, and both repainted on the tick.</summary>
+        /// allows, and the idle glyph on a matrix MatrixDrawsGlyph allows. The strips' pictures and lines and
+        /// the screens' lines are repainted on the tick; a matrix's glyph, line and dot are drawn once, at build.</summary>
         [Fact]
         public void The_page_draws_live_only_what_PanelHome_allows()
         {
@@ -1040,6 +1042,79 @@ namespace OpenDashPlugin.Tests
             // The page's head over its sections.
             Assert.Contains("head.Children.Add(eyebrow); head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));", code);
             Assert.Contains("var stack = new StackPanel { Orientation = Orientation.Vertical }; stack.Children.Add(head); foreach (var section in sections)", code);
+        }
+
+        /// <summary>
+        /// The page's wiring is held whole, statement by statement: the order the devices are listed in, the
+        /// shape a strip is drawn in, each repaint guard, the facts the update check is compared with, the
+        /// press's kind, the LED walk, a device row's chrome, and which string each name, figure and line draws.
+        /// Each of them, changed alone, left every other test green.
+        /// </summary>
+        [Fact]
+        public void Every_decision_it_wires_is_held_whole()
+        {
+            var code = PageCode();
+            // Rig order, as the brief and the Right now ruling have it: each list walked as Settings gives it.
+            Assert.Contains("foreach (var screen in screens) { if (screen == null) continue; var row = HomeScreenRow(screen);", code);
+            // A strip is drawn in its own shape, ends and centre the right way round, and asks the car for a run
+            // of its own centre's length; its line repaints only when it moved, as a screen's does, and the
+            // screen's key holds its text, so a wheel's zone cycle repaints it.
+            Assert.Contains("foreach (var bar in bars) { if (bar == null) continue; var span = PanelHome.StripSpan(bar.Shape); var facts = StripFacts(bar.Namespace); var strip = new HomeStrip { Bar = bar, Ends = span[0], Centre = span[1], Dim = dim,", code);
+            Assert.Contains("var lineKey = line.Text + \"|\" + line.TextHex + \"|\" + line.DotHex; if (lineKey == strip.PaintedLine) return; strip.PaintedLine = lineKey;", code);
+            Assert.Contains("var painted = line.Text + \"|\" + line.TextHex + \"|\" + line.DotHex; if (painted == row.Painted) return;", code);
+            // The facts the update check's answer is compared with are each device's, and are returned.
+            Assert.Contains("var facts = new List<string>(); foreach (var screen in screens.Where(screen => screen != null)) {", code);
+            Assert.Contains("foreach (var bar in strips.Where(bar => bar != null)) {", code);
+            Assert.Contains("foreach (var slot in matrices) {", code);
+            Assert.Contains("} return facts; }", code);
+            // An issue's press is an outline press: one Primary per page, and there may be several issues.
+            Assert.Contains("var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);", code);
+            Assert.DoesNotContain("PanelButtonKind.Primary", code);
+            // HomeRelight's walk of Ui.Strip's tree: every LED is collected before any is set, and a tree of
+            // another shape is refused whole.
+            Assert.Contains("var row = picture == null ? null : picture.Child as Panel; if (row == null || frame == null || row.Children.Count != frame.Length) return false;", code);
+            Assert.Contains("var leds = new List<Border>(); for (var g = 0; g < frame.Length; g++) { var group = row.Children[g] as Panel; var lit = frame[g] ?? new string[0]; if (group == null || group.Children.Count != lit.Length) return false; foreach (var child in group.Children) { var led = child as Border; if (led == null) return false; leds.Add(led); } }", code);
+            Assert.Contains("var at = 0; foreach (var lit in frame) {", code);
+            // A device row: padded, ruled on top, its content stretched so the dot sits at the right edge, the
+            // hand, the kit's focus ring, and the template whose chrome takes the hover ground.
+            Assert.Contains("var row = new Button { Content = content, Padding = new Thickness(PanelHome.RowPaddingX, PanelHome.RowPaddingY, PanelHome.RowPaddingX, PanelHome.RowPaddingY), Background = Brushes.Transparent, BorderBrush = Ui.Brush(Theme.Rule), BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0), HorizontalContentAlignment = HorizontalAlignment.Stretch, Cursor = System.Windows.Input.Cursors.Hand, Template = HomeRowTemplate(), FocusVisualStyle = Ui.FocusRing(), };", code);
+            Assert.Contains("chrome.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); chrome.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty)); chrome.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty)); chrome.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));", code);
+            Assert.Contains("presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty)); presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); chrome.AppendChild(presenter); var template = new ControlTemplate(typeof(Button)) { VisualTree = chrome };", code);
+            Assert.Contains("var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true }; over.Setters.Add(new Setter(Border.BackgroundProperty, Ui.Brush(Theme.Hover), \"chrome\")); template.Triggers.Add(over);", code);
+            // What each row's text says: a matrix's name over its line, a screen's name before its size, a
+            // strip's shape as StripShape writes it beside its name, and each dot docked right.
+            Assert.Contains("var name = Ui.Text(title, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary); name.TextWrapping = TextWrapping.Wrap; var lineText = HomeLineText(true); HomeSetLine(lineText, line); var text = Ui.VStack(0, name, lineText); text.VerticalAlignment = VerticalAlignment.Center; var dot = HomeDot(line.DotHex);", code);
+            Assert.Contains("var figure = Ui.Text(meta, PanelHome.MetaSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data); figure.VerticalAlignment = VerticalAlignment.Center; figure.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0);", code);
+            Assert.Contains("var title = Ui.Text(name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
+            Assert.Contains("var meta = Ui.Text(shape, PanelHome.MetaSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data); meta.VerticalAlignment = VerticalAlignment.Center; meta.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0);", code);
+            Assert.Contains("var name = Ui.Text(bar.Name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary); name.TextWrapping = TextWrapping.Wrap; name.VerticalAlignment = VerticalAlignment.Center; top.Children.Add(name);", code);
+            Assert.Contains("strip.Dot.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0); DockPanel.SetDock(strip.Dot, Dock.Right); top.Children.Add(strip.Dot);", code);
+            Assert.Contains("var picture = Ui.Matrix(cells, MatrixStyle.Home, dim); picture.VerticalAlignment = VerticalAlignment.Center; picture.Margin = new Thickness(0, 0, PanelHome.RowGap, 0);", code);
+            Assert.Contains("var dock = new DockPanel { LastChildFill = true }; DockPanel.SetDock(picture, Dock.Left); DockPanel.SetDock(dot, Dock.Right); dock.Children.Add(picture); dock.Children.Add(dot); dock.Children.Add(text);", code);
+        }
+
+        /// <summary>
+        /// Main.dc.html's numbers are held where the page draws them, not only by their values in
+        /// Its_geometry_is_the_artboards: each statement that uses one is pinned whole, so a gap dropped, a
+        /// size changed or a stack turned on its side fails here.
+        /// </summary>
+        [Fact]
+        public void Its_geometry_is_drawn_where_it_is_held()
+        {
+            var code = PageCode();
+            Assert.Contains("var head = new StackPanel { Orientation = Orientation.Vertical }; var eyebrow = Ui.Eyebrow(PanelHome.Title); eyebrow.Margin = new Thickness(0, 0, 0, PanelHome.HeaderGap); head.Children.Add(eyebrow);", code);
+            Assert.Contains("var rows = new StackPanel { Orientation = Orientation.Vertical }; for (var i = 0; i < issues.Count; i++)", code);
+            Assert.Contains("var text = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = align };", code);
+            Assert.Contains("var detail = Ui.Prose(issue.Detail, PanelHome.DetailSize); detail.Margin = new Thickness(0, PanelHome.DetailGap, 0, 0); text.Children.Add(detail);", code);
+            Assert.Contains("var open = Ui.LinkButton(PanelHome.OpenLink); open.Height = double.NaN; open.FontSize = PanelHome.OpenLinkSize; open.VerticalAlignment = VerticalAlignment.Center;", code);
+            Assert.Contains("var head = new Border { Padding = new Thickness(PanelHome.CardHeadPaddingX, PanelHome.CardHeadPaddingTop, PanelHome.CardHeadPaddingX, PanelHome.CardHeadPaddingBottom), Child = headDock, };", code);
+            Assert.Contains("var stack = new StackPanel { Orientation = Orientation.Vertical }; stack.Children.Add(head); if (rows.Count == 0)", code);
+            Assert.Contains("var text = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary); if (wrap) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis; text.Margin = new Thickness(0, PanelHome.LineGap, 0, 0); text.Visibility = Visibility.Collapsed; return text;", code);
+            Assert.Contains("var dot = new Ellipse { Width = PanelHome.DotSize, Height = PanelHome.DotSize, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelHome.RowGap, 0, 0, 0), }; HomeSetDot(dot, hex); return dot;", code);
+            Assert.Contains("System.Windows.Documents.Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular); numeral.VerticalAlignment = VerticalAlignment.Center;", code);
+            Assert.Contains("var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small); rig.Padding = new Thickness(PanelHome.QuickRigPaddingX, 0, PanelHome.QuickRigPaddingX, 0); rig.HorizontalAlignment = HorizontalAlignment.Left;", code);
+            Assert.Contains("var cells = new FrameworkElement[] { Ui.VStack(PanelHome.QuickGap, labelLine, slider), Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelSettings.NightModeTitle), night), Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelHome.TryTitle), rig), };", code);
+            Assert.Contains("var rule = i == 0 ? 0 : PanelMetrics.BorderWeight; var cell = new Border { Padding = new Thickness(PanelHome.QuickPaddingX, PanelHome.QuickPaddingY, PanelHome.QuickPaddingX, PanelHome.QuickPaddingY), BorderBrush = Ui.Brush(Theme.Rule),", code);
         }
 
         /// <summary>What each press does: the issue's own call, and each row and link to its own page.</summary>
