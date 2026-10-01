@@ -386,6 +386,9 @@ namespace OpenDashPlugin.Tests
             // picked from the keyboard focused again after its redraw.
             InOrder(RigMethod("private void RigDrawChips("),
                 "var current = rigScenario;",
+                // 32 between two groups and 18 between two rows of them, as the artboard's `gap: 18px 32px`:
+                // the chips' own 6 counted in, and the last group's trailing gap taken back by the panel.
+                "var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };",
                 "foreach (var group in PanelEmulation.Groups)",
                 "foreach (var scenario in group.Scenarios)",
                 "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",
@@ -393,8 +396,11 @@ namespace OpenDashPlugin.Tests
                 // is pressed as the kit's segmented control does.
                 "AutomationProperties.SetName(chip, scenario.Label);",
                 "AutomationProperties.SetItemStatus(chip, id == current ? \"checked\" : \"unchecked\");",
+                "chip.Margin = new Thickness(0, 0, PanelRigMap.ChipGap, PanelRigMap.ChipGap);",
                 "if (id == focus) focusChip = chip;",
                 "Ui.Eyebrow(group.Title)",
+                "title.Margin = new Thickness(0, 0, 0, PanelRigMap.GroupTitleGap);",
+                "column.Margin = new Thickness(0, 0, PanelRigMap.GroupGapX - PanelRigMap.ChipGap, PanelRigMap.GroupGapY - PanelRigMap.ChipGap);",
                 "host.Child = wrap;",
                 "chip.Dispatcher.BeginInvoke(new Action(() => chip.Focus()), DispatcherPriority.Input);");
             // A rebuild -- the night switch, a resize, Settings' Try -- paints the selection, not the default.
@@ -530,7 +536,11 @@ namespace OpenDashPlugin.Tests
                 "if (TwoColumns)",
                 "Ui.HStack(PanelRigMap.HeaderGap, controls)",
                 "return Ui.Row(title, right);",
+                // The stacked header's gaps between and under its controls, the last line's taken back, so the
+                // canvas stands its section gap under it as it does under the two-column header.
+                "Margin = new Thickness(0, PanelRigMap.HeaderStackGap, -PanelRigMap.HeaderGap, -PanelRigMap.HeaderLabelGap)",
                 "foreach (var control in controls)",
+                "control.Margin = new Thickness(0, 0, PanelRigMap.HeaderGap, PanelRigMap.HeaderLabelGap);",
                 "wrap.Children.Add(control);",
                 "return Ui.VStack(0, title, wrap);");
 

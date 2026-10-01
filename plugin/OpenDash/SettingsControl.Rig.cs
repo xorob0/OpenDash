@@ -155,7 +155,10 @@ namespace OpenDashPlugin
             }
 
             // Stacked: the controls wrap under the title, so a narrow column never pushes one off the page.
-            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, PanelRigMap.HeaderStackGap, 0, 0) };
+            // Each control carries its gap on its right and under it; the panel takes back the last line's and
+            // the last control's, so the canvas stands its section gap under the controls and a control wraps
+            // only when it does not fit.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, PanelRigMap.HeaderStackGap, -PanelRigMap.HeaderGap, -PanelRigMap.HeaderLabelGap) };
             foreach (var control in controls)
             {
                 control.Margin = new Thickness(0, 0, PanelRigMap.HeaderGap, PanelRigMap.HeaderLabelGap);
@@ -934,7 +937,9 @@ namespace OpenDashPlugin
         private void RigDrawChips(Border host, IList<RigTileView> views, string focus)
         {
             var current = rigScenario;
-            var wrap = new WrapPanel { Orientation = Orientation.Horizontal };
+            // Every group carries the gap across on its right, and the panel takes back the last one's, so a
+            // group wraps only when it does not fit, as the artboard's flex-wrap does.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };
             Button focusChip = null;
             foreach (var group in PanelEmulation.Groups)
             {
@@ -954,8 +959,9 @@ namespace OpenDashPlugin
                 var title = Ui.Eyebrow(group.Title);
                 title.Margin = new Thickness(0, 0, 0, PanelRigMap.GroupTitleGap);
                 var column = Ui.VStack(0, title, chips);
-                // The chips' own 6 under them is part of the 18 between two rows of groups.
-                column.Margin = new Thickness(0, 0, PanelRigMap.GroupGapX, PanelRigMap.GroupGapY - PanelRigMap.ChipGap);
+                // The last chip's own 6 on its right is part of the 32 between two groups, and the chips' 6
+                // under them part of the 18 between two rows of groups.
+                column.Margin = new Thickness(0, 0, PanelRigMap.GroupGapX - PanelRigMap.ChipGap, PanelRigMap.GroupGapY - PanelRigMap.ChipGap);
                 wrap.Children.Add(column);
             }
             host.Child = wrap;
