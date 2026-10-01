@@ -274,20 +274,37 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The second screen at a size is the case worth saying out loud: it is the whole of
-        /// ADR 0017 and is invisible from the outside until two rims cycle together.</summary>
+        /// ADR 0017 and is invisible from the outside until two rims cycle together. It is said as what the
+        /// driver gets, two screens showing different pages, and the screen is named the way step 2 asked
+        /// about it: by its size where tiles show sizes, by its kind where they say Landscape or Portrait.</summary>
         [Fact]
         public void The_note_says_what_the_button_will_do()
         {
-            var entry = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            var types = PanelAddScreen.Types(Catalogue());
+            var faces = types.First(t => t.Kind == Contract.KindFace);
+            var companions = types.First(t => t.Kind == Contract.KindCompanion);
+            var walls = types.First(t => t.Kind == Contract.KindPitWall);
+            var rim = faces.Entries.First(e => e.Width == 850);
             // The ordinary case says nothing at all: a button reading "Add screen" has already said it.
-            Assert.Equal(string.Empty, PanelAddScreen.Note(entry, false));
+            Assert.Equal(string.Empty, PanelAddScreen.Note(faces, rim, false));
             // Another screen at a size is the one case worth a line, since two rims that page together is
             // what somebody would otherwise report as a bug. It counts nothing: the third at a size is not
             // "your second", and a second added after the first was removed is the only one.
-            Assert.Equal("This 850 × 480 gets settings of its own.", PanelAddScreen.Note(entry, true));
-            Assert.DoesNotContain("second", PanelAddScreen.Note(entry, true));
+            Assert.Equal("This 850 × 480 can show different pages from any other 850 × 480 on your rig.", PanelAddScreen.Note(faces, rim, true));
+            Assert.DoesNotContain("second", PanelAddScreen.Note(faces, rim, true));
+            Assert.DoesNotContain("settings", PanelAddScreen.Note(faces, rim, true));
+            // A companion and a pit wall are asked as an orientation, and no pixels are drawn on the sheet:
+            // a second landscape companion is not "This 850 × 480", which is the Rim face's size.
+            Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(companions));
+            Assert.Equal("This companion can show different pages from any other companion on your rig.", PanelAddScreen.Note(companions, companions.Entries[0], true));
+            Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(walls));
+            Assert.Equal("This pit wall can show different pages from any other pit wall on your rig.", PanelAddScreen.Note(walls, walls.Entries[1], true));
+            Assert.Equal(string.Empty, PanelAddScreen.Note(walls, walls.Entries[0], false));
             // Except a card face, since every one of them reads the same twelve slots and a second gets none (#474).
-            Assert.Equal(string.Empty, PanelAddScreen.Note(Package("OpenDash 480 round", Contract.KindSlots, 480, 480), true));
+            var rounds = types.First(t => t.Kind == Contract.KindSlots);
+            Assert.Equal(string.Empty, PanelAddScreen.Note(rounds, rounds.Entries[0], true));
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("note.Text = PanelAddScreen.Note(type, entry, second);", screens);
         }
 
         /// <summary>
@@ -325,7 +342,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
             Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
             Assert.Equal("Save", PanelAddScreen.SaveButton);
-            Assert.Equal("Applies your changes and writes the dashboard.", PanelAddScreen.SaveTooltip);
+            // In Save's own verb, and the page's one verb for a dashboard: every other line says install.
+            Assert.Equal("Saves your changes and installs the dashboard again.", PanelAddScreen.SaveTooltip);
+            Assert.DoesNotContain("writes", PanelAddScreen.SaveTooltip);
             // In the verb of the line after it, and with no hover on the button beside it to say it again.
             Assert.Equal("Installs this screen's dashboard again, at its saved name and size.", PanelAddScreen.ReinstallCaption);
             Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim"));

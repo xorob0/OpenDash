@@ -147,8 +147,9 @@ namespace OpenDashPlugin
 
         public const string ReinstallButton = "Reinstall";
 
-        /// <summary>Save's hover, which does not name a row the sheet may not draw.</summary>
-        public const string SaveTooltip = "Applies your changes and writes the dashboard.";
+        /// <summary>Save's hover, in Save's own verb and the page's verb for a dashboard, which is install: it
+        /// does not name a row the sheet may not draw.</summary>
+        public const string SaveTooltip = "Saves your changes and installs the dashboard again.";
 
         /// <summary>The edit sheet's Cancel, which has nothing to add and so does not say "adding".</summary>
         public const string EditCancelTooltip = "Goes back without changing anything.";
@@ -427,21 +428,26 @@ namespace OpenDashPlugin
         /// The line under the questions, saying what pressing the button will do.
         /// </summary>
         /// <remarks>
-        /// Another screen at a size is the case worth saying out loud: it gets a copy of the dashboard and a
-        /// settings group of its own, which is the whole of ADR 0017 and is invisible from the outside until
-        /// somebody wonders why their two rims cycle together. <paramref name="second"/> says only that the
-        /// size's own settings are taken, so the line counts nothing: the third screen at a size is not the
-        /// second, and a second added after the first was removed takes the first's place.
+        /// Another screen of a size is the case worth saying out loud: it gets a copy of the dashboard and its
+        /// own settings, which is the whole of ADR 0017 and is invisible from the outside until somebody
+        /// wonders why their two rims cycle together. What the driver needs from that is the consequence, that
+        /// the two can show different pages, never the settings group behind it (voice.md, What never
+        /// appears). <paramref name="second"/> says only that the size's own settings are taken, so the line
+        /// counts nothing: the third screen at a size is not the second, and a second added after the first
+        /// was removed takes the first's place.
+        ///
+        /// The screen is named the way the sheet asked about it: by its size where the tiles show sizes, and
+        /// by its kind where step 2 asked Landscape or Portrait and no size is drawn anywhere -- a second
+        /// landscape companion is not "This 850 × 480", which is the Rim face's size.
         /// </remarks>
-        public static string Note(PackageEntry entry, bool second)
+        public static string Note(ScreenType type, PackageEntry entry, bool second)
         {
-            if (entry == null) return string.Empty;
+            if (entry == null || !second) return string.Empty;
             // Not a card face's: every card face reads the same twelve slots, so a second one gets a dashboard of its
             // own and no settings at all, and the line would promise what it does not do (#474).
             if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return string.Empty;
-            return second
-                ? "This " + entry.SizeLabel + " gets settings of its own."
-                : string.Empty;
+            var thing = Question(type) == SizeQuestion.Orientation ? KindName(entry.Kind).ToLowerInvariant() : entry.SizeLabel;
+            return "This " + thing + " can show different pages from any other " + thing + " on your rig.";
         }
 
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not
