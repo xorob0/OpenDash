@@ -163,7 +163,7 @@ namespace OpenDashPlugin
                     var noted = !string.IsNullOrWhiteSpace(note);
                     if (noted) parts.Add(note.Trim());
                     var first = before != FlagBoxInstallState.Outdated && before != FlagBoxInstallState.UpToDate;
-                    var select = first ? SelectStep(panels) : null;
+                    var select = first ? SelectStep(profile, panels) : null;
                     if (select != null) parts.Add(select);
                     return new PanelMessage(string.Join(" ", parts), noted ? PanelTone.Caution : PanelTone.Info);
                 case FlagBoxInstallState.Unavailable:
@@ -176,15 +176,23 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The select step after a first install, in <see cref="StepsLeft"/>'s form: on the one matrix's
-        /// device with its content number; on each matrix's device when the rig has several, each with its
-        /// own number; and nothing on a rig with none, which has no device to name.
+        /// The select step after a first install, in <see cref="StepsLeft"/>'s form, the profile quoted as the
+        /// entry to pick in SimHub's list: on the one matrix's device with its content number; on each matrix's
+        /// device when the rig has several, each with its own number; and nothing on a rig with none, which has
+        /// no device to name. The Updates page says the same step in the same words (PanelUpdates.FlagBoxSelect
+        /// on its branch).
         /// </summary>
-        public static string SelectStep(IList<int> panels)
+        public static string SelectStep(string profile, IList<int> panels)
         {
             if (panels == null || panels.Count == 0) return null;
-            if (panels.Count == 1) return "Select it on " + YourDevice + ContentStep(panels[0]);
-            return "Select it on " + EachDevice + " and set " + ContentField + " to the matrix's number.";
+            if (panels.Count == 1) return SelectOn(profile) + YourDevice + ContentStep(panels[0]);
+            return SelectOn(profile) + EachDevice + " and set " + ContentField + " to the matrix's number.";
+        }
+
+        /// <summary>The select step's opening, the profile quoted as the entry SimHub lists.</summary>
+        private static string SelectOn(string profile)
+        {
+            return "Select \"" + profile + "\" on ";
         }
 
         /// <summary>Where the select step is taken when the rig has several matrices.</summary>
@@ -202,16 +210,17 @@ namespace OpenDashPlugin
         /// same state (PanelUpdates.UpdateBringsItTo and LightFailed on that branch), so one profile is never
         /// hovered two ways on two pages.
         /// </summary>
+        /// <param name="profile">The profile as SimHub lists it, which the select step quotes.</param>
         /// <param name="panels">The rig's matrices: a current profile's hover is the select step, in the one
         /// form the page says it (<see cref="SelectStep"/>), and none on a rig with no matrix to name.</param>
-        public static string ProfileLineTooltip(FlagBoxInstallState state, string embeddedVersion, IList<int> panels)
+        public static string ProfileLineTooltip(FlagBoxInstallState state, string embeddedVersion, string profile, IList<int> panels)
         {
             switch (state)
             {
                 case FlagBoxInstallState.UpToDate:
                     // The dot and the version already say it is current: the hover gives the one step the
                     // line cannot show, which FlagBoxInstallPlan.Summary carried.
-                    return SelectStep(panels);
+                    return SelectStep(profile, panels);
                 case FlagBoxInstallState.Outdated:
                     // The line already shows the version SimHub has: the hover names the one the press brings.
                     return UpdateBringsItTo(embeddedVersion);
@@ -489,7 +498,7 @@ namespace OpenDashPlugin
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
-                    return "Select \"" + profile + "\" on " + YourDevice + content;
+                    return SelectOn(profile) + YourDevice + content;
                 case FlagBoxInstallState.NotEmbedded:
                     return NoProfile;
                 case FlagBoxInstallState.Unavailable:
