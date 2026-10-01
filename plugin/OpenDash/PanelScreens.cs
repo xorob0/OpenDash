@@ -1122,8 +1122,11 @@ namespace OpenDashPlugin
                 case AnchorPaging:
                     return screen.IsCompanion;
                 case AnchorSlots:
-                case AnchorRevRing:
                     return screen.IsSlots;
+                case AnchorRevRing:
+                    // A round screen's: a rectangular card face titles the same rig-wide row Rev bar, so a hit
+                    // on "Rev ring" opens a round screen, where the row it lands on carries the name searched.
+                    return IsRound(screen);
             }
             if (string.Equals(anchor, PanelSoon.ZonesInsteadOfCards.Anchor, StringComparison.Ordinal)) return screen.IsSlots;
             if (FaceSoon.Concat(ZoneListSoon).Any(item => string.Equals(item.Anchor, anchor, StringComparison.Ordinal))) return face;

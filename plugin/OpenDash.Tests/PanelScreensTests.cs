@@ -333,6 +333,12 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.DrawsDisc(new ScreenInstance { Kind = Contract.KindSlots, Width = 850, Height = 480 }));
             Assert.Equal(PanelScreens.RevRingTitle, PanelScreens.RevRingTitleFor(round));
             Assert.Equal(PanelScreens.RevBarTitle, PanelScreens.RevRingTitleFor(legacy));
+            // So a search for "Rev ring" opens a round screen, whose row is called that, and not a card face's
+            // Rev bar; a rig with no round screen keeps the card face it has.
+            Assert.False(PanelScreens.Draws(PanelScreens.AnchorRevRing, legacy));
+            Assert.True(PanelScreens.Draws(PanelScreens.AnchorSlots, legacy));
+            Assert.Same(round, PanelScreens.ScreenFor(PanelScreens.AnchorRevRing, new[] { legacy, round }, legacy));
+            Assert.Same(legacy, PanelScreens.ScreenFor(PanelScreens.AnchorRevRing, new[] { legacy }, legacy));
             var page = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
             Assert.Contains("Ui.Thumb(PanelScreens.ThumbKind(captured)", page);
             var roundEditor = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
