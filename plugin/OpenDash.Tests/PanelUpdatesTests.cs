@@ -1663,6 +1663,259 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("updatesDownload = Ui.Button(null, PanelButtonKind.Primary);", PageCode());
         }
 
+        // --- What the draw files call -----------------------------------------------------------------
+
+        /// <summary>Asserts that each part is in the body, each after the one before it.</summary>
+        private static void InOrder(string body, params string[] parts)
+        {
+            var at = -1;
+            foreach (var part in parts)
+            {
+                var next = body.IndexOf(part, at + 1, StringComparison.Ordinal);
+                Assert.True(next > at, "\"" + part + "\" is there, after what comes before it");
+                at = next;
+            }
+        }
+
+        /// <summary>
+        /// The replacing presses pass on only the yes their second press gave: an edited dashboard is replaced
+        /// only after the question was asked and answered (PanelConfirmation), and Reinstall everything hands
+        /// that answer, and nothing else, to the installer. A first press that ran with replaceEdited true
+        /// would replace the driver's work without asking, with every pure test green.
+        /// </summary>
+        [Fact]
+        public void The_replacing_presses_pass_on_only_the_yes_the_second_press_gave()
+        {
+            var apply = Method("private void ApplyUpdate()");
+            InOrder(apply,
+                "if (applying) return;",
+                "if (updateStatus.State == UpdateState.Checking) return;",
+                "var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);",
+                "applyWaiting = true; if (Check(manual: true)) return; applyWaiting = false;",
+                "if (release == null) { UpdatesDrawCard(); UpdatesRefreshCheck(); Say(UpdateWording.NothingToApply, false); return; }",
+                "plugin.Installer.Refresh();",
+                "var edited = plugin.Installer.EditedFolders;",
+                "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);",
+                "if (press == PressOutcome.Ask) { UpdatesAsk(updatesCardLine, question); return; }",
+                "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
+                "applying = true;",
+                "UpdatesDrawCard(); UpdatesRefreshCheck();",
+                "UpdateService.InBackground(",
+                "outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);");
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
+
+            var reinstall = Method("private void Reinstall()");
+            InOrder(reinstall,
+                "if (applying) return;",
+                "plugin.Installer.Refresh();",
+                "var question = PanelUpdates.ReinstallQuestion(UpdatesNames(edited));",
+                "if (press == PressOutcome.Ask) { UpdatesAsk(updatesReinstallLine, question); return; }",
+                "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
+                "plugin.Installer.EnsureInstalled(true, replaceEdited);",
+                "var lights = failure == null ? UpdatesBringLightsForward() : null;",
+                "Save();",
+                "Redraw();",
+                "if (failure != null) Say(PanelUpdates.ReinstallFailed, false);",
+                "else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName(), Settings.MatrixPanels().ToList()), lights.Ok);");
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(reinstall, @"EnsureInstalled\("));
+        }
+
+        /// <summary>
+        /// A run is turned on before the work leaves the interface thread, and every press it holds off is
+        /// drawn disabled while it runs, whichever build drew it: the guards that return during a run are
+        /// pinned above, and these are what makes them hold.
+        /// </summary>
+        [Fact]
+        public void A_run_is_turned_on_before_it_starts_and_draws_its_presses_disabled()
+        {
+            InOrder(Method("private void ApplyUpdate()"), "if (press == PressOutcome.Ask)", "applying = true;", "UpdateService.InBackground(");
+            Assert.Contains("restore.IsEnabled = !applying; updatesRunPresses.Add(restore);", Method("private FrameworkElement UpdatesKeptCard(double width)"));
+            Assert.Contains("updatesReinstall.IsEnabled = !applying;", Method("private FrameworkElement UpdatesReinstallRow()"));
+            Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !applying; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesStripRow("));
+            Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !applying; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesFlagBoxRow("));
+            InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (applying) ShowRun();");
+            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction);", Method("private void ShowRun()"));
+            Assert.Contains("applyingFraction = fraction; if (applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction);", Method("private void ApplyUpdate()"));
+        }
+
+        /// <summary>
+        /// What each press writes, where the pure tests cannot see it: a strip's profile into its device, the
+        /// flag box's into SimHub, a kept copy back into its folder, the driver's titles back over an update's,
+        /// and the restart the driver said yes to. A press that wrote nothing would still say what it did.
+        /// </summary>
+        [Fact]
+        public void Each_press_writes_what_it_says_it_wrote()
+        {
+            var strips = Method("private IDictionary<string, FlagBoxPlan> UpdatesWriteStrips(");
+            InOrder(strips,
+                "foreach (var entry in PanelUpdates.StripsToWrite(census, reachable, wanted, listed))",
+                "var result = InstallBar(bar, embedded[bar.ProfileShapeId]);",
+                "tally.Strip(bar.Name, PanelUpdates.DeviceName(devices, bar), entry.Value.State, result);",
+                "written[PanelUpdates.StripKey(bar)] = result;",
+                "foreach (var bar in PanelUpdates.StripsWithoutDevice(census, reachable, wanted, listed))",
+                "tally.DeviceNotListed(bar.Name);",
+                "return PanelUpdates.AfterWrite(after, reachable, written);");
+
+            InOrder(Method("private FrameworkElement UpdatesFlagBoxRow("),
+                "Func<FlagBoxPlan> press = () => { var result = InstallFlagBox(); said = new UpdatesLightsTally(); said.FlagBox(drawn.State, result); return result; };",
+                "{ if (applying) return; draw(press()); RefreshAttention(); RefreshSidebar(); UpdatesSay(said); };");
+            Assert.Contains("{ if (applying) return; draw(update()); RefreshAttention(); RefreshSidebar(); UpdatesSay(said); };", Method("private FrameworkElement UpdatesStripRow("));
+            Assert.Contains("if (line != null) Say(line, said.Ok);", Method("private void UpdatesSay(UpdatesLightsTally said)"));
+
+            InOrder(Method("private void RestoreKept()"),
+                "plugin.Installer.Refresh();",
+                "foreach (var kept in UpdatesKept())",
+                "var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));",
+                "if (copy == null) continue;",
+                "if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;",
+                "plugin.Installer.Refresh(); Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed), restored > 0 && failed.Count == 0);");
+
+            InOrder(Method("private void UpdatesApplied("),
+                "try",
+                "foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);",
+                "Save();",
+                "plugin.Installer.Refresh();",
+                "plugin.RefreshUpdateMark();",
+                "updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);",
+                "var showing = updatesCardHost != null && IsLoaded;");
+
+            InOrder(Method("private async void OfferRestart("),
+                "var now = answer == DialogResult.Yes;",
+                "PluginUpdate.AskToReopen(root, now);",
+                "if (!now) return;",
+                "Say(UpdateWording.RestartGoing);",
+                "Save();",
+                "Application.Current.Shutdown();",
+                "catch",
+                "PluginUpdate.AskToReopen(root, false);");
+
+            var import = Method("private void UpdatesCopyForImport()");
+            InOrder(import,
+                "var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());",
+                "updatesImportLine.Text = ok ? PanelUpdates.CopiedForImport(copied.Path) : PanelUpdates.CopyForImportFailed;");
+        }
+
+        /// <summary>
+        /// The check flow reaches the shell's update state through these calls, and the pure decisions are
+        /// worth nothing unless the page makes them: an answer that never redraws leaves Check now disabled and
+        /// "Checking for updates…" up, and a switch turned off that never withdraws the offer leaves its card.
+        /// </summary>
+        [Fact]
+        public void The_check_flow_draws_every_answer_the_shell_hears()
+        {
+            Assert.Contains("OnUpdate(UpdatesRefreshCheck, manual => UpdateAnswered());", Method("private FrameworkElement BuildUpdatesPage(PanelRoute to)"));
+            InOrder(Method("private void UpdateAnswered()"),
+                "UpdatesDrawCard();",
+                "UpdatesRefreshCheck();",
+                "var waiting = applyWaiting;",
+                "applyWaiting = false;",
+                "if (PanelUpdates.AppliesWhenAnswered(waiting, updateStatus.State, UpdatesPending()) && updatesCardHost != null) ApplyUpdate();");
+
+            var row = Method("private FrameworkElement BuildCheckRow()");
+            Assert.Contains("var toggle = BuildToggle(Settings.CheckForUpdates, on => { Settings.CheckForUpdates = on; Save(); updateStatus = PanelUpdates.Switched(on, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.RigVersion); UpdatesDrawCard(); if (on) Check(manual: false); UpdatesRefreshCheck(); RefreshAttention(); RefreshSidebar(); });", row);
+            Assert.Contains("var row = Ui.SettingRow(PanelUpdates.CheckTitle, Ui.HStack(PanelUpdates.CheckControlsGap, updatesCheckNow, toggle), UpdateWording.CheckCaption);", row);
+            Assert.Contains("left.Children.Add(updatesLastChecked); left.Children.Add(updatesCheckLine);", row);
+            InOrder(row, "left.Children.Add(updatesCheckLine);", "UpdatesRefreshCheck(); return row;");
+
+            var refresh = Method("private void UpdatesRefreshCheck()");
+            Assert.Contains("if (updatesLastChecked != null) updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);", refresh);
+            Assert.Contains("var line = PanelUpdates.RowLine(updatesCard, updateStatus); updatesCheckLine.Text = line ?? string.Empty; updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;", refresh);
+            Assert.Contains("if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);", refresh);
+            Assert.Contains("if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);", refresh);
+            Assert.Contains("var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);", refresh);
+            Assert.Contains("if (cardLine != null && updatesCardLine != null) { updatesCardLine.Text = cardLine; updatesCardLine.Visibility = Visibility.Visible; }", refresh);
+
+            var card = Method("private void UpdatesDrawCard()");
+            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());", card);
+            Assert.Contains("var heading = Ui.Heading(PanelUpdates.Heading(latest), true);", card);
+            Assert.Contains("var note = PanelUpdates.CardNote(updatesCard, latest);", card);
+            Assert.Contains("updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);", card);
+            Assert.Contains("if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());", card);
+            // The brief's named source for the notes, never the release's raw text.
+            Assert.Contains("var summary = UpdateWording.Summarise(updateStatus.Notes);", Method("private FrameworkElement UpdatesReleaseNotes()"));
+        }
+
+        /// <summary>
+        /// What the page draws, as drawn: every section in its place, every anchor search and Home route to
+        /// placed on the section it names, every row of the table added, and each row's hover, which is the
+        /// only way the reasons for "Unknown" and the steps for a device or a restart reach the driver.
+        /// </summary>
+        [Fact]
+        public void The_page_draws_every_section_row_and_anchor_it_says()
+        {
+            var page = Method("private FrameworkElement BuildUpdatesPage(PanelRoute to)");
+            Assert.Contains("var kept = UpdatesKeptCard(updatesWidth); updatesPage = PageLayout(PanelUpdates.Title, null, Ui.Anchor(BuildPluginSection(), PanelUpdates.AnchorPlugin), Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck), Ui.Anchor(BuildInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages), kept, Ui.Anchor(UpdatesSupportSection(), PanelUpdates.AnchorSupport));", page);
+
+            var keptCard = Method("private FrameworkElement UpdatesKeptCard(double width)");
+            InOrder(keptCard,
+                "var kept = UpdatesKept(); if (kept.Count == 0) return null;",
+                "Ui.Text(PanelUpdates.KeptTitle(kept.Select(k => k.Value).ToList()),",
+                "Ui.Caption(PanelUpdates.KeptCaption(kept.Count), BodyWidth)",
+                "var restore = Ui.Button(PanelUpdates.PutMineBack,",
+                "return Ui.Anchor(card, PanelUpdates.AnchorKept);");
+
+            var section = Method("private FrameworkElement BuildInSimHubSection(double width, bool keptAnchorHere)");
+            InOrder(section,
+                "rows.Children.Add(UpdatesTableHead(versionWidth));",
+                "foreach (var pair in UpdatesDashboardRows()) { Action<UpdatesRow> paint; rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));",
+                "var lights = BuildLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth); foreach (var row in lights) rows.Children.Add(row); if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());",
+                "foreach (var note in notes) children.Add(UpdatesNote(note));",
+                "if (PanelUpdates.ShowsImportFallback(flagBoxPlan)) { var fallback = UpdatesFlagBoxFallback(flagBoxPlan);",
+                "children.Add(fallback);",
+                "var reinstall = Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall);",
+                "return PageSection(PanelUpdates.InSimHubTitle, false, PanelUpdates.SectionGap, children.ToArray());");
+            Assert.Contains("var text = Ui.Caption(PanelUpdates.NothingInSimHub, BodyWidth);", Method("private static FrameworkElement UpdatesTableEmpty()"));
+
+            var lights = Method("private IList<FrameworkElement> BuildLightRows(");
+            Assert.Contains("for (var i = 0; i < strips.Count; i++) drawn.Add(UpdatesStripRow(strips[i].Key, stripRows[i], versionWidth, painters));", lights);
+            Assert.Contains("if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, flagBoxRow, versionWidth));", lights);
+
+            // The restart is known only from the shell's facts, and a row fed none never says it.
+            Assert.Contains("var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed, facts == null ? null : facts.AddedSinceStart);", Method("private IList<KeyValuePair<ScreenInstance, UpdatesRow>> UpdatesDashboardRows()"));
+
+            var row = Method("private static Border UpdatesTableRow(");
+            Assert.Contains("paint = current => { version.Text = current.Version; stacked.Text = PanelUpdates.VersionInName(versionWidth, current.Version); state.Text = current.State; state.Foreground = Ui.Brush(current.StateHex); dot.Fill = Ui.Brush(current.DotHex); border.ToolTip = current.Tooltip; }; paint(row); return border;", row);
+
+            var support = Method("private FrameworkElement UpdatesSupportSection()");
+            InOrder(support,
+                "foreach (var press in new FrameworkElement[] { copy, log, issue, guide })",
+                "var caption = Ui.Prose(PanelUpdates.SupportCaption, PanelUpdates.SupportCaptionSize);",
+                "var licence = Ui.Prose(PanelUpdates.Licence, PanelUpdates.SupportCaptionSize, Theme.TextLabel);",
+                "return PageSection(PanelUpdates.SupportTitle, false, PanelUpdates.SectionGap, presses, caption, licence);");
+
+            // The by-hand route's press reaches its copy.
+            Assert.Contains("copy.Click += (sender, args) => UpdatesCopyForImport();", Method("private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)"));
+        }
+
+        /// <summary>
+        /// The support report is gathered as its caption promises: OpenDash's last lines of SimHub's current
+        /// log, read before the folders are (whose read logs a line per package and would push the older ones
+        /// out), and every field the composer is handed. The composer's own test cannot see what it is given.
+        /// </summary>
+        [Fact]
+        public void The_support_report_is_gathered_as_its_caption_says()
+        {
+            var input = Method("private UpdatesReportInput UpdatesReportInput()");
+            InOrder(input, "var log = UpdatesLogTail(root);", "if (!applying) plugin.Installer.Refresh();", "var screens = UpdatesDashboardRows()");
+            foreach (var field in new[]
+            {
+                "GeneratedUtc = DateTime.UtcNow,", "PluginVersion = OpenDash.Version,", "RigVersion = plugin.RigVersion,", "SimHubVersion = UpdatesSimHubVersion(root),",
+                "SimHubRoot = root,", "OsVersion = Environment.OSVersion.VersionString,", "ChecksOn = Settings.CheckForUpdates,", "LastCheckedTicks = Settings.LastUpdateCheckTicks,",
+                "UpdateLine = updateStatus.Line,", "RestartPending = UpdatesPending(),", "Screens = screens,", "Strips = strips,", "Matrices = matrices,",
+                "FlagBox = flagBox,", "CarTables = carTables,", "Log = log,",
+            })
+            {
+                Assert.Contains(field, input);
+            }
+            Assert.Contains("if (PanelUpdates.DrawsFlagBoxRow(matrices.Count > 0) && plugin.FlagBoxJson != null)", input);
+
+            var tail = Method("private static IList<string> UpdatesLogTail(string root)");
+            InOrder(tail,
+                "var path = Path.Combine(root ?? string.Empty, PanelUpdates.LogFolder, PanelUpdates.LogFile);",
+                "new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)",
+                "return PanelUpdates.Tail(UpdatesLines(reader));");
+        }
+
         // --- Search -----------------------------------------------------------------------------------
 
         [Fact]
