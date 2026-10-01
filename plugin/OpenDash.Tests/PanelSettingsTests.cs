@@ -433,7 +433,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(36, PanelSettings.IndexReadLine);
             Assert.Equal(20, PanelSettings.IndexJumpMargin);
             var page = Page();
-            Assert.Contains("var all = new List<UIElement> { SettingsIndex(sections, to) };", page);
+            // The page is the row, then all six sections, laid out together under the title.
+            Assert.Matches(@"var all = new List<UIElement> \{ SettingsIndex\(sections, to\) \};\s*all\.AddRange\(sections\);", page);
+            Assert.Contains("return PageLayout(PanelSettings.Title, null, all.ToArray());", page);
+            // Every link is kept, to be lit, and drawn.
+            Assert.Matches(@"links\.Add\(link\);\s*wrap\.Children\.Add\(link\);", page);
+            // It hears the column's scroller once loaded, and reads the view on every move of it.
+            Assert.Matches(@"scroll = SettingsScrollOf\(row\);\s*if \(scroll == null\) return;\s*scroll\.ScrollChanged \+= follow;", page);
+            Assert.Matches(@"args\.ExtentHeightChange == 0\) return;\s*read\(\);", page);
             // The rule that closes the row, and a link lit in the primary ink on the zone ground.
             Assert.Matches(@"BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, 0, 0, PanelMetrics\.BorderWeight\),\s*Padding = new Thickness\(0, 0, 0, PanelSettings\.IndexPaddingBottom - PanelSettings\.IndexGap\),", page);
             Assert.Contains("link.Background = lit ? Ui.Brush(Theme.SurfaceZone) : Brushes.Transparent;", page);
@@ -555,8 +562,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(5, PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, 700, true, -1));
             // A link's press holds its own section while its heading is in view, even at the foot...
             Assert.Equal(4, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, 200, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
-            // ...and lets go once it has scrolled out of view.
+            // ...and lets go once it has scrolled out of view, below it or above it.
             Assert.Equal(3, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, 10, 800, 1300 }, PanelSettings.IndexReadLine, 700, false, 4));
+            Assert.Equal(5, PanelSettings.CurrentSection(new double[] { -3000, -2500, -2000, -1500, -100, 20 }, PanelSettings.IndexReadLine, 700, false, 4));
             Assert.Equal(0, PanelSettings.CurrentSection(new double[0], PanelSettings.IndexReadLine, 700, false, -1));
             Assert.Equal(0, PanelSettings.CurrentSection(null, PanelSettings.IndexReadLine, 700, true, 2));
         }
@@ -589,6 +597,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var start = PanelSettings.IndexStartMark(settingsIndexMark, anchor);", page);
             Assert.Contains("var held = PanelSettings.IndexStartHeld(settingsIndexMark, settingsIndexHeld, anchor);", page);
             Assert.Contains("mark(start);", page);
+            // Every mark keeps itself and the hold for the next build in place, the write side of the two reads
+            // above, and lights exactly the section it names.
+            Assert.Matches(@"settingsIndexMark = current;\s*settingsIndexHeld = held;\s*for \(var k = 0; k < links\.Count; k\+\+\) SettingsPaintIndexLink\(links\[k\], k == current\);", page);
             Assert.Contains("OnLeave(\"Settings.indexMark\", () => { settingsIndexMark = -1; settingsIndexHeld = -1; });", page);
             Assert.Contains("PanelSettings.CurrentSection(tops, PanelSettings.IndexReadLine, scroll.ViewportHeight, atEnd, held)", page);
             Assert.Contains("Dispatcher.BeginInvoke(read, DispatcherPriority.Background);", page);
