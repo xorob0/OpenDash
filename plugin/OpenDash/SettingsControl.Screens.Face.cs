@@ -64,7 +64,7 @@ namespace OpenDashPlugin
             // window re-lays the aside without rebuilding the page and reloading its live preview.
             var twoColumns = TwoColumns;
             var content = ContentWidthUpTo(PanelFacePlan.ContentMost(face, twoColumns));
-            var column = twoColumns ? PanelFacePlan.ColumnFor(face, content) : content;
+            var column = PanelFacePlan.PictureWidthFor(content, twoColumns);
             var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.FitWidth(face, column), key, pick), PanelScreens.AnchorZones);
             var card = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
             // Two zones, or a zone and the glance, opening on the same page: said in a line under the aside,
@@ -74,12 +74,12 @@ namespace OpenDashPlugin
             var rows = BuildFaceRows(screen, redraw, column);
 
             if (!twoColumns) return Ui.VStack(16, picture, aside, rows);
-            // The picture's column, then the aside taking the rest from its least, as the pit wall's list does:
-            // it stays beside the zone it lists however wide the window.
+            // The artboard's grid, minmax(0,1fr) 316px: the picture's column takes the rest, the picture fitted
+            // into it from the left and the rows stretching across it, and the aside is its own 316 beside them.
             var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(column) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideGap) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = PanelFacePlan.AsideWidth });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideWidth) });
             var left = Ui.VStack(16, picture, rows);
             grid.Children.Add(left);
             aside.VerticalAlignment = VerticalAlignment.Top;
