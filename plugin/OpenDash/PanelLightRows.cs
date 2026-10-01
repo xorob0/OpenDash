@@ -390,17 +390,25 @@ namespace OpenDashPlugin
         /// The colour of the flag box profile's status dot in the Matrix page's header pill.
         /// </summary>
         /// <remarks>
-        /// Read off <see cref="PanelMatrix.ProfileRow"/>, the words the pill draws beside it, rather than from
-        /// a second table, so the dot cannot disagree with the words beside it. It read PanelCopy.LightRow
-        /// while both pages drew that table; the Updates rows now take their dot from LightRow's words
-        /// themselves (PanelUpdates), and LightRow's older profile is amber where ProfileRow's is green. The
-        /// one pairing a table carrying a single colour per state cannot say is the uninstalled one: the
-        /// canvas draws that dot in status.notInstalled and its label in text.label.
+        /// A fixed ink per state, read off no page's table. It read PanelCopy.LightRow, then PanelMatrix.ProfileRow,
+        /// and each time the table it read was reworded by the page that owns it the dot moved with it: when
+        /// ProfileRow's words gave up their ink, this returned null and Ui.Brush(null) threw while the Matrix
+        /// page built. A profile in SimHub, older or current, is the installed green the pill's words sit beside;
+        /// a failed one is the failure red; every state with no profile to show, SimHub's settings out of reach
+        /// and a build with none included, is status.notInstalled, which the canvas draws that dot in.
         /// </remarks>
         public static string DotHex(FlagBoxInstallState state)
         {
-            var ink = PanelMatrix.ProfileRow(state, null).StateHex;
-            return string.Equals(ink, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : ink;
+            switch (state)
+            {
+                case FlagBoxInstallState.UpToDate:
+                case FlagBoxInstallState.Outdated:
+                    return Theme.StatusUpToDate;
+                case FlagBoxInstallState.Failed:
+                    return Theme.StatusFailed;
+                default:
+                    return Theme.StatusNotInstalled;
+            }
         }
 
         /// <summary>

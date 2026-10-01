@@ -141,7 +141,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The Updates page's: its "In SimHub" table reads it, dot included (PanelUpdates), and the Updates
         /// agent may reword it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow, and
-        /// its pill's dot, PanelLightRows.DotHex, reads that table rather than this one.
+        /// its pill's dot, PanelLightRows.DotHex, is a fixed ink per state that reads neither table.
         ///
         /// The state is a word and the version has a column of its own, so the words are the four the
         /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
