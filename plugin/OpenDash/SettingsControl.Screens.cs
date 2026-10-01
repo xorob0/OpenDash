@@ -78,8 +78,10 @@ namespace OpenDashPlugin
             if (fix != null) selected.Add(fix);
             // The screen itself, between its name and the controls that change it (ADR 0020). Null when its
             // package is not installed, which the fix above says in its own words.
-            // Read up to BodyWidth, where the preview stops growing: a wider window does not reload it.
-            var preview = BuildScreenPreview(screen, ContentWidthUpTo(BodyWidth));
+            // Read up to BodyWidth, where the preview stops growing: a wider window does not reload it. Less the
+            // preview's own 1 px frame each side, which ScreenPreview draws round the width it is given: fitted to
+            // the whole column, the frame stood 2 px past it and the page's clip cut its right edge.
+            var preview = BuildScreenPreview(screen, ContentWidthUpTo(BodyWidth) - 2 * PanelMetrics.BorderWeight);
             if (preview != null) selected.Add(preview);
             selected.Add(BuildScreenEditor(screen));
 

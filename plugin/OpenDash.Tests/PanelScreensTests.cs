@@ -724,7 +724,11 @@ namespace OpenDashPlugin.Tests
                 Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\bContentWidth\b(?!UpTo)"), source + " reads the whole content width");
             }
             var page = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.cs"));
-            Assert.Contains("BuildScreenPreview(screen, ContentWidthUpTo(BodyWidth))", page);
+            // The preview is fitted inside the column with its frame, never 2 px past it.
+            Assert.Contains("BuildScreenPreview(screen, ContentWidthUpTo(BodyWidth) - 2 * PanelMetrics.BorderWeight)", page);
+            var preview = RepoPaths.Code(System.IO.Path.Combine(dir, "ScreenPreview.cs"));
+            Assert.Contains("BorderThickness = new Thickness(1),", preview);
+            Assert.Equal(1, PanelMetrics.BorderWeight);
             var companion = RepoPaths.Code(System.IO.Path.Combine(dir, "SettingsControl.Screens.Companion.cs"));
             Assert.Contains("ContentWidthUpTo(PanelScreens.ControlsColumnMost)", companion);
         }
