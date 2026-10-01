@@ -473,8 +473,30 @@ namespace OpenDashPlugin
             {
                 return live ? PanelEmulation.LiveFrame(packed, ends, centre) : PanelEmulation.StripFrame(ends, centre, PanelEmulation.Idle, options);
             }
-            return CentreAtRest(PanelEmulation.StripFrame(ends, centre, scenario, options), scenario, centreShowsRevs);
+            return SpotterOnBareRun(CentreAtRest(PanelEmulation.StripFrame(ends, centre, scenario, options), scenario, centreShowsRevs), ends, scenario, options);
         }
+
+        /// <summary>
+        /// A car alongside on a strip with no ends: the whole run in the spotter's amber, for a side whose switch is
+        /// on, as the profile draws it (rpmStrip.ts takes the side role over the whole run where a shape has no
+        /// lamps). PanelEmulation.StripFrame lights a car alongside only on an end, so on a bare run it would draw
+        /// the moment as no car at all, and Spotter left and right would change nothing in the preview.
+        /// </summary>
+        private static string[][] SpotterOnBareRun(string[][] frame, int ends, string scenario, StripOptions options)
+        {
+            if (ends > 0 || frame == null || frame.Length != 1 || frame[0] == null) return frame;
+            options = options ?? StripOptions.Default;
+            var left = (scenario == PanelEmulation.CarLeft || scenario == PanelEmulation.CarBoth) && options.Draws(SpotterLeft);
+            var right = (scenario == PanelEmulation.CarRight || scenario == PanelEmulation.CarBoth) && options.Draws(SpotterRight);
+            if (!left && !right) return frame;
+            for (var i = 0; i < frame[0].Length; i++) frame[0][i] = Theme.Caution;
+            return frame;
+        }
+
+        /// <summary>The spotter's two effect ids, as Contract.LedEffects and the generator name them.</summary>
+        private const string SpotterLeft = "spotter.left";
+
+        private const string SpotterRight = "spotter.right";
 
         /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on, in a centre that
         /// shows them, while the strip is showing in SimHub (<see cref="CardLit"/>); every LED dark otherwise.</summary>
@@ -950,6 +972,17 @@ namespace OpenDashPlugin
             var right = Enumerable.Repeat(Theme.FlagYellow, ends).ToArray();
             return new[] { left, middle, right };
         }
+
+        /// <summary>The LEDs the Something else tile draws: twelve, in the border's grey, as AddLeds.dc.html draws
+        /// them. Not a strip at rest, whose unlit LEDs are the raised surface one step above the tile's ground and
+        /// all but vanish there beside the lit Fanatec tile.</summary>
+        public static string[][] AnyStripFrame()
+        {
+            return new[] { Enumerable.Repeat(Theme.Border, AnyStripLeds).ToArray() };
+        }
+
+        /// <summary>How many LEDs the Something else tile draws.</summary>
+        private const int AnyStripLeds = 12;
 
         /// <summary>What a device row in the sheet says at its right: the rig's strips already on it, so a
         /// driver sees a device is taken before installing a second profile into its list, and whether SimHub

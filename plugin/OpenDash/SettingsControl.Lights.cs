@@ -1461,7 +1461,7 @@ namespace OpenDashPlugin
                 if (sides.Length > 0)
                 {
                     var tile = LedsHardwareTile(PanelLeds.SomethingElse, null,
-                        PanelEmulation.StripFrame(0, 12, PanelEmulation.Idle),
+                        PanelLeds.AnyStripFrame(),
                         PanelLeds.SomethingElseNote, null, !fanatec, () => pickHardware(false));
                     if (!fanatec) chosenTile = tile;
                     tiles.Add(tile);

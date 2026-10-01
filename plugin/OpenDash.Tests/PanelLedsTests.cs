@@ -461,6 +461,12 @@ namespace OpenDashPlugin.Tests
             return next == null ? body : body.Substring(0, body.IndexOf(next, StringComparison.Ordinal));
         }
 
+        /// <summary>The text with every space and line break taken out, so a pin holds a statement whatever its layout.</summary>
+        private static string Squash(string text)
+        {
+            return string.Concat(text.Where(ch => !char.IsWhiteSpace(ch)));
+        }
+
         private static int Occurrences(string text, string part)
         {
             var count = 0;
@@ -674,6 +680,35 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelLeds.IsRevMoment(PanelEmulation.CarLeft));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             Assert.Equal(2, Occurrences(leds, "PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))"));
+        }
+
+        /// <summary>
+        /// A car alongside on a bare run lights the whole run in the spotter's amber, for a side whose switch is on,
+        /// as the profile draws it (rpmStrip.ts takes the side role over the whole run where a shape has no lamps):
+        /// the emulation lights only an end, and a brow has none, so Car left drew the same frame as no car at all.
+        /// </summary>
+        [Fact]
+        public void A_car_alongside_lights_a_bare_run_where_its_side_is_switched_on()
+        {
+            var on = PanelLeds.OptionsFor(false, null);
+            foreach (var chip in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
+            {
+                var frame = PanelLeds.PreviewFrame(chip, 0, 15, on, false, null);
+                Assert.Single(frame);
+                Assert.All(frame[0], c => Assert.Equal(Theme.Caution, c));
+            }
+            // Spotter left off: Car left is the strip as it was, Both still lights for the right.
+            var leftOff = PanelLeds.OptionsFor(false, new[] { "spotter.left" });
+            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarLeft, leftOff), PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 0, 15, leftOff, false, null));
+            Assert.Contains(PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 0, 15, leftOff, false, null)[0], c => c == null);
+            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarRight, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.Caution, c));
+            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarBoth, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.Caution, c));
+            var bothOff = PanelLeds.OptionsFor(false, new[] { "spotter.left", "spotter.right" });
+            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarBoth, bothOff), PanelLeds.PreviewFrame(PanelEmulation.CarBoth, 0, 15, bothOff, false, null));
+            // With ends the emulation's own rule stands: the end on the car's side.
+            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, on), PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 3, 9, on, false, null));
+            // The card's rev moment on a bare run is untouched.
+            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Mid, on), PanelLeds.CardFrame("0-15-0", on));
         }
 
         /// <summary>A card draws its strip lit only while SimHub shows the profile: a card that says it is not
@@ -1473,6 +1508,22 @@ namespace OpenDashPlugin.Tests
             Assert.Single(bare);
             Assert.DoesNotContain(Theme.FlagYellow, bare[0]);
             Assert.Contains(Theme.ShiftStage2, bare[0]);
+        }
+
+        /// <summary>The Something else tile draws twelve LEDs in the border's grey, as AddLeds.dc.html does: a strip at
+        /// rest is the raised surface, one step above the tile's ground, and all but vanished beside the Fanatec tile.</summary>
+        [Fact]
+        public void The_something_else_tile_draws_twelve_grey_leds()
+        {
+            var frame = PanelLeds.AnyStripFrame();
+            Assert.Single(frame);
+            Assert.Equal(12, frame[0].Length);
+            Assert.All(frame[0], c => Assert.Equal(Theme.Border, c));
+            Assert.Equal("#33383F", Theme.Border);
+            Assert.NotEqual(StripStyle.Card.UnlitHex, Theme.Border);
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Contains("LedsHardwareTile(PanelLeds.SomethingElse,null,PanelLeds.AnyStripFrame(),", Squash(leds));
+            Assert.DoesNotContain("PanelEmulation.StripFrame(0,12,PanelEmulation.Idle)", Squash(leds));
         }
 
         /// <summary>A device row names the rig's strips already on it, and whether SimHub is talking to it.</summary>
