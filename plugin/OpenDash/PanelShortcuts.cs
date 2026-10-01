@@ -286,18 +286,14 @@ namespace OpenDashPlugin
         public const string NextScreenCrumb = "NextScreen";
 
         /// <summary>
-        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging: the brief's
-        /// Devices › the screen's name › Controls and events › NextScreen, as the artboard draws "Devices ›
-        /// Phone › ...", its card's own name. A companion with no name reads its kind. The screen's name is
-        /// OpenDash's rather than a SimHub device's, and a companion in a window sits under no Devices; the
-        /// sentence above says both ("the device or window the companion runs on"), and the trail's form is
-        /// left to the author's ruling.
+        /// Where SimHub binds a companion's paging, under PanelCopy.CompanionPaging, which says where to start
+        /// ("open the device or window the companion runs on in SimHub"): Controls and events › NextScreen,
+        /// the two names SimHub itself gives. The brief's trail began "Devices › Phone", the card's own name,
+        /// but that is OpenDash's name for the screen, not a device SimHub lists, and a companion in a window
+        /// sits under no Devices at all, so a crumb for it could name a row SimHub does not have. The Screens
+        /// page draws the same two (PanelScreens.CompanionPagingCrumbs), so one binding has one path.
         /// </summary>
-        public static string[] PagingCrumbs(string screenName)
-        {
-            var name = string.IsNullOrWhiteSpace(screenName) ? PanelAddScreen.KindName(Contract.KindCompanion) : screenName.Trim();
-            return new[] { PanelAttention.DevicesCrumb, name, ControlsAndEventsCrumb, NextScreenCrumb };
-        }
+        public static readonly string[] PagingCrumbs = { ControlsAndEventsCrumb, NextScreenCrumb };
 
         // --- The filter ---------------------------------------------------------------------------------
 
