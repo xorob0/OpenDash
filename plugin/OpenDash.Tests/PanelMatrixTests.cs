@@ -324,6 +324,16 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(guard)));
             }
+            // A sheet opens inside the press that asks for it, over the page, and its presses sit at the bottom
+            // right, where the page's own Remove can be in a short window: the second press of a double-click on
+            // the page's press would confirm what the sheet is there to ask. Each sheet's press ignores a repeat,
+            // and is the press it guards (the save press is Rename's, the remove press Remove it's).
+            foreach (var press in new[] { "add", "save", "remove" })
+            {
+                Assert.Contains("var " + press + " = Ui.Button(", flat);
+                Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(
+                    press + ".PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; }; " + press + ".Click += (sender, args) => { matrixSheetPressed = true;")));
+            }
             // A sheet's press closes the sheet and draws the page again under the pointer, so the second press of
             // its double-click would land on whatever switch the new page puts there -- after Remove it, another
             // matrix's -- and flip it. Each of the three sets the flag first, the page's root ignores the next
@@ -621,7 +631,7 @@ namespace OpenDashPlugin.Tests
                 // The sheets: the content number SimHub will give the new matrix, the presses by their words,
                 // the message after adding, and the rename box opening on the name.
                 "var slot = Settings.FreeMatrixSlot(); if (slot == 0) return;",
-                "var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large); add.Click += (sender, args) =>",
+                "var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large); add.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; }; add.Click += (sender, args) =>",
                 "Say(new PanelMessage( PanelMatrix.PanelAdded(",
                 "var name = Ui.Input(current, PanelMatrix.NameWidth); var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);",
                 "save.Click += (sender, args) =>",

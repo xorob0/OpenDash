@@ -716,6 +716,9 @@ namespace OpenDashPlugin
             if (slot == 0) return;
             var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);
             var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large);
+            // The sheet opens inside the press that asks for it, over the page, so the second press of a
+            // double-click on that press can land on this one before the sheet has been read: it is ignored.
+            add.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
             add.Click += (sender, args) =>
             {
                 matrixSheetPressed = true;
@@ -746,6 +749,7 @@ namespace OpenDashPlugin
             var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);
             // A blank name is ignored by the settings, so the press waits for one.
             name.TextChanged += (sender, args) => save.IsEnabled = PanelMatrix.CanRename(name.Text);
+            save.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
             save.Click += (sender, args) =>
             {
                 matrixSheetPressed = true;
@@ -768,6 +772,7 @@ namespace OpenDashPlugin
         {
             var name = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
             var remove = Ui.Button(PanelMatrix.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large);
+            remove.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
             remove.Click += (sender, args) =>
             {
                 matrixSheetPressed = true;
