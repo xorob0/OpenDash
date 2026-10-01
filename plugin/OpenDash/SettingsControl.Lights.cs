@@ -696,7 +696,7 @@ namespace OpenDashPlugin
                     // The page is not redrawn, so the last press's line goes first rather than stacking.
                     var live = Settings.LedBarByNamespace(ns) ?? bar;
                     ClearMessages();
-                    Say(PanelLeds.BrightnessSaid(live.Name, value));
+                    Say(PanelLeds.BrightnessSaid(live.Name, value, Settings.LightsNightMode, Settings.LightsNightBrightness));
                 }, 160);
                 if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
             };
@@ -1177,7 +1177,7 @@ namespace OpenDashPlugin
             }
             var ok = plan.State == FlagBoxInstallState.UpToDate;
             var target = LedsTargetOf(targets, bar.Device);
-            var line = ok ? PanelLeds.ReverseSaid(bar.Name, reversed, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ProfileFailed(bar.Name);
+            var line = ok ? PanelLeds.ReverseSaid(bar.Name, reversed, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ReversedNotInstalled(bar.Name, reversed);
             Say(line, ok && plan.Note == null);
         }
 
@@ -1638,7 +1638,7 @@ namespace OpenDashPlugin
             if (target == null)
             {
                 Redraw();
-                Say(PanelMessage.Caution(PanelLeds.AddedWithoutDevice(bar.Name)));
+                Say(PanelMessage.Caution(PanelLeds.AddedWithoutDevice(bar.Name, declined)));
                 return;
             }
             var plan = LedsReinstall(bar, targets);

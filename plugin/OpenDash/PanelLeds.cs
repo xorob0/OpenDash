@@ -17,12 +17,16 @@ namespace OpenDashPlugin
     /// <summary>One effect switch of the Effects grid: the setting it is read through and what it is called.</summary>
     public sealed class LedEffectSwitch
     {
-        public LedEffectSwitch(string setting, string label, string role)
+        public LedEffectSwitch(string setting, string label, string role, params string[] keywords)
         {
             Setting = setting;
             Label = label;
             Role = role;
+            Keywords = keywords ?? new string[0];
         }
+
+        /// <summary>The words the rest of the panel uses for what the switch silences, which search finds it by.</summary>
+        public IReadOnlyList<string> Keywords { get; private set; }
 
         /// <summary>The setting the switch is (Contract.LedEffectSettings), which the rig stores per strip.</summary>
         public string Setting { get; private set; }
@@ -300,8 +304,10 @@ namespace OpenDashPlugin
             return ProfileBlocked(embedded, deviceListed, offered, declined);
         }
 
-        /// <summary>The header's line with no SimHub device offered: a pointer at the row that says why.</summary>
-        public const string AwaitsDevice = "This strip's profile waits for a SimHub device.";
+        /// <summary>The header's line with no SimHub device offered: the fact, with the SimHub device row under it
+        /// carrying the step. Nothing installs the profile on its own once a device appears, so the line does not
+        /// say it waits for one.</summary>
+        public const string AwaitsDevice = "No SimHub device to install this strip's profile on.";
 
         /// <summary>
         /// Whether the SimHub device picker can be used: not where this build carries no profile of the strip's
@@ -673,6 +679,7 @@ namespace OpenDashPlugin
             if (listed.Count == 0) return new LedDeviceRow(PanelLights.DeviceRowCaption(0, null, declined), null, null, -1);
             var ids = listed.Select(device => device.Id).ToList();
             var labels = listed.Select(device => device.Connected ? device.Name : device.Name + PanelLights.DeviceOffline).ToList();
+            var connected = listed.Select(device => device.Connected).ToList();
             var known = ids.Contains(current, StringComparer.Ordinal);
             if (!known)
             {
@@ -681,7 +688,7 @@ namespace OpenDashPlugin
             }
             if (listed.Count == 1 && known)
             {
-                return new LedDeviceRow(PanelLights.DeviceRowCaption(1, PanelLights.OneDevice(labels[0]), declined), null, null, -1);
+                return new LedDeviceRow(PanelLights.DeviceRowCaption(1, PanelLights.OneDevice(listed[0].Name, connected[0]), declined), null, null, -1);
             }
             var index = ids.FindIndex(id => string.Equals(id, current, StringComparison.Ordinal));
             return new LedDeviceRow(PanelLights.DeviceRowCaption(listed.Count, PanelLights.BarDeviceCaption, declined), ids, labels, index);
@@ -746,10 +753,16 @@ namespace OpenDashPlugin
 
         /// <summary>The line after a Brightness pick (ruling 50: every press says what it did): what the strip
         /// runs at now, its own value or the rig's. A statement rather than "Set ...", which reads as the fix box's
-        /// imperative, and never a possessive with no noun after it.</summary>
-        public static string BrightnessSaid(string name, int? value)
+        /// imperative, and never a possessive with no noun after it. At night the profile runs a strip at the lower
+        /// of its own value and the night brightness (contract.ts ledBrightnessInForce), as
+        /// <see cref="PreviewDim"/> draws it, so a value above the night brightness is said with the one in force.</summary>
+        public static string BrightnessSaid(string name, int? value, bool night = false, int nightBrightness = 100)
         {
-            return value.HasValue ? name + " runs at " + Percent(value.Value) + " brightness." : name + " runs at the rig's brightness.";
+            if (!value.HasValue) return name + " runs at the rig's brightness.";
+            var own = name + " runs at " + Percent(value.Value) + " brightness";
+            return night && nightBrightness < value.Value
+                ? own + ", " + Percent(nightBrightness) + " while night mode is on."
+                : own + ".";
         }
 
         /// <summary>The greyed "Each LED in turn" row's press (#434).</summary>
@@ -790,12 +803,12 @@ namespace OpenDashPlugin
             new LedEffectSwitch("LedEffectPitLane", "Pit lane", RoleStrip),
             new LedEffectSwitch("LedEffectPitLimiter", "Pit limiter", RoleStrip),
             new LedEffectSwitch("LedEffectPitSpeeding", "Speeding in the pit lane", RoleStrip),
-            new LedEffectSwitch("LedEffectTc", "TC", RoleAid),
+            new LedEffectSwitch("LedEffectTc", "TC", RoleAid, "traction control"),
             new LedEffectSwitch("LedEffectAbs", "ABS", RoleAid),
             new LedEffectSwitch("LedEffectDrs", "DRS", RoleAid),
             new LedEffectSwitch("LedEffectPushToPass", "Push to pass", RoleAid),
             new LedEffectSwitch(LowFuelSetting, "Low fuel", RoleCar),
-            new LedEffectSwitch("LedEffectTemperature", "Temperature", RoleCar),
+            new LedEffectSwitch("LedEffectTemperature", "Temperature", RoleCar, "oil temperature", "water temperature"),
             new LedEffectSwitch("LedEffectOilPressure", "Oil pressure", RoleCar),
             new LedEffectSwitch(TurnLeftSetting, "Turn signal left", RoleSide),
             new LedEffectSwitch(TurnRightSetting, "Turn signal right", RoleSide),
@@ -941,12 +954,26 @@ namespace OpenDashPlugin
         /// <summary>What a device row in the sheet says at its right: the rig's strips already on it, so a
         /// driver sees a device is taken before installing a second profile into its list, and whether SimHub
         /// is talking to it.</summary>
+        /// <remarks>
+        /// Bounded, since the names are the driver's own and the kit's radio row docks its meta at full width
+        /// beside the device's name: one strip is named, cut to <see cref="DeviceMetaNameChars"/>, and the rest are
+        /// counted, with "Not connected" last. PanelLedsTests measures the widest it can be against the sheet.
+        /// </remarks>
         public static string DeviceMeta(bool connected, IEnumerable<string> stripsOnIt)
         {
-            var parts = (stripsOnIt ?? Enumerable.Empty<string>()).Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
+            var names = (stripsOnIt ?? Enumerable.Empty<string>()).Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).ToList();
+            var parts = new List<string>();
+            if (names.Count > 0)
+            {
+                var first = names[0].Length > DeviceMetaNameChars ? names[0].Substring(0, DeviceMetaNameChars - 1).TrimEnd() + "…" : names[0];
+                parts.Add(names.Count == 1 ? first : first + " and " + Digits(names.Count - 1) + " more");
+            }
             if (!connected) parts.Add(NotConnected);
             return parts.Count == 0 ? null : string.Join(Dot, parts);
         }
+
+        /// <summary>The most characters of a strip's name a device row in the sheet spells out.</summary>
+        public const int DeviceMetaNameChars = 14;
 
         /// <summary>Whether SimHub has a device whose name says it is a Fanatec wheel, which is what the tile's
         /// eyebrow claims and all it can: nothing detects the wheel's LEDs themselves.</summary>
@@ -1080,6 +1107,12 @@ namespace OpenDashPlugin
             return "Could not install " + name + "'s profile. See SimHub's log.";
         }
 
+        /// <summary>The header's Update press, failed: in the press's own verb.</summary>
+        public static string UpdateFailed(string name)
+        {
+            return "Could not update " + name + "'s profile. See SimHub's log.";
+        }
+
         /// <summary>A strip moved to another SimHub device, which installs its profile there fresh and
         /// unselected: the step SimHub does not take, as after any install.</summary>
         public static string Moved(string name, string device, string note = null)
@@ -1131,7 +1164,7 @@ namespace OpenDashPlugin
         /// else an install with the step SimHub does not take; the log where it failed.</summary>
         public static string InstallSaid(bool ok, FlagBoxInstallState? before, string name, string device, string note = null)
         {
-            if (!ok) return ProfileFailed(name);
+            if (!ok) return before == FlagBoxInstallState.Outdated ? UpdateFailed(name) : ProfileFailed(name);
             return before == FlagBoxInstallState.Outdated ? ProfileUpdated(name, note) : ProfileInstalled(name, device, note);
         }
 
@@ -1183,6 +1216,17 @@ namespace OpenDashPlugin
             return Steps(ReverseSaid(name, reversed), note, wasInSimHub ? null : SelectIt(name, device));
         }
 
+        /// <summary>
+        /// A Reverse whose install failed. The direction was saved before the install, and the install takes the
+        /// old copy out of every device first, so the line says what the strip is now, as a failed rename or move
+        /// does.
+        /// </summary>
+        public static string ReversedNotInstalled(string name, bool reversed)
+        {
+            var now = reversed ? "Reversed " + name : name + " is no longer reversed";
+            return now + ", but its profile could not be installed again. See SimHub's log.";
+        }
+
         /// <summary>Whether SimHub held the profile before a press, up to date or not: the one state in which an
         /// install replaces a copy rather than adding one the driver has still to select.</summary>
         public static bool HeldInSimHub(FlagBoxInstallState? profile)
@@ -1206,8 +1250,13 @@ namespace OpenDashPlugin
         /// restart comes last, since the plugin publishes a strip's own settings only for the strips it held when
         /// SimHub started (PanelLights.BarAdded says the same).
         /// </summary>
-        public static string AddedWithoutDevice(string name)
+        /// <remarks>Where SimHub lists LED devices OpenDash passed over (#437), the first step is not to add hardware
+        /// SimHub already has: the line says which devices OpenDash cannot reach and points at the log, as the
+        /// SimHub device row under it does.</remarks>
+        public static string AddedWithoutDevice(string name, IList<string> declined = null)
         {
+            var passed = PanelLights.NotOffered(declined);
+            if (passed != null) return "Added " + name + ", but " + passed;
             return "Added " + name + ". Add your wheel or Arduino in SimHub, install " + name + "'s profile here, then restart SimHub.";
         }
 
@@ -1239,7 +1288,7 @@ namespace OpenDashPlugin
             };
             foreach (var effect in Effects)
             {
-                entries.Add(new PanelSearch.Entry(effect.Label, PanelPage.Leds, AnchorEffects, "effect"));
+                entries.Add(new PanelSearch.Entry(effect.Label, PanelPage.Leds, AnchorEffects, new[] { "effect" }.Concat(effect.Keywords).ToArray()));
             }
             return entries.ToArray();
         }

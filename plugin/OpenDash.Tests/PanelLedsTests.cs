@@ -117,6 +117,20 @@ namespace OpenDashPlugin.Tests
             // And the artboard's words, where the build keeps voice.md's.
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "add leds"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "use the car's own rev lights"));
+            // An effect is found by the words the rest of the panel uses for what it silences: Settings' and Rig's
+            // oil and water temperature for Temperature, the generator's traction control for TC.
+            foreach (var (query, label) in new[]
+            {
+                ("water", "Temperature"),
+                ("oil temperature", "Temperature"),
+                ("water temperature", "Temperature"),
+                ("traction control", "TC"),
+            })
+            {
+                Assert.Contains(PanelSearch.Find(PanelLeds.Search, query), hit => hit.Entry.Label == label && hit.Entry.Route.Anchor == PanelLeds.AnchorEffects);
+            }
+            Assert.Equal(new[] { "oil temperature", "water temperature" }, PanelLeds.Effects.Single(effect => effect.Label == "Temperature").Keywords);
+            Assert.Equal(new[] { "traction control" }, PanelLeds.Effects.Single(effect => effect.Label == "TC").Keywords);
         }
 
         [Fact]
@@ -253,7 +267,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_header_says_a_reason_the_device_row_says_only_by_pointing_at_it()
         {
-            Assert.Equal("This strip's profile waits for a SimHub device.", PanelLeds.AwaitsDevice);
+            // The fact, with the row under it carrying the step: nothing installs the profile once a device appears.
+            Assert.Equal("No SimHub device to install this strip's profile on.", PanelLeds.AwaitsDevice);
+            Assert.DoesNotContain("wait", PanelLeds.AwaitsDevice);
             Assert.Contains(PanelLights.BarDeviceTitle.Substring("SimHub ".Length), PanelLeds.AwaitsDevice);
             Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, null));
             Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, new[] { "Rim" }));
@@ -1334,9 +1350,24 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Null(PanelLeds.DeviceMeta(true, null));
             Assert.Equal("Dash brow", PanelLeds.DeviceMeta(true, new[] { "Dash brow" }));
-            Assert.Equal("Rim · Dash brow", PanelLeds.DeviceMeta(true, new[] { "Rim", "Dash brow" }));
+            Assert.Equal("Rim and 1 more", PanelLeds.DeviceMeta(true, new[] { "Rim", "Dash brow" }));
             Assert.Equal("Not connected", PanelLeds.DeviceMeta(false, new string[0]));
             Assert.Equal("Rim · Not connected", PanelLeds.DeviceMeta(false, new[] { "Rim" }));
+            Assert.Equal("Wheel rim and 4 more · Not connected", PanelLeds.DeviceMeta(false, new[] { "Wheel rim", "Wheel rim (2)", "Dash brow", "Left strip", "Right strip" }));
+            Assert.Equal("Wheel rim (2)", PanelLeds.DeviceMeta(true, new[] { "Wheel rim (2)" }));
+            Assert.Equal("The long stri…", PanelLeds.DeviceMeta(true, new[] { "The long strip across the top" }));
+
+            // The meta is the driver's own words, docked at full width beside the device's name in the kit's radio
+            // row: at its widest, a name of the widest glyph cut to its limit, 99 more and Not connected, it leaves
+            // the device's name its room in the sheet's body (560 less its padding and scroll bar, 486; less the
+            // row's padding, ring and gaps, 424 for the two).
+            var medium = Advances("BarlowMedium");
+            var widestGlyph = medium.OrderByDescending(pair => pair.Value).First(pair => char.IsLetterOrDigit(pair.Key)).Key;
+            double Width(string text, double size) => text.Sum(ch => medium.TryGetValue(ch, out var em) ? em : 0.75) * size;
+            var widest = PanelLeds.DeviceMeta(false, new[] { new string(widestGlyph, 40) }.Concat(Enumerable.Repeat("Rim", 99)));
+            const double both = 486 - 2 * PanelKit.RadioRowPaddingX - PanelKit.RadioRing - 2 * PanelKit.RadioRowGap;
+            Assert.True(Width(widest, PanelKit.RadioMetaSize) + Width("Arduino RGB LEDs", PanelKit.RadioNameSize) <= both,
+                widest + " is " + Width(widest, PanelKit.RadioMetaSize) + " beside a name of " + Width("Arduino RGB LEDs", PanelKit.RadioNameSize) + " in " + both);
         }
 
         /// <summary>The device picker is bounded so a long name trims, and the lines under a row are capped as the
@@ -1396,7 +1427,9 @@ namespace OpenDashPlugin.Tests
             var one = PanelLeds.DeviceRow(new[] { wheel }, "wheel", null);
             Assert.False(one.HasPicker);
             Assert.Equal("Goes to Fanatec CSL Elite.", one.Caption);
-            Assert.Equal("Goes to Button hub (not connected).", PanelLeds.DeviceRow(new[] { unplugged }, "hub", null).Caption);
+            // A device SimHub is not talking to is said in one form: a sentence in the caption, the sheet's meta
+            // joined by a dot in the picker.
+            Assert.Equal("Goes to Button hub, which is not connected.", PanelLeds.DeviceRow(new[] { unplugged }, "hub", null).Caption);
 
             // The strip's own device, gone from SimHub: first and selected, never the device that sorted first.
             var gone = PanelLeds.DeviceRow(new[] { wheel }, "old", null);
@@ -1409,7 +1442,8 @@ namespace OpenDashPlugin.Tests
             var two = PanelLeds.DeviceRow(new[] { arduino, unplugged }, "hub", new[] { "Rim" });
             Assert.True(two.HasPicker);
             Assert.Equal(new[] { LedBar.ArduinoDevice, "hub" }, two.Ids);
-            Assert.Equal(new[] { "Arduino RGB LEDs", "Button hub (not connected)" }, two.Labels);
+            Assert.Equal(new[] { "Arduino RGB LEDs", "Button hub · Not connected" }, two.Labels);
+            Assert.Equal("Button hub" + PanelLeds.Dot + PanelLeds.DeviceMeta(false, null), two.Labels[1]);
             Assert.Equal(1, two.Selected);
             Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.", two.Caption);
         }
@@ -1483,6 +1517,10 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelLeds.HeldInSimHub(FlagBoxInstallState.NotInstalled));
             Assert.False(PanelLeds.HeldInSimHub(FlagBoxInstallState.Failed));
             Assert.False(PanelLeds.HeldInSimHub(null));
+            // A failed reinstall says what the strip is now, as a failed rename or move does: the direction was
+            // saved, and the old copy is out of every device.
+            Assert.Equal("Reversed Rim, but its profile could not be installed again. See SimHub's log.", PanelLeds.ReversedNotInstalled("Rim", true));
+            Assert.Equal("Rim is no longer reversed, but its profile could not be installed again. See SimHub's log.", PanelLeds.ReversedNotInstalled("Rim", false));
         }
 
         /// <summary>A Reverse or a Rename the page cannot follow with an install saves the setting and says what
@@ -1507,6 +1545,12 @@ namespace OpenDashPlugin.Tests
             // The steps left in order: a device in SimHub, the profile installed here, then the restart the strip's
             // own settings wait on, as BarAdded says it.
             Assert.Equal("Added Rim. Add your wheel or Arduino in SimHub, install Rim's profile here, then restart SimHub.", PanelLeds.AddedWithoutDevice("Rim"));
+            Assert.Equal(PanelLeds.AddedWithoutDevice("Rim"), PanelLeds.AddedWithoutDevice("Rim", new string[0]));
+            // Where SimHub lists a device OpenDash passed over (#437), the line does not send the driver to add
+            // hardware SimHub already has: it says what the SimHub device row under it says.
+            Assert.Equal("Added Rim, but Fanatec CSL Elite has no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
+            Assert.EndsWith(PanelLeds.DeviceRow(null, "wheel", new[] { "Fanatec CSL Elite" }).Caption, PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
             Assert.Contains("Restart SimHub", PanelLights.BarAdded("Rim", "Wheel"));
         }
 
@@ -1605,6 +1649,13 @@ namespace OpenDashPlugin.Tests
             // What the strip runs at now: never the fix box's imperative "Set", nor a possessive with no noun.
             Assert.Equal("Rim runs at 60% brightness.", PanelLeds.BrightnessSaid("Rim", 60));
             Assert.Equal("Rim runs at the rig's brightness.", PanelLeds.BrightnessSaid("Rim", null));
+            // At night the profile runs the strip at the lower of its own value and the night brightness
+            // (contract.ts ledBrightnessInForce), as the card and the preview draw it, so the line names both.
+            Assert.Equal("Rim runs at 60% brightness, 25% while night mode is on.", PanelLeds.BrightnessSaid("Rim", 60, true, Contract.DefaultLightsNightBrightness));
+            Assert.Equal("Rim runs at 20% brightness.", PanelLeds.BrightnessSaid("Rim", 20, true, 25));
+            Assert.Equal("Rim runs at 25% brightness.", PanelLeds.BrightnessSaid("Rim", 25, true, 25));
+            Assert.Equal("Rim runs at 60% brightness.", PanelLeds.BrightnessSaid("Rim", 60, false, 25));
+            Assert.Equal("Rim runs at the rig's brightness.", PanelLeds.BrightnessSaid("Rim", null, true, 25));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var pick = leds.Substring(leds.IndexOf("var value = PanelLeds.BrightnessValue(i);", StringComparison.Ordinal));
             pick = pick.Substring(0, pick.IndexOf("}, 160);", StringComparison.Ordinal));
@@ -1613,7 +1664,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(60, PanelLeds.BrightnessValue(Array.IndexOf(PanelLeds.BrightnessLabels(80), "60%")));
             Assert.Null(PanelLeds.BrightnessValue(0));
             Assert.Contains("ClearMessages();", pick);
-            Assert.Contains("Say(PanelLeds.BrightnessSaid(live.Name, value));", pick);
+            Assert.Contains("Say(PanelLeds.BrightnessSaid(live.Name, value, Settings.LightsNightMode, Settings.LightsNightBrightness));", pick);
         }
 
         /// <summary>The header's press says an update where SimHub held an older copy, an install with the step
@@ -1624,7 +1675,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Updated Rim's profile.", PanelLeds.InstallSaid(true, FlagBoxInstallState.Outdated, "Rim", "Wheel"));
             Assert.Equal(PanelLeds.ProfileInstalled("Rim", "Wheel"), PanelLeds.InstallSaid(true, FlagBoxInstallState.NotInstalled, "Rim", "Wheel"));
             Assert.Equal(PanelLeds.ProfileInstalled("Rim", null), PanelLeds.InstallSaid(true, null, "Rim", null));
-            Assert.Equal(PanelLeds.ProfileFailed("Rim"), PanelLeds.InstallSaid(false, FlagBoxInstallState.Outdated, "Rim", "Wheel"));
+            // A failure in the press's own verb: Update fails as an update.
+            Assert.Equal("Could not update Rim's profile. See SimHub's log.", PanelLeds.InstallSaid(false, FlagBoxInstallState.Outdated, "Rim", "Wheel"));
+            Assert.Equal("Could not install Rim's profile. See SimHub's log.", PanelLeds.InstallSaid(false, FlagBoxInstallState.NotInstalled, "Rim", "Wheel"));
+            Assert.Equal(PanelLeds.ProfileFailed("Rim"), PanelLeds.InstallSaid(false, null, "Rim", null));
         }
 
         /// <summary>A rename reinstalls only where SimHub holds the profile, and a blank name renames nothing.</summary>

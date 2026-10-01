@@ -100,8 +100,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Downloading…", PanelLights.CarTablesDownloading);
             // A chooser's value names what the code knows: SimHub does not list the device.
             Assert.Equal("Device not in SimHub", PanelLights.DeviceGone);
-            Assert.Equal(" (not connected)", PanelLights.DeviceOffline);
+            Assert.Equal(" · Not connected", PanelLights.DeviceOffline);
             Assert.Equal("Goes to Arduino RGB LEDs.", PanelLights.OneDevice("Arduino RGB LEDs"));
+            Assert.Equal("Goes to Button hub, which is not connected.", PanelLights.OneDevice("Button hub", false));
             Assert.Equal("No SimHub device has LEDs. Add your wheel or Arduino in SimHub first.", PanelLights.NoDevices);
             // No word of the old tabs survives in the words the page draws.
             foreach (var words in new[] { PanelLights.CarTablesCaption, PanelLights.BarAddFailed("Rim"), PanelLights.BarNameCaption, PanelLights.RenameBarTooltip })
@@ -211,7 +212,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The status line is CarLightService's status, with "over a week old" in place of its age where the copy
+        /// The status line is CarLightService's status, with "updated over a week ago" in place of its age where the copy
         /// is (ruling 51), so the age is never given twice and "updated just now" never sits beside the note. The
         /// page works the note out as it draws the row, since the status's own age is written only when the
         /// tables are read.
@@ -219,22 +220,24 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_stale_note_takes_the_place_of_the_age()
         {
-            Assert.Equal(", over a week old", PanelLights.CarTablesStaleAge);
+            Assert.Equal(", updated over a week ago", PanelLights.CarTablesStaleAge);
             Assert.Equal("Press Update for a newer copy.", PanelLights.CarTablesUpdateStep);
-            Assert.Equal("84 cars, updated 9 days ago", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
-            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
+            // Every state of the line ends in a full stop, the plain one included.
+            Assert.Equal("84 cars, updated 9 days ago.", PanelLights.CarTablesLine("84 cars, updated 9 days ago", false));
+            Assert.Equal("84 cars.", PanelLights.CarTablesLine("84 cars", false));
+            Assert.Equal("84 cars, updated over a week ago. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated 9 days ago", true));
             // Frozen at "just now" by a SimHub left running a week: the note replaces it rather than contradicting it.
-            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated just now", true));
+            Assert.Equal("84 cars, updated over a week ago. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars, updated just now", true));
             // Tables with no fetch stamp give no age, and are stale by CarLightLibrary.IsStale only because nothing
             // says when they came: offered the Update, never called over a week old.
             Assert.Equal("84 cars. Press Update for a newer copy.", PanelLights.CarTablesLine("84 cars", true));
-            Assert.Equal("1 car, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine("1 car, updated yesterday", true));
+            Assert.Equal("1 car, updated over a week ago. Press Update for a newer copy.", PanelLights.CarTablesLine("1 car, updated yesterday", true));
             Assert.Equal("Not downloaded yet.", PanelLights.CarTablesLine("Not downloaded yet.", false));
             Assert.Equal(string.Empty, PanelLights.CarTablesLine(null, true));
             Assert.Equal(string.Empty, PanelLights.CarTablesLine(null, false));
             // Held to what CarLightService.Describe writes, so a reword there moves this.
             var now = new System.DateTime(2026, 9, 30, 12, 0, 0, System.DateTimeKind.Utc);
-            Assert.Equal("84 cars, over a week old. Press Update for a newer copy.", PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, null), true));
+            Assert.Equal("84 cars, updated over a week ago. Press Update for a newer copy.", PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, null), true));
             Assert.Equal("84 cars. Press Update for a newer copy.", PanelLights.CarTablesLine(CarLightService.Describe(84, null, now, null), true));
         }
 
@@ -253,9 +256,10 @@ namespace OpenDashPlugin.Tests
             var failed = CarLightRefresh.Failed("Unable to connect to the remote server", 84);
             var none = CarLightService.Describe(0, null, now, CarLightRefresh.Failed("The remote name could not be resolved: 'codeload.github.com'", 0));
             Assert.Equal(PanelLights.CarTablesDownloadFailed, PanelLights.CarTablesLine(none, false));
-            Assert.Equal("Could not download a newer copy. You have 84 cars, updated 9 days ago.",
+            // The count is the copy's, not the driver's.
+            Assert.Equal("Could not download a newer copy. Your copy has 84 cars, updated 9 days ago.",
                 PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, failed), false));
-            Assert.Equal("Could not download a newer copy. You have 84 cars, over a week old.",
+            Assert.Equal("Could not download a newer copy. Your copy has 84 cars, updated over a week ago.",
                 PanelLights.CarTablesLine(CarLightService.Describe(84, now.AddDays(-9), now, failed), true));
             foreach (var status in new[] { none, CarLightService.Describe(84, now.AddDays(-9), now, failed) })
             {

@@ -76,9 +76,9 @@ namespace OpenDashPlugin
 
         /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
         /// to choose, and a drop-down of one is a question with one answer.</summary>
-        public static string OneDevice(string name)
+        public static string OneDevice(string name, bool connected = true)
         {
-            return "Goes to " + name + ".";
+            return connected ? "Goes to " + name + "." : "Goes to " + name + ", which is not connected.";
         }
 
         /// <summary>Said when SimHub has none, in the row's own noun ("SimHub device"). The bar is still added
@@ -146,9 +146,10 @@ namespace OpenDashPlugin
         /// without its label, so it names the device and not an "it".</summary>
         public const string DeviceGone = "Device not in SimHub";
 
-        /// <summary>Said beside a device that SimHub is not talking to. A profile installs into it all the
-        /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
-        public const string DeviceOffline = " (not connected)";
+        /// <summary>Said beside a device that SimHub is not talking to, in the picker's value, joined as the Add
+        /// sheet's device rows join their meta. A profile installs into it all the same -- the profile list is
+        /// SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
+        public const string DeviceOffline = PanelLeds.Dot + PanelLeds.NotConnected;
 
         /// <summary>The centre's count, in the word the rest of the page uses for it ("Centre display").</summary>
         public const string BarCentreTitle = "LEDs in the centre";
@@ -359,13 +360,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Said in place of the status's ", updated ..." once the copy on disk is over a week old
-        /// (CarLightService.Stale), which is worked out as the row is drawn: the status is written when the tables
-        /// are read, at start and after a download, so its age can be days behind a SimHub left running. In place
-        /// of it rather than after it, so the line never gives the age twice or says "updated just now" beside
-        /// "over a week old".
+        /// Said in place of the status's ", updated ..." once the copy is over a week old
+        /// (<see cref="CarTablesStale"/>), which is worked out as the row is drawn: the status is written when the
+        /// tables are read, at start and after a download, so its age can be days behind a SimHub left running. In
+        /// place of it rather than after it, so the line never gives the age twice or says "updated just now"
+        /// beside "over a week ago". The copy is what was updated, so the age is the update's, not the cars'.
         /// </summary>
-        public const string CarTablesStaleAge = ", over a week old";
+        public const string CarTablesStaleAge = ", updated over a week ago";
 
         /// <summary>The step a copy over a week old is offered, after the count.</summary>
         public const string CarTablesUpdateStep = "Press Update for a newer copy.";
@@ -375,8 +376,12 @@ namespace OpenDashPlugin
         public const string CarTablesDownloadFailed = "Could not download Lovely Car Data. See SimHub's log.";
 
         /// <summary>A download that did not answer beside a copy that works, said as voice.md's "Could not reach
-        /// GitHub. You have 0.3.0-rc.4." is: what failed, then what the driver still has.</summary>
+        /// GitHub. You have 0.3.0-rc.4." is: what failed, then what the driver still has, with the copy the subject
+        /// of the count (<see cref="CarTablesCopyHas"/>).</summary>
         public const string CarTablesNewerFailed = "Could not download a newer copy.";
+
+        /// <summary>What leads the count after a failed download: the cars are the copy's, not the driver's.</summary>
+        public const string CarTablesCopyHas = "Your copy has ";
 
         /// <summary>Said while the tables are still being read at start, which a page opened at once can see.</summary>
         public const string CarTablesLoading = "Loading…";
@@ -411,8 +416,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The row's status line: CarLightService's status, with "over a week old" in place of its age where the
-        /// copy is. The service's lowercase states, which name the tables by the noun the row retired and carry an
+        /// The row's status line: CarLightService's status, with "updated over a week ago" in place of its age where
+        /// the copy is, and a full stop in every state. The service's lowercase states, which name the tables by the noun the row retired and carry an
         /// exception's message, and its two failed downloads, which carry the fetch's message, are said in the
         /// row's own words; the page writes the reasons to SimHub's log.
         /// </summary>
@@ -431,11 +436,11 @@ namespace OpenDashPlugin
             if (failed) said = said.Substring(0, failedAt).TrimEnd();
             if (said.Length == 0) return string.Empty;
             var agedAt = said.IndexOf(ServiceAge, StringComparison.Ordinal);
-            // Over a week old replaces the age; a copy with no fetch stamp has no age to replace, and is stale
+            // Over a week ago replaces the age; a copy with no fetch stamp has no age to replace, and is stale
             // only because nothing says when it came, so it is not called over a week old.
             var copy = !stale ? said : agedAt >= 0 ? said.Substring(0, agedAt) + CarTablesStaleAge : said;
-            if (failed) return CarTablesNewerFailed + " You have " + copy + ".";
-            return stale ? copy + ". " + CarTablesUpdateStep : copy;
+            if (failed) return CarTablesNewerFailed + " " + CarTablesCopyHas + copy + ".";
+            return stale ? copy + ". " + CarTablesUpdateStep : copy + ".";
         }
 
         /// <summary>
