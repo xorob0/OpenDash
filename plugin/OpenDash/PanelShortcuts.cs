@@ -691,29 +691,24 @@ namespace OpenDashPlugin
         public const double CaptionGap = 4;
 
         /// <summary>SimHub's ControlsEditor is given at least this much wherever it is drawn
-        /// (SettingsControl.BuildBinder's MinWidth).</summary>
+        /// (SettingsControl.BuildBinder's MinWidth). This page lowers it: its slot is never narrower beside a
+        /// name (<see cref="BinderWidth"/>), and under the name it is the row's whole width, so the floor
+        /// could only ever clip SimHub's template at a row narrower than it.</summary>
         public const double BinderMinWidth = 260;
 
         /// <summary>
-        /// The least slot a row gives SimHub's editor beside its name: the room Shortcuts.dc.html gives its
-        /// binder and the buttons after it, 260 + 16 + 120. SimHub's editor is not the artboard's binder: each
-        /// binding is a 58 px press type, the plugin and the input in a StackPanel that never wraps, so a bound
-        /// key or wheel button is clipped in a slot too narrow for it. The page drops the editor's own name
-        /// column (SettingsControl.ShortcutsDropNameColumn), so the bindings have the whole slot, and gives it
-        /// more where the row has the room (<see cref="BinderSlot"/>).
+        /// The slot a row gives SimHub's editor beside its name. Not the artboard's 260 + 16 + 120: SimHub's
+        /// editor is not the artboard's binder. SimHub 9.12.6 (themes/generic.baml) prints each binding on one
+        /// line that never wraps, at 10 px: a 58 px press type, then the plugin and the input, each a Label
+        /// padded 5 a side, the plugin's 4 from the press type. A long joystick binding is the widest:
+        /// "JoystickPlugin" and "Logitech_G923_Racing_Wheel_for_PlayStation_4_and_PC_B05" are 63 and 288 px
+        /// of Arial (Liberation Sans' advances), 433 px of line with the press type and the padding, and
+        /// the slot's two rules and the template's margins take 10 more. The button's number is the line's
+        /// last word, and the only part that says which button is bound. SimHub draws in Segoe UI, which
+        /// measures wider than Arial, so the slot keeps some 75 px past that; the page drops the editor's own
+        /// name column (SettingsControl.ShortcutsDropNameColumn), so the bindings have all of it.
         /// </summary>
-        public const double BinderWidth = 260 + 16 + 120;
-
-        /// <summary>
-        /// The most a row gives SimHub's editor beside its name: 677, what a stacked slot has just under
-        /// <see cref="RowStackBelow"/>, so a row never has less room for its bindings lying flat than it had
-        /// stacked a pixel narrower. A long joystick binding needs it: SimHub 9.12.6 prints
-        /// "JoystickPlugin" and the device's own name, such as
-        /// "Logitech_G923_Racing_Wheel_for_Xbox_One_and_PC_B05", on one line at 10 px, about 423 px of
-        /// Arial and more of Segoe UI, and the button's number is its last word. Past this the name column
-        /// takes the rest.
-        /// </summary>
-        public const double BinderMaxWidth = RowStackBelow - 1 - CardRules - 2 * RowPaddingX;
+        public const double BinderWidth = 520;
 
         /// <summary>The name SimHub's editor draws in its own 2* column. None: the row's name, beside it, already
         /// says what it binds, and the page drops the column where SimHub's template has the shape 9.12.6 draws;
@@ -721,9 +716,14 @@ namespace OpenDashPlugin
         /// binding's BinderName.</summary>
         public const string EditorName = "";
 
-        /// <summary>The least a row's name is left beside the press and the binder before the binder moves
-        /// under it.</summary>
-        public const double NameMinWidth = 160;
+        /// <summary>
+        /// The least a row's name is left beside the press and the binder before the binder moves under it:
+        /// the widest label a row draws with its New tag on one line. "Band D · previous page" is 136.1 px of
+        /// Barlow Regular at 14, and the tag 8 after it is 36.3 ("New" at 10 px SemiBold tracked 0.12, padded
+        /// 6 and 5 inside its two rules), 180.4 in all. The glance's caption is not in this column, so the
+        /// name needs no more.
+        /// </summary>
+        public const double NameMinWidth = 184;
 
         /// <summary>The binder's gap under the name and the press when a row stacks.</summary>
         public const double StackGap = 8;
@@ -744,47 +744,63 @@ namespace OpenDashPlugin
         public const double BannerIconSize = 16;
         public const double BannerStackGap = 8;
 
-        /// <summary>
-        /// Whether a row puts its binder under its name and press rather than beside them: when a card as wide
-        /// as the content cannot give the name <see cref="NameMinWidth"/> beside a 90 px press and the
-        /// <see cref="BinderWidth"/> slot. A row's width, not the sidebar's: TwoColumns is about two blocks of a
-        /// page.
-        /// </summary>
-        public static bool RowStacks(double contentWidth)
-        {
-            return contentWidth < RowStackBelow;
-        }
+        /// <summary>The room inside a row's padding from which it lies flat: the name's floor, the press and
+        /// the binder's slot, with the gaps between them.</summary>
+        public const double RowFlatFrom = NameMinWidth + RowGap + PressWidth + RowGap + BinderWidth;
 
-        /// <summary>The narrowest content a row lies flat in: the card's two rules, the row's padding, the name,
-        /// the press and the binder's slot with the gaps between them.</summary>
-        public const double RowStackBelow = CardRules + 2 * RowPaddingX + NameMinWidth + RowGap + PressWidth + RowGap + BinderWidth;
+        /// <summary>The narrowest content a row lies flat in: the card's two rules and the row's padding
+        /// around <see cref="RowFlatFrom"/>.</summary>
+        public const double RowStackBelow = CardRules + 2 * RowPaddingX + RowFlatFrom;
 
         /// <summary>The card's border, left and right.</summary>
         private const double CardRules = 2;
 
-        /// <summary>
-        /// The width of the binder's slot. Beside the name, what the row has past the name's
-        /// <see cref="NameMinWidth"/> and the press, from <see cref="BinderWidth"/> at
-        /// <see cref="RowStackBelow"/> up to <see cref="BinderMaxWidth"/> at <see cref="RowWidest"/>: one width
-        /// for every row of a build, so press and binder still line up down a card. Under the name, the whole
-        /// of what the row has inside its padding, as estimated for lowering the editor's MinWidth: the stacked
-        /// slot itself stretches across the row, so the scroll bar this counts and a page that does not
-        /// scroll leaves no gap at its right. Where it is less than BuildBinder's
-        /// <see cref="BinderMinWidth"/>, the row lowers the editor's MinWidth to the slot, so SimHub lays its
-        /// template out in the room it has rather than being clipped at the slot's edge.
-        /// </summary>
-        public static double BinderSlot(double contentWidth, bool stacks)
+        /// <summary>The room inside a row's padding on a card as wide as the content.</summary>
+        public static double RowInside(double contentWidth)
         {
-            if (!stacks) return Math.Max(BinderWidth, Math.Min(BinderMaxWidth, contentWidth - (RowStackBelow - BinderWidth)));
             return Math.Max(0, contentWidth - CardRules - 2 * RowPaddingX);
         }
 
-        /// <summary>The narrowest content at which the flat slot has reached <see cref="BinderMaxWidth"/>,
-        /// past which nothing a row draws moves, so the page reads the width only this far.</summary>
-        public const double RowWidest = RowStackBelow + BinderMaxWidth - BinderWidth;
+        /// <summary>
+        /// Whether a row puts its binder under its name and press rather than beside them: when the room
+        /// inside its padding cannot give the name <see cref="NameMinWidth"/> beside a 90 px press and the
+        /// <see cref="BinderWidth"/> slot. Decided as the row is measured, from the room it is given, so the
+        /// page reads no width and a resize rebuilds nothing on it.
+        /// </summary>
+        public static bool RowStacksInside(double inside)
+        {
+            return inside < RowFlatFrom;
+        }
+
+        /// <summary>The same for a card as wide as the content.</summary>
+        public static bool RowStacks(double contentWidth)
+        {
+            return RowStacksInside(RowInside(contentWidth));
+        }
+
+        /// <summary>
+        /// The width of the binder's slot: <see cref="BinderWidth"/> beside the name, the same in every row so
+        /// press and binder line up down a card, and the name column takes the rest; under the name, the
+        /// whole of the room inside the row's padding.
+        /// </summary>
+        public static double BinderSlot(double inside, bool stacks)
+        {
+            return stacks ? Math.Max(0, inside) : BinderWidth;
+        }
+
+        /// <summary>The name's column: what the row has inside its padding past the press, and past the
+        /// binder when the binder is beside it.</summary>
+        public static double NameColumn(double inside, bool stacks)
+        {
+            var rest = inside - RowGap - PressWidth;
+            if (!stacks) rest -= RowGap + BinderWidth;
+            return Math.Max(0, rest);
+        }
 
         /// <summary>A row's caption (the glance's) keeps the measure every row caption in the panel keeps,
-        /// as Ui.SettingRow draws it, rather than a paragraph's 620, however wide the name column grows.</summary>
+        /// as Ui.SettingRow draws it, rather than a paragraph's 620. It runs under the line that holds the
+        /// row's name, from the name's left edge across the press and the binder, so it is not wrapped to
+        /// the name column's floor.</summary>
         public const double CaptionMaxWidth = 520;
 
         // --- Search -------------------------------------------------------------------------------------

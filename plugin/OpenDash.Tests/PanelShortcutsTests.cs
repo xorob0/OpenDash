@@ -697,8 +697,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(14, PanelShortcuts.RowNameSize);
             Assert.Equal(8, PanelShortcuts.TagGap);
             Assert.Equal(90, PanelShortcuts.PressWidth);
-            // The binder's slot: the artboard's 260 binder, 16 of gap and 120 of buttons after it.
-            Assert.Equal(260 + 16 + 120, PanelShortcuts.BinderWidth);
             // The header: 8 from the title to the caption, the filter's 30 px bar on the caption's foot.
             Assert.Equal(8, PanelShortcuts.IntroGap);
             Assert.Equal(11, PanelShortcuts.FilterRaise);
@@ -718,15 +716,19 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The page's own numbers, where the artboard has none: it draws no stacked row, no glance
-        /// caption, no stacked header and no floor under SimHub's editor.</summary>
+        /// caption, no stacked header, no floor under SimHub's editor and no binder of SimHub's.</summary>
         [Fact]
         public void Its_own_geometry_where_the_artboard_has_none()
         {
             // The glance's caption 4 under its name, and a stacked binder 8 under the name and the press.
             Assert.Equal(4, PanelShortcuts.CaptionGap);
             Assert.Equal(8, PanelShortcuts.StackGap);
-            // The least a name keeps beside the press and the binder before the binder moves under it.
-            Assert.Equal(160, PanelShortcuts.NameMinWidth);
+            // The least a name keeps beside the press and the binder before the binder moves under it: the
+            // widest label with its tag (A_rows_name_column_holds_its_widest_label_with_its_tag measures it).
+            Assert.Equal(184, PanelShortcuts.NameMinWidth);
+            // The slot SimHub's editor is given beside the name, which is not the artboard's 260 + 16 + 120:
+            // SimHub's template prints a long joystick binding on one line wider than that.
+            Assert.Equal(520, PanelShortcuts.BinderWidth);
             // BuildBinder's floor under SimHub's editor, wherever it is drawn.
             Assert.Equal(260, PanelShortcuts.BinderMinWidth);
             // The filter's gap under the caption when the header stacks, which the artboard's never does (its
@@ -737,58 +739,163 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_row_puts_its_binder_under_its_name_only_where_the_three_cannot_sit_side_by_side()
         {
-            // 2 of card rules, 32 of padding, 160 of name, 16 + 90 + 16 + 396 of press and binder.
-            Assert.Equal(712, PanelShortcuts.RowStackBelow);
-            Assert.Equal(PanelShortcuts.RowStackBelow, 2 + 2 * PanelShortcuts.RowPaddingX + PanelShortcuts.NameMinWidth
-                + PanelShortcuts.RowGap + PanelShortcuts.PressWidth + PanelShortcuts.RowGap + PanelShortcuts.BinderWidth);
+            // Inside the row's padding: 184 of name, 16 + 90 + 16 + 520 of press and binder.
+            Assert.Equal(826, PanelShortcuts.RowFlatFrom);
+            Assert.Equal(PanelShortcuts.RowFlatFrom, PanelShortcuts.NameMinWidth + PanelShortcuts.RowGap + PanelShortcuts.PressWidth + PanelShortcuts.RowGap + PanelShortcuts.BinderWidth);
+            // And on the page, with 2 of card rules and 32 of padding round it.
+            Assert.Equal(860, PanelShortcuts.RowStackBelow);
+            Assert.Equal(PanelShortcuts.RowStackBelow, 2 + 2 * PanelShortcuts.RowPaddingX + PanelShortcuts.RowFlatFrom);
+            Assert.Equal(PanelShortcuts.RowFlatFrom, PanelShortcuts.RowInside(PanelShortcuts.RowStackBelow));
+            Assert.Equal(0, PanelShortcuts.RowInside(20));
+            // The artboard's 1200 frame (879 of content) and a 4K column lie flat; one pixel under the
+            // threshold stacks, inside the padding as on the page.
             Assert.False(PanelShortcuts.RowStacks(Column(1200)));
             Assert.False(PanelShortcuts.RowStacks(Column(3840)));
-            Assert.False(PanelShortcuts.RowStacks(712));
-            Assert.True(PanelShortcuts.RowStacks(711));
-            // Nothing a row draws moves from RowWidest up, which is why the page reads the width only that
-            // far: a row there is laid out as one in a 4K column.
-            Assert.Equal(993, PanelShortcuts.RowWidest);
-            Assert.Equal(PanelShortcuts.RowStacks(Column(3840)), PanelShortcuts.RowStacks(PanelShortcuts.RowWidest));
-            Assert.Equal(PanelShortcuts.BinderSlot(Column(3840), PanelShortcuts.RowStacks(Column(3840))), PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest, PanelShortcuts.RowStacks(PanelShortcuts.RowWidest)));
-            Assert.True(PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest - 1, false) < PanelShortcuts.BinderMaxWidth);
+            Assert.False(PanelShortcuts.RowStacks(860));
+            Assert.True(PanelShortcuts.RowStacks(859));
+            Assert.False(PanelShortcuts.RowStacksInside(826));
+            Assert.True(PanelShortcuts.RowStacksInside(825));
             // The rail's content at the narrowest full-sidebar width: the binder goes under the name there.
             Assert.True(PanelShortcuts.RowStacks(679));
             Assert.True(PanelShortcuts.RowStacks(400));
         }
 
         [Fact]
-        public void Every_row_gives_simhubs_editor_one_slot_as_wide_as_the_row_allows()
+        public void Every_row_gives_simhubs_editor_one_slot_wide_enough_for_a_long_binding()
         {
-            // Beside the name the slot is never narrower than BuildBinder's floor.
+            // Beside the name the slot is never narrower than BuildBinder's floor, and this page lowers that
+            // floor, so under the name, where the slot is the row's whole width, SimHub's template is laid
+            // out in the room it has rather than clipped at the slot's edge.
             Assert.True(PanelShortcuts.BinderWidth >= PanelShortcuts.BinderMinWidth);
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
             Assert.Contains("MinWidth = " + PanelShortcuts.BinderMinWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }", shell);
-            // Beside the name, the artboard's slot where a row first lies flat, growing with the room past the
-            // name's floor to what a stacked slot had just under it, so a long joystick binding, whose button
-            // number is its last word, is not clipped at a wide window: 563 at the artboard's 1200 frame, and
-            // the cap from 993 of content up, a 4K column included. Every row of a build has the same one.
-            Assert.Equal(677, PanelShortcuts.BinderMaxWidth);
-            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow - 1, true));
-            Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowStackBelow, false));
-            Assert.Equal(563, PanelShortcuts.BinderSlot(Column(1200), false));
-            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(PanelShortcuts.RowWidest, false));
-            Assert.Equal(PanelShortcuts.BinderMaxWidth, PanelShortcuts.BinderSlot(Column(3840), false));
-            // The name keeps its floor all the way: the slot grows only by what the row has past it.
-            foreach (var content in new double[] { 712, 800, 879, 993, 1500 })
-            {
-                var name = content - 2 - 2 * PanelShortcuts.RowPaddingX - PanelShortcuts.RowGap - PanelShortcuts.PressWidth - PanelShortcuts.RowGap - PanelShortcuts.BinderSlot(content, false);
-                Assert.True(name >= PanelShortcuts.NameMinWidth, content.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            }
-            // Under it, the whole row inside its padding, which may be less than the floor: the row lowers the
-            // editor's MinWidth to the slot there, so SimHub's template is laid out in it rather than clipped.
-            Assert.Equal(566, PanelShortcuts.BinderSlot(600, true));
-            Assert.Equal(677, PanelShortcuts.BinderSlot(711, true));
-            Assert.Equal(266, PanelShortcuts.BinderSlot(300, true));
-            Assert.Equal(0, PanelShortcuts.BinderSlot(20, true));
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
-            Assert.Contains("control.MinWidth = Math.Min(control.MinWidth, Math.Max(0, layout.Binder - 2 * PanelMetrics.BorderWeight));", code);
+            Assert.Matches(@"control\.VerticalAlignment = VerticalAlignment\.Center;\s*control\.MinWidth = 0;\s*slot = new Border", code);
+
+            // SimHub 9.12.6 prints a binding on one line at 10 px: a 58 px press type, then the plugin 4 after
+            // it and the input, each a Label padded 5 a side. "JoystickPlugin" and
+            // "Logitech_G923_Racing_Wheel_for_PlayStation_4_and_PC_B05" are 63.4 and 288.0 px of Arial
+            // (Liberation Sans' advances, which have Arial's metrics), and the slot's two rules and the
+            // template's margins take 10 more: the line's last word, the button's number, is drawn whole only
+            // in a slot of 443 px or more, and Segoe UI, which SimHub draws in, measures wider than Arial.
+            const double pressType = 58, pluginGap = 4, labelPadding = 2 * 5, plugin = 63.4, input = 288.0, frame = 10;
+            var longBinding = pressType + pluginGap + labelPadding + plugin + labelPadding + input + frame;
+            Assert.True(PanelShortcuts.BinderWidth >= longBinding + 0.15 * (plugin + input), "the slot holds a long joystick binding with room for Segoe UI");
+
+            // Beside the name, one slot of that width in every row, wherever the row lies flat, so press and
+            // binder line up down a card; the name column takes the rest.
+            foreach (var content in new[] { PanelShortcuts.RowStackBelow, Column(1200), 1500, Column(3840) })
+            {
+                var inside = PanelShortcuts.RowInside(content);
+                Assert.Equal(PanelShortcuts.BinderWidth, PanelShortcuts.BinderSlot(inside, false));
+                Assert.Equal(inside - PanelShortcuts.RowGap - PanelShortcuts.PressWidth - PanelShortcuts.RowGap - PanelShortcuts.BinderWidth, PanelShortcuts.NameColumn(inside, false));
+                Assert.True(PanelShortcuts.NameColumn(inside, false) >= PanelShortcuts.NameMinWidth, content.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+            // At the artboard's frame the name has 203, and the threshold gives it its floor exactly.
+            Assert.Equal(203, PanelShortcuts.NameColumn(PanelShortcuts.RowInside(Column(1200)), false));
+            Assert.Equal(PanelShortcuts.NameMinWidth, PanelShortcuts.NameColumn(PanelShortcuts.RowInside(PanelShortcuts.RowStackBelow), false));
+            // Under the name the slot is the whole row inside its padding, wider than the flat slot just under
+            // the threshold, so a row never has less room for its bindings stacked than flat; and the name
+            // has the row past the press.
+            Assert.Equal(PanelShortcuts.RowFlatFrom - 1, PanelShortcuts.BinderSlot(PanelShortcuts.RowFlatFrom - 1, true));
+            Assert.True(PanelShortcuts.BinderSlot(PanelShortcuts.RowFlatFrom - 1, true) > PanelShortcuts.BinderWidth);
+            Assert.Equal(566, PanelShortcuts.BinderSlot(566, true));
+            Assert.Equal(0, PanelShortcuts.BinderSlot(-4, true));
+            Assert.Equal(566 - 16 - 90, PanelShortcuts.NameColumn(566, true));
+            Assert.Equal(0, PanelShortcuts.NameColumn(50, true));
+            Assert.Equal(0, PanelShortcuts.NameColumn(300, false));
             // SimHub's editor draws no name of its own: the row's beside it says what it binds.
             Assert.Empty(PanelShortcuts.EditorName);
+        }
+
+        /// <summary>
+        /// The name column's floor holds what a flat row puts on its name's line: the widest label any card
+        /// draws, with the New or Soon tag 8 after it, measured in the faces the panel draws them in (Barlow
+        /// Regular at 14 for a name, Barlow SemiBold at 10 tracked 0.12 for a tag) from the font files the
+        /// plugin embeds. Narrower, the WrapPanel drops the tag onto a second line at the width a row first
+        /// lies flat. Kerning is left out, as a tag's letters are drawn one by one (Ui.Tracked).
+        /// </summary>
+        [Fact]
+        public void A_rows_name_column_holds_its_widest_label_with_its_tag()
+        {
+            var fonts = Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts");
+            var regular = new Advances(Path.Combine(fonts, "Barlow-Regular.ttf"));
+            var semiBold = new Advances(Path.Combine(fonts, "Barlow-SemiBold.ttf"));
+            Func<string, double> tag = text => 2 * PanelMetrics.BorderWeight + PanelShell.TagPaddingX + (PanelShell.TagPaddingX - 1)
+                + semiBold.Width(text, PanelShell.TagTextSize, Math.Round(PanelShell.TagTextSize * 0.12, 2));
+            var rows = PanelShortcuts.FaceBindings(Face, "Rim").Concat(PanelShortcuts.LightsBindings())
+                .Concat(new[] { PanelShortcuts.GlanceBinding(Contract.KindCompanion, Contract.CompanionPrefix, "Phone") })
+                .Select(row => regular.Width(row.Label, PanelShortcuts.RowNameSize) + (row.IsNew ? PanelShortcuts.TagGap + tag(PanelSoon.NewTag) : 0))
+                .Concat(PanelShortcuts.SoonDrawn.Select(item => regular.Width(item.Title, PanelShortcuts.RowNameSize) + PanelShortcuts.TagGap + tag(PanelSoon.Tag)))
+                .ToList();
+            var widest = rows.Max();
+            // "Band D · previous page" and its New tag, 180.4.
+            Assert.InRange(widest, 178, 183);
+            Assert.True(PanelShortcuts.NameMinWidth >= widest, "the name's floor is " + PanelShortcuts.NameMinWidth + ", its widest line " + widest.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+            // So at the artboard's frame and where a row first lies flat, every name line fits beside the press
+            // and the binder.
+            Assert.True(PanelShortcuts.NameColumn(PanelShortcuts.RowInside(Column(1200)), false) >= widest);
+            Assert.True(PanelShortcuts.NameColumn(PanelShortcuts.RowInside(PanelShortcuts.RowStackBelow), false) >= widest);
+        }
+
+        /// <summary>Advances from a TrueType file's hmtx, through its Windows Unicode cmap: enough to measure a
+        /// line of Latin text as WPF lays it, less kerning.</summary>
+        private sealed class Advances
+        {
+            private readonly byte[] font;
+            private readonly int unitsPerEm;
+            private readonly int metrics;
+            private readonly int hmtx;
+            private readonly int cmap;
+
+            public Advances(string path)
+            {
+                font = File.ReadAllBytes(path);
+                var tables = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (var i = 0; i < U16(4); i++)
+                {
+                    var record = 12 + 16 * i;
+                    tables[System.Text.Encoding.ASCII.GetString(font, record, 4)] = (int)U32(record + 8);
+                }
+                unitsPerEm = U16(tables["head"] + 18);
+                metrics = U16(tables["hhea"] + 34);
+                hmtx = tables["hmtx"];
+                var map = tables["cmap"];
+                for (var i = 0; i < U16(map + 2); i++)
+                {
+                    var record = map + 4 + 8 * i;
+                    if (U16(record) == 3 && U16(record + 2) == 1) cmap = map + (int)U32(record + 4);
+                }
+                Assert.True(cmap > 0 && U16(cmap) == 4, path + " has a Windows Unicode cmap of format 4");
+            }
+
+            public double Width(string text, double size, double tracking = 0)
+            {
+                return text.Sum(c => (double)U16(hmtx + 4 * Math.Min(Glyph(c), metrics - 1)) / unitsPerEm * size + tracking);
+            }
+
+            private int Glyph(char c)
+            {
+                var segments = U16(cmap + 6) / 2;
+                var ends = cmap + 14;
+                var starts = ends + 2 * segments + 2;
+                var deltas = starts + 2 * segments;
+                var ranges = deltas + 2 * segments;
+                for (var i = 0; i < segments; i++)
+                {
+                    if (c > U16(ends + 2 * i)) continue;
+                    if (c < U16(starts + 2 * i)) return 0;
+                    var range = U16(ranges + 2 * i);
+                    if (range == 0) return (c + U16(deltas + 2 * i)) & 0xFFFF;
+                    var glyph = U16(ranges + 2 * i + range + 2 * (c - U16(starts + 2 * i)));
+                    return glyph == 0 ? 0 : (glyph + U16(deltas + 2 * i)) & 0xFFFF;
+                }
+                return 0;
+            }
+
+            private int U16(int at) => (font[at] << 8) | font[at + 1];
+
+            private uint U32(int at) => ((uint)U16(at) << 16) | (uint)U16(at + 2);
         }
 
         /// <summary>
@@ -1016,27 +1123,27 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);", face);
             Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", face);
             Assert.Contains("foreach (var binding in PanelShortcuts.FaceBindings(screen.Namespace, screen.Name))", face);
-            Assert.Contains("ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", face);
-            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance), layout);", face);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, binding, BuildBinder(binding.Action, binding.BinderName), null);", face);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.FaceGlance));", face);
             var wall = Between(code, "private ShortcutsGroupState BuildShortcutsPitWall(", "return group;");
             Assert.Contains("var group = ShortcutsCard(screen.Name, PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height), null);", wall);
             Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", wall);
             Assert.Contains("var caption = PanelShortcuts.PitWallGlances(screen.Width, screen.Height) ? Ui.Caption(PanelCopy.PitWallGlance) : Ui.Caption(PanelShortcuts.PortraitGlanceCaption);", wall);
-            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), caption, layout);", wall);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), caption);", wall);
             var bound = Between(code, "private bool ShortcutsGlanceBound(", "\n        }");
             Assert.Contains("var triggers = TriggersOf(PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name).Action);", bound);
             Assert.Contains("return triggers == null || triggers.Count > 0;", bound);
             var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
             Assert.Contains("var glance = PanelShortcuts.GlanceBinding(screen.Kind, screen.Namespace, screen.Name);", companion);
-            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance), layout);", companion);
+            Assert.Contains("ShortcutsBinding(group, screen.Name, glance, BuildBinder(glance.Action, glance.BinderName, hold: true), Ui.Caption(PanelCopy.CompanionGlance));", companion);
             var lights = Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;");
             Assert.Contains("foreach (var binding in PanelShortcuts.LightsBindings())", lights);
-            Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", lights);
+            Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null);", lights);
 
-            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights(layout);");
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights();");
             // Over every screen the rig has, the same list the sidebar's count reads (BoundCount), so the cards
             // add up to it.
-            Assert.Matches(@"foreach \(var screen in Settings\.RigScreens\(\)\)\s*\{\s*if \(screen == null\) continue;\s*if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallCard\(screen\.Width, screen\.Height, ShortcutsGlanceBound\(screen\)\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
+            Assert.Matches(@"foreach \(var screen in Settings\.RigScreens\(\)\)\s*\{\s*if \(screen == null\) continue;\s*if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallCard\(screen\.Width, screen\.Height, ShortcutsGlanceBound\(screen\)\)\) screens\.Add\(BuildShortcutsPitWall\(screen\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen\)\);", page);
             Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
         }
 
@@ -1050,8 +1157,8 @@ namespace OpenDashPlugin.Tests
         public void The_page_puts_every_part_where_it_is_drawn()
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;"));
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal, layout);", Between(code, "private ShortcutsGroupState BuildShortcutsAlerts(", "return group;"));
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest);", Between(code, "private ShortcutsGroupState BuildShortcutsLights(", "return group;"));
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal);", Between(code, "private ShortcutsGroupState BuildShortcutsAlerts(", "return group;"));
             // Two greyed rows, each drawn once and only there.
             Assert.Equal(2, Regex.Matches(code, @"ShortcutsSoon\(group, PanelSoon\.").Count);
             var companion = Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;");
@@ -1078,49 +1185,47 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("group.Body.Children.Add(row);", Between(code, "private static void ShortcutsBinding(", "\n        }"));
             Assert.Contains("group.Body.Children.Add(shown);", Between(code, "private static void ShortcutsSoon(", "\n        }"));
 
-            // A row: the name and its tags, the caption under them, the press, and the binder's slot; the
-            // Tag Ui.Soon reads to put its Soon tag after a greyed row's name.
-            var row = Between(code, "private static Border ShortcutsRow(", "private static void ShortcutsDropNameColumn(");
+            // A row: the name and its tags on one line, the caption, the press, and the binder's slot, each
+            // handed to the row's panel, which lays them out; the Tag Ui.Soon reads to put its Soon tag after a
+            // greyed row's name.
+            var row = Between(code, "private static Border ShortcutsRow(", "private sealed class ShortcutsRowPanel");
             Assert.Contains("nameLine.Children.Add(name);", row);
             Assert.Contains("nameLine.Children.Add(tag);", row);
-            Assert.Contains("left.Children.Add(nameLine);", row);
-            Assert.Contains("left.Children.Add(caption);", row);
-            Assert.Contains("grid.Children.Add(left);", row);
-            Assert.Contains("grid.Children.Add(pressText);", row);
-            Assert.Contains("Grid.SetColumn(pressText, 1);", row);
-            Assert.Contains("grid.Children.Add(slot);", row);
-            Assert.Contains("Grid.SetColumn(slot, 2);", row);
-            Assert.Contains("Grid.SetRow(slot, 1);", row);
-            Assert.Contains("Grid.SetColumnSpan(slot, 2);", row);
-            // Under the name the slot stretches across the row: its estimate counts a scroll bar the page may
-            // not have, and a fixed width there would leave a gap at the card's right.
-            Assert.Matches(@"Grid\.SetColumnSpan\(slot, 2\);\s*(//[^\n]*\s*)*slot\.Width = double\.NaN;\s*slot\.HorizontalAlignment = HorizontalAlignment\.Stretch;", row);
-            Assert.Contains("Tag = new RowParts(nameLine, control),", row);
-            // The name's line runs across, its caption under it, and the row's grid is the bordered row itself;
-            // beside the name, the slot gets a third column, only when the row does not stack.
             Assert.Contains("var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };", row);
-            Assert.Contains("var left = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };", row);
-            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);", row);
-            Assert.Matches(@"Padding = new Thickness\(PanelShortcuts\.RowPaddingX, [^\n]*\s*Child = grid,\s*Tag = new RowParts", row);
-            Assert.Matches(@"\}\s*else\s*\{\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ layout\.Binder\) \}\);\s*slot\.Margin = new Thickness\(PanelShortcuts\.RowGap, 0, 0, 0\);\s*Grid\.SetColumn\(slot, 2\);\s*\}", row);
+            Assert.Matches(@"return new Border\s*\{\s*BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, PanelMetrics\.BorderWeight, 0, 0\),\s*Padding = new Thickness\(PanelShortcuts\.RowPaddingX, PanelShortcuts\.RowPaddingY, PanelShortcuts\.RowPaddingX, PanelShortcuts\.RowPaddingY\),\s*Child = new ShortcutsRowPanel\(nameLine, caption, pressText, slot\),\s*Tag = new RowParts\(nameLine, control\),\s*\};", row);
+            // A caption, where a row has one, under the name's line at its gap and a row caption's measure;
+            // a row with none (every zone, Lights and greyed row) is drawn without.
+            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShortcuts\.CaptionMaxWidth\);\s*\}", row);
+            // A long name wraps; the press is the artboard's .cap, 16 after the name; the slot holds the
+            // control, keeps the panel's corner and the clash outline's room, and is centred on the line.
             Assert.Matches(@"var name = Ui\.Text\(label, [^;]*\);\s*name\.TextWrapping = TextWrapping\.Wrap;\s*name\.VerticalAlignment = VerticalAlignment\.Center;", row);
             Assert.Matches(@"tag\.Margin = new Thickness\(PanelShortcuts\.TagGap, 0, 0, 0\);\s*tag\.VerticalAlignment = VerticalAlignment\.Center;", row);
-            Assert.Matches(@"pressText = Ui\.Text\(press, [^;]*\);\s*pressText\.VerticalAlignment = VerticalAlignment\.Center;", row);
-            Assert.Matches(@"control\.Margin = new Thickness\(0\);\s*control\.VerticalAlignment = VerticalAlignment\.Center;", row);
-            Assert.Matches(@"HorizontalAlignment = HorizontalAlignment\.Left,\s*VerticalAlignment = VerticalAlignment\.Center,\s*BorderThickness = new Thickness\(PanelMetrics\.BorderWeight\),", row);
-            // The name takes what the press and the binder leave, so those two line up down a card.
-            Assert.Matches(@"var grid = new Grid\(\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth\) \}\);", row);
-            // A row is ruled above in the panel's rule colour, as the card's header is ruled under, and its
-            // binder's slot keeps the panel's corner, as the caution outline is drawn on it.
+            Assert.Matches(@"pressText = Ui\.Text\(press, Theme\.SizeSmall, FontWeights\.Normal, Theme\.TextSecondary\);\s*pressText\.VerticalAlignment = VerticalAlignment\.Center;\s*pressText\.Margin = new Thickness\(PanelShortcuts\.RowGap, 0, 0, 0\);", row);
+            Assert.Matches(@"if \(control != null\)\s*\{\s*control\.Margin = new Thickness\(0\);\s*control\.VerticalAlignment = VerticalAlignment\.Center;\s*control\.MinWidth = 0;\s*slot = new Border\s*\{\s*Child = control,\s*HorizontalAlignment = HorizontalAlignment\.Stretch,\s*VerticalAlignment = VerticalAlignment\.Center,\s*BorderThickness = new Thickness\(PanelMetrics\.BorderWeight\),\s*CornerRadius = new CornerRadius\(Theme\.Radius\),\s*\};\s*\}", row);
+            // The slot's width is the panel's, never fixed on it.
+            Assert.DoesNotContain("Width = ", Between(code.Replace("\r\n", "\n"), "slot = new Border\n", "};"));
+
+            // The row's panel: its parts in reading order, which is Tab's; flat or stacked from the width it is
+            // given, never from the build; the name column, the press column and the slot from the model.
+            var panel = Between(code, "private sealed class ShortcutsRowPanel", "private static void ShortcutsDropNameColumn(");
+            Assert.Contains(": Panel", panel);
+            Assert.Matches(@"foreach \(var part in new\[\] \{ name, caption, press, slot \}\)\s*\{\s*if \(part != null\) Children\.Add\(part\);\s*\}", panel);
+            var measure = Between(panel, "protected override Size MeasureOverride(", "protected override Size ArrangeOverride(");
+            Assert.Matches(@"var inside = double\.IsInfinity\(available\.Width\) \? PanelShortcuts\.RowFlatFrom : available\.Width;\s*stacks = PanelShortcuts\.RowStacksInside\(inside\);", measure);
+            Assert.Contains("name.Measure(new Size(PanelShortcuts.NameColumn(inside, stacks), open));", measure);
+            Assert.Contains("press.Measure(new Size(PanelShortcuts.RowGap + PanelShortcuts.PressWidth, open));", measure);
+            Assert.Contains("line = Math.Max(name.DesiredSize.Height, press.DesiredSize.Height);", measure);
+            // Stacked, the slot is under the line, the stack's gap above it; flat, it is on the line.
+            Assert.Matches(@"if \(slot != null\)\s*\{\s*slot\.Measure\(new Size\(PanelShortcuts\.BinderSlot\(inside, stacks\), open\)\);\s*if \(stacks\) under \+= PanelShortcuts\.StackGap \+ slot\.DesiredSize\.Height;\s*else line = Math\.Max\(line, slot\.DesiredSize\.Height\);\s*\}", measure);
+            // The caption across the row, at its own measure, under the line.
+            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Measure\(new Size\(inside, open\)\);\s*under \+= caption\.DesiredSize\.Height;\s*\}\s*return new Size\(inside, line \+ under\);", measure);
+            var arrange = Between(panel, "protected override Size ArrangeOverride(", "\n        }\n");
+            Assert.Matches(@"var nameWidth = PanelShortcuts\.NameColumn\(inside, stacks\);\s*name\.Arrange\(new Rect\(0, 0, nameWidth, line\)\);\s*press\.Arrange\(new Rect\(nameWidth, 0, PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth, line\)\);", arrange);
+            Assert.Matches(@"var y = line;\s*if \(caption != null\)\s*\{\s*caption\.Arrange\(new Rect\(0, y, inside, caption\.DesiredSize\.Height\)\);\s*y \+= caption\.DesiredSize\.Height;\s*\}", arrange);
+            Assert.Matches(@"if \(stacks\) slot\.Arrange\(new Rect\(0, y \+ PanelShortcuts\.StackGap, inside, slot\.DesiredSize\.Height\)\);\s*else slot\.Arrange\(new Rect\(nameWidth \+ PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth \+ PanelShortcuts\.RowGap, 0, PanelShortcuts\.BinderSlot\(inside, false\), line\)\);", arrange);
+            // A row is ruled above in the panel's rule colour, as the card's header is ruled under.
             Assert.Equal(2, Regex.Matches(code, Regex.Escape("BorderBrush = Ui.Brush(Theme.Rule),")).Count);
-            Assert.Contains("BorderBrush = Ui.Brush(Theme.Rule),", Between(code, "private static Border ShortcutsRow(", "private static void ShortcutsDropNameColumn("));
             Assert.Contains("CornerRadius = new CornerRadius(Theme.Radius),", Between(code.Replace("\r\n", "\n"), "slot = new Border\n", "};"));
-            // A stacked row has two grid rows, or the slot set in the second would be drawn over the name; a
-            // long name wraps; the binder is 16 after the press; the press word is the artboard's .cap.
-            Assert.Matches(@"if \(layout\.Stacks\)\s*\{\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);", row);
-            Assert.Matches(@"var name = Ui\.Text\(label, [^;]*\);\s*name\.TextWrapping = TextWrapping\.Wrap;", row);
-            Assert.Contains("slot.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", row);
-            Assert.Contains("pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);", row);
             // The card: the header's rule under it, which the first row's missing rule relies on
             // (RuleAbove(true, false)); the count 16 from the name; the line beside the name in .cap.
             Assert.Contains("BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),", card);
@@ -1216,7 +1321,6 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("name.TextWrapping = TextWrapping.Wrap;", card);
             Assert.DoesNotContain("TextTrimming", card);
             Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
-            Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
             // A glance's caption keeps a row caption's 520, as Ui.SettingRow draws every other, however wide
             // the name column grows.
@@ -1244,7 +1348,6 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("name.Margin = new Thickness(0, 0, PanelShortcuts.GroupDetailGap, 0);", code);
             Assert.Contains("var name = Ui.Text(label, PanelShortcuts.RowNameSize, FontWeights.Normal, Theme.TextPrimary);", code);
             Assert.Contains("tag.Margin = new Thickness(PanelShortcuts.TagGap, 0, 0, 0);", code);
-            Assert.Contains("grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + PanelShortcuts.PressWidth) });", code);
             Assert.Contains("pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", code);
             Assert.Matches(@"icon\.VerticalAlignment = VerticalAlignment\.Top;\s*icon\.Margin = new Thickness\(0, 1, PanelShortcuts\.BannerGap, 0\);", code);
             Assert.Contains("text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);", code);
@@ -1282,8 +1385,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var crumbs = Ui.Crumbs(PanelShortcuts.PagingCrumbs);", Between(code, "private ShortcutsGroupState BuildShortcutsCompanion(", "return group;"));
             Assert.Contains("Ui.Anchor(row, PanelBindings.Anchor(binding.Action));", code);
             Assert.Contains("Ui.Soon(row, item)", code);
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest, layout);", code);
-            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal, layout);", code);
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.RigTest);", code);
+            Assert.Contains("ShortcutsSoon(group, PanelSoon.AlertDismissal);", code);
             Assert.Contains("padding: PanelKit.SegmentedPaddingShortcuts", code);
             // Columns follow the room a row has, never the sidebar's state.
             Assert.DoesNotContain("!Narrow", code);
@@ -1321,28 +1424,26 @@ namespace OpenDashPlugin.Tests
 
             // The rows as the model gives them: its label and press, the New tag where the model says, the
             // greyed rows by the registry's titles, and each card's line beside its name.
-            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, layout, caption, out slot, out press, tags);", code);
+            Assert.Contains("ShortcutsRow(binding.Label, binding.Press, editor, caption, out slot, out press, tags);", code);
 
             Assert.Contains("if (row.Press != null) row.Press.Visibility = PanelShortcuts.ShowsPress(states[row], row.IsHold) ? Visibility.Visible : Visibility.Hidden;", code);
             Assert.Contains("var tags = binding.IsNew ? new FrameworkElement[] { Ui.NewTag() } : new FrameworkElement[0];", code);
-            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, layout, null, out slot, out press);", code);
+            Assert.Contains("ShortcutsRow(item.Title, PanelShortcuts.Tap, chip, null, out slot, out press);", code);
             Assert.Equal(3, Regex.Matches(code, Regex.Escape("PanelShortcuts.GroupDetail(screen.Name, screen.Kind, screen.Width, screen.Height)")).Count);
             Assert.Contains("ShortcutsCard(PanelShortcuts.RigGroupTitle, PanelShortcuts.RigGroupDetail, null);", code);
             Assert.Contains("ShortcutsCard(PanelShortcuts.AlertsGroupTitle, null, null);", code);
 
             // Every row's binder in one slot of the model's width, the gap on the slot, never on SimHub's editor,
             // whose template draws its own Margin a second time; the editor names nothing of its own.
-            // The width is read only up to RowWidest, where the drawing stops changing (the shell's rule
-            // 11): past it a resize would re-create every SimHub editor on the page for nothing.
-            Assert.Contains("var layout = new ShortcutsLayout(ContentWidthUpTo(PanelShortcuts.RowWidest));", code);
-            Assert.DoesNotMatch(@"\bContentWidth\b", code);
-            Assert.Contains("Stacks = PanelShortcuts.RowStacks(contentWidth);", code);
-            Assert.Contains("Binder = PanelShortcuts.BinderSlot(contentWidth, Stacks);", code);
+            // The page reads no width at all (the shell's rule 11): each row decides as it is measured whether
+            // its binder sits beside the name or under it, so a resize at any width rebuilds nothing and
+            // re-creates none of SimHub's editors on the page.
+            Assert.DoesNotMatch(@"\bContentWidth(UpTo)?\b", code);
+            Assert.DoesNotContain("ColumnRoom", code);
+            Assert.DoesNotContain("ShortcutsLayout", code);
+            Assert.Contains("Child = new ShortcutsRowPanel(nameLine, caption, pressText, slot),", code);
             Assert.Contains("control.Margin = new Thickness(0);", code);
             Assert.DoesNotContain("control.Margin = new Thickness(PanelShortcuts", code);
-            Assert.Contains("Child = control,\n                    Width = layout.Binder,", code.Replace("\r\n", "\n"));
-            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + layout.Binder) }", code);
-            Assert.DoesNotContain("GridLength.Auto });\n                    control", code.Replace("\r\n", "\n"));
             Assert.Contains("control.FriendlyName = PanelShortcuts.EditorName;", code);
             // A card's name is measured at the header's width, so a long one wraps there.
             Assert.Contains("var titleLine = new WrapPanel", code);
