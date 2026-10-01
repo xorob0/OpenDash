@@ -122,6 +122,7 @@ namespace OpenDashPlugin
         private readonly List<string> notUpdated = new List<string>();
         private readonly List<string> notInstalled = new List<string>();
         private readonly List<string> noDevice = new List<string>();
+        private readonly List<string> notedOn = new List<string>();
 
         /// <summary>Older strip profiles brought to this build's version, by name.</summary>
         public IReadOnlyList<string> Updated => updated;
@@ -153,6 +154,14 @@ namespace OpenDashPlugin
         /// maker's profiles, which the driver has to change before the select step can be taken.</summary>
         public string Note { get; private set; }
 
+        /// <summary>The SimHub devices whose install reported <see cref="Note"/>, by the name the select step
+        /// gives each (null where SimHub gives none), so a run that names several devices can say which one the
+        /// note is about.</summary>
+        public IReadOnlyList<string> NotedOn => notedOn;
+
+        /// <summary>Whether the flag box's install reported <see cref="Note"/>: its device is the matrix's.</summary>
+        public bool FlagBoxNoted { get; private set; }
+
         /// <summary>One strip the run wrote: its name, the SimHub device it names, what SimHub held before,
         /// and what the write reported.</summary>
         public void Strip(string name, string device, FlagBoxInstallState before, FlagBoxPlan after)
@@ -162,7 +171,7 @@ namespace OpenDashPlugin
             {
                 if (older) updated.Add(name);
                 else installed.Add(new KeyValuePair<string, string>(name, device));
-                Noted(after);
+                if (Noted(after) && !notedOn.Contains(device)) notedOn.Add(device);
             }
             else if (older) notUpdated.Add(name);
             else notInstalled.Add(name);
@@ -178,12 +187,15 @@ namespace OpenDashPlugin
         {
             FlagBoxWasOlder = before == FlagBoxInstallState.Outdated;
             FlagBoxAfter = after == null ? FlagBoxInstallState.Failed : after.State;
-            if (FlagBoxAfter == FlagBoxInstallState.UpToDate) Noted(after);
+            if (FlagBoxAfter == FlagBoxInstallState.UpToDate && Noted(after)) FlagBoxNoted = true;
         }
 
-        private void Noted(FlagBoxPlan after)
+        /// <summary>Keeps the first install's note, and says whether this install reported the same one.</summary>
+        private bool Noted(FlagBoxPlan after)
         {
-            if (Note == null && !string.IsNullOrWhiteSpace(after.Note)) Note = after.Note;
+            if (string.IsNullOrWhiteSpace(after.Note)) return false;
+            if (Note == null) Note = after.Note;
+            return string.Equals(Note, after.Note, StringComparison.Ordinal);
         }
 
         /// <summary>Whether a write failed, whose reason is in SimHub's log.</summary>
@@ -1166,10 +1178,10 @@ namespace OpenDashPlugin
             Profiles(line, "Updated", lights.Updated);
             Profiles(line, "Installed", lights.Installed.Select(pair => pair.Key).ToList());
             if (flagBoxOk) line.Add((lights.FlagBoxWasOlder ? "Updated " : "Installed ") + name + ".");
-            if (lights.Note != null) line.Add(lights.Note);
             var step = SelectIt(lights.Installed.ToList());
-            if (step != null) line.Add(step);
             var flagBoxStep = flagBoxOk && !lights.FlagBoxWasOlder ? FlagBoxSelect(name, matrices) : null;
+            if (lights.Note != null) line.Add(NoteSaid(lights, flagBoxStep != null));
+            if (step != null) line.Add(step);
             if (flagBoxStep != null) line.Add(flagBoxStep);
             Profiles(line, "Could not update", lights.NotUpdated);
             Profiles(line, "Could not install", lights.NotInstalled);
@@ -1179,6 +1191,37 @@ namespace OpenDashPlugin
             if (noDevice != null) line.Add(noDevice);
             return line.Count == 0 ? null : string.Join(" ", line);
         }
+
+        /// <summary>
+        /// What an install reported about its device, said so that it points at a device the line names. The
+        /// LEDs and Matrix pages install one profile per press, so FlagBoxInstallPlan.BuiltInModeNote's "your
+        /// device" is clear there; a run of this page's can name several devices in its select steps, and then
+        /// the note names the one it is about (<see cref="BuiltInOn"/>). Said as reported when the line names
+        /// one device or none, when the note is another, or when SimHub gives no name for a device it is about.
+        /// </summary>
+        /// <param name="flagBoxSelected">Whether the line gives the flag box's select step, which names the
+        /// matrix's device.</param>
+        public static string NoteSaid(UpdatesLightsTally lights, bool flagBoxSelected)
+        {
+            if (lights == null || lights.Note == null) return null;
+            var named = lights.Installed.Select(pair => pair.Value).Where(device => !string.IsNullOrWhiteSpace(device))
+                .Select(device => device.Trim()).Distinct(StringComparer.Ordinal).Count() + (flagBoxSelected ? 1 : 0);
+            if (named <= 1 || !string.Equals(lights.Note, FlagBoxInstallPlan.BuiltInModeNote, StringComparison.Ordinal)) return lights.Note;
+            if (lights.NotedOn.Any(string.IsNullOrWhiteSpace)) return lights.Note;
+            var devices = lights.NotedOn.Select(device => device.Trim()).Distinct(StringComparer.Ordinal).ToList();
+            if (lights.FlagBoxNoted) devices.Add(MatrixDeviceName);
+            return devices.Count == 0 ? lights.Note : BuiltInOn(devices);
+        }
+
+        /// <summary>FlagBoxInstallPlan.BuiltInModeNote with its device named: "Turn off built-in profiles on
+        /// Moza, or OpenDash's will not be listed."</summary>
+        public static string BuiltInOn(IList<string> devices)
+        {
+            return "Turn off built-in profiles on " + And(devices ?? new string[0]) + ", or OpenDash's will not be listed.";
+        }
+
+        /// <summary>The matrix's device in a sentence that already says where it is.</summary>
+        public const string MatrixDeviceName = "your matrix's device";
 
         /// <summary>"Updated Rim's profile.", "Updated the profiles of Rim and Brow.": the LEDs page's form for
         /// one, and its names for several.</summary>
