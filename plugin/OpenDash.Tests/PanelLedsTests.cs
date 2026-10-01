@@ -459,6 +459,304 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>The page's source, comments out.</summary>
+        private static string LedsSource()
+        {
+            return RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+        }
+
+        /// <summary>Holds each statement to <paramref name="where"/>, whatever its layout: a pin read from the
+        /// page's source with every space and line break taken out of both, so a condition and the statement it
+        /// guards, or a control and the write it carries, are held together rather than each on its own.</summary>
+        private static void Holds(string where, string label, params string[] statements)
+        {
+            var squashed = Squash(where);
+            foreach (var statement in statements)
+            {
+                Assert.True(squashed.Contains(Squash(statement)), label + " no longer carries: " + statement);
+            }
+        }
+
+        /// <summary>
+        /// The page's structure: the sections and the strip's parts, in order, each drawn where the artboard
+        /// draws it. A section that stopped being added, or the empty state drawn above real strips, would
+        /// otherwise leave every test green, since the pins elsewhere read the methods that draw each part.
+        /// </summary>
+        [Fact]
+        public void The_page_draws_its_sections_and_the_strips_parts_in_order()
+        {
+            var leds = LedsSource();
+            Holds(Body(leds, "private FrameworkElement BuildLedsPage(", "private LedBar LedsSelectedBar("), "BuildLedsPage",
+                "var sections = new List<UIElement> { Ui.Anchor(LedsCards(bars, current), PanelLeds.AnchorStrips) };"
+                + "if (current != null) sections.Add(LedsStripSection(current));"
+                + "sections.Add(LedsEveryStripSection());"
+                + "return PageLayout(PanelLeds.Title, null, sections.ToArray());");
+            Holds(Body(leds, "private FrameworkElement LedsStripSection(", "private static Border LedsBlock("), "LedsStripSection",
+                "Action redrawPreview = () => { redrawOnlyPreview(); Action repaintCard; if (ledsCardRepaints.TryGetValue(ns, out repaintCard)) repaintCard(); };",
+                "var parts = new List<UIElement> { LedsHeader(bar, targets, declined) };"
+                + "var fix = LedsFix(bar);"
+                + "if (fix != null) parts.Add(fix);"
+                + "parts.Add(Ui.Anchor(preview, PanelLeds.AnchorPreview));"
+                + "parts.Add(LedsColumns(LedsRevLights(bar, redrawPreview), LedsThisStrip(bar, targets, declined, redrawPreview)));"
+                + "parts.Add(Ui.Anchor(LedsEffects(bar, redrawPreview), PanelLeds.AnchorEffects));"
+                + "return LedsBlock(Ui.VStack(18, parts.ToArray()));");
+            Holds(Body(leds, "private FrameworkElement LedsCards(", "private FrameworkElement LedsStripSection("), "LedsCards",
+                "var card = Ui.StripCard(bar.Name, PanelLeds.ShapeDots(bar.Shape), fitted, PanelLeds.StateText(profile, selected), PanelLeds.StateHex(profile, selected), ReferenceEquals(bar, current),",
+                "if (bars.Count > 0) return grid; return Ui.VStack(12, Ui.Prose(PanelLeds.NoStrips, Theme.SizeBody), grid);");
+            Holds(Body(leds, "private FrameworkElement LedsHeader(", "private static string LedsProfileBlocked("), "LedsHeader",
+                "var title = Ui.SubHeading(bar.Name);",
+                "var lead = Ui.Text(PanelLeds.HardwareLead(bar.Shape), 13, FontWeights.Medium, Theme.TextPrimary);",
+                "var numerals = Ui.Text(PanelLeds.ShapeDots(bar.Shape), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);",
+                "chip.ToolTip = PanelLeds.HardwareLead(bar.Shape) + PanelLeds.ShapeDots(bar.Shape);",
+                "if (blocked == null) return row; return Ui.VStack(6, row, LedsCaptionLine(blocked));");
+            Holds(Body(leds, "private FrameworkElement BuildLedBarActions(", "private void InstallLedBarProfile("), "BuildLedBarActions",
+                "if (state != null) { var hex = PanelLeds.StateHex(profile, selected);",
+                "var action = blocked == null ? PanelLeds.ProfileAction(profile) : null; if (action != null) { var install = Ui.Button(action, PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "var rename = Ui.Button(PanelLeds.RenameButton, PanelButtonKind.Outline, PanelButtonSize.Small); rename.ToolTip = PanelLights.RenameBarTooltip;",
+                "var remove = Ui.Button(PanelLeds.RemoveButton, PanelButtonKind.GhostDanger, PanelButtonSize.Small); remove.ToolTip = PanelLeds.RemoveTooltip;");
+            Holds(Body(leds, "private FrameworkElement LedsRevLights(", "private FrameworkElement LedsThisStrip("), "LedsRevLights",
+                "Ui.Anchor(LedsHeading(PanelLeds.RevLightsTitle), PanelLeds.AnchorRevLights), Ui.Rows(Ui.Anchor(LedsRow(PanelLeds.CarRevLightsTitle, style), PanelLeds.AnchorRevStyle), carLine, width, Ui.Anchor(LedsRow(PanelLeds.CentreDisplayTitle, centre), PanelLeds.AnchorCentre))",
+                "Ui.SubRow(Ui.Anchor(LedsRow(PanelLeds.MirrorFitTitle,",
+                "centre.Child = Ui.ChoiceButton(PanelLights.CentreLabels, PanelLeds.CentreIndex(Settings.BarCentre(ns)),",
+                "if (line == null || key == shown) return; shown = key; var hex = PanelLeds.CarLineHex(known); carText.Text = line; carText.Foreground = Ui.Brush(hex);");
+            Holds(Body(leds, "private FrameworkElement LedsThisStrip(", "private FrameworkElement LedsEffects("), "LedsThisStrip",
+                "var rows = new List<UIElement> { Ui.Anchor(deviceRow, PanelLeds.AnchorDevice) };",
+                "rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));",
+                "rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));",
+                "Ui.Anchor(LedsHeading(PanelLeds.ThisStripTitle), PanelLeds.AnchorThisStrip), Ui.Rows(rows.ToArray())");
+            Holds(Body(leds, "private FrameworkElement LedsEffects(", "private static Border LedsEffectTile("), "LedsEffects",
+                "var caption = Ui.Prose(PanelLeds.EffectsCaption);",
+                "var title = Ui.HStack(0, Ui.Heading(PanelLeds.EffectsTitle), tag);",
+                "var limiter = LedsRow(PanelSoon.PitLimiterLights.Title, BuildSegmented(PanelLeds.PitLimiterLightsValues, PanelLeds.PitLimiterLightsLabels, PanelLeds.PitLimiterLightsValues[1], value => { }));",
+                "return Ui.VStack(0, head, grid, under);");
+            Holds(Body(leds, "private FrameworkElement LedsEveryStripSection(", "private FrameworkElement BuildCarTablesRow("), "LedsEveryStripSection",
+                "var carData = Ui.SettingRow(PanelSoon.CarDataForAcAccLmu.Title, null);",
+                "Ui.Anchor(LedsHeading(PanelLeds.EveryStripTitle), PanelLeds.AnchorEveryStrip),",
+                "Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables),");
+            var preview = Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl(");
+            Holds(preview, "LedsPreview",
+                "var sizes = ends > 0 ? new[] { ends, centre, ends } : new[] { centre };",
+                "foreach (var text in PanelLeds.PreviewLabels(ends, centre))",
+                "var chip = Ui.Chip(scenario.Value, id == ledsScenario, () =>",
+                "var link = Ui.LinkButton(PanelLeds.AllDevicesAtOnce);");
+        }
+
+        /// <summary>
+        /// Each control together with the write it carries and the repaint after it: two switches whose writes were
+        /// swapped still carried both writes and both saves, so a pin per string could not tell. Each handler is
+        /// held whole, from the control to its last statement.
+        /// </summary>
+        [Fact]
+        public void Each_control_carries_its_own_write_and_the_repaint_after_it()
+        {
+            var leds = LedsSource();
+            Holds(Body(leds, "private FrameworkElement LedsEffects(", "private static Border LedsEffectTile("), "LedsEffects",
+                "tiles.Add(LedsEffectTile(effect.Label, Settings.BarEffectEnabled(ns, id), on => { Settings.SetBarEffect(ns, id, on); Save(); redrawPreview(); }));",
+                "var flags = LedsRow(PanelLeds.FlagAnimationTitle, Ui.Switch(Settings.BarFlagAnimation(ns), on => { var live = Settings.LedBarByNamespace(ns); if (live != null) live.FlagAnimation = on; Save(); }));",
+                "LedsRow(PanelLeds.SpotterTitle, Ui.Switch(Settings.BarSpotterWhole(ns), on => { var live = Settings.LedBarByNamespace(ns); if (live != null) live.SpotterWhole = on; Save(); redrawPreview(); }), PanelLeds.SpotterCaption)");
+            Holds(Body(leds, "private FrameworkElement LedsRevLights(", "private FrameworkElement LedsThisStrip("), "LedsRevLights",
+                "BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit, value => { Settings.LedMirrorFit = value; Save(); }), PanelLeds.MirrorFitCaption)",
+                "var style = Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)), on => { var live = Settings.LedBarByNamespace(ns); if (live != null) live.RpmStyle = Contract.NormaliseChoice(on ? Contract.LedRpmStyleCar : Contract.LedRpmStyleLeftToRight, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle); Save(); show(); redrawPreview(); });",
+                "var live = Settings.LedBarByNamespace(ns); if (live != null) live.Centre = Contract.LedCentres[i]; Save(); redrawPreview(); drawCentre(); LedsFocusLater(() => LedsFirstControl(centre.Child));");
+            Holds(Body(leds, "private FrameworkElement LedsThisStrip(", "private FrameworkElement LedsEffects("), "LedsThisStrip",
+                "var value = PanelLeds.BrightnessValue(i); Settings.SetBarBrightness(ns, value); Save(); redrawPreview(); drawBrightness(true);",
+                "reverse = Ui.Switch(Settings.BarReversed(ns), on => { ledsFocusReverse = LedsLetGoOfFocus(reverse); ReverseLedBar(ns, on);");
+            // The Add sheet's device radios hand AddLedBar the device's id, never its name.
+            var sheet = Body(leds, "private void ShowAddLedBar()", "private static FrameworkElement LedsSheetRow(");
+            Holds(sheet, "ShowAddLedBar",
+                "foreach (var target in targets) { var id = target.Id;",
+                ".Where(other => other != null && string.Equals(Settings.BarDevice(other.Namespace), id, StringComparison.Ordinal)).Select(other => other.Name);",
+                "var chosen = string.Equals(id, device, StringComparison.Ordinal);",
+                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; showDevices(); updateFooter();");
+            Assert.DoesNotContain("target.Name;", Squash(sheet).Replace("target==null?null:target.Name", string.Empty));
+        }
+
+        /// <summary>
+        /// Each press's condition held together with the statement it guards: the lines a press says are pinned in
+        /// its body, but an inverted condition kept them all and said the failure after a good install, or threw
+        /// on the null it was meant to catch.
+        /// </summary>
+        [Fact]
+        public void Each_press_chooses_its_line_by_the_condition_it_guards()
+        {
+            var leds = LedsSource();
+            Holds(Body(leds, "private FrameworkElement LedsFix(", "private FrameworkElement LedsPreview("), "LedsFix",
+                "var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace); if (issue == null) return null;");
+            Holds(Body(leds, "private void InstallLedBarProfile(", "private void ReverseLedBar("), "InstallLedBarProfile",
+                "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
+                "if (plan == null) { Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name))); return; }");
+            Holds(Body(leds, "private void ReverseLedBar(", "private void ShowRenameLedBar("), "ReverseLedBar",
+                "if (bar == null || !Settings.SetBarReversed(ns, reversed)) return; Save();",
+                "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
+                "if (plan == null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked))); return; }");
+            Holds(Body(leds, "private void RenameLedBar(", "private void ShowRemoveLedBar("), "RenameLedBar",
+                "var targets = inSimHub ? LedTargets.All(out declined) : null; var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;",
+                "if (inSimHub && blocked == null) { var plan = LedsReinstall(bar, targets);",
+                "if (blocked != null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.Renamed(bar.Name, false), blocked))); return; }");
+            Holds(Body(leds, "private void AddLedBar(", null), "AddLedBar",
+                "var target = LedsTargetOf(targets, bar.Device); if (target == null) { Redraw(); Say(PanelMessage.Caution(PanelLeds.AddedWithoutDevice(bar.Name, declined))); return; }");
+            Holds(Body(leds, "private void RemoveLedBar(", "private void ShowAddLedBar("), "RemoveLedBar",
+                "if (takenOut == false && held) Log.Warn(");
+            var move = Body(leds, "private void MoveLedBar(", "private FrameworkElement BuildLedBarActions(");
+            Holds(move, "MoveLedBar",
+                "var found = EmbeddedProfileOf(bar); if (found == null) {",
+                "RebuildPage(); ledsFocusDevice = false; Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.NotMoved(bar.Name), PanelLeds.NoProfileForStrip))); return; }",
+                "var ok = plan.State == FlagBoxInstallState.UpToDate;",
+                "RefreshAttention(); RebuildPage(); ledsFocusDevice = false; RefreshSidebar(); Say(line, ok && plan.Note == null);");
+            Holds(Body(leds, "private static Border BuildLedDeviceRow(", "private void MoveLedBar("), "BuildLedDeviceRow",
+                "if (!row.HasPicker) return LedsRow(PanelLights.BarDeviceTitle, null, row.Caption);",
+                "if (!movable) { picker.Opacity = PanelMetrics.DisabledOpacity; ToolTipService.SetShowOnDisabled(picker, true); }",
+                "if (row.Selected >= 0) picker.ToolTip = labels[row.Selected]; var drawn = LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);");
+        }
+
+        /// <summary>
+        /// The Add LEDs sheet's call sites, each with the words and the gate it draws by: the Fanatec tile only
+        /// where the build embeds its profile (ruling 53), the name box on the hardware's own name until the driver
+        /// types (ruling 54), the shape step's fixed shape for the wheel, and every step's label.
+        /// </summary>
+        [Fact]
+        public void The_Add_sheet_draws_each_step_by_its_own_gate_and_words()
+        {
+            var leds = LedsSource();
+            var sheet = Body(leds, "private void ShowAddLedBar()", "private static FrameworkElement LedsSheetRow(");
+            // The pin PanelLedBarFormTests holds by its own anchors, held here where the gate and the default stand.
+            Holds(sheet, "ShowAddLedBar",
+                "if (offersFanatec) { var tile = LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null, PanelLeds.ShapeFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre), PanelLeds.FanatecShape, null, fanatec, () => pickHardware(true));",
+                "if (sides.Length > 0) { var tile = LedsHardwareTile(PanelLeds.SomethingElse, null, PanelLeds.AnyStripFrame(), PanelLeds.SomethingElseNote, null, !fanatec, () => pickHardware(false));",
+                "var grid = Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray());",
+                "hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec) ? Ui.VStack(12, grid, LedsNote(PanelLeds.OtherWheelNote)) : (UIElement)grid;",
+                "if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)); updateFooter();",
+                "Action showShape = () => { if (fanatec) { var numerals = Ui.Text(PanelLeds.FanatecShape, 18, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data); var fixedLabel = Ui.Eyebrow(PanelLeds.Fixed);",
+                "fixedDock.Children.Add(Ui.VStack(4, numerals, Ui.Prose(PanelLeds.SetByTheWheel, PanelKit.CardMetaSize)));",
+                "note.Text = PanelLights.BarShapeNote(side, centre, fanatec);",
+                "sides.Select(n => new Segmented.Option(n.ToString(CultureInfo.InvariantCulture), PanelLeds.EndsLabel(n), minWidth: PanelKit.SegmentMinWidth))",
+                "side = int.Parse(value, CultureInfo.InvariantCulture); centres = PanelLights.BarCentres(census, side); centre = PanelLeds.KeptCentre(centres, centre); showCentre(); refresh();",
+                "centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle);",
+                "LedsSheetRow(PanelLights.BarEndsTitle, ends),",
+                "if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));",
+                "ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLeds.NoProfiles), null); return;",
+                "Ui.Step(1, PanelLeds.HardwareStep, hardwareHost, true), Ui.Step(2, PanelLeds.ShapeStep, shapeHost), Ui.Step(3, PanelLights.BarDeviceTitle, deviceHost), Ui.Step(4, PanelLights.BarNameTitle, name));",
+                "ShowSheet(PanelLights.AddBar, body, Ui.VStack(14, footerNote, SheetFooter(null, cancel, add)));");
+            Assert.Equal(2, Occurrences(leds, "DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec))"));
+            Assert.Equal(1, Occurrences(Squash(sheet), "if(offersFanatec)"));
+            // The Rename and Remove sheets' words.
+            var rename = Body(leds, "private void ShowRenameLedBar(", "private void RenameLedBar(");
+            Assert.Contains("ShowSheet(\"Rename \" + bar.Name,", rename);
+            Holds(rename, "ShowRenameLedBar",
+                "var save = Ui.Button(PanelLeds.RenameButton, PanelButtonKind.Primary, PanelButtonSize.Large);",
+                "var caption = Ui.Prose(PanelLights.BarNameCaption);");
+            Holds(Body(leds, "private void ShowRemoveLedBar(", "private void RemoveLedBar("), "ShowRemoveLedBar",
+                "var remove = Ui.Button(PanelLeds.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large); remove.ToolTip = PanelLeds.RemoveTooltip;",
+                "ShowSheet(PanelLeds.RemoveTitle(bar.Name), Ui.Prose(PanelLeds.RemoveBody, Theme.SizeBody), SheetFooter(null, cancel, remove));");
+        }
+
+        /// <summary>
+        /// Lovely Car Data's download: the guard, the flag set and the row drawn disabled, the fetch off the
+        /// interface thread, and the flag cleared and the row drawn again back on it, in that order. A completion
+        /// that left the flag set kept the button on "Downloading…" for the rest of the session, and one that drew
+        /// the row from the pool thread threw into SimHub's log.
+        /// </summary>
+        [Fact]
+        public void The_download_sets_its_flag_fetches_off_the_interface_thread_and_clears_it_back_on_it()
+        {
+            var leds = LedsSource();
+            var download = Squash(Body(leds, "private void DownloadCarTables()", "private static Border BuildLedDeviceRow("));
+            var at = new[]
+            {
+                "if(carTablesButton==null||carTablesDownloading)return;",
+                "carTablesDownloading=true;",
+                "RefreshCarTables();",
+                "UpdateService.InBackground(()=>{",
+                "plugin.CarLights.Download(DateTime.UtcNow);",
+                "Dispatcher.Invoke(()=>{carTablesDownloading=false;RefreshCarTables();});",
+            }.Select(part => download.IndexOf(part, StringComparison.Ordinal)).ToArray();
+            Assert.All(at, i => Assert.True(i >= 0, "the download no longer carries one of its steps"));
+            for (var i = 1; i < at.Length; i++) Assert.True(at[i - 1] < at[i], "the download's steps are out of order at step " + i);
+            Assert.Equal(1, Occurrences(download, "carTablesDownloading=false;"));
+            // Nothing on the pool thread touches the row: only the Invoke draws it.
+            var pool = download.Substring(at[3], at[5] - at[3]);
+            Assert.DoesNotContain("carTablesLine", pool);
+            Assert.DoesNotContain("carTablesButton", pool);
+            Assert.DoesNotContain("RefreshCarTables", pool);
+            // The row is drawn once as it is built, before the tick that catches the start's read up.
+            var row = Body(leds, "private FrameworkElement BuildCarTablesRow(", "private string CarTablesKey(");
+            Assert.InRange(row.IndexOf("RefreshCarTables();", StringComparison.Ordinal), 0, row.IndexOf("OnTick(", StringComparison.Ordinal));
+            Holds(row, "BuildCarTablesRow",
+                "carTablesButton = Ui.Button(PanelLights.CarTablesButton(plugin.CarLights.CarCount), PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "var row = LedsRow(PanelLights.CarTablesTitle, carTablesButton);",
+                "OnTick(() => { if (carTablesLine == null || carTablesDownloading) return; if (!string.Equals(CarTablesKey(), carTablesDrawn, StringComparison.Ordinal)) RefreshCarTables(); });");
+        }
+
+        /// <summary>
+        /// The page has no DrawsLighting, so a wheel press repaints it in place: each card and the preview re-dim,
+        /// the Brightness chooser draws the rig's value in force again once its list is closed, and a change to the
+        /// strip repaints its card. The build's lifetime drops what it holds, and a device pick hands focus to the
+        /// control drawn in the picker's place, with the flag cleared whatever the build reached.
+        /// </summary>
+        [Fact]
+        public void A_wheel_press_repaints_in_place_and_the_build_drops_what_it_holds()
+        {
+            var leds = LedsSource();
+            Holds(Body(leds, "private FrameworkElement BuildLedsPage(", "private LedBar LedsSelectedBar("), "BuildLedsPage",
+                "ledsCardRepaints.Clear(); OnDrop(() => { carTablesButton = null; carTablesLine = null; ledsCardRepaints.Clear(); });");
+            Holds(Body(leds, "private FrameworkElement LedsCards(", "private FrameworkElement LedsStripSection("), "LedsCards",
+                "paint(); ledsCardRepaints[ns] = paint; OnLighting(() => Ui.Redim(picture, LedsDim(ns)));");
+            Holds(Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl("), "LedsPreview",
+                "OnLighting(() => Ui.Redim(preview, LedsDim(ns)));",
+                "redraw = () => { draw(); Ui.Redim(preview, LedsDim(ns)); };");
+            var strip = Body(leds, "private FrameworkElement LedsThisStrip(", "private FrameworkElement LedsEffects(");
+            Holds(strip, "LedsThisStrip",
+                "OnLighting(() => { if (rigInForce() == rigShown) return; var open = LedsFirstControl(brightness.Child) as ToggleButton; if (open == null || open.IsChecked != true) { drawBrightness(false); return; }",
+                "closed = (sender, args) => { open.Unchecked -= closed; owed = false; if (rigInForce() != rigShown) drawBrightness(false); }; open.Unchecked += closed; });",
+                "if (ledsFocusDevice) { ledsFocusDevice = false; LedsFocusLater(() => LedsFocusable(LedsFirstControl(LedsRowControl(deviceRow))) ?? LedsFirstControl(brightness.Child)); }");
+            // The flag is set before the page is drawn again, and cleared after every redraw, whichever the build
+            // reached: left set, a later build would pull focus to the picker.
+            var move = Squash(Body(leds, "private void MoveLedBar(", "private FrameworkElement BuildLedBarActions("));
+            Assert.InRange(move.IndexOf("ledsFocusDevice=true;", StringComparison.Ordinal), 0, move.IndexOf("RebuildPage();", StringComparison.Ordinal));
+            Assert.Equal(Occurrences(move, "RebuildPage();"), Occurrences(move, "RebuildPage();ledsFocusDevice=false;"));
+            Assert.Equal(2, Occurrences(move, "RebuildPage();"));
+        }
+
+        /// <summary>
+        /// The layout the page holds at every width: the two blocks under the preview side by side only where two
+        /// columns fit (never by Narrow, which Hooks 4.0 forbids for this), the preview a picture that only
+        /// shrinks, since its labels are placed for a scale of at most one, and each grid at the artboard's counts.
+        /// </summary>
+        [Fact]
+        public void The_page_is_laid_out_by_the_columns_and_its_pictures_only_shrink()
+        {
+            var leds = LedsSource();
+            var columns = Body(leds, "private FrameworkElement LedsColumns(", "private FrameworkElement LedsHeader(");
+            Assert.Contains("if (!TwoColumns) return Ui.VStack(24, left, right);", columns);
+            Assert.DoesNotContain("Narrow", columns);
+            Assert.Contains("StretchDirection = StretchDirection.DownOnly, Child = preview", Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl("));
+            Assert.Contains("Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray())", leds);
+            Assert.Contains("Ui.CardGrid(PanelLeds.EffectTileMinWidth, PanelLeds.EffectTileGap, PanelLeds.EffectColumns, tiles.ToArray())", leds);
+            Assert.Contains("Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray())", leds);
+            Assert.Equal(3, Occurrences(leds, "Ui.CardGrid("));
+        }
+
+        /// <summary>The edges the rules' own summaries promise: a chip the emulation does not know, the
+        /// Brightness list's last entry and one past it, a chip pressed for nothing, and the trims and the case the
+        /// words are read in.</summary>
+        [Fact]
+        public void The_rules_hold_at_their_edges()
+        {
+            var options = PanelLeds.OptionsFor(false, null);
+            Assert.Equal(PanelLeds.PreviewFrame(PanelLeds.LiveScenario, 3, 9, options, false, null), PanelLeds.PreviewFrame("nope", 3, 9, options, false, null));
+            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Idle, options), PanelLeds.PreviewFrame("nope", 3, 9, options, false, null));
+            Assert.Equal(100, PanelLeds.BrightnessValue(10));
+            Assert.Null(PanelLeds.BrightnessValue(11));
+            Assert.Null(PanelLeds.BrightnessValue(0));
+            Assert.Equal(PanelLeds.LiveScenario, PanelLeds.ScenarioFor(null, "LedRim", "LedRim"));
+            Assert.Equal("Rim is in Lovely Car Data.", PanelLeds.CarLine(true, " Rim ", true, true, false, true));
+            Assert.Equal("Rim", PanelLeds.DeviceMeta(true, new[] { " ", "Rim" }));
+            Assert.Null(PanelLeds.DeviceMeta(true, new[] { " ", null }));
+            Assert.Null(PanelLeds.InstallsOn("Strip", " "));
+            Assert.True(PanelLeds.FoundFanatec(new[] { "FANATEC Podium" }));
+            Assert.True(PanelLeds.TablesMissing(0, " " + PanelLights.CarTablesNone));
+        }
+
         /// <summary>A method's body: from its signature to the next one's, or to the end.</summary>
         private static string Body(string text, string start, string next)
         {
