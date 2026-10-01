@@ -703,19 +703,45 @@ namespace OpenDashPlugin.Tests
             Assert.True(4 * (PanelScreens.PortraitChoiceWidth + PanelScreens.WrapGap) <= PanelScreens.ControlsMost);
             Assert.True(PanelScreens.GlancePageWidth + PanelScreens.GlanceChipMax + 2 * PanelScreens.WrapGap <= PanelScreens.ControlsMost);
             Assert.Equal(PanelScreens.ControlsMost, PanelScreens.ControlsWidth(PanelScreens.ControlsColumnMost));
-            // A chip cut short says the whole binding in its hover, then where it goes.
-            Assert.Equal("FANATEC Podium Wheel Base DD1 · 12" + System.Environment.NewLine + PanelBindings.ChipTooltip, PanelScreens.ChipTooltip("FANATEC Podium Wheel Base DD1 · 12"));
-            Assert.Equal(PanelBindings.ChipTooltip, PanelScreens.ChipTooltip(null));
-            // A zone's hover carries the page and the button line its cell may cut, and the info bar's its ends.
+            // A chip cut short says the whole binding in its hover, then where it goes; a whole one says only
+            // where it goes, since its own words are on it.
+            Assert.Equal("FANATEC Podium Wheel Base DD1 · 12" + System.Environment.NewLine + PanelBindings.ChipTooltip, PanelScreens.ChipTooltip("FANATEC Podium Wheel Base DD1 · 12", true));
+            Assert.Equal(PanelBindings.ChipTooltip, PanelScreens.ChipTooltip("Not bound", false));
+            Assert.Equal(PanelBindings.ChipTooltip, PanelScreens.ChipTooltip(null, true));
+            // A zone's hover carries the page and the button line where its cell cuts them, and the info bar's
+            // the ends it cuts; the page passes null for a line drawn whole.
             Assert.Equal("Zone A · Gear, speed, revs · FANATEC Podium Wheel Base DD1 · 12", PanelScreens.ZoneCellTooltip("A", "Gear, speed, revs", "FANATEC Podium Wheel Base DD1 · 12"));
             Assert.Equal("Band D · Relative · Not bound", PanelScreens.ZoneCellTooltip("D", "Relative", PanelScreens.NoButton));
             Assert.Equal("Zone C", PanelScreens.ZoneCellTooltip("C", null, string.Empty));
             var nl = System.Environment.NewLine;
             Assert.Equal("Info bar" + nl + "Left: Air temperature · Track temperature" + nl + "Right: Fuel", PanelScreens.InfoBarTooltip("Air temperature · Track temperature", "Fuel"));
+            Assert.Equal("Info bar" + nl + "Left: Air temperature · Track temperature", PanelScreens.InfoBarTooltip("Air temperature · Track temperature", null));
+            Assert.Equal("Info bar", PanelScreens.InfoBarTooltip(null, null));
             var faceSource = ScreensSource("SettingsControl.Screens.Face.cs");
-            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, pageName, buttonLine);", "Face.cs");
-            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.ZoneCellTooltip(\"D\", pageName, buttonLine);", "Face.cs");
-            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.InfoBarTooltip(leftFields, rightFields);", "Face.cs");
+            AssertOnce(faceSource, "ScreensHover(cell, () => PanelScreens.ZoneCellTooltip(letter, ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));", "Face.cs");
+            AssertOnce(faceSource, "ScreensHover(cell, () => PanelScreens.ZoneCellTooltip(\"D\", ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));", "Face.cs");
+            AssertOnce(faceSource, "ScreensHover(cell, () => PanelScreens.InfoBarTooltip(ScreensIsCut(left) ? leftFields : null, ScreensIsCut(right) ? rightFields : null));", "Face.cs");
+            AssertOnce(faceSource, "ScreensHover(chip, () => PanelScreens.ChipTooltip(label.Text, ScreensIsCut(label)));", "Face.cs");
+            // The hover is worked out as it opens, when the lines are laid out, and one that would only repeat a
+            // whole line does not open.
+            AssertOnce(faceSource, "owner.ToolTipOpening += (sender, args) => owner.ToolTip = hover();", "Face.cs");
+            AssertOnce(faceSource, "if (!ScreensIsCut(text())) args.Handled = true;", "Face.cs");
+            AssertOnce(faceSource, "return whole.WidthIncludingTrailingWhitespace > block.ActualWidth + 0.5;", "Face.cs");
+
+            // A card's name, which the kit trims with no hover, and a card on the disc, whose name two columns
+            // cut short ("Tyre pressures" in 70 px), say themselves in a hover where they are cut.
+            AssertOnce(ScreensSource("SettingsControl.Screens.cs"), "ScreensHoverWhenCut(card, captured.Name, () => ScreensTextIn(card, captured.Name)); cards.Add(card);", "Screens.cs");
+            var roundSource = ScreensSource("SettingsControl.Screens.Round.cs");
+            AssertOnce(roundSource, "var cardName = PanelScreens.CardShown(Settings.Slot(slot));", "Round.cs");
+            AssertOnce(roundSource, "ScreensHoverWhenCut(cell, PanelScreens.CardHover(slot, cardName), () => name);", "Round.cs");
+            Assert.Equal(Cards.All[0].DisplayName, PanelScreens.CardShown(-1));
+            Assert.Equal(Cards.All[1].DisplayName, PanelScreens.CardShown(1));
+            Assert.Equal(Cards.All[Cards.All.Count - 1].DisplayName, PanelScreens.CardShown(Cards.All.Count + 4));
+            Assert.Equal("Card 3 · Tyre pressures", PanelScreens.CardHover(3, "Tyre pressures"));
+            foreach (var source in System.IO.Directory.GetFiles(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), "SettingsControl.Screens*.cs"))
+            {
+                Assert.False(System.Text.RegularExpressions.Regex.IsMatch(RepoPaths.Code(source), @"cell\.ToolTip ="), source + " gives a cell a hover that does not ask whether its lines are cut");
+            }
         }
 
         /// <summary>

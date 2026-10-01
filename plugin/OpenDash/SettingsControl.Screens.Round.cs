@@ -109,7 +109,8 @@ namespace OpenDashPlugin
                 var slot = i + 1;
                 var label = Ui.Eyebrow(PanelScreens.CardLabel(slot));
                 label.HorizontalAlignment = HorizontalAlignment.Center;
-                var name = ScreensCellText(Cards.All[Math.Max(0, Math.Min(Cards.All.Count - 1, Settings.Slot(slot)))].DisplayName, Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
+                var cardName = PanelScreens.CardShown(Settings.Slot(slot));
+                var name = ScreensCellText(cardName, Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
                 name.HorizontalAlignment = HorizontalAlignment.Center;
                 name.Margin = new Thickness(0, PanelRoundPlan.CardLineGap, 0, 0);
                 var cell = new Border
@@ -124,6 +125,9 @@ namespace OpenDashPlugin
                     Margin = new Thickness(i % columns == 0 ? 0 : PanelRoundPlan.CardGap, i < columns ? 0 : PanelRoundPlan.CardGap, 0, 0),
                     Child = Ui.VStack(0, label, name),
                 };
+                // Two columns leave a card 70 px for its name, and "Tyre pressures" is 92: the hover says which
+                // card it is where the name is cut short.
+                ScreensHoverWhenCut(cell, PanelScreens.CardHover(slot, cardName), () => name);
                 Grid.SetColumn(cell, i % columns);
                 Grid.SetRow(cell, i / columns);
                 grid.Children.Add(cell);

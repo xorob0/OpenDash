@@ -658,28 +658,33 @@ namespace OpenDashPlugin
         /// gap and its title's least. A width read for a wrap stops here (ContentWidthUpTo).</summary>
         public const double ControlsColumnMost = ControlsMost + PanelShell.RowGap + RowTitleLeast;
 
-        /// <summary>A binding chip's hover where the chip is cut short: the whole binding, then where a press
-        /// goes (PanelBindings.ChipTooltip), so a long device name can still be read.</summary>
-        public static string ChipTooltip(string label)
+        /// <summary>A binding chip's hover: where a press goes (PanelBindings.ChipTooltip), led by the whole
+        /// binding only where the chip is <paramref name="cut"/> short, so a long device name can still be read
+        /// and a whole one is not said twice (voice.md: nothing the control already says).</summary>
+        public static string ChipTooltip(string label, bool cut)
         {
-            return string.IsNullOrEmpty(label) ? PanelBindings.ChipTooltip : label + Environment.NewLine + PanelBindings.ChipTooltip;
+            return !cut || string.IsNullOrEmpty(label) ? PanelBindings.ChipTooltip : label + Environment.NewLine + PanelBindings.ChipTooltip;
         }
 
-        /// <summary>A zone's hover in the picture: its name, then the page it opens on and the button line, both
-        /// of which the cell cuts short where it is narrow, "Zone A · Gear, speed, revs · Not bound". The
-        /// reference face's zone A has about 79 px inside at the artboard's own frame, and its default page is
-        /// 112 px.</summary>
+        /// <summary>A zone's hover in the picture: its name, then the page it opens on and the button line where
+        /// the cell cuts them short, "Zone A · Gear, speed, revs · Not bound"; the page calls this with null for
+        /// a line drawn whole. The reference face's zone A has about 79 px inside at the artboard's own frame,
+        /// and its default page is 112 px.</summary>
         public static string ZoneCellTooltip(string letter, string page, string buttonLine)
         {
             var parts = new[] { PanelFacePlan.ZoneLabel(letter), page, buttonLine };
             return string.Join(" · ", parts.Where(part => !string.IsNullOrEmpty(part)));
         }
 
-        /// <summary>The info bar's hover in the picture: its name, then each end's fields, which a narrow end
-        /// cuts short ("Air temperature · Track temperature" is 171 px in a 151 px end at the artboard's frame).</summary>
+        /// <summary>The info bar's hover in the picture: its name, then the fields of each end a narrow bar cuts
+        /// short ("Air temperature · Track temperature" is 171 px in a 151 px end at the artboard's frame); the
+        /// page calls this with null for an end drawn whole.</summary>
         public static string InfoBarTooltip(string left, string right)
         {
-            return InfoBarTitle + Environment.NewLine + "Left: " + left + Environment.NewLine + "Right: " + right;
+            var hover = InfoBarTitle;
+            if (!string.IsNullOrEmpty(left)) hover += Environment.NewLine + "Left: " + left;
+            if (!string.IsNullOrEmpty(right)) hover += Environment.NewLine + "Right: " + right;
+            return hover;
         }
 
         /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 21").</summary>
@@ -905,6 +910,19 @@ namespace OpenDashPlugin
         public static string CardLabel(int slot)
         {
             return "Card " + slot;
+        }
+
+        /// <summary>The card a slot holding <paramref name="value"/> shows, by name: a value past either end of
+        /// Cards.All is the nearest card, as the slot's choice reads it.</summary>
+        public static string CardShown(int value)
+        {
+            return Cards.All[Math.Max(0, Math.Min(Cards.All.Count - 1, value))].DisplayName;
+        }
+
+        /// <summary>A card's hover on the disc, where its name is cut short: which card it is, and what it shows.</summary>
+        public static string CardHover(int slot, string name)
+        {
+            return CardLabel(slot) + " · " + name;
         }
 
         /// <summary>

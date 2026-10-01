@@ -9,6 +9,7 @@
 // is the driver keeping it, and the editor redraws itself in place so the picture says what was just set.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -279,8 +280,8 @@ namespace OpenDashPlugin
             var cell = ScreensZoneButton(grid, selected, pick, new Thickness(PanelFacePlan.BarPaddingX, 0, PanelFacePlan.BarPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
-            // An end with two fields is cut short in a narrow bar, so the hover carries both ends whole.
-            cell.ToolTip = PanelScreens.InfoBarTooltip(leftFields, rightFields);
+            // An end with two fields is cut short in a narrow bar, so the hover carries an end cut short whole.
+            ScreensHover(cell, () => PanelScreens.InfoBarTooltip(ScreensIsCut(left) ? leftFields : null, ScreensIsCut(right) ? rightFields : null));
             cell.Uid = "screens.zone." + PanelScreens.BarKey;
             return cell;
         }
@@ -340,8 +341,9 @@ namespace OpenDashPlugin
             dock.Children.Add(button);
             dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY));
-            // The page and the button line are cut short in a narrow cell, so the hover carries both whole.
-            cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, pageName, buttonLine);
+            // The page and the button line are cut short in a narrow cell, so the hover carries either whole
+            // where it is.
+            ScreensHover(cell, () => PanelScreens.ZoneCellTooltip(letter, ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));
             cell.Uid = "screens.zone." + letter;
             return cell;
         }
@@ -366,11 +368,12 @@ namespace OpenDashPlugin
             DockPanel.SetDock(count, Dock.Right);
             dock.Children.Add(count);
             var pageName = FacePages.NameOf("D", PanelScreens.FirstTicked(screen.Face, "D"));
-            dock.Children.Add(ScreensCellText(pageName, PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary));
+            var page = ScreensCellText(pageName, PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary);
+            dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, 0, PanelFacePlan.CellPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
-            cell.ToolTip = PanelScreens.ZoneCellTooltip("D", pageName, buttonLine);
+            ScreensHover(cell, () => PanelScreens.ZoneCellTooltip("D", ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));
             cell.Uid = "screens.zone.D";
             return cell;
         }
@@ -623,7 +626,7 @@ namespace OpenDashPlugin
 
         /// <summary>A binding chip cut short at <paramref name="most"/> -- PanelFacePlan.AsideChipMax in the zone
         /// aside, PanelScreens.GlanceChipMax beside a glance -- so a long device name leaves the words and the
-        /// controls beside it their room, with the whole binding in its hover.</summary>
+        /// controls beside it their room, with the whole binding in its hover where it is cut.</summary>
         private static FrameworkElement ScreensCutChip(FrameworkElement chip, double most)
         {
             chip.MaxWidth = most;
@@ -632,9 +635,61 @@ namespace OpenDashPlugin
             if (label != null)
             {
                 label.TextTrimming = TextTrimming.CharacterEllipsis;
-                chip.ToolTip = PanelScreens.ChipTooltip(label.Text);
+                ScreensHover(chip, () => PanelScreens.ChipTooltip(label.Text, ScreensIsCut(label)));
             }
             return chip;
+        }
+
+        /// <summary>
+        /// Gives <paramref name="owner"/> a hover worked out as it opens, when the lines it reads have been laid
+        /// out and whether one of them is cut short is known.
+        /// </summary>
+        /// <remarks>
+        /// Set once now as well, since WPF raises ToolTipOpening only on an element that has a ToolTip, and it
+        /// reads the ToolTip again after the event, so the one written there is the one shown.
+        /// </remarks>
+        private static void ScreensHover(FrameworkElement owner, Func<string> hover)
+        {
+            owner.ToolTip = hover();
+            owner.ToolTipOpening += (sender, args) => owner.ToolTip = hover();
+        }
+
+        /// <summary>Gives <paramref name="owner"/> the hover <paramref name="hover"/> only while
+        /// <paramref name="text"/> is cut short: a line drawn whole says it already.</summary>
+        private static void ScreensHoverWhenCut(FrameworkElement owner, string hover, Func<TextBlock> text)
+        {
+            owner.ToolTip = hover;
+            owner.ToolTipOpening += (sender, args) =>
+            {
+                if (!ScreensIsCut(text())) args.Handled = true;
+            };
+        }
+
+        /// <summary>
+        /// Whether a line drawn with an ellipsis is cut short at the width it was laid out at: its whole text,
+        /// set in its own face and size, is wider than the line.
+        /// </summary>
+        private static bool ScreensIsCut(TextBlock block)
+        {
+            if (block == null || string.IsNullOrEmpty(block.Text)) return false;
+            var typeface = new Typeface(block.FontFamily, block.FontStyle, block.FontWeight, block.FontStretch);
+            var whole = new FormattedText(block.Text, CultureInfo.CurrentCulture, block.FlowDirection, typeface, block.FontSize, Brushes.Black,
+                VisualTreeHelper.GetDpi(block).PixelsPerDip);
+            return whole.WidthIncludingTrailingWhitespace > block.ActualWidth + 0.5;
+        }
+
+        /// <summary>The first line under <paramref name="root"/> that reads <paramref name="text"/>.</summary>
+        private static TextBlock ScreensTextIn(DependencyObject root, string text)
+        {
+            var block = root as TextBlock;
+            if (block != null && string.Equals(block.Text, text, StringComparison.Ordinal)) return block;
+            var count = root is Visual ? VisualTreeHelper.GetChildrenCount(root) : 0;
+            for (var i = 0; i < count; i++)
+            {
+                var found = ScreensTextIn(VisualTreeHelper.GetChild(root, i), text);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>A page not built yet, greyed in the list under Show all, beside the grip's room: 16 in, where

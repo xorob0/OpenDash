@@ -126,7 +126,7 @@ namespace OpenDashPlugin
                 var captured = screen;
                 var state = ScreensStateOf(captured);
                 var thumb = Ui.Thumb(PanelScreens.ThumbKind(captured), captured.Width, captured.Height);
-                cards.Add(Ui.DeviceCard(
+                var card = Ui.DeviceCard(
                     thumb,
                     captured.Name,
                     PanelScreens.CardMeta(captured),
@@ -139,7 +139,11 @@ namespace OpenDashPlugin
                         // press left (Added Rim. Restart SimHub...) stays.
                         Select(PanelPage.Screens, captured.Namespace);
                         RebuildPage();
-                    }));
+                    });
+                // The kit trims a long name with no hover, and only the selected screen's is read whole in the
+                // header: the card's hover says it where it is cut. The state's own hover is the innermost.
+                ScreensHoverWhenCut(card, captured.Name, () => ScreensTextIn(card, captured.Name));
+                cards.Add(card);
             }
             cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
             return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray());
