@@ -405,6 +405,9 @@ namespace OpenDashPlugin.Tests
             // A page that asks SimHub while it is built repaints its lighting in place.
             Assert.DoesNotContain("DrawsLighting()", matrix);
             Assert.Contains("OnLighting(() => Ui.Redim(preview,", matrix);
+            // Both pictures are dimmed again at the matrix's own dim, the large 8x8 as well as each card's.
+            Assert.Contains("OnLighting(() => Ui.Redim(preview, MatrixDim()));", FlatSource());
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(FlatSource(), System.Text.RegularExpressions.Regex.Escape("OnLighting(() => Ui.Redim(")).Count);
             // The page reads none of the old tab's matrix copy: it has its own.
             Assert.DoesNotContain("PanelLights.", matrix);
             Assert.DoesNotContain("PanelLights.", RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs")));
