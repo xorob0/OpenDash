@@ -281,7 +281,7 @@ namespace OpenDashPlugin.Tests
             // The press's tooltip: Install installs, Update and Reinstall replace; and after a failed press, the
             // Install it offers is warned as the state the failed press was made in, since SimHub may still
             // hold the copy a press then replaces.
-            Assert.Equal("Installs the flag box profile in SimHub. Your own profiles are never changed.", PanelMatrix.InstallTooltip);
+            Assert.Equal("Installs the flag box profile in SimHub.", PanelMatrix.InstallTooltip);
             // One verb per press: the hover says the press's own, and "Adds" stays the add tile's.
             Assert.StartsWith("Installs ", PanelMatrix.InstallTooltip);
             Assert.StartsWith("Adds ", PanelMatrix.AddTooltip);

@@ -132,8 +132,10 @@ namespace OpenDashPlugin
 
         /// <summary>Install's hover, in the press's own verb (voice.md: "Removes this screen" beside "Remove this
         /// screen"), the profile by the page's own noun for it, as <see cref="NoProfile"/> and
-        /// <see cref="RemoveCaption"/> name it; "Adds" is the add tile's verb on this page.</summary>
-        public const string InstallTooltip = "Installs the flag box profile in SimHub. Your own profiles are never changed.";
+        /// <see cref="RemoveCaption"/> name it; "Adds" is the add tile's verb on this page. One sentence, the
+        /// press's action, in the LEDs page's form for its own Install press; the Replaces warning is Update's
+        /// and Reinstall's.</summary>
+        public const string InstallTooltip = "Installs the flag box profile in SimHub.";
 
         /// <summary>Whether SimHub holds a copy of the profile, which a press then replaces.</summary>
         private static bool InSimHub(FlagBoxInstallState state)
