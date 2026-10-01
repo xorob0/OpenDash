@@ -438,7 +438,9 @@ namespace OpenDashPlugin.Tests
             var otherwise = applied.IndexOf("else", guarded, StringComparison.Ordinal);
             Assert.True(showing >= 0 && guarded > showing && read > guarded && redraw > read && otherwise > redraw, "the read and the redraw are the showing page's alone");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(applied, @"updatesRead = true;"));
-            Assert.Contains("if (updatesCardHost != null) Say(said, outcome.Ok);", applied);
+            // A run that did not finish is said on whatever page shows: the line is the shell's, above every
+            // page, and the failure would otherwise reach nothing but SimHub's log.
+            Assert.Contains("if (updatesCardHost != null || !outcome.Ok) Say(said, outcome.Ok);", applied);
         }
 
         /// <summary>The page's code with every run of whitespace one space, so a pin reads a call that is

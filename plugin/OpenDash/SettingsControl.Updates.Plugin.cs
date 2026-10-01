@@ -473,6 +473,11 @@ namespace OpenDashPlugin
         /// there is not one the driver can see. While the panel is away the page is neither redrawn nor
         /// counted as read: the return rebuilds it and reads the disk, so a dashboard edited in Dash Studio
         /// meanwhile is drawn as it now is. Only the line is said, which the return keeps.
+        ///
+        /// A run that did not finish is said whatever page shows, since the line is the shell's and sits
+        /// above every page until the next Go: a run that failed while the driver was on Home would otherwise
+        /// leave no word anywhere but SimHub's log, and the card would offer Download again as if it had never
+        /// been pressed. One that finished says itself on the Updates page, or by the restart's dialog.
         /// </remarks>
         /// <param name="said">What the page says of the run: its outcome's line, or PanelUpdates.UpdateFailed
         /// for a run that threw.</param>
@@ -509,7 +514,7 @@ namespace OpenDashPlugin
                     RefreshAttention();
                     RefreshSidebar();
                 }
-                if (updatesCardHost != null) Say(said, outcome.Ok);
+                if (updatesCardHost != null || !outcome.Ok) Say(said, outcome.Ok);
             }
             catch (Exception ex)
             {
