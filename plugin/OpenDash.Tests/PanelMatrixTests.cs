@@ -1320,7 +1320,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Padding = new Thickness(PanelMatrix.OptionIndent, PanelMatrix.OptionPaddingY, 0, PanelMatrix.OptionPaddingY),", matrix);
             // The selected matrix's name wraps inside its column rather than trimming, and its number wraps
             // under it.
-            Assert.Contains("var heading = new WrapPanel { Orientation = Orientation.Horizontal", matrix);
+            Assert.Contains("var heading = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };", matrix);
             Assert.Contains("var title = Ui.SubHeading(name);", matrix);
             Assert.Contains("title.TextTrimming = TextTrimming.None; title.TextWrapping = TextWrapping.Wrap;", FlatSource());
             Assert.DoesNotContain("new StackPanel { Orientation = Orientation.Horizontal }", matrix);
@@ -1345,6 +1345,7 @@ namespace OpenDashPlugin.Tests
                 "protected override AutomationPeer OnCreateAutomationPeer() { return new Peer(this, type); }",
                 "private sealed class Peer : FrameworkElementAutomationPeer",
                 "protected override AutomationControlType GetAutomationControlTypeCore() { return type; }",
+                "protected override string GetClassNameCore() { return \"Border\"; }",
                 // The cards' group, each card by its name and the add tile by its words.
                 "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
                 "AutomationProperties.SetName(add, PanelMatrix.AddPanel);",
