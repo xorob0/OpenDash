@@ -269,8 +269,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The sentence under the card's heading in each state, or null for none. A download has none:
-        /// the heading names the release and the bar's head says the run and its percent (Ui.Progress), so a
-        /// caption between them said the run twice in two verbs and the version twice.</summary>
+        /// the heading names the release and the bar's head says the run and its percent (<see cref="Downloading"/>),
+        /// so a caption between them said the run twice in two verbs and the version twice.</summary>
         public static string CardNote(UpdatesCard card, string version)
         {
             switch (card)
@@ -280,6 +280,13 @@ namespace OpenDashPlugin
                 default: return null;
             }
         }
+
+        /// <summary>
+        /// The head word of a download's bar: the verb its press and its line use ("Download", "OpenDash itself
+        /// was downloaded", "OpenDash is downloaded"), where the shared bar's PanelCopy.Installing gave one run
+        /// two verbs on one card (voice.md: one word per thing).
+        /// </summary>
+        public const string Downloading = "Downloading";
 
         /// <summary>The card's padding and rhythm, from the artboard's inline styles.</summary>
         public const double CardPaddingX = 20;
