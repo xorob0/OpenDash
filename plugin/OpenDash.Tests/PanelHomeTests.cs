@@ -579,7 +579,18 @@ namespace OpenDashPlugin.Tests
             // An update waiting, or SimHub not saying, does not stop the car's own lights.
             Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.Outdated, true));
             Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.Unavailable, true));
-            Assert.True(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.NotEmbedded, true));
+            // A profile this build does not carry reads Not installed, as the LEDs card says it, and a strip
+            // whose line says Not installed is never drawn lit.
+            Assert.False(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.NotEmbedded, true));
+            Assert.False(PanelHome.StripLive(true, car, rpm, FlagBoxInstallState.NotEmbedded, null));
+            foreach (var profile in new FlagBoxInstallState?[] { null }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState?>()))
+            {
+                foreach (var selected in new bool?[] { null, true, false })
+                {
+                    if (PanelHome.StripLine(true, "Car", profile, selected).Text == PanelHome.StripNotInstalled)
+                        Assert.False(PanelHome.StripLive(true, car, rpm, profile, selected), profile + "/" + selected);
+                }
+            }
         }
 
         private static void Line(HomeLine line, string text, string textHex, string dotHex)
@@ -647,13 +658,16 @@ namespace OpenDashPlugin.Tests
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotInstalled, null), "Not installed", Theme.TextSecondary, null);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotInstalled, false), "Not installed", Theme.TextSecondary, null);
             Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Failed, null), "Not installed", Theme.TextSecondary, null);
+            // A profile this build does not carry is Not installed too, as the LEDs card says it (its default
+            // case), whatever the selection and live or not: one strip state, one word on both pages.
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotEmbedded, null), "Not installed", Theme.TextSecondary, null);
+            Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.NotEmbedded, true), "Not installed", Theme.TextSecondary, null);
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotEmbedded, false), "Not installed", Theme.TextSecondary, null);
 
-            // SimHub could not be asked, or this build carries no profile: nothing is said, and no dot.
+            // SimHub could not be asked: nothing is said, and no dot.
             Line(PanelHome.StripLine(false, null, null, null), string.Empty, Theme.TextSecondary, null);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Unavailable, true), string.Empty, Theme.TextSecondary, null);
-            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.NotEmbedded, null), string.Empty, Theme.TextSecondary, null);
             Assert.Null(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Unavailable, true).DotHex);
-            Assert.Null(PanelHome.StripLine(true, "Car", FlagBoxInstallState.NotEmbedded, true).DotHex);
 
             Assert.Equal(PanelCopy.Installed, PanelHome.StripInstalled);
             Assert.Equal(PanelCopy.NotInstalled, PanelHome.StripNotInstalled);

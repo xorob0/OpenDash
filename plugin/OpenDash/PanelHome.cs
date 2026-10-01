@@ -475,15 +475,34 @@ namespace OpenDashPlugin
         /// (CarLightService.Ready), on a strip whose centre shows the revs in the car's own style, and whose
         /// profile SimHub is not known to be missing or not showing. Flags, the spotter and every other effect
         /// are drawn by the profile inside SimHub, which the plugin does not see, so a strip showing one of
-        /// those is drawn dark rather than guessed at.
+        /// those is drawn dark rather than guessed at. A strip whose line says Not installed is drawn dark
+        /// too, a build that carries no profile for it included (<see cref="StripNotInstalledFor"/>): the
+        /// picture never shows lights the line says nothing is there to draw.
         /// </remarks>
         public static bool StripLive(bool carReady, string rpmStyle, string centre, FlagBoxInstallState? profile, bool? selected)
         {
             if (!carReady) return false;
             if (!string.Equals(Contract.NormaliseLedRpmStyle(rpmStyle), Contract.LedRpmStyleCar, StringComparison.Ordinal)) return false;
             if (!string.Equals(Contract.NormaliseLedCentre(centre), Contract.LedCentres[0], StringComparison.Ordinal)) return false;
-            if (profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed) return false;
+            if (StripNotInstalledFor(profile)) return false;
             return selected != false;
+        }
+
+        /// <summary>
+        /// Whether a strip's line says Not installed: SimHub has no profile for it, the last install failed,
+        /// or this build carries none, as the LEDs card says each of them (PanelLeds.StateText on the LEDs
+        /// branch, whose default case is Not installed).
+        /// </summary>
+        /// <remarks>
+        /// One strip state has one word on both pages (voice.md), and the LEDs card says Not installed for a
+        /// profile this build does not carry, with its header saying the rest ("This build ships no profile
+        /// for this strip." in place of an Install press). Saying nothing for it, as Home once did, is the
+        /// other reading, and needs a ruling: one for silence moves this and the LEDs card's StateText
+        /// together, each with its pin.
+        /// </remarks>
+        public static bool StripNotInstalledFor(FlagBoxInstallState? profile)
+        {
+            return profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed || profile == FlagBoxInstallState.NotEmbedded;
         }
 
         /// <summary>
@@ -502,24 +521,19 @@ namespace OpenDashPlugin
         /// <summary>
         /// A strip's line: the profile that is not in SimHub, then one that is and is not selected, then one
         /// with an update, then the car's own rev lights while they are live, then the profile's state.
-        /// Nothing at all when SimHub could not be asked or this build carries no profile.
+        /// Nothing at all when SimHub could not be asked.
         /// </summary>
-        /// <remarks>
-        /// A build with no profile for the strip cannot tell whether SimHub holds one from an older build, and
-        /// nothing on the LEDs page can install one (its header says "This build ships no profile for this
-        /// strip." in place of a press), so "Not installed" would be a guess with no step after it. The LEDs
-        /// card is asked to say nothing for it too, as it already does where SimHub could not be read.
-        /// </remarks>
         /// <remarks>
         /// Amber only where the attention card has a row for it (StripUnselected, StripOutdated), so an amber
         /// line never sits under "Nothing to fix". A profile that is not installed is the LEDs card's Install
         /// press, in the secondary ink and with no dot; a failed install is one that is not installed, since
-        /// nothing Home reads ever says Failed and the LEDs card says Not installed for it. The green dot is
-        /// for a selection SimHub reported, never for one nobody could read.
+        /// nothing Home reads ever says Failed and the LEDs card says Not installed for it; and so is a
+        /// profile this build does not carry, as the LEDs card says it (<see cref="StripNotInstalledFor"/>).
+        /// The green dot is for a selection SimHub reported, never for one nobody could read.
         /// </remarks>
         public static HomeLine StripLine(bool live, string carName, FlagBoxInstallState? profile, bool? selected)
         {
-            if (profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
+            if (StripNotInstalledFor(profile)) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
             var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
             if (installed && selected == false) return new HomeLine(StripNotSelected, Theme.Caution, Theme.Caution);
             if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripUpdateAvailable, Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
