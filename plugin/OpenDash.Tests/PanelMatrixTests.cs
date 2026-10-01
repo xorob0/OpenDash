@@ -599,7 +599,7 @@ namespace OpenDashPlugin.Tests
                 // The greyed caption carries the artboard's SOON tag after its words.
                 "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary), Ui.SoonTag(PanelSoon.PriorityOrder));",
                 "var head = Ui.Row(Ui.Heading(PanelMatrix.PriorityTitle), Ui.Soon(reorder, PanelSoon.PriorityOrder));",
-                "idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(false, null)), PanelSoon.RpmColourForEverything)); var idleLayer",
+                "idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(true, null)), PanelSoon.RpmColourForEverything)); var idleLayer",
                 // Each helper adds what it is given: a layer its rows, a layer's line its name, number or dot,
                 // words, link and control, an option its words, caption, line and control.
                 "if (row != null) stack.Children.Add(row);",

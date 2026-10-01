@@ -546,7 +546,7 @@ namespace OpenDashPlugin
                 idle.Add(MatrixOption(PanelMatrix.RedlineFlashTitle, null,
                     BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[i] = on; Save(); })));
             }
-            idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(false, null)), PanelSoon.RpmColourForEverything));
+            idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(true, null)), PanelSoon.RpmColourForEverything));
             var idleLayer = MatrixLayer(idle.ToArray());
 
             var device = MatrixLayer(Ui.Soon(
