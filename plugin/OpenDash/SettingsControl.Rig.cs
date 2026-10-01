@@ -333,7 +333,6 @@ namespace OpenDashPlugin
             parent.RaiseEvent(new MouseWheelEventArgs(args.MouseDevice, args.Timestamp, args.Delta) { RoutedEvent = UIElement.MouseWheelEvent, Source = sender });
         }
 
-
         /// <summary>The dotted ground at the tiles' scale, so a tile dropped on a step of the grid still has
         /// its corner between four dots when the arrangement is shrunk.</summary>
         private static Brush RigDots(double scale)
@@ -533,7 +532,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
-
         /// focus restore walk the tiles in the order they were built. A tile it is over may now draw over it,
         /// as the next build draws them anyway.</summary>
         private static void RigLower(FrameworkElement root)

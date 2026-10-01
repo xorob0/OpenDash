@@ -749,7 +749,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A flank: what sits high on it stacked from the top, then what sits low, level with the
-
         /// faces' foot where it fits there. A flank too tall for the canvas at <see cref="LayoutGap"/> closes
         /// up, as far as <see cref="LayoutGapMin"/>. Returns the flank's foot.</summary>
         private static double Column(IList<RigTile> high, IList<RigTile> low, double x, double top, double facesBottom, double foot, IDictionary<RigTile, RigTile> placed)
@@ -1675,7 +1674,6 @@ namespace OpenDashPlugin
             { 'o', 0.556 }, { 'p', 0.563 }, { 'q', 0.563 }, { 'r', 0.376 }, { 's', 0.493 }, { 't', 0.374 }, { 'u', 0.541 },
             { 'v', 0.504 }, { 'w', 0.761 }, { 'x', 0.516 }, { 'y', 0.489 }, { 'z', 0.455 },
         };
-
 
         /// <summary>
         /// A phone: the flag over the whole of it, its one word tracked, or the module it opens on, wrapped;

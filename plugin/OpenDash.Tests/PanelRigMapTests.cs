@@ -209,7 +209,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1, tile.Split("rigHeld = tile.Id;").Length - 1);
         }
 
-
         private static void InOrder(string text, params string[] parts)
         {
             var at = 0;
@@ -431,7 +430,6 @@ namespace OpenDashPlugin.Tests
                 "private sealed class RigGroupPeer : FrameworkElementAutomationPeer", "return AutomationControlType.Group;");
         }
 
-
         /// <remarks>
         /// Rulings the page alone carries out: the model functions are tested, and these hold that the page
         /// calls them. Each was a mutation that left every other check green.
@@ -567,7 +565,6 @@ namespace OpenDashPlugin.Tests
                 "control.Margin = new Thickness(0, 0, PanelRigMap.HeaderGap, PanelRigMap.HeaderLabelGap);",
                 "wrap.Children.Add(control);",
                 "return Ui.VStack(0, title, wrap);");
-
 
             // The page's own words: its title and New tag, the canvas's hint, and the empty rig.
             InOrder(header, "Ui.PageTitle(PanelRigMap.Title), Ui.NewTag()");
@@ -1226,7 +1223,6 @@ namespace OpenDashPlugin.Tests
 
         [Fact]
         public void A_rig_arranged_in_a_narrow_window_is_not_clamped_onto_the_foot_of_a_wide_one()
-
         {
             var settings = Rig();
             // The fallback's canvas is taller than the 580 at 600.
@@ -2094,7 +2090,6 @@ namespace OpenDashPlugin.Tests
 
         [Fact]
         public void A_matrix_on_critical_flags_only_does_not_show_the_flags_that_are_news()
-
         {
             var settings = Rig();
             Assert.True(PanelRigMap.MatrixOptionsFor(settings, 1, PanelEmulation.Green).Flags);
