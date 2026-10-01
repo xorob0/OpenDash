@@ -289,8 +289,8 @@ namespace OpenDashPlugin
             return parts.Length == 0 ? null : string.Join(" · ", parts);
         }
 
-        /// <summary>Whether SimHub's units are not the ones the page was drawn with, so it has to be drawn
-        /// again: any of the four moved, including one SimHub could not say before and can now.</summary>
+        /// <summary>Whether SimHub's units are not the ones the page was drawn with, so the texts they decide
+        /// are set again in place: any of the four moved, including one SimHub could not say before and can now.</summary>
         public static bool UnitsMoved(IList<string> drawn, IList<string> now)
         {
             if (drawn == null || now == null) return !ReferenceEquals(drawn, now);

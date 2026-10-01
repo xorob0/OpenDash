@@ -697,16 +697,17 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelSettings.UnitsMoved(new string[4], new string[4]));
             Assert.True(PanelSettings.UnitsMoved(metric, null));
             var page = Page();
-            // Never while a text box has the keyboard: a rebuild would commit the half-typed number and the
-            // restored box would take the rest of it in front of its caret.
+            // The tick never stands down for the keyboard: it rebuilds nothing, so a box being typed in keeps its
+            // text and caret.
             Assert.Matches(@"OnTick\(\(\) =>\s*\{\s*var now = SettingsUnitNames\(\);\s*if \(!PanelSettings\.UnitsMoved\(units, now\)\) return;\s*units = now;\s*foreach \(var follow in settingsUnitsFollow\) follow\(now\);\s*\}\);", page);
             // Set in place, never rebuilt: a rebuild would commit a half-typed number and move the caret, so the
             // tick would have to stand down while any text box had the keyboard.
             Assert.DoesNotContain("RebuildPage(", page);
             Assert.DoesNotContain("Keyboard.FocusedElement", page);
             Assert.DoesNotContain("Activated", page);
-            // Emptied before the sections are built, so a follower of an old build never outlives it.
-            Assert.Matches(@"var units = SettingsUnitNames\(\);\s*settingsUnitsFollow\.Clear\(\);\s*var sections = ", page);
+            // Emptied before the sections are built, and again when the build is let go of, so a follower of a
+            // build -- and the discarded page its texts hold -- never outlives it, on a Go to another page too.
+            Assert.Matches(@"var units = SettingsUnitNames\(\);\s*settingsUnitsFollow\.Clear\(\);\s*OnDrop\(\(\) => settingsUnitsFollow\.Clear\(\)\);\s*var sections = ", page);
             // Everything the units decide follows them: the Units line (collapsed when SimHub answers none),
             // the fuel target's unit, the unit after each temperature and both temperature defaults.
             Assert.Equal(4, Regex.Matches(page, @"settingsUnitsFollow\.Add\(").Count);

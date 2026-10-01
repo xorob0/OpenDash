@@ -43,7 +43,8 @@ namespace OpenDashPlugin
 
         /// <summary>What follows SimHub's units on this build: each sets a text the units decide -- the Units
         /// line, the fuel target's unit, the unit after both temperatures and their default placeholders --
-        /// from the four names. Filled while the page is built and emptied at the start of the next build.</summary>
+        /// from the four names. Filled while the page is built, and emptied when the build is let go of (OnDrop), so
+        /// no follower, nor the page it was drawn into, outlives the build that made it.</summary>
         private readonly List<Action<string[]>> settingsUnitsFollow = new List<Action<string[]>>();
 
         private FrameworkElement BuildSettingsPage(PanelRoute to)
@@ -53,6 +54,7 @@ namespace OpenDashPlugin
             OnLeave("Settings.indexMark", () => { settingsIndexMark = -1; settingsIndexHeld = -1; });
             var units = SettingsUnitNames();
             settingsUnitsFollow.Clear();
+            OnDrop(() => settingsUnitsFollow.Clear());
             var sections = new FrameworkElement[]
             {
                 Ui.Anchor(SettingsRaceData(units), PanelSettings.AnchorRaceData),
