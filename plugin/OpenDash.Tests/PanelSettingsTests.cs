@@ -547,7 +547,7 @@ namespace OpenDashPlugin.Tests
             // The tick's look: the accent with the tick when on, the border and no fill when off.
             Assert.Contains("BorderBrush = Ui.Brush(on ? Theme.Accent : Theme.Border),", page);
             Assert.Contains("Background = on ? Ui.Brush(Theme.Accent) : Brushes.Transparent,", page);
-            Assert.Matches(@"if \(on\)\s*\{\s*var tick = Ui\.Icon\(PanelIcons\.Check, Theme\.OnAccent, PanelSettings\.AlertCheckIcon, PanelIcons\.Box\);", page);
+            Assert.Matches(@"if \(on\)\s*\{\s*var tick = Ui\.Icon\(PanelIcons\.Check, Theme\.OnAccent, PanelSettings\.AlertCheckIcon, PanelIcons\.Box\);\s*tick\.HorizontalAlignment = HorizontalAlignment\.Center;\s*tick\.VerticalAlignment = VerticalAlignment\.Center;\s*box\.Child = tick;", page);
         }
 
         [Fact]
@@ -1009,8 +1009,16 @@ namespace OpenDashPlugin.Tests
             // has none of its own.
             Assert.Contains("if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));", page);
             Assert.Matches(@"if \(alert\.Unit == null\)\s*\{\s*var unit = Ui\.Caption\(PanelSettings\.TemperatureUnit\(temperature\) \?\? string\.Empty\);\s*settingsUnitsFollow\.Add\(now => unit\.Text = PanelSettings\.TemperatureUnit\(now\[1\]\) \?\? string\.Empty\);\s*when\.Add\(unit\);\s*\}\s*else if \(alert\.Unit\.Length > 0\) when\.Add\(Ui\.Caption\(alert\.Unit\)\);", page);
-            // A name's caption under it.
-            Assert.Matches(@"if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);", page);
+            // A name's caption under it, set off by the fix-detail gap, after the name itself.
+            Assert.Matches(@"nameCell\.Children\.Add\(nameLine\);\s*if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);\s*under\.Margin = new Thickness\(0, PanelKit\.FixDetailGap, 0, 0\);\s*nameCell\.Children\.Add\(under\);\s*\}", page);
+            // A greyed name carries its Soon tag after it, and the four surface headings theirs under the name.
+            Assert.Matches(@"line\.Children\.Add\(name\);\s*line\.Children\.Add\(tag\);\s*nameLine = line;", page);
+            Assert.Matches(@"head\.Children\.Add\(label\);\s*head\.Children\.Add\(tag\);", page);
+            // Every cell is placed in its own row and column of the table, and every rule runs under the whole row.
+            Assert.Matches(@"Grid\.SetRow\(cell, row\);\s*Grid\.SetColumn\(cell, column\);\s*grid\.Children\.Add\(cell\);\s*return cell;", page);
+            Assert.Matches(@"Grid\.SetRow\(rule, row\);\s*Grid\.SetColumnSpan\(rule, Math\.Max\(1, grid\.ColumnDefinitions\.Count\)\);\s*grid\.Children\.Add\(rule\);", page);
+            // A live row's Try opens Rig on its scenario and is the cell's content.
+            Assert.Matches(@"link\.Click \+= \(sender, args\) => Open\(PanelPage\.Rig, scenario\);\s*tryIt = link;", page);
 
             // The table's head in the artboard's order: Alert, then Threshold.
             var alertHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);", StringComparison.Ordinal);
@@ -1095,6 +1103,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("100%", PanelSettings.PreviewPercent(false, 100, 25));
             Assert.Equal("25%", PanelSettings.PreviewPercent(true, 100, 25));
             Assert.Equal("0%", PanelSettings.PreviewPercent(true, 100, -5));
+            // By night the night brightness alone, whatever the day one is: not the one scaled by the other.
+            Assert.Equal(0.25, PanelSettings.PreviewLevel(true, 60, 25));
+            Assert.Equal("25%", PanelSettings.PreviewPercent(true, 60, 25));
             // A pick stands while night mode stays where it was made, and any move of night mode lets it go.
             Assert.Equal(false, PanelSettings.KeptPick(false, false, false));
             Assert.Equal(true, PanelSettings.KeptPick(true, true, true));
@@ -1179,6 +1190,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var head = new DockPanel { LastChildFill = false };", page);
             Assert.Contains("DockPanel.SetDock(eyebrow, Dock.Left);", page);
             Assert.Contains("DockPanel.SetDock(pick, Dock.Right);", page);
+            Assert.Matches(@"head\.Children\.Add\(eyebrow\);\s*head\.Children\.Add\(pick\);", page);
+            // The stage draws all three pictures, in the artboard's order.
+            Assert.Contains("var pictures = new FrameworkElement[] { strip, matrix, percent };", page);
+            Assert.Contains("stage.Children.Add(pictures[i]);", page);
         }
 
         /// <summary>The artboard's preview: a 3·9·3 strip of 20 px LEDs, a yellow on the ends and the revs in the
