@@ -75,8 +75,10 @@ namespace OpenDashPlugin
                 headLine.Children.Add(have);
             }
 
-            var note = updatesCard == UpdatesCard.Downloading && applyingLine != null ? applyingLine : PanelUpdates.CardNote(updatesCard, latest);
-            var text = Ui.VStack(PanelUpdates.CardTextGap, headLine, Ui.Caption(note, BodyWidth));
+            // A download has no sentence under its heading: the bar's own head says the run, and a caption over
+            // it named the run a second time, with a second verb, and the heading's version again.
+            var note = PanelUpdates.CardNote(updatesCard, latest);
+            var text = note == null ? Ui.VStack(PanelUpdates.CardTextGap, headLine) : Ui.VStack(PanelUpdates.CardTextGap, headLine, Ui.Caption(note, BodyWidth));
             updatesCardLine = Ui.Caption(string.Empty, BodyWidth);
             updatesCardLine.Visibility = Visibility.Collapsed;
             // Added after the stack was built, so it takes the stack's gap itself.
@@ -398,7 +400,6 @@ namespace OpenDashPlugin
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
             applying = true;
-            applyingLine = PanelUpdates.Downloading(updateStatus.LatestVersion);
             applyingFraction = 0;
             UpdatesDrawCard();
             UpdatesRefreshCheck();
@@ -478,7 +479,6 @@ namespace OpenDashPlugin
         private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome, string said)
         {
             applying = false;
-            applyingLine = null;
             applyingFraction = 0;
             try
             {

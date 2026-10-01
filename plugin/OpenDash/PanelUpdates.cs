@@ -246,12 +246,6 @@ namespace OpenDashPlugin
         /// and the line points there.</summary>
         public const string UpdateFailed = "The update did not finish. See SimHub's log.";
 
-        /// <summary>The line over the bar while a release downloads.</summary>
-        public static string Downloading(string version)
-        {
-            return "Downloading " + (string.IsNullOrWhiteSpace(version) ? "the update" : version.Trim()) + "…";
-        }
-
         /// <summary>
         /// Whether a check's answer runs the Download that was waiting for it: only a press that was waiting,
         /// only onto an offer, and never over a staged plugin, which the check offers again because the old
@@ -274,13 +268,14 @@ namespace OpenDashPlugin
             return state == UpdateState.UpdateAvailable ? UpdatesCard.Available : UpdatesCard.None;
         }
 
-        /// <summary>The sentence under the card's heading in each state, or null for none.</summary>
+        /// <summary>The sentence under the card's heading in each state, or null for none. A download has none:
+        /// the heading names the release and the bar's head says the run and its percent (Ui.Progress), so a
+        /// caption between them said the run twice in two verbs and the version twice.</summary>
         public static string CardNote(UpdatesCard card, string version)
         {
             switch (card)
             {
                 case UpdatesCard.Available: return RestartNote;
-                case UpdatesCard.Downloading: return Downloading(version);
                 case UpdatesCard.Staged: return UpdateWording.RestartLater;
                 default: return null;
             }

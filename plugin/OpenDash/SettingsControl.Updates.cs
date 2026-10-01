@@ -66,8 +66,7 @@ namespace OpenDashPlugin
         private bool applyWaiting;
 
         /// <summary>The run that is downloading, held outside the build so a rebuild in place draws it again
-        /// rather than an offer with live buttons: the line it said and the fraction it last reported.</summary>
-        private string applyingLine;
+        /// rather than an offer with live buttons: the fraction it last reported.</summary>
         private double applyingFraction;
 
         /// <summary>Whether this visit to the page has read the installer's folders from the disk.</summary>

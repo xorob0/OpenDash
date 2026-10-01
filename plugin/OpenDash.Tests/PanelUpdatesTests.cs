@@ -135,8 +135,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash 0.5.1", PanelUpdates.Heading(" 0.5.1 "));
             Assert.Equal("OpenDash", PanelUpdates.Heading(null));
             Assert.Equal(PanelUpdates.RestartNote, PanelUpdates.CardNote(UpdatesCard.Available, "0.5.1"));
-            Assert.Equal("Downloading 0.5.1…", PanelUpdates.CardNote(UpdatesCard.Downloading, "0.5.1"));
-            Assert.Equal("Downloading the update…", PanelUpdates.Downloading(null));
+            // A download is said by the heading and the bar's head alone: no caption names the run a second time.
+            Assert.Null(PanelUpdates.CardNote(UpdatesCard.Downloading, "0.5.1"));
+            Assert.Null(PanelUpdates.CardNote(UpdatesCard.Downloading, null));
             Assert.Equal(UpdateWording.RestartLater, PanelUpdates.CardNote(UpdatesCard.Staged, "0.5.1"));
             Assert.Null(PanelUpdates.CardNote(UpdatesCard.None, "0.5.1"));
         }
