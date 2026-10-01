@@ -322,6 +322,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "All", "Bound", "Not bound" }, PanelShortcuts.FilterLabels);
             Assert.Equal(PanelShortcuts.FilterValues.Length, PanelShortcuts.FilterLabels.Length);
             Assert.Equal(PanelBindings.NotBound, PanelShortcuts.FilterLabels[2]);
+            // Each value under its own label, as BuildSegmented pairs them by position: swapped, "Bound" would
+            // show the rows not bound.
+            Assert.Equal(new[] { PanelShortcuts.FilterAll, PanelShortcuts.FilterBound, PanelShortcuts.FilterNotBound }, PanelShortcuts.FilterValues);
+            Assert.Equal(new[] { "all", "bound", "not-bound" }, PanelShortcuts.FilterValues);
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterValues[1], NotBound));
+            Assert.False(PanelShortcuts.Shows(PanelShortcuts.FilterValues[2], Bound));
             // The group's name, which the artboard gives a screen reader alone (aria-label="Show").
             Assert.Equal("Show", PanelShortcuts.FilterTitle);
 
@@ -614,6 +620,20 @@ namespace OpenDashPlugin.Tests
             // Every zone's previous page on one button: the tail is said once, for them all.
             Assert.Equal("Keyboard · F9 takes zone A, zone B, zone C and zone D to their previous pages on Rim.", PanelShortcuts.Clashes(
                 Contract.FaceZoneLetters.Select(l => Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes(PanelFacePlan.ZoneLabel(l), false)))).Single().Text);
+            // A clause whose screens are some of a later one's is not merged into it: Main dash is still named.
+            Assert.Equal("Keyboard · F9 cycles zone A on Rim, and holds the quick glance on both Rim and Main dash.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes),
+                Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
+            }).Single().Text);
+            // And the other way round, a later clause on some of an earlier one's screens.
+            Assert.Equal("Keyboard · F9 holds the quick glance on both Rim and Main dash, and cycles zone A on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.GlanceDoes),
+                Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+            }).Single().Text);
             // And beside a next page on the same screen, each verb once.
             Assert.Equal("Keyboard · F9 cycles zone A and takes zone B and zone C to their previous pages on Rim.", PanelShortcuts.Clashes(new[]
             {
@@ -780,7 +800,16 @@ namespace OpenDashPlugin.Tests
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             Assert.Contains("control.Loaded += (sender, args) => ShortcutsDropNameColumn(control);", code);
-            var drop = Between(code, "private static void ShortcutsDropNameColumn(", "catch (Exception ex)");
+            // Only SimHub's editor is told its name and has its column dropped: BuildBinder's fallback text,
+            // when the editor could not be made, is a TextBlock, which wraps in the slot instead.
+            var binding = Between(code, "private static void ShortcutsBinding(", "var tags =");
+            Assert.Matches(@"var control = editor as ControlsEditor;\s*if \(control != null\)\s*\{\s*control\.FriendlyName = PanelShortcuts\.EditorName;\s*control\.Loaded \+= \(sender, args\) => ShortcutsDropNameColumn\(control\);\s*\}", binding);
+            Assert.Matches(@"var fallback = editor as TextBlock;\s*if \(fallback != null\) fallback\.TextWrapping = TextWrapping\.Wrap;", binding);
+            var drop = Between(code, "private static void ShortcutsDropNameColumn(", "private static FrameworkElement ShortcutsMenuOwner(");
+            // It runs from a Loaded handler, so a surprise from SimHub's template is caught and logged here
+            // rather than thrown onto SimHub's UI thread: the whole body is the try, and its catch is its own.
+            Assert.Matches(@"^private static void ShortcutsDropNameColumn\(ControlsEditor editor\)\s*\{\s*try\s*\{\s*editor\.ApplyTemplate\(\);", drop);
+            Assert.Matches(@"\}\s*catch \(Exception ex\)\s*\{\s*Log\.Warn\([^;]*\);\s*\}\s*\}\s*$", drop);
             Assert.Contains("editor.Template.FindName(\"brd\", editor) as Border;", drop);
             Assert.Contains("if (grid == null || grid.ColumnDefinitions.Count != 2) return;", drop);
             Assert.Contains("if (!grid.ColumnDefinitions[0].Width.IsStar || !grid.ColumnDefinitions[1].Width.IsStar) return;", drop);
@@ -796,6 +825,7 @@ namespace OpenDashPlugin.Tests
             var owner = Between(code, "private static FrameworkElement ShortcutsMenuOwner(", "\n        }");
             Assert.Contains("if (element != null && element.ContextMenu != null) return element;", owner);
             Assert.Contains("var content = label == null ? null : label.Content as FrameworkElement;", owner);
+            Assert.Contains("return content != null && content.ContextMenu != null ? content : null;", owner);
         }
 
         [Fact]
@@ -941,7 +971,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OnDrop(release);", follow);
             Assert.Single(Regex.Matches(code, @"InputMappingsChanged \+="));
 
-            var reconcile = Between(code, "private static void ShortcutsReconcile(", "catch (Exception ex)");
+            var reconcile = Between(code, "private static void ShortcutsReconcile(", "private static FrameworkElement ShortcutsTitleTagged(");
+            // It runs from a Dispatcher callback, so a surprise from SimHub's model is caught and logged here
+            // rather than thrown onto SimHub's UI thread: the whole body is the try, and its catch is its own.
+            Assert.Matches(@"^private static void ShortcutsReconcile\(ControlsEditor editor\)\s*\{\s*try\s*\{\s*var model = editor\.Model;", reconcile);
+            Assert.Matches(@"\}\s*catch \(Exception ex\)\s*\{\s*Log\.Warn\([^;]*\);\s*\}\s*\}\s*$", reconcile);
             // An editor with no model, no list or no action is left alone, and so is a list SimHub cannot give.
             Assert.Contains("if (model == null || model.Triggers == null || string.IsNullOrEmpty(editor.ActionName)) return;", reconcile);
             Assert.Contains("if (PluginManager.GetInstance() == null) return;", reconcile);
@@ -1061,6 +1095,18 @@ namespace OpenDashPlugin.Tests
             // not have, and a fixed width there would leave a gap at the card's right.
             Assert.Matches(@"Grid\.SetColumnSpan\(slot, 2\);\s*(//[^\n]*\s*)*slot\.Width = double\.NaN;\s*slot\.HorizontalAlignment = HorizontalAlignment\.Stretch;", row);
             Assert.Contains("Tag = new RowParts(nameLine, control),", row);
+            // The name's line runs across, its caption under it, and the row's grid is the bordered row itself;
+            // beside the name, the slot gets a third column, only when the row does not stack.
+            Assert.Contains("var nameLine = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };", row);
+            Assert.Contains("var left = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };", row);
+            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);", row);
+            Assert.Matches(@"Padding = new Thickness\(PanelShortcuts\.RowPaddingX, [^\n]*\s*Child = grid,\s*Tag = new RowParts", row);
+            Assert.Matches(@"\}\s*else\s*\{\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ layout\.Binder\) \}\);\s*slot\.Margin = new Thickness\(PanelShortcuts\.RowGap, 0, 0, 0\);\s*Grid\.SetColumn\(slot, 2\);\s*\}", row);
+            Assert.Matches(@"var name = Ui\.Text\(label, [^;]*\);\s*name\.TextWrapping = TextWrapping\.Wrap;\s*name\.VerticalAlignment = VerticalAlignment\.Center;", row);
+            Assert.Matches(@"tag\.Margin = new Thickness\(PanelShortcuts\.TagGap, 0, 0, 0\);\s*tag\.VerticalAlignment = VerticalAlignment\.Center;", row);
+            Assert.Matches(@"pressText = Ui\.Text\(press, [^;]*\);\s*pressText\.VerticalAlignment = VerticalAlignment\.Center;", row);
+            Assert.Matches(@"control\.Margin = new Thickness\(0\);\s*control\.VerticalAlignment = VerticalAlignment\.Center;", row);
+            Assert.Matches(@"HorizontalAlignment = HorizontalAlignment\.Left,\s*VerticalAlignment = VerticalAlignment\.Center,\s*BorderThickness = new Thickness\(PanelMetrics\.BorderWeight\),", row);
             // The name takes what the press and the binder leave, so those two line up down a card.
             Assert.Matches(@"var grid = new Grid\(\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth\) \}\);", row);
             // A row is ruled above in the panel's rule colour, as the card's header is ruled under, and its
@@ -1079,6 +1125,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),", card);
             Assert.Contains("var count = new Border { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0) };", card);
             Assert.Contains("var line = Ui.Text(detail, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);", card);
+            // The kind and size line only where there is one, 10 after the name, on the name's line, centred.
+            Assert.Matches(@"if \(!string\.IsNullOrEmpty\(detail\)\)\s*\{\s*name\.Margin = new Thickness\(0, 0, PanelShortcuts\.GroupDetailGap, 0\);\s*var line = Ui\.Text\(detail, Theme\.SizeSmall, FontWeights\.Normal, Theme\.TextSecondary\);\s*line\.VerticalAlignment = VerticalAlignment\.Center;\s*titleLine\.Children\.Add\(line\);\s*\}", card);
+            Assert.Matches(@"name\.TextWrapping = TextWrapping\.Wrap;\s*name\.VerticalAlignment = VerticalAlignment\.Center;\s*var titleLine = new WrapPanel \{ Orientation = Orientation\.Horizontal, VerticalAlignment = VerticalAlignment\.Center \};", card);
+            // The header's name takes the room the count leaves, star then Auto, so a long name is measured at
+            // the header's width and wraps there rather than pushing the count off the card.
+            Assert.Matches(@"var head = new Grid\(\);\s*head\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*head\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = GridLength\.Auto \}\);", card);
+            // The header is the bordered child the card's body starts with.
+            Assert.Matches(@"body\.Children\.Add\(new Border\s*\{\s*BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, 0, 0, PanelMetrics\.BorderWeight\),\s*Padding = [^\n]*\s*Child = head,\s*\}\);\s*if \(lead != null\) body\.Children\.Add\(lead\);", card);
             // A greyed row's key at the slot's left, where SimHub's bindings start.
             Assert.Contains("chip.HorizontalAlignment = HorizontalAlignment.Left;", Between(code, "private static void ShortcutsSoon(", "\n        }"));
 
@@ -1090,6 +1144,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("header = Ui.VStack(0, caption, filter);", header);
             // The filter at the header's right in two columns, and the header built with it.
             Assert.Contains("filter.HorizontalAlignment = HorizontalAlignment.Right;", Between(header, "if (TwoColumns)", "else"));
+            // And at its left under the caption when the header stacks: Segmented's constructor sets Right.
+            Assert.Matches(@"else\s*\{\s*filter\.HorizontalAlignment = HorizontalAlignment\.Left;\s*filter\.Margin = new Thickness\(0, PanelShortcuts\.FilterGapStacked, 0, 0\);\s*header = Ui\.VStack\(0, caption, filter\);\s*\}", header);
             // The caption and the filter share a foot, which FilterRaise's 30 less 19 assumes.
             Assert.Contains("caption.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
             Assert.Contains("filter.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
@@ -1188,7 +1244,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("tag.Margin = new Thickness(PanelShortcuts.TagGap, 0, 0, 0);", code);
             Assert.Contains("grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelShortcuts.RowGap + PanelShortcuts.PressWidth) });", code);
             Assert.Contains("pressText.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", code);
-            Assert.Contains("icon.Margin = new Thickness(0, 1, PanelShortcuts.BannerGap, 0);", code);
+            Assert.Matches(@"icon\.VerticalAlignment = VerticalAlignment\.Top;\s*icon\.Margin = new Thickness\(0, 1, PanelShortcuts\.BannerGap, 0\);", code);
             Assert.Contains("var text = Ui.Text(string.Empty, PanelShortcuts.BannerTextSize, FontWeights.Normal, Theme.TextSecondary);", code);
             // A greyed row's chip is the artboard's .key, as every binder's slot starts.
             Assert.Contains("var chip = Ui.BindingChip(Ui.NotBound, false, key: true);", code);
@@ -1201,6 +1257,8 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"var dock = new DockPanel \{ LastChildFill = true \};\s*DockPanel\.SetDock\(icon, Dock\.Left\);\s*dock\.Children\.Add\(icon\);\s*dock\.Children\.Add\(text\);", clash);
             Assert.Contains("Child = dock,", clash);
             Assert.Contains("Background = Ui.Tint(Theme.Caution, PanelShortcuts.BannerTint),", clash);
+            // The artboard's 1 px outline in deep caution, at the panel's corner.
+            Assert.Matches(@"BorderBrush = Ui\.Brush\(Theme\.CautionDeep\),\s*BorderThickness = new Thickness\(PanelMetrics\.BorderWeight\),\s*Background = [^\n]*\s*CornerRadius = new CornerRadius\(Theme\.Radius\),", clash);
             Assert.DoesNotContain("0.06", code);
         }
 
