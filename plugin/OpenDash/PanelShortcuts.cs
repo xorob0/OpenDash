@@ -454,22 +454,33 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What a zone's row does, in the clash line, with the zone in its running-text form: "cycles zone B",
-        /// as the artboard's line has it for a next page, and "takes band D to its previous page", in the
+        /// as the artboard's line has it for a next page, and "takes zone D to its previous page", in the
         /// row's own words for the other. A label starts with a capital because it starts a label ("Zone B ·
-        /// next page", the Screens picture, the Flag display's choices); mid-sentence the panel writes it
-        /// lower case, as the Screens page's own warning does ("Zone B and zone C both show the relative.").
+        /// next page", "Band D · next page", the Screens picture); mid-sentence the panel writes every zone
+        /// "zone" and its letter, D included, as the Screens page's own warning does for the same face
+        /// (FacePageClash.Message: "Zone A and zone D both show the relative."). voice.md names "band D" in
+        /// running text as the panel talking to itself, so one zone is not given two names on two pages.
         /// </summary>
         public static string ZoneDoes(string zoneLabel, bool next)
         {
             var zone = Running(zoneLabel);
-            return next ? "cycles " + zone : "takes " + zone + " to its " + PreviousPageTitle.ToLowerInvariant();
+            return next ? "cycles " + zone : "takes " + zone + PreviousPageTail;
         }
 
-        /// <summary>A label as it reads mid-sentence: its first letter lower case, the rest as written.</summary>
+        /// <summary>The previous page's words after its zone, and the form two or more zones share:
+        /// "takes zone A and zone D to their previous pages".</summary>
+        private const string PreviousPageTail = " to its previous page";
+        private const string PreviousPagesTail = " to their previous pages";
+
+        /// <summary>A zone's label as it reads mid-sentence: "zone" and its letter, the last word of the
+        /// label ("Zone B" and "Band D" read "zone B" and "zone D"). A label of one word is lower-cased at its
+        /// first letter alone.</summary>
         private static string Running(string label)
         {
             if (string.IsNullOrEmpty(label)) return label ?? string.Empty;
-            return char.ToLowerInvariant(label[0]) + label.Substring(1);
+            var space = label.Trim().LastIndexOf(' ');
+            if (space < 0) return char.ToLowerInvariant(label[0]) + label.Substring(1);
+            return "zone " + label.Trim().Substring(space + 1);
         }
 
         public const string GlanceDoes = "holds the quick glance";
@@ -549,36 +560,80 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line after the trigger's name. One action on several screens: "cycles zone B on both Main dash
-        /// and Rim." Otherwise each screen's uses, in the page's order, with the screen after them, then the
-        /// rig's own, which belong to no screen: "cycles zone A on Rim and toggles night mode." A verb the
-        /// uses share is said once: "turns the brightness up and down".
+        /// The line after the trigger's name: what is done, each with the screens it is done on, in the page's
+        /// order, then the rig's own, which belong to no screen. One thing done on two screens is said once:
+        /// "cycles zone B on both Main dash and Rim, and toggles night mode." Things done on the same screens
+        /// are said together before them: "cycles zone A and holds the quick glance on Rim." And a verb the
+        /// uses share is said once: "toggles night mode and turns the brightness up and down".
         /// </summary>
         private static string ClashRest(IList<BindingUse> uses)
         {
-            var sameDoes = uses.All(use => use.Does == uses[0].Does);
-            var everyPlaced = uses.All(use => !string.IsNullOrEmpty(use.Place));
-            if (sameDoes && everyPlaced)
+            var clauses = new List<Clause>();
+            var rig = new List<string>();
+            foreach (var use in uses)
             {
-                var places = uses.Select(use => use.Place).ToList();
-                return uses[0].Does + " on " + (places.Count == 2 ? "both " : string.Empty) + Listed(places) + ".";
+                var does = use.Does ?? string.Empty;
+                if (string.IsNullOrEmpty(use.Place))
+                {
+                    if (!rig.Contains(does)) rig.Add(does);
+                    continue;
+                }
+                var clause = clauses.FirstOrDefault(one => one.Does.Contains(does));
+                if (clause == null)
+                {
+                    clause = new Clause();
+                    clause.Does.Add(does);
+                    clauses.Add(clause);
+                }
+                if (!clause.Places.Contains(use.Place)) clause.Places.Add(use.Place);
             }
-            var parts = new List<string>();
-            foreach (var place in uses.Where(use => !string.IsNullOrEmpty(use.Place)).Select(use => use.Place).Distinct(StringComparer.Ordinal))
+            // Then what is done on the very same screens goes into one clause, the first one's.
+            var merged = new List<Clause>();
+            foreach (var clause in clauses)
             {
-                parts.Add(Folded(uses.Where(use => use.Place == place).Select(use => use.Does).ToList()) + " on " + place);
+                var same = merged.FirstOrDefault(one => one.Places.Count == clause.Places.Count && one.Places.All(clause.Places.Contains));
+                if (same == null) merged.Add(clause);
+                else same.Does.AddRange(clause.Does);
             }
-            var rig = uses.Where(use => string.IsNullOrEmpty(use.Place)).Select(use => use.Does).ToList();
+            var parts = merged
+                .Select(clause => Folded(clause.Does) + " on " + (clause.Places.Count == 2 ? "both " : string.Empty) + Listed(clause.Places))
+                .ToList();
             if (rig.Count > 0) parts.Add(Folded(rig));
             return Series(parts) + ".";
         }
 
-        /// <summary>What several rows do, with the words they all start with said once: "turns the brightness
-        /// up and down", "cycles zone A and zone C". Listed whole when they share no first word, or when one
-        /// would be left with nothing after it.</summary>
+        /// <summary>What is done, and the screens it is done on, in the page's order.</summary>
+        private sealed class Clause
+        {
+            public readonly List<string> Does = new List<string>();
+            public readonly List<string> Places = new List<string>();
+        }
+
+        /// <summary>What several rows do, each verb said once, in the order the rows are met: "toggles night
+        /// mode and turns the brightness up and down", "cycles zone A and takes zone A and zone D to their
+        /// previous pages".</summary>
         private static string Folded(IList<string> does)
         {
+            return Listed(does.GroupBy(FirstWord, StringComparer.Ordinal).Select(alike => FoldedAlike(alike.ToList())).ToList());
+        }
+
+        private static string FirstWord(string does)
+        {
+            var space = does.IndexOf(' ');
+            return space < 0 ? does : does.Substring(0, space);
+        }
+
+        /// <summary>What several rows that start alike do, with the words they all start with said once:
+        /// "turns the brightness up and down", "cycles zone A and zone C", and the previous page's tail said
+        /// once for every zone it takes back. Listed whole when one would be left with nothing after the
+        /// shared words.</summary>
+        private static string FoldedAlike(IList<string> does)
+        {
             if (does.Count == 1) return does[0];
+            if (does.All(one => one.EndsWith(PreviousPageTail, StringComparison.Ordinal)))
+            {
+                return FoldedAlike(does.Select(one => one.Substring(0, one.Length - PreviousPageTail.Length)).ToList()) + PreviousPagesTail;
+            }
             // A zone's name is one word here, in either case, so that "zone A and zone C" is never cut to
             // "zone A and C".
             var words = does.Select(one => Regex.Matches(one, @"(?i:zone|band) \S+|\S+").Cast<Match>().Select(match => match.Value).ToArray()).ToList();

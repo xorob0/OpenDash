@@ -446,18 +446,37 @@ namespace OpenDashPlugin.Tests
             var longPress = PanelShortcuts.Fires.OnLongPress;
             // A short press on Zone A's next page, long presses on Zone A's and Band D's previous page: only the
             // two long presses are doubled.
-            Assert.Equal("Keyboard · F9 takes zone A to its previous page and band D to its previous page on Rim.", PanelShortcuts.Clashes(new[]
+            Assert.Equal("Keyboard · F9 takes zone A and zone D to their previous pages on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", false), longPress),
             }).Single().Text);
-            // One row bound on both gestures of a button answers both, so a long press elsewhere doubles it.
+            // One row bound on both gestures of a button answers both, so a long press elsewhere doubles it,
+            // and so does a short press, whichever of its two bindings SimHub lists first.
             Assert.Equal("Keyboard · F9 cycles zone A and takes zone A to its previous page on Rim.", PanelShortcuts.Clashes(new[]
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+            }).Single().Text);
+            Assert.Equal("Keyboard · F9 cycles zone A and takes zone A to its previous page on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", false), longPress),
+            }).Single().Text);
+            Assert.Equal("Keyboard · F9 cycles zone A and zone D on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", true), shortPress),
+            }).Single().Text);
+            Assert.Equal("Keyboard · F9 cycles zone A and zone D on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), longPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true), shortPress),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Band D", true), shortPress),
             }).Single().Text);
         }
 
@@ -520,8 +539,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_clash_line_reads_for_any_pair_of_rows()
         {
-            Assert.Equal("cycles band D", PanelShortcuts.ZoneDoes("Band D", true));
-            Assert.Equal("takes band D to its previous page", PanelShortcuts.ZoneDoes("Band D", false));
+            // Every zone mid-sentence is "zone" and its letter, D included, as the Screens page's warning
+            // writes it ("Zone A and zone D both show the relative."): "band D" is the panel's own word.
+            Assert.Equal("cycles zone D", PanelShortcuts.ZoneDoes("Band D", true));
+            Assert.Equal("takes zone D to its previous page", PanelShortcuts.ZoneDoes("Band D", false));
+            Assert.Equal("cycles zone B", PanelShortcuts.ZoneDoes("Zone B", true));
+            Assert.Equal(new[] { "zone A", "zone B", "zone C", "zone D" }, Contract.FaceZoneLetters.Select(l => PanelShortcuts.ZoneDoes(PanelFacePlan.ZoneLabel(l), true).Substring("cycles ".Length)));
             // A screen's uses come before the rig's, so "on Rim" is said of them alone.
             Assert.Equal("Keyboard · N cycles zone A on Rim and toggles night mode.", PanelShortcuts.Clashes(new[]
             {
@@ -560,6 +583,44 @@ namespace OpenDashPlugin.Tests
             {
                 Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
                 Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
+            }).Single().Text);
+        }
+
+        /// <summary>A third use never makes the line say twice what two uses share: one thing done on two
+        /// screens, a verb two rows share and a previous page taken on several zones are each said once.</summary>
+        [Fact]
+        public void A_clash_line_says_once_what_its_uses_share_however_many_there_are()
+        {
+            // The artboard's doubling, and night mode on the same button.
+            Assert.Equal("CSL Elite · 7 cycles zone B on both Main dash and Rim, and toggles night mode.", PanelShortcuts.Clashes(new[]
+            {
+                Use("JoystickPlugin.CSL_Elite_B07", "Main dash", PanelShortcuts.ZoneDoes("Zone B", true)),
+                Use("JoystickPlugin.CSL_Elite_B07", "Rim", PanelShortcuts.ZoneDoes("Zone B", true)),
+                Use("JoystickPlugin.CSL_Elite_B07", null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)),
+            }).Single().Text);
+            // The rig's three rows: the verb the two brightness rows share is said once beside night mode's.
+            Assert.Equal("CSL Elite · 7 toggles night mode and turns the brightness up and down.", PanelShortcuts.Clashes(new[]
+            {
+                Use("JoystickPlugin.CSL_Elite_B07", null, PanelShortcuts.RigActionDoes(Contract.ToggleNightModeAction)),
+                Use("JoystickPlugin.CSL_Elite_B07", null, PanelShortcuts.RigActionDoes(Contract.BrightnessUpAction)),
+                Use("JoystickPlugin.CSL_Elite_B07", null, PanelShortcuts.RigActionDoes(Contract.BrightnessDownAction)),
+            }).Single().Text);
+            // Two screens' glances and a third screen's zone.
+            Assert.Equal("Keyboard · F9 holds the quick glance on both Pit wall and Main dash, and cycles zone A on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Pit wall", PanelShortcuts.GlanceDoes),
+                Use("KeyboardReaderPlugin.F9", "Main dash", PanelShortcuts.GlanceDoes),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+            }).Single().Text);
+            // Every zone's previous page on one button: the tail is said once, for them all.
+            Assert.Equal("Keyboard · F9 takes zone A, zone B, zone C and zone D to their previous pages on Rim.", PanelShortcuts.Clashes(
+                Contract.FaceZoneLetters.Select(l => Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes(PanelFacePlan.ZoneLabel(l), false)))).Single().Text);
+            // And beside a next page on the same screen, each verb once.
+            Assert.Equal("Keyboard · F9 cycles zone A and takes zone B and zone C to their previous pages on Rim.", PanelShortcuts.Clashes(new[]
+            {
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone A", true)),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone B", false)),
+                Use("KeyboardReaderPlugin.F9", "Rim", PanelShortcuts.ZoneDoes("Zone C", false)),
             }).Single().Text);
         }
 
