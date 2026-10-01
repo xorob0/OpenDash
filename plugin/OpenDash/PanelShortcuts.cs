@@ -666,8 +666,10 @@ namespace OpenDashPlugin
         public const double LeadPaddingY = 12;
         public const double LeadGap = 10;
 
-        // The clash line (role=status): padded 12 by 16, the 16 px icon 12 from the text at 14, and 8 between
-        // two lines when two triggers clash.
+        // The clash line (role=status): padded 12 by 16 on the caution colour at 6 per cent (the artboard's
+        // rgba(255,179,0,0.06)), the 16 px icon 12 from the text at 14, and 8 between two lines when two
+        // triggers clash.
+        public const double BannerTint = 0.06;
         public const double BannerPaddingX = 16;
         public const double BannerPaddingY = 12;
         public const double BannerGap = 12;

@@ -629,8 +629,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelShortcuts.BannerGap);
             Assert.Equal(14, PanelShortcuts.BannerTextSize);
             Assert.Equal(16, PanelShortcuts.BannerIconSize);
-            // Two clash lines, 8 apart.
+            // Two clash lines, 8 apart, on the caution colour at the artboard's rgba(255,179,0,0.06).
             Assert.Equal(8, PanelShortcuts.BannerStackGap);
+            Assert.Equal(0.06, PanelShortcuts.BannerTint);
         }
 
         /// <summary>The page's own numbers, where the artboard has none: it draws no stacked row, no glance
@@ -797,6 +798,15 @@ namespace OpenDashPlugin.Tests
             // Let go of when the editor leaves the tree, and when the build is replaced or the page left.
             Assert.Contains("editor.Unloaded += (sender, args) => detach();", body);
             Assert.Contains("OnDrop(detach);", body);
+
+            // What each step acts on, not only its += and -=: every mapping watched is remembered, so rewatch
+            // and detach can let go of it; the collection is swapped before it is watched, and the mappings
+            // in it are watched every time; the model is remembered between its -= and +=; and the watch is
+            // taken up at once, not only on Loaded.
+            Assert.Matches(@"Action rewatchMappings = \(\) =>\s*\{\s*foreach \(var mapping in watchedMappings\) mapping\.PropertyChanged -= mappingChanged;\s*watchedMappings\.Clear\(\);\s*if \(watchedTriggers == null\) return;\s*foreach \(var mapping in watchedTriggers\)\s*\{\s*if \(mapping == null\) continue;\s*mapping\.PropertyChanged \+= mappingChanged;\s*watchedMappings\.Add\(mapping\);\s*\}\s*\};", body);
+            Assert.Matches(@"Action rewatchTriggers = \(\) =>\s*\{\s*var triggers = watched == null \? null : watched\.Triggers;\s*if \(!ReferenceEquals\(triggers, watchedTriggers\)\)\s*\{\s*if \(watchedTriggers != null\) watchedTriggers\.CollectionChanged -= collectionChanged;\s*watchedTriggers = triggers;\s*if \(watchedTriggers != null\) watchedTriggers\.CollectionChanged \+= collectionChanged;\s*\}\s*rewatchMappings\(\);\s*\};", body);
+            Assert.Matches(@"Action attach = \(\) =>\s*\{\s*var model = editor\.Model;\s*if \(ReferenceEquals\(model, watched\)\) return;\s*if \(watched != null\) watched\.PropertyChanged -= modelChanged;\s*watched = model;\s*if \(watched != null\) watched\.PropertyChanged \+= modelChanged;\s*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
+            Assert.Matches(@"OnDrop\(detach\);\s*attach\(\);\s*\}", body);
         }
 
         /// <summary>
@@ -826,6 +836,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
             Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);\s*if \(editor != null\) editors\.Add\(editor\);", page);
+
+            // The step every re-read goes through: a burst of changes is read once, after it, by the page's
+            // evaluation, and never once the build is dropped.
+            var changed = Between(code, "private FrameworkElement BuildShortcutsPage(", "var editors =");
+            Assert.Matches(@"var pending = false;\s*var dropped = false;\s*OnDrop\(\(\) => dropped = true\);", changed);
+            Assert.Matches(@"Action changed = \(\) =>\s*\{\s*if \(pending \|\| dropped\) return;\s*pending = true;\s*Dispatcher\.BeginInvoke\(DispatcherPriority\.Background, new Action\(\(\) =>\s*\{\s*pending = false;\s*if \(!dropped\) evaluate\(\);\s*\}\)\);\s*\};", changed);
         }
 
         /// <summary>
@@ -894,7 +910,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShortcutsBinding(group, null, binding, BuildBinder(binding.Action, binding.BinderName), null, layout);", lights);
 
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var lights = BuildShortcutsLights(layout);");
-            Assert.Matches(@"if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallCard\(screen\.Width, screen\.Height, ShortcutsGlanceBound\(screen\)\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
+            // Over every screen the rig has, the same list the sidebar's count reads (BoundCount), so the cards
+            // add up to it.
+            Assert.Matches(@"foreach \(var screen in Settings\.RigScreens\(\)\)\s*\{\s*if \(screen == null\) continue;\s*if \(screen\.IsFace\) screens\.Add\(BuildShortcutsFace\(screen, layout\)\);\s*else if \(screen\.IsPitWall && PanelShortcuts\.PitWallCard\(screen\.Width, screen\.Height, ShortcutsGlanceBound\(screen\)\)\) screens\.Add\(BuildShortcutsPitWall\(screen, layout\)\);\s*else if \(screen\.IsCompanion\) screens\.Add\(BuildShortcutsCompanion\(screen, layout\)\);", page);
             Assert.Equal(3, Regex.Matches(page, @"screens\.Add\(").Count);
         }
 
@@ -948,6 +966,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Grid.SetRow(slot, 1);", row);
             Assert.Contains("Grid.SetColumnSpan(slot, 2);", row);
             Assert.Contains("Tag = new RowParts(nameLine, control),", row);
+            // A stacked row has two grid rows, or the slot set in the second would be drawn over the name; a
+            // long name wraps; the binder is 16 after the press; the press word is the artboard's .cap.
+            Assert.Matches(@"if \(layout\.Stacks\)\s*\{\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);", row);
+            Assert.Matches(@"var name = Ui\.Text\(label, [^;]*\);\s*name\.TextWrapping = TextWrapping\.Wrap;", row);
+            Assert.Contains("slot.Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0);", row);
+            Assert.Contains("pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);", row);
+            // The card: the header's rule under it, which the first row's missing rule relies on
+            // (RuleAbove(true, false)); the count 16 from the name; the line beside the name in .cap.
+            Assert.Contains("BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),", card);
+            Assert.Contains("var count = new Border { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelShortcuts.RowGap, 0, 0, 0) };", card);
+            Assert.Contains("var line = Ui.Text(detail, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);", card);
+            // A greyed row's key at the slot's left, where SimHub's bindings start.
+            Assert.Contains("chip.HorizontalAlignment = HorizontalAlignment.Left;", Between(code, "private static void ShortcutsSoon(", "\n        }"));
 
             // The header: the caption and the filter, the filter in the second column when two fit.
             var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
@@ -955,6 +986,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("grid.Children.Add(caption);", header);
             Assert.Contains("grid.Children.Add(filter);", header);
             Assert.Contains("header = Ui.VStack(0, caption, filter);", header);
+            // The filter at the header's right in two columns, and the header built with it.
+            Assert.Contains("filter.HorizontalAlignment = HorizontalAlignment.Right;", Between(header, "if (TwoColumns)", "else"));
+            Assert.Contains("var header = BuildShortcutsHeader(filter);", code);
+            // The empty line keeps a message line's measure.
+            Assert.Contains("var empty = Ui.Caption(string.Empty, BodyWidth);", code);
+            // The page opens on All, as the artboard presses it.
+            Assert.Contains("private string shortcutsFilter = PanelShortcuts.FilterAll;", code);
+            // The title leaves the page's stack before it goes into the row with its tag: WPF will not give
+            // an element a second parent, and the page would draw PageFailed.
+            Assert.Matches(@"stack\.Children\.RemoveAt\(0\);\s*stack\.Children\.Insert\(0, Ui\.HStack\(12, title, Ui\.NewTag\(\)\)\);", code);
         }
 
         /// <summary>
@@ -985,6 +1026,9 @@ namespace OpenDashPlugin.Tests
             Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
             var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
             Assert.Contains("row.Bindable && row.Shown.Visibility == Visibility.Visible", keep);
+            // From the hidden row's own place, and the first row that takes the focus keeps it.
+            Assert.Contains("var at = rows.IndexOf(from);", keep);
+            Assert.Contains("if (row.Row.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)) && row.Row.IsKeyboardFocusWithin) return;", keep);
             // Rows after it, then the ones before it nearest first, reversed in the spelling hooks section 0
             // asks for: SpanOverloadTests cannot see a .Reverse() whose receiver is a call.
             Assert.Contains("var near = rows.Skip(at + 1).Concat(Enumerable.Reverse(rows.Take(Math.Max(0, at))));", keep);
@@ -1014,7 +1058,7 @@ namespace OpenDashPlugin.Tests
             {
                 "HeaderPaddingX", "HeaderPaddingY", "GroupTitleSize", "GroupDetailGap", "CountSize", "RowPaddingX", "RowPaddingY",
                 "RowGap", "RowNameSize", "TagGap", "PressWidth", "CaptionGap", "StackGap", "LeadPaddingX", "LeadPaddingY", "LeadGap",
-                "BannerPaddingX", "BannerPaddingY", "BannerGap", "BannerTextSize", "BannerIconSize", "BannerStackGap",
+                "BannerPaddingX", "BannerPaddingY", "BannerGap", "BannerTextSize", "BannerIconSize", "BannerStackGap", "BannerTint",
                 "IntroGap", "FilterRaise", "FilterGapStacked",
             })
             {
@@ -1038,6 +1082,12 @@ namespace OpenDashPlugin.Tests
             var clash = Between(code, "private static Border ShortcutsClashLine(", "return line;");
             Assert.Contains("text.MaxWidth = BodyWidth;", clash);
             Assert.Contains("text.HorizontalAlignment = HorizontalAlignment.Left;", clash);
+            Assert.Contains("text.TextWrapping = TextWrapping.Wrap;", clash);
+            // The icon docked at the left and the sentence filling the rest, in the amber box.
+            Assert.Matches(@"var dock = new DockPanel \{ LastChildFill = true \};\s*DockPanel\.SetDock\(icon, Dock\.Left\);\s*dock\.Children\.Add\(icon\);\s*dock\.Children\.Add\(text\);", clash);
+            Assert.Contains("Child = dock,", clash);
+            Assert.Contains("Background = Ui.Tint(Theme.Caution, PanelShortcuts.BannerTint),", clash);
+            Assert.DoesNotContain("0.06", code);
         }
 
         /// <summary>
@@ -1145,6 +1195,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("group.Card.Visibility = groupShown ? Visibility.Visible : Visibility.Collapsed;", code);
             Assert.Contains("row.Row.BorderThickness = new Thickness(0, PanelShortcuts.RuleAbove(firstShown, group.HasLead) ? PanelMetrics.BorderWeight : 0, 0, 0);", code);
             Assert.Contains("var emptyText = PanelShortcuts.EmptyLine(chosen, anyShown);", code);
+            // The loop's own bookkeeping: a hidden row draws no rule and leaves the next one first, and the
+            // empty line hears of a card shown anywhere on the page, not only the last.
+            Assert.Matches(@"var anyShown = false;\s*foreach \(var group in groups\)\s*\{\s*var firstShown = true;\s*foreach \(var row in group\.Rows\)\s*\{\s*(//[^\n]*\s*)*if \(row\.Press != null\) row\.Press\.Visibility = [^;]*;\s*var shows = PanelShortcuts\.Shows\(chosen, states\[row\]\);\s*row\.Shown\.Visibility = shows \? Visibility\.Visible : Visibility\.Collapsed;\s*if \(!shows\) continue;\s*row\.Row\.BorderThickness = new Thickness\(0, PanelShortcuts\.RuleAbove\(firstShown, group\.HasLead\) \? PanelMetrics\.BorderWeight : 0, 0, 0\);\s*firstShown = false;\s*\}\s*var groupShown = PanelShortcuts\.CardShows\(group\.Rows\.Select\(row => states\[row\]\), chosen\);\s*group\.Card\.Visibility = groupShown \? Visibility\.Visible : Visibility\.Collapsed;\s*anyShown \|= groupShown;", code);
 
             // The anchor puts the filter back to All on the first build after the page is opened, and never on
             // a rebuild in place, which keeps the route and its anchor: OnLeave runs on Go alone.
@@ -1180,6 +1233,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("read.Select(trigger => new PanelShortcuts.BindingUse(trigger, row.Place, row.Does)).ToList();", usesOf);
             Assert.Contains(".Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger))", usesOf);
             Assert.Contains(".Select(mapping => new PanelShortcuts.BindingUse(mapping.Trigger, row.Place, row.Does, PanelShortcuts.FiresOn(mapping.PressType.ToString())))", usesOf);
+            // Ruling 60's null, which the view alone gives: an editor that could not be made, a shell read
+            // that failed and a read that threw each read as "cannot be read", never as nothing bound.
+            var usesAll = Between(code, "private IList<PanelShortcuts.BindingUse> ShortcutsUses(", "private void ShortcutsWatch(");
+            Assert.Contains("if (editor == null) return null;", usesAll);
+            Assert.Contains("var read = TriggersOf(row.Action);", usesAll);
+            Assert.Contains("return read == null ? null :", usesAll);
+            Assert.Matches(@"catch \(Exception ex\)\s*\{\s*Log\.Warn\([^;]*\);\s*return null;\s*\}", usesAll);
 
             var landing = Regex.Match(code, @"if \(shortcutsLanding\)\s*\{\s*shortcutsFilter = PanelShortcuts\.FilterFor\(shortcutsFilter, to == null \? null : to\.Anchor, true\);\s*shortcutsLanding = false;\s*\}\s*OnLeave\(""Shortcuts\.filterLanding"", \(\) => shortcutsLanding = true\);");
             Assert.True(landing.Success, "the filter's reset for an anchor is not gated on the page's first build");

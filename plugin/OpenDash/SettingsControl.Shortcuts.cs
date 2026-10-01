@@ -629,8 +629,8 @@ namespace OpenDashPlugin
                 foreach (var row in group.Rows)
                 {
                     // The column keeps its width, so a row with no press word still lines up with the others.
-                if (row.Press != null) row.Press.Visibility = PanelShortcuts.ShowsPress(states[row], row.IsHold) ? Visibility.Visible : Visibility.Hidden;
-                var shows = PanelShortcuts.Shows(chosen, states[row]);
+                    if (row.Press != null) row.Press.Visibility = PanelShortcuts.ShowsPress(states[row], row.IsHold) ? Visibility.Visible : Visibility.Hidden;
+                    var shows = PanelShortcuts.Shows(chosen, states[row]);
                     row.Shown.Visibility = shows ? Visibility.Visible : Visibility.Collapsed;
                     if (!shows) continue;
                     row.Row.BorderThickness = new Thickness(0, PanelShortcuts.RuleAbove(firstShown, group.HasLead) ? PanelMetrics.BorderWeight : 0, 0, 0);
@@ -726,7 +726,7 @@ namespace OpenDashPlugin
             {
                 BorderBrush = Ui.Brush(Theme.CautionDeep),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
-                Background = Ui.Tint(Theme.Caution, 0.06),
+                Background = Ui.Tint(Theme.Caution, PanelShortcuts.BannerTint),
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Padding = new Thickness(PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY, PanelShortcuts.BannerPaddingX, PanelShortcuts.BannerPaddingY),
                 Child = dock,
