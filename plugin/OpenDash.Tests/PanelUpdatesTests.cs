@@ -401,10 +401,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("}, new SimHubInstallLog(), mustFinish: true);", apply);
 
             // A run that throws still posts a completion, carrying a failed outcome whose line points at the log.
-            var caught = apply.IndexOf("outcome = new UpdateOutcome { Reason = PanelUpdates.ApplyThrew };", StringComparison.Ordinal);
+            var caught = apply.IndexOf("said = PanelUpdates.UpdateFailed;", StringComparison.Ordinal);
             Assert.True(caught > work && caught < consent, "a throw inside Apply becomes a failed outcome before the completion is posted");
-            Assert.Contains("Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome)));", apply);
-            Assert.Equal("The update did not finish: see SimHub's log.", new UpdateOutcome { Reason = PanelUpdates.ApplyThrew }.Line);
+            Assert.Contains("Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));", apply);
+            // In the page's own sentence, the shape its other failure takes, and never in the outcome's reason slot.
+            Assert.Equal("The update did not finish. See SimHub's log.", PanelUpdates.UpdateFailed);
+            Assert.Equal(PanelUpdates.ReinstallFailed.Replace("reinstall", "update"), PanelUpdates.UpdateFailed);
+            Assert.Contains("outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report); said = outcome.Line;", System.Text.RegularExpressions.Regex.Replace(apply, @"\s+", " "));
 
             // The completion clears the run before anything that can throw, keeps a net of its own, and offers
             // the restart outside it.
@@ -434,7 +437,7 @@ namespace OpenDashPlugin.Tests
             var otherwise = applied.IndexOf("else", guarded, StringComparison.Ordinal);
             Assert.True(showing >= 0 && guarded > showing && read > guarded && redraw > read && otherwise > redraw, "the read and the redraw are the showing page's alone");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(applied, @"updatesRead = true;"));
-            Assert.Contains("if (updatesCardHost != null) Say(outcome.Line, outcome.Ok);", applied);
+            Assert.Contains("if (updatesCardHost != null) Say(said, outcome.Ok);", applied);
         }
 
         /// <summary>The page's code with every run of whitespace one space, so a pin reads a call that is
@@ -783,7 +786,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.4.2", older.Version);
             Assert.Equal("Reinstall everything brings it to 0.5.0.", older.Tooltip);
 
-            const string edited = "You have edited it, so OpenDash left it alone. Reinstall everything replaces it.";
+            const string edited = "You have edited it. Reinstall everything replaces it.";
+            Assert.Equal(edited, PanelUpdates.EditedTooltip);
             Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", true), true, false).Tooltip);
             // Either fact alone is the driver's work.
             Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: true, heldBack: false), true, false).Tooltip);
@@ -883,6 +887,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextLabel, unread.StateHex);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
             Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
+            // A round screen is a round face, never "no 480 × 480 round."; a size not known is left out, never "0 × 0".
+            var round = new ScreenInstance { Name = "Round", Kind = Contract.KindSlots, Width = 480, Height = 480 };
+            Assert.Equal("This build ships no 480 × 480 round face.", PanelUpdates.DashboardRow(round, null, null, null).Tooltip);
+            var unsized = new ScreenInstance { Name = "Phone", Kind = Contract.KindCompanion };
+            Assert.Equal("This build ships no companion.", PanelUpdates.DashboardRow(unsized, null, null, null).Tooltip);
+            Assert.DoesNotContain("0 × 0", PanelUpdates.ShipsNo(new ScreenInstance { Kind = Contract.KindFace, Width = 1280 }));
         }
 
         /// <summary>The sentences under the table: what the build ships and what the installer could not do,
@@ -938,14 +948,19 @@ namespace OpenDashPlugin.Tests
             var none = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
             Assert.Equal("Not installed", none.State);
             Assert.Equal(Theme.StatusNotInstalled, none.DotHex);
-            Assert.Equal("Reinstall everything installs it, then select it on its device.", none.Tooltip);
+            // The press that installs it, as a missing dashboard's hover says; the select step is the press's
+            // own line, in its one form with the strip's name and device.
+            Assert.Equal("Reinstall everything installs it.", none.Tooltip);
+            Assert.Equal(PanelUpdates.NotInstalledTooltip, PanelUpdates.StripNotInstalled);
             Assert.False(none.OffersUpdate);
 
             // What the page cannot know is said as not known, not as not installed.
             var unreachable = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
             Assert.Equal("Unknown", unreachable.State);
             Assert.Equal(Theme.TextLabel, unreachable.StateHex);
-            Assert.Equal(PanelLightRows.Unavailable, unreachable.Tooltip);
+            // The note under the table says why (TableNotes), so the row's hover does not say it again.
+            Assert.Null(unreachable.Tooltip);
+            Assert.Contains(PanelLightRows.Unavailable, PanelUpdates.TableNotes(true, null, false, true, true, true, false));
             var notEmbedded = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
             Assert.Equal("Unknown", notEmbedded.State);
             Assert.Equal("This build ships no profile for this strip.", notEmbedded.Tooltip);
@@ -973,7 +988,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(step, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, deviceListed: false).Tooltip);
             // A state no press writes from is said as it is, device or not.
             Assert.Null(PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.5.0" }, deviceListed: false).Tooltip);
-            Assert.Equal(PanelLightRows.Unavailable, PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, deviceListed: false).Tooltip);
+            Assert.Null(PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, deviceListed: false).Tooltip);
 
             var devices = new Dictionary<string, string> { { LedBar.ArduinoDevice, "Arduino" } };
             var arduino = new LedBar { Name = "Rim", Device = LedBar.ArduinoDevice };
@@ -1070,11 +1085,20 @@ namespace OpenDashPlugin.Tests
 
             var none = PanelUpdates.FlagBoxRow("OpenDash Flag box", null, null);
             Assert.False(none.OffersUpdate);
-            Assert.Equal("Reinstall everything installs it, then select it on your matrix's device in SimHub.", none.Tooltip);
+            // The press that installs it; the select step, with the matrix's content number, is the press's line.
+            Assert.Equal("Reinstall everything installs it.", none.Tooltip);
+            Assert.Equal(PanelUpdates.NotInstalledTooltip, PanelUpdates.FlagBoxNotInstalled);
 
             var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
             Assert.Equal("Unknown", unreachable.State);
-            Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.", unreachable.Tooltip);
+            // The by-hand route under the table prints that sentence (UpdatesFlagBoxFallback), so the hover does not.
+            Assert.Null(unreachable.Tooltip);
+            Assert.True(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
+            // A build with no profile says so on the row, where no note under the table does.
+            var notEmbedded = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, null);
+            Assert.Equal("Unknown", notEmbedded.State);
+            Assert.Equal("This build ships no flag box profile.", notEmbedded.Tooltip);
+            Assert.False(notEmbedded.OffersUpdate);
             Assert.Equal("See SimHub's log.", PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Failed }, null).Tooltip);
         }
 
@@ -1606,7 +1630,9 @@ namespace OpenDashPlugin.Tests
         {
             var report = PanelUpdates.Report(new UpdatesReportInput { GeneratedUtc = Now });
             Assert.Contains("OpenDash plugin: unknown", report);
-            Assert.Contains("Update check: off. Not checked yet (UTC).", report);
+            // "(UTC)" labels a time, and a rig that never checked has none on the line.
+            Assert.Contains("Update check: off. Not checked yet.", report);
+            Assert.DoesNotContain("(UTC)", report);
             Assert.Contains("Screens (0)", report);
             Assert.DoesNotContain("Flag box profile", report);
             Assert.Contains("SimHub's log, the last 0 OpenDash lines:", report);

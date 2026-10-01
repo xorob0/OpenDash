@@ -241,9 +241,10 @@ namespace OpenDashPlugin
         }
         public const string EveryRelease = "Every release on GitHub";
 
-        /// <summary>Why a run that threw did not finish, in UpdateOutcome.Line's "The update did not finish:
-        /// see SimHub's log.": the exception is in the log, and the line points there (voice.md).</summary>
-        public const string ApplyThrew = "see SimHub's log";
+        /// <summary>What the page says of a download that threw, in the shape of Reinstall everything's failure
+        /// (ReinstallFailed) and voice.md's "Install failed. See SimHub's log.": the exception is in the log,
+        /// and the line points there.</summary>
+        public const string UpdateFailed = "The update did not finish. See SimHub's log.";
 
         /// <summary>The line over the bar while a release downloads.</summary>
         public static string Downloading(string version)
@@ -710,14 +711,26 @@ namespace OpenDashPlugin
         public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";
 
         /// <summary>"This build ships no 1280 × 480 face." for a screen whose package this build does not
-        /// carry.</summary>
+        /// carry. A screen whose size is not known (a migrated one whose folder spells none, which
+        /// RepairScreenSizes cannot match) leaves the size out rather than say "0 × 0", as the Screens card
+        /// does; a round screen is a round face, since "round" alone is an adjective without its noun.</summary>
         public static string ShipsNo(ScreenInstance screen)
         {
             if (screen == null) return NoDashboards;
-            return "This build ships no " + screen.SizeLabel + " " + PanelAddScreen.KindName(screen.Kind).ToLowerInvariant() + ".";
+            var size = screen.Width > 0 && screen.Height > 0 ? screen.SizeLabel + " " : string.Empty;
+            return "This build ships no " + size + KindNoun(screen.Kind) + ".";
         }
 
-        public const string EditedTooltip = "You have edited it, so OpenDash left it alone. " + PanelConfirmation.ReinstallLabel + " replaces it.";
+        /// <summary>A screen's kind as a noun in a sentence: "face", "round face", "companion", "pit wall".</summary>
+        private static string KindNoun(string kind)
+        {
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "round face";
+            return PanelAddScreen.KindName(kind).ToLowerInvariant();
+        }
+
+        /// <summary>An edited dashboard's hover: the fact, then the press, as every row hover on the page says
+        /// it. What the installer does with an edited folder is its mechanism, not the driver's (voice.md).</summary>
+        public const string EditedTooltip = "You have edited it. " + PanelConfirmation.ReinstallLabel + " replaces it.";
 
         /// <summary>An older dashboard's tooltip, naming the version the row does not show: "Reinstall
         /// everything brings it to 0.5.0."</summary>
@@ -827,11 +840,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A strip row's tooltip in each state, or null where the row already says it all (voice.md): an
-        /// up-to-date profile, whose version has a column of its own, has none, as a dashboard's row has none.
-        /// An older profile names the version its Update brings, in the dashboard rows' form (BringsItTo), and
-        /// leaves what the press costs to the press's own tooltip; a missing one names the press on this page
-        /// that installs it and the step OpenDash does not take.
+        /// A strip row's tooltip in each state, or null where the page already says it all (voice.md): an
+        /// up-to-date profile, whose version has a column of its own, has none, as a dashboard's row has none,
+        /// and neither has one SimHub's LED settings hide, since the note under the table says why
+        /// (PanelLightRows.Unavailable, TableNotes). An older profile names the version its Update brings, in
+        /// the dashboard rows' form (BringsItTo), and leaves what the press costs to the press's own tooltip; a
+        /// missing one names the press on this page that installs it, whose own line then gives the select
+        /// step in the page's one form.
         /// </summary>
         public static string StripTooltip(FlagBoxPlan plan)
         {
@@ -845,7 +860,7 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Unavailable:
-                    return PanelLightRows.Unavailable;
+                    return null;
                 case FlagBoxInstallState.NotEmbedded:
                     return StripNotEmbedded;
                 default:
@@ -854,8 +869,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A row is one strip of the rig, so the census rows' "no strip of this shape" does not
-        /// apply to it: the strip is there and its profile is not, which the row's state already says.</summary>
-        public const string StripNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on its device.";
+        /// apply to it: the strip is there and its profile is not, which the row's state already says. The
+        /// hover names the press, as a missing dashboard's does; the select step is said once, in its one form
+        /// with the strip's name and device ('Select "Rim" on Fanatec in SimHub to use it.'), by the line the
+        /// press writes (ReinstallSummary), since the row names no device for "its device" to point at.</summary>
+        public const string StripNotInstalled = NotInstalledTooltip;
 
         /// <summary>A strip whose shape this build carries no profile for, whatever SimHub holds, in the LEDs
         /// page's words for it (PanelLeds.NoProfileForStrip).</summary>
@@ -878,8 +896,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// The flag box row's tooltip in each state. An older profile is said as a strip's is, a missing one
         /// names the press on this page, and a current one has none, as a current strip's has none. A failed
-        /// one says where to look. The rest are FlagBoxInstallPlan.Summary's, which names the file to import
-        /// by hand while SimHub's matrix settings cannot be reached.
+        /// one says where to look. One SimHub's matrix settings hide has none: the by-hand route under the
+        /// table prints FlagBoxInstallPlan.Summary's sentence for it, and the hover would repeat it. The rest,
+        /// a build with no profile among them, are FlagBoxInstallPlan.Summary's.
         /// </summary>
         public static string FlagBoxTooltip(FlagBoxPlan plan, string extractedPath)
         {
@@ -894,14 +913,17 @@ namespace OpenDashPlugin
                     return UpdateBringsItTo(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Failed:
                     return LightFailed;
+                case FlagBoxInstallState.Unavailable:
+                    return null;
                 default:
                     return FlagBoxInstallPlan.Summary(plan, extractedPath);
             }
         }
 
-        /// <summary>A missing flag box profile's hover: the press on this page that installs it, and where the
-        /// select step is taken, in the Matrix page's words (PanelMatrix.YourDevice).</summary>
-        public const string FlagBoxNotInstalled = PanelConfirmation.ReinstallLabel + " installs it, then select it on " + MatrixDevice + ".";
+        /// <summary>A missing flag box profile's hover: the press on this page that installs it, as a strip's
+        /// says. The select step, with the matrix's content number, is said once, in the Matrix page's form,
+        /// by the line the press writes (FlagBoxSelect).</summary>
+        public const string FlagBoxNotInstalled = NotInstalledTooltip;
 
         /// <summary>Where the flag box's select step is taken, as the Matrix page says it: the device that
         /// draws a matrix, and on a rig with several, each one's.</summary>
@@ -1379,7 +1401,8 @@ namespace OpenDashPlugin
             text.AppendLine("Dashboards on the rig: " + Known(input.RigVersion));
             text.AppendLine("SimHub: " + Known(input.SimHubVersion) + (string.IsNullOrWhiteSpace(input.SimHubRoot) ? string.Empty : ", in " + input.SimHubRoot));
             text.AppendLine("Windows: " + Known(input.OsVersion));
-            text.AppendLine("Update check: " + (input.ChecksOn ? "on" : "off") + ". " + LastChecked(input.LastCheckedTicks, input.GeneratedUtc, TimeZoneInfo.Utc) + " (UTC).");
+            // "(UTC)" labels a time, so a rig that has never checked, whose line carries none, goes without it.
+            text.AppendLine("Update check: " + (input.ChecksOn ? "on" : "off") + ". " + LastChecked(input.LastCheckedTicks, input.GeneratedUtc, TimeZoneInfo.Utc) + (input.LastCheckedTicks > 0 ? " (UTC)." : "."));
             if (!string.IsNullOrWhiteSpace(input.UpdateLine)) text.AppendLine("Update status: " + input.UpdateLine);
             if (input.RestartPending) text.AppendLine("Update status: " + UpdateWording.RestartLater);
             List("Screens", input.Screens, text);

@@ -424,17 +424,22 @@ namespace OpenDashPlugin
             UpdateService.InBackground(() =>
             {
                 UpdateOutcome outcome;
+                string said;
                 try
                 {
                     outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
+                    said = outcome.Line;
                 }
                 catch (Exception ex)
                 {
                     // A run that throws is still finished on the page: without a completion, applying would
                     // stay true for the life of the control, the card would say "Downloading" until SimHub
-                    // restarts, and every press the run holds off would stay held off with it.
+                    // restarts, and every press the run holds off would stay held off with it. The exception is
+                    // in the log, and the page says the failure in its own sentence, the shape
+                    // Reinstall everything's takes, rather than in UpdateOutcome.Line's reason slot.
                     Log.Error("Applying " + release.Version + " failed", ex);
-                    outcome = new UpdateOutcome { Reason = PanelUpdates.ApplyThrew };
+                    outcome = new UpdateOutcome();
+                    said = PanelUpdates.UpdateFailed;
                 }
                 // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
                 // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
@@ -443,7 +448,7 @@ namespace OpenDashPlugin
                 // Posted, not Invoked: End runs on the interface thread and waits there for this run
                 // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
                 // and SimHub's close would hang the whole grace and then report an install that had finished.
-                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome)));
+                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));
             }, new SimHubInstallLog(), mustFinish: true);
         }
 
@@ -463,7 +468,9 @@ namespace OpenDashPlugin
         /// counted as read: the return rebuilds it and reads the disk, so a dashboard edited in Dash Studio
         /// meanwhile is drawn as it now is. Only the line is said, which the return keeps.
         /// </remarks>
-        private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome)
+        /// <param name="said">What the page says of the run: its outcome's line, or PanelUpdates.UpdateFailed
+        /// for a run that threw.</param>
+        private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome, string said)
         {
             applying = false;
             applyingLine = null;
@@ -497,7 +504,7 @@ namespace OpenDashPlugin
                     RefreshAttention();
                     RefreshSidebar();
                 }
-                if (updatesCardHost != null) Say(outcome.Line, outcome.Ok);
+                if (updatesCardHost != null) Say(said, outcome.Ok);
             }
             catch (Exception ex)
             {

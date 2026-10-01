@@ -271,10 +271,16 @@ namespace OpenDashPlugin.Tests
             // The whole reason a strip row has a tooltip of its own. FlagBoxInstallPlan.Summary offers the
             // copy in the OpenDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
             // that sentence over a strip row sends a driver looking for a file nothing ever created.
+            // The reason is the note under the table, and the strip row's hover says nothing further.
             var strip = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).Tooltip;
-            Assert.Equal(PanelLightRows.Unavailable, strip);
-            Assert.DoesNotContain("OpenDash folder", strip, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("by hand", strip, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(strip);
+            var note = PanelUpdates.TableNotes(true, null, false, true, true, true, false);
+            Assert.Contains(PanelLightRows.Unavailable, note);
+            foreach (var line in note)
+            {
+                Assert.DoesNotContain("OpenDash folder", line, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("by hand", line, StringComparison.OrdinalIgnoreCase);
+            }
             Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
         }
 
