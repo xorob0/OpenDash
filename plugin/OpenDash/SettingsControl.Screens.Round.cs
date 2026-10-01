@@ -48,11 +48,13 @@ namespace OpenDashPlugin
             });
             var intro = Ui.Caption("Any card in any slot. A face with fewer slots uses the first ones.", BodyWidth);
             intro.Margin = new Thickness(0, 0, 0, 12);
-            picture.Margin = new Thickness(0, 0, 0, 12);
+            // Drawn at its own 846 and shrunk to a narrower column, never clipped by it.
+            var fitted = Ui.FitWidth(picture);
+            fitted.Margin = new Thickness(0, 0, 0, 12);
             var warning = BuildSlotWarning();
             warning.Margin = new Thickness(0, 12, 0, 0);
             return Ui.Anchor(Ui.VStack(0,
-                PageSection(PanelScreens.CardsTitle, intro, picture),
+                PageSection(PanelScreens.CardsTitle, intro, fitted),
                 BuildSlotsRevBarRow(screen),
                 warning), PanelScreens.AnchorSlots);
         }
