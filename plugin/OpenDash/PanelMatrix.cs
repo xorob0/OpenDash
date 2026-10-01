@@ -461,9 +461,10 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The line under the name box, which says what the name is not: one profile paints every matrix, so
-        /// SimHub's list carries the profile's name and never this one.
+        /// SimHub's list carries the profile's name and never this one. One sentence, in the form the Screens
+        /// and LEDs sheets give the same row ("Also shown in SimHub's ... list").
         /// </summary>
-        public const string NameCaption = "OpenDash's own label. It is not shown in SimHub's profile list.";
+        public const string NameCaption = "Not shown in SimHub's profile list.";
 
         public const string Cancel = "Cancel";
 

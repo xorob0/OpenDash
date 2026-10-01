@@ -759,7 +759,7 @@ namespace OpenDashPlugin.Tests
             // A change of case is a rename, and is said.
             Assert.Equal("Renamed to left pillar.", PanelMatrix.RenameSaid("Left pillar", "left pillar"));
             Assert.Equal("Name", PanelMatrix.NameTitle);
-            Assert.Equal("OpenDash's own label. It is not shown in SimHub's profile list.", PanelMatrix.NameCaption);
+            Assert.Equal("Not shown in SimHub's profile list.", PanelMatrix.NameCaption);
             // Remove is a sheet with one press; Rename is a sheet; neither acts on the first press.
             var matrix = MatrixSource();
             Assert.Contains("ShowSheet(PanelMatrix.RemoveTitle(name),", matrix);
