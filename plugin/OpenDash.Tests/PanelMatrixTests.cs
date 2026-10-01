@@ -365,6 +365,21 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("askedManually = false; } RefreshAttention(); RebuildPage(); RefreshSidebar(); }", System.Text.RegularExpressions.Regex.Replace(shell, @"\s+", " "));
             var status = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs"));
             Assert.Contains("issues = PanelAttention.Find(attentionFacts);", status);
+            // The plan is kept by the list's identity, so each ask has to hand back a list of its own: a shared
+            // empty list for a rig with nothing to fix would keep a stale plan through an Install's Redraw, and
+            // the line would say Not installed under a message that says Installed. Held with nothing to fix,
+            // with an issue to fix, and for RefreshAttention's catch.
+            Assert.NotSame(PanelAttention.Find(new AttentionInput()), PanelAttention.Find(new AttentionInput()));
+            Assert.NotSame(PanelAttention.Find(null), PanelAttention.Find(null));
+            Func<AttentionInput> withIssue = () => new AttentionInput
+            {
+                Matrices = new List<AttentionMatrix> { new AttentionMatrix { Slot = 1, Name = "Matrix 1" } },
+                FlagBox = FlagBoxInstallState.Outdated,
+                FlagBoxName = "OpenDash Flag box",
+            };
+            Assert.NotEmpty(PanelAttention.Find(withIssue()));
+            Assert.NotSame(PanelAttention.Find(withIssue()), PanelAttention.Find(withIssue()));
+            Assert.Contains("attentionFacts = new AttentionInput(); issues = new List<PanelIssue>(); }", System.Text.RegularExpressions.Regex.Replace(status, @"\s+", " "));
             Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
             // The line as drawn: the state in the dot's ink (ProfileRow's StateHex, the dot's alone), the name as
             // SimHub lists it, the press only where there is one to offer, the message after it, and the hover.
