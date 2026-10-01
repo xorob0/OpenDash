@@ -478,7 +478,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Home_names_a_screens_state_as_its_card_does()
         {
+            // The Screens branch drops the base's NotInSimHubYet for RestartToLoad: once the old word is gone the
+            // new one must be there, so a rename on Screens fails here rather than turning this guard off.
             var cards = typeof(PanelScreens).GetField("RestartToLoad");
+            Assert.True((cards == null) == (typeof(PanelScreens).GetField("NotInSimHubYet") != null),
+                "PanelScreens carries neither NotInSimHubYet nor RestartToLoad, or both: Home's guard needs the new name.");
             if (cards != null) Assert.Equal(PanelHome.RestartToLoad, (string)cards.GetValue(null));
             Assert.Null(typeof(PanelHome).GetField("Missing"));
             Assert.Null(typeof(PanelHome).GetField("NotInSimHubYet"));
@@ -493,6 +497,7 @@ namespace OpenDashPlugin.Tests
         {
             const string fact = "'s device is not in SimHub.";
             Assert.StartsWith(fact + " ", PanelHome.CheckedNoDevice);
+            Sibling(typeof(PanelLeds), LedsMembers);
             var listed = typeof(PanelLeds).GetField("DeviceNotListed");
             if (listed != null) Assert.StartsWith("This strip" + fact + " ", (string)listed.GetValue(null));
             var shipped = typeof(PanelLeds).GetField("NoProfileForStrip");
@@ -507,6 +512,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Home_names_a_strips_and_a_matrixs_state_as_their_cards_do()
         {
+            Sibling(typeof(PanelLeds), LedsMembers);
+            Sibling(typeof(PanelMatrix), MatrixMembers);
             Action<Type, string, string> same = (type, field, home) =>
             {
                 var theirs = type.GetField(field);
@@ -518,6 +525,16 @@ namespace OpenDashPlugin.Tests
             same(typeof(PanelLeds), "Installed", PanelHome.StripInstalled);
             same(typeof(PanelLeds), "NotInstalled", PanelHome.StripNotInstalled);
             same(typeof(PanelMatrix), "NotShown", PanelHome.MatrixNotShown);
+
+            // The idle display as the Matrix page's Idle display control names it, value for value: Home reads
+            // PanelLights.RestLabels, and the control draws PanelMatrix's own copy, which the page may reword.
+            var rests = typeof(PanelMatrix).GetField("RestLabels");
+            if (rests != null)
+            {
+                var labels = (string[])rests.GetValue(null);
+                Assert.Equal(Contract.FlagBoxRests.Length, labels.Length);
+                for (var i = 0; i < Contract.FlagBoxRests.Length; i++) Assert.Equal(labels[i], PanelHome.RestLabel(Contract.FlagBoxRests[i]));
+            }
 
             var stateText = typeof(PanelLeds).GetMethod("StateText", new[] { typeof(FlagBoxInstallState?), typeof(bool?) });
             if (stateText == null) return;
@@ -531,6 +548,25 @@ namespace OpenDashPlugin.Tests
                         "The LEDs card says \"" + card + "\" for " + profile + "/" + selected + ", and Home \"" + PanelHome.StripLine(false, null, profile, selected).Text + "\".");
                 }
             }
+        }
+
+        /// <summary>The members the LEDs branch adds to PanelLeds, which Home's guards read by name.</summary>
+        private static readonly string[] LedsMembers = { "Showing", "NotSelected", "UpdateAvailable", "Installed", "NotInstalled", "StateText", "DeviceNotListed", "NoProfileForStrip" };
+
+        /// <summary>The members the Matrix branch adds to PanelMatrix, which Home's guards read by name.</summary>
+        private static readonly string[] MatrixMembers = { "NotShown", "RestLabels" };
+
+        /// <summary>
+        /// A sibling page's members a guard reads by reflection arrive together, with their branch: none of
+        /// them on this branch, where the guards wait, and all of them once that branch has merged. One renamed
+        /// while the rest stay fails here, rather than quietly turning the guard that reads it back into a
+        /// no-op. Once Home has merged after Screens, LEDs and Matrix, the guards can name the members directly.
+        /// </summary>
+        private static void Sibling(Type type, string[] members)
+        {
+            var present = members.Where(name => type.GetMember(name).Length > 0).ToList();
+            Assert.True(present.Count == 0 || present.Count == members.Length,
+                type.Name + " carries " + string.Join(", ", present) + " but not " + string.Join(", ", members.Except(present)) + ": a renamed member turns Home's guard off.");
         }
 
         /// <summary>A size nobody knows is not drawn, and nor is one the name already says.</summary>
