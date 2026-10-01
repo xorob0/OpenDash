@@ -314,7 +314,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1, canvas.Split("PanelRigMap.Plan(").Length - 1);
             InOrder(RigMethod("private static Brush RigDots("), "Ui.DotGrid();", "if (scale >= 1) return dots;", "scaled.Transform = new ScaleTransform(scale, scale);");
             // Reset layout is what the header's press does.
-            Assert.Contains("reset.Click += (sender, args) => RigResetLayout();", RigMethod("private FrameworkElement BuildRigHeader("));
+            InOrder(RigMethod("private FrameworkElement BuildRigHeader("),
+                "var reset = Ui.Button(PanelRigMap.ResetLayout, PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "reset.Height = PanelRigMap.ResetButtonHeight;",
+                "reset.Padding = new Thickness(PanelRigMap.ResetButtonPaddingX, 0, PanelRigMap.ResetButtonPaddingX, 0);",
+                "reset.Click += (sender, args) => RigResetLayout();");
 
             var tile = RigMethod("private RigTileView BuildRigTile(");
             // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
@@ -343,8 +347,20 @@ namespace OpenDashPlugin.Tests
                 "Canvas.SetTop(root, tile.Y);",
                 "return new RigTileView(tile, root, paint);");
             // The tile's name as the driver named it, and the dot in Caution, as the sidebar's.
+            // Trimmed with an ellipsis to the room beside the dot, which RigNameTrimmed's tooltip rule assumes.
+            InOrder(tile, "Ui.Text(tile.Name, PanelRigMap.NameSize,", "name.TextTrimming = TextTrimming.CharacterEllipsis;",
+                "name.MaxWidth = Math.Max(0, tile.Width - (warns ? PanelRigMap.WarnDot + PanelRigMap.WarnGap : 0));",
+                "RigNameTrimmed(tile.Name, name.MaxWidth)");
             InOrder(tile, "Ui.Text(tile.Name, PanelRigMap.NameSize,", "nameLine.Children.Add(name);", "if (warns)", "Fill = Ui.Brush(Theme.Caution),", "body.Children.Add(nameLine);", "body.Children.Add(host);");
-            Assert.Contains("private static ControlTemplate RigThumbTemplate", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
+            // The Thumb's face is transparent rather than empty: without a background it is not hit-testable,
+            // a press lands on the picture under it, and no tile can be dragged.
+            InOrder(RigMethod("private static ControlTemplate RigThumbTemplate"),
+                "new FrameworkElementFactory(typeof(Border))",
+                "face.SetValue(Border.BackgroundProperty, Brushes.Transparent);",
+                "new ControlTemplate(typeof(Thumb)) { VisualTree = face };");
+            // The drag's clamp and the drop size a tile by its root, which is the whole footprint, name line
+            // included: sized by the picture alone, a tile dropped at the foot deepened the room each time.
+            InOrder(tile, "var root = new Grid { Width = PanelRigMap.FootprintWidth(tile), Height = PanelRigMap.FootprintHeight(tile) };", "Canvas.SetLeft(root, tile.X);");
             // A build that has been replaced writes nothing: the shell lets go of it before the new one is built.
             InOrder(canvas, "Live = true };", "OnDrop(() =>", "extent.Live = false;");
 
@@ -431,6 +447,10 @@ namespace OpenDashPlugin.Tests
                 "DrawsLighting();",
                 "var canvas = Ui.Anchor(BuildRigCanvas(views), PanelRigMap.AnchorCanvas);",
                 "var chips = Ui.Anchor(BuildRigScenarios(views), PanelRigMap.AnchorScenarios);",
+                // The page's section gap between the header, the canvas and the chips.
+                "var gap = PanelShell.SectionGapFor(PanelPage.Rig);",
+                "canvas.Margin = new Thickness(0, gap, 0, 0);",
+                "chips.Margin = new Thickness(0, gap, 0, 0);",
                 "stack.Children.Add(BuildRigHeader());",
                 "stack.Children.Add(canvas);",
                 "stack.Children.Add(chips);",
@@ -466,6 +486,10 @@ namespace OpenDashPlugin.Tests
                 "PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner)",
                 "var column = PanelRigMap.FaceColumn(screen);",
                 "var list = PanelRigMap.FaceZones(screen);",
+                // Each zone as wide (or, stacked, as tall) as its weight, the dash's own proportions.
+                "var length = new GridLength(zone.Weight, GridUnitType.Star);",
+                "if (column) zones.RowDefinitions.Add(new RowDefinition { Height = length });",
+                "else zones.ColumnDefinitions.Add(new ColumnDefinition { Width = length });",
                 "var covered = RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner);",
                 "var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.ZoneWidth(list, \"A\", column, inner));",
                 "dock.Children.Add(RigOverZoneA(covered, list, column, limiter, PanelRigMap.PopUpPaint(scenario)));",
@@ -878,6 +902,26 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(24 + PanelRigMap.FootprintHeight(rim) + 28, laid[0].Y);
             Assert.Equal(24, laid[0].X);
             Assert.Equal(24 + 100 + 28, laid[1].X);
+
+            // The main layout keeps the rig's order down a flank too: pit wall A over B on the right, the
+            // first phone over the second on the left, and the first round over the second.
+            var face = Tile(RigTileKind.Face, "F", 300, 112);
+            var flanks = PanelRigMap.DefaultLayout(new[]
+            {
+                Tile(RigTileKind.PitWall, "A"), Tile(RigTileKind.PitWall, "B"),
+                Tile(RigTileKind.Companion, "P1", 50, 90), Tile(RigTileKind.Companion, "P2", 50, 90),
+                Tile(RigTileKind.Round, "R1", 60, 60), Tile(RigTileKind.Round, "R2", 60, 60),
+                face,
+            }, 1100);
+            var at = flanks.ToDictionary(t => t.Id);
+            Assert.True(at["A"].X > at["F"].X && at["R1"].X > at["F"].X, "the right flank");
+            Assert.True(at["P1"].X < at["F"].X, "the left flank");
+            Assert.Equal(at["A"].X, at["B"].X);
+            Assert.True(at["A"].Y < at["B"].Y, "pit wall A over B");
+            Assert.Equal(at["P1"].X, at["P2"].X);
+            Assert.True(at["P1"].Y < at["P2"].Y, "the first phone over the second");
+            Assert.Equal(at["R1"].X, at["R2"].X);
+            Assert.True(at["R1"].Y < at["R2"].Y, "the first round over the second");
         }
 
         [Fact]
@@ -939,8 +983,8 @@ namespace OpenDashPlugin.Tests
         /// scrolled across, only there -- in a frame at least the 580 high.</summary>
         private static void Inside(RigPlan plan, double width, string label)
         {
-            Assert.True(plan.DrawnHeight >= PanelRigMap.CanvasHeight, label);
-            Assert.True(plan.DrawnHeight >= plan.Height * plan.Scale, label);
+            // The room in the tiles' own pixels is never under the canvas's height, whatever it is drawn at.
+            Assert.True(plan.Height >= PanelRigMap.CanvasHeight, label);
             Assert.InRange(plan.Scale, PanelRigMap.MinScale, 1);
             if (plan.Scale > PanelRigMap.MinScale + 1e-9)
             {
@@ -1616,7 +1660,8 @@ namespace OpenDashPlugin.Tests
                 var screen = Screen(Contract.KindFace, "F", "F", size.Width, size.Height);
                 var room = PanelRigMap.ZoneWidth(PanelRigMap.FaceZones(screen), "A", PanelRigMap.FaceColumn(screen), PanelRigMap.ScreenInner(w));
                 var words = PanelRigMap.LimiterPaint(PanelEmulation.Limiter, room).Words;
-                if (words != null) Assert.True(PanelRigMap.TrackedWidth(words, PanelRigMap.BandTextSize, 0) <= room, size.Width + "x" + size.Height);
+                Assert.True(words != null, "no words on " + size.Width + "x" + size.Height);
+                Assert.True(PanelRigMap.TrackedWidth(words, PanelRigMap.BandTextSize, 0) <= room, size.Width + "x" + size.Height);
             }
             var reference = PanelRigMap.ZoneWidth(zones, "A", false, inner);
             Assert.Equal("Pit limiter", PanelRigMap.LimiterPaint(PanelEmulation.Limiter, reference).Words);
