@@ -480,9 +480,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl)", code);
 
             var copy = Method("private void UpdatesCopyReport()");
-            Assert.Contains("report = PanelUpdates.Report(UpdatesReportInput());", copy);
-            Assert.True(copy.IndexOf("Clipboard.SetText(report);", StringComparison.Ordinal) < copy.IndexOf("Say(PanelUpdates.ReportCopied);", StringComparison.Ordinal)
-                && copy.Contains("Clipboard.SetText(report);"), "the report is on the clipboard before the page says so");
+            // Each failure says its own line and returns; only a report that reached the clipboard says so.
+            InOrder(copy,
+                "report = PanelUpdates.Report(UpdatesReportInput());",
+                "catch",
+                "Say(PanelUpdates.ReportNotWritten, false); return;",
+                "Clipboard.SetText(report);",
+                "catch",
+                "Say(PanelUpdates.ReportFailed, false); return;",
+                "Say(PanelUpdates.ReportCopied);");
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(copy, @"PanelUpdates\.ReportCopied"));
 
             var log = Method("private void UpdatesOpenLog()");
             Assert.Contains("var folder = Path.Combine(plugin.Installer.SimHubRoot ?? string.Empty, PanelUpdates.LogFolder);", log);
@@ -526,6 +533,27 @@ namespace OpenDashPlugin.Tests
 
             var ask = Method("private void UpdatesAsk(TextBlock line, string question)");
             Assert.Contains("foreach (var other in new[] { updatesCardLine, updatesReinstallLine }) { if (other == null || other == line) continue; other.Text = string.Empty; other.Visibility = Visibility.Collapsed; }", ask);
+
+            // The question is shown, on a line in the tree: the second press replaces edited dashboards on the
+            // strength of it, so a question written to a collapsed or detached line would let Download or
+            // Reinstall everything replace them without its names, its kept copy or Put mine back ever showing.
+            Assert.Contains("if (line == null) return; line.Text = question; line.Visibility = Visibility.Visible;", ask);
+            InOrder(Method("private void UpdatesDrawCard()"),
+                "updatesCardLine = Ui.Caption(string.Empty, BodyWidth);",
+                "text.Children.Add(updatesCardLine);",
+                "updatesDownload.SetBinding(");
+            InOrder(Method("private FrameworkElement UpdatesReinstallRow()"),
+                "updatesReinstallLine = Ui.Caption(string.Empty, BodyWidth);",
+                "updatesReinstall.SetBinding(",
+                "grid.Children.Add(updatesReinstall);",
+                "grid.Children.Add(updatesReinstallLine);",
+                "return grid;");
+
+            // Each press's label is read from its own line, through its own action: "Download" or "Reinstall
+            // everything", and "Replace anyway" only while that press's question is what the line shows.
+            var label = Method("private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action)");
+            Assert.Contains("return new Binding(nameof(TextBlock.Text)) { Source = line, Mode = BindingMode.OneWay, Converter = new ConfirmationLabel(confirmation, action), };", label);
+            Assert.Contains("public object Convert(object value, Type targetType, object parameter, CultureInfo culture) { return confirmation.Label(action, value as string); }", FlatCode());
         }
 
         /// <summary>
@@ -1858,6 +1886,7 @@ namespace OpenDashPlugin.Tests
             var import = Method("private void UpdatesCopyForImport()");
             InOrder(import,
                 "var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());",
+                "var ok = copied != null && copied.Status != FlagBoxStatus.Failed && copied.Status != FlagBoxStatus.NotEmbedded;",
                 "updatesImportLine.Text = ok ? PanelUpdates.CopiedForImport(copied.Path) : PanelUpdates.CopyForImportFailed;");
         }
 
@@ -1898,7 +1927,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);", card);
             Assert.Contains("if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());", card);
             // The brief's named source for the notes, never the release's raw text.
-            Assert.Contains("var summary = UpdateWording.Summarise(updateStatus.Notes);", Method("private FrameworkElement UpdatesReleaseNotes()"));
+            var notes = Method("private FrameworkElement UpdatesReleaseNotes()");
+            InOrder(notes,
+                "var summary = UpdateWording.Summarise(updateStatus.Notes);",
+                "var heading = PanelUpdates.NotesHeading(summary);",
+                "var line = Ui.Prose(summary, Theme.SizeSmall, Theme.TextPrimary);");
+            Assert.DoesNotContain("Ui.Prose(updateStatus.Notes", notes);
         }
 
         /// <summary>
@@ -1954,6 +1988,111 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The page's responsive choices are made where it draws, from the width it was given: the pure tests
+        /// hold ButtonBeside, VersionWidth and ColumnWidth, and they are worth nothing unless the draw files
+        /// call them with the content width. A stack test turned round, a card drawn at a fixed width, or a
+        /// version column sized from a constant would put Download beside its words in a narrow column, or
+        /// leave an empty 126 px column while the version also prints in the name.
+        /// </summary>
+        [Fact]
+        public void The_page_stacks_and_drops_a_column_from_the_width_it_is_given()
+        {
+            var beside = Method("private static FrameworkElement UpdatesBeside(");
+            InOrder(beside,
+                "if (press == null) return text;",
+                "if (!PanelUpdates.ButtonBeside(width)) { press.HorizontalAlignment = HorizontalAlignment.Left; press.Margin = new Thickness(0, gap, 0, 0); return Ui.VStack(0, text, press); }",
+                "var grid = new Grid();");
+            Assert.Contains("Child = UpdatesBeside(text, updatesDownload, PanelUpdates.CardGap, updatesWidth),", Method("private void UpdatesDrawCard()"));
+            Assert.Contains("var body = UpdatesBeside(text, restore, PanelUpdates.KeptGap, width);", Method("private FrameworkElement UpdatesKeptCard(double width)"));
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(FlatCode(), @"UpdatesBeside\(text, ").Count);
+
+            var section = Method("private FrameworkElement UpdatesInSimHubSection(double width, bool keptAnchorHere)");
+            Assert.Contains("var versionWidth = PanelUpdates.VersionWidth(width, PanelUpdates.TableHasPress(lightRows));", section);
+            var grid = Method("private static Grid UpdatesTableGrid(double versionWidth)");
+            InOrder(grid,
+                "new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }",
+                "new ColumnDefinition { Width = new GridLength(PanelUpdates.ColumnWidth(versionWidth)) }",
+                "new ColumnDefinition { Width = new GridLength(PanelUpdates.ColumnWidth(PanelUpdates.TableStateWidth)) }",
+                "new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = \"UpdatesPress\" }");
+            // A hidden version column takes no gap and draws nothing, as the head's and every row's cell.
+            var place = Method("private static void UpdatesPlace(");
+            Assert.Contains("var gap = column == 0 || column == 3 || (column == 1 && versionWidth <= 0) ? 0 : PanelUpdates.TableGap;", place);
+            Assert.Contains("if (column == 1 && versionWidth <= 0) element.Visibility = Visibility.Collapsed;", place);
+            InOrder(Method("private static FrameworkElement UpdatesTableHead(double versionWidth)"),
+                "UpdatesPlace(grid, Ui.Eyebrow(PanelUpdates.ItemColumn), 0, versionWidth);",
+                "UpdatesPlace(grid, Ui.Eyebrow(PanelUpdates.VersionColumn), 1, versionWidth);",
+                "UpdatesPlace(grid, Ui.Eyebrow(PanelUpdates.StateColumn), 2, versionWidth);");
+        }
+
+        /// <summary>
+        /// The table and the cards wrap and stretch rather than clip or centre (hooks rule 2): at the 587 px
+        /// narrow column with an Update press the name column is 181 px, and "OpenDash Flag box · matrix
+        /// profile" is 192 px in Barlow 14 and 12, so a name that did not wrap would lose its last word. The
+        /// rows share the press column, so one with Update keeps its version and state under the head's. The
+        /// four Support presses with their NEW tags are about 635 px, so a row that did not wrap would clip
+        /// "Read the guide". A caption beside its press measured unbounded clips beside it, and a bar that is
+        /// not held left sits centred in the card.
+        /// </summary>
+        [Fact]
+        public void The_table_and_cards_wrap_and_stretch_rather_than_clip()
+        {
+            var row = Method("private static Border UpdatesTableRow(");
+            Assert.Contains("name.TextWrapping = TextWrapping.Wrap;", row);
+            Assert.Contains("state.TextWrapping = TextWrapping.Wrap;", row);
+            InOrder(row,
+                "cell.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });",
+                "cell.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });");
+            InOrder(Method("private FrameworkElement UpdatesInSimHubSection(double width, bool keptAnchorHere)"),
+                "var rows = new StackPanel { Orientation = Orientation.Vertical };",
+                "Grid.SetIsSharedSizeScope(rows, true);");
+
+            Assert.Contains("title.TextWrapping = TextWrapping.Wrap;", Method("private FrameworkElement UpdatesKeptCard(double width)"));
+            Assert.Contains("var presses = new WrapPanel { Orientation = Orientation.Horizontal };", Method("private FrameworkElement UpdatesSupportSection()"));
+
+            var card = Method("private void UpdatesDrawCard()");
+            Assert.Contains("var headLine = new WrapPanel { Orientation = Orientation.Horizontal };", card);
+            Assert.Contains("updatesProgressHost = new Border { HorizontalAlignment = HorizontalAlignment.Left,", card);
+
+            // The words take the star column and the press its own width, in both places a press sits beside
+            // words, so the words are measured against what the press leaves them.
+            InOrder(Method("private static FrameworkElement UpdatesBeside("),
+                "grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });",
+                "Grid.SetColumn(text, 0); Grid.SetColumn(press, 1);");
+            InOrder(Method("private FrameworkElement UpdatesReinstallRow()"),
+                "grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });",
+                "Grid.SetColumn(updatesReinstall, 0); Grid.SetColumn(updatesReinstallLine, 1);");
+        }
+
+        /// <summary>
+        /// The draw-time choices that are not a press or a width: the version the card says the rig has, the
+        /// names SimHub lists a folder under (voice.md: no folder names), the devices the select step names,
+        /// and a waiting Download dropped when the page is left.
+        /// </summary>
+        [Fact]
+        public void The_page_draws_what_the_rig_has_by_the_names_SimHub_lists()
+        {
+            var card = Method("private void UpdatesDrawCard()");
+            InOrder(card,
+                "var installed = plugin.RigVersion;",
+                "if (PanelUpdates.ShowsYouHave(installed))",
+                "Ui.Text(PanelUpdates.YouHave, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary), Ui.Numeral(installed, PanelUpdates.CardVersionSize, Theme.TextPrimary));");
+            Assert.DoesNotContain("Ui.Numeral(latest", card);
+
+            var kept = Method("private IList<KeyValuePair<string, string>> UpdatesKept()");
+            Assert.Contains("kept.Add(new KeyValuePair<string, string>(folder, PanelUpdates.ScreenName(screens, folder)));", kept);
+            Assert.Contains("var screens = Settings.RigScreens();", kept);
+            var names = Method("private IReadOnlyCollection<string> UpdatesNames(IEnumerable<string> folders)");
+            Assert.Contains("var screens = Settings.RigScreens(); return (folders ?? Enumerable.Empty<string>()).Select(folder => PanelUpdates.ScreenName(screens, folder)).ToList();", names);
+            // Both questions name what they replace through UpdatesNames, never the installer's folders.
+            Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited),", Method("private void ApplyUpdate()"));
+            Assert.Contains("PanelUpdates.ReinstallQuestion(UpdatesNames(edited));", Method("private void Reinstall()"));
+
+            Assert.Contains("if (target != null && target.Id != null) devices[target.Id] = target.Name;", Method("private static IDictionary<string, string> UpdatesDevices()"));
+
+            Assert.Contains("OnLeave(\"Updates.applyWaiting\", () => applyWaiting = false);", Method("private FrameworkElement BuildUpdatesPage(PanelRoute to)"));
+        }
+
+        /// <summary>
         /// The support report is gathered as its caption promises: OpenDash's last lines of SimHub's current
         /// log, read before the folders are (whose read logs a line per package and would push the older ones
         /// out), and every field the composer is handed. The composer's own test cannot see what it is given.
@@ -1974,6 +2113,26 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains(field, input);
             }
             Assert.Contains("if (PanelUpdates.DrawsFlagBoxRow(matrices.Count > 0) && plugin.FlagBoxJson != null)", input);
+            // What each field is filled with, not only that it is filled: a report naming no screen's kind, no
+            // strip's shape, no matrix or no car tables would pass the field pins above.
+            foreach (var source in new[]
+            {
+                ".Select(pair => new UpdatesReportItem(pair.Value.Name, PanelUpdates.ScreenDetail(pair.Key.Kind, pair.Key.Width, pair.Key.Height), pair.Value.Version, pair.Value.State))",
+                "var census = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);",
+                "var row = PanelUpdates.StripRow(entry.Key.Name, entry.Value);",
+                "var detail = PanelUpdates.StripDetail(PanelLightRows.ShapeLabel(entry.Key.ProfileShapeId), entry.Key.Device);",
+                "strips.Add(new UpdatesReportItem(row.Name, detail, row.Version, row.State));",
+                ".Select(m => new UpdatesReportItem(PanelUpdates.MatrixName(m), Settings.MatrixName(m), null, null))",
+                "var row = PanelUpdates.FlagBoxRow(FlagBoxName(), SafePlan(), plugin.FlagBox?.Path); flagBox = new UpdatesReportItem(row.Name, null, row.Version, row.State);",
+                "var carTables = cars == null ? null : PanelUpdates.CarTables(cars.Status, cars.FetchedAt);",
+            })
+            {
+                Assert.Contains(source, input);
+            }
+            var simHub = Method("private static string UpdatesSimHubVersion(string root)");
+            InOrder(simHub,
+                "var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);",
+                "return File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;");
 
             var tail = Method("private static IList<string> UpdatesLogTail(string root)");
             InOrder(tail,
