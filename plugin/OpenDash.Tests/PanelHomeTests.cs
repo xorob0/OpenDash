@@ -851,7 +851,7 @@ namespace OpenDashPlugin.Tests
             // which has no automation peer, so that name reaches UI Automation only once the kit gives the
             // surface one; the call is held so that it is there when the kit does.
             Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));", code);
-            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);", code);
+            Assert.Contains("night.HorizontalAlignment = HorizontalAlignment.Left; System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);", code);
         }
 
         /// <summary>Home draws night mode and a brightness as controls, so it says so before it draws
@@ -879,19 +879,21 @@ namespace OpenDashPlugin.Tests
             // message; never on the tick.
             Assert.Single(Regex.Matches(code, @"StripFacts\(bar\.Namespace\); var strip = new HomeStrip"));
             Assert.Equal(3, Regex.Matches(code, @"StripFacts\(").Count);
-            Assert.Contains("var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
+            // Each strip's own bar and each screen's own settings, never the first one's.
+            Assert.Contains("var ns = strip.Bar.Namespace; var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
             Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
             Assert.Contains("var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected);", code);
-            Assert.Contains("if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex)) {", code);
+            Assert.Contains("var runKey = run ?? string.Empty; if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex)) {", code);
             Assert.Contains("HomeRelightMissed(); strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim); strip.Host.Child = strip.Picture;", code);
-            Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex);", code);
+            // It says it repainted, so the caller neither draws the frame whole again nor warns.
+            Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex); } return true; }", code);
             Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom); HomeSetDot(strip.Dot, line.DotHex);", code);
             Assert.Contains("strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);", code);
             Assert.Contains("OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });", code);
             Assert.Contains("if (live.Count > 0) OnTick(", code);
             Assert.Contains("OnTick(() => { foreach (var screen in shown) HomePaintScreen(screen); });", code);
             Assert.Contains("if (shown.Count > 0) OnTick(", code);
-            Assert.Contains("var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);", code);
+            Assert.Contains("var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);", code);
             Assert.Contains("var facts = MatrixFacts(slot); var shown = facts == null ? null : facts.Shown;", code);
             Assert.Contains("var line = PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown); IList<string> cells = new string[64]; if (PanelHome.MatrixDrawsGlyph(shown)) { var options = new MatrixOptions { Rest = Settings.MatrixRest(slot), Side = Settings.MatrixSide(slot), Bands = Settings.MatrixGearBands(slot), CarLadder = Settings.MatrixGearCarLadder(slot), }; cells = PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options); }", code);
             Assert.Contains("var picture = Ui.Matrix(cells, MatrixStyle.Home, dim);", code);
@@ -903,6 +905,75 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (painted == row.Painted) return; row.Painted = painted; HomeSetLine(row.Line, line); HomeSetDot(row.Dot, line.DotHex);", code);
             Assert.Contains("text.Text = line.Text; text.Foreground = Ui.Brush(line.TextHex);", code);
             Assert.Contains("dot.Fill = hex == null ? null : Ui.Brush(hex); dot.Visibility = hex == null ? Visibility.Hidden : Visibility.Visible;", code);
+        }
+
+        /// <summary>
+        /// The 1 s tick only reads: a strip's run from the car's lights and its own settings, a screen's zone
+        /// pages. What needs fixing and each device's facts are asked of SimHub on Go and on Check again, never
+        /// once a second on SimHub's interface thread while the driver is on track, and a wheel's lighting
+        /// press does not rebuild Home, whose rebuild the shell settles. Each tick method is held whole from its
+        /// signature, everything the tick runs is read for a call into SimHub, the disk or a rebuild, and the
+        /// page's lifetime hooks are counted.
+        /// </summary>
+        [Fact]
+        public void The_tick_only_reads()
+        {
+            var code = PageCode();
+            Assert.Contains("private void HomePaintStrip(HomeStrip strip) { var profile = strip.Profile; var selected = strip.Selected; var cars = plugin.CarLights; var ns = strip.Bar.Namespace; var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected); var run = live ? cars.Run(strip.Centre) : null; var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected); var runKey = run ?? string.Empty; if (runKey != strip.PaintedRun) {", code);
+            Assert.Contains("private void HomePaintScreen(HomeScreen row) { var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart); var painted = line.Text", code);
+
+            var ticked = new List<string>();
+            foreach (var head in new[] { "void HomePaintStrip(", "void HomePaintScreen(", "bool HomeRelight(", "void HomeRelightMissed(", "void HomeSetLine(", "void HomeSetDot(" })
+            {
+                Assert.Single(Regex.Matches(code, Regex.Escape(head)));
+                ticked.Add(Block(code, code.IndexOf(head, StringComparison.Ordinal)));
+            }
+            foreach (Match tick in Regex.Matches(code, Regex.Escape("OnTick(() =>"))) ticked.Add(Block(code, tick.Index));
+            Assert.Equal(8, ticked.Count);
+            var calls = new[]
+            {
+                @"\bRefreshAttention\(", @"\bCheckAgain\(", @"\bRedraw\(", @"\bRebuildPage\(", @"\bAttention\(",
+                @"\bLedTargets\.", @"\bBarCensus\(", @"\bSafePlan\(", @"\bEmbeddedJsonFor\(", @"\bProfileSelected\(",
+                @"\bFolderInstalled\(", @"\bplugin\.Installer\b", @"\bStripFacts\(", @"\bScreenFacts\(", @"\bMatrixFacts\(",
+                @"\bSave\(", @"\bGo\(", @"\bOpen\(",
+            };
+            foreach (var body in ticked)
+            {
+                foreach (var call in calls) Assert.False(Regex.IsMatch(body, call), "The tick runs " + call + " in: " + body);
+            }
+
+            // Two ticks (the screens' and the strips'), one update hook, the add tile's drop; nothing on a wheel's
+            // lighting press, which rebuilds Home through the shell once the burst settles, and nothing to clear
+            // on leaving, since the shell clears every hook on a rebuild and on Go.
+            Assert.Equal(2, Regex.Matches(code, @"\bOnTick\(").Count);
+            Assert.Single(Regex.Matches(code, @"\bOnUpdate\("));
+            Assert.Single(Regex.Matches(code, @"\bOnDrop\("));
+            Assert.Empty(Regex.Matches(code, @"\bOnLighting\("));
+            Assert.Empty(Regex.Matches(code, @"\bOnLeave\("));
+        }
+
+        /// <summary>The block that opens at the first brace at or after <paramref name="from"/>, to the brace that
+        /// closes it, a brace inside a string skipped.</summary>
+        private static string Block(string code, int from)
+        {
+            var open = code.IndexOf('{', from);
+            Assert.True(open >= 0, "No block after " + from);
+            var depth = 0;
+            var quoted = false;
+            for (var i = open; i < code.Length; i++)
+            {
+                var c = code[i];
+                if (quoted)
+                {
+                    if (c == '\\') i++;
+                    else if (c == '"') quoted = false;
+                    continue;
+                }
+                if (c == '"') quoted = true;
+                else if (c == '{') depth++;
+                else if (c == '}' && --depth == 0) return code.Substring(open, i - open + 1);
+            }
+            throw new InvalidOperationException("The block at " + open + " never closes.");
         }
 
         /// <summary>An update check's answer can land while Home is showing and add or drop a row, so Home hears
@@ -963,7 +1034,7 @@ namespace OpenDashPlugin.Tests
             var code = PageCode();
             Assert.Contains("head.Children.Add(Ui.PageTitle(PanelAttention.Headline(issues.Count)));", code);
             Assert.Contains("var eyebrow = Ui.Eyebrow(PanelHome.Title);", code);
-            Assert.Contains("var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize);", code);
+            Assert.Contains("var icon = Ui.NavIcon(PanelHome.IssueIcon(issue), Theme.Caution, PanelHome.IconSize); icon.HorizontalAlignment = HorizontalAlignment.Center; icon.VerticalAlignment = VerticalAlignment.Center; var well = new Border {", code);
             Assert.Contains("var title = Ui.Text(issue.Title, PanelShell.RowTitleSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
             Assert.Contains("if (!string.IsNullOrEmpty(issue.Detail)) { var detail = Ui.Prose(issue.Detail, PanelHome.DetailSize);", code);
             Assert.Contains("text.Children.Add(detail);", code);
@@ -987,7 +1058,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small);", code);
             Assert.Contains("var dim = PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);", code);
             Assert.Contains("var name = Ui.Text(bar.Name ?? string.Empty, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary);", code);
-            Assert.Contains("var grid = Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax,", code);
+            // Main.dc.html's three cards in its order: Screens, LEDs, Matrix.
+            Assert.Contains("var grid = Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax, HomeCard(PanelPage.Screens, HomeScreenRows(screens), PanelScreens.NoScreens), HomeCard(PanelPage.Leds, HomeStripRows(strips, dim), PanelLeds.NoStrips), HomeCard(PanelPage.Matrix, matrices.Select(m => HomeMatrixRow(m, dim)).ToList(), PanelMatrix.NoPanels)); return PageSection(PanelHome.RightNowTitle, grid);", code);
             Assert.Contains("return PageSection(PanelHome.RightNowTitle, grid);", code);
             Assert.Contains("return PageSection(PanelHome.QuickControlsTitle, Ui.CardBox(body, 0));", code);
             Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelSettings.NightModeTitle), night),", code);
@@ -1078,9 +1150,10 @@ namespace OpenDashPlugin.Tests
             // A device row: padded, ruled on top, its content stretched so the dot sits at the right edge, the
             // hand, the kit's focus ring, and the template whose chrome takes the hover ground.
             Assert.Contains("var row = new Button { Content = content, Padding = new Thickness(PanelHome.RowPaddingX, PanelHome.RowPaddingY, PanelHome.RowPaddingX, PanelHome.RowPaddingY), Background = Brushes.Transparent, BorderBrush = Ui.Brush(Theme.Rule), BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0), HorizontalContentAlignment = HorizontalAlignment.Stretch, Cursor = System.Windows.Input.Cursors.Hand, Template = HomeRowTemplate(), FocusVisualStyle = Ui.FocusRing(), };", code);
-            Assert.Contains("chrome.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); chrome.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty)); chrome.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty)); chrome.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));", code);
+            // The hover's setter names the root "chrome", which WPF looks up when it seals the template.
+            Assert.Contains("if (homeRowTemplate != null) return homeRowTemplate; var chrome = new FrameworkElementFactory(typeof(Border), \"chrome\"); chrome.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty)); chrome.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty)); chrome.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty)); chrome.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));", code);
             Assert.Contains("presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty)); presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); chrome.AppendChild(presenter); var template = new ControlTemplate(typeof(Button)) { VisualTree = chrome };", code);
-            Assert.Contains("var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true }; over.Setters.Add(new Setter(Border.BackgroundProperty, Ui.Brush(Theme.Hover), \"chrome\")); template.Triggers.Add(over);", code);
+            Assert.Contains("var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true }; over.Setters.Add(new Setter(Border.BackgroundProperty, Ui.Brush(Theme.Hover), \"chrome\")); template.Triggers.Add(over); homeRowTemplate = template; return template; }", code);
             // What each row's text says: a matrix's name over its line, a screen's name before its size, a
             // strip's shape as StripShape writes it beside its name, and each dot docked right.
             Assert.Contains("var name = Ui.Text(title, PanelHome.NameSize, FontWeights.SemiBold, Theme.TextPrimary); name.TextWrapping = TextWrapping.Wrap; var lineText = HomeLineText(true); HomeSetLine(lineText, line); var text = Ui.VStack(0, name, lineText); text.VerticalAlignment = VerticalAlignment.Center; var dot = HomeDot(line.DotHex);", code);
@@ -1111,10 +1184,21 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var stack = new StackPanel { Orientation = Orientation.Vertical }; stack.Children.Add(head); if (rows.Count == 0)", code);
             Assert.Contains("var text = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary); if (wrap) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis; text.Margin = new Thickness(0, PanelHome.LineGap, 0, 0); text.Visibility = Visibility.Collapsed; return text;", code);
             Assert.Contains("var dot = new Ellipse { Width = PanelHome.DotSize, Height = PanelHome.DotSize, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(PanelHome.RowGap, 0, 0, 0), }; HomeSetDot(dot, hex); return dot;", code);
-            Assert.Contains("System.Windows.Documents.Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular); numeral.VerticalAlignment = VerticalAlignment.Center;", code);
+            // The figure is the artboard's .num: Barlow Condensed 600 in the primary ink, tabular, centred on its label.
+            Assert.Contains("var numeral = Ui.Text(PanelHome.Percent(value), PanelHome.QuickValueSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data); System.Windows.Documents.Typography.SetNumeralAlignment(numeral, FontNumeralAlignment.Tabular); numeral.VerticalAlignment = VerticalAlignment.Center;", code);
+            // Each eyebrow centred on what it is docked beside, and each dock filling with its last child.
+            Assert.Contains("var eyebrow = Ui.Eyebrow(PanelNav.Label(page)); eyebrow.VerticalAlignment = VerticalAlignment.Center; var headDock = new DockPanel { LastChildFill = true }; DockPanel.SetDock(open, Dock.Right);", code);
+            Assert.Contains("var label = Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn)); label.VerticalAlignment = VerticalAlignment.Center; var labelLine = new DockPanel { LastChildFill = true }; DockPanel.SetDock(numeral, Dock.Right);", code);
+            Assert.Contains("var dock = new DockPanel { LastChildFill = true }; DockPanel.SetDock(well, Dock.Left); dock.Children.Add(well);", code);
+            Assert.Contains("var top = new DockPanel { LastChildFill = true }; strip.Dot.Margin = new Thickness(PanelHome.MetaGap, 0, 0, 0);", code);
+            Assert.Contains("var dock = new DockPanel { LastChildFill = true }; DockPanel.SetDock(row.Dot, Dock.Right);", code);
+            Assert.DoesNotContain("LastChildFill = false", code);
+            // A shape or a size is drawn only when there is one: a bare run's one count included, never an empty figure.
+            Assert.Contains("var shape = PanelHome.StripShape(bar); if (shape.Length > 0) { var meta = Ui.Text(shape,", code);
+            Assert.Contains("if (!string.IsNullOrEmpty(meta)) { var figure = Ui.Text(meta,", code);
             Assert.Contains("var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small); rig.Padding = new Thickness(PanelHome.QuickRigPaddingX, 0, PanelHome.QuickRigPaddingX, 0); rig.HorizontalAlignment = HorizontalAlignment.Left;", code);
             Assert.Contains("var cells = new FrameworkElement[] { Ui.VStack(PanelHome.QuickGap, labelLine, slider), Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelSettings.NightModeTitle), night), Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelHome.TryTitle), rig), };", code);
-            Assert.Contains("var rule = i == 0 ? 0 : PanelMetrics.BorderWeight; var cell = new Border { Padding = new Thickness(PanelHome.QuickPaddingX, PanelHome.QuickPaddingY, PanelHome.QuickPaddingX, PanelHome.QuickPaddingY), BorderBrush = Ui.Brush(Theme.Rule),", code);
+            Assert.Contains("for (var i = 0; i < cells.Length; i++) { var rule = i == 0 ? 0 : PanelMetrics.BorderWeight; var cell = new Border { Padding = new Thickness(PanelHome.QuickPaddingX, PanelHome.QuickPaddingY, PanelHome.QuickPaddingX, PanelHome.QuickPaddingY), BorderBrush = Ui.Brush(Theme.Rule),", code);
         }
 
         /// <summary>What each press does: the issue's own call, and each row and link to its own page.</summary>
