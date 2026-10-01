@@ -296,12 +296,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A dashboard written after SimHub started, which SimHub has not read: the ruled phrase for that state
-        /// (voice ruling 23, "One phrase for the one state"), which the Screens card and its fix box say too.
+        /// A dashboard written after SimHub started, which SimHub has not read: one phrase for that state on
+        /// every page (voice.md, "One word per thing"), which the Screens card and its fix box say too, where
+        /// Main.dc.html's line says "Not in SimHub yet".
         /// </summary>
         /// <remarks>
-        /// The base's PanelScreens has no constant with these words: its NotInSimHubYet is the wording the
-        /// ruling replaced, and the Screens branch drops it for PanelScreens.RestartToLoad. PanelHomeTests holds
+        /// The base's PanelScreens has no constant with these words: its NotInSimHubYet is the wording this
+        /// replaces, and the Screens branch drops it for PanelScreens.RestartToLoad. PanelHomeTests holds
         /// this one to PanelScreens' own the moment that constant exists, so the two pages cannot drift; once
         /// it does, Home should draw PanelScreens.StateLabel and lose this copy.
         /// </remarks>
@@ -429,8 +430,10 @@ namespace OpenDashPlugin
 
         // --- Right now: LEDs -------------------------------------------------------------------------------
 
-        /// <summary>The #369 switch's noun, read from the switch itself (voice ruling 6): the car's own rev
-        /// lights, never just "lights", and renamed with the switch if it is.</summary>
+        /// <summary>The #369 switch's noun, read from the switch itself (PanelLeds.CarRevLightsTitle), so one
+        /// thing has one name (voice.md, "One word per thing"): the car's own rev lights, never just "lights",
+        /// and renamed with the switch if it is. Main.dc.html's "Car-specific · Porsche table" names the
+        /// tables behind it, which is the panel talking to itself.</summary>
         public const string CarLightsLine = PanelLeds.CarRevLightsTitle;
 
         // A strip's state. Showing, Not selected in SimHub and Update available are the LEDs cards' words
@@ -556,7 +559,10 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// No dot for the flag box profile's update: the line would not say what the amber meant, and the
-        /// attention card already has the row for it.
+        /// attention card already has the row for it. Which content number a device shows is not read yet
+        /// (#521), so every rig's panels are Shown null today: the amber line, its dark picture and the
+        /// green dot are drawn once that ticket fills Shown, and until then a panel nobody checked is not
+        /// called dark.
         /// </remarks>
         public static HomeLine MatrixLine(int slot, string name, string rest, bool? shown)
         {

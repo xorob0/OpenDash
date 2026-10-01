@@ -578,9 +578,8 @@ namespace OpenDashPlugin
 
         /// <summary>A device's line under its name, 3 under it: a screen's on one line, trimmed with its whole text
         /// on hover, as Main.dc.html's Screens line is; a strip's the same, where the artboard's LEDs line wraps,
-        /// so that the one line a live strip keeps holds the card at one height whatever the car's name (a
-        /// departure recorded with Home's); and a matrix's, which no session changes, wrapped. HomeSetLine
-        /// fills it.</summary>
+        /// so that the one line a live strip keeps holds the card at one height whatever the car's name; and
+        /// a matrix's, which no session changes, wrapped. HomeSetLine fills it.</summary>
         private static TextBlock HomeLineText(bool wrap)
         {
             var text = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary);

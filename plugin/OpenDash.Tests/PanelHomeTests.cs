@@ -456,15 +456,16 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             var missing = PanelHome.ScreenLine(settings, face, false, true);
             // The Screens card's own constant, not a copy: when the card's word moves, Home's moves with it. The
-            // ruled word is held here too (the inventory's "Missing", scenario HM-04), so a Screens page that
-            // says otherwise fails Home until the page and the ruling agree.
+            // word itself is held here too, so a Screens page that says otherwise fails Home until the two
+            // pages agree on one word (voice.md, "One word per thing").
             Assert.Equal(PanelScreens.Missing, missing.Text);
             Assert.Equal("Missing", missing.Text);
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
-            // The ruled phrase for a dashboard SimHub has not read (voice ruling 23). Scenario HM-03 asks the
-            // fix row to say it too, which PanelAttention's title does not yet: that waits on the Screens request.
+            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing"), the Screens card's
+            // too. The attention card's title for the same state still says "is not in SimHub yet"
+            // (PanelAttention), which PanelAttention's owner settles at the #503 merge.
             Assert.Equal("Restart SimHub to load it", restart.Text);
             Assert.Equal(PanelHome.RestartToLoad, restart.Text);
             Assert.Equal(Theme.Caution, restart.TextHex);
@@ -1126,7 +1127,7 @@ namespace OpenDashPlugin.Tests
         public void Every_decision_it_wires_is_held_whole()
         {
             var code = PageCode();
-            // Rig order, as the brief and the Right now ruling have it: each list walked as Settings gives it.
+            // Rig order: each list walked as Settings gives it, as the Screens, LEDs and Matrix pages list them.
             Assert.Contains("foreach (var screen in screens) { if (screen == null) continue; var row = HomeScreenRow(screen);", code);
             // A strip is drawn in its own shape, ends and centre the right way round, and asks the car for a run
             // of its own centre's length; its line repaints only when it moved, as a screen's does, and the
@@ -1236,7 +1237,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The empty rig is the add tile with its sentence, in place of Right now and under its anchor,
-        /// and it is the only thing on the page (voice.md; the inventory's "in place of the three sections"):
+        /// and it is the only thing on the page, as voice.md's rig empty state is:
         /// only an issue the headline counts (an update, the one kind an empty rig can have) is drawn above it,
         /// so the count is never over no rows. A rig with anything draws Right now and the quick controls, and
         /// each Home search entry lands on its own section's anchor. Search does not know whether the rig is
