@@ -147,7 +147,7 @@ namespace OpenDashPlugin.Tests
                 {
                     PanelSettings.UnitsTitle, PanelSettings.FlagsInPitLaneTitle, PanelSettings.BrightnessTitle,
                     PanelSettings.NightBrightnessTitle, PanelSettings.NightModeTitle, PanelSettings.NightModeButtonTitle,
-                    PanelSettings.PreviewTitle, PanelSettings.AlertColumn, PanelSettings.TriggerColumn, PanelSettings.TryLabel,
+                    PanelSettings.PreviewTitle, PanelSettings.AlertColumn, PanelSettings.ThresholdColumn, PanelSettings.TryLabel,
                 })
                 .Concat(PanelSettings.Alerts.Select(alert => alert.Title))
                 .Concat(PanelSettings.SurfaceColumns)
@@ -446,7 +446,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// Every metric the page draws with is PanelSettings', held to Settings.dc.html where the artboard has
-        /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the Trigger cell's gap 8, the
+        /// one: td padding 10/12 at 14 px with the name in 500, the .ck 16, Try 13, the Threshold cell's gap 8, the
         /// Units line 14 in 400, the .num-in's and the .num's 600, the preview card's padding 16/18 with gap 16
         /// and 8 under it, the name inputs 150 with gap 8, the .t gap of 8 before a tag, the h2's 10, the tyre
         /// buttons' 6 and the .idx's 500. The page types no gap, padding, size or weight of its own: no numeral
@@ -768,9 +768,9 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelSettings.Alert("Nothing"));
             Assert.Equal(new[] { "Screens", "LEDs", "Matrix", "Races only" }, PanelSettings.SurfaceColumns);
             Assert.Equal("Alert", PanelSettings.AlertColumn);
-            // A heading is a noun (voice.md), and "Trigger" fits every row, Pit window open's event included,
-            // where the artboard's "When" is an adverb.
-            Assert.Equal("Trigger", PanelSettings.TriggerColumn);
+            // A heading is a noun (voice.md), where the artboard's "When" is an adverb, and it is the word the
+            // panel already gives these numbers: Matrix's "Thresholds" link lands on this table.
+            Assert.Equal("Threshold", PanelSettings.ThresholdColumn);
             Assert.Equal("Try", PanelSettings.TryLabel);
             // Every row is drawn, in this order, and every live row writes the rig-wide setting.
             var page = Page();
@@ -1001,10 +1001,10 @@ namespace OpenDashPlugin.Tests
             // A name's caption under it.
             Assert.Matches(@"if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);", page);
 
-            // The table's head in the artboard's order: Alert, then Trigger.
+            // The table's head in the artboard's order: Alert, then Threshold.
             var alertHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);", StringComparison.Ordinal);
-            var triggerHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.TriggerColumn), null, false);", StringComparison.Ordinal);
-            Assert.True(alertHead >= 0 && triggerHead > alertHead, "the table's head");
+            var thresholdHead = page.IndexOf("SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);", StringComparison.Ordinal);
+            Assert.True(alertHead >= 0 && thresholdHead > alertHead, "the table's head");
 
             // The greyed rows' words where they are drawn: the fuel unit SimHub's, litres when it cannot say;
             // the tyre buttons main then secondary; every greyed option disabled and the first chosen.

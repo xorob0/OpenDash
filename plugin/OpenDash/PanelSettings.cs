@@ -318,11 +318,12 @@ namespace OpenDashPlugin
 
         public const string AlertColumn = "Alert";
 
-        /// <summary>What sets each row off. The artboard heads the column "When", an adverb; voice.md makes a
-        /// heading a noun, and voice.md beats artboard copy. "Trigger" fits every row, Pit window open's event
-        /// as much as a threshold, where "Threshold" would name something that row does not have. Updates'
-        /// own column heads are nouns too. plugin.md records the departure from the artboard.</summary>
-        public const string TriggerColumn = "Trigger";
+        /// <summary>What each row warns at. The artboard heads the column "When", an adverb; voice.md makes a
+        /// heading a noun, and voice.md beats artboard copy. The noun is the one the panel already gives these
+        /// numbers -- Matrix's Warnings row links "Thresholds" here, search finds the table by "threshold" --
+        /// so the panel keeps one word for the thing. Every row draws a threshold box, Pit window open's too,
+        /// empty because that alert is an event. A departure from the artboard for plugin.md to record.</summary>
+        public const string ThresholdColumn = "Threshold";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
         public static readonly string[] SurfaceColumns = { "Screens", "LEDs", "Matrix", "Races only" };

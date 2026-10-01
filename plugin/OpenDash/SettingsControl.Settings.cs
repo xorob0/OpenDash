@@ -649,7 +649,7 @@ namespace OpenDashPlugin
             SettingsAlertRule(grid, row);
             var column = 0;
             SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.AlertColumn), null, false);
-            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.TriggerColumn), null, false);
+            SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);
             if (surfaces)
             {
                 foreach (var name in PanelSettings.SurfaceColumns)
