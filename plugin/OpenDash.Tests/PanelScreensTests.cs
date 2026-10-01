@@ -829,7 +829,10 @@ namespace OpenDashPlugin.Tests
         public void A_pit_wall_lists_the_zones_of_the_page_on_screen()
         {
             Assert.Equal("Page on screen", PanelScreens.PitWallPageTitle);
+            // The race page's board is fixed in pitwall.ts and has no slot, so its list names only A and B: the
+            // artboard's Board row is a recorded departure, not an oversight.
             Assert.Equal(new[] { "RaceA", "RaceB" }, PanelScreens.PitWallZones(0).Select(s => s.Key));
+            Assert.DoesNotContain(Contract.PitWallZoneSlots, slot => slot.Page == "Race" && slot.Slot != "A" && slot.Slot != "B");
             Assert.Equal(new[] { "TowerWide", "TowerA", "TowerB" }, PanelScreens.PitWallZones(1).Select(s => s.Key));
             Assert.Equal(new[] { "TelemetryA", "TelemetryB", "TelemetryC" }, PanelScreens.PitWallZones(2).Select(s => s.Key));
             Assert.Equal(new[] { "Wide zone", "Zone A", "Zone B" }, PanelScreens.PitWallZones(1).Select(PanelScreens.PitWallZoneLabel));

@@ -821,6 +821,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The landscape zones of one page, in the order the list draws them.</summary>
+        /// <remarks>
+        /// Only the zones a driver can set. Screens.dc.html's Race zones card draws a Board row with a
+        /// Leaderboard choice above Zone A and Zone B, but the race page's board is fixed in pitwall.ts and has
+        /// no Contract.PitWallZoneSlot, so there is no setting for a row to write, and a choice that changes
+        /// nothing is not drawn. A departure recorded for Tim: if he wants the board configurable, it is a
+        /// ticket, and until then a greyed row.
+        /// </remarks>
         public static IReadOnlyList<Contract.PitWallZoneSlot> PitWallZones(int page)
         {
             var name = Contract.PitWallPageNames[Contract.NormalisePitWallPage(page)];
