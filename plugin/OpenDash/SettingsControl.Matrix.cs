@@ -91,19 +91,22 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The flag box profile on the title's line: a dot in its state's ink, the profile as SimHub lists it
-        /// with its version, and the one press that changes it, which is left out when there is nothing to
-        /// install or nowhere to put it.
+        /// The flag box profile on the title's line: a dot in its state's ink (PanelMatrix.ProfileRow), the
+        /// profile as SimHub lists it with its version, and the one press that changes it, which is left out
+        /// when there is nothing to install or nowhere to put it.
         /// </summary>
         private FrameworkElement BuildMatrixProfile(FlagBoxPlan plan)
         {
             var state = PanelMatrix.StateOf(plan);
             var version = plan == null ? null : plan.InstalledVersion;
+            var action = PanelMatrix.ProfileRow(state, version);
+            // The dot is the page's own ink for the state, the one part of the line that tells an older profile
+            // from a current one: never another page's table, which has moved under it twice.
             var dot = new Ellipse
             {
                 Width = PanelMatrix.ProfileDotSize,
                 Height = PanelMatrix.ProfileDotSize,
-                Fill = Ui.Brush(PanelLightRows.DotHex(state)),
+                Fill = Ui.Brush(action.StateHex),
                 VerticalAlignment = VerticalAlignment.Center,
             };
             var line = Ui.Text(PanelMatrix.ProfileLine(FlagBoxName(), state, version), Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
@@ -111,7 +114,6 @@ namespace OpenDashPlugin
             var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line);
             if (PanelMatrix.ProfileHasButton(state))
             {
-                var action = PanelMatrix.ProfileRow(state, version);
                 var primary = action.Style == PanelButton.Primary;
                 var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);
                 if (!primary) button.Padding = new Thickness(PanelMatrix.ProfileButtonPaddingX, 0, PanelMatrix.ProfileButtonPaddingX, 0);

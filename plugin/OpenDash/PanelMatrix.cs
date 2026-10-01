@@ -33,12 +33,14 @@ namespace OpenDashPlugin
         // --- The profile, on the title's line ---------------------------------------------------------
 
         /// <summary>
-        /// What the flag box profile's line says after the profile's name, and the press beside it. The
-        /// Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither page rewords
-        /// a state for the other. The state is the version SimHub holds, since the name already says which
-        /// profile it is: "OpenDash Flag box · 0.5.0". Every state carries its ink, though the line is drawn in
-        /// the dot's colour rather than in it: the dot's colour is read off a row's ink (PanelLightRows.DotHex),
-        /// and a state left without one would leave the dot without a colour.
+        /// What the flag box profile's line says after the profile's name, the ink of the dot beside it, and
+        /// the press. The Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither
+        /// page rewords a state for the other. The state is the version SimHub holds, since the name already
+        /// says which profile it is: "OpenDash Flag box · 0.5.0". With the line reduced to the name and the
+        /// version (ruling 55) the dot is the one part of it that tells an older profile from a current one, so
+        /// each state's ink is the dot's, drawn by the page itself (the words are text.secondary in every
+        /// state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
+        /// Home and the Updates artboard draw it, a failed one red, and none purpose.status.notInstalled.
         /// </summary>
         public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
         {
@@ -46,13 +48,13 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(installed, Theme.StatusUpToDate, Update, PanelButton.Primary);
+                    return new RowAction(installed, Theme.StatusUpdateAvailable, Update, PanelButton.Primary);
                 case FlagBoxInstallState.UpToDate:
                     return new RowAction(installed, Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
                     return new RowAction(PanelCopy.InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
                 default:
-                    return new RowAction(PanelCopy.NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
+                    return new RowAction(PanelCopy.NotInstalled, Theme.StatusNotInstalled, "Install", PanelButton.Outline);
             }
         }
 

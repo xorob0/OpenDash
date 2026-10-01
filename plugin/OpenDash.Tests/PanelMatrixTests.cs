@@ -121,20 +121,26 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { FlagBoxInstallState.Outdated },
                 pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
             Assert.Equal(PanelMatrix.Update, outdated.Button);
-            // Every state carries its ink, though the line is drawn in the dot's colour: the dot's colour is read
-            // off a row's ink, and the page hands it to Ui.Brush, which throws on a null one, so a state left
-            // without an ink would fail the whole page.
-            Assert.Equal(Theme.StatusUpToDate, outdated.StateHex);
+            // Every state carries the dot's ink, which the page draws itself: the line is the name and the version
+            // (ruling 55), so the dot is what tells an older profile from a current one, in the amber the
+            // sidebar's dot, Home and the Updates artboard give an update. The page hands it to Ui.Brush, which
+            // throws on a null one, so a state left without an ink would fail the whole page.
+            Assert.Equal(Theme.StatusUpdateAvailable, outdated.StateHex);
             Assert.Equal(Theme.StatusUpToDate, current.StateHex);
+            Assert.NotEqual(current.StateHex, outdated.StateHex);
             Assert.Equal(Theme.StatusFailed, PanelMatrix.ProfileRow(FlagBoxInstallState.Failed, null).StateHex);
-            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).StateHex);
-            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.Unavailable, null).StateHex);
-            Assert.Equal(Theme.TextLabel, PanelMatrix.ProfileRow(FlagBoxInstallState.NotEmbedded, null).StateHex);
+            Assert.Equal(Theme.StatusNotInstalled, PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).StateHex);
+            Assert.Equal(Theme.StatusNotInstalled, PanelMatrix.ProfileRow(FlagBoxInstallState.Unavailable, null).StateHex);
+            Assert.Equal(Theme.StatusNotInstalled, PanelMatrix.ProfileRow(FlagBoxInstallState.NotEmbedded, null).StateHex);
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
-                Assert.Matches("^#[0-9A-F]{6}$", PanelLightRows.DotHex(state));
+                Assert.Matches("^#[0-9A-F]{6}$", PanelMatrix.ProfileRow(state, "0.4.0").StateHex);
+                Assert.Matches("^#[0-9A-F]{6}$", PanelMatrix.ProfileRow(state, null).StateHex);
             }
-            Assert.Contains("Fill = Ui.Brush(PanelLightRows.DotHex(state)),", MatrixSource());
+            // The page's own ink, never another page's table, which moved under the dot twice.
+            Assert.Contains("var action = PanelMatrix.ProfileRow(state, version); var dot = new Ellipse { Width = PanelMatrix.ProfileDotSize, Height = PanelMatrix.ProfileDotSize, Fill = Ui.Brush(action.StateHex),", FlatSource());
+            Assert.DoesNotContain("DotHex", MatrixSource());
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(MatrixSource(), @"PanelMatrix\.ProfileRow\("));
 
             // The state a plan reads as, the by-hand import, and the failure the page keeps.
             Assert.Equal(FlagBoxInstallState.NotEmbedded, PanelMatrix.StateOf(null));
@@ -305,13 +311,12 @@ namespace OpenDashPlugin.Tests
             var status = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs"));
             Assert.Contains("issues = PanelAttention.Find(attentionFacts);", status);
             Assert.DoesNotContain("PanelCopy.LightRow(", matrix);
-            // The line as drawn: the state in the dot's ink (ProfileRow's StateHex is not drawn on this page, the
-            // dot carries the state), the name as SimHub lists it, the press only where there is one to offer,
-            // the message after it, and the hover.
+            // The line as drawn: the state in the dot's ink (ProfileRow's StateHex, the dot's alone), the name as
+            // SimHub lists it, the press only where there is one to offer, the message after it, and the hover.
             foreach (var pin in new[]
             {
                 "slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));",
-                "Fill = Ui.Brush(PanelLightRows.DotHex(state)),",
+                "Fill = Ui.Brush(action.StateHex),",
                 "Width = PanelMatrix.ProfileDotSize, Height = PanelMatrix.ProfileDotSize,",
                 "var line = Ui.Text(PanelMatrix.ProfileLine(FlagBoxName(), state, version), Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);",
                 "var row = Ui.HStack(PanelMatrix.ProfileGap, dot, line); if (PanelMatrix.ProfileHasButton(state)) {",
@@ -325,7 +330,8 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(pin, flat);
             }
-            Assert.DoesNotContain("StateHex", matrix);
+            // StateHex is the dot's alone: the words stay text.secondary in every state.
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(matrix, @"StateHex"));
             // A page that asks SimHub while it is built repaints its lighting in place.
             Assert.DoesNotContain("DrawsLighting()", matrix);
             Assert.Contains("OnLighting(() => Ui.Redim(preview,", matrix);
@@ -492,7 +498,7 @@ namespace OpenDashPlugin.Tests
                 // The title's line: the version SimHub holds, the press for the line's own state, clicked, and
                 // put on the line.
                 "var version = plan == null ? null : plan.InstalledVersion;",
-                "var action = PanelMatrix.ProfileRow(state, version); var primary = action.Style == PanelButton.Primary; "
+                "if (PanelMatrix.ProfileHasButton(state)) { var primary = action.Style == PanelButton.Primary; "
                     + "var button = Ui.Button(action.Button, primary ? PanelButtonKind.Primary : PanelButtonKind.Ghost, PanelButtonSize.Small);",
                 "button.Click += (sender, args) => { var from = PanelMatrix.PressedFrom(state, matrixFailedFrom); var result = InstallFlagBox();",
                 "if (said != null) Say(said); }; row.Children.Add(button); }",
