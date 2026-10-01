@@ -135,7 +135,7 @@ namespace OpenDashPlugin
                 paint();
                 ledsCardRepaints[ns] = paint;
                 OnLighting(() => Ui.Redim(picture, LedsDim(ns)));
-                cards.Add(Ui.StripCard(
+                var card = Ui.StripCard(
                     bar.Name,
                     PanelLeds.ShapeDots(bar.Shape),
                     fitted,
@@ -146,7 +146,10 @@ namespace OpenDashPlugin
                     {
                         Select(PanelPage.Leds, ns);
                         Redraw();
-                    }));
+                    });
+                // The card trims a long name, so its hover has the whole of it.
+                card.ToolTip = bar.Name;
+                cards.Add(card);
             }
             cards.Add(Ui.InlineAddCard(PanelLights.AddBar, PanelKit.StripAddIcon, ShowAddLedBar));
             var grid = Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray());
@@ -246,6 +249,10 @@ namespace OpenDashPlugin
         private FrameworkElement LedsHeader(LedBar bar, IList<LedTarget> targets, IList<string> declined)
         {
             var title = Ui.SubHeading(bar.Name);
+            // Wrapped rather than cut: a name has no length limit, and the header is the one place it is meant to be
+            // read whole. The WrapPanel gives it the whole of the name's column.
+            title.TextTrimming = TextTrimming.None;
+            title.TextWrapping = TextWrapping.Wrap;
             title.VerticalAlignment = VerticalAlignment.Center;
             // The gap is the name's, so a chip the WrapPanel drops to a second line starts under the name.
             title.Margin = new Thickness(0, 0, 12, 0);
@@ -883,7 +890,6 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCarTablesRow()
         {
             carTablesButton = Ui.Button(PanelLights.CarTablesButton(plugin.CarLights.CarCount), PanelButtonKind.Outline, PanelButtonSize.Small);
-            carTablesButton.ToolTip = PanelLights.CarTablesButtonTooltip;
             carTablesButton.Click += (sender, args) => DownloadCarTables();
 
             var row = LedsRow(PanelLights.CarTablesTitle, carTablesButton);
@@ -959,6 +965,7 @@ namespace OpenDashPlugin
             if (carTablesButton != null)
             {
                 carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+                carTablesButton.ToolTip = PanelLights.CarTablesButtonTooltip(service.CarCount);
                 carTablesButton.IsEnabled = !carTablesDownloading;
             }
         }

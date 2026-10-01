@@ -261,16 +261,19 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The header's line says each reason once: with no SimHub device at all, the SimHub device row's caption
-        /// already says the whole of it, so the header points at that row instead of saying it twice. Every other
-        /// reason is the one ProfileBlocked gives, and a press's line after Reverse or Rename keeps the full reason.
+        /// says what SimHub lacks and the step in SimHub, so the header says only why it offers no Install and
+        /// names that row, never its fact a second time. Every other reason is the one ProfileBlocked gives, and a
+        /// press's line after Reverse or Rename keeps the full reason.
         /// </summary>
         [Fact]
-        public void The_header_says_a_reason_the_device_row_says_only_by_pointing_at_it()
+        public void The_header_names_the_device_row_rather_than_saying_its_fact_again()
         {
-            // The fact, with the row under it carrying the step: nothing installs the profile once a device appears.
-            Assert.Equal("No SimHub device to install this strip's profile on.", PanelLeds.AwaitsDevice);
+            // A pointer, by the row's name: nothing installs the profile once a device appears, so it says no wait.
+            Assert.Equal("Nothing here can install this strip's profile. See SimHub device.", PanelLeds.AwaitsDevice);
             Assert.DoesNotContain("wait", PanelLeds.AwaitsDevice);
-            Assert.Contains(PanelLights.BarDeviceTitle.Substring("SimHub ".Length), PanelLeds.AwaitsDevice);
+            Assert.EndsWith("See " + PanelLights.BarDeviceTitle + ".", PanelLeds.AwaitsDevice);
+            Assert.DoesNotContain("No SimHub device", PanelLeds.AwaitsDevice);
+            Assert.DoesNotContain("LEDs", PanelLeds.AwaitsDevice);
             Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, null));
             Assert.Equal(PanelLeds.AwaitsDevice, PanelLeds.HeaderBlocked(true, false, 0, new[] { "Rim" }));
             Assert.NotEqual(PanelLeds.DeviceRow(null, "arduino", null).Caption, PanelLeds.HeaderBlocked(true, false, 0, null));
@@ -348,6 +351,8 @@ namespace OpenDashPlugin.Tests
                 // Lovely Car Data's press, and the row's label and line, ruling 51.
                 "carTablesButton.Click += (sender, args) => DownloadCarTables();",
                 "carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);",
+                // The hover follows the label, a first download turning both from Download to Update.
+                "carTablesButton.ToolTip = PanelLights.CarTablesButtonTooltip(service.CarCount);",
                 "carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;",
                 // The Add sheet's choices each change what the press adds.
                 "() => pickHardware(true)",
@@ -1104,6 +1109,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var stacked = !TwoColumns;", header);
             Assert.Contains("var row = stacked ? (FrameworkElement)Ui.VStack(8, name, actions) : Ui.Row(name, actions);", header);
             Assert.Contains("lead.TextTrimming = TextTrimming.CharacterEllipsis;", header);
+            // The strip's name wraps rather than being cut: a name has no length limit, and this is where it is read
+            // whole. The card trims it, so its hover has the whole of it.
+            Assert.Contains("title.TextTrimming = TextTrimming.None;", header);
+            Assert.Contains("title.TextWrapping = TextWrapping.Wrap;", header);
+            Assert.Contains("card.ToolTip = bar.Name;", Body(leds, "private FrameworkElement LedsCards(", "private FrameworkElement LedsStripSection("));
             Assert.Contains("DockPanel.SetDock(numerals, Dock.Right);", header);
             var actions = leds.Substring(leds.IndexOf("private FrameworkElement BuildLedBarActions(", StringComparison.Ordinal));
             actions = actions.Substring(0, actions.IndexOf("private void InstallLedBarProfile(", StringComparison.Ordinal));
@@ -1612,6 +1622,11 @@ namespace OpenDashPlugin.Tests
             // A device SimHub is not talking to is said in one form: a sentence in the caption, the sheet's meta
             // joined by a dot in the picker.
             Assert.Equal("Goes to Button hub, which is not connected.", PanelLeds.DeviceRow(new[] { unplugged }, "hub", null).Caption);
+            // With a device passed over as well, each fact stays beside its own device.
+            Assert.Equal("Goes to Button hub, which is not connected, and Rim has no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLeds.DeviceRow(new[] { unplugged }, "hub", new[] { "Rim" }).Caption);
+            Assert.Equal("Goes to Fanatec CSL Elite, not Rim, which has no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLeds.DeviceRow(new[] { wheel }, "wheel", new[] { "Rim" }).Caption);
 
             // The strip's own device, gone from SimHub: first and selected, never the device that sorted first.
             var gone = PanelLeds.DeviceRow(new[] { wheel }, "old", null);
@@ -1730,9 +1745,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelLeds.AddedWithoutDevice("Rim"), PanelLeds.AddedWithoutDevice("Rim", new string[0]));
             // Where SimHub lists a device OpenDash passed over (#437), the line does not send the driver to add
             // hardware SimHub already has: it says what the SimHub device row under it says.
-            Assert.Equal("Added Rim, but Fanatec CSL Elite has no LEDs OpenDash can reach. See SimHub's log.",
+            // It still names the two steps every add without an install leaves, in BarAddFailed's form: the strip's
+            // own properties attach only when SimHub starts.
+            Assert.Equal("Added Rim, but Fanatec CSL Elite has no LEDs OpenDash can reach. See SimHub's log, then install Rim's profile here and restart SimHub.",
                 PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
-            Assert.EndsWith(PanelLeds.DeviceRow(null, "wheel", new[] { "Fanatec CSL Elite" }).Caption, PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
+            Assert.Contains(PanelLights.Unreached(new[] { "Fanatec CSL Elite" }), PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
+            Assert.StartsWith(PanelLeds.DeviceRow(null, "wheel", new[] { "Fanatec CSL Elite" }).Caption.TrimEnd('.'), PanelLights.NotOffered(new[] { "Fanatec CSL Elite" }));
+            Assert.EndsWith("See SimHub's log, then install it here and restart SimHub.", PanelLights.BarAddFailed("Rim"));
             Assert.Contains("Restart SimHub", PanelLights.BarAdded("Rim", "Wheel"));
         }
 

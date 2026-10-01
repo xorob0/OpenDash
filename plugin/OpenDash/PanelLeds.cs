@@ -295,8 +295,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The same, as the line under the header says it: the one state it words apart is no SimHub device at
-        /// all, where the whole reason is the SimHub device row's own caption, and the header points at that row
-        /// rather than saying the sentence a second time.
+        /// all, where the SimHub device row's caption says what SimHub lacks and the step in SimHub, and the
+        /// header says only what that means here and points at the row, rather than saying its fact a second time.
         /// </summary>
         public static string HeaderBlocked(bool embedded, bool deviceListed, int offered, IList<string> declined)
         {
@@ -304,10 +304,10 @@ namespace OpenDashPlugin
             return ProfileBlocked(embedded, deviceListed, offered, declined);
         }
 
-        /// <summary>The header's line with no SimHub device offered: the fact, with the SimHub device row under it
-        /// carrying the step. Nothing installs the profile on its own once a device appears, so the line does not
-        /// say it waits for one.</summary>
-        public const string AwaitsDevice = "No SimHub device to install this strip's profile on.";
+        /// <summary>The header's line with no SimHub device offered: why it offers no Install, and the row that
+        /// says what SimHub lacks, by name. Nothing installs the profile on its own once a device appears, so the
+        /// line does not say it waits for one.</summary>
+        public const string AwaitsDevice = "Nothing here can install this strip's profile. See SimHub device.";
 
         /// <summary>
         /// Whether the SimHub device picker can be used: not where this build carries no profile of the strip's
@@ -710,7 +710,7 @@ namespace OpenDashPlugin
             }
             if (listed.Count == 1 && known)
             {
-                return new LedDeviceRow(PanelLights.DeviceRowCaption(1, PanelLights.OneDevice(listed[0].Name, connected[0]), declined), null, null, -1);
+                return new LedDeviceRow(PanelLights.OneDeviceCaption(listed[0].Name, connected[0], declined), null, null, -1);
             }
             var index = ids.FindIndex(id => string.Equals(id, current, StringComparison.Ordinal));
             return new LedDeviceRow(PanelLights.DeviceRowCaption(listed.Count, PanelLights.BarDeviceCaption, declined), ids, labels, index);
@@ -1285,11 +1285,12 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>Where SimHub lists LED devices OpenDash passed over (#437), the first step is not to add hardware
         /// SimHub already has: the line says which devices OpenDash cannot reach and points at the log, as the
-        /// SimHub device row under it does.</remarks>
+        /// SimHub device row under it does, then names the two steps every add without an install leaves, in
+        /// PanelLights.BarAddFailed's form.</remarks>
         public static string AddedWithoutDevice(string name, IList<string> declined = null)
         {
-            var passed = PanelLights.NotOffered(declined);
-            if (passed != null) return "Added " + name + ", but " + passed;
+            var passed = PanelLights.Unreached(declined);
+            if (passed != null) return "Added " + name + ", but " + passed + ". See SimHub's log, then install " + name + "'s profile here and restart SimHub.";
             return "Added " + name + ". Add your wheel or Arduino in SimHub, install " + name + "'s profile here, then restart SimHub.";
         }
 

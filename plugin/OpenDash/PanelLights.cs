@@ -103,10 +103,20 @@ namespace OpenDashPlugin
             return NameList(names) + Unreachable(names);
         }
 
+        /// <summary>The devices passed over and what they have, with no full stop and no pointer at the log, for a
+        /// line that goes on to say the steps after it: "Rim has no LEDs OpenDash can reach". Null with none.</summary>
+        public static string Unreached(System.Collections.Generic.IList<string> names)
+        {
+            if (names == null || names.Count == 0) return null;
+            return NameList(names) + (names.Count == 1 ? " has" : " have") + UnreachableFact;
+        }
+
+        private const string UnreachableFact = " no LEDs OpenDash can reach";
+
         /// <summary>What the devices passed over have, and where the reason is.</summary>
         private static string Unreachable(System.Collections.Generic.IList<string> names)
         {
-            return (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach. See SimHub's log.";
+            return (names.Count == 1 ? " has" : " have") + UnreachableFact + ". See SimHub's log.";
         }
 
         /// <summary>At most this many names are spelled out before the rest are counted.</summary>
@@ -128,6 +138,24 @@ namespace OpenDashPlugin
             if (passed == null) return offered == 0 ? NoDevices : caption;
             if (offered == 0 || string.IsNullOrEmpty(caption)) return passed;
             return caption.Trim().TrimEnd('.') + ", not " + NameList(declined) + ", which" + Unreachable(declined);
+        }
+
+        /// <summary>
+        /// The caption under the device row where SimHub has the one device and the strip is on it: where it goes,
+        /// whether SimHub is talking to it, and the devices passed over.
+        /// </summary>
+        /// <remarks>
+        /// Built from the device's name and state rather than by trimming <see cref="OneDevice"/>'s sentence: a
+        /// device that is not connected is already a "which" clause, and a second ", not Rim, which ..." stacked on
+        /// it read as part of "not connected". There the two facts are joined, each beside its own device, and the
+        /// caption stays at voice.md's two sentences.
+        /// </remarks>
+        public static string OneDeviceCaption(string name, bool connected, System.Collections.Generic.IList<string> declined)
+        {
+            var unreached = Unreached(declined);
+            if (unreached == null) return OneDevice(name, connected);
+            if (connected) return DeviceRowCaption(1, OneDevice(name), declined);
+            return "Goes to " + name + ", which is not connected, and " + unreached + ". See SimHub's log.";
         }
 
         private static string NameList(System.Collections.Generic.IList<string> names)
@@ -329,8 +357,13 @@ namespace OpenDashPlugin
             + "about 400 KB, so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
-        /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
-        public const string CarTablesButtonTooltip = "Downloads Lovely Car Data.";
+        /// of what the tables are for, and a tooltip on the button says what the button does, in the verb its
+        /// label carries (<see cref="CarTablesButton"/>), so a first download that turns Download into Update
+        /// turns the hover with it.</summary>
+        public static string CarTablesButtonTooltip(int cars)
+        {
+            return cars > 0 ? "Updates Lovely Car Data." : "Downloads Lovely Car Data.";
+        }
 
         /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
         public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;

@@ -95,7 +95,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Stretch to fit", "Actual size" }, PanelLights.MirrorFitLabels);
             // The source by its own name, which is how a driver who met it at Lovely Sim Racing knows it.
             Assert.Equal("Lovely Car Data", PanelLights.CarTablesTitle);
-            Assert.Equal("Downloads Lovely Car Data.", PanelLights.CarTablesButtonTooltip);
+            // The hover in the label's own verb, Download or Update.
+            Assert.Equal("Downloads Lovely Car Data.", PanelLights.CarTablesButtonTooltip(0));
+            Assert.Equal("Updates Lovely Car Data.", PanelLights.CarTablesButtonTooltip(84));
+            Assert.StartsWith(PanelLights.CarTablesButton(0) + "s ", PanelLights.CarTablesButtonTooltip(0));
+            Assert.StartsWith(PanelLights.CarTablesButton(84) + "s ", PanelLights.CarTablesButtonTooltip(84));
             Assert.Equal("Not downloaded yet.", PanelLights.CarTablesNone);
             Assert.Equal("Downloading…", PanelLights.CarTablesDownloading);
             // A chooser's value names what the code knows: SimHub does not list the device.
@@ -412,6 +416,21 @@ namespace OpenDashPlugin.Tests
                 PanelLights.DeviceRowCaption(1, "Goes to Arduino RGB LEDs.", new[] { "Rim", "Hub" }));
             Assert.Equal("Rim has no LEDs OpenDash can reach. See SimHub's log.",
                 PanelLights.DeviceRowCaption(2, PanelLights.BarDeviceCaption, new[] { "Rim" }));
+
+            // The one device, named with its state: "not Rim" follows the device it contrasts with, and a device
+            // SimHub is not talking to keeps that fact beside its own name rather than under a second "which".
+            Assert.Equal("Goes to Arduino RGB LEDs.", PanelLights.OneDeviceCaption("Arduino RGB LEDs", true, null));
+            Assert.Equal("Goes to Button hub, which is not connected.", PanelLights.OneDeviceCaption("Button hub", false, new string[0]));
+            Assert.Equal("Goes to Arduino RGB LEDs, not Rim, which has no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLights.OneDeviceCaption("Arduino RGB LEDs", true, new[] { "Rim" }));
+            Assert.Equal("Goes to Button hub, which is not connected, and Rim has no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLights.OneDeviceCaption("Button hub", false, new[] { "Rim" }));
+            Assert.Equal("Goes to Button hub, which is not connected, and Rim and Hub have no LEDs OpenDash can reach. See SimHub's log.",
+                PanelLights.OneDeviceCaption("Button hub", false, new[] { "Rim", "Hub" }));
+            // The fact alone, for a line that goes on to the steps after it.
+            Assert.Null(PanelLights.Unreached(null));
+            Assert.Equal("Rim has no LEDs OpenDash can reach", PanelLights.Unreached(new[] { "Rim" }));
+            Assert.Equal(PanelLights.Unreached(new[] { "Rim", "Hub" }) + ". See SimHub's log.", PanelLights.NotOffered(new[] { "Rim", "Hub" }));
         }
     }
 }
