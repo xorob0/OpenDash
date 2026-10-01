@@ -845,8 +845,10 @@ namespace OpenDashPlugin.Tests
             // A key step reaches only changed, so the figure is set there too, before an unchanged value returns.
             Assert.Contains("var slider = Ui.Slider(value, v => { numeral.Text = PanelHome.Percent(v); if (nightOn) {", code);
             Assert.Contains("var night = Ui.Switch(nightOn, on =>", code);
-            // Both controls are named for UI Automation, as the sidebar's and the Rig page's night switches are:
-            // the eyebrows over them are separate text.
+            // The night switch is named for UI Automation, as the sidebar's and the Rig page's are: the eyebrow
+            // over it is separate text. The slider is given its name too, but Ui.Slider's bare surface is a Grid,
+            // which has no automation peer, so that name reaches UI Automation only once the kit gives the
+            // surface one; the call is held so that it is there when the kit does.
             Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));", code);
             Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(night, PanelSettings.NightModeTitle);", code);
         }
@@ -1048,13 +1050,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("switch (PanelHome.Press(issue))", code);
             Assert.Contains("press.Click += (sender, args) => HomeAct(issue);", code);
             Assert.Contains("row.Click += (sender, args) => click();", code);
+            // A device row's content is a panel, which gives UI Automation no text: the row carries the name of
+            // the device it opens.
+            Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(row, name ?? string.Empty); row.Click += (sender, args) => click(); return row;", code);
+            Assert.Equal(3, Regex.Matches(code, @"\bHomeRow\(").Count - 1);
             Assert.Contains("case HomePress.CheckAgain: CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); return;", code);
             Assert.Contains("case HomePress.Reinstall: var screen = Settings.ScreenByNamespace(issue.Subject); if (screen != null) { InstallScreenAgain(screen); return; } Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("case HomePress.Open: Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("default: Go(issue.Route); return;", code);
-            Assert.Contains("var ns = screen.Namespace; return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, () => Open(PanelPage.Screens, ns)));", code);
-            Assert.Contains("var ns = bar.Namespace; rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
-            Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, () => Open(PanelPage.Matrix, id));", code);
+            Assert.Contains("var ns = screen.Namespace; return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, screen.Name, () => Open(PanelPage.Screens, ns)));", code);
+            Assert.Contains("var ns = bar.Namespace; rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), bar.Name, () => Open(PanelPage.Leds, ns)));", code);
+            Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, title, () => Open(PanelPage.Matrix, id));", code);
             Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
             // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last, and
@@ -1140,7 +1146,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis }; press.Click += (sender, args) => HomeAct(issue);", code);
             Assert.DoesNotContain("press.ToolTip", code);
             Assert.Contains("if (beside) { press.VerticalAlignment = align; press.MaxWidth = PanelHome.PressMaxWidth; press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0); DockPanel.SetDock(press, Dock.Right); dock.Children.Add(press); dock.Children.Add(text); } else { press.HorizontalAlignment = HorizontalAlignment.Left; press.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(press); dock.Children.Add(text); }", code);
-            Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));", code);
+            Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), bar.Name, () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("strip.Line.Margin = new Thickness(0, PanelHome.StripRowGap, 0, 0);", code);
             Assert.Contains("text.Visibility = line.Text.Length > 0 ? Visibility.Visible : keepsRoom ? Visibility.Hidden : Visibility.Collapsed;", code);
             // A strip that can go live keeps its line's room, one line, so its card does not grow as a session

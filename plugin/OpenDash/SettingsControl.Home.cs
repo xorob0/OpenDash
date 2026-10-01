@@ -336,7 +336,7 @@ namespace OpenDashPlugin
             dock.Children.Add(row.Dot);
             dock.Children.Add(text);
             var ns = screen.Namespace;
-            return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, () => Open(PanelPage.Screens, ns)));
+            return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, screen.Name, () => Open(PanelPage.Screens, ns)));
         }
 
         /// <summary>Draws a screen's line from its settings as they are now, with the facts the last Go read,
@@ -432,7 +432,7 @@ namespace OpenDashPlugin
                 // The line carries its own gap, so a line with nothing to say takes its gap with it, unless the
                 // strip can go live, whose card keeps one height as a session starts and ends.
                 var ns = bar.Namespace;
-                rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), () => Open(PanelPage.Leds, ns)));
+                rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), bar.Name, () => Open(PanelPage.Leds, ns)));
             }
             if (live.Count > 0) OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });
             return rows;
@@ -551,7 +551,7 @@ namespace OpenDashPlugin
             dock.Children.Add(dot);
             dock.Children.Add(text);
             var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return HomeRow(dock, () => Open(PanelPage.Matrix, id));
+            return HomeRow(dock, title, () => Open(PanelPage.Matrix, id));
         }
 
         /// <summary>A name with its figure after it, as the Screens rows draw "Main dash 1280 × 480". The figure
@@ -620,8 +620,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A device row: the artboard's .rowlink, a press as wide as the card with a rule on top that
-        /// takes the hover ground under the pointer.</summary>
-        private static Button HomeRow(UIElement content, Action click)
+        /// takes the hover ground under the pointer. Its content is a panel, which gives UI Automation no text,
+        /// so the row carries the device's name, which is what it opens.</summary>
+        private static Button HomeRow(UIElement content, string name, Action click)
         {
             var row = new Button
             {
@@ -635,6 +636,7 @@ namespace OpenDashPlugin
                 Template = HomeRowTemplate(),
                 FocusVisualStyle = Ui.FocusRing(),
             };
+            System.Windows.Automation.AutomationProperties.SetName(row, name ?? string.Empty);
             row.Click += (sender, args) => click();
             return row;
         }
@@ -698,8 +700,11 @@ namespace OpenDashPlugin
                     ShowLightingChange();
                 }
             }, v => numeral.Text = PanelHome.Percent(v), false);
-            // The eyebrows over the controls are text beside them, which names nothing to UI Automation: each
-            // control carries its own name, the slider the brightness in force, as its eyebrow does.
+            // The eyebrows over the controls are text beside them, which names nothing to UI Automation, so each
+            // control is given its own name, the slider the brightness in force, as its eyebrow says. The switch
+            // is a ToggleButton and is heard by it; the slider is the kit's bare surface, a Grid, which has no
+            // automation peer, so its name reaches nothing until Ui.Slider gives the surface one (asked of the
+            // kit). The call stays so that it takes effect then.
             System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));
             var label = Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn));
             label.VerticalAlignment = VerticalAlignment.Center;
