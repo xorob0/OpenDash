@@ -1043,6 +1043,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Grid.SetColumn(slot, 2);", row);
             Assert.Contains("Grid.SetRow(slot, 1);", row);
             Assert.Contains("Grid.SetColumnSpan(slot, 2);", row);
+            // Under the name the slot stretches across the row: its estimate counts a scroll bar the page may
+            // not have, and a fixed width there would leave a gap at the card's right.
+            Assert.Matches(@"Grid\.SetColumnSpan\(slot, 2\);\s*(//[^\n]*\s*)*slot\.Width = double\.NaN;\s*slot\.HorizontalAlignment = HorizontalAlignment\.Stretch;", row);
             Assert.Contains("Tag = new RowParts(nameLine, control),", row);
             // The name takes what the press and the binder leave, so those two line up down a card.
             Assert.Matches(@"var grid = new Grid\(\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(1, GridUnitType\.Star\) \}\);\s*grid\.ColumnDefinitions\.Add\(new ColumnDefinition \{ Width = new GridLength\(PanelShortcuts\.RowGap \+ PanelShortcuts\.PressWidth\) \}\);", row);
@@ -1143,6 +1146,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (editor != null) editor.HorizontalAlignment = HorizontalAlignment.Stretch;", code);
             Assert.Contains("slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);", code);
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
+            // A glance's caption keeps a row caption's 520, as Ui.SettingRow draws every other, however wide
+            // the name column grows.
+            Assert.Equal(520, PanelShortcuts.CaptionMaxWidth);
+            Assert.Matches(@"caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShortcuts\.CaptionMaxWidth\);", code);
+            var widgets = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
+            Assert.Contains("Caption(caption, " + PanelShortcuts.CaptionMaxWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")", widgets);
             // Every number the model takes from the artboard is drawn with: none is left for the view to
             // spell as a literal of its own.
             foreach (var name in new[]

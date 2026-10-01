@@ -752,7 +752,9 @@ namespace OpenDashPlugin
         private const double CardRules = 2;
 
         /// <summary>The width of the binder's slot: <see cref="BinderWidth"/> beside the name, and under it the
-        /// whole of what the row has inside its padding. Where that is less than BuildBinder's
+        /// whole of what the row has inside its padding, as estimated for lowering the editor's MinWidth: the
+        /// stacked slot itself stretches across the row, so the scroll bar this counts and a page that does
+        /// not scroll leaves no gap at its right. Where that is less than BuildBinder's
         /// <see cref="BinderMinWidth"/>, the row lowers the editor's MinWidth to the slot, so SimHub lays its
         /// template out in the room it has rather than being clipped at the slot's edge.</summary>
         public static double BinderSlot(double contentWidth, bool stacks)
@@ -760,6 +762,10 @@ namespace OpenDashPlugin
             if (!stacks) return BinderWidth;
             return Math.Max(0, contentWidth - CardRules - 2 * RowPaddingX);
         }
+
+        /// <summary>A row's caption (the glance's) keeps the measure every row caption in the panel keeps,
+        /// as Ui.SettingRow draws it, rather than a paragraph's 620, however wide the name column grows.</summary>
+        public const double CaptionMaxWidth = 520;
 
         // --- Search -------------------------------------------------------------------------------------
 

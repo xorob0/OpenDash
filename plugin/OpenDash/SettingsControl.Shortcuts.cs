@@ -461,7 +461,8 @@ namespace OpenDashPlugin
         /// The artboard's .r: the name with its tags, the press in a 90 px column and the binder in a slot of
         /// fixed width after it, 16 apart, padded 10 by 16 under a rule. The columns are fixed rather than
         /// sized by each row's control, so press and binder line up down a card, greyed rows included. Where
-        /// the content cannot give the name room beside them, the binder goes under the name and the press.
+        /// the content cannot give the name room beside them, the binder goes under the name and the press,
+        /// across the row's whole width.
         /// </summary>
         /// <remarks>The border's Tag carries the row's parts, so a Soon appends its tag after the name. The
         /// slot is handed back for the clash mark: it always keeps a border's room, empty until a clash line
@@ -486,6 +487,7 @@ namespace OpenDashPlugin
             if (caption != null)
             {
                 caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);
+                caption.MaxWidth = Math.Min(caption.MaxWidth, PanelShortcuts.CaptionMaxWidth);
                 left.Children.Add(caption);
             }
             pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
@@ -524,6 +526,10 @@ namespace OpenDashPlugin
                     slot.Margin = new Thickness(0, PanelShortcuts.StackGap, 0, 0);
                     Grid.SetRow(slot, 1);
                     Grid.SetColumnSpan(slot, 2);
+                    // Under the name the slot is the row's whole width, whatever it is: layout.Binder counts a
+                    // scroll bar the page may not have, and only lowers the editor's MinWidth.
+                    slot.Width = double.NaN;
+                    slot.HorizontalAlignment = HorizontalAlignment.Stretch;
                 }
                 else
                 {
