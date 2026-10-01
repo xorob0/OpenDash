@@ -882,7 +882,7 @@ namespace OpenDashPlugin
             RefreshCarTables();
             // The start reads the tables on a thread of its own, so a page opened before it lands would say
             // "Loading…" beside Download until something drew it again, while the car line above read the tables.
-            // Each tick compares two properties; the row, and the stale check's read of the folder, only on a change.
+            // Each tick compares two properties and draws the row again only on a change; nothing reads the disk.
             OnTick(() =>
             {
                 if (carTablesLine == null || carTablesDownloading) return;
@@ -921,8 +921,11 @@ namespace OpenDashPlugin
                 Log.Warn("Lovely Car Data could not be read: " + status);
             }
             // Whether the copy is over a week old is worked out as the row is drawn: the status is written only
-            // when the tables are read, so the age it gives stands still while SimHub runs.
-            var line = PanelLights.CarTablesLine(status, service.Stale(DateTime.UtcNow));
+            // when the tables are read, so the age it gives stands still while SimHub runs. From the stamp the
+            // service holds rather than the folder's, since a tick draws this row: the read writes the stamp
+            // before the status, so read after it.
+            var stale = PanelLights.CarTablesStale(service.CarCount, service.FetchedAt, DateTime.UtcNow);
+            var line = PanelLights.CarTablesLine(status, stale);
             carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
             if (carTablesButton != null)
             {

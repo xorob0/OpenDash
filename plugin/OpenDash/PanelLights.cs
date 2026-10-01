@@ -438,6 +438,19 @@ namespace OpenDashPlugin
             return stale ? copy + ". " + CarTablesUpdateStep : copy;
         }
 
+        /// <summary>
+        /// Whether the copy is over a week old, from what CarLightService holds in memory: its count of cars and
+        /// its fetch stamp, both written by the read that wrote its status. CarLightLibrary.IsStale's rule (no
+        /// stamp, a stamp <see cref="CarLightLibrary.MaxAge"/> old, or a stamp in the future) over the same stamp
+        /// without reading the folder, so the row can be drawn from a tick: nothing is read from disk on one.
+        /// </summary>
+        public static bool CarTablesStale(int cars, DateTime? fetchedAt, DateTime nowUtc)
+        {
+            if (cars <= 0) return false;
+            if (fetchedAt == null) return true;
+            return nowUtc - fetchedAt.Value >= CarLightLibrary.MaxAge || fetchedAt.Value > nowUtc;
+        }
+
         /// <summary>Whether CarLightService's status says a download did not answer, with a copy on disk or
         /// without: the page writes its reason to SimHub's log, since the row says only that it failed.</summary>
         public static bool CarTablesDownloadDidNotAnswer(string status)

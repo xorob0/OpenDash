@@ -5,6 +5,9 @@
 // offering a label for a value the contract had retired, and nothing said so. A segmented bar is worse
 // than silent, since BuildSegmented indexes the labels with the values and throws while the page is being
 // drawn.
+using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using Xunit;
 
@@ -277,17 +280,57 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Update", PanelLights.CarTablesButton(84));
             Assert.Equal("Download", PanelLights.CarTablesButton(0));
-            // The page asks the service as it draws the row, with the clock of the moment.
+            // The page works the age out from what the service holds as it draws the row, with the clock of the
+            // moment, and never from the folder: a tick draws the row, and nothing is read from disk on a tick.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Contains("PanelLights.CarTablesLine(status, service.Stale(DateTime.UtcNow))", leds);
+            Assert.Contains("var stale = PanelLights.CarTablesStale(service.CarCount, service.FetchedAt, DateTime.UtcNow);", leds);
+            Assert.Contains("var line = PanelLights.CarTablesLine(status, stale);", leds);
+            Assert.DoesNotContain(".Stale(", leds);
+            Assert.DoesNotContain("CarLightLibrary.", leds);
+            // The stamp is read after the status, which the service's read writes after it.
+            var refresh = leds.Substring(leds.IndexOf("private void RefreshCarTables()", StringComparison.Ordinal));
+            Assert.InRange(refresh.IndexOf("var status = service.Status;", StringComparison.Ordinal), 0, refresh.IndexOf("service.FetchedAt", StringComparison.Ordinal));
             // The start reads the tables on a thread of its own: a tick draws the row again once the status or the
-            // count it was drawn from moves, and only then, since the stale check reads the folder.
+            // count it was drawn from moves, and only then.
             Assert.Contains("carTablesDrawn = CarTablesKey();", leds);
             Assert.Contains("if (carTablesLine == null || carTablesDownloading) return;", leds);
             Assert.Contains("if (!string.Equals(CarTablesKey(), carTablesDrawn, StringComparison.Ordinal)) RefreshCarTables();", leds);
             // The one row that fetches the tables names both things that read them.
             Assert.Equal("Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, about 400 KB, so your car is never disclosed.",
                 PanelLights.CarTablesCaption);
+        }
+
+        /// <summary>
+        /// The age the row works out from the service's stamp in memory is CarLightLibrary.IsStale's over the same
+        /// stamp on disk: none, a week, and a stamp in the future, each on both sides of its edge. With no cars
+        /// there is no copy to call old, as CarLightService.Stale has it.
+        /// </summary>
+        [Fact]
+        public void The_rows_age_is_the_librarys_from_the_stamp_in_memory()
+        {
+            var now = new DateTime(2026, 9, 30, 12, 0, 0, DateTimeKind.Utc);
+            var root = Path.Combine(Path.GetTempPath(), "opendash-stale-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                Assert.True(CarLightLibrary.IsStale(root, now));
+                Assert.True(PanelLights.CarTablesStale(84, null, now));
+                foreach (var age in new[] { TimeSpan.Zero, TimeSpan.FromDays(6), TimeSpan.FromDays(7) - TimeSpan.FromTicks(1), TimeSpan.FromDays(7), TimeSpan.FromDays(30), TimeSpan.FromDays(-1), TimeSpan.FromTicks(-1) })
+                {
+                    var stamp = now - age;
+                    File.WriteAllText(Path.Combine(root, CarLightLibrary.StampFile), stamp.Ticks.ToString(CultureInfo.InvariantCulture));
+                    Assert.Equal(CarLightLibrary.IsStale(root, now), PanelLights.CarTablesStale(84, stamp, now));
+                }
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+            Assert.False(PanelLights.CarTablesStale(0, null, now));
+            Assert.False(PanelLights.CarTablesStale(0, now.AddDays(-30), now));
+            Assert.False(PanelLights.CarTablesStale(1, now.AddDays(-6), now));
+            Assert.True(PanelLights.CarTablesStale(1, now.AddDays(-7), now));
+            Assert.True(PanelLights.CarTablesStale(1, now.AddMinutes(1), now));
         }
 
         /// <summary>
