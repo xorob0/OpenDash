@@ -284,16 +284,18 @@ namespace OpenDashPlugin.Tests
             guard = guard.Substring(0, guard.IndexOf("return LedsLogged(bar, InstallBar(bar, found.Json));", StringComparison.Ordinal));
             Assert.Contains("var found = EmbeddedProfileOf(bar);", guard);
             Assert.Contains("if (found == null)", guard);
-            Assert.Contains("if (LedTargets.Find(bar.Device) == null)", guard);
+            Assert.Contains("if (LedsTargetOf(targets, bar.Device) == null)", guard);
             // InstallBar is called in two places only: the guard, and a move, which installs on the device just
             // picked from SimHub's own list.
             Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json)"));
             Assert.Contains("var embedded = EmbeddedProfileOf(bar) != null;", leds);
-            Assert.Contains("var listed = LedTargets.Find(bar.Device) != null;", leds);
+            Assert.Contains("var listed = LedsTargetOf(targets, bar.Device) != null;", leds);
             Assert.Contains(": PanelLeds.ProfileBlocked(embedded, listed, offered, declined);", leds);
             Assert.Contains("? PanelLeds.HeaderBlocked(embedded, listed, offered, declined)", leds);
-            Assert.Contains("var blocked = LedsProfileBlocked(bar, true);", leds);
-            Assert.Contains("var offered = LedTargets.All(out declined).Count;", leds);
+            Assert.Contains("var blocked = LedsProfileBlocked(bar, targets, declined, true);", leds);
+            Assert.Contains("var offered = targets.Count;", leds);
+            Assert.Contains("return targets.FirstOrDefault(target => string.Equals(target.Id, wanted, StringComparison.Ordinal));", leds);
+            Assert.Contains("var wanted = LedBar.NormaliseDevice(device);", leds);
             Assert.Contains("var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;", leds);
         }
 
@@ -321,7 +323,7 @@ namespace OpenDashPlugin.Tests
                 Assert.True(leds.Contains(wiring), "the page no longer carries: " + wiring);
             }
             // Install, Reverse, Rename and Add each install through the guard, once.
-            Assert.Equal(4, Occurrences(leds, "LedsReinstall(bar)"));
+            Assert.Equal(4, Occurrences(leds, "LedsReinstall(bar, targets)"));
             foreach (var (method, next) in new[]
             {
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
@@ -332,15 +334,49 @@ namespace OpenDashPlugin.Tests
             {
                 var body = leds.Substring(leds.IndexOf(method, StringComparison.Ordinal));
                 if (next != null) body = body.Substring(0, body.IndexOf(next, StringComparison.Ordinal));
-                Assert.True(Occurrences(body, "LedsReinstall(bar)") == 1, method + " does not install through the guard");
+                Assert.True(Occurrences(body, "LedsReinstall(bar, targets)") == 1, method + " does not install through the guard");
             }
             // A rename installs again only where SimHub holds the profile and the page can install it.
             var rename = leds.Substring(leds.IndexOf("private void RenameLedBar(", StringComparison.Ordinal));
             rename = rename.Substring(rename.IndexOf("if (inSimHub && blocked == null)", StringComparison.Ordinal));
-            Assert.InRange(rename.IndexOf("LedsReinstall(bar)", StringComparison.Ordinal), 0, rename.IndexOf("}", StringComparison.Ordinal));
+            Assert.InRange(rename.IndexOf("LedsReinstall(bar, targets)", StringComparison.Ordinal), 0, rename.IndexOf("}", StringComparison.Ordinal));
             // Remove takes the profile out of SimHub before the strip leaves the rig.
             var remove = leds.Substring(leds.IndexOf("private void RemoveLedBar(", StringComparison.Ordinal));
             Assert.InRange(remove.IndexOf("StripInstaller.UninstallEverywhere(", StringComparison.Ordinal), 0, remove.IndexOf("Settings.RemoveLedBar(ns);", StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// SimHub's LED devices are walked once a build and once a press, on SimHub's interface thread: the build's
+        /// walk is handed to the header, and each press reads the list once for its guard, its install and its
+        /// line. Only a move, whose line names the device after the install, walks again on its own.
+        /// </summary>
+        [Fact]
+        public void SimHubs_devices_are_walked_once_a_build_and_once_a_press()
+        {
+            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Equal(1, Occurrences(leds, "LedTargets.Find("));
+            Assert.Contains("var target = LedTargets.Find(bar.Device);", Body(leds, "private void MoveLedBar(", "private FrameworkElement BuildLedBarActions("));
+            Assert.Equal(1, Occurrences(Body(leds, "private FrameworkElement BuildLedsPage(", "private FrameworkElement LedsEveryStripSection("), "LedTargets.All("));
+            Assert.Contains("var parts = new List<UIElement> { LedsHeader(bar, targets, declined) };", leds);
+            foreach (var (method, next) in new[]
+            {
+                ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
+                ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
+                ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
+                ("private void AddLedBar(", null),
+            })
+            {
+                var body = Body(leds, method, next);
+                Assert.True(Occurrences(body, "LedTargets.All(") == 1, method + " walks SimHub's devices more than once");
+                Assert.True(Occurrences(body, "LedsProfileBlocked(") <= 1, method + " asks twice whether it may install");
+            }
+        }
+
+        /// <summary>A method's body: from its signature to the next one's, or to the end.</summary>
+        private static string Body(string text, string start, string next)
+        {
+            var body = text.Substring(text.IndexOf(start, StringComparison.Ordinal));
+            return next == null ? body : body.Substring(0, body.IndexOf(next, StringComparison.Ordinal));
         }
 
         private static int Occurrences(string text, string part)
@@ -1183,8 +1219,15 @@ namespace OpenDashPlugin.Tests
                 // The car tables' button greys out while a download is out.
                 "carTablesButton.IsEnabled = !carTablesDownloading;",
                 // The row's caption and attribution (contract.test.ts holds the attribution too).
-                "left.Children.Add(LedsCaptionLine(PanelLights.CarTablesCaption));",
-                "left.Children.Add(LedsCaptionLine(PanelLights.CarTablesAttribution));",
+                "LedsCaptionLine(PanelLights.CarTablesCaption),",
+                "LedsCaptionLine(PanelLights.CarTablesAttribution),",
+                // Under the title where the kit's row has the column, and under the row where it has not: the
+                // licence's attribution and the status line are in the tree either way.
+                "foreach (var line in lines) left.Children.Add(line);",
+                "drawn = Ui.VStack(0, new UIElement[] { row }.Concat(lines).ToArray());",
+                // A picker that takes no pick fades as the kit's disabled controls do, and keeps its hover.
+                "picker.Opacity = PanelMetrics.DisabledOpacity;",
+                "ToolTipService.SetShowOnDisabled(picker, true);",
                 // The fix box: SimHub's steps and the press that asks again, at the artboard's padding.
                 "var box = Ui.FixBox(PanelLeds.NotSelectedTitle, null, issue.Steps, again);",
                 "again.Click += (sender, args) => CheckAgain();",

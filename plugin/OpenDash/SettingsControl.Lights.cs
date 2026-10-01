@@ -175,7 +175,7 @@ namespace OpenDashPlugin
                 Action repaintCard;
                 if (ledsCardRepaints.TryGetValue(ns, out repaintCard)) repaintCard();
             };
-            var parts = new List<UIElement> { LedsHeader(bar) };
+            var parts = new List<UIElement> { LedsHeader(bar, targets, declined) };
             var fix = LedsFix(bar);
             if (fix != null) parts.Add(fix);
             parts.Add(Ui.Anchor(preview, PanelLeds.AnchorPreview));
@@ -243,7 +243,7 @@ namespace OpenDashPlugin
         /// presses on the strip. Where nothing here can install the profile, a line under it says why in place of
         /// Install or Update.
         /// </summary>
-        private FrameworkElement LedsHeader(LedBar bar)
+        private FrameworkElement LedsHeader(LedBar bar, IList<LedTarget> targets, IList<string> declined)
         {
             var title = Ui.SubHeading(bar.Name);
             title.VerticalAlignment = VerticalAlignment.Center;
@@ -273,7 +273,7 @@ namespace OpenDashPlugin
             var name = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             name.Children.Add(title);
             name.Children.Add(chip);
-            var blocked = LedsProfileBlocked(bar, true);
+            var blocked = LedsProfileBlocked(bar, targets, declined, true);
             // Beside the name where two columns fit, and under it where they do not: the state and three or four
             // presses take up to 388 px, which beside the name and its chip ran past a single column.
             var stacked = !TwoColumns;
@@ -285,28 +285,37 @@ namespace OpenDashPlugin
 
         /// <summary>Why nothing on this page can install the strip's profile, or null: PanelLeds.ProfileBlocked
         /// over whether the build carries it, whether SimHub lists the strip's device, and what SimHub offers, or
-        /// PanelLeds.HeaderBlocked for the line under the header.</summary>
-        private static string LedsProfileBlocked(LedBar bar, bool header = false)
+        /// PanelLeds.HeaderBlocked for the line under the header. From SimHub's devices as the caller walked them,
+        /// once: each walk is a pass over every device on SimHub's interface thread.</summary>
+        private static string LedsProfileBlocked(LedBar bar, IList<LedTarget> targets, IList<string> declined, bool header = false)
         {
-            IList<string> declined;
-            var offered = LedTargets.All(out declined).Count;
+            var offered = targets.Count;
             var embedded = EmbeddedProfileOf(bar) != null;
-            var listed = LedTargets.Find(bar.Device) != null;
+            var listed = LedsTargetOf(targets, bar.Device) != null;
             return header
                 ? PanelLeds.HeaderBlocked(embedded, listed, offered, declined)
                 : PanelLeds.ProfileBlocked(embedded, listed, offered, declined);
         }
 
+        /// <summary>The device among <paramref name="targets"/> a strip names, or null: LedTargets.Find over a list
+        /// already walked.</summary>
+        private static LedTarget LedsTargetOf(IList<LedTarget> targets, string device)
+        {
+            var wanted = LedBar.NormaliseDevice(device);
+            return targets.FirstOrDefault(target => string.Equals(target.Id, wanted, StringComparison.Ordinal));
+        }
+
         /// <summary>
         /// Installs the strip's profile again from what this build embeds, where the page may: null, with the
-        /// reason in SimHub's log, where the build carries no profile for it or SimHub does not list its device.
+        /// reason in SimHub's log, where the build carries no profile for it or SimHub does not list its device
+        /// among <paramref name="targets"/>, the devices the press walked.
         /// </summary>
         /// <remarks>
         /// UpdateBars' guard, for the same reason: InstallBar takes the strip's copy out of every device first,
         /// so running it for a device SimHub does not list would remove a profile that still lights and install
         /// nothing. A result that is not an install is logged too, so every "See SimHub's log" has a line behind it.
         /// </remarks>
-        private static FlagBoxPlan LedsReinstall(LedBar bar)
+        private static FlagBoxPlan LedsReinstall(LedBar bar, IList<LedTarget> targets)
         {
             var found = EmbeddedProfileOf(bar);
             if (found == null)
@@ -314,7 +323,7 @@ namespace OpenDashPlugin
                 Log.Warn("The profile for " + bar.Name + " was not installed: this build carries no profile of its shape, " + bar.ProfileShapeId + ".");
                 return null;
             }
-            if (LedTargets.Find(bar.Device) == null)
+            if (LedsTargetOf(targets, bar.Device) == null)
             {
                 Log.Warn("The profile for " + bar.Name + " was not installed: the LED device it names is not in SimHub.");
                 return null;
@@ -496,6 +505,12 @@ namespace OpenDashPlugin
             return panel.Children.OfType<Control>().FirstOrDefault(control => control.Focusable);
         }
 
+        /// <summary>The control, where it can take keyboard focus: null where it is gone, disabled or not a stop.</summary>
+        private static UIElement LedsFocusable(UIElement control)
+        {
+            return control != null && control.IsEnabled && control.Focusable ? control : null;
+        }
+
         /// <summary>Focuses a control once the layout that drew it has run: a control added a moment ago is
         /// not visible yet, and focus handed to it then goes nowhere.</summary>
         /// <remarks>
@@ -657,11 +672,6 @@ namespace OpenDashPlugin
             var ns = bar.Namespace;
             var movable = PanelLeds.DeviceMovable(EmbeddedProfileOf(bar) != null);
             var deviceRow = BuildLedDeviceRow(targets, declined, Settings.BarDevice(ns), movable, value => MoveLedBar(ns, value));
-            if (ledsFocusDevice)
-            {
-                ledsFocusDevice = false;
-                LedsFocusLater(() => LedsFirstControl(LedsRowControl(deviceRow)));
-            }
             var rows = new List<UIElement> { Ui.Anchor(deviceRow, PanelLeds.AnchorDevice) };
 
             // The chooser names the rig's brightness in force in its first entry, so it is drawn again when a
@@ -691,6 +701,14 @@ namespace OpenDashPlugin
                 if (refocus) LedsFocusLater(() => LedsFirstControl(brightness.Child));
             };
             drawBrightness(false);
+            if (ledsFocusDevice)
+            {
+                ledsFocusDevice = false;
+                // The picker drawn in the pressed one's place, or, where the pick left the row a caption with
+                // nothing to press, the Brightness chooser under it: focus that sat in the closed list must land
+                // in the panel, not in SimHub's window.
+                LedsFocusLater(() => LedsFocusable(LedsFirstControl(LedsRowControl(deviceRow))) ?? LedsFirstControl(brightness.Child));
+            }
             // Not while its list is open: the chooser would be replaced under the popup, which would stay up with
             // the old value and out of Escape's reach. The redraw waits for the list to close.
             var owed = false;
@@ -871,13 +889,24 @@ namespace OpenDashPlugin
             var row = LedsRow(PanelLights.CarTablesTitle, carTablesButton);
             // Capped as a row's own caption is, so none of the three runs the width of a desk.
             carTablesLine = LedsCaptionLine(string.Empty);
+            var lines = new UIElement[]
+            {
+                carTablesLine,
+                LedsCaptionLine(PanelLights.CarTablesCaption),
+                LedsCaptionLine(PanelLights.CarTablesAttribution),
+            };
+            // Under the row's title, in the column the kit draws it in; where the kit's row holds no such column,
+            // under the row, since the licence's attribution and the status line are drawn either way.
             var parts = row.Tag as RowParts;
-            var left = parts == null ? null : parts.TitleLine.Parent as StackPanel;
+            var left = parts == null || parts.TitleLine == null ? null : parts.TitleLine.Parent as StackPanel;
+            FrameworkElement drawn = row;
             if (left != null)
             {
-                left.Children.Add(carTablesLine);
-                left.Children.Add(LedsCaptionLine(PanelLights.CarTablesCaption));
-                left.Children.Add(LedsCaptionLine(PanelLights.CarTablesAttribution));
+                foreach (var line in lines) left.Children.Add(line);
+            }
+            else
+            {
+                drawn = Ui.VStack(0, new UIElement[] { row }.Concat(lines).ToArray());
             }
             RefreshCarTables();
             // The start reads the tables on a thread of its own, so a page opened before it lands would say
@@ -888,7 +917,7 @@ namespace OpenDashPlugin
                 if (carTablesLine == null || carTablesDownloading) return;
                 if (!string.Equals(CarTablesKey(), carTablesDrawn, StringComparison.Ordinal)) RefreshCarTables();
             });
-            return row;
+            return drawn;
         }
 
         /// <summary>What the car tables' row is drawn from: the service's status and its count of cars.</summary>
@@ -991,6 +1020,13 @@ namespace OpenDashPlugin
             // Where a pick could only be refused, the picker shows the strip's device and takes no pick: the header
             // says why.
             picker.IsEnabled = movable;
+            if (!movable)
+            {
+                // Faded as the kit's other controls are when they take no press, since the choice button's own
+                // template draws a disabled picker at full ink; and its hover still names the whole device.
+                picker.Opacity = PanelMetrics.DisabledOpacity;
+                ToolTipService.SetShowOnDisabled(picker, true);
+            }
             if (row.Selected >= 0) picker.ToolTip = labels[row.Selected];
             var drawn = LedsRow(PanelLights.BarDeviceTitle, picker, row.Caption);
             drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);
@@ -1021,6 +1057,8 @@ namespace OpenDashPlugin
             {
                 Log.Warn("The profile for " + bar.Name + " was not moved: this build carries no profile of its shape, " + bar.ProfileShapeId + ".");
                 RebuildPage();
+                // A build that never reached the device row leaves the flag for an unrelated one: it ends here.
+                ledsFocusDevice = false;
                 Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.NotMoved(bar.Name), PanelLeds.NoProfileForStrip)));
                 return;
             }
@@ -1034,6 +1072,7 @@ namespace OpenDashPlugin
             // fix box and the sidebar's dot are drawn again from what SimHub says now.
             RefreshAttention();
             RebuildPage();
+            ledsFocusDevice = false;
             RefreshSidebar();
             Say(line, ok && plan.Note == null);
         }
@@ -1098,17 +1137,20 @@ namespace OpenDashPlugin
             if (bar == null) return;
             var facts = StripFacts(ns);
             var before = facts == null ? null : facts.Profile;
-            var blocked = LedsProfileBlocked(bar);
-            var plan = blocked == null ? LedsReinstall(bar) : null;
+            // SimHub's devices walked once, for the guard, the install and the line.
+            IList<string> declined;
+            var targets = LedTargets.All(out declined);
+            var blocked = LedsProfileBlocked(bar, targets, declined);
+            var plan = blocked == null ? LedsReinstall(bar, targets) : null;
             Redraw();
             if (plan == null)
             {
                 // The page was drawn before the build or SimHub changed under it: the reason, not the log.
-                Say(PanelMessage.Caution(LedsProfileBlocked(bar) ?? PanelLeds.ProfileFailed(bar.Name)));
+                Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name)));
                 return;
             }
             var ok = plan.State == FlagBoxInstallState.UpToDate;
-            var target = LedTargets.Find(bar.Device);
+            var target = LedsTargetOf(targets, bar.Device);
             Say(PanelLeds.InstallSaid(ok, before, bar.Name, target == null ? null : target.Name, plan.Note), ok && plan.Note == null);
         }
 
@@ -1123,16 +1165,18 @@ namespace OpenDashPlugin
             Save();
             var facts = StripFacts(ns);
             var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);
-            var blocked = LedsProfileBlocked(bar);
-            var plan = blocked == null ? LedsReinstall(bar) : null;
+            IList<string> declined;
+            var targets = LedTargets.All(out declined);
+            var blocked = LedsProfileBlocked(bar, targets, declined);
+            var plan = blocked == null ? LedsReinstall(bar, targets) : null;
             Redraw();
             if (plan == null)
             {
-                Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), LedsProfileBlocked(bar))));
+                Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked)));
                 return;
             }
             var ok = plan.State == FlagBoxInstallState.UpToDate;
-            var target = LedTargets.Find(bar.Device);
+            var target = LedsTargetOf(targets, bar.Device);
             var line = ok ? PanelLeds.ReverseSaid(bar.Name, reversed, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ProfileFailed(bar.Name);
             Say(line, ok && plan.Note == null);
         }
@@ -1171,11 +1215,14 @@ namespace OpenDashPlugin
             Save();
             // Only where the page can install it: a rename must not take a profile that still lights out of
             // SimHub and put nothing back.
-            var blocked = inSimHub ? LedsProfileBlocked(bar) : null;
+            // SimHub's devices walked once, and only where the rename installs again.
+            IList<string> declined = null;
+            var targets = inSimHub ? LedTargets.All(out declined) : null;
+            var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;
             var ok = true;
             if (inSimHub && blocked == null)
             {
-                var plan = LedsReinstall(bar);
+                var plan = LedsReinstall(bar, targets);
                 ok = plan != null && plan.State == FlagBoxInstallState.UpToDate;
             }
             Redraw();
@@ -1585,14 +1632,16 @@ namespace OpenDashPlugin
             Select(PanelPage.Leds, bar.Namespace);
             // With no device SimHub lists there is nowhere to install: the strip is added, the press said no
             // more, and the line names the step left.
-            var target = LedTargets.Find(bar.Device);
+            IList<string> declined;
+            var targets = LedTargets.All(out declined);
+            var target = LedsTargetOf(targets, bar.Device);
             if (target == null)
             {
                 Redraw();
                 Say(PanelMessage.Caution(PanelLeds.AddedWithoutDevice(bar.Name)));
                 return;
             }
-            var plan = LedsReinstall(bar);
+            var plan = LedsReinstall(bar, targets);
             var ok = plan != null && plan.State == FlagBoxInstallState.UpToDate;
             Redraw();
             // A note is not a failure, so the line stays the ordinary one and gains a sentence, before the select
