@@ -27,12 +27,11 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == "Things to fix");
         }
 
-        /// <summary>Every section heading is found, and lands on Home. The quick controls' own labels are found on
-        /// the pages that always draw them, since an empty rig's Home draws no quick controls: Night mode on
-        /// Settings, the flags and the spotter on Rig, and the brightness, whose label is whichever brightness
-        /// is in force, on Settings too.</summary>
+        /// <summary>Every section heading and every quick-controls label but the brightness's is found, and lands
+        /// on Home (search covers every row label and section heading on every page): the brightness's label is
+        /// whichever brightness is in force, so neither is an entry, and the section's name carries the word.</summary>
         [Fact]
-        public void Every_heading_it_draws_is_searchable()
+        public void Every_heading_and_label_it_draws_is_searchable()
         {
             var labels = PanelHome.Search.Select(entry => entry.Label).ToList();
             Assert.Equal(new[]
@@ -40,12 +39,20 @@ namespace OpenDashPlugin.Tests
                 PanelHome.Title,
                 PanelHome.RightNowTitle,
                 PanelHome.QuickControlsTitle,
+                PanelSettings.NightModeTitle,
+                PanelHome.TryTitle,
             }, labels);
             Assert.Equal(labels.Count, labels.Distinct().Count());
-            Assert.DoesNotContain(PanelHome.Search, entry => entry.Label == PanelSettings.NightModeTitle || entry.Label == PanelHome.TryTitle);
-            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelSettings.NightModeTitle);
-            Assert.Contains(PanelRigMap.Search, entry => entry.Label == PanelEmulation.FlagsGroup);
-            Assert.Contains(PanelRigMap.Search, entry => entry.Label == PanelEmulation.SpotterGroup);
+            Assert.All(PanelHome.Search.Skip(2), entry => Assert.Equal(PanelHome.AnchorQuickControls, entry.Route.Anchor));
+            // Each is drawn by the page, as its label says: the switch's eyebrow and the Rig cell's.
+            var code = PageCode();
+            Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelSettings.NightModeTitle), night),", code);
+            Assert.Contains("Ui.VStack(PanelHome.QuickGap, Ui.Eyebrow(PanelHome.TryTitle), rig),", code);
+            // Typing a label as it is drawn finds it on Home.
+            foreach (var drawn in new[] { PanelHome.RightNowTitle, PanelHome.QuickControlsTitle, PanelSettings.NightModeTitle, PanelHome.TryTitle })
+            {
+                Assert.Contains(PanelSearch.Find(PanelSearch.All(), drawn.ToLowerInvariant()), hit => hit.Route.Page == PanelPage.Home && hit.Label == drawn);
+            }
             // The slider's label is whichever brightness is in force, so neither brightness is a Home entry: a
             // fixed one would land on the other brightness's slider half the time. Settings lists both, and
             // Quick controls carries the word.
@@ -63,7 +70,10 @@ namespace OpenDashPlugin.Tests
             Func<string, string[]> keywords = label => PanelHome.Search.Single(entry => entry.Label == label).Keywords;
             Assert.Equal(new[] { "things to fix", "nothing to fix", "attention", "problem", "warning" }, keywords(PanelHome.Title));
             Assert.Equal(new[] { "live", "showing" }, keywords(PanelHome.RightNowTitle));
-            Assert.Equal(new[] { "brightness", "night mode" }, keywords(PanelHome.QuickControlsTitle));
+            // "night mode" is the Night mode entry's own label, so the section does not carry it a second time.
+            Assert.Equal(new[] { "brightness" }, keywords(PanelHome.QuickControlsTitle));
+            Assert.Equal(new[] { "dark", "dim" }, keywords(PanelSettings.NightModeTitle));
+            Assert.Equal(new[] { "try", "emulate", "rig" }, keywords(PanelHome.TryTitle));
         }
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
@@ -1023,7 +1033,10 @@ namespace OpenDashPlugin.Tests
         /// and it is the only thing on the page (voice.md; the inventory's "in place of the three sections"):
         /// only an issue the headline counts (an update, the one kind an empty rig can have) is drawn above it,
         /// so the count is never over no rows. A rig with anything draws Right now and the quick controls, and
-        /// each Home search entry lands on its own section's anchor.</summary>
+        /// each Home search entry lands on its own section's anchor. Search does not know whether the rig is
+        /// empty, so one rule holds for every entry under Right now and the quick controls: on an empty rig,
+        /// Right now's lands on the add tile, which takes its anchor, and the quick controls' land at the top
+        /// of the page, whose anchor is not drawn and which is short enough to show it all.</summary>
         [Fact]
         public void The_empty_rig_stands_in_place_of_right_now()
         {
@@ -1041,6 +1054,12 @@ namespace OpenDashPlugin.Tests
                 Assert.True(drawnAt.ContainsKey(entry.Route.Anchor), entry.Label);
                 Assert.Contains(drawnAt[entry.Route.Anchor], code);
             });
+            // Branch by branch: the empty rig draws Right now's anchor and not the quick controls', and those
+            // that land on the missing one are exactly the quick controls' heading and labels.
+            Assert.Contains("if (empty) { sections.Add(Ui.Anchor(HomeEmptyRig(), PanelHome.AnchorRightNow)); } else {", code);
+            Assert.Single(Regex.Matches(code, Regex.Escape("PanelHome.AnchorQuickControls")));
+            Assert.Equal(new[] { PanelHome.QuickControlsTitle, PanelSettings.NightModeTitle, PanelHome.TryTitle },
+                PanelHome.Search.Where(entry => entry.Route.Anchor == PanelHome.AnchorQuickControls).Select(entry => entry.Label).ToArray());
             Assert.Single(Regex.Matches(code, Regex.Escape("Ui.Anchor(HomeQuickControls(),")));
             Assert.Contains("foreach (var section in sections) { section.Margin = new Thickness(0, PanelShell.SectionGapFor(PanelPage.Home), 0, 0); stack.Children.Add(section); } return stack;", code);
             Assert.Contains("var line = Ui.Prose(PanelCopy.EmptyRig, PanelHome.DetailSize); line.Margin = new Thickness(0, PanelHome.EmptyRigGap, 0, 0); return Ui.VStack(0, Ui.CardGrid(PanelHome.CardMinWidth, PanelHome.CardGap, PanelHome.CardMax, tile), line);", code);

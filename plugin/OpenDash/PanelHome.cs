@@ -624,11 +624,15 @@ namespace OpenDashPlugin
             // thing to fix" or "3 things to fix" (PanelAttention.Headline), so no one label names it.
             new PanelSearch.Entry(Title, PanelPage.Home, null, "things to fix", "nothing to fix", "attention", "problem", "warning"),
             new PanelSearch.Entry(RightNowTitle, PanelPage.Home, AnchorRightNow, "live", "showing"),
-            // The quick controls' own labels are not entries: Night mode is Settings' (PanelSettings.Search) and
-            // the flags and the spotter are Rig's (PanelRigMap.Search), on the pages that always draw them, where
-            // an empty rig's Home draws no quick controls to land on. The section's name stays, and lands at the
-            // top of an empty rig's page, which is short enough to show it all.
-            new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness", "night mode"),
+            // Every heading and every label Home draws is an entry (search covers every row label and section
+            // heading on every page), its quick controls' included, as Settings and Rig list their own switches
+            // too. The brightness's label is whichever brightness is in force, so the section's name carries
+            // the word (SearchDrawnOtherwise). An empty rig draws neither Right now nor the quick controls: one
+            // rule for all four of these entries, which then land on the add tile that stands in Right now's
+            // place, or at the top of a page short enough to show it all (The_empty_rig_stands_in_place_of_right_now).
+            new PanelSearch.Entry(QuickControlsTitle, PanelPage.Home, AnchorQuickControls, "brightness"),
+            new PanelSearch.Entry(PanelSettings.NightModeTitle, PanelPage.Home, AnchorQuickControls, "dark", "dim"),
+            new PanelSearch.Entry(TryTitle, PanelPage.Home, AnchorQuickControls, "try", "emulate", "rig"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
