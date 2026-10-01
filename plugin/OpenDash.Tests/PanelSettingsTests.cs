@@ -791,7 +791,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Screens", "LEDs", "Matrix", "Races only" }, PanelSettings.SurfaceColumns);
             Assert.Equal("Alert", PanelSettings.AlertColumn);
             // A heading is a noun (voice.md), where the artboard's "When" is an adverb, and it is the word the
-            // panel already gives these numbers: Matrix's "Thresholds" link lands on this table.
+            // artboards already give these numbers: Matrix.dc.html's Warnings row links "Thresholds" to this
+            // table, and Settings.dc.html labels each box "{name} threshold".
             Assert.Equal("Threshold", PanelSettings.ThresholdColumn);
             Assert.Equal("Try", PanelSettings.TryLabel);
             // Every row is drawn, in this order, and every live row writes the rig-wide setting.

@@ -319,10 +319,11 @@ namespace OpenDashPlugin
         public const string AlertColumn = "Alert";
 
         /// <summary>What each row warns at. The artboard heads the column "When", an adverb; voice.md makes a
-        /// heading a noun, and voice.md beats artboard copy. The noun is the one the panel already gives these
-        /// numbers -- Matrix's Warnings row links "Thresholds" here, search finds the table by "threshold" --
-        /// so the panel keeps one word for the thing. Every row draws a threshold box, Pit window open's too,
-        /// empty because that alert is an event. A departure from the artboard for plugin.md to record.</summary>
+        /// heading a noun, and voice.md beats artboard copy. The noun is the one the artboards already give
+        /// these numbers -- Matrix.dc.html's Warnings row links "Thresholds" to this table, Settings.dc.html
+        /// labels each box "{name} threshold", and search finds the table by "threshold" -- so the panel keeps
+        /// one word for the thing. Every row draws a threshold box, Pit window open's too, empty because that
+        /// alert is an event. A departure from the artboard for plugin.md to record.</summary>
         public const string ThresholdColumn = "Threshold";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
