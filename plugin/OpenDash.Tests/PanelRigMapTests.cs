@@ -196,7 +196,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("root.ClearValue(Panel.ZIndexProperty);", RigMethod("private static void RigLower("));
             // A tile an arrow key moves is scrolled to, since WPF does not follow a focused element that moves;
             // the key never raises it, so a rebuild while it is held restores focus to the same tile.
-            InOrder(Handler(tile, "thumb.KeyDown +="), "RigPlace(root,", "extent.Pending = tile;", "root.BringIntoView();");
+            InOrder(Handler(tile, "thumb.KeyDown +="), "RigPlace(root,", "extent.Pending = tile;", "root.BringIntoView(RigRingBounds(root, extent));");
+            InOrder(RigMethod("private static Rect RigRingBounds("), "(Theme.FocusRingOffset + Theme.FocusRing) / (extent.Scale > 0 ? extent.Scale : 1)", "new Rect(-outset, -outset, root.Width + 2 * outset, root.Height + 2 * outset)");
             Assert.DoesNotContain("SetZIndex", Handler(tile, "thumb.KeyDown +="));
             Assert.Equal(1, tile.Split("Panel.SetZIndex(").Length - 1);
 
@@ -245,7 +246,7 @@ namespace OpenDashPlugin.Tests
             InOrder(canvas,
                 "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
                 "var plan = PanelRigMap.Plan(Settings, width);",
-                "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };",
+                "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };",
                 "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
                 "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
                 "var tiles = plan.Tiles;",
@@ -263,16 +264,38 @@ namespace OpenDashPlugin.Tests
                 "extent.Live = false;",
                 // The frame is the plan's, and a room wider than the canvas scrolls across inside it.
                 "var frame = new Grid { Height = plan.DrawnHeight, ClipToBounds = true };",
+                "BorderBrush = Ui.Brush(Theme.Rule),",
+                "Child = frame,",
+                "canvas.HorizontalAlignment = HorizontalAlignment.Left;",
+                "canvas.VerticalAlignment = VerticalAlignment.Top;",
                 "if (plan.Scrolls(width))",
+                // Held off the scroller's clip by the focus ring's outset, so a tile at an edge keeps its ring.
+                "var outset = Theme.FocusRingOffset + Theme.FocusRing;",
+                "canvas.Margin = new Thickness(outset);",
                 "HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,",
                 "VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,",
+                // No Tab stop, no focus taken by a press on the ground, no page key swallowed.
+                "Focusable = false,",
                 "Content = canvas,",
                 "scroller.PreviewMouseWheel += RigPassWheel;",
-                "frame.Height = plan.DrawnHeight + SystemParameters.HorizontalScrollBarHeight;",
+                "RigKeepScroll(scroller, extent);",
+                "extent.Scroller = scroller;",
+                "extent.Inset = outset;",
+                // The scroller fills the frame, so its bar is along the frame's foot.
+                "frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;",
                 "frame.Children.Add(scroller);",
+                // A canvas that fits is framed at the room's own width: outline, ground and room agree.
+                "outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;",
+                "outline.HorizontalAlignment = HorizontalAlignment.Left;",
                 "frame.Children.Add(canvas);",
-                "BorderBrush = Ui.Brush(Theme.Rule),",
-                "Child = frame,");
+                "return outline;");
+            Assert.DoesNotContain("VerticalAlignment = VerticalAlignment.Top,", canvas);
+            // A rebuild draws a canvas that scrolls across where it was scrolled to, and only the build that
+            // is the page's keeps the place.
+            InOrder(RigMethod("private void RigKeepScroll("), "var restore = rigScrollX;", "scroller.Loaded +=", "scroller.ScrollToHorizontalOffset(restore);", "scroller.ScrollChanged +=", "if (!restored || !extent.Live) return;", "rigScrollX = scroller.HorizontalOffset;");
+            // The tile in the hand is kept in view as it is dragged past the scroller's edge.
+            InOrder(RigMethod("private static void RigFollow("), "if (scroller == null) return;", "var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;", "var right = left + root.Width * extent.Scale;",
+                "if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);", "else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);");
             Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
             InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
             // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
@@ -297,7 +320,11 @@ namespace OpenDashPlugin.Tests
             // A drag is held inside all four edges, and only a drag that moved saves: a plain click keeps
             // the tile following the default.
             var delta = Handler(tile, "thumb.DragDelta +=");
-            InOrder(delta, "moved = true;", "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)", "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)");
+            InOrder(delta,
+                "moved = true;",
+                "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)",
+                "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)",
+                "RigFollow(root, extent);");
             InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
             InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
             InOrder(Handler(tile, "thumb.DragStarted +="), "startLeft = Canvas.GetLeft(root);", "startTop = Canvas.GetTop(root);");

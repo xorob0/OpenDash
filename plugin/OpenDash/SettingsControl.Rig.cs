@@ -92,6 +92,12 @@ namespace OpenDashPlugin
             /// the save waits for it to come up. The build saves it when it is let go of, so a rebuild in
             /// between plans from the move rather than drawing the tile back where it was.</summary>
             public RigTile Pending { get; set; }
+
+            /// <summary>The scroller the room scrolls across in, or null where the room fits the canvas; the
+            /// room's offset in it (the focus ring's outset), and the scale it is drawn at.</summary>
+            public ScrollViewer Scroller { get; set; }
+            public double Inset { get; set; }
+            public double Scale { get; set; }
         }
 
         private FrameworkElement BuildRigPage(PanelRoute to)
@@ -183,7 +189,7 @@ namespace OpenDashPlugin
             // layouts and heights as the bar came and went, and its height brought the bar back.
             var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
             var plan = PanelRigMap.Plan(Settings, width);
-            var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Live = true };
+            var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };
             // The room on the dotted ground: the tiles' room as drawn, which a shrunk arrangement leaves
             // shorter than the frame, so the band under it takes no drop.
             var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
@@ -231,27 +237,7 @@ namespace OpenDashPlugin
 
             // Past the least it is shrunk to, the room is wider than the canvas and scrolls across inside it.
             var frame = new Grid { Height = plan.DrawnHeight, ClipToBounds = true };
-            if (plan.Scrolls(width))
-            {
-                var scroller = new ScrollViewer
-                {
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Content = canvas,
-                };
-                scroller.PreviewMouseWheel += RigPassWheel;
-                frame.Height = plan.DrawnHeight + SystemParameters.HorizontalScrollBarHeight;
-                frame.Children.Add(scroller);
-            }
-            else
-            {
-                canvas.HorizontalAlignment = HorizontalAlignment.Left;
-                canvas.VerticalAlignment = VerticalAlignment.Top;
-                frame.Children.Add(canvas);
-            }
-
-            return new Border
+            var outline = new Border
             {
                 Background = Ui.Brush(Theme.SurfaceInset),
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -259,6 +245,78 @@ namespace OpenDashPlugin
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Child = frame,
             };
+            canvas.HorizontalAlignment = HorizontalAlignment.Left;
+            canvas.VerticalAlignment = VerticalAlignment.Top;
+            if (plan.Scrolls(width))
+            {
+                // A focused tile's ring stands outside it, and a scroller clips what it holds to its view, so
+                // the room is held off the scroller's edges by the ring's outset and a tile at an edge keeps
+                // its whole ring. The room itself, and so every place a tile is kept at, is unchanged.
+                var outset = Theme.FocusRingOffset + Theme.FocusRing;
+                canvas.Margin = new Thickness(outset);
+                var scroller = new ScrollViewer
+                {
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, no focus
+                    // taken by a press on the ground (which scrolled the page back up to the canvas), and no
+                    // arrow or page key swallowed for an axis it does not scroll. A tile's arrow keys still
+                    // scroll it across, through the tile's BringIntoView.
+                    Focusable = false,
+                    Content = canvas,
+                };
+                scroller.PreviewMouseWheel += RigPassWheel;
+                RigKeepScroll(scroller, extent);
+                extent.Scroller = scroller;
+                extent.Inset = outset;
+                // The scroller fills the frame, so its bar lies along the frame's foot.
+                frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;
+                frame.Children.Add(scroller);
+            }
+            else
+            {
+                // The frame is the room's own width, so its outline, the dotted ground and the room a drag
+                // is held to are one rectangle whether or not the page's scroll bar is showing.
+                outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;
+                outline.HorizontalAlignment = HorizontalAlignment.Left;
+                frame.Children.Add(canvas);
+            }
+            return outline;
+        }
+
+        /// <summary>Where a canvas that scrolls across was scrolled to, so a rebuild -- the night switch, a
+        /// wheel's lighting press, a resize -- draws it there again rather than at its left end.</summary>
+        private double rigScrollX;
+
+        /// <summary>Restores the canvas's scroll across once the scroller is laid out, and keeps it as it
+        /// changes while this build is the page's.</summary>
+        private void RigKeepScroll(ScrollViewer scroller, RigExtent extent)
+        {
+            var restore = rigScrollX;
+            var restored = false;
+            scroller.Loaded += (sender, args) =>
+            {
+                if (restored) return;
+                restored = true;
+                scroller.ScrollToHorizontalOffset(restore);
+            };
+            scroller.ScrollChanged += (sender, args) =>
+            {
+                if (!restored || !extent.Live) return;
+                rigScrollX = scroller.HorizontalOffset;
+            };
+        }
+
+        /// <summary>Scrolls a canvas that scrolls across so the tile in the hand stays in view: a tile dragged
+        /// past the scroller's edge is otherwise dropped where nobody can see it.</summary>
+        private static void RigFollow(FrameworkElement root, RigExtent extent)
+        {
+            var scroller = extent.Scroller;
+            if (scroller == null) return;
+            var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;
+            var right = left + root.Width * extent.Scale;
+            if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);
+            else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);
         }
 
         /// <summary>The wheel over a canvas that scrolls across goes on to the page: the canvas's scroller
@@ -384,6 +442,7 @@ namespace OpenDashPlugin
                 moved = true;
                 Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
                 Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
+                RigFollow(root, extent);
             };
             // Saved on the drop, never in End(): SimHub is force-killed on the VM. A drag that is cancelled --
             // the capture lost, or the build replaced under it -- is no drop: the tile goes back.
@@ -425,8 +484,8 @@ namespace OpenDashPlugin
                 if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;
                 extent.Pending = tile;
                 // WPF does not scroll to a focused element that moves; the left button is up, so the guard
-                // above lets this through.
-                root.BringIntoView();
+                // above lets this through. The tile is brought in with its focus ring round it.
+                root.BringIntoView(RigRingBounds(root, extent));
             };
             thumb.KeyUp += (sender, args) =>
             {
@@ -446,6 +505,14 @@ namespace OpenDashPlugin
             };
 
             return new RigTileView(tile, root, paint);
+        }
+
+        /// <summary>A tile with its focus ring round it, in the tile's own pixels: the ring stands its outset
+        /// outside the tile on the screen, which is more of the tile's pixels when the room is shrunk.</summary>
+        private static Rect RigRingBounds(FrameworkElement root, RigExtent extent)
+        {
+            var outset = (Theme.FocusRingOffset + Theme.FocusRing) / (extent.Scale > 0 ? extent.Scale : 1);
+            return new Rect(-outset, -outset, root.Width + 2 * outset, root.Height + 2 * outset);
         }
 
         /// <summary>Whether a tile's name is wider than the room over its picture, so the line trims it.</summary>
