@@ -869,6 +869,23 @@ namespace OpenDashPlugin
 
         public const string CardsCaption = "Cards are shared by every round screen.";
 
+        /// <summary>Whether <paramref name="rig"/> holds a card face that is not round, which reads the same
+        /// shared cards and rig-wide rev bar as the round screens.</summary>
+        public static bool HasCardFace(IEnumerable<ScreenInstance> rig)
+        {
+            return rig != null && rig.Any(screen => screen != null && screen.IsSlots && !IsRound(screen));
+        }
+
+        /// <summary>
+        /// The caption under the cards, naming every screen that shares them: the round screens, and the card
+        /// faces where the rig holds one. A card face's own editor told its driver the cards belonged to round
+        /// screens; a rig with none is not told about a kind it cannot add.
+        /// </summary>
+        public static string CardsCaptionFor(IEnumerable<ScreenInstance> rig)
+        {
+            return HasCardFace(rig) ? "Cards are shared by every round screen and card face." : CardsCaption;
+        }
+
         public static string CardLabel(int slot)
         {
             return "Card " + slot;
@@ -948,6 +965,16 @@ namespace OpenDashPlugin
         /// as the clash lines write them, and the list has no serial comma, as the page's others do not.
         /// </summary>
         public const string RigRevBarCaption = "Every round screen, any face whose own rev bar you have not set and the speedo wherever it is shown.";
+
+        /// <summary>The Rev ring's or Rev bar's caption on <paramref name="rig"/>: <see cref="RigRevBarCaption"/>,
+        /// naming the card faces beside the round screens where the rig holds one, since a card face's arc reads
+        /// the same rig-wide setting and its own editor draws this row.</summary>
+        public static string RigRevBarCaptionFor(IEnumerable<ScreenInstance> rig)
+        {
+            return HasCardFace(rig)
+                ? "Every round screen and card face, any face whose own rev bar you have not set and the speedo wherever it is shown."
+                : RigRevBarCaption;
+        }
 
         // --- Anchors, search and the greyed rows ---------------------------------------------------------
 

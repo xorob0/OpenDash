@@ -45,7 +45,7 @@ namespace OpenDashPlugin
             if (duplicates.Length > 0) rows.Add(BuildScreensWarning(duplicates));
             rows.Add(Ui.Anchor(BuildRevRingRow(screen), PanelScreens.AnchorRevRing));
             rows.Add(Ui.SoonRow(PanelSoon.ZonesInsteadOfCards));
-            var caption = Ui.Prose(PanelScreens.CardsCaption);
+            var caption = Ui.Prose(PanelScreens.CardsCaptionFor(Settings.RigScreens()));
             caption.Margin = new Thickness(0, 10, 0, 0);
             rows.Add(caption);
             var list = Ui.Rows(rows.ToArray());
@@ -83,7 +83,7 @@ namespace OpenDashPlugin
                 Settings.SetRevBar(value);
                 ScreensSave(screen);
             });
-            return Ui.SettingRow(caption: PanelScreens.RigRevBarCaption, title: PanelScreens.RevRingTitleFor(screen), control: control);
+            return Ui.SettingRow(caption: PanelScreens.RigRevBarCaptionFor(Settings.RigScreens()), title: PanelScreens.RevRingTitleFor(screen), control: control);
         }
 
         /// <summary>The disc, with the cards it carries in the order the package reads them: stacked for two,

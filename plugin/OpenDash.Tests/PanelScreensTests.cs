@@ -252,7 +252,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(FacePages.For("B"), page => page.Name == "Speedo");
             Assert.Contains(Modules.All, module => module.Name == "Speedo");
             var round = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Round.cs"));
-            Assert.Contains("PanelScreens.RigRevBarCaption,", round);
+            Assert.Contains("caption: PanelScreens.RigRevBarCaptionFor(Settings.RigScreens()),", round);
+            Assert.Contains("Ui.Prose(PanelScreens.CardsCaptionFor(Settings.RigScreens()))", round);
+            // A card face reads the same cards and the same rev bar, and draws this editor: where the rig holds
+            // one, both captions name it, and a rig with none is not told about a kind it cannot add.
+            var disc = new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 };
+            var cardFace = new ScreenInstance { Kind = Contract.KindSlots, Width = 1280, Height = 480 };
+            Assert.Equal(PanelScreens.RigRevBarCaption, PanelScreens.RigRevBarCaptionFor(new[] { disc }));
+            Assert.Equal(PanelScreens.CardsCaption, PanelScreens.CardsCaptionFor(new[] { disc }));
+            Assert.Equal("Every round screen and card face, any face whose own rev bar you have not set and the speedo wherever it is shown.",
+                PanelScreens.RigRevBarCaptionFor(new[] { disc, cardFace }));
+            Assert.Equal("Cards are shared by every round screen and card face.", PanelScreens.CardsCaptionFor(new[] { cardFace }));
+            Assert.Contains(PanelScreens.CardFace.ToLowerInvariant(), PanelScreens.CardsCaptionFor(new[] { cardFace }));
+            Assert.Equal(PanelScreens.CardsCaption, PanelScreens.CardsCaptionFor(null));
             Assert.Contains("Settings.SetRevBar(value);", round);
             // The note an upgrading user meets, in the noun and verbs Home uses.
             Assert.Equal("Keep or remove each screen an older OpenDash made.", PanelScreens.UnclaimedNote);
