@@ -544,6 +544,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("foreach (var press in updatesRunPresses) press.IsEnabled = false;", run);
             // Put mine back and both light rows' Update join the presses a run holds off.
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(FlatCode(), @"updatesRunPresses\.Add\(").Count);
+            // A light row's repaint takes the press it replaces out of the list, so a run holds off only the
+            // presses its build draws, never a detached one left from an earlier paint.
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(lights, @"UpdatesUnhold\(actionHost\.Child as Button\); actionHost\.Child = null;").Count);
+            Assert.Contains("if (press != null) updatesRunPresses.Remove(press);", Method("private void UpdatesUnhold(Button press)"));
         }
 
         /// <summary>

@@ -81,6 +81,12 @@ namespace OpenDashPlugin
             return button;
         }
 
+        /// <summary>Takes a press a repaint replaced out of the presses a run holds off (ShowRun).</summary>
+        private void UpdatesUnhold(Button press)
+        {
+            if (press != null) updatesRunPresses.Remove(press);
+        }
+
         /// <summary>
         /// A strip's row, and its Update press while its profile is older than this build's and SimHub lists
         /// its device.
@@ -111,6 +117,9 @@ namespace OpenDashPlugin
             {
                 paint(row);
                 var hadFocus = actionHost.IsKeyboardFocusWithin;
+                // The press this repaint replaces leaves the run's list with the tree, so the list holds only
+                // the presses this build draws (UpdatesUnhold).
+                UpdatesUnhold(actionHost.Child as Button);
                 actionHost.Child = null;
                 if (row.OffersUpdate)
                 {
@@ -174,6 +183,9 @@ namespace OpenDashPlugin
                 var row = PanelUpdates.FlagBoxRow(name, current, path);
                 paint(row);
                 var hadFocus = actionHost.IsKeyboardFocusWithin;
+                // The press this repaint replaces leaves the run's list with the tree, so the list holds only
+                // the presses this build draws (UpdatesUnhold).
+                UpdatesUnhold(actionHost.Child as Button);
                 actionHost.Child = null;
                 if (row.OffersUpdate)
                 {
