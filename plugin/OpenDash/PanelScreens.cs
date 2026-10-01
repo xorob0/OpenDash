@@ -659,12 +659,21 @@ namespace OpenDashPlugin
             return string.IsNullOrEmpty(label) ? PanelBindings.ChipTooltip : label + Environment.NewLine + PanelBindings.ChipTooltip;
         }
 
-        /// <summary>A zone's hover in the picture: its name, then the button line the cell may have cut short,
-        /// "Zone A · FANATEC Podium Wheel Base DD1 · 12".</summary>
-        public static string ZoneCellTooltip(string letter, string buttonLine)
+        /// <summary>A zone's hover in the picture: its name, then the page it opens on and the button line, both
+        /// of which the cell cuts short where it is narrow, "Zone A · Gear, speed, revs · Not bound". The
+        /// reference face's zone A has about 79 px inside at the artboard's own frame, and its default page is
+        /// 112 px.</summary>
+        public static string ZoneCellTooltip(string letter, string page, string buttonLine)
         {
-            var name = PanelFacePlan.ZoneLabel(letter);
-            return string.IsNullOrEmpty(buttonLine) ? name : name + " · " + buttonLine;
+            var parts = new[] { PanelFacePlan.ZoneLabel(letter), page, buttonLine };
+            return string.Join(" · ", parts.Where(part => !string.IsNullOrEmpty(part)));
+        }
+
+        /// <summary>The info bar's hover in the picture: its name, then each end's fields, which a narrow end
+        /// cuts short ("Air temperature · Track temperature" is 171 px in a 151 px end at the artboard's frame).</summary>
+        public static string InfoBarTooltip(string left, string right)
+        {
+            return InfoBarTitle + Environment.NewLine + "Left: " + left + Environment.NewLine + "Right: " + right;
         }
 
         /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 21").</summary>

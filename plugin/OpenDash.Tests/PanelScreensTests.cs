@@ -694,13 +694,19 @@ namespace OpenDashPlugin.Tests
             Assert.True(4 * (PanelScreens.PortraitChoiceWidth + PanelScreens.WrapGap) <= PanelScreens.ControlsMost);
             Assert.True(PanelScreens.GlancePageWidth + PanelScreens.GlanceChipMax + 2 * PanelScreens.WrapGap <= PanelScreens.ControlsMost);
             Assert.Equal(PanelScreens.ControlsMost, PanelScreens.ControlsWidth(PanelScreens.ControlsColumnMost));
-            // A chip cut short says the whole binding in its hover, then where it goes; a zone's hover carries
-            // the button line its cell may cut.
+            // A chip cut short says the whole binding in its hover, then where it goes.
             Assert.Equal("FANATEC Podium Wheel Base DD1 · 12" + System.Environment.NewLine + PanelBindings.ChipTooltip, PanelScreens.ChipTooltip("FANATEC Podium Wheel Base DD1 · 12"));
             Assert.Equal(PanelBindings.ChipTooltip, PanelScreens.ChipTooltip(null));
-            Assert.Equal("Zone A · FANATEC Podium Wheel Base DD1 · 12", PanelScreens.ZoneCellTooltip("A", "FANATEC Podium Wheel Base DD1 · 12"));
-            Assert.Equal("Band D · Not bound", PanelScreens.ZoneCellTooltip("D", PanelScreens.NoButton));
-            Assert.Equal("Zone C", PanelScreens.ZoneCellTooltip("C", string.Empty));
+            // A zone's hover carries the page and the button line its cell may cut, and the info bar's its ends.
+            Assert.Equal("Zone A · Gear, speed, revs · FANATEC Podium Wheel Base DD1 · 12", PanelScreens.ZoneCellTooltip("A", "Gear, speed, revs", "FANATEC Podium Wheel Base DD1 · 12"));
+            Assert.Equal("Band D · Relative · Not bound", PanelScreens.ZoneCellTooltip("D", "Relative", PanelScreens.NoButton));
+            Assert.Equal("Zone C", PanelScreens.ZoneCellTooltip("C", null, string.Empty));
+            var nl = System.Environment.NewLine;
+            Assert.Equal("Info bar" + nl + "Left: Air temperature · Track temperature" + nl + "Right: Fuel", PanelScreens.InfoBarTooltip("Air temperature · Track temperature", "Fuel"));
+            var faceSource = ScreensSource("SettingsControl.Screens.Face.cs");
+            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, pageName, buttonLine);", "Face.cs");
+            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.ZoneCellTooltip(\"D\", pageName, buttonLine);", "Face.cs");
+            AssertOnce(faceSource, "cell.ToolTip = PanelScreens.InfoBarTooltip(leftFields, rightFields);", "Face.cs");
         }
 
         /// <summary>

@@ -264,10 +264,12 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarMiddleShare, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
-            var left = ScreensCellText(PanelScreens.BarEnd(screen.Face, face, true), PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
+            var leftFields = PanelScreens.BarEnd(screen.Face, face, true);
+            var rightFields = PanelScreens.BarEnd(screen.Face, face, false);
+            var left = ScreensCellText(leftFields, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
             var middle = ScreensCellText(PanelScreens.InfoBarMiddle, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextLabel);
             middle.TextAlignment = TextAlignment.Center;
-            var right = ScreensCellText(PanelScreens.BarEnd(screen.Face, face, false), PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
+            var right = ScreensCellText(rightFields, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
             right.TextAlignment = TextAlignment.Right;
             Grid.SetColumn(middle, 1);
             Grid.SetColumn(right, 2);
@@ -277,7 +279,8 @@ namespace OpenDashPlugin
             var cell = ScreensZoneButton(grid, selected, pick, new Thickness(PanelFacePlan.BarPaddingX, 0, PanelFacePlan.BarPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
-            cell.ToolTip = PanelScreens.InfoBarTitle;
+            // An end with two fields is cut short in a narrow bar, so the hover carries both ends whole.
+            cell.ToolTip = PanelScreens.InfoBarTooltip(leftFields, rightFields);
             cell.Uid = "screens.zone." + PanelScreens.BarKey;
             return cell;
         }
@@ -321,7 +324,8 @@ namespace OpenDashPlugin
             top.Children.Add(count);
             top.Children.Add(ScreensCellText(letter, PanelFacePlan.LetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data));
 
-            var page = ScreensCellText(FacePages.NameOf(letter, PanelScreens.FirstTicked(screen.Face, letter)), PanelFacePlan.PageSize, FontWeights.SemiBold, Theme.TextPrimary);
+            var pageName = FacePages.NameOf(letter, PanelScreens.FirstTicked(screen.Face, letter));
+            var page = ScreensCellText(pageName, PanelFacePlan.PageSize, FontWeights.SemiBold, Theme.TextPrimary);
             page.VerticalAlignment = VerticalAlignment.Center;
             if (centred) page.TextAlignment = TextAlignment.Center;
             var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, letter)));
@@ -336,8 +340,8 @@ namespace OpenDashPlugin
             dock.Children.Add(button);
             dock.Children.Add(page);
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY));
-            // The button line is cut short in a narrow cell, so the hover carries it whole.
-            cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, buttonLine);
+            // The page and the button line are cut short in a narrow cell, so the hover carries both whole.
+            cell.ToolTip = PanelScreens.ZoneCellTooltip(letter, pageName, buttonLine);
             cell.Uid = "screens.zone." + letter;
             return cell;
         }
@@ -361,11 +365,12 @@ namespace OpenDashPlugin
             count.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
             DockPanel.SetDock(count, Dock.Right);
             dock.Children.Add(count);
-            dock.Children.Add(ScreensCellText(FacePages.NameOf("D", PanelScreens.FirstTicked(screen.Face, "D")), PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary));
+            var pageName = FacePages.NameOf("D", PanelScreens.FirstTicked(screen.Face, "D"));
+            dock.Children.Add(ScreensCellText(pageName, PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary));
             var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, 0, PanelFacePlan.CellPaddingX, 0));
             cell.Height = height;
             cell.VerticalContentAlignment = VerticalAlignment.Center;
-            cell.ToolTip = PanelScreens.ZoneCellTooltip("D", buttonLine);
+            cell.ToolTip = PanelScreens.ZoneCellTooltip("D", pageName, buttonLine);
             cell.Uid = "screens.zone.D";
             return cell;
         }
