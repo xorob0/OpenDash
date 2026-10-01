@@ -18,6 +18,12 @@ namespace OpenDashPlugin.Tests
             return RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
         }
 
+        /// <summary>The page's lines in this order, with only white space between them.</summary>
+        private static string Lines(params string[] lines)
+        {
+            return string.Join(@"\s*", lines.Select(Regex.Escape));
+        }
+
         [Fact]
         public void Settings_says_what_the_artboard_says()
         {
@@ -436,11 +442,64 @@ namespace OpenDashPlugin.Tests
             // The page is the row, then all six sections, laid out together under the title.
             Assert.Matches(@"var all = new List<UIElement> \{ SettingsIndex\(sections, to\) \};\s*all\.AddRange\(sections\);", page);
             Assert.Contains("return PageLayout(PanelSettings.Title, null, all.ToArray());", page);
-            // Every link is kept, to be lit, and drawn.
+            // A link for every section from the first, each kept, to be lit, and drawn in the row's wrap, which
+            // is what the row's border holds.
+            Assert.Matches(Lines(
+                "for (var i = 0; i < PanelSettings.SectionTitles.Length; i++)",
+                "{",
+                "var index = i;",
+                "var heading = SettingsHeadingOf(sections[i]);",
+                "var link = SettingsIndexLink(PanelSettings.SectionTitles[i]);"), page);
             Assert.Matches(@"links\.Add\(link\);\s*wrap\.Children\.Add\(link\);", page);
-            // It hears the column's scroller once loaded, and reads the view on every move of it.
-            Assert.Matches(@"scroll = SettingsScrollOf\(row\);\s*if \(scroll == null\) return;\s*scroll\.ScrollChanged \+= follow;", page);
-            Assert.Matches(@"args\.ExtentHeightChange == 0\) return;\s*read\(\);", page);
+            Assert.Matches(Lines(
+                "Margin = new Thickness(0, PanelSettings.IndexTop - PanelShell.SectionGapFor(PanelPage.Settings), 0, 0),",
+                "Child = wrap,",
+                "};"), page);
+            // It hears the column's scroller once, when it is first loaded, and reads the view on every move of
+            // it that moved something.
+            Assert.Matches(Lines(
+                "row.Loaded += (sender, args) =>",
+                "{",
+                "if (scroll != null) return;",
+                "scroll = SettingsScrollOf(row);",
+                "if (scroll == null) return;",
+                "scroll.ScrollChanged += follow;"), page);
+            Assert.Matches(Lines(
+                "if (args.VerticalChange == 0 && args.ViewportHeightChange == 0 && args.ExtentHeightChange == 0) return;",
+                "read();"), page);
+            // A read from a dropped build, or before the scroller is found, or while the row is hidden, writes
+            // nothing.
+            Assert.Matches(Lines(
+                "Action read = () =>",
+                "{",
+                "if (dropped || scroll == null || !row.IsVisible) return;",
+                "var tops = sections.Select(section => SettingsTopIn(scroll, section)).ToList();"), page);
+            // The scroller is found by walking up from the row, one parent a step.
+            Assert.Matches(Lines(
+                "var node = element;",
+                "while (node != null)",
+                "{",
+                "node = VisualTreeHelper.GetParent(node);",
+                "var scroll = node as ScrollViewer;",
+                "if (scroll != null) return scroll;",
+                "}",
+                "return null;"), page);
+            // A section's heading is the first thing it draws.
+            Assert.Contains("var heading = panel == null || panel.Children.Count == 0 ? null : panel.Children[0] as FrameworkElement;", page);
+            // A link's own template: its ground and padding are the button's, so the mark and the hover show,
+            // and its label is drawn, centred in its height.
+            Assert.Matches(Lines(
+                "var chrome = new FrameworkElementFactory(typeof(Border));",
+                "chrome.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));",
+                "chrome.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));",
+                "chrome.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));",
+                "var presenter = new FrameworkElementFactory(typeof(ContentPresenter));",
+                "presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);",
+                "chrome.AppendChild(presenter);"), page);
+            // A mark is kept on the link, so the pointer leaving a marked link leaves it marked.
+            Assert.Matches(Lines(
+                "link.Tag = current;",
+                "SettingsInkIndexLink(link, current || link.IsMouseOver);"), page);
             // The rule that closes the row, and a link lit in the primary ink on the zone ground.
             Assert.Matches(@"BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, 0, 0, PanelMetrics\.BorderWeight\),\s*Padding = new Thickness\(0, 0, 0, PanelSettings\.IndexPaddingBottom - PanelSettings\.IndexGap\),", page);
             Assert.Contains("link.Background = lit ? Ui.Brush(Theme.SurfaceZone) : Brushes.Transparent;", page);
@@ -596,6 +655,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(4, PanelSettings.IndexStartMark(4, PanelSettings.AnchorFlags));
             Assert.Equal(-1, PanelSettings.IndexStartHeld(4, -1, PanelSettings.AnchorFlags));
             Assert.Equal(5, PanelSettings.IndexStartHeld(5, 5, null));
+            // Race data, the first section, is a mark and a hold like any other: a rebuild in place after the
+            // driver scrolled back up from where a route landed keeps Race data, and a press on its link at the
+            // foot of the page holds it while its heading is in view.
+            Assert.Equal(0, PanelSettings.IndexStartMark(0, PanelSettings.AnchorFlags));
+            Assert.Equal(-1, PanelSettings.IndexStartHeld(0, -1, PanelSettings.AnchorFlags));
+            Assert.Equal(0, PanelSettings.IndexStartHeld(0, 0, PanelSettings.AnchorFlags));
+            Assert.Equal(0, PanelSettings.CurrentSection(new double[] { 0, 300, 600, 900, 1200, 1500 }, PanelSettings.IndexReadLine, 700, true, 0));
             // Search lands on Flags, a short section the landing scroll leaves at the foot of the view: held,
             // it stays marked rather than Race data, whose top is the last to reach the read line.
             var landed = new double[] { -400, 560, 820, 1300, 1900, 2300 };
@@ -667,6 +733,13 @@ namespace OpenDashPlugin.Tests
         {
             var page = Page();
             Assert.Contains("if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;", page);
+            // SettingsFit and SettingsNew give a row back untouched only when it is not one they can work on.
+            Assert.Matches(Lines(
+                "if (parts == null || parts.Control == null || grid == null) return row;",
+                "grid.RowDefinitions.Add("), page);
+            Assert.Matches(Lines(
+                "if (parts == null || parts.TitleLine == null) return row;",
+                "var tag = Ui.NewTag();"), page);
             Assert.Contains("SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", page);
             foreach (var greyed in new[] { "TyreDisplay", "YellowFlags", "DashTheme", "ColourVision", "Colours", "BrandName" })
             {
@@ -802,6 +875,51 @@ namespace OpenDashPlugin.Tests
             Assert.All(rows, index => Assert.True(index >= 0));
             Assert.Equal(rows.OrderBy(i => i), rows);
             Assert.Contains("Open(PanelPage.Rig, scenario)", page);
+        }
+
+        /// <summary>
+        /// The table is put together head first and a row at a time: the head on the grid's first row, each
+        /// alert on a row of its own that it adds, and its cells from the first column on. The head names the
+        /// surface columns only where they are drawn, a greyed name carries its Soon tag, and the ticks and
+        /// surface heads sit in the middle of their columns.
+        /// </summary>
+        [Fact]
+        public void The_alert_table_is_put_together_head_first_and_row_by_row()
+        {
+            var page = Page();
+            Assert.Matches(Lines(
+                "var row = 0;",
+                "SettingsAlertHeader(grid, row++, surfaces);",
+                "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.LowFuelTitle)"), page);
+            Assert.Matches(Lines(
+                "private static void SettingsAlertHeader(Grid grid, int row, bool surfaces)",
+                "{",
+                "grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });",
+                "SettingsAlertRule(grid, row);",
+                "var column = 0;"), page);
+            Assert.Matches(Lines(
+                "grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });",
+                "if (!last) SettingsAlertRule(grid, row);",
+                "var column = 0;"), page);
+            Assert.Matches(Lines(
+                "SettingsAlertCell(grid, row, column++, Ui.Eyebrow(PanelSettings.ThresholdColumn), null, false);",
+                "if (surfaces)",
+                "{",
+                "foreach (var name in PanelSettings.SurfaceColumns)"), page);
+            Assert.Matches(Lines(
+                "FrameworkElement nameLine = name;",
+                "if (soon != null)",
+                "{",
+                "var line = new WrapPanel { Orientation = Orientation.Horizontal };",
+                "var tag = Ui.SoonTag(soon);"), page);
+            Assert.Matches(Lines(
+                "line.Children.Add(name);",
+                "line.Children.Add(tag);",
+                "nameLine = line;"), page);
+            Assert.Matches(Lines(
+                "content.VerticalAlignment = VerticalAlignment.Center;",
+                "if (centred) content.HorizontalAlignment = HorizontalAlignment.Center;",
+                "else if (align == HorizontalAlignment.Right) content.HorizontalAlignment = HorizontalAlignment.Right;"), page);
         }
 
         [Fact]
@@ -1090,6 +1208,16 @@ namespace OpenDashPlugin.Tests
             Assert.All(order, index => Assert.True(index >= 0));
             Assert.Equal(order.OrderBy(i => i), order);
             Assert.DoesNotMatch(@"units\.Local\w+Unit\.ToString\(\)", page);
+            // The units are SimHub's own, read through the PluginManager from its GameManager's unit settings, and
+            // a read SimHub cannot answer, or one that throws, gives four nulls.
+            Assert.Matches(Lines(
+                "var manager = plugin == null ? null : plugin.PluginManager;",
+                "var game = manager == null ? null : manager.GameManager;",
+                "var units = game == null ? null : game.GameUnitSettings;",
+                "var names = units == null ? new string[4] : new[]"), page);
+            Assert.Matches(Lines(
+                "settingsUnitsFailed = true;",
+                "return new string[4];"), page);
             Assert.Contains("PanelSettings.UnitsLine(now[0], now[1], now[2], now[3])", page);
             Assert.Contains("showUnits(units);", page);
             Assert.Contains("var temperature = units[1];", page);
@@ -1165,6 +1293,21 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Action show = () => hint.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;", page);
             Assert.Matches(@"show\(\);\s*box\.TextChanged \+= \(sender, args\) => show\(\);", page);
             Assert.Contains("hint.IsHitTestVisible = false;", page);
+            // The box and its placeholder share one cell of a grid as wide as the box, the placeholder over the
+            // box's text and centred in its height: drop either and a threshold box loses its field or the
+            // unit's default it shows while empty, and a greyed box its dash.
+            Assert.Matches(Lines(
+                "hint.VerticalAlignment = VerticalAlignment.Center;",
+                "hint.HorizontalAlignment = box.TextAlignment == TextAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;",
+                "hint.Margin = new Thickness(box.Padding.Left + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0, box.Padding.Right + PanelMetrics.BorderWeight + PanelSettings.HintInset, 0);",
+                "hint.IsHitTestVisible = false;",
+                "Action show = () => hint.Visibility = string.IsNullOrEmpty(box.Text) ? Visibility.Visible : Visibility.Collapsed;",
+                "show();",
+                "box.TextChanged += (sender, args) => show();",
+                "var grid = new Grid { Width = box.Width, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };",
+                "grid.Children.Add(box);",
+                "grid.Children.Add(hint);",
+                "return grid;"), page);
 
             Assert.Matches(@"grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*grid\.RowDefinitions\.Add\(new RowDefinition \{ Height = GridLength\.Auto \}\);\s*Grid\.SetRow\(parts\.Control, 1\);\s*Grid\.SetColumn\(parts\.Control, 0\);\s*Grid\.SetColumnSpan\(parts\.Control, 2\);", page);
 
@@ -1209,10 +1352,19 @@ namespace OpenDashPlugin.Tests
             // A stacked control goes under its title across both columns, against the left edge.
             Assert.Matches(@"Grid\.SetRow\(parts\.Control, 1\);\s*Grid\.SetColumn\(parts\.Control, 0\);\s*Grid\.SetColumnSpan\(parts\.Control, 2\);\s*parts\.Control\.HorizontalAlignment = HorizontalAlignment\.Left;", page);
             // A surface heading and its tag centred over their column; Try as tall as its text, not the link's
-            // own height; the preview's three pictures centred on one line.
+            // own height; the preview's three pictures on one line, 40 apart and centred in its height.
             Assert.Matches(@"var head = new StackPanel \{ Orientation = Orientation\.Vertical, HorizontalAlignment = HorizontalAlignment\.Center \};\s*var label = Ui\.Eyebrow\(name\);\s*label\.HorizontalAlignment = HorizontalAlignment\.Center;\s*var tag = Ui\.SoonTag\(PanelSoon\.AlertDisplay\);\s*tag\.HorizontalAlignment = HorizontalAlignment\.Center;", page);
             Assert.Matches(@"link\.FontSize = PanelSettings\.AlertTryTextSize;\s*link\.Height = double\.NaN;", page);
-            Assert.Contains("pictures[i].VerticalAlignment = VerticalAlignment.Center;", page);
+            Assert.Matches(Lines(
+                "var stage = new StackPanel { Orientation = Orientation.Horizontal };",
+                "var pictures = new FrameworkElement[] { strip, matrix, percent };",
+                "for (var i = 0; i < pictures.Length; i++)",
+                "{",
+                "pictures[i].VerticalAlignment = VerticalAlignment.Center;",
+                "var gap = i < pictures.Length - 1 ? PanelSettings.PreviewStageGap : 0;",
+                "pictures[i].Margin = new Thickness(0, 0, gap, 0);",
+                "stage.Children.Add(pictures[i]);",
+                "}"), page);
 
             // The preview's head: its name on the left and Day|Night against the right edge.
             Assert.Contains("var head = new DockPanel { LastChildFill = false };", page);
@@ -1327,15 +1479,35 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelSettings.AnchorAlerts, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
             Assert.Equal(PanelSettings.AnchorRaceData, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.UnitsTitle).Route.Anchor);
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "night mode button"));
-            // The words a driver may search for a section by, where its title does not say them.
-            foreach (var pair in new[]
+            // The words a driver may search for each entry by, where its label does not say them: every entry's,
+            // in the order the page lists them, so a word dropped or loosened is a test that fails.
+            var keywords = new[]
             {
+                new[] { PanelDataTab.SectionTitle },
+                new[] { PanelDataTab.PositionTitle, "overall", "class" },
+                new[] { PanelDataTab.DeltaTitle, "session best", "all-time best", "last lap" },
+                new[] { PanelDataTab.DeltaPrecisionTitle, "hundredths", "thousandths", "decimals" },
+                new[] { PanelDataTab.SessionTitle, "laps", "time" },
+                new[] { PanelDataTab.DriverNameTitle, "name format", "surname" },
+                new[] { PanelDataTab.TeamNameTitle, "team" },
+                new[] { PanelDataTab.ClockTitle, "24h", "12h", "time of day" },
                 new[] { PanelSettings.UnitsTitle, "km/h", "mph", "celsius", "fahrenheit", "litres", "gallons" },
+                new[] { PanelSettings.FlagsTitle },
+                new[] { PanelDataTab.BlueFlagTitle, "blue flag" },
+                new[] { PanelSettings.FlagsInPitLaneTitle, "pit", "band d" },
                 new[] { PanelSettings.AlertsTitle, "warning", "threshold" },
+                new[] { PanelSettings.LowFuelTitle, "warning", "laps", "fuel" },
+                new[] { PanelSettings.OilTempTitle, "warning", "threshold", "hot" },
+                new[] { PanelSettings.WaterTempTitle, "warning", "threshold", "coolant", "hot" },
                 new[] { PanelSettings.LightingTitle, "lights", "preview" },
+                new[] { PanelSettings.BrightnessTitle, "lights", "leds", "dim" },
+                new[] { PanelSettings.NightBrightnessTitle, "night", "dim" },
+                new[] { PanelSettings.NightModeTitle, "dark", "dim" },
                 new[] { PanelSettings.AppearanceTitle, "look", "theme", "colours" },
                 new[] { PanelSettings.DriverTitle, "branding", "logo", "race number" },
-            })
+            };
+            Assert.Equal(keywords.Select(pair => pair[0]), labels);
+            foreach (var pair in keywords)
             {
                 Assert.Equal(pair.Skip(1), PanelSettings.Search.Single(entry => entry.Label == pair[0]).Keywords);
             }
