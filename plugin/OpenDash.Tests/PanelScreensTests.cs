@@ -1129,6 +1129,28 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>
+        /// One phrase for one state across pages: a screen written after SimHub started is said the same way on
+        /// its card, in its fix box, and in Home's issue and the sidebar dot's item, which PanelAttention titles.
+        /// </summary>
+        /// <remarks>
+        /// Skipped, not deleted, while the pages disagree: the card and the fix box say
+        /// PanelScreens.RestartToLoad, and PanelAttention, which this page may not change, still titles the issue
+        /// "Rim is not in SimHub yet". The skip goes in the merge that builds that title from the same phrase,
+        /// or that Tim rules the other way.
+        /// </remarks>
+        [Fact(Skip = "Shared request: PanelAttention's ScreenRestart title still reads \"is not in SimHub yet\"; build it from PanelScreens.RestartToLoad at the merge.")]
+        public void A_screen_waiting_for_the_restart_is_said_one_way_on_every_page()
+        {
+            Assert.Equal("Restart SimHub to load it", PanelScreens.RestartToLoad);
+            Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
+            var waiting = new AttentionInput();
+            waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
+            var title = System.Linq.Enumerable.Single(PanelAttention.Find(waiting)).Title;
+            Assert.DoesNotContain("not in SimHub yet", title);
+            Assert.Contains("Restart SimHub", title);
+        }
+
         /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>
         private static string ScreensSource(string file)
         {
