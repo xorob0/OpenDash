@@ -901,9 +901,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextLabel, unread.StateHex);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
             Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
-            // A round screen is a round face, never "no 480 × 480 round."; a size not known is left out, never "0 × 0".
+            // A slots screen in the Screens page's words: a square one is a round screen and a rectangular one a
+            // card face (PanelScreens.KindOf, CardsCaption), never "no 480 × 480 round." nor a third name. A
+            // release build carries no slots package, so a migrated rectangular one always shows this hover.
             var round = new ScreenInstance { Name = "Round", Kind = Contract.KindSlots, Width = 480, Height = 480 };
-            Assert.Equal("This build ships no 480 × 480 round face.", PanelUpdates.DashboardRow(round, null, null, null).Tooltip);
+            Assert.Equal("This build ships no 480 × 480 round screen.", PanelUpdates.DashboardRow(round, null, null, null).Tooltip);
+            var cards = new ScreenInstance { Name = "Cards", Kind = Contract.KindSlots, Width = 1280, Height = 480 };
+            Assert.Equal("This build ships no 1280 × 480 card face.", PanelUpdates.DashboardRow(cards, null, null, null).Tooltip);
+            Assert.Equal("round screen", PanelUpdates.RoundScreen);
+            Assert.Equal("card face", PanelUpdates.CardFace);
+            // A size not known is left out, never "0 × 0".
             var unsized = new ScreenInstance { Name = "Phone", Kind = Contract.KindCompanion };
             Assert.Equal("This build ships no companion.", PanelUpdates.DashboardRow(unsized, null, null, null).Tooltip);
             Assert.DoesNotContain("0 × 0", PanelUpdates.ShipsNo(new ScreenInstance { Kind = Contract.KindFace, Width = 1280 }));

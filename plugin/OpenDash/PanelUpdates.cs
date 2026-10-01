@@ -715,19 +715,33 @@ namespace OpenDashPlugin
         /// <summary>"This build ships no 1280 × 480 face." for a screen whose package this build does not
         /// carry. A screen whose size is not known (a migrated one whose folder spells none, which
         /// RepairScreenSizes cannot match) leaves the size out rather than say "0 × 0", as the Screens card
-        /// does; a round screen is a round face, since "round" alone is an adjective without its noun.</summary>
+        /// does. A slots screen is named as the Screens page names it: a square one is a "round screen" and
+        /// any other a "card face" (PanelScreens.KindOf, CardsCaption), never a third name for the kind.</summary>
+        /// <remarks>
+        /// The rectangular case is the common one: OpenDash.csproj keeps "OpenDash slots *.simhubdash" out of
+        /// the embedded packages, so a migrated "OpenDash slots 1280x480" screen has no installer entry on any
+        /// release build and its row always carries this hover.
+        /// </remarks>
         public static string ShipsNo(ScreenInstance screen)
         {
             if (screen == null) return NoDashboards;
             var size = screen.Width > 0 && screen.Height > 0 ? screen.SizeLabel + " " : string.Empty;
-            return "This build ships no " + size + KindNoun(screen.Kind) + ".";
+            return "This build ships no " + size + KindNoun(screen) + ".";
         }
 
-        /// <summary>A screen's kind as a noun in a sentence: "face", "round face", "companion", "pit wall".</summary>
-        private static string KindNoun(string kind)
+        /// <summary>A slots screen in a sentence where it is round, as the Screens page writes it in prose.</summary>
+        public const string RoundScreen = "round screen";
+
+        /// <summary>A slots screen in a sentence where it is not round, PanelScreens.CardFace's words.</summary>
+        public const string CardFace = "card face";
+
+        /// <summary>A screen's kind as a noun in a sentence: "face", "round screen", "card face", "companion",
+        /// "pit wall". Round is the Screens page's test (PanelScreens.IsRound): a slots screen of a known,
+        /// square size; held here as this page's own literals, since the Screens page's are its own to change.</summary>
+        private static string KindNoun(ScreenInstance screen)
         {
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "round face";
-            return PanelAddScreen.KindName(kind).ToLowerInvariant();
+            if (screen.IsSlots) return screen.Width > 0 && screen.Width == screen.Height ? RoundScreen : CardFace;
+            return PanelAddScreen.KindName(screen.Kind).ToLowerInvariant();
         }
 
         /// <summary>An edited dashboard's hover: the fact, then the press, as every row hover on the page says
