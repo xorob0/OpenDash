@@ -806,11 +806,14 @@ namespace OpenDashPlugin
             return bar != null && devices != null && devices.TryGetValue(LedBar.NormaliseDevice(bar.Device) ?? string.Empty, out name) ? name : null;
         }
 
-        /// <summary>Whether the table draws the flag box profile's row: on a rig with a matrix, and only when
-        /// this build carries the profile, since a row for one it cannot write could say nothing true.</summary>
-        public static bool DrawsFlagBoxRow(bool hasMatrix, bool embedded)
+        /// <summary>Whether the table draws the flag box profile's row: whenever the rig has a matrix (ruling
+        /// 69). A build that carries no profile still draws it, reading "Unknown" with the hover "This build
+        /// ships no flag box profile." (FlagBoxRow), as a strip whose profile the build lacks is drawn, so a
+        /// matrix never goes missing from the table without a word. Only the writes need the profile, and
+        /// they check for it themselves (UpdatesBringLightsForward).</summary>
+        public static bool DrawsFlagBoxRow(bool hasMatrix)
         {
-            return hasMatrix && embedded;
+            return hasMatrix;
         }
 
         /// <summary>The flag box profile's row, drawn when the rig has a matrix.</summary>

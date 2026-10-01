@@ -407,7 +407,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));", apply);
             // In the page's own sentence, the shape its other failure takes, and never in the outcome's reason slot.
             Assert.Equal("The update did not finish. See SimHub's log.", PanelUpdates.UpdateFailed);
-            Assert.Equal(PanelUpdates.ReinstallFailed.Replace("reinstall", "update"), PanelUpdates.UpdateFailed);
+            Assert.Equal(PanelUpdates.UpdateFailed, PanelUpdates.ReinstallFailed.Replace("reinstall", "update"));
             Assert.Contains("outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report); said = outcome.Line;", System.Text.RegularExpressions.Regex.Replace(apply, @"\s+", " "));
 
             // The completion clears the run before anything that can throw, keeps a net of its own, and offers
@@ -702,8 +702,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>Only a row that draws its Update takes the press column: an older light profile on a
-        /// device SimHub lists. The flag box's row is drawn only on a rig with a matrix and a build that
-        /// carries the profile.</summary>
+        /// device SimHub lists. The flag box's row is drawn whenever the rig has a matrix.</summary>
         [Fact]
         public void The_table_s_press_column_and_flag_box_row_are_drawn_only_when_used()
         {
@@ -714,9 +713,17 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelUpdates.TableHasPress(new[] { PanelUpdates.StripRow("Dash", older, deviceListed: false) }));
             Assert.False(PanelUpdates.TableHasPress(new[] { PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }), PanelUpdates.StripRow("Rim", new FlagBoxPlan { State = FlagBoxInstallState.Failed }), null }));
             Assert.False(PanelUpdates.TableHasPress(null));
-            Assert.True(PanelUpdates.DrawsFlagBoxRow(true, true));
-            Assert.False(PanelUpdates.DrawsFlagBoxRow(false, true));
-            Assert.False(PanelUpdates.DrawsFlagBoxRow(true, false));
+            // Whenever the rig has a matrix, a build without the profile included: its row reads "Unknown" and
+            // says why, where leaving it out left a matrix rig's table with no matrix row and no word.
+            Assert.True(PanelUpdates.DrawsFlagBoxRow(true));
+            Assert.False(PanelUpdates.DrawsFlagBoxRow(false));
+            var unshipped = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, null);
+            Assert.False(unshipped.OffersUpdate);
+            Assert.Equal("This build ships no flag box profile.", unshipped.Tooltip);
+            // Drawn from the matrix alone; the writes keep their own check for the profile.
+            Assert.Contains("private bool UpdatesDrawsFlagBox() { return PanelUpdates.DrawsFlagBoxRow(Settings.MatrixPanels().Any()); }", FlatCode());
+            Assert.Contains("var flagBoxPlan = UpdatesDrawsFlagBox() ? SafePlan() : null;", FlatCode());
+            Assert.Contains("if (plugin.FlagBoxJson != null) { var before = SafePlan().State; if (PanelUpdates.BringsFlagBoxForward(Settings.MatrixPanels().Any(), before)) tally.FlagBox(before, InstallFlagBox()); }", Method("private UpdatesLightsTally UpdatesBringLightsForward()"));
         }
 
         /// <summary>The flag box's by-hand route is drawn only while SimHub's matrix settings are out of reach,

@@ -375,7 +375,9 @@ namespace OpenDashPlugin
                 .Select(m => new UpdatesReportItem(PanelUpdates.MatrixName(m), Settings.MatrixName(m), null, null))
                 .ToList();
             UpdatesReportItem flagBox = null;
-            if (PanelUpdates.DrawsFlagBoxRow(matrices.Count > 0, plugin.FlagBoxJson != null))
+            // The report's flag box line only over a profile this build carries: a dev build's "Unknown" says
+            // nothing a reader of the report could act on.
+            if (PanelUpdates.DrawsFlagBoxRow(matrices.Count > 0) && plugin.FlagBoxJson != null)
             {
                 var row = PanelUpdates.FlagBoxRow(FlagBoxName(), SafePlan(), plugin.FlagBox?.Path);
                 flagBox = new UpdatesReportItem(row.Name, null, row.Version, row.State);

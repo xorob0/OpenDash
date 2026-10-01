@@ -55,7 +55,7 @@ namespace OpenDashPlugin
         /// <summary>Whether the table draws the flag box profile's row (PanelUpdates.DrawsFlagBoxRow).</summary>
         private bool UpdatesDrawsFlagBox()
         {
-            return PanelUpdates.DrawsFlagBoxRow(Settings.MatrixPanels().Any(), plugin.FlagBoxJson != null);
+            return PanelUpdates.DrawsFlagBoxRow(Settings.MatrixPanels().Any());
         }
 
         /// <summary>
