@@ -129,6 +129,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Not installed", PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).State);
             Assert.Equal("Install", PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).Button);
             Assert.Equal(PanelButton.Outline, PanelMatrix.ProfileRow(FlagBoxInstallState.NotInstalled, null).Style);
+            // The states the page draws no press for still read as not installed, with Install as the press,
+            // should anything read them.
+            foreach (var state in new[] { FlagBoxInstallState.NotEmbedded, FlagBoxInstallState.Unavailable })
+            {
+                Assert.Equal("Not installed", PanelMatrix.ProfileRow(state, null).State);
+                Assert.Equal("Install", PanelMatrix.ProfileRow(state, null).Button);
+                Assert.Equal(PanelButton.Outline, PanelMatrix.ProfileRow(state, null).Style);
+            }
             // Update is the page's one primary press: of the states that offer a press, only Outdated.
             var pressable = new[] { FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed };
             Assert.Equal(new[] { FlagBoxInstallState.Outdated },
@@ -198,6 +206,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Installed OpenDash Flag box. Turn off built-in profiles on your device, or OpenDash's will not be listed. "
                 + "Select it on your matrix's device in SimHub and set RGB Matrix content to 2.", noted.Text);
             Assert.Equal(PanelTone.Caution, noted.Tone);
+            // The installer's note is said as it reads, without the space round it.
+            Assert.Equal(noted.Text, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", "  " + FlagBoxInstallPlan.BuiltInModeNote + " ", one).Text);
+            // A first install that SimHub reads back as older (FlagBoxInstallPlan.Decide reads Outdated whenever
+            // the versions differ) still installed it: the same message as a current one, never a failure.
+            var readOlder = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Outdated, "OpenDash Flag box", null, one);
+            Assert.Equal(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one).Text, readOlder.Text);
+            Assert.StartsWith("Installed OpenDash Flag box. ", readOlder.Text);
+            Assert.Equal(PanelTone.Info, readOlder.Tone);
             var updated = PanelMatrix.InstallSaid(FlagBoxInstallState.Outdated, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one);
             Assert.Equal("Updated OpenDash Flag box.", updated.Text);
             Assert.Equal(PanelTone.Info, updated.Tone);
@@ -421,8 +437,26 @@ namespace OpenDashPlugin.Tests
         public void Every_press_on_the_page_does_what_it_says()
         {
             Assert.True(PanelMatrix.AddEnabled(3, 4));
+            // An empty rig, whose free content is the first, and a rig whose first content is the free one: the
+            // tile is the only way to add a matrix.
+            Assert.True(PanelMatrix.AddEnabled(0, 1));
+            Assert.True(PanelMatrix.AddEnabled(2, 1));
             Assert.False(PanelMatrix.AddEnabled(4, 1));
             Assert.False(PanelMatrix.AddEnabled(2, 0));
+            // Driven from the settings the page reads it from: open on a new rig, closed at four.
+            var rig = new OpenDashSettings();
+            rig.Normalise();
+            Assert.True(PanelMatrix.AddEnabled(rig.MatrixPanels().Count(), rig.FreeMatrixSlot()));
+            for (var k = 1; k <= PanelMatrix.MaxPanels; k++)
+            {
+                Assert.True(PanelMatrix.AddEnabled(rig.MatrixPanels().Count(), rig.FreeMatrixSlot()));
+                Assert.NotEqual(0, rig.AddMatrixPanel("M" + k));
+            }
+            Assert.False(PanelMatrix.AddEnabled(rig.MatrixPanels().Count(), rig.FreeMatrixSlot()));
+            // Removing the first frees the first content, and the tile opens again.
+            rig.RemoveMatrixPanel(1);
+            Assert.Equal(1, rig.FreeMatrixSlot());
+            Assert.True(PanelMatrix.AddEnabled(rig.MatrixPanels().Count(), rig.FreeMatrixSlot()));
             var matrix = MatrixSource();
             var flat = FlatSource();
             foreach (var pin in new[]
@@ -665,6 +699,8 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Matrix 2", PanelMatrix.SlotCaption("Left pillar", 2));
             Assert.Null(PanelMatrix.SlotCaption("Matrix 2", 2));
+            // A name that only looks like the number in another case is a name: the number is still said.
+            Assert.Equal("Matrix 2", PanelMatrix.SlotCaption("matrix 2", 2));
             Assert.Equal("Rename", PanelMatrix.Rename);
             Assert.Equal("Remove", PanelMatrix.Remove);
             Assert.Equal("Rename Left pillar", PanelMatrix.RenameTitle("Left pillar"));
@@ -682,6 +718,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelMatrix.CanRename("Pillar"));
             Assert.Equal("Renamed to Pillar.", PanelMatrix.RenameSaid("Left pillar", "Pillar"));
             Assert.Null(PanelMatrix.RenameSaid("Left pillar", "Left pillar"));
+            // A change of case is a rename, and is said.
+            Assert.Equal("Renamed to left pillar.", PanelMatrix.RenameSaid("Left pillar", "left pillar"));
             Assert.Equal("Name", PanelMatrix.NameTitle);
             Assert.Equal("OpenDash's own label. It is not shown in SimHub's profile list.", PanelMatrix.NameCaption);
             // Remove is a sheet with one press; Rename is a sheet; neither acts on the first press.
@@ -871,6 +909,9 @@ namespace OpenDashPlugin.Tests
         {
             Assert.False(PanelMatrix.ShowsGearRows("dark"));
             Assert.True(PanelMatrix.ShowsGearRows("gear"));
+            // The contract's value, as Settings stores it, and nothing else.
+            Assert.False(PanelMatrix.ShowsGearRows("Gear"));
+            Assert.False(PanelMatrix.ShowsGearRows(null));
             Assert.False(PanelMatrix.ShowsCarShiftPoints("dark", true));
             Assert.False(PanelMatrix.ShowsCarShiftPoints("gear", false));
             Assert.True(PanelMatrix.ShowsCarShiftPoints("gear", true));
@@ -907,6 +948,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelMatrix.TablesMissing(0, "could not read the car light tables: bad json"));
             Assert.False(PanelMatrix.TablesMissing(0, "the car light tables could not be loaded"));
             Assert.False(PanelMatrix.TablesMissing(0, null));
+            Assert.False(PanelMatrix.TablesMissing(0, PanelLights.CarTablesNone.ToUpperInvariant()));
+            Assert.True(PanelMatrix.TablesMissing(0, "  " + PanelLights.CarTablesNone));
             Assert.False(PanelMatrix.TablesMissing(12, PanelLights.CarTablesNone));
             // No car loaded, or a game whose tables the plugin does not read: nothing, tables or not.
             Assert.Null(PanelMatrix.CarLine(true, null, false, false, true, true));
