@@ -444,6 +444,11 @@ namespace OpenDashPlugin
                 // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
                 // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
                 // SimHub closing mid-download saves it in End even though the completion below never runs.
+                //
+                // The one settings write off the interface thread, and an exception to OpenDash.cs's rule that
+                // the interface thread is the only writer: the counted run sets this one consent field before it
+                // finishes, so that End, which waits for the run (UpdateService.WaitForIdle) and then saves, keeps it. SimHub's
+                // close kills the process right after End, so the completion posted below never runs then.
                 if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
                 // Posted, not Invoked: End runs on the interface thread and waits there for this run
                 // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
