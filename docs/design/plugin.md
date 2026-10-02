@@ -105,6 +105,7 @@ issues, most urgent first, in the order a driver has to act:
 
 | rule | title | page | press |
 |---|---|---|---|
+| the settings file is there and SimHub could not read it | "OpenDash could not read its settings", then where the file is kept and the steps | Home | Open the folder |
 | a screen's folder is gone | "Rim's dashboard is missing from SimHub" | Screens | Install it again |
 | a screen written since SimHub started | "Rim is not in SimHub yet", then "Restart SimHub to load it." and the Dash Studio step | Screens | Open Rim |
 | a strip's profile installed and not selected | "Dash brow's profile is not selected", then the steps in SimHub's menus | LEDs | Check again |
@@ -114,6 +115,19 @@ issues, most urgent first, in the order a driver has to act:
 | the flag box profile is older | "OpenDash Flag box has an update" | Matrix | Open Matrix |
 | an update waits for SimHub to close | "Restart SimHub to finish updating" | Updates | Open Updates |
 | a newer release is on offer | "OpenDash 0.5.1 is available" | Updates | Open Updates |
+
+**Settings SimHub could not read come first** (#643), because every other rule reads the rig, and
+that rig is the defaults OpenDash fell back to. SimHub hands a plugin its defaults when neither
+`OpenDash.GeneralSettings.json` nor any `_Backups` copy can be read, and logs Newtonsoft's exception;
+OpenDash's first save would then write the defaults over the file. So when SimHub fell back and the
+file is there with something in it, `SettingsRescue` copies it beside itself as
+`OpenDash.GeneralSettings.unreadable.json` before that save, and OpenDash runs on the defaults. A copy
+already there is never overwritten; when it holds another file, the issue names SimHub's `_Backups`,
+where the save moved this one. The steps close SimHub first, because OpenDash saves when SimHub
+closes and would write over a file restored while it runs, then have the kept file corrected, or an
+earlier one taken from `_Backups`, and saved under the settings file's name, then start SimHub. The
+press opens Explorer on the copy, or on `_Backups`. Home's own sidebar item wears the dot, since the
+fix is in no page of the panel.
 
 A missing folder comes before a restart, because restarting will not bring it back. Both come before
 the lights, because a screen is what most rigs have. The out-of-date profile and the waiting update

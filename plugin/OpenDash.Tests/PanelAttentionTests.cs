@@ -234,6 +234,62 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelAttention.Of(null, PanelAttention.ScreenRestart, "Rim"));
         }
 
+        // --- The settings SimHub could not read (#643) --------------------------------------------------------
+
+        private const string Copy = @"C:\Program Files (x86)\SimHub\PluginsData\Common\OpenDash.GeneralSettings.unreadable.json";
+        private const string Backups = @"C:\Program Files (x86)\SimHub\PluginsData\Common\_Backups";
+
+        /// <summary>A file SimHub could not read is said first, on Home, with where it was kept and the steps to
+        /// have the rig back; the press opens Explorer on the copy, and Home's sidebar item wears the dot.</summary>
+        [Fact]
+        public void Settings_SimHub_could_not_read_are_said_first_with_where_the_file_is_kept()
+        {
+            var input = new AttentionInput { SettingsUnreadable = true, SettingsCopy = Copy, SettingsBackups = Backups, RestartPending = true };
+            input.Screens.Add(Screen("Rim", installed: false));
+            var issues = PanelAttention.Find(input);
+            var issue = issues.First();
+            Assert.Equal(PanelAttention.SettingsUnreadable, issue.Id);
+            Assert.Equal("OpenDash could not read its settings", issue.Title);
+            Assert.Equal("It started on defaults and kept the file as " + Copy + ".", issue.Detail);
+            Assert.Equal(new[] { "Close SimHub" }, issue.Steps[0]);
+            Assert.Equal(new[] { "Correct the kept file, or take an earlier one from _Backups, and save it as OpenDash.GeneralSettings.json" }, issue.Steps[1]);
+            Assert.Equal(new[] { "Start SimHub" }, issue.Steps[2]);
+            Assert.Equal(3, issue.Steps.Count);
+            Assert.Equal("Open the folder", issue.ActionLabel);
+            Assert.Equal(PanelIssueAction.OpenFolder, issue.Action);
+            Assert.Equal(PanelPage.Home, issue.Page);
+            Assert.Equal(Copy, issue.Subject);
+            Assert.True(PanelNav.Warns(PanelPage.Home, issues));
+            Assert.Equal(3, issues.Count);
+        }
+
+        /// <summary>When no copy holds the file (an earlier one was already kept, or the copy could not be
+        /// written), SimHub's _Backups does, and the press opens that folder.</summary>
+        [Fact]
+        public void Settings_no_copy_holds_are_found_in_SimHubs_backups()
+        {
+            var issue = PanelAttention.Find(new AttentionInput { SettingsUnreadable = true, SettingsBackups = Backups }).Single();
+            Assert.Equal("It started on defaults. SimHub keeps the file in " + Backups + ".", issue.Detail);
+            Assert.Equal(new[] { "Take an earlier file from _Backups and save it as OpenDash.GeneralSettings.json" }, issue.Steps[1]);
+            Assert.Equal(Backups, issue.Subject);
+            Assert.Equal("It started on defaults. SimHub keeps the file in its _Backups folder.", PanelAttention.SettingsUnreadableDetail(null, null));
+        }
+
+        /// <summary>Settings that were read, or a first run, say nothing.</summary>
+        [Fact]
+        public void Settings_that_were_read_say_nothing()
+        {
+            Assert.Empty(PanelAttention.Find(new AttentionInput { SettingsUnreadable = false, SettingsCopy = Copy }));
+            Assert.Empty(PanelAttention.Find(new AttentionInput { SettingsUnreadable = null }));
+            Assert.False(PanelNav.Warns(PanelPage.Home, PanelAttention.Find(new AttentionInput())));
+        }
+
+        [Fact]
+        public void A_folder_the_press_could_not_open_is_named()
+        {
+            Assert.Equal("Could not open " + Backups + ".", PanelAttention.FolderFailed(Backups));
+        }
+
         [Theory]
         [InlineData(0, "Nothing to fix")]
         [InlineData(1, "1 thing to fix")]
@@ -246,7 +302,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void No_sentence_is_contracted_or_spells_the_wordmark()
         {
-            var input = new AttentionInput { RestartPending = true };
+            var input = new AttentionInput { RestartPending = true, SettingsUnreadable = true };
             input.Screens.Add(Screen("Rim", written: true));
             input.Screens.Add(Screen("Gone", installed: false));
             input.Screens.Add(Screen("Old", unclaimed: true));

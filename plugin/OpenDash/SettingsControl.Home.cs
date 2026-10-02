@@ -209,9 +209,38 @@ namespace OpenDashPlugin
                 case HomePress.Open:
                     Open(issue.Page, issue.Subject, issue.Anchor);
                     return;
+                case HomePress.OpenFolder:
+                    HomeOpenFolder(issue.Subject);
+                    return;
                 default:
                     Go(issue.Route);
                     return;
+            }
+        }
+
+        /// <summary>Open the folder: Explorer on the kept settings, selected in their folder, or on SimHub's
+        /// _Backups when no copy holds them (PanelAttention's settings-unreadable issue, #643).</summary>
+        private void HomeOpenFolder(string path)
+        {
+            try
+            {
+                var isFile = System.IO.File.Exists(path);
+                if (!isFile && !System.IO.Directory.Exists(path))
+                {
+                    Say(PanelAttention.FolderFailed(path), false);
+                    return;
+                }
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = PanelHome.ExplorerArguments(path, isFile),
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Opening " + path + " failed: " + ex.Message);
+                Say(PanelAttention.FolderFailed(path), false);
             }
         }
 

@@ -45,6 +45,9 @@ namespace OpenDashPlugin
 
         /// <summary>Writes the screen's dashboard back.</summary>
         Reinstall,
+
+        /// <summary>Shows the issue's subject, a file or a folder, in Explorer.</summary>
+        OpenFolder,
     }
 
     public static class PanelHome
@@ -146,6 +149,7 @@ namespace OpenDashPlugin
             if (id == PanelAttention.ScreensUnclaimed) return PanelIcons.Screens;
             if (id == PanelAttention.UpdateRestart) return PanelIcons.Restart;
             if (id == PanelAttention.UpdateAvailable) return PanelIcons.Updates;
+            // A missing dashboard and settings SimHub could not read: something gone, not something waiting.
             return PanelIcons.Warning;
         }
 
@@ -158,8 +162,19 @@ namespace OpenDashPlugin
             {
                 case PanelIssueAction.CheckAgain: return HomePress.CheckAgain;
                 case PanelIssueAction.Reinstall: return issue.Subject == null ? HomePress.Go : HomePress.Reinstall;
+                case PanelIssueAction.OpenFolder: return issue.Subject == null ? HomePress.Go : HomePress.OpenFolder;
                 default: return issue.Subject == null ? HomePress.Go : HomePress.Open;
             }
+        }
+
+        /// <summary>
+        /// What Explorer is started with for an Open the folder press: a file is selected in its folder, so the
+        /// kept settings are the one row highlighted beside the ones SimHub reads; a folder is opened.
+        /// </summary>
+        public static string ExplorerArguments(string path, bool isFile)
+        {
+            var quoted = "\"" + (path ?? string.Empty) + "\"";
+            return isFile ? "/select," + quoted : quoted;
         }
 
         /// <summary>

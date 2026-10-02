@@ -165,6 +165,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(HomePress.CheckAgain, PanelHome.Press(Issue(PanelAttention.StripUnselected + "x", PanelPage.Leds, null, PanelIssueAction.CheckAgain)));
         }
 
+        /// <summary>Settings SimHub could not read (#643): the warning, as a dashboard that is gone wears it, and a
+        /// press that opens Explorer on the kept file, selected in its folder, or on _Backups when no copy holds it.</summary>
+        [Fact]
+        public void Settings_SimHub_could_not_read_open_the_folder_they_are_kept_in()
+        {
+            const string copy = @"C:\SimHub\PluginsData\Common\OpenDash.GeneralSettings.unreadable.json";
+            const string backups = @"C:\SimHub\PluginsData\Common\_Backups";
+            var issue = PanelAttention.Find(new AttentionInput { SettingsUnreadable = true, SettingsCopy = copy, SettingsBackups = backups }).Single();
+            Assert.Equal(PanelIcons.Warning, PanelHome.IssueIcon(issue));
+            Assert.Equal(HomePress.OpenFolder, PanelHome.Press(issue));
+            Assert.Equal(HomePress.Go, PanelHome.Press(Issue(PanelAttention.SettingsUnreadable, PanelPage.Home, null, PanelIssueAction.OpenFolder)));
+            Assert.Equal("/select,\"" + copy + "\"", PanelHome.ExplorerArguments(copy, true));
+            Assert.Equal("\"" + backups + "\"", PanelHome.ExplorerArguments(backups, false));
+            // The row is drawn from its words, so the key moves with them.
+            Assert.Contains(PanelAttention.SettingsUnreadableTitle, PanelHome.DrawnFrom(new[] { issue }));
+        }
+
         /// <summary>A press is a row's trailing action and sits beside its text wherever the text keeps 300 of
         /// room beside the widest press, the rail's widths included; it goes under the text only narrower.</summary>
         [Fact]

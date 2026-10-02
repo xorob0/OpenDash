@@ -2,8 +2,8 @@
 //
 // Home leads with the things a driver cannot see from the seat: a dashboard written into SimHub that SimHub
 // has not loaded, a folder that is gone, a strip whose profile is installed and not selected on its device,
-// a matrix slot no device shows, an update waiting for a restart (#503). Each is said in the driver's terms
-// and, where the fix is in SimHub, with the steps there.
+// a matrix slot no device shows, an update waiting for a restart (#503), a settings file SimHub could not read
+// (#643). Each is said in the driver's terms and, where the fix is in SimHub, with the steps there.
 //
 // The rules are pure and take plain facts, because the facts come from SimHub and a SimHub call can fail.
 // SettingsControl.Status.cs asks SimHub and fills an AttentionInput; a fact it could not read stays null,
@@ -28,6 +28,10 @@ namespace OpenDashPlugin
 
         /// <summary>Writes the missing thing back: the screen's dashboard.</summary>
         Reinstall,
+
+        /// <summary>Shows the file or folder the issue's subject names in Explorer: the settings SimHub could not
+        /// read, where they were set aside (#643).</summary>
+        OpenFolder,
     }
 
     /// <summary>One thing to fix.</summary>
@@ -146,6 +150,16 @@ namespace OpenDashPlugin
         /// <summary>Whether the last check found a newer release, and which.</summary>
         public bool? UpdateAvailable { get; set; }
         public string OfferedVersion { get; set; }
+
+        /// <summary>Whether the settings file was there and SimHub could not read it, so OpenDash started on
+        /// defaults (SettingsRescue.Unreadable).</summary>
+        public bool? SettingsUnreadable { get; set; }
+
+        /// <summary>Where the unreadable file was set aside, or null when no copy holds it.</summary>
+        public string SettingsCopy { get; set; }
+
+        /// <summary>SimHub's _Backups folder beside the settings file, which holds the file when no copy does.</summary>
+        public string SettingsBackups { get; set; }
     }
 
     public static class PanelAttention
@@ -175,6 +189,19 @@ namespace OpenDashPlugin
             var screens = (input.Screens ?? new List<AttentionScreen>()).Where(s => s != null).ToList();
             var strips = (input.Strips ?? new List<AttentionStrip>()).Where(s => s != null).ToList();
             var matrices = (input.Matrices ?? new List<AttentionMatrix>()).Where(m => m != null).ToList();
+
+            // First: the rig every other rule reads is the defaults OpenDash fell back to, and the driver's own
+            // is in a file that only they can mend. Filed on Home, which wears the dot, since the fix is in no
+            // page of the panel but in the folder the press opens.
+            if (input.SettingsUnreadable == true)
+            {
+                var copy = string.IsNullOrWhiteSpace(input.SettingsCopy) ? null : input.SettingsCopy;
+                issues.Add(new PanelIssue(
+                    SettingsUnreadable, PanelPage.Home, copy ?? input.SettingsBackups,
+                    SettingsUnreadableTitle,
+                    SettingsUnreadableDetail(copy, input.SettingsBackups),
+                    SettingsUnreadableSteps(copy != null), OpenFolder, PanelIssueAction.OpenFolder));
+            }
 
             foreach (var screen in screens.Where(s => s.Installed == false))
             {
@@ -283,6 +310,7 @@ namespace OpenDashPlugin
         public const string FlagBoxOutdated = "flagbox-outdated";
         public const string UpdateRestart = "update-restart";
         public const string UpdateAvailable = "update-available";
+        public const string SettingsUnreadable = "settings-unreadable";
 
         /// <summary>Whether the issues hold one of that rule about that subject: ("screen-restart:", "Rim").</summary>
         public static bool Has(IEnumerable<PanelIssue> issues, string rule, string subject = null)
@@ -309,6 +337,54 @@ namespace OpenDashPlugin
         }
 
         public const string InstallAgain = "Install it again";
+
+        // --- The settings SimHub could not read (#643) ----------------------------------------------------------
+
+        public const string SettingsUnreadableTitle = "OpenDash could not read its settings";
+
+        /// <summary>The file SimHub reads them from, as a driver finds it in PluginsData\Common.</summary>
+        public const string SettingsFileName = "OpenDash.GeneralSettings.json";
+
+        /// <summary>The press: Explorer, on the copy where there is one and on _Backups otherwise.</summary>
+        public const string OpenFolder = "Open the folder";
+
+        /// <summary>
+        /// What happened and where the file is: "It started on defaults and kept the file as C:\...\
+        /// OpenDash.GeneralSettings.unreadable.json." When no copy holds it, SimHub's _Backups does, where the
+        /// save this start made moved it.
+        /// </summary>
+        public static string SettingsUnreadableDetail(string copy, string backups)
+        {
+            if (!string.IsNullOrWhiteSpace(copy)) return "It started on defaults and kept the file as " + copy + ".";
+            return "It started on defaults. SimHub keeps the file in " + (string.IsNullOrWhiteSpace(backups) ? "its _Backups folder" : backups) + ".";
+        }
+
+        /// <summary>
+        /// The steps to have the rig back, in the order they have to be taken.
+        /// </summary>
+        /// <remarks>
+        /// SimHub is closed first, because OpenDash saves its settings when SimHub closes: a file restored while
+        /// it runs is written over with the defaults on the way out. The kept file is the one SimHub could not
+        /// read, so it is corrected rather than put back as it is; _Backups holds earlier versions as
+        /// OpenDash.GeneralSettings_b1.json and on, any of which is a whole rig.
+        /// </remarks>
+        public static IList<string[]> SettingsUnreadableSteps(bool kept)
+        {
+            return new List<string[]>
+            {
+                new[] { "Close SimHub" },
+                new[] { kept
+                    ? "Correct the kept file, or take an earlier one from _Backups, and save it as " + SettingsFileName
+                    : "Take an earlier file from _Backups and save it as " + SettingsFileName },
+                new[] { "Start SimHub" },
+            };
+        }
+
+        /// <summary>The folder press could not open Explorer there, named rather than the exception's words.</summary>
+        public static string FolderFailed(string path)
+        {
+            return "Could not open " + path + ".";
+        }
         public const string CheckAgain = "Check again";
         // An outdated profile's issue has no detail: its title says there is an update and its press says
         // where the Update is. "Update it to the version this OpenDash carries." described the mechanism, a
