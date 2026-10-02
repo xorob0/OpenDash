@@ -117,6 +117,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("template.Triggers.Add(DisabledFade());", body);
         }
 
+        /// <summary>The dashed tile answers the pointer across its whole face. Its template's grid paints the
+        /// button's Transparent; without it the grid is hit only where the plus or the words draw, and a
+        /// click between them fell through (#529, the Add a screen tile that "sometimes" ignored the pointer).</summary>
+        [Fact]
+        public void The_add_tile_is_hit_across_its_whole_face()
+        {
+            var widgets = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.cs"));
+            var start = widgets.IndexOf("private static ControlTemplate DashedCardTemplate()", StringComparison.Ordinal);
+            var body = widgets.Substring(start, widgets.IndexOf("private static FrameworkElementFactory DashedFrame()", start, StringComparison.Ordinal) - start);
+            Assert.Contains("host.SetValue(Panel.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));", body);
+            Assert.Contains("Background = System.Windows.Media.Brushes.Transparent", Factory("DashedAddCard"));
+            Assert.Contains("Background = System.Windows.Media.Brushes.Transparent", Factory("InlineAddCard"));
+        }
+
         /// <summary>
         /// LEDs and Matrix draw cards of their own shape, and their add tile on one line, so the kit has them
         /// rather than each page re-implementing a card or taking Screens' numbers. Leds.dc.html's .dcard

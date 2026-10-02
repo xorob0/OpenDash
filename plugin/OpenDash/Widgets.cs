@@ -642,7 +642,10 @@ namespace OpenDashPlugin
             presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
 
+            // The grid paints the button's own Transparent: a panel with no background is hit only where a
+            // child draws, so the tile answered on its plus and its words and nowhere between or around them.
             var host = new FrameworkElementFactory(typeof(Grid));
+            host.SetValue(Panel.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
             host.AppendChild(presenter);
             host.AppendChild(DashedFrame());
             var template = new ControlTemplate(typeof(Button)) { VisualTree = host };
