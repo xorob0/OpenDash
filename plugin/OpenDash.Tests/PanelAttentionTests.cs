@@ -100,17 +100,17 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_matrix_slot_no_device_shows_is_dark()
+        public void A_matrix_slot_no_device_shows_is_not_shown_in_SimHub()
         {
             var input = new AttentionInput();
             input.Matrices.Add(new AttentionMatrix { Slot = 2, Name = "Left pillar", Shown = false });
             input.Matrices.Add(new AttentionMatrix { Slot = 3, Name = null, Shown = false });
             var issues = PanelAttention.Find(input);
-            Assert.Equal("Left pillar is dark", issues[0].Title);
+            Assert.Equal("Left pillar is not shown in SimHub", issues[0].Title);
             Assert.Equal("No matrix device in SimHub is set to matrix 2.", issues[0].Detail);
             Assert.Equal("Open Left pillar", issues[0].ActionLabel);
             Assert.Equal("2", issues[0].Subject);
-            Assert.Equal("Matrix 3 is dark", issues[1].Title);
+            Assert.Equal("Matrix 3 is not shown in SimHub", issues[1].Title);
         }
 
         [Fact]

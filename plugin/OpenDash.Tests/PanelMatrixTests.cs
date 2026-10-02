@@ -47,7 +47,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Warnings", PanelMatrix.WarningsTitle);
             // The words the Alerts rows use for the two temperatures.
             Assert.Equal("Low fuel, oil temperature and water temperature.", PanelMatrix.WarningsCaption);
-            Assert.Equal("Thresholds", PanelMatrix.ThresholdsLink);
+            Assert.Equal("Triggers", PanelMatrix.ThresholdsLink);
             // voice.md over the artboard: "Idle display" for "At rest", "Mounting side" for "Cars on",
             // "Spotter bar animation" for "Slide in", "Redline flash" for "Flash at redline".
             Assert.Equal("Idle display", PanelMatrix.IdleDisplayTitle);
@@ -816,7 +816,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_fix_box_names_the_device_the_profile_and_the_content()
         {
-            Assert.Equal("No device in SimHub shows matrix 2", PanelMatrix.FixTitle(2));
+            // Titled by the card's state (#524, ruling 8); the matrix number is in the Content step.
+            Assert.Equal("Not shown in SimHub", PanelMatrix.FixTitle);
             var steps = PanelMatrix.FixSteps(2, "OpenDash Flag box");
             Assert.Equal(3, steps.Count);
             Assert.Equal(new[] { "Devices", "your matrix" }, steps[0]);
@@ -839,6 +840,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("4", PanelMatrix.Rank(PanelMatrix.WarningsTitle));
             Assert.Equal(string.Empty, PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle));
             Assert.Equal(new PanelRoute(PanelPage.Settings, "settings.alerts"), PanelMatrix.ThresholdsRoute);
+            // The link is the plural of the column it lands on, so the two pages say one word for the thing
+            // (#524, ruling 7): the Settings column renamed renames the link, and a link reworded here fails.
+            Assert.Equal(PanelSettings.ThresholdColumn + "s", PanelMatrix.ThresholdsLink);
             Assert.Equal(new[] { 363, 371, 505 }, PanelMatrix.SoonDrawn.Select(item => item.Ticket).OrderBy(t => t));
             var matrix = MatrixSource();
             Assert.Contains("Ui.Soon(reorder, PanelSoon.PriorityOrder)", matrix);
@@ -1240,7 +1244,7 @@ namespace OpenDashPlugin.Tests
                 "var rename = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Outline, PanelButtonSize.Small); rename.ToolTip = PanelMatrix.RenameTooltip; rename.Click += (sender, args) => ShowRenameMatrix(m);",
                 "var remove = Ui.Button(PanelMatrix.Remove, PanelButtonKind.GhostDanger, PanelButtonSize.Small); remove.ToolTip = PanelMatrix.RemoveTooltip; remove.Click += (sender, args) => ShowRemoveMatrix(m);",
                 "var head = Ui.Row(heading, Ui.HStack(PanelMatrix.ActionGap, rename, remove));",
-                "var fix = Ui.FixBox(PanelMatrix.FixTitle(m), null, PanelMatrix.FixSteps(m, FlagBoxName()), check);",
+                "var fix = Ui.FixBox(PanelMatrix.FixTitle, null, PanelMatrix.FixSteps(m, FlagBoxName()), check);",
                 "var all = Ui.LinkButton(PanelMatrix.AllDevices);",
                 "var thresholds = Ui.LinkButton(PanelMatrix.ThresholdsLink);",
                 "body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.PreviewColumnWidth) }); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelMatrix.BodyGap) });",

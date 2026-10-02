@@ -203,7 +203,7 @@ namespace OpenDashPlugin
                 var name = string.IsNullOrWhiteSpace(matrix.Name) ? "Matrix " + matrix.Slot : matrix.Name;
                 issues.Add(new PanelIssue(
                     MatrixDark + matrix.Slot, PanelPage.Matrix, matrix.Slot.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    name + " is dark",
+                    NotShownTitle(name),
                     "No matrix device in SimHub is set to matrix " + matrix.Slot + ".",
                     null, Open(name), PanelIssueAction.Navigate));
             }
@@ -293,6 +293,16 @@ namespace OpenDashPlugin
         {
             var id = rule + (subject ?? string.Empty);
             return issues == null ? null : issues.FirstOrDefault(issue => issue != null && string.Equals(issue.Id, id, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// A matrix no device shows, titled by its name and the Matrix card's state for it (#524, ruling 8):
+        /// "Left pillar is not shown in SimHub". The matrix number is in the detail under it.
+        /// </summary>
+        public static string NotShownTitle(string name)
+        {
+            var state = PanelMatrix.NotShown;
+            return name + " is " + char.ToLowerInvariant(state[0]) + state.Substring(1);
         }
 
         public const string InstallAgain = "Install it again";

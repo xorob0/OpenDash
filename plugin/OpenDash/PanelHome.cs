@@ -423,15 +423,15 @@ namespace OpenDashPlugin
         /// tables behind it, which is the panel talking to itself.</summary>
         public const string CarLightsLine = PanelLeds.CarRevLightsTitle;
 
-        // A strip's state. Showing, Not selected in SimHub and Update available are the LEDs cards' words
-        // (Leds.dc.html), copied here until the LEDs page's PanelLeds.StateText lands; Installed and Not
-        // installed are PanelCopy's, which the Updates page's rows say too. A failed install reads as Not
-        // installed, as the LEDs card reads it.
-        public const string StripShowing = "Showing";
-        public const string StripNotSelected = "Not selected in SimHub";
-        public const string StripUpdateAvailable = "Update available";
-        public const string StripInstalled = PanelCopy.Installed;
-        public const string StripNotInstalled = PanelCopy.NotInstalled;
+        // A strip's state, in the LEDs cards' own words, read from PanelLeds rather than copied (#524): Installed
+        // and Not installed are PanelCopy's, which the Updates page's rows say too. A failed install, and a
+        // strip whose profile this build does not ship (ruling 2), read as Not installed, as the LEDs card reads
+        // them.
+        public const string StripShowing = PanelLeds.Showing;
+        public const string StripNotSelected = PanelLeds.NotSelected;
+        public const string StripUpdateAvailable = PanelLeds.UpdateAvailable;
+        public const string StripInstalled = PanelLeds.Installed;
+        public const string StripNotInstalled = PanelLeds.NotInstalled;
 
         /// <summary>The ends and the centre a strip is drawn with. A shape the panel cannot read is drawn as the
         /// Rig page draws it, 3/9/3.</summary>
@@ -536,8 +536,8 @@ namespace OpenDashPlugin
 
         // --- Right now: matrix -----------------------------------------------------------------------------
 
-        /// <summary>The Matrix card's word for a slot no device shows (Matrix.dc.html).</summary>
-        public const string MatrixNotShown = "Not shown in SimHub";
+        /// <summary>The Matrix card's word for a slot no device shows, read from the card (#524, ruling 8).</summary>
+        public const string MatrixNotShown = PanelMatrix.NotShown;
 
         /// <summary>
         /// "Matrix 1 · Gear": the SimHub content number and the idle display, as the Idle display control

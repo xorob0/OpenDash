@@ -349,13 +349,12 @@ namespace OpenDashPlugin
 
         // --- The scenario chips ---------------------------------------------------------------------
 
-        /// <summary>What assistive technology calls the chips' section. The artboard's aria-label is "What to
-        /// emulate", a wh-clause posing as a heading; a heading is a noun (voice.md). Search matches a keyword
-        /// that contains what is typed, so the entries carry "emulation" beside "emulate": the name a screen
-        /// reader announces finds the chips when it is typed back. The same chips are "Preview" on Matrix and
-        /// Settings, so the group entries carry "preview" too, and a driver who learnt the word there finds
-        /// them here.</summary>
-        public const string ScenariosName = "Emulation";
+        /// <summary>What the scenario chips' section is called, on this page and on every page that draws chips
+        /// from PanelEmulation: Matrix, LEDs and Settings read this constant (#524, ruling 6). The artboard's
+        /// aria-label is "What to emulate", a wh-clause posing as a heading; a heading is a noun (voice.md), and
+        /// the other pages' artboards say "What to preview", so the one noun is "Preview". The group entries
+        /// still carry "emulate" and "emulation" as keywords, so a driver who types either finds the chips.</summary>
+        public const string ScenariosName = "Preview";
 
         /// <summary>Between groups across and down, under a group's title, and between two chips.</summary>
         public const double GroupGapX = 32;

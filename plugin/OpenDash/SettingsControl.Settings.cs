@@ -735,6 +735,14 @@ namespace OpenDashPlugin
                 settingsUnitsFollow.Add(now => unit.Text = PanelSettings.TemperatureUnit(now[1]) ?? string.Empty);
                 when.Add(unit);
             }
+            else if (alert.Unit == PanelSettings.LapsUnit && box is TextBox)
+            {
+                // "lap" or "laps" by the number beside it, as it is typed (ruling 11).
+                var typed = (TextBox)box;
+                var unit = Ui.Caption(PanelSettings.LapsUnitFor(typed.Text));
+                typed.TextChanged += (sender, args) => unit.Text = PanelSettings.LapsUnitFor(typed.Text);
+                when.Add(unit);
+            }
             else if (alert.Unit.Length > 0) when.Add(Ui.Caption(alert.Unit));
             SettingsAlertCell(grid, row, column++, Ui.HStack(PanelSettings.AlertThresholdGap, when.ToArray()), soon, false);
 

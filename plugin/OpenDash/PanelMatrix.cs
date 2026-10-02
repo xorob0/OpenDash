@@ -534,11 +534,10 @@ namespace OpenDashPlugin
             return state != FlagBoxInstallState.UpToDate && state != FlagBoxInstallState.Outdated;
         }
 
-        /// <summary>The fix box's title, drawn only when something has read that no device shows the matrix.</summary>
-        public static string FixTitle(int matrix)
-        {
-            return "No device in SimHub shows matrix " + matrix.ToString(CultureInfo.InvariantCulture);
-        }
+        /// <summary>The fix box's title, drawn only when something has read that no device shows the matrix: the
+        /// card's state, one phrase for the one state on the card, on Home and here (#524, ruling 8). The matrix
+        /// number is in the steps under it (<see cref="FixSteps"/>'s Content line).</summary>
+        public const string FixTitle = NotShown;
 
         /// <summary>SimHub names its devices itself, so the crumb names the one a driver is to open.</summary>
         public const string YourMatrixCrumb = "your matrix";
@@ -707,7 +706,7 @@ namespace OpenDashPlugin
         /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
         /// the artboard's own from its clause "What to preview". Not "scenarios", which is the code's word for
         /// PanelEmulation's chips and no page shows a driver.</summary>
-        public const string PreviewChipsName = "Preview";
+        public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
         public const string AllDevices = "All devices at once";
@@ -767,8 +766,9 @@ namespace OpenDashPlugin
         public const string SpotterAnimationTitle = "Spotter bar animation";
         public const string SpotterAnimationCaption = "Every matrix.";
 
-        /// <summary>The link on the Warnings row: the thresholds are the rig's, on Settings' Alerts.</summary>
-        public const string ThresholdsLink = "Thresholds";
+        /// <summary>The link on the Warnings row: the triggers are the rig's, on Settings' Alerts, named by the
+        /// plural of the column they are in there (#524, ruling 7).</summary>
+        public const string ThresholdsLink = PanelSettings.ThresholdColumn + "s";
         public static readonly PanelRoute ThresholdsRoute = new PanelRoute(PanelPage.Settings, PanelSettings.AnchorAlerts);
 
         public const string IdleDisplayTitle = "Idle display";

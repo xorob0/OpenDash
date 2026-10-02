@@ -478,7 +478,11 @@ namespace OpenDashPlugin
             var top = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(link, Dock.Right);
             top.Children.Add(link);
-            top.Children.Add(chips);
+            // A WrapPanel has no automation peer, so the chips are named on a group around them, as the Rig and
+            // Matrix pages name theirs (PanelLeds.PreviewChipsName).
+            var chipGroup = new RigGroup { Child = chips };
+            AutomationProperties.SetName(chipGroup, PanelLeds.PreviewChipsName);
+            top.Children.Add(chipGroup);
 
             redraw = () =>
             {

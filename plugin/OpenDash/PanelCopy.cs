@@ -188,6 +188,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What a strip's row says: <see cref="LightRow"/>'s words, except that a strip whose profile this build
+        /// does not ship reads "Not installed", as the LEDs card and Home say it (#524, ruling 2), where the flag
+        /// box's row keeps "Unknown".
+        /// </summary>
+        public static RowAction StripRow(FlagBoxInstallState state, string installedVersion)
+        {
+            return LightRow(state == FlagBoxInstallState.NotEmbedded ? FlagBoxInstallState.NotInstalled : state, installedVersion);
+        }
+
+        /// <summary>
         /// What a screen package's row says and offers.
         /// </summary>
         /// <remarks>

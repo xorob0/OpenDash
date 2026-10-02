@@ -863,10 +863,11 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelSettings.Alert("Nothing"));
             Assert.Equal(new[] { "Screens", "LEDs", "Matrix", "Races only" }, PanelSettings.SurfaceColumns);
             Assert.Equal("Alert", PanelSettings.AlertColumn);
-            // A heading is a noun (voice.md), where the artboard's "When" is an adverb, and it is the word the
-            // artboards already give these numbers: Matrix.dc.html's Warnings row links "Thresholds" to this
-            // table, and Settings.dc.html labels each box "{name} threshold".
-            Assert.Equal("Threshold", PanelSettings.ThresholdColumn);
+            // A heading is a noun (voice.md), where the artboard's "When" is an adverb: "Trigger" (#524, ruling 7),
+            // which also covers Pit window open, an event with no threshold. Search still finds the table by
+            // "threshold".
+            Assert.Equal("Trigger", PanelSettings.ThresholdColumn);
+            Assert.Contains(PanelSearch.Find(PanelSearch.All(), "threshold"), hit => hit.Route.Anchor == PanelSettings.AnchorAlerts);
             Assert.Equal("Try", PanelSettings.TryLabel);
             // Every row is drawn, in this order, and every live row writes the rig-wide setting.
             var page = Page();
@@ -1138,7 +1139,7 @@ namespace OpenDashPlugin.Tests
             // The threshold cell: the word, the box, then the unit -- SimHub's temperature unit where the row
             // has none of its own.
             Assert.Contains("if (alert.HasThreshold) when.Add(Ui.Caption(alert.Op));", page);
-            Assert.Matches(@"if \(alert\.Unit == null\)\s*\{\s*var unit = Ui\.Caption\(PanelSettings\.TemperatureUnit\(temperature\) \?\? string\.Empty\);\s*settingsUnitsFollow\.Add\(now => unit\.Text = PanelSettings\.TemperatureUnit\(now\[1\]\) \?\? string\.Empty\);\s*when\.Add\(unit\);\s*\}\s*else if \(alert\.Unit\.Length > 0\) when\.Add\(Ui\.Caption\(alert\.Unit\)\);", page);
+            Assert.Matches(@"if \(alert\.Unit == null\)\s*\{\s*var unit = Ui\.Caption\(PanelSettings\.TemperatureUnit\(temperature\) \?\? string\.Empty\);\s*settingsUnitsFollow\.Add\(now => unit\.Text = PanelSettings\.TemperatureUnit\(now\[1\]\) \?\? string\.Empty\);\s*when\.Add\(unit\);\s*\}\s*else if \(alert\.Unit == PanelSettings\.LapsUnit && box is TextBox\)\s*\{[^}]*var unit = Ui\.Caption\(PanelSettings\.LapsUnitFor\(typed\.Text\)\);\s*typed\.TextChanged \+= \(sender, args\) => unit\.Text = PanelSettings\.LapsUnitFor\(typed\.Text\);\s*when\.Add\(unit\);\s*\}\s*else if \(alert\.Unit\.Length > 0\) when\.Add\(Ui\.Caption\(alert\.Unit\)\);", page);
             // A name's caption under it, set off by the fix-detail gap, after the name itself.
             Assert.Matches(@"nameCell\.Children\.Add\(nameLine\);\s*if \(caption != null\)\s*\{\s*var under = Ui\.Caption\(caption\);\s*under\.Margin = new Thickness\(0, PanelKit\.FixDetailGap, 0, 0\);\s*nameCell\.Children\.Add\(under\);\s*\}", page);
             // A greyed name carries its Soon tag after it, and the four surface headings theirs under the name.
@@ -1495,7 +1496,7 @@ namespace OpenDashPlugin.Tests
                 new[] { PanelSettings.FlagsTitle },
                 new[] { PanelDataTab.BlueFlagTitle, "blue flag" },
                 new[] { PanelSettings.FlagsInPitLaneTitle, "pit", "band d" },
-                new[] { PanelSettings.AlertsTitle, "warning", "threshold" },
+                new[] { PanelSettings.AlertsTitle, "warning", "threshold", "trigger" },
                 new[] { PanelSettings.LowFuelTitle, "warning", "laps", "fuel" },
                 new[] { PanelSettings.OilTempTitle, "warning", "threshold", "hot" },
                 new[] { PanelSettings.WaterTempTitle, "warning", "threshold", "coolant", "hot" },
@@ -1532,6 +1533,22 @@ namespace OpenDashPlugin.Tests
                 Assert.True(drawnIn.Count == 1, entry.Label + " is drawn in " + drawnIn.Count + " sections");
                 Assert.True(PanelSettings.SectionAnchors[drawnIn[0]] == entry.Route.Anchor, entry.Label + " routes to " + entry.Route.Anchor);
             }
+        }
+    
+        /// <summary>Low fuel's unit follows the number in its box (#524, ruling 11): "under [1] lap", "under [2]
+        /// laps", and the plural for nothing readable, as it is typed.</summary>
+        [Fact]
+        public void Low_fuels_unit_is_lap_or_laps_by_the_value()
+        {
+            Assert.Equal("lap", PanelSettings.LapsUnitFor(1));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor(2));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor(0));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor(PanelSettings.LowFuelMax));
+            Assert.Equal("lap", PanelSettings.LapsUnitFor(" 1 "));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor("12"));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor(string.Empty));
+            Assert.Equal("laps", PanelSettings.LapsUnitFor((string)null));
+            Assert.Equal(PanelSettings.LapsUnit, PanelSettings.Alert(PanelSettings.LowFuelTitle).Unit);
         }
     }
 }

@@ -55,9 +55,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { PanelSoon.RealHardware }, PanelRigMap.SoonDrawn);
             Assert.Equal("Leaderboard", PanelRigMap.BoardLabel);
             // The artboard's <section aria-label="What to emulate"> is a wh-clause posing as a heading; a
-            // heading is a noun (voice.md), and the name a screen reader announces is one search finds.
-            Assert.Equal("Emulation", PanelRigMap.ScenariosName);
-            Assert.Equal(PanelPage.Rig, PanelSearch.Find(PanelSearch.All(), PanelRigMap.ScenariosName).First().Route.Page);
+            // heading is a noun (voice.md), and the one noun for the chips on every page is "Preview" (#524,
+            // ruling 6). The name a screen reader announces is one search finds, and "emulation" still does.
+            Assert.Equal("Preview", PanelRigMap.ScenariosName);
+            Assert.Contains(PanelSearch.Find(PanelSearch.All(), PanelRigMap.ScenariosName), hit => hit.Route.Page == PanelPage.Rig);
             Assert.All(PanelSearch.Find(PanelSearch.All(), "emulation"), hit => Assert.Equal(PanelPage.Rig, hit.Route.Page));
             Assert.DoesNotContain(new[] { "What", "Where", "How", "Which", "When", "Who", "Why" }, w => PanelRigMap.ScenariosName.StartsWith(w + " ", StringComparison.Ordinal));
             // The chips are the voice's words: "Pit limiter" and the temperatures by name.

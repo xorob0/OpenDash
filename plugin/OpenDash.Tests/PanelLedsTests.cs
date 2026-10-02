@@ -1494,8 +1494,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Install", PanelLeds.InstallProfile);
             Assert.Equal("Update", PanelLeds.UpdateProfile);
             Assert.Equal("Installs this strip's profile in SimHub.", PanelLeds.InstallTooltip);
-            // What the press does, not how: never "this build's version".
-            Assert.Equal("Updates this strip's profile in SimHub.", PanelLeds.UpdateTooltip);
+            // What the press costs, as the Matrix and Updates pages' Update say it (#524, ruling 12): never
+            // "this build's version".
+            Assert.Equal("Replaces the copy in SimHub, including your changes to it.", PanelLeds.UpdateTooltip);
             Assert.Equal("Rename", PanelLeds.RenameButton);
             Assert.Equal("Remove", PanelLeds.RemoveButton);
             // One verb for the act, as Screens' "Removes this screen, its settings and its dashboard." has it.

@@ -143,7 +143,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | MX-06 | Critical flags only | | Flip | property | J |
 | MX-07 | Mounting side | | Each | FlagBoxSide | J |
 | MX-08 | Spotter bar animation | | Flip | FlagBoxSpotterAnimation (rig-wide; caption says so) | J |
-| MX-09 | Thresholds link | | Click | Settings › Alerts | V |
+| MX-09 | Triggers link | | Click | Settings › Alerts | V |
 | MX-10 | Idle display | | Gear | FlagBoxRest; sub-rows appear | J; V |
 | MX-11 | Shift colours / Car-specific shift points / Redline flash | Gear | Flip each | GearBands / GearCarLadder / GearBlink; car line | U; J; V |
 | MX-12 | #371 / #363 / #505 | | Hover | greyed | V |

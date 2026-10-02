@@ -147,11 +147,14 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>What the page cannot know it does not claim: with SimHub's settings out of reach, or no
         /// profile in this build to compare with, the row reads "Unknown", the table's word for a version it
-        /// cannot read, and the row's hover says why.</summary>
+        /// cannot read, and the row's hover says why. A strip is the exception for a profile the build does not
+        /// ship, which reads "Not installed" as the LEDs card and Home say it (#524, ruling 2).</summary>
         [Fact]
         public void Nothing_embedded_and_SimHub_unreachable_read_as_unknown()
         {
             Assert.Equal("Unknown", PanelCopy.LightRow(FlagBoxInstallState.NotEmbedded, null).State);
+            Assert.Equal(PanelCopy.NotInstalled, PanelCopy.StripRow(FlagBoxInstallState.NotEmbedded, null).State);
+            Assert.Equal("Unknown", PanelCopy.StripRow(FlagBoxInstallState.Unavailable, null).State);
             Assert.Equal("Unknown", PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).State);
             Assert.Equal(PanelUpdates.Unknown, PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).State);
             Assert.Equal(Theme.TextLabel, PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).StateHex);

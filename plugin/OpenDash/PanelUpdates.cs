@@ -762,7 +762,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A strip's row: its name, the version of its profile in SimHub, and the state PanelCopy.LightRow says,
+        /// A strip's row: its name, the version of its profile in SimHub, and the state PanelCopy.StripRow says,
         /// with an Update press while that profile is older than this build's and SimHub lists the strip's
         /// device. Where it does not, the press could only fail, so the row offers none and its hover says the
         /// step, as the LEDs page does; the state still says what SimHub holds.
@@ -857,7 +857,8 @@ namespace OpenDashPlugin
         private static UpdatesRow LightRow(string name, string kind, FlagBoxPlan plan, string tooltip, bool offersUpdate)
         {
             var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
-            var words = PanelCopy.LightRow(state, plan == null ? null : plan.InstalledVersion);
+            var version = plan == null ? null : plan.InstalledVersion;
+            var words = kind == StripKind ? PanelCopy.StripRow(state, version) : PanelCopy.LightRow(state, version);
             return new UpdatesRow(name, kind, VersionText(plan == null ? null : plan.InstalledVersion), words.State, words.StateHex,
                 Dot(words.StateHex), tooltip, offersUpdate);
         }
@@ -995,9 +996,8 @@ namespace OpenDashPlugin
         public const string RowUpdate = "Update";
 
         /// <summary>A light row's Update press: what it costs, in the words the Matrix page's flag box Update
-        /// warns with (FlagBoxInstallPlan.Replaces). The LEDs page's strip Update does not say it yet ("Updates
-        /// this strip's profile in SimHub."), which is a shared request. The row's hover names the version the
-        /// press brings; this is the press's own.</summary>
+        /// warns with (FlagBoxInstallPlan.Replaces), and the LEDs page's strip Update too (#524, ruling 12). The
+        /// row's hover names the version the press brings; this is the press's own.</summary>
         public const string RowUpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         private static UpdatesRow Row(string name, string kind, string version, string state, string hex, string tooltip)

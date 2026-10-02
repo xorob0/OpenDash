@@ -1019,7 +1019,8 @@ namespace OpenDashPlugin.Tests
             Assert.Null(unreachable.Tooltip);
             Assert.Contains(PanelLightRows.Unavailable, PanelUpdates.TableNotes(true, null, false, true, true, true, false));
             var notEmbedded = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
-            Assert.Equal("Unknown", notEmbedded.State);
+            // As the LEDs card and Home say it (#524, ruling 2); the hover says why no press installs it.
+            Assert.Equal("Not installed", notEmbedded.State);
             Assert.Equal("This build ships no profile for this strip.", notEmbedded.Tooltip);
             Assert.False(notEmbedded.OffersUpdate);
 
@@ -1066,7 +1067,7 @@ namespace OpenDashPlugin.Tests
         /// reads older and an unstamped one current, and the row would offer an Update that writes nothing.
         /// </summary>
         [Fact]
-        public void A_strip_this_build_ships_no_profile_for_reads_unknown_whatever_SimHub_holds()
+        public void A_strip_this_build_ships_no_profile_for_reads_not_installed_whatever_SimHub_holds()
         {
             var brow = new LedBar { Name = "Brow", Namespace = "LedBrow", Shape = "brow-12", Device = LedBar.ArduinoDevice };
             var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
@@ -1090,7 +1091,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.3.0-rc.2", plans[0].Value.InstalledVersion);
             Assert.Same(census[1].Value, plans[1].Value);
             var row = PanelUpdates.StripRow("Brow", plans[0].Value);
-            Assert.Equal("Unknown", row.State);
+            // The LEDs card's and Home's word for it (#524, ruling 2), beside the version SimHub truly holds.
+            Assert.Equal("Not installed", row.State);
             Assert.Equal("0.3.0-rc.2", row.Version);
             Assert.Equal(PanelUpdates.StripNotEmbedded, row.Tooltip);
             Assert.False(row.OffersUpdate);

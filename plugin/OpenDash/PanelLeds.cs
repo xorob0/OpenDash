@@ -325,7 +325,9 @@ namespace OpenDashPlugin
         public const string DeviceNotListed = "This strip's device is not in SimHub. Choose one under SimHub device.";
 
         public const string InstallTooltip = "Installs this strip's profile in SimHub.";
-        public const string UpdateTooltip = "Updates this strip's profile in SimHub.";
+        /// <summary>The Update press over an older profile says what it costs, in the words the Matrix page's
+        /// flag box Update and the Updates table's row press say it (#524, ruling 12).</summary>
+        public const string UpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         public const string RenameButton = "Rename";
         public const string RemoveButton = "Remove";
@@ -348,6 +350,10 @@ namespace OpenDashPlugin
 
         /// <summary>The chip that shows the car's own rev lights as they are now.</summary>
         public const string LiveScenario = "live";
+
+        /// <summary>What a screen reader calls the preview's chips: the Rig page's one noun for the scenario
+        /// chips' section, as Matrix and Settings name theirs (#524, ruling 6).</summary>
+        public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
         /// <summary>
         /// The preview's chips, in the artboard's order: what the strip shows now, and five moments it can be

@@ -318,13 +318,12 @@ namespace OpenDashPlugin
 
         public const string AlertColumn = "Alert";
 
-        /// <summary>What each row warns at. The artboard heads the column "When", an adverb; voice.md makes a
-        /// heading a noun, and voice.md beats artboard copy. The noun is the one the artboards already give
-        /// these numbers -- Matrix.dc.html's Warnings row links "Thresholds" to this table, Settings.dc.html
-        /// labels each box "{name} threshold", and search finds the table by "threshold" -- so the panel keeps
-        /// one word for the thing. Every row draws a threshold box, Pit window open's too, empty because that
-        /// alert is an event. A departure from the artboard for plugin.md to record.</summary>
-        public const string ThresholdColumn = "Threshold";
+        /// <summary>What sets each row off. The artboard heads the column "When", an adverb; voice.md makes a
+        /// heading a noun, and voice.md beats artboard copy. The noun is "Trigger" (#524, ruling 7), which also
+        /// covers Pit window open, an event whose row draws an empty box and has no threshold; the Matrix page's
+        /// Warnings row links here as its plural (PanelMatrix.ThresholdsLink), and search still finds the table by
+        /// "threshold". A departure from the artboard that plugin.md records.</summary>
+        public const string ThresholdColumn = "Trigger";
 
         /// <summary>The four columns #512 will make answer, greyed until then.</summary>
         public static readonly string[] SurfaceColumns = { "Screens", "LEDs", "Matrix", "Races only" };
@@ -335,7 +334,26 @@ namespace OpenDashPlugin
         public const string Over = "over";
         public const string At = "at";
 
+        /// <summary>Low fuel's unit as the table holds it; drawn as <see cref="LapsUnitFor"/> says for the
+        /// number in the box beside it.</summary>
         public const string LapsUnit = "laps";
+        public const string LapUnit = "lap";
+
+        /// <summary>"under [1] lap", "under [2] laps": the unit follows the number (#524, ruling 11), and so
+        /// does an empty or unreadable box, which reads as more than one.</summary>
+        public static string LapsUnitFor(int laps)
+        {
+            return laps == 1 ? LapUnit : LapsUnit;
+        }
+
+        /// <summary>The unit for what the box holds as typed, before it is committed.</summary>
+        public static string LapsUnitFor(string typed)
+        {
+            int laps;
+            return int.TryParse((typed ?? string.Empty).Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out laps)
+                ? LapsUnitFor(laps)
+                : LapsUnit;
+        }
 
         public const int LowFuelMax = 99;
         public const int TemperatureMax = 999;
@@ -459,7 +477,8 @@ namespace OpenDashPlugin
         /// binding lives on Shortcuts, where "night mode button" finds it.</summary>
         public const string NightModeButtonTitle = "Night mode button";
 
-        public const string PreviewTitle = "Preview";
+        /// <summary>The scenario chips' section, in the Rig page's one noun for it (#524, ruling 6).</summary>
+        public const string PreviewTitle = PanelRigMap.ScenariosName;
 
         public const string PreviewDay = "day";
         public const string PreviewNight = "night";
@@ -603,7 +622,7 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(FlagsTitle, PanelPage.Settings, AnchorFlags),
             new PanelSearch.Entry(PanelDataTab.BlueFlagTitle, PanelPage.Settings, AnchorFlags, "blue flag"),
             new PanelSearch.Entry(FlagsInPitLaneTitle, PanelPage.Settings, AnchorFlags, "pit", "band d"),
-            new PanelSearch.Entry(AlertsTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold"),
+            new PanelSearch.Entry(AlertsTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "trigger"),
             new PanelSearch.Entry(LowFuelTitle, PanelPage.Settings, AnchorAlerts, "warning", "laps", "fuel"),
             new PanelSearch.Entry(OilTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "hot"),
             new PanelSearch.Entry(WaterTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "coolant", "hot"),
