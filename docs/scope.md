@@ -180,7 +180,7 @@ same `purpose.flag.*` tokens.
 One profile ships, `OpenDash Flag box.ledsprofile`, built by `bun run build` like everything else
 and embedded in the plugin like everything else. It is the one artefact **the plugin does not
 install by itself**: a profile paints hardware somebody owns, which is a thing to be asked about
-rather than assumed. The Lights page has a button that adds it to SimHub's own matrix profiles
+rather than assumed. The Matrix page has a press that adds it to SimHub's own matrix profiles
 through SimHub's own API, and it never presses itself. The file is written out as well, as the
 fallback and as the thing you copy to another machine.
 [ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
