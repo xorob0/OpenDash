@@ -329,6 +329,8 @@ namespace OpenDashPlugin.Tests
             // licence and the project it came from are on the page for as long as the row is.
             Assert.Contains("CC BY-NC-SA 4.0", PanelLights.CarTablesAttribution);
             Assert.Contains(CarLightLibrary.ProjectUrl, PanelLights.CarTablesAttribution);
+            // The lights are rev lights, the panel's one noun for them (#523).
+            Assert.StartsWith("Rev lights come from Lovely Car Data, ", CarLightLibrary.Attribution);
         }
 
         [Theory]

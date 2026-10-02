@@ -232,7 +232,7 @@ look at, and what a report needs.
 - **Are the wheel's built-in profiles switched off?** A device that ships its own profiles and
   lists them shows only those, so OpenDash's is installed and not listed. When OpenDash sees them
   switched on, the line after adding the strip ends in the caution colour with *Turn off built-in
-  profiles on your device, or OpenDash's will not be listed.* Switch them off on the wheel's LED
+  profiles on your device, or OpenDash's profiles will not be listed.* Switch them off on the wheel's LED
   page in SimHub and select the strip's profile there.
 - **Does the strip survive a SimHub restart?** A strip whose device row reads *The device it was on
   (no longer on this rig)* after a restart is pointed at a device id SimHub no longer has.

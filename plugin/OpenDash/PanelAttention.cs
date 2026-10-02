@@ -154,6 +154,11 @@ namespace OpenDashPlugin
         public const string DevicesCrumb = "Devices";
         public const string TelemetryLedsCrumb = "Telemetry LEDs";
 
+        /// <summary>The device crumb when the panel does not know the strip's device: the device as SimHub lists
+        /// it, in the words PanelLeds.SelectIt and the LEDs page's SimHub device row use, rather than "your LED
+        /// device", which named no device a driver could find.</summary>
+        public const string UnnamedDeviceCrumb = "the strip's device in SimHub";
+
         /// <summary>
         /// Every issue the facts show, most urgent first.
         /// </summary>
@@ -220,11 +225,9 @@ namespace OpenDashPlugin
 
             foreach (var strip in strips.Where(s => s.Profile == FlagBoxInstallState.Outdated))
             {
-                // Filed where the Update press is, which the LEDs page says (PanelLeds.StripUpdateRoute):
-                // Updates' lights section until the LEDs header carries the press, then LEDs. An issue whose
-                // press lands where there is nothing to press is worse than one that sends the driver a page
-                // further, and the item that wears the dot follows the issue's page (PanelNav.Warns and
-                // UpdatesWarns), so neither this nor PanelNav changes when the press moves.
+                // Filed where the Update press is, which the LEDs page says (PanelLeds.StripUpdateRoute): the
+                // strip's own header on LEDs. The item that wears the dot follows the issue's page (PanelNav.Warns
+                // and UpdatesWarns), so neither this nor PanelNav changes when the press moves.
                 var route = PanelLeds.StripUpdateRoute;
                 issues.Add(new PanelIssue(
                     StripOutdated + strip.Namespace, route.Page, strip.Namespace,
@@ -354,7 +357,7 @@ namespace OpenDashPlugin
         {
             return new List<string[]>
             {
-                new[] { DevicesCrumb, string.IsNullOrWhiteSpace(deviceName) ? "your LED device" : deviceName, TelemetryLedsCrumb },
+                new[] { DevicesCrumb, string.IsNullOrWhiteSpace(deviceName) ? UnnamedDeviceCrumb : deviceName, TelemetryLedsCrumb },
                 new[] { "Select \"" + stripName + "\"" },
                 new[] { "Set automatic profile switching to Disabled" },
             };

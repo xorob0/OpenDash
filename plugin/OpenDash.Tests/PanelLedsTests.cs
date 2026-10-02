@@ -1128,13 +1128,12 @@ namespace OpenDashPlugin.Tests
             // A download that did not answer leaves them missing all the same.
             Assert.True(PanelLeds.TablesMissing(0, PanelLights.CarTablesNone + " " + PanelLights.CarTablesFailed("timeout")));
             Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceNotLoaded));
-            Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceUnreadPrefix + ": Access to the path is denied."));
-            Assert.False(PanelLeds.TablesMissing(0, PanelLights.ServiceUnloaded));
+            Assert.False(PanelLeds.TablesMissing(0, CarLightService.Unreadable));
             Assert.False(PanelLeds.TablesMissing(84, "84 cars, updated just now"));
             Assert.False(PanelLeds.TablesMissing(0, null));
             const string car = "Porsche 911 GT3 R (992)";
             Assert.Null(PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.ServiceNotLoaded), true));
-            Assert.Null(PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.ServiceUnloaded), true));
+            Assert.Null(PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, CarLightService.Unreadable), true));
             Assert.Equal(PanelLeds.CarTablesMissing, PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.CarTablesNone), true));
         }
 
@@ -1991,7 +1990,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_note_comes_before_the_select_it_enables()
         {
-            const string note = "Turn off built-in profiles on your device, or OpenDash's will not be listed.";
+            const string note = FlagBoxInstallPlan.BuiltInModeNote;
             Assert.Equal("Installed Rim's profile. " + note + " Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.ProfileInstalled("Rim", "Wheel", note));
             Assert.Equal("Updated Rim's profile. " + note, PanelLeds.ProfileUpdated("Rim", note));
             Assert.Equal("Moved Rim's profile to Wheel. " + note + " Select \"Rim\" on Wheel in SimHub to use it.", PanelLeds.Moved("Rim", "Wheel", note));

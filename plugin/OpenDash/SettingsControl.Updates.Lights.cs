@@ -6,7 +6,7 @@
 // installing are in SettingsControl.Profiles.cs, shared with LEDs, Matrix and Home.
 //
 // NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS (ADR 0013). A profile installed by an older build is reported
-// with an Update press, which is where the strip-outdated fix sends a driver (PanelLeds.StripUpdateRoute), and
+// with an Update press, as the strip's header on LEDs is (where PanelLeds.StripUpdateRoute sends a driver), and
 // is not rewritten until that or Reinstall everything is pressed; a missing one is installed by Reinstall
 // everything alone (ruling 70), and one that is current is never rewritten.
 using System;

@@ -91,6 +91,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Set automatic profile switching to Disabled" }, issue.Steps[2]);
         }
 
+        /// <summary>With no device name, the crumb says where the device is, in SimHub, as PanelLeds.SelectIt
+        /// does, and not "your LED device" (#523).</summary>
+        [Fact]
+        public void A_strip_whose_device_is_unknown_is_sent_to_its_device_in_SimHub()
+        {
+            var input = new AttentionInput();
+            input.Strips.Add(Strip("Dash brow", FlagBoxInstallState.UpToDate, false, device: null));
+            var issue = PanelAttention.Find(input).Single();
+            Assert.Equal(new[] { "Devices", "the strip's device in SimHub", "Telemetry LEDs" }, issue.Steps[0]);
+            Assert.Equal(PanelAttention.UnnamedDeviceCrumb, issue.Steps[0][1]);
+            Assert.EndsWith(" in SimHub", PanelAttention.UnnamedDeviceCrumb);
+            Assert.EndsWith(" in SimHub to use it.", PanelLeds.SelectIt("Dash brow", null));
+        }
+
         [Fact]
         public void A_strip_that_is_not_installed_is_not_asked_to_be_selected()
         {
@@ -136,18 +150,19 @@ namespace OpenDashPlugin.Tests
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Outdated, true));
             input.FlagBox = FlagBoxInstallState.Outdated;
             Assert.Equal(new[] { "Wheel rim's profile has an update" }, PanelAttention.Find(input).Select(i => i.Title));
-            // Filed where the LEDs page says its press is (PanelLeds.StripUpdateRoute): on Updates until the
-            // LEDs page's header has one, and the Updates item wears the dot for it, which its badge does not
-            // say. The route is the LEDs page's constant, so moving the press moves the issue and the dot.
-            Assert.Equal(new PanelRoute(PanelPage.Updates, PanelUpdates.AnchorLights), PanelLeds.StripUpdateRoute);
+            // Filed where the LEDs page says its press is (PanelLeds.StripUpdateRoute): the strip's header on
+            // LEDs, which carries Update (#523), so the LEDs item wears the dot and the Updates item does not.
+            // The route is the LEDs page's constant, so moving the press moves the issue and the dot.
+            Assert.Equal(new PanelRoute(PanelPage.Leds, PanelLeds.AnchorStrips), PanelLeds.StripUpdateRoute);
             var outdated = PanelAttention.Find(input).Single();
             Assert.Equal(PanelLeds.StripUpdateRoute.Page, outdated.Page);
             Assert.Equal(PanelLeds.StripUpdateRoute.Anchor, outdated.Anchor);
             // The title and the press say it all; the detail described the plugin's mechanism.
             Assert.Null(outdated.Detail);
             Assert.Equal("Open " + PanelNav.Label(PanelLeds.StripUpdateRoute.Page), outdated.ActionLabel);
-            Assert.Equal("Open Updates", outdated.ActionLabel);
-            Assert.True(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
+            Assert.Equal("Open LEDs", outdated.ActionLabel);
+            Assert.False(PanelNav.UpdatesWarns(PanelAttention.Find(input)));
+            Assert.True(PanelNav.Warns(PanelPage.Leds, PanelAttention.Find(input)));
             input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });
             Assert.Equal("OpenDash Flag box has an update", PanelAttention.Find(input).Last().Title);
             Assert.Equal("Open Matrix", PanelAttention.Find(input).Last().ActionLabel);

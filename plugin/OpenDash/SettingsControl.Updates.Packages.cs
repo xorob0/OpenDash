@@ -47,8 +47,9 @@ namespace OpenDashPlugin
             foreach (var row in lights) rows.Children.Add(row);
             if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());
             var table = Ui.CardBox(rows, 0);
-            // Where the strip-outdated fix lands (PanelLeds.StripUpdateRoute): the first light row whose Update
-            // press is the fix, or the table when no row offers one.
+            // Where a route to Updates' lights lands: the first light row whose Update press brings a profile
+            // forward, or the table when no row offers one. Home's strip-outdated fix goes to the LEDs header
+            // instead (PanelLeds.StripUpdateRoute, #523).
             var anchor = PanelUpdates.LightsAnchor(lightRows);
             if (anchor >= 0) Ui.Anchor(lights[anchor], PanelUpdates.AnchorLights);
             else Ui.Anchor(table, PanelUpdates.AnchorLights);

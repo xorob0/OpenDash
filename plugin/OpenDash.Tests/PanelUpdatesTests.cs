@@ -1269,11 +1269,11 @@ namespace OpenDashPlugin.Tests
             var tally = Tally(installed: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote);
             Assert.Equal(new[] { "Fanatec" }, tally.NotedOn);
             Assert.Equal(FlagBoxInstallPlan.BuiltInModeNote, tally.Note);
-            Assert.Equal("Installed Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed. Select \"Rim\" on Fanatec in SimHub to use it.",
+            Assert.Equal("Installed Rim's profile. Turn off built-in profiles on your device, or OpenDash's profiles will not be listed. Select \"Rim\" on Fanatec in SimHub to use it.",
                 PanelUpdates.ReinstallSummary(0, 0, false, tally, "OpenDash Flag box", Matrix1));
             Assert.False(tally.Ok);
             Assert.False(tally.Failed);
-            Assert.Equal("Updated Rim's profile. Turn off built-in profiles on your device, or OpenDash's will not be listed.",
+            Assert.Equal("Updated Rim's profile. Turn off built-in profiles on your device, or OpenDash's profiles will not be listed.",
                 PanelUpdates.LightsSaid(Tally(updated: Strips("Rim"), note: FlagBoxInstallPlan.BuiltInModeNote), "OpenDash Flag box", Matrix1));
             // A run that names several devices says which one the note is about, since "your device" would
             // point at neither (voice.md); the form is BuiltInModeNote's with the device named.
@@ -1282,14 +1282,14 @@ namespace OpenDashPlugin.Tests
             two.Strip("Rim", "Fanatec", FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate });
             two.Strip("Brow", "Moza", FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote });
             Assert.Equal(new[] { "Moza" }, two.NotedOn);
-            Assert.Equal("Installed the profiles of Rim and Brow. Turn off built-in profiles on Moza, or OpenDash's will not be listed. Select \"Rim\" on Fanatec and \"Brow\" on Moza in SimHub to use them.",
+            Assert.Equal("Installed the profiles of Rim and Brow. Turn off built-in profiles on Moza, or OpenDash's profiles will not be listed. Select \"Rim\" on Fanatec and \"Brow\" on Moza in SimHub to use them.",
                 PanelUpdates.LightsSaid(two, "OpenDash Flag box", Matrix1));
             // A strip and the flag box both reporting it, beside the matrix's own select step.
             var both = new UpdatesLightsTally();
             both.Strip("Rim", "Fanatec", FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote });
             both.FlagBox(FlagBoxInstallState.NotInstalled, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote });
             Assert.True(both.FlagBoxNoted);
-            Assert.Equal("Installed Rim's profile. Installed OpenDash Flag box. Turn off built-in profiles on Fanatec and your matrix's device, or OpenDash's will not be listed. Select \"Rim\" on Fanatec in SimHub to use it. Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 1.",
+            Assert.Equal("Installed Rim's profile. Installed OpenDash Flag box. Turn off built-in profiles on Fanatec and your matrix's device, or OpenDash's profiles will not be listed. Select \"Rim\" on Fanatec in SimHub to use it. Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 1.",
                 PanelUpdates.LightsSaid(both, "OpenDash Flag box", Matrix1));
             // One device named, or a device SimHub gives no name for, keeps the note as reported.
             Assert.Equal(FlagBoxInstallPlan.BuiltInModeNote, PanelUpdates.NoteSaid(tally, false));

@@ -349,21 +349,25 @@ namespace OpenDashPlugin.Tests
         public void The_services_own_states_are_said_in_the_rows_words()
         {
             Assert.Equal("Loading…", PanelLights.CarTablesLoading);
-            Assert.Equal("Could not read Lovely Car Data. See SimHub's log.", PanelLights.CarTablesUnreadable);
+            // The service says a failed read in the panel's failure form (#523), and the row says it as is.
+            Assert.Equal("Lovely Car Data could not be read. See SimHub's log.", CarLightService.Unreadable);
+            Assert.Equal(CarLightService.Unreadable, PanelLights.CarTablesUnreadable);
             Assert.Equal(PanelLights.CarTablesLoading, PanelLights.CarTablesLine(new CarLightService(null, System.IO.Path.GetTempPath()).Status, false));
-            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine("could not read the car light tables: Access to the path is denied.", true));
-            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine("the car light tables could not be loaded", false));
-            Assert.True(PanelLights.CarTablesUnread("could not read the car light tables: boom"));
+            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine(CarLightService.Unreadable, true));
+            Assert.Equal(PanelLights.CarTablesUnreadable, PanelLights.CarTablesLine(CarLightService.Unreadable, false));
+            Assert.True(PanelLights.CarTablesUnread(CarLightService.Unreadable));
+            Assert.False(PanelLights.CarTablesUnread("could not read the car light tables: boom"));
             Assert.False(PanelLights.CarTablesUnread("84 cars"));
             Assert.False(PanelLights.CarTablesUnread(null));
             // The words matched are CarLightService's own: a reword there has to move them here.
             var service = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "CarLightService.cs"));
             Assert.Contains("status = \"" + PanelLights.ServiceNotLoaded + "\";", service);
-            Assert.Contains("status = \"" + PanelLights.ServiceUnreadPrefix + ": \" + e.Message;", service);
-            Assert.Contains("status = \"" + PanelLights.ServiceUnloaded + "\";", service);
+            // Both failures set the one status and keep the exception's message for the log.
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(service, @"error = e\.Message;\s+status = Unreadable;").Count);
+            Assert.DoesNotContain("car light tables", service);
             // The reason is written to the log, once for each failure, so the line has something behind it.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Contains("Log.Warn(\"Lovely Car Data could not be read: \" + status);", leds);
+            Assert.Contains("Log.Warn(\"Lovely Car Data could not be read: \" + error);", leds);
         }
 
         [Theory]

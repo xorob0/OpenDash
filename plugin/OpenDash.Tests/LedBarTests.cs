@@ -446,6 +446,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(FlagBoxInstallPlan.BuiltInModeOf(false, false));
             // It names the switch rather than describing the symptom, because the switch is the fix.
             Assert.Contains("built-in profiles", FlagBoxInstallPlan.BuiltInModeNote, StringComparison.Ordinal);
+            // A possessive takes its noun (voice.md, #523).
+            Assert.Equal("Turn off built-in profiles on your device, or OpenDash's profiles will not be listed.", FlagBoxInstallPlan.BuiltInModeNote);
             // A plan carrying it is still a plan that worked: nothing to repeat, nothing to undo.
             var plan = new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote };
             Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);

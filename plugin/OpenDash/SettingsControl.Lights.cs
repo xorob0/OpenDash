@@ -954,10 +954,11 @@ namespace OpenDashPlugin
             carTablesDrawn = CarTablesKey();
             var status = service.Status;
             // A failure to read is said in the row's words, so its reason goes to the log, once for each.
-            if (PanelLights.CarTablesUnread(status) && !string.Equals(status, carTablesLogged, StringComparison.Ordinal))
+            var error = service.Error;
+            if (PanelLights.CarTablesUnread(status) && !string.Equals(error, carTablesLogged, StringComparison.Ordinal))
             {
-                carTablesLogged = status;
-                Log.Warn("Lovely Car Data could not be read: " + status);
+                carTablesLogged = error;
+                Log.Warn("Lovely Car Data could not be read: " + error);
             }
             // Whether the copy is over a week old is worked out as the row is drawn: the status is written only
             // when the tables are read, so the age it gives stands still while SimHub runs. From the stamp the

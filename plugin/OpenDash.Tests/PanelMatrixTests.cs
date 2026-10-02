@@ -203,7 +203,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Installed OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, null).Text);
             // The built-in profiles note comes before the select step it blocks, in caution, in one message.
             var noted = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", FlagBoxInstallPlan.BuiltInModeNote, one);
-            Assert.Equal("Installed OpenDash Flag box. Turn off built-in profiles on your device, or OpenDash's will not be listed. "
+            Assert.Equal("Installed OpenDash Flag box. Turn off built-in profiles on your device, or OpenDash's profiles will not be listed. "
                 + "Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2.", noted.Text);
             Assert.Equal(PanelTone.Caution, noted.Tone);
             // The installer's note is said as it reads, without the space round it.
@@ -1015,8 +1015,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelMatrix.TablesMissing(0, PanelLights.CarTablesNone + " " + PanelLights.CarTablesFailed("timed out")));
             Assert.True(PanelMatrix.TablesMissing(0, CarLightService.Describe(0, null, DateTime.UtcNow, null)));
             Assert.False(PanelMatrix.TablesMissing(0, "not loaded"));
-            Assert.False(PanelMatrix.TablesMissing(0, "could not read the car light tables: bad json"));
-            Assert.False(PanelMatrix.TablesMissing(0, "the car light tables could not be loaded"));
+            Assert.False(PanelMatrix.TablesMissing(0, CarLightService.Unreadable));
             Assert.False(PanelMatrix.TablesMissing(0, null));
             Assert.False(PanelMatrix.TablesMissing(0, PanelLights.CarTablesNone.ToUpperInvariant()));
             Assert.True(PanelMatrix.TablesMissing(0, "  " + PanelLights.CarTablesNone));

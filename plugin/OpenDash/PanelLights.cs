@@ -419,18 +419,13 @@ namespace OpenDashPlugin
         /// <summary>Said while the tables are still being read at start, which a page opened at once can see.</summary>
         public const string CarTablesLoading = "Loading…";
 
-        /// <summary>Said where the tables on disk could not be read. The reason is in SimHub's log, where the
-        /// page writes it, since an exception's message is not the panel's to show.</summary>
-        public const string CarTablesUnreadable = "Could not read Lovely Car Data. See SimHub's log.";
+        /// <summary>Said where the tables on disk could not be read: CarLightService's own status, which is in
+        /// the panel's words since #523. The reason is in SimHub's log, where the page writes it, since an
+        /// exception's message is not the panel's to show.</summary>
+        public const string CarTablesUnreadable = CarLightService.Unreadable;
 
         /// <summary>CarLightService's status before the start's read has finished, as it writes it.</summary>
         public const string ServiceNotLoaded = "not loaded";
-
-        /// <summary>The start of CarLightService's status where reading the folder threw, as it writes it.</summary>
-        public const string ServiceUnreadPrefix = "could not read the car light tables";
-
-        /// <summary>CarLightService's status where the read at start threw, as it writes it.</summary>
-        public const string ServiceUnloaded = "the car light tables could not be loaded";
 
         /// <summary>The age clause of CarLightService's status ("84 cars, updated 9 days ago"), as Describe
         /// writes it.</summary>
@@ -440,12 +435,11 @@ namespace OpenDashPlugin
         /// copy that works, as Describe writes it, with the fetch's own message after it.</summary>
         public const string ServiceFailedTail = " (last download failed: ";
 
-        /// <summary>Whether CarLightService's status is one of its two failures to read the tables, which the
-        /// row says in its own words and the page writes to the log.</summary>
+        /// <summary>Whether CarLightService's status says the tables could not be read, whose reason the page
+        /// writes to the log.</summary>
         public static bool CarTablesUnread(string status)
         {
-            var said = (status ?? string.Empty).Trim();
-            return said.StartsWith(ServiceUnreadPrefix, StringComparison.Ordinal) || said == ServiceUnloaded;
+            return (status ?? string.Empty).Trim() == CarLightService.Unreadable;
         }
 
         /// <summary>

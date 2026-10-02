@@ -117,11 +117,11 @@ namespace OpenDashPlugin
         public const string AnchorCarTables = "leds.car-tables";
 
         /// <summary>
-        /// Where Home's issue and the sidebar's dot send the driver for a strip profile's update: Updates' lights
-        /// section. The LEDs header carries an Update press of its own now, but PanelAttentionTests pins this
-        /// route to Updates, so moving it to new PanelRoute(PanelPage.Leds, AnchorStrips) waits on that test.
+        /// Where Home's issue and the sidebar's dot send the driver for a strip profile's update: the LEDs page's
+        /// strips, since the strip's header carries the Update press (#523). It was Updates' lights section
+        /// while only the Updates table had one.
         /// </summary>
-        public static readonly PanelRoute StripUpdateRoute = new PanelRoute(PanelPage.Updates, PanelUpdates.AnchorLights);
+        public static readonly PanelRoute StripUpdateRoute = new PanelRoute(PanelPage.Leds, AnchorStrips);
 
         // --- Which strip, and which moment ------------------------------------------------------------------
 
@@ -607,7 +607,7 @@ namespace OpenDashPlugin
         ///
         /// <para>With no tables read, it says they are missing only where none were ever downloaded
         /// (<paramref name="tablesMissing"/>): while the start's read is still running, or where the copy on disk
-        /// could not be read, the row below says "Loading…" or "Could not read", and a line saying they were never
+        /// could not be read, the row below says "Loading…" or that it could not be read, and a line saying they were never
         /// downloaded would contradict it, and be false.</para>
         /// </remarks>
         public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)

@@ -615,7 +615,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Which light row the strip-outdated fix lands on (PanelLeds.StripUpdateRoute, AnchorLights): the
+        /// Which light row a route to AnchorLights lands on (Home's strip-outdated fix goes to LEDs since #523): the
         /// first whose Update press is the fix, or -1 for the table itself when no row offers one.
         /// </summary>
         public static int LightsAnchor(IList<UpdatesRow> lightRows)
@@ -1208,10 +1208,10 @@ namespace OpenDashPlugin
         }
 
         /// <summary>FlagBoxInstallPlan.BuiltInModeNote with its device named: "Turn off built-in profiles on
-        /// Moza, or OpenDash's will not be listed."</summary>
+        /// Moza, or OpenDash's profiles will not be listed."</summary>
         public static string BuiltInOn(IList<string> devices)
         {
-            return "Turn off built-in profiles on " + And(devices ?? new string[0]) + ", or OpenDash's will not be listed.";
+            return "Turn off built-in profiles on " + And(devices ?? new string[0]) + ", or OpenDash's profiles will not be listed.";
         }
 
         /// <summary>The matrix's device in a sentence that already says where it is.</summary>

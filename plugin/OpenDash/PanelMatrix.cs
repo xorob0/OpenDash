@@ -810,7 +810,7 @@ namespace OpenDashPlugin
         /// (CarLightLibrary), so in any other game every car would read as missing from a dataset that may well
         /// measure it, and a download sent for from there could never apply. Null too while tables that are on
         /// disk are still being read, or when the copy on disk could not be read: the LEDs page's Lovely Car
-        /// Data row then says "Loading" or "Could not read", and a line saying they were never downloaded would
+        /// Data row then says "Loading" or that it could not be read, and a line saying they were never downloaded would
         /// contradict it, and be false.
         /// </summary>
         /// <param name="tablesMissing">Whether no tables were ever downloaded (<see cref="TablesMissing"/>).</param>
