@@ -351,9 +351,18 @@ namespace OpenDashPlugin
             // A copy that could not be put back is said by name, since the card still offers it once the
             // page is drawn again, and "nothing to put back" under it would say the opposite.
             var failed = new List<string>();
+            // The card shows a kept copy whatever the driver has done since (ruling 5), so a folder edited again
+            // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
+            var held = new List<string>();
+            var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);
             foreach (var kept in UpdatesKept())
             {
                 var folder = kept.Key;
+                if (!PanelUpdates.PutsBack(edited.Contains(folder)))
+                {
+                    held.Add(kept.Value);
+                    continue;
+                }
                 try
                 {
                     var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
@@ -369,7 +378,7 @@ namespace OpenDashPlugin
             plugin.Installer.Refresh();
             Save();
             Redraw();
-            Say(PanelUpdates.PutBack(restored, failed), restored > 0 && failed.Count == 0);
+            Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);
         }
 
         /// <summary>

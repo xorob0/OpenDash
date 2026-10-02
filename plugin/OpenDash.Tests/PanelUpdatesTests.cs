@@ -61,7 +61,7 @@ namespace OpenDashPlugin.Tests
                 PanelUpdates.CheckNow, PanelUpdates.InSimHubTitle, PanelConfirmation.ReinstallLabel, PanelConfirmation.UpdateLabel,
                 PanelUpdates.PutMineBack, PanelUpdates.SupportTitle, PanelUpdates.CopyReport, PanelUpdates.OpenLog,
                 PanelUpdates.ReportIssue, PanelUpdates.ReadGuide, PanelUpdates.RestartNote, PanelUpdates.SupportCaption,
-                PanelUpdates.Heading("0.5.1"), PanelUpdates.KeptTitle(new[] { "Main dash" }), PanelUpdates.KeptCaption(1),
+                PanelUpdates.Heading("0.5.1"), PanelUpdates.KeptHeading(1), PanelUpdates.KeptHeading(2), PanelUpdates.KeptLine(new[] { "Main dash" }),
                 PanelUpdates.Licence,
             };
             foreach (var label in labels)
@@ -586,19 +586,27 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// Put mine back never overwrites edits it did not ask about: it reads the disk first and restores only
-        /// what the kept card offers, which is a folder the driver has not edited again (ShowsKept, fed the
-        /// installer's own Edited). PackageExtractor.Restore keeps no copy of what it replaces.
+        /// Put mine back never overwrites edits it did not ask about: it reads the disk first, and of what the
+        /// kept card offers -- every kept copy, since ruling 5 of #524 -- it restores only a folder the installer
+        /// does not find edited again (PutsBack), naming the rest. PackageExtractor.Restore keeps no copy of what
+        /// it replaces.
         /// </summary>
         [Fact]
         public void Put_mine_back_restores_only_what_the_card_offers_from_a_fresh_read()
         {
             var code = FlatCode();
-            Assert.Contains("if (!PanelUpdates.ShowsKept(copies, package.Any(p => p.Edited))) continue;", code);
+            Assert.Contains("if (!PanelUpdates.ShowsKept(copies)) continue;", code);
             var restore = Method("private void RestoreKept()");
             var read = restore.IndexOf("plugin.Installer.Refresh();", StringComparison.Ordinal);
+            var edited = restore.IndexOf("var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);", StringComparison.Ordinal);
             var each = restore.IndexOf("foreach (var kept in UpdatesKept())", StringComparison.Ordinal);
-            Assert.True(read >= 0 && each > read, "the disk is read before the copies are chosen");
+            var skip = restore.IndexOf("if (!PanelUpdates.PutsBack(edited.Contains(folder))) { held.Add(kept.Value); continue; }", StringComparison.Ordinal);
+            var write = restore.IndexOf("PackageExtractor.Restore(", StringComparison.Ordinal);
+            Assert.True(read >= 0 && edited > read && each > edited, "the disk is read before the copies are chosen");
+            Assert.True(skip > each && write > skip, "an edited folder is passed over before anything is written");
+            Assert.Contains("Say(PanelUpdates.PutBack(restored, failed, held),", restore);
+            Assert.True(PanelUpdates.PutsBack(edited: false));
+            Assert.False(PanelUpdates.PutsBack(edited: true));
         }
 
         /// <summary>
@@ -1519,10 +1527,18 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_kept_card_names_what_was_kept()
         {
-            Assert.Equal("Your edited Main dash was kept", PanelUpdates.KeptTitle(new[] { "Main dash" }));
-            Assert.Equal("Your edited Rim and Main dash were kept", PanelUpdates.KeptTitle(new[] { "Rim", "Main dash" }));
-            Assert.Equal("Your edited Rim, Pit wall and Main dash were kept", PanelUpdates.KeptTitle(new[] { "Rim", "Pit wall", "Main dash" }));
-            Assert.Equal("Your edited dashboard was kept", PanelUpdates.KeptTitle(new string[0]));
+            // A heading is a noun (#524, ruling 4); what was kept is the first line under it.
+            Assert.Equal("Kept copy", PanelUpdates.KeptHeading(1));
+            Assert.Equal("Kept copies", PanelUpdates.KeptHeading(2));
+            Assert.Equal("Your edited Main dash was kept.", PanelUpdates.KeptClause(new[] { "Main dash" }));
+            Assert.Equal("Your edited Rim and Main dash were kept.", PanelUpdates.KeptClause(new[] { "Rim", "Main dash" }));
+            Assert.Equal("Your edited Rim, Pit wall and Main dash were kept.", PanelUpdates.KeptClause(new[] { "Rim", "Pit wall", "Main dash" }));
+            Assert.Equal("Your edited dashboard was kept.", PanelUpdates.KeptClause(new string[0]));
+            Assert.Equal("Your edited Rim was kept. OpenDash replaced it. Your copy is still here.", PanelUpdates.KeptLine(new[] { "Rim" }));
+            Assert.Equal("Your edited Rim and Main dash were kept. OpenDash replaced them. Your copies are still here.", PanelUpdates.KeptLine(new[] { "Rim", "Main dash" }));
+            var card = Method("private FrameworkElement UpdatesKeptCard(double width)");
+            Assert.Contains("var title = Ui.Text(PanelUpdates.KeptHeading(kept.Count), PanelUpdates.KeptTitleSize, FontWeights.SemiBold, Theme.TextPrimary);", card);
+            Assert.Contains("Ui.Caption(PanelUpdates.KeptLine(kept.Select(k => k.Value).ToList()), BodyWidth)", card);
             // An update, Reinstall everything and the Screens page's reinstall each keep a copy, so the
             // caption does not say which replaced it.
             Assert.Equal("OpenDash replaced it. Your copy is still here.", PanelUpdates.KeptCaption(1));
@@ -1535,20 +1551,18 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A folder is on the kept card while a copy of edited work is there and the folder in SimHub is not
-        /// the driver's own: Put mine back leaves the copy in place, so once it has run, or the driver edits
-        /// again, the folder drops off the card rather than claiming a replacement that is over, and Put mine
-        /// back never overwrites edits it did not ask about.
+        /// A folder is on the kept card whenever a copy of edited work is there to put back, as the artboard
+        /// draws it (#524, ruling 5), whether or not the driver has edited the folder in SimHub since: Put mine
+        /// back is what leaves an edited folder alone (PutsBack).
         /// </summary>
         [Fact]
-        public void The_kept_card_shows_a_copy_only_while_the_folder_in_SimHub_is_not_the_driver_s()
+        public void The_kept_card_shows_a_copy_whenever_one_is_kept()
         {
             var yours = new[] { @"C:\SimHub\DashTemplates\OpenDash Rim" + PackageExtractor.EditedSuffix + "20260930.zip", @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" };
-            Assert.True(PanelUpdates.ShowsKept(yours, edited: false));
-            Assert.False(PanelUpdates.ShowsKept(yours, edited: true));
+            Assert.True(PanelUpdates.ShowsKept(yours));
             // The ordinary one-deep backup is not a copy of anybody's work.
-            Assert.False(PanelUpdates.ShowsKept(new[] { @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" }, edited: false));
-            Assert.False(PanelUpdates.ShowsKept(null, edited: false));
+            Assert.False(PanelUpdates.ShowsKept(new[] { @"C:\SimHub\DashTemplates\OpenDash Rim_backup.zip" }));
+            Assert.False(PanelUpdates.ShowsKept(null));
             // A folder outside the rig is never replaced, so its copy is not the card's to offer, and it has no
             // name but the folder's, which voice.md never shows.
             Assert.Contains("plugin.Installer.Packages.Where(p => p.FolderName != null && !p.OutsideRig)", PageCode());
@@ -1576,6 +1590,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Could not put back Rim. See SimHub's log.", PanelUpdates.PutBack(0, new[] { "Rim" }));
             Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it. Could not put back Rim and Pit wall. See SimHub's log.",
                 PanelUpdates.PutBack(1, new[] { "Rim", "Pit wall" }));
+            // A folder edited since its copy was kept is left alone and named (#524, ruling 5).
+            Assert.Equal("Did not put back Rim, which you have edited since.", PanelUpdates.PutBack(0, null, new[] { "Rim" }));
+            Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it. Did not put back Rim and Pit wall, which you have edited since.",
+                PanelUpdates.PutBack(1, new string[0], new[] { "Rim", "Pit wall" }));
         }
 
         // --- Support ----------------------------------------------------------------------------------
@@ -1862,10 +1880,11 @@ namespace OpenDashPlugin.Tests
             InOrder(Method("private void RestoreKept()"),
                 "plugin.Installer.Refresh();",
                 "foreach (var kept in UpdatesKept())",
+                "if (!PanelUpdates.PutsBack(edited.Contains(folder))) { held.Add(kept.Value); continue; }",
                 "var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));",
                 "if (copy == null) continue;",
                 "if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;",
-                "plugin.Installer.Refresh(); Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed), restored > 0 && failed.Count == 0);");
+                "plugin.Installer.Refresh(); Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);");
 
             InOrder(Method("private void UpdatesApplied("),
                 "try",
@@ -1952,8 +1971,8 @@ namespace OpenDashPlugin.Tests
             var keptCard = Method("private FrameworkElement UpdatesKeptCard(double width)");
             InOrder(keptCard,
                 "var kept = UpdatesKept(); if (kept.Count == 0) return null;",
-                "Ui.Text(PanelUpdates.KeptTitle(kept.Select(k => k.Value).ToList()),",
-                "Ui.Caption(PanelUpdates.KeptCaption(kept.Count), BodyWidth)",
+                "Ui.Text(PanelUpdates.KeptHeading(kept.Count),",
+                "Ui.Caption(PanelUpdates.KeptLine(kept.Select(k => k.Value).ToList()), BodyWidth)",
                 "var restore = Ui.Button(PanelUpdates.PutMineBack,",
                 "return Ui.Anchor(card, PanelUpdates.AnchorKept);");
 

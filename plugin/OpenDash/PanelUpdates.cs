@@ -1270,12 +1270,27 @@ namespace OpenDashPlugin
         public const double KeptTextGap = 3;
         public const double KeptTitleSize = 15;
 
-        /// <summary>"Your edited Rim was kept", "Your edited Rim and Pit wall were kept".</summary>
-        public static string KeptTitle(IList<string> names)
+        /// <summary>The kept card's heading, a noun as voice.md has a heading (#524, ruling 4): "Kept copy", or
+        /// "Kept copies" for more than one.</summary>
+        public static string KeptHeading(int count)
+        {
+            return count > 1 ? "Kept copies" : "Kept copy";
+        }
+
+        /// <summary>The kept card's first line: "Your edited Rim was kept.", "Your edited Rim and Pit wall were
+        /// kept." (#524, ruling 4).</summary>
+        public static string KeptClause(IList<string> names)
         {
             var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
-            if (list.Count == 0) return "Your edited dashboard was kept";
-            return "Your edited " + And(list) + (list.Count == 1 ? " was kept" : " were kept");
+            if (list.Count == 0) return "Your edited dashboard was kept.";
+            return "Your edited " + And(list) + (list.Count == 1 ? " was kept." : " were kept.");
+        }
+
+        /// <summary>The words under the kept card's heading: <see cref="KeptClause"/>, then <see cref="KeptCaption"/>.</summary>
+        public static string KeptLine(IList<string> names)
+        {
+            var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            return KeptClause(list) + " " + KeptCaption(Math.Max(1, list.Count));
         }
 
         /// <summary>"Rim", "Rim and Pit wall", "Rim, Pit wall and Main dash".</summary>
@@ -1297,17 +1312,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether a folder is drawn on the kept card: while a copy kept from edited work is there to put back,
-        /// and only while the folder in SimHub is not the driver's own. Put mine back leaves the copy where it
-        /// was, so a folder already put back, or edited again since, is the driver's and drops off the card;
-        /// the next replacement they agree to brings it back. That also keeps Put mine back from ever
-        /// overwriting a folder that holds edits, which it would do without asking.
+        /// Whether a folder is drawn on the kept card: whenever a copy kept from edited work is there to put
+        /// back, as the artboard draws it (#524, ruling 5), whether or not the folder in SimHub has been edited
+        /// since. The ordinary one-deep backup is not anybody's work and never shows.
         /// </summary>
+        /// <remarks>
+        /// The card used to hide a folder the driver had edited again, which is also what kept Put mine back from
+        /// overwriting those edits. The card no longer does, so Put mine back asks the installer itself and
+        /// leaves such a folder as it is (<see cref="PutsBack"/>), saying so by name (<see cref="PutBack"/>).
+        /// </remarks>
         /// <param name="copies">PackageExtractor.KeptCopies for the folder.</param>
-        /// <param name="edited">Whether the installer finds the folder in SimHub edited (PackageStatus.Edited).</param>
-        public static bool ShowsKept(IEnumerable<string> copies, bool edited)
+        public static bool ShowsKept(IEnumerable<string> copies)
         {
-            return !edited && (copies ?? Enumerable.Empty<string>()).Any(path => path != null && path.Contains(PackageExtractor.EditedSuffix));
+            return (copies ?? Enumerable.Empty<string>()).Any(path => path != null && path.Contains(PackageExtractor.EditedSuffix));
+        }
+
+        /// <summary>Whether Put mine back writes a folder the card shows: only one the installer does not find
+        /// edited, since PackageExtractor.Restore keeps no copy of what it replaces and nothing has asked.</summary>
+        /// <param name="edited">Whether the installer finds the folder in SimHub edited (PackageStatus.Edited).</param>
+        public static bool PutsBack(bool edited)
+        {
+            return !edited;
         }
 
         /// <summary>The name SimHub lists a folder under: its screen's, or the folder's own for a folder no
@@ -1325,11 +1350,15 @@ namespace OpenDashPlugin
         /// </summary>
         /// <param name="restored">Copies put back.</param>
         /// <param name="failed">The names, as SimHub lists them, of the dashboards whose copy could not be put back.</param>
-        public static string PutBack(int restored, IList<string> failed = null)
+        /// <param name="held">The names of the dashboards left as they are because they were edited since their
+        /// copy was kept (<see cref="PutsBack"/>).</param>
+        public static string PutBack(int restored, IList<string> failed = null, IList<string> held = null)
         {
             var names = (failed ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            var kept = (held ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
             var line = new List<string>();
             if (restored > 0) line.Add("Put back " + (restored == 1 ? "1 dashboard" : restored + " dashboards") + ". " + ToSee(restored, false));
+            if (kept.Count > 0) line.Add("Did not put back " + And(kept) + ", which you have edited since.");
             if (names.Count > 0) line.Add("Could not put back " + And(names) + ". See SimHub's log.");
             return line.Count == 0 ? "There was nothing to put back." : string.Join(" ", line);
         }

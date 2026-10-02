@@ -176,8 +176,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Every folder OpenDash replaced although somebody had edited it, whose copy is still there to put
-        /// back and which is not the driver's own again since (PanelUpdates.ShowsKept), each with the name
-        /// SimHub lists it under. Off what the installer last read of the disk.
+        /// back (PanelUpdates.ShowsKept), each with the name SimHub lists it under. Off what the installer last
+        /// read of the disk.
         /// </summary>
         private IList<KeyValuePair<string, string>> UpdatesKept()
         {
@@ -199,7 +199,7 @@ namespace OpenDashPlugin
                     Log.Warn("Could not look for a kept copy of " + folder + ": " + ex.Message);
                     continue;
                 }
-                if (!PanelUpdates.ShowsKept(copies, package.Any(p => p.Edited))) continue;
+                if (!PanelUpdates.ShowsKept(copies)) continue;
                 kept.Add(new KeyValuePair<string, string>(folder, PanelUpdates.ScreenName(screens, folder)));
             }
             return kept;
@@ -218,9 +218,9 @@ namespace OpenDashPlugin
             var kept = UpdatesKept();
             if (kept.Count == 0) return null;
 
-            var title = Ui.Text(PanelUpdates.KeptTitle(kept.Select(k => k.Value).ToList()), PanelUpdates.KeptTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
+            var title = Ui.Text(PanelUpdates.KeptHeading(kept.Count), PanelUpdates.KeptTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
             title.TextWrapping = TextWrapping.Wrap;
-            var text = Ui.VStack(PanelUpdates.KeptTextGap, title, Ui.Caption(PanelUpdates.KeptCaption(kept.Count), BodyWidth));
+            var text = Ui.VStack(PanelUpdates.KeptTextGap, title, Ui.Caption(PanelUpdates.KeptLine(kept.Select(k => k.Value).ToList()), BodyWidth));
             var restore = Ui.Button(PanelUpdates.PutMineBack, PanelButtonKind.Outline, PanelButtonSize.Small);
             restore.Click += (sender, args) => RestoreKept();
             restore.IsEnabled = !applying;
