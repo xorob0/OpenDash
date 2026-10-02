@@ -96,24 +96,19 @@ namespace OpenDashPlugin.Tests
         public void A_glance_rebound_in_place_is_held_again()
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.cs"));
-            var start = code.IndexOf("private static void HoldWhilePressed(", StringComparison.Ordinal);
+            var start = code.IndexOf("private void HoldWhilePressed(", StringComparison.Ordinal);
             Assert.True(start >= 0, "HoldWhilePressed is in the shell");
-            var body = code.Substring(start, code.IndexOf("private static Button BuildLink(", start, StringComparison.Ordinal) - start);
-            Assert.Contains("mapping.PropertyChanged += pressTypeChanged;", body);
-            Assert.Contains("mapping.PropertyChanged -= pressTypeChanged;", body);
-            Assert.Contains("args.PropertyName == \"PressType\"", body);
-            Assert.Contains("watched.PropertyChanged += modelChanged;", body);
-            Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
-            // SimHub's mappings outlive the editor, so the watch is let go of when the editor leaves the tree.
-            Assert.Contains("editor.Unloaded += (sender, args) => detach();", body);
-            var detach = body.Substring(body.IndexOf("Action detach = () =>", StringComparison.Ordinal));
-            detach = detach.Substring(0, detach.IndexOf("};", StringComparison.Ordinal));
-            Assert.Contains("mapping.PropertyChanged -= pressTypeChanged;", detach);
-            Assert.Contains("watchedMappings.Clear();", detach);
-            Assert.Contains("watchedTriggers.CollectionChanged -= collectionChanged;", detach);
-            Assert.Contains("watchedTriggers = null;", detach);
-            Assert.Contains("watched.PropertyChanged -= modelChanged;", detach);
-            Assert.Contains("watched = null;", detach);
+            var body = System.Text.RegularExpressions.Regex.Replace(code.Substring(start, code.IndexOf("private static Button BuildLink(", start, StringComparison.Ordinal) - start), @"\s+", " ");
+            // The shell's one watcher (WatchBindings, held by PanelShortcutsTests), correcting every mapping it
+            // watches and every press type changed in place, and let go of with the build as well as on Unloaded:
+            // an editor built and never loaded raises no Unloaded.
+            Assert.Contains("OnDrop(WatchBindings(editor, mapping => { if (mapping.PressType != PressType.During) mapping.PressType = PressType.During; }, null));", body);
+            var watch = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Bindings.cs"));
+            watch = watch.Substring(watch.IndexOf("private static Action WatchBindings(", StringComparison.Ordinal));
+            Assert.Contains("args.PropertyName != \"PressType\"", watch);
+            Assert.Contains("each(sender as InputMapping);", watch);
+            Assert.Contains("editor.Unloaded += (sender, args) => detach();", watch);
+            Assert.Contains("return detach;", watch);
         }
 
         /// <summary>

@@ -992,7 +992,11 @@ namespace OpenDashPlugin.Tests
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
             var start = code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal);
             Assert.True(start >= 0, "ShortcutsWatch is on the page");
-            var body = code.Substring(start);
+            // The page's watch is the shell's WatchBindings, which HoldWhilePressed stands on too, let go of
+            // when the build is dropped as well as when the editor leaves the tree.
+            Assert.Matches(@"private void ShortcutsWatch\(ControlsEditor editor, Action changed\)\s*\{\s*OnDrop\(WatchBindings\(editor, null, changed\)\);\s*\}", code.Substring(start));
+            var bindings = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Bindings.cs"));
+            var body = bindings.Substring(bindings.IndexOf("private static Action WatchBindings(", StringComparison.Ordinal));
             Assert.Contains("mapping.PropertyChanged += mappingChanged;", body);
             Assert.Contains("watchedTriggers.CollectionChanged += collectionChanged;", body);
             Assert.Contains("watched.PropertyChanged += modelChanged;", body);
@@ -1009,18 +1013,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("watched.PropertyChanged -= modelChanged;", detach);
             Assert.Contains("watched = null;", detach);
 
-            // Let go of when the editor leaves the tree, and when the build is replaced or the page left.
+            // Let go of when the editor leaves the tree; the caller lets go of it when the build is replaced.
             Assert.Contains("editor.Unloaded += (sender, args) => detach();", body);
-            Assert.Contains("OnDrop(detach);", body);
 
             // What each step acts on, not only its += and -=: every mapping watched is remembered, so rewatch
             // and detach can let go of it; the collection is swapped before it is watched, and the mappings
             // in it are watched every time; the model is remembered between its -= and +=; and the watch is
             // taken up at once, not only on Loaded.
-            Assert.Matches(@"Action rewatchMappings = \(\) =>\s*\{\s*foreach \(var mapping in watchedMappings\) mapping\.PropertyChanged -= mappingChanged;\s*watchedMappings\.Clear\(\);\s*if \(watchedTriggers == null\) return;\s*foreach \(var mapping in watchedTriggers\)\s*\{\s*if \(mapping == null\) continue;\s*mapping\.PropertyChanged \+= mappingChanged;\s*watchedMappings\.Add\(mapping\);\s*\}\s*\};", body);
+            Assert.Matches(@"Action rewatchMappings = \(\) =>\s*\{\s*foreach \(var mapping in watchedMappings\) mapping\.PropertyChanged -= mappingChanged;\s*watchedMappings\.Clear\(\);\s*if \(watchedTriggers == null\) return;\s*foreach \(var mapping in watchedTriggers\)\s*\{\s*if \(mapping == null\) continue;\s*mapping\.PropertyChanged \+= mappingChanged;\s*watchedMappings\.Add\(mapping\);\s*each\(mapping\);\s*\}\s*\};", body);
             Assert.Matches(@"Action rewatchTriggers = \(\) =>\s*\{\s*var triggers = watched == null \? null : watched\.Triggers;\s*if \(!ReferenceEquals\(triggers, watchedTriggers\)\)\s*\{\s*if \(watchedTriggers != null\) watchedTriggers\.CollectionChanged -= collectionChanged;\s*watchedTriggers = triggers;\s*if \(watchedTriggers != null\) watchedTriggers\.CollectionChanged \+= collectionChanged;\s*\}\s*rewatchMappings\(\);\s*\};", body);
-            Assert.Matches(@"Action attach = \(\) =>\s*\{\s*var model = editor\.Model;\s*if \(ReferenceEquals\(model, watched\)\) return;\s*if \(watched != null\) watched\.PropertyChanged -= modelChanged;\s*watched = model;\s*if \(watched != null\) watched\.PropertyChanged \+= modelChanged;\s*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
-            Assert.Matches(@"OnDrop\(detach\);\s*attach\(\);\s*\}", body);
+            Assert.Matches(@"Action attach = \(\) =>\s*\{\s*var model = editor\.Model;\s*if \(ReferenceEquals\(model, watched\)\) return;\s*if \(watched != null\) watched\.PropertyChanged -= modelChanged;\s*watched = model;\s*if \(watched != null\) watched\.PropertyChanged \+= modelChanged;\s*rewatchTriggers\(\);\s*told\(\);\s*\};", body);
+            Assert.Matches(@"attach\(\);\s*return detach;\s*\}", body);
         }
 
         /// <summary>
@@ -1035,18 +1038,19 @@ namespace OpenDashPlugin.Tests
         public void The_bindings_watch_is_taken_up_on_every_row_whenever_the_editor_or_its_model_moves()
         {
             var code = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Shortcuts.cs"));
-            var body = code.Substring(code.IndexOf("private void ShortcutsWatch(", StringComparison.Ordinal));
+            var bindings = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Bindings.cs"));
+            var body = bindings.Substring(bindings.IndexOf("private static Action WatchBindings(", StringComparison.Ordinal));
             // A notification that names no property (all of them changed) reads again too.
-            Assert.Contains("if (args.PropertyName == null || args.PropertyName == \"Trigger\" || args.PropertyName == \"PressType\") changed();", Between(body, "mappingChanged = (sender, args) =>", "};"));
+            Assert.Matches(@"if \(args\.PropertyName != null && args\.PropertyName != ""Trigger"" && args\.PropertyName != ""PressType""\) return;\s*each\(sender as InputMapping\);\s*told\(\);", Between(body, "mappingChanged = (sender, args) =>", "};"));
             Assert.Contains("args.PropertyName != \"Triggers\"", Between(body, "modelChanged = (sender, args) =>", "};"));
             // Each re-reads the page. A binding changed in place (SimHub's Change sets Trigger and PressType on
             // the mapping already in the list) raises neither a collection change nor InputMappingsChanged,
             // so the mapping's own watch is the only way the clash line hears of it; an Add or a Clear
             // raises the collection's; a model replaced or taken up again reads at once.
-            Assert.Contains("args.PropertyName == \"PressType\") changed();", Between(body, "mappingChanged = (sender, args) =>", "};"));
-            Assert.Matches(@"collectionChanged = \(sender, args\) =>\s*\{\s*rewatchMappings\(\);\s*changed\(\);\s*\};", body);
-            Assert.Matches(@"modelChanged = \(sender, args\) =>\s*\{\s*if \(args\.PropertyName != null && args\.PropertyName != ""Triggers""\) return;\s*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
-            Assert.Matches(@"Action attach = \(\) =>\s*\{[^}]*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
+            Assert.Matches(@"Action told = \(\) =>\s*\{\s*if \(changed != null\) changed\(\);\s*\};", body);
+            Assert.Matches(@"collectionChanged = \(sender, args\) =>\s*\{\s*rewatchMappings\(\);\s*told\(\);\s*\};", body);
+            Assert.Matches(@"modelChanged = \(sender, args\) =>\s*\{\s*if \(args\.PropertyName != null && args\.PropertyName != ""Triggers""\) return;\s*rewatchTriggers\(\);\s*told\(\);\s*\};", body);
+            Assert.Matches(@"Action attach = \(\) =>\s*\{[^}]*rewatchTriggers\(\);\s*told\(\);\s*\};", body);
             Assert.Contains("if (args.PropertyName == null || args.PropertyName == \"Model\") attach();", body);
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = TaggedPageLayout(");

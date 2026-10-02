@@ -15,8 +15,6 @@
 // the call sites, and the caption is what says the binding is corrected to a hold (#435).
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
@@ -834,84 +832,13 @@ namespace OpenDashPlugin
         /// type changed in place (SimHub's Change edits both on the mapping already there).
         /// </summary>
         /// <remarks>
-        /// The mappings are SimHub's for the whole session, and a mapping's PropertyChanged holds its handlers
-        /// strongly, so the watch is let go of when the editor leaves the tree and when the page is dropped, as
-        /// HoldWhilePressed lets go of its own; Loaded takes it up again.
+        /// The shell's WatchBindings, which HoldWhilePressed stands on too: the mappings are SimHub's for the whole
+        /// session, and a mapping's PropertyChanged holds its handlers strongly, so the watch is let go of when
+        /// the editor leaves the tree and when the page is dropped; Loaded takes it up again.
         /// </remarks>
         private void ShortcutsWatch(ControlsEditor editor, Action changed)
         {
-            ControlsEditorModel watched = null;
-            System.Collections.ObjectModel.ObservableCollection<InputMapping> watchedTriggers = null;
-            var watchedMappings = new List<InputMapping>();
-            PropertyChangedEventHandler mappingChanged = null;
-            PropertyChangedEventHandler modelChanged = null;
-            NotifyCollectionChangedEventHandler collectionChanged = null;
-
-            Action rewatchMappings = () =>
-            {
-                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= mappingChanged;
-                watchedMappings.Clear();
-                if (watchedTriggers == null) return;
-                foreach (var mapping in watchedTriggers)
-                {
-                    if (mapping == null) continue;
-                    mapping.PropertyChanged += mappingChanged;
-                    watchedMappings.Add(mapping);
-                }
-            };
-            Action rewatchTriggers = () =>
-            {
-                var triggers = watched == null ? null : watched.Triggers;
-                if (!ReferenceEquals(triggers, watchedTriggers))
-                {
-                    if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
-                    watchedTriggers = triggers;
-                    if (watchedTriggers != null) watchedTriggers.CollectionChanged += collectionChanged;
-                }
-                rewatchMappings();
-            };
-            mappingChanged = (sender, args) =>
-            {
-                if (args.PropertyName == null || args.PropertyName == "Trigger" || args.PropertyName == "PressType") changed();
-            };
-            collectionChanged = (sender, args) =>
-            {
-                rewatchMappings();
-                changed();
-            };
-            modelChanged = (sender, args) =>
-            {
-                if (args.PropertyName != null && args.PropertyName != "Triggers") return;
-                rewatchTriggers();
-                changed();
-            };
-            Action attach = () =>
-            {
-                var model = editor.Model;
-                if (ReferenceEquals(model, watched)) return;
-                if (watched != null) watched.PropertyChanged -= modelChanged;
-                watched = model;
-                if (watched != null) watched.PropertyChanged += modelChanged;
-                rewatchTriggers();
-                changed();
-            };
-            Action detach = () =>
-            {
-                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= mappingChanged;
-                watchedMappings.Clear();
-                if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
-                watchedTriggers = null;
-                if (watched != null) watched.PropertyChanged -= modelChanged;
-                watched = null;
-            };
-            editor.PropertyChanged += (sender, args) =>
-            {
-                if (args.PropertyName == null || args.PropertyName == "Model") attach();
-            };
-            editor.Loaded += (sender, args) => attach();
-            editor.Unloaded += (sender, args) => detach();
-            OnDrop(detach);
-            attach();
+            OnDrop(WatchBindings(editor, null, changed));
         }
     }
 }

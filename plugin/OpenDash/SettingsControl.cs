@@ -955,7 +955,7 @@ namespace OpenDashPlugin
         /// could be constructed by a host that does not carry the style -- so a failure falls back to naming
         /// the action, which is exactly what somebody binding it by hand needs.
         /// </summary>
-        private static FrameworkElement BuildBinder(string action, string friendlyName, bool hold = false)
+        private FrameworkElement BuildBinder(string action, string friendlyName, bool hold = false)
         {
             try
             {
@@ -994,89 +994,15 @@ namespace OpenDashPlugin
         /// control mean what it says, so the row says it instead of doing it silently: every glance row's
         /// caption ends on PanelCopy.GlanceBoundAsHold.
         /// </summary>
-        private static void HoldWhilePressed(ControlsEditor editor)
+        private void HoldWhilePressed(ControlsEditor editor)
         {
-            // SimHub's own Loaded handler replaces Model with a new ControlsEditorModel every time the editor
-            // is shown (ControlsEditor_Loaded in 9.12.6), and the Add dialog writes into that new model's
-            // Triggers. Watching only the first model missed every glance bound on the page, so the watch
-            // follows Model wherever it goes, and Triggers when the model replaces it.
-            ControlsEditorModel watched = null;
-            System.Collections.ObjectModel.ObservableCollection<InputMapping> watchedTriggers = null;
-            var watchedMappings = new List<InputMapping>();
-            System.ComponentModel.PropertyChangedEventHandler pressTypeChanged = null;
-            System.ComponentModel.PropertyChangedEventHandler modelChanged = null;
-            System.Collections.Specialized.NotifyCollectionChangedEventHandler collectionChanged = null;
-
-            Action<InputMapping> hold = mapping =>
+            // Every mapping the editor holds is corrected as it is watched, and again whenever its press type is
+            // changed in place; the watch follows the model wherever SimHub moves it (WatchBindings), and is let
+            // go of with the build as well as when the editor leaves the tree.
+            OnDrop(WatchBindings(editor, mapping =>
             {
-                if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
-            };
-            // Every mapping in the collection is watched for its press type, and the watch moves with the
-            // collection: what left it is let go of, what joined it is watched and corrected.
-            Action rewatchMappings = () =>
-            {
-                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= pressTypeChanged;
-                watchedMappings.Clear();
-                if (watchedTriggers == null) return;
-                foreach (var mapping in watchedTriggers)
-                {
-                    if (mapping == null) continue;
-                    mapping.PropertyChanged += pressTypeChanged;
-                    watchedMappings.Add(mapping);
-                    hold(mapping);
-                }
-            };
-            Action rewatchTriggers = () =>
-            {
-                var triggers = watched == null ? null : watched.Triggers;
-                if (!ReferenceEquals(triggers, watchedTriggers))
-                {
-                    if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
-                    watchedTriggers = triggers;
-                    if (watchedTriggers != null) watchedTriggers.CollectionChanged += collectionChanged;
-                }
-                rewatchMappings();
-            };
-            pressTypeChanged = (sender, args) =>
-            {
-                if (args.PropertyName == null || args.PropertyName == "PressType") hold(sender as InputMapping);
-            };
-            collectionChanged = (sender, args) => rewatchMappings();
-            modelChanged = (sender, args) =>
-            {
-                if (args.PropertyName == null || args.PropertyName == "Triggers") rewatchTriggers();
-            };
-            Action attach = () =>
-            {
-                var model = editor.Model;
-                if (ReferenceEquals(model, watched)) return;
-                if (watched != null) watched.PropertyChanged -= modelChanged;
-                watched = model;
-                if (watched != null) watched.PropertyChanged += modelChanged;
-                rewatchTriggers();
-            };
-            // The mappings are SimHub's for the whole session (ControlsEditorModel's Triggers is a new
-            // collection over PluginManager's own InputActionMapping), and a mapping's PropertyChanged holds
-            // its handlers strongly. A handler left on one after the editor has gone kept the editor, and the
-            // whole page it sat on, alive until SimHub closed, and ran once more per discarded page on every
-            // press type change; so the watch is let go of whenever the editor leaves the tree, and Loaded
-            // (or the next Model) takes it up again.
-            Action detach = () =>
-            {
-                foreach (var mapping in watchedMappings) mapping.PropertyChanged -= pressTypeChanged;
-                watchedMappings.Clear();
-                if (watchedTriggers != null) watchedTriggers.CollectionChanged -= collectionChanged;
-                watchedTriggers = null;
-                if (watched != null) watched.PropertyChanged -= modelChanged;
-                watched = null;
-            };
-            editor.PropertyChanged += (sender, args) =>
-            {
-                if (args.PropertyName == null || args.PropertyName == "Model") attach();
-            };
-            editor.Loaded += (sender, args) => attach();
-            editor.Unloaded += (sender, args) => detach();
-            attach();
+                if (mapping.PressType != PressType.During) mapping.PressType = PressType.During;
+            }, null));
         }
 
         /// <summary>
