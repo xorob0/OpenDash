@@ -928,6 +928,7 @@ namespace OpenDashPlugin.Tests
             var expected = new Dictionary<string, string>
             {
                 { PanelScreens.AnchorCards, "face wall portrait companion round" },
+                { PanelScreens.AnchorAdd, "face wall portrait companion round" },
                 { PanelScreens.AnchorDetails, "face wall portrait companion round" },
                 { PanelScreens.AnchorRevBar, "face" },
                 { PanelScreens.AnchorLapReview, "face" },
@@ -1455,7 +1456,11 @@ namespace OpenDashPlugin.Tests
                 "if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());",
                 "if (rig.Count == 0) { sections.Add(Ui.Prose(PanelCopy.EmptyRig, Theme.SizeBody)); return PageLayout(PanelScreens.Title, null, sections.ToArray()); }",
                 "var fix = BuildScreenFix(screen); if (fix != null) selected.Add(fix);",
-                "cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));",
+                "cards.Add(Ui.Anchor(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen), PanelScreens.AnchorAdd));",
+                // A route to the add tile opens the Add sheet on the way in, after the page's own focus, and only
+                // while the build it follows is showing (#523): Home's empty-rig tile routes here.
+                "if (to != null && to.Anchor == PanelScreens.AnchorAdd) ScreensOpenAddOnArrival();",
+                "var dropped = false; OnDrop(() => dropped = true); Dispatcher.BeginInvoke(new Action(() => { if (!dropped) ShowAddScreen(); }), DispatcherPriority.Input);",
                 "Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray())",
                 "edit.Click += (sender, args) => ShowEdit(screen);",
                 "duplicate.Click += (sender, args) => DuplicateScreen(screen);",
@@ -1561,6 +1566,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(new[]
             {
+                "AnchorAdd = screens.add",
                 "AnchorCards = screens.cards",
                 "AnchorClassOnly = screens.class-only",
                 "AnchorDetails = screens.details",

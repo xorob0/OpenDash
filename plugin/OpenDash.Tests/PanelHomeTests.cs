@@ -942,12 +942,13 @@ namespace OpenDashPlugin.Tests
                 foreach (var call in calls) Assert.False(Regex.IsMatch(body, call), "The tick runs " + call + " in: " + body);
             }
 
-            // Two ticks (the screens' and the strips'), one update hook, the add tile's drop; nothing on a wheel's
-            // lighting press, which rebuilds Home through the shell once the burst settles, and nothing to clear
-            // on leaving, since the shell clears every hook on a rebuild and on Go.
+            // Two ticks (the screens' and the strips'), one update hook; no drop, since the add tile routes to the
+            // Screens page, which opens its own sheet (#523); nothing on a wheel's lighting press, which rebuilds
+            // Home through the shell once the burst settles, and nothing to clear on leaving, since the shell
+            // clears every hook on a rebuild and on Go.
             Assert.Equal(2, Regex.Matches(code, @"\bOnTick\(").Count);
             Assert.Single(Regex.Matches(code, @"\bOnUpdate\("));
-            Assert.Single(Regex.Matches(code, @"\bOnDrop\("));
+            Assert.Empty(Regex.Matches(code, @"\bOnDrop\("));
             Assert.Empty(Regex.Matches(code, @"\bOnLighting\("));
             Assert.Empty(Regex.Matches(code, @"\bOnLeave\("));
         }
@@ -1217,10 +1218,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, title, () => Open(PanelPage.Matrix, id));", code);
             Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
-            // Go focuses the Screens page at Loaded; the sheet opens after, at Input, so its focus lands last, and
-            // only while the Screens build it follows is showing: a press handled first drops that build.
-            Assert.Contains("Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => { Go(PanelPage.Screens); var dropped = false; OnDrop(() => dropped = true); Dispatcher.BeginInvoke(new Action(() => { if (!dropped) ShowAddScreen(); }), DispatcherPriority.Input); });", code);
-            Assert.Single(Regex.Matches(code, @"ShowAddScreen\(\)"));
+            // The empty rig's tile routes to the Screens page's add tile, and that page opens its own sheet
+            // (#523): Home no longer calls the page's private sheet.
+            Assert.Contains("var tile = Ui.DashedAddCard(PanelAddScreen.SectionTitle, () => Go(PanelPage.Screens, PanelScreens.AnchorAdd));", code);
+            Assert.DoesNotContain("ShowAddScreen", code);
             // The shell's route is its own, not a hook: Home never reads it.
             Assert.DoesNotContain("route.", code);
             Assert.DoesNotContain("Go(PanelPage.Screens); ShowAddScreen();", code);

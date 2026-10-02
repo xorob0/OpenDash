@@ -62,6 +62,7 @@ namespace OpenDashPlugin
                 screensBuiltSinceGo = true;
                 OnLeave("Screens.follow", () => screensBuiltSinceGo = false);
                 if (to != null && to.Anchor != null) ScreensFollow(to.Anchor, rig);
+                if (to != null && to.Anchor == PanelScreens.AnchorAdd) ScreensOpenAddOnArrival();
             }
             var sections = new List<UIElement>();
             if (PanelScreens.ShowsUnclaimedNote(rig)) sections.Add(BuildUnclaimedNote());
@@ -98,6 +99,27 @@ namespace OpenDashPlugin
 
         /// <summary>Selects the screen a route to <paramref name="anchor"/> needs, and on a face opens the
         /// zone, and the whole list, the row is drawn in.</summary>
+        /// <summary>
+        /// Opens the Add sheet for a route to the add tile (PanelScreens.AnchorAdd), once the page it arrives on
+        /// is drawn: Home's empty-rig tile goes there (#523).
+        /// </summary>
+        /// <remarks>
+        /// Go puts focus on the page's first control at Loaded. The sheet opens after that, at Input, so its own
+        /// focus (queued at Normal as it opens) lands last and inside the sheet, and the opener it remembers is a
+        /// control still on screen. Input is a background priority, run only when no input is pending, so a
+        /// sidebar press made while the page was building is handled first: the sheet belongs to the build it
+        /// follows, through that build's own OnDrop, and does not open over whatever page the press went to.
+        /// </remarks>
+        private void ScreensOpenAddOnArrival()
+        {
+            var dropped = false;
+            OnDrop(() => dropped = true);
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!dropped) ShowAddScreen();
+            }), DispatcherPriority.Input);
+        }
+
         private void ScreensFollow(string anchor, IReadOnlyList<ScreenInstance> rig)
         {
             var current = SelectedScreen;
@@ -145,7 +167,7 @@ namespace OpenDashPlugin
                 ScreensHoverWhenCut(card, captured.Name, () => ScreensTextIn(card, captured.Name));
                 cards.Add(card);
             }
-            cards.Add(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen));
+            cards.Add(Ui.Anchor(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen), PanelScreens.AnchorAdd));
             return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray());
         }
 

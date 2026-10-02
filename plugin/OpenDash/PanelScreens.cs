@@ -1042,6 +1042,10 @@ namespace OpenDashPlugin
         // --- Anchors, search and the greyed rows ---------------------------------------------------------
 
         public const string AnchorCards = "screens.cards";
+
+        /// <summary>The dashed tile that adds a screen. A route to it opens the Add sheet once the page is drawn
+        /// (#523): Home's empty-rig tile goes there rather than calling the page's sheet itself.</summary>
+        public const string AnchorAdd = "screens.add";
         public const string AnchorRevBar = "screens.revbar";
         public const string AnchorFlagDisplay = "screens.flag-display";
         public const string AnchorLapReview = "screens.lap-review";
@@ -1140,6 +1144,7 @@ namespace OpenDashPlugin
             switch (anchor)
             {
                 case AnchorCards:
+                case AnchorAdd:
                 case AnchorDetails:
                     return true;
                 case AnchorZones:
