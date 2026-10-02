@@ -550,8 +550,10 @@ export function inputMapping(action: string, key: string, pressType: number = PR
   return {
     Target: action,
     Trigger: `KeyboardReaderPlugin.${key.toUpperCase()}`,
-    // An action with a release has to be During, and an action named Hold has a release.
-    PressType: /(^|\.)Hold/.test(action) ? PRESS.during : pressType,
+    // An action with a release has to be During, and an action named Hold has a release. The name
+    // carries the screen's namespace in front of the verb (OpenDash.RimHoldQuickGlance), so the verb
+    // is found anywhere after the dot, as a capitalised word.
+    PressType: /\.\w*Hold[A-Z]/.test(action) ? PRESS.during : pressType,
     GameRestriction: { SupportedGames: [] },
   };
 }

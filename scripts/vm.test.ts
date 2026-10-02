@@ -183,6 +183,9 @@ describe('binding a key to a SimHub action', () => {
     // through TriggerAction, which fires start and end back to back. A glance bound any other way
     // appears and vanishes in the same frame, which is what the first attempt on the VM did.
     expect(inputMapping('OpenDash.HoldQuickGlance', 'F8').PressType).toBe(PRESS.during);
+    // The screen's namespace sits between the dot and the verb since the glance went per face.
+    expect(inputMapping('OpenDash.RimHoldQuickGlance', 'F8').PressType).toBe(PRESS.during);
+    expect(inputMapping('OpenDash.Face1280x480HoldQuickGlance', 'F8').PressType).toBe(PRESS.during);
     expect(inputMapping('OpenDash.CycleZoneB', 'F7').PressType).toBe(PRESS.shortAndLong);
     // Even when the caller asks for something else: an action named Hold has a release.
     expect(inputMapping('OpenDash.HoldQuickGlance', 'F8', PRESS.shortAndLong).PressType).toBe(PRESS.during);
