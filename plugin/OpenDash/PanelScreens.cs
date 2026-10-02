@@ -69,8 +69,10 @@ namespace OpenDashPlugin
     {
         public const string Title = "Screens";
 
-        /// <summary>A rig with no screen, on Home's card.</summary>
-        public const string NoScreens = "No screens yet";
+        /// <summary>A rig with no screen: the line over the add tile on an empty Screens page, as LEDs and Matrix
+        /// draw theirs (PanelLeds.NoStrips, PanelMatrix.NoPanels), and the words Home's card and the Updates table
+        /// read from it.</summary>
+        public const string NoScreens = "No screens yet.";
 
         /// <summary>The line an upgrading user meets over the cards, and nobody else: the noun and the two
         /// verbs Home's issue uses for the same screens (PanelAttention.UnclaimedDetail).</summary>

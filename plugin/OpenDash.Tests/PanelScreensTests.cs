@@ -210,7 +210,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Screens", PanelScreens.Title);
             // The empty rig's words, which Home's card says too.
-            Assert.Equal("No screens yet", PanelScreens.NoScreens);
+            Assert.Equal("No screens yet.", PanelScreens.NoScreens);
             Assert.Equal("Add the screen your rig has.", PanelCopy.EmptyRig);
             // A failure points at the log (voice.md), in the words its siblings use.
             Assert.Equal("Could not duplicate Rim. See SimHub's log.", PanelAddScreen.DuplicateFailed("Rim"));
@@ -1224,6 +1224,24 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(phrase + ". " + step, issue.Detail);
             Assert.Equal(step, PanelUpdates.DashboardRow(rim, package, true, true).Tooltip);
             Assert.DoesNotContain("this display", step);
+        }
+
+        /// <summary>
+        /// An empty Screens page says so over its add tile, as LEDs and Matrix do, in the words Home's card and the
+        /// Updates table read from it: the three device pages lay out their empty state one way, and nothing
+        /// quotes a phrase the page it points at does not draw.
+        /// </summary>
+        [Fact]
+        public void An_empty_rig_is_said_over_the_add_tile_as_LEDs_and_Matrix_say_theirs()
+        {
+            var cards = ScreensSource("SettingsControl.Screens.cs");
+            Assert.Contains("if (rig.Count > 0) return grid; return Ui.VStack(12, Ui.Prose(PanelScreens.NoScreens, Theme.SizeBody), grid);", cards);
+            foreach (var empty in new[] { PanelScreens.NoScreens, PanelLeds.NoStrips, PanelMatrix.NoPanels })
+            {
+                Assert.EndsWith(".", empty);
+                Assert.Equal(empty, PanelHome.EmptyLine(empty));
+            }
+            Assert.StartsWith(PanelScreens.NoScreens + " ", PanelUpdates.NothingInSimHub);
         }
 
         /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>

@@ -168,7 +168,11 @@ namespace OpenDashPlugin
                 cards.Add(card);
             }
             cards.Add(Ui.Anchor(Ui.DashedAddCard(PanelAddScreen.SectionTitle, ShowAddScreen), PanelScreens.AnchorAdd));
-            return Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray());
+            var grid = Ui.CardGrid(PanelKit.CardMinWidth, PanelKit.CardGridGap, PanelScreens.CardColumns, cards.ToArray());
+            if (rig.Count > 0) return grid;
+            // The empty state names the emptiness over the tile that ends it, as LEDs and Matrix draw theirs; Home's
+            // card and the Updates table read the same words.
+            return Ui.VStack(12, Ui.Prose(PanelScreens.NoScreens, Theme.SizeBody), grid);
         }
 
         /// <summary>Whether SimHub has the screen: its folder, then whether it was written after SimHub started

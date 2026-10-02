@@ -461,9 +461,9 @@ namespace OpenDashPlugin
             return string.IsNullOrEmpty(kind) ? string.Empty : " · " + kind;
         }
 
-        /// <summary>The table with no row under its head: an empty rig, in the one phrase the panel has for
-        /// it (PanelScreens.NoScreens), pointing at the page that adds one.</summary>
-        public const string NothingInSimHub = PanelScreens.NoScreens + ". Add a screen on the Screens page.";
+        /// <summary>The table with no row under its head: an empty rig, in the line the Screens page draws over
+        /// its add tile (PanelScreens.NoScreens), pointing at the page that adds one.</summary>
+        public const string NothingInSimHub = PanelScreens.NoScreens + " Add a screen on the Screens page.";
 
         public const string UpToDate = "Up to date";
         public const string UpdateAvailable = "Update available";

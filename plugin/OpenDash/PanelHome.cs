@@ -604,8 +604,8 @@ namespace OpenDashPlugin
             return Math.Max(0, Math.Min(100, value)).ToString(CultureInfo.InvariantCulture) + "%";
         }
 
-        /// <summary>A card's empty state as a sentence: each page's own words, with the full stop the Screens
-        /// page's pill leaves off.</summary>
+        /// <summary>A card's empty state as a sentence: each page's own words, the line each device page draws
+        /// over its add tile, with a full stop should a page's ever leave one off.</summary>
         public static string EmptyLine(string empty)
         {
             var text = (empty ?? string.Empty).Trim();

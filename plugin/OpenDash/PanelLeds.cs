@@ -97,7 +97,8 @@ namespace OpenDashPlugin
         public const string Title = "LEDs";
 
         /// <summary>The empty state, here and under Home's LEDs eyebrow: the LEDs page's own, as NoScreens is
-        /// Screens'. It was PanelLights.NoBars, shared, which Home's read froze.</summary>
+        /// Screens' and NoPanels Matrix's, each drawn over its page's add tile. It was PanelLights.NoBars, shared,
+        /// which Home's read froze.</summary>
         public const string NoStrips = "No strips yet.";
 
         public const string AnchorStrips = "leds.strips";

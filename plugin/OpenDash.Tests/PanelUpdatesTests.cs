@@ -43,7 +43,8 @@ namespace OpenDashPlugin.Tests
             // The noun phrase the old footer drew: the page does not describe itself.
             Assert.Equal("MIT licence", PanelUpdates.Licence);
             // The empty rig in the one phrase the panel has for it, which the Screens page owns and has frozen.
-            Assert.Equal(PanelScreens.NoScreens + ". Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
+            Assert.Equal(PanelScreens.NoScreens + " Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
+            Assert.Equal("No screens yet. Add a screen on the Screens page.", PanelUpdates.NothingInSimHub);
         }
 
         /// <summary>The names a label may capitalise after its first word.</summary>
