@@ -24,7 +24,7 @@ export default function Install() {
         title="Install the plugin"
         lede={
           <>
-            One file installs all 14 dashboards and 63 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
+            One file installs all 14 dashboards and 122 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
             <a href={SIMHUB_URL} className="link" rel="noopener">
               SimHub
             </a>{' '}
@@ -57,11 +57,11 @@ export default function Install() {
             },
             {
               title: 'Start SimHub and enable the plugin.',
-              body: 'Switch OpenDash on, then Show in left main menu, and press Ok. OpenDash appears in the left menu with four tabs: Rig, Data, Lights and Install.',
+              body: 'Switch OpenDash on, then Show in left main menu, and press Ok. OpenDash appears in the left menu, with a sidebar of pages: Home, Rig, Screens, LEDs, Matrix, Shortcuts, Settings and Updates.',
             },
             {
-              title: 'Add your screens on the Rig tab, then restart SimHub.',
-              body: 'The Rig starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
+              title: 'Add your screens on the Screens page, then restart SimHub.',
+              body: 'The Screens page starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
             },
           ]}
         />
@@ -73,13 +73,13 @@ export default function Install() {
             <strong>Assign a dashboard to a display in Dash Studio.</strong> A DDU, a USB screen, or a phone on the network, like any other dashboard.
           </li>
           <li>
-            <strong>Set each screen up on the Rig tab.</strong> Choose the pages for each zone and bind the wheel buttons.
+            <strong>Set each screen up on the Screens page.</strong> Choose the pages for each zone, and bind the wheel buttons on the Shortcuts page.
           </li>
           <li>
             <strong>Every screen keeps its own settings.</strong> A face on the wheel and a face beside it are set up apart.
           </li>
           <li>
-            <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Updating is one click, then restart SimHub.
+            <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Press Download on the Updates page, then restart SimHub.
           </li>
         </ul>
       </Section>
@@ -123,7 +123,7 @@ export default function Install() {
             <strong>A value reads <code>--</code>.</strong> iRacing has not published it yet, or never does.
           </li>
           <li>
-            <strong>The shift lights look generic.</strong> Press Download on the Lights tab to fetch the car tables.
+            <strong>The shift lights look generic.</strong> Press Download under Car Data on the LEDs page.
           </li>
           <li>
             <strong>A wheel button does nothing.</strong> Bind the action of the screen you are looking at. Each screen has its own.

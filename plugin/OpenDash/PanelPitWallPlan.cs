@@ -1,15 +1,19 @@
-// PanelPitWallPlan.cs: the picture of the three pit wall pages the Rig tab configures a screen on, the
-// words that go under it, and the companion grid beside it, as numbers.
+// PanelPitWallPlan.cs: the picture of the pit wall page the Screens page configures a screen on, the
+// words that go beside it, and the companion grid, as numbers.
 //
 // A pit wall's zones are letters, and a letter is a position: zone C is wherever the Tower page draws it.
-// The panel therefore says where each zone is twice, once as a miniature of every page and once as a
-// sentence in the zone's own row, and until this class the two disagreed. The miniature stacked C above D
-// and drew the wide zone down the left, while the sentence beside it said C was the lower left of the
-// tower and D the lower right; the Tower page's fixed panel was not drawn at all. Both halves now read the
-// table below, so a rectangle that moves takes its sentence with it and PanelPitWallPlanTests fails when
-// it does not.
+// The panel says where each landscape zone is by drawing it: the picture of the page on screen stands
+// beside the list of that page's zones, and every box in it is drawn from the table below. A portrait
+// wall's zones have no picture, so each of its four choices carries its place as a hover ("Upper left.").
+// Until this class the miniature stacked C above D and drew the wide zone down the left, and the Tower
+// page's fixed panel was not drawn at all; PanelPitWallPlanTests holds the table to the pages the pit wall
+// has.
 //
-// Apart from SettingsControl.Panes.cs for the reason PanelFacePlan.cs is apart from it: the panel is WPF
+// Screens.dc.html draws one page at a time, the one "Page on screen" picks, at the wall's own 16 by 9 and
+// as wide as the column gives it; the table below is that page at 253 across, and Scaled draws it at any
+// other width.
+//
+// Apart from SettingsControl.Screens.PitWall.cs for the reason PanelFacePlan.cs is apart from it: the panel is WPF
 // and the net8.0 test project cannot compile a line of it, so the geometry lives where the tests can hold
 // it against the canvas. Pure: no WPF types.
 //
@@ -22,46 +26,106 @@ using System.Text;
 
 namespace OpenDashPlugin
 {
-    /// <summary>The three pit wall pages as rectangles, and the sentence each zone's row carries.</summary>
+    /// <summary>The three pit wall pages as rectangles, and where the portrait wall's zones sit.</summary>
     public static class PanelPitWallPlan
     {
-        /// <summary>A page miniature, which is 1920 x 1080 at about 0.132. The pit wall is the one kind
-        /// whose picture is three pictures, so the scale is the canvas's own number rather than a width
-        /// divided by the face's, the way PanelFacePlan.PictureWidth is.</summary>
+        /// <summary>The design space the page table is written in: 1920 x 1080 at about 0.132. A picture at
+        /// another width is this scaled, never a rectangle near it.</summary>
         public const double ThumbWidth = 253;
 
         public const double ThumbHeight = 142;
 
-        /// <summary>Between one miniature and the next. Three of them and two gaps come to 797 with the
-        /// one pixel frame each carries, which is what has to fit the 896 a pane's body is given.</summary>
-        public const double ThumbGap = 16;
-
-        /// <summary>Every panel is drawn this far in from the miniature's edge, which is what leaves the
-        /// surface.inset ground showing around them rather than a page of pure ui.field.</summary>
+        /// <summary>Every panel is drawn this far in from the page's edge, which is what leaves the
+        /// surface.inset ground showing around them.</summary>
         public const double Inset = 4;
 
-        /// <summary>The page's name under its miniature: text.secondary at the caption size, not the
-        /// tracked label the miniature's own panels are drawn with.</summary>
-        public const double CaptionSize = Theme.SizeSmall;
+        /// <summary>The zone list beside the picture (the artboard's 300 px card), and the gap between them.</summary>
+        public const double ListWidth = 300;
 
-        public const double CaptionGap = 8;
+        public const double ListGap = 24;
 
-        /// <summary>Between one zone row and the next, which is wider than the twelve a pane's own rows
-        /// take because a zone row is a title over a caption rather than a single line.</summary>
-        public const double RowGap = 14;
+        /// <summary>The rule around the picture, inside the width the column gives it.</summary>
+        public const double Frame = 1;
 
-        /// <summary>Every control in the list is the same box: the four zones, the wide zone and the web
-        /// view address, at the full control height and so at the body size rather than the label size.
-        ///
-        /// It was 220, which is what the face pane's glance select takes. The wide zone names three of
-        /// its six pages by what the extra width buys, and "Lap history · delta to best" is longer than
-        /// anything the narrow list holds, so the box grew with the longest label rather than letting a
-        /// ComboBox ellipsise the half of the name that says which page it is.</summary>
-        public const double SelectWidth = 260;
+        /// <summary>The narrowest the picture is drawn, however narrow the column.</summary>
+        public const double PictureLeast = 120;
 
-        public const double SelectHeight = Theme.ControlHeight;
+        /// <summary>
+        /// The width the picture takes on a page <paramref name="content"/> wide, its frame included: the
+        /// content less the zone list and its gap in two columns, the content stacked, and in either case no
+        /// wider than <see cref="StackedMax"/>.
+        /// </summary>
+        /// <remarks>
+        /// A 16 by 9 picture the width of a wide page stood 485 px tall and pushed the rows under it out of
+        /// sight, which the face's picture is capped against for the same reason. Beside the list it used to
+        /// stop only at the content's 1112 px ceiling; the column has none now, and at a 3840 px window the
+        /// picture was 3195 px wide and 1796 tall. Past the cap the zone list beside it takes the room.
+        /// </remarks>
+        public static double PictureWidthFor(double content, bool twoColumns)
+        {
+            var column = twoColumns ? content - ListWidth - ListGap : content;
+            return Math.Max(PictureLeast, Math.Min(column, StackedMax));
+        }
 
-        public const double AddressWidth = SelectWidth;
+        /// <summary>The widest a stacked picture is drawn, frame included: the widest whose page
+        /// (<see cref="PictureHeight"/>) stands no taller than PanelFacePlan.MaxHeight.</summary>
+        public static readonly double StackedMax = Math.Ceiling((PanelFacePlan.MaxHeight + 1) * 16 / 9) - 1 + 2 * Frame;
+
+        /// <summary>
+        /// The most of the content width the pit wall's editor reads (ContentWidthUpTo): the widest picture,
+        /// the gap and the zone list's least. Past it the picture has stopped at <see cref="StackedMax"/> and
+        /// the list beside it takes the rest without a rebuild; the address box and every line of controls
+        /// under it have stopped changing well before.
+        /// </summary>
+        public static readonly double ContentMost = StackedMax + ListGap + ListWidth;
+
+        /// <summary>The page itself inside a picture <paramref name="outer"/> wide: the frame is drawn inside
+        /// the column, not beside it, or the column clips the picture's right edge.</summary>
+        public static double CanvasWidth(double outer)
+        {
+            return outer - 2 * Frame;
+        }
+
+        /// <summary>A panel of the picture: its name at 12 over what it shows at 14, padded 8 by 6. The
+        /// artboard writes a zone's bare letter at 16 in the display face; the page writes "Zone A" and
+        /// "Wide zone", which at 16 does not fit a Tower zone on a narrow page.</summary>
+        public const double ZoneNameSize = Theme.SizeLabel;
+
+        public const double ZonePageSize = Theme.SizeBody;
+
+        public const double ZonePaddingX = 8;
+
+        public const double ZonePaddingY = 6;
+
+        /// <summary>The web view address box, as the artboard draws it.</summary>
+        public const double AddressWidth = 320;
+
+        /// <summary>The address box in a column <paramref name="column"/> wide: the artboard's 320, or less
+        /// where 320 would squeeze the row's title under PanelScreens.RowTitleLeast, as every other row's
+        /// controls are held.</summary>
+        public static double AddressWidthFor(double column)
+        {
+            return Math.Min(AddressWidth, PanelScreens.ControlsWidth(column));
+        }
+
+        /// <summary>The picture's height at a width: the wall's own 16 by 9.</summary>
+        public static double PictureHeight(double width)
+        {
+            return Math.Floor(width * 9 / 16);
+        }
+
+        /// <summary>A page's panels at a picture <paramref name="width"/> across, scaled from the table.</summary>
+        public static IReadOnlyList<Panel> Scaled(Page page, double width)
+        {
+            var panels = new List<Panel>();
+            if (page == null) return panels;
+            var k = width / ThumbWidth;
+            foreach (var panel in page.Panels)
+            {
+                panels.Add(new Panel(panel.Name, Math.Round(panel.X * k), Math.Round(panel.Y * k), Math.Floor(panel.Width * k), Math.Floor(panel.Height * k), panel.Configurable, panel.Shows));
+            }
+            return panels;
+        }
 
         /// <summary>What an empty address box shows. A watermark and never a value: Contract.NormaliseUrl
         /// keeps only an absolute address, so a bare scheme stored in the setting is blanked on the first
@@ -72,7 +136,7 @@ namespace OpenDashPlugin
         /// list below can be pointed at or a fixed part of the page.</summary>
         public sealed class Panel
         {
-            public Panel(string name, double x, double y, double width, double height, bool configurable)
+            public Panel(string name, double x, double y, double width, double height, bool configurable, string shows = null)
             {
                 Name = name;
                 X = x;
@@ -80,7 +144,12 @@ namespace OpenDashPlugin
                 Width = width;
                 Height = height;
                 Configurable = configurable;
+                Shows = shows;
             }
+
+            /// <summary>What a fixed panel shows, drawn under its name as a zone's page is ("Board ·
+            /// Leaderboard" on the artboard's Race picture); null for a zone, whose page is its setting.</summary>
+            public string Shows { get; private set; }
 
             public string Name { get; private set; }
 
@@ -119,23 +188,6 @@ namespace OpenDashPlugin
             public IReadOnlyList<Panel> Panels { get; private set; }
         }
 
-        /// <summary>Where one zone is drawn, as the row beside the picture says it.</summary>
-        public sealed class ZonePlace
-        {
-            public ZonePlace(string page, string where)
-            {
-                Page = page;
-                Where = where;
-            }
-
-            /// <summary>The title of the page this is a place on, which is one of the three below.</summary>
-            public string Page { get; private set; }
-
-            /// <summary>"upper right", "top", "lower left": the words the sentence ends on, and what the
-            /// test holds the rectangle to.</summary>
-            public string Where { get; private set; }
-        }
-
         /// <summary>
         /// The three pages in the order the picture draws them.
         /// </summary>
@@ -148,11 +200,11 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<Page> Pages = new[]
         {
             new Page("Race",
-                new Panel("Board", 4, 4, 118, 134, false),
+                new Panel("Board", 4, 4, 118, 134, false, "Leaderboard"),
                 new Panel("A", 128, 4, 118, 65, true),
                 new Panel("B", 128, 73, 118, 65, true)),
             new Page("Tower",
-                new Panel("Tower", 4, 4, 110, 134, false),
+                new Panel("Tower", 4, 4, 110, 134, false, "Leaderboard"),
                 new Panel("Wide", 118, 4, 131, 59, true),
                 new Panel("A", 118, 67, 63, 71, true),
                 new Panel("B", 185, 67, 63, 71, true)),
@@ -162,38 +214,23 @@ namespace OpenDashPlugin
                 new Panel("C", 4, 96, 243, 39, true)),
         };
 
-        /// <summary>
-        /// Where on its own page each zone sits.
-        /// </summary>
-        /// <remarks>
-        /// One place each, now that a zone belongs to a page. The table used to give A two places -- the
-        /// race page's upper right and the telemetry page's top -- because it was one setting drawn in two
-        /// pages, and the caption saying so was the only warning a driver got that moving one moved both.
-        /// </remarks>
+        /// <summary>Where on the portrait wall each of its four zones sits, which its choice's hover says: the
+        /// portrait wall has no picture to show it.</summary>
         private static readonly Dictionary<string, string> ZoneWhere = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            { "RaceA", "upper right" },
-            { "RaceB", "lower right" },
-            { "TowerWide", "across the top of the right column" },
-            { "TowerA", "lower left" },
-            { "TowerB", "lower right" },
-            { "TelemetryA", "top" },
-            { "TelemetryB", "middle" },
-            { "TelemetryC", "bottom" },
             { "PortraitA", "upper left" },
             { "PortraitB", "upper right" },
             { "PortraitC", "lower left" },
             { "PortraitD", "lower right" },
         };
 
-        /// <summary>The caption of one zone's row: "Race page, upper right." Written from the table above
-        /// rather than beside it, so the words cannot drift from the picture the panel draws.</summary>
-        public static string ZoneDescription(Contract.PitWallZoneSlot slot)
+        /// <summary>A portrait zone's hover: its place alone, "Upper left.", under a row titled Portrait layout,
+        /// where "Portrait page" would name a page the wall does not have.</summary>
+        public static string ZonePosition(Contract.PitWallZoneSlot slot)
         {
-            if (slot == null) return string.Empty;
             string where;
-            if (!ZoneWhere.TryGetValue(slot.Key, out where)) return string.Empty;
-            return slot.Page + " page, " + where + ".";
+            if (slot == null || !ZoneWhere.TryGetValue(slot.Key, out where) || where.Length == 0) return string.Empty;
+            return char.ToUpperInvariant(where[0]) + where.Substring(1) + ".";
         }
 
         /// <summary>Every zone and page the quick glance can be set to, packed the way
@@ -220,28 +257,86 @@ namespace OpenDashPlugin
             var slot = index >= 0 && index < zones.Count ? zones[index] : zones[0];
             return slot.Page + " " + slot.Slot + " · " + ZonePages.StandardName(Contract.QuickGlancePage(glance));
         }
+    }
 
-        /// <summary>The page of that title, or null. Used by the tests to hold a sentence against the
-        /// rectangles of the page it names.</summary>
-        public static Page PageNamed(string title)
+    /// <summary>
+    /// The round screen's picture: the disc and the cards it carries.
+    /// </summary>
+    /// <remarks>
+    /// The disc is the artboard's: 240 across and 32 from the rows. The cards on it are this plan's own numbers,
+    /// not Screens.dc.html's: the artboard draws only the 480 round's two cards, 10 apart and padded 9 by 10 with
+    /// 6 between their lines, and the 800 round's six do not fit the disc at those numbers. The plan draws every
+    /// round at the tighter 6 apart, padded 6 by 7 with 4 between the lines, so both rounds read alike.
+    /// </remarks>
+    public static class PanelRoundPlan
+    {
+        /// <summary>The artboard's 240 px disc, and the 32 between it and the rows beside it.</summary>
+        public const double PictureSize = 240;
+
+        public const double PictureGap = 32;
+
+        /// <summary>Between two cards on the disc, across and down: the plan's 6, where the artboard's two cards
+        /// stand 10 apart, so six fit.</summary>
+        public const double CardGap = 6;
+
+        /// <summary>A card is padded 6 at the sides and 7 above and below: the plan's numbers, tighter than the
+        /// artboard's .zone (9 by 10), so six fit.</summary>
+        public const double CardPaddingX = 6;
+
+        public const double CardPaddingY = 7;
+
+        /// <summary>Between a card's label and the card it shows: the plan's 4, the artboard's 6.</summary>
+        public const double CardLineGap = 4;
+
+        /// <summary>A card's height: its rule, its padding, the 11 px label and the 14 px card name at
+        /// PanelFacePlan.LineHeight, and the gap between them.</summary>
+        public const double CardHeight = 50;
+
+        /// <summary>The most cards the disc carries: the 800 round's six. A card face of another size reads
+        /// all twelve slots, which stand taller than the disc in any arrangement of these cards, so it is
+        /// drawn as its rows alone.</summary>
+        public const int MostOnDisc = 6;
+
+        /// <summary>Whether the disc is drawn with the cards on it.</summary>
+        public static bool OnDisc(int read)
         {
-            foreach (var page in Pages)
-            {
-                if (string.Equals(page.Title, title, StringComparison.Ordinal)) return page;
-            }
-            return null;
+            return read > 0 && read <= MostOnDisc;
+        }
+
+        /// <summary>The cards stand in one column for two, and in two columns of three for six.</summary>
+        public static int Columns(int read)
+        {
+            return read > 2 ? 2 : 1;
+        }
+
+        /// <summary>A card's width: 140 alone in its column, 84 beside another, which keeps every corner of
+        /// the three rows of two inside the disc (88 put the top row's corners 2 px past it).</summary>
+        public static double CardWidth(int columns)
+        {
+            return columns == 1 ? 140 : 84;
         }
     }
 
-    /// <summary>The companion's grid of modules, which has no picture and so no plan beyond three numbers.</summary>
+    /// <summary>The companion's grid of modules, which has no picture and so no plan beyond a few numbers.</summary>
     public static class PanelCompanionPlan
     {
-        /// <summary>Two columns of eleven and ten rather than three of seven: the name is a body line and
-        /// not a label, and three columns of it do not leave room for the toggle at the panel's width.</summary>
-        public const int ModuleColumns = 2;
+        /// <summary>Three columns of seven, as Screens.dc.html draws them: a checkbox beside each name, which
+        /// leaves the room a switch took.</summary>
+        public const int ModuleColumns = 3;
 
-        public const double ModuleRowGap = 12;
+        /// <summary>Between two modules, across and down: the artboard's 6.</summary>
+        public const double ModuleGap = 6;
 
-        public const double ModuleColumnGap = 40;
+        /// <summary>One module's row (.mod): 34 high, padded 10.</summary>
+        public const double ModuleHeight = 34;
+
+        public const double ModulePaddingX = 10;
+
+        /// <summary>"Not in iRacing" beside a module's name, smaller than the name: the artboard's 11.</summary>
+        public const double NoteSize = 11;
+
+        /// <summary>The narrowest a column may be and still hold a name and "Not in iRacing" beside it: the
+        /// grid's least card, so three fit from 612 of content and fewer below.</summary>
+        public const double ModuleLeast = 200;
     }
 }

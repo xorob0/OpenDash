@@ -139,3 +139,32 @@ to acquire. Neither ticket may assume this record covers it.
 evaluator, so ADR 0019 answers a genuinely different question and the sixteen points ADR 0008 priced
 are still in front of it. What crosses over is the rule about the fit and the vocabulary of states,
 which is why both live in `PanelPreview.cs` rather than inside the WPF.
+
+## Amended, 2026-10-02: the live preview is the Screens page's, one at a time (#791)
+
+**What moved.** The Rig tab is gone ([#791](https://github.com/xorob0/OpenDash/issues/791)). SimHub's
+renderer is hosted on the Screens page, under the selected screen's name and above its editor, and
+only there. One preview is alive at a time, the selected screen's, and it is let go on every page
+change and every rebuild. Where this record says "the Rig tab", read the Screens page; where it says
+the preview is let go when the tab is left, read the page.
+
+**The Rig page draws schematics only.** The new Rig page shows every screen, strip and matrix at once,
+painted with a flag, the spotter, the pit lane, a warning or the revs. It never hosts the renderer.
+Every tile is the panel's own drawing (`PanelRigMap`, `PanelEmulation`): a face's band and pop-ups in
+the dash's own words, a matrix from the generator's own glyph sheet, a strip by the artboard's rules.
+A live dashboard per tile would be a renderer per screen drawing beside the car, which is the cost
+this record says nobody has measured, multiplied.
+
+**What the schematics cost.** They are a second drawing of what a dashboard and a profile do, and a
+second drawing can diverge. Tests hold them to the artboard's rules and the generator's sheet, not to
+the dashboard, so they are pictures, never evidence. The LEDs page met one divergence, a car alongside
+on a strip with no end lamps, and was corrected to the profile it installs.
+
+**The LEDs and Matrix pages draw stills of the same kind**, from `PanelEmulation`, rather than SimHub's
+`LedsPreviewEx` and `MatrixPreviewEx`. The unresolved question above about those two controls is
+unchanged, and [#400](https://github.com/xorob0/OpenDash/issues/400) and
+[#401](https://github.com/xorob0/OpenDash/issues/401) still may not assume this record covers it.
+
+**What it still cannot do** is draw before a package is installed. The Add a screen sheet draws its
+sizes as tiles, with no picture of a face; that is [#85](https://github.com/xorob0/OpenDash/issues/85)'s
+to answer.

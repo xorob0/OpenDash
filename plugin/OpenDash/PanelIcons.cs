@@ -68,5 +68,82 @@ namespace OpenDashPlugin
 
         /// <summary>The plus the add card carries.</summary>
         public const string Plus = "M8 3v10M3 8h10";
+
+        // The rebuilt panel's own set (#791), drawn on a twenty unit box as the redesign's artboards draw
+        // them: the sidebar's eight, and the few glyphs the pages put beside a row. None of them is on
+        // PluginComponents.dc.html, whose icon row a test holds to exactly eight names, so PanelIconsTests
+        // pins these against their literals the way it pins the phone and the plus; they move to a join
+        // with design/canvas/plugin/*.dc.html once the author copies the artboards there.
+
+        /// <summary>The side of the square the sidebar's paths are drawn in.</summary>
+        public const double NavBox = 20;
+
+        /// <summary>A sidebar icon on screen, which is the artboard's 18.</summary>
+        public const double NavSize = 18;
+
+        /// <summary>Home: a house.</summary>
+        public const string Home = "M3 9l7-5.5L17 9v8H3z M8 17v-5h4v5";
+
+        /// <summary>Rig: a screen, a box beside it and a strip under both, which is a rig seen from the seat.</summary>
+        public const string Rig = "M2.5 3.5h9v6h-9z M13.5 3.5h4v4h-4z M2.5 12.5h15v3h-15z";
+
+        /// <summary>Screens: one display on a short stand.</summary>
+        public const string Screens = "M2.5 4.5h15v9h-15z M7 17h6";
+
+        /// <summary>LEDs: three lamps in a row.</summary>
+        public const string Leds = "M2.5 8.5h3v3h-3z M8.5 8.5h3v3h-3z M14.5 8.5h3v3h-3z";
+
+        /// <summary>Matrix: a three by three grid, which is the 8x8 at the size of an icon.</summary>
+        public const string Matrix = "M3 3h4v4H3z M8 3h4v4H8z M13 3h4v4h-4z M3 8h4v4H3z M8 8h4v4H8z M13 8h4v4h-4z M3 13h4v4H3z M8 13h4v4H8z M13 13h4v4h-4z";
+
+        /// <summary>Shortcuts: a button, a ring round a smaller one.</summary>
+        public const string Shortcuts = "M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 7.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z";
+
+        /// <summary>Settings: two sliders.</summary>
+        public const string Settings = "M3 6h14 M3 14h14 M7 4v4 M13 12v4";
+
+        /// <summary>Updates: an arrow down into a tray.</summary>
+        public const string Updates = "M10 3v9M6 8.5l4 4 4-4M3.5 14v3h13v-3";
+
+        /// <summary>The search field's lens.</summary>
+        public const string Search = "M8.5 3a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M12.5 12.5l4.5 4.5";
+
+        /// <summary>The cross that closes a sheet.</summary>
+        public const string Close = "M5 5l10 10M15 5L5 15";
+
+        /// <summary>The ringed bang a notice and a fix box carry.</summary>
+        public const string Warning = "M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 6v5 M10 13.5v.5";
+
+        /// <summary>An arc with an arrowhead: a restart, or a check done again.</summary>
+        public const string Restart = "M15.5 6.5A6.5 6.5 0 1 0 16.5 11 M16 3v4h-4";
+
+        /// <summary>The six-dot grip a row that can be dragged carries, as two columns of short marks.</summary>
+        public const string DragHandle = "M7.5 4.5v1 M12.5 4.5v1 M7.5 9.5v1 M12.5 9.5v1 M7.5 14.5v1 M12.5 14.5v1";
+
+        /// <summary>A chevron pointing on, which separates two crumbs.</summary>
+        public const string ChevronRight = "M7.5 5l5 5-5 5";
+
+        /// <summary>A chevron pointing down, which a drop-down and a disclosure carry.</summary>
+        public const string ChevronDown = "M5 7.5l5 5 5-5";
+
+        /// <summary>The plus a dashed add card carries at the twenty unit size.</summary>
+        public const string Add = "M10 4v12M4 10h12";
+
+        /// <summary>Night mode on the rail: a crescent, where the full sidebar draws a labelled switch.</summary>
+        public const string Night = "M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z";
+
+        /// <summary>The ringed "i" AddLeds.dc.html puts before a note, on the sixteen unit box
+        /// (<see cref="Box"/>): its circle r6 about the centre, the stem and the dot.</summary>
+        public const string Info = "M8 2a6 6 0 1 0 0 12a6 6 0 1 0 0-12z M8 7v4.5 M8 4.8v.4";
+
+        /// <summary>The box the LEDs page's car line draws its ringed marks on: fourteen units.</summary>
+        public const double RingBox = 14;
+
+        /// <summary>Leds.dc.html's car line when the car is in the tables: a tick in a ring, on
+        /// <see cref="RingBox"/>. Its ringed bang, for a car that is not, is <see cref="Warning"/>.</summary>
+        public const string RingCheck = "M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.8 7.2l1.6 1.6 3-3.2";
+
+        /// <summary>Leds.dc.html's car line with no car to name: a dash in a ring, on <see cref="RingBox"/>.</summary>
+        public const string RingDash = "M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.5 7h5";
     }
 }

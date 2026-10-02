@@ -88,7 +88,7 @@ namespace OpenDashPlugin
         /// <summary>The sentence a row shows when the profile is installed but the device is listing the
         /// maker's built-in profiles instead.</summary>
         public const string BuiltInModeNote =
-            "Turn off built-in profiles on your device, or OpenDash's will not be listed.";
+            "Turn off built-in profiles on your device, or OpenDash's profiles will not be listed.";
 
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "OpenDash";

@@ -315,6 +315,30 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The package in a catalogue a screen is written from, or null when the catalogue carries none
+        /// that makes it.
+        /// </summary>
+        /// <remarks>
+        /// The one the screen remembers, when the catalogue carries it. A screen migrated from a settings
+        /// file written before ADR 0017 remembers none -- the migration sets no package, and a later
+        /// repair fills one only for a screen that had no size -- and one whose package has been dropped
+        /// from the build remembers a name that is gone, so both fall back: first to the package whose own
+        /// folder the screen holds, which is every stock screen, and then to the kind and the size. The
+        /// installer and the panel's Duplicate both ask here, so the two cannot find different packages.
+        /// </remarks>
+        public static PackageEntry EntryFor(IEnumerable<PackageEntry> catalogue, ScreenInstance screen)
+        {
+            if (catalogue == null || screen == null) return null;
+            var entries = catalogue.Where(entry => entry != null).ToList();
+            return (string.IsNullOrEmpty(screen.Package) ? null : entries.FirstOrDefault(entry => string.Equals(entry.Package, screen.Package, StringComparison.Ordinal)))
+                ?? entries.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase))
+                ?? entries.FirstOrDefault(entry =>
+                    string.Equals(entry.Kind, screen.Kind, StringComparison.Ordinal)
+                    && entry.Width == screen.Width
+                    && entry.Height == screen.Height);
+        }
+
+        /// <summary>
         /// A screen made from a package, taking the stock namespace and folder when the rig has neither.
         /// </summary>
         /// <remarks>

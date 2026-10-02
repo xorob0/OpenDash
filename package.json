@@ -17,6 +17,7 @@
     "emulator": "bash scripts/emulator.sh",
     "dev": "bun scripts/dev.ts",
     "shots": "bun scripts/shots.ts",
+    "panel-shots": "bun scripts/panel-shots.ts",
     "previews": "bun scripts/previews.ts",
     "affected": "bun scripts/affected.ts",
     "trace": "bun scripts/trace.ts",

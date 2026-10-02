@@ -63,7 +63,9 @@ namespace OpenDashPlugin.Tests
         public void What_is_registered_is_what_the_contract_lists_screen_by_screen()
         {
             var settings = RigOfEveryKind();
-            var expected = settings.RigScreens().SelectMany(s => Contract.ScreenActionNames(s.Kind, s.Namespace)).ToArray();
+            var expected = settings.RigScreens().SelectMany(s => Contract.ScreenActionNames(s.Kind, s.Namespace))
+                .Concat(Contract.RigActionNames())
+                .ToArray();
             Assert.Equal(expected, Record(settings).Select(r => r.Name).ToArray());
             // And that list, spelled out, so a contract that grew an action would fail here too rather
             // than being registered faithfully.
@@ -74,8 +76,15 @@ namespace OpenDashPlugin.Tests
                 "Face1920x480CycleZoneC",
                 "Face1920x480CycleZoneD",
                 "Face1920x480HoldQuickGlance",
+                "Face1920x480CycleZoneABack",
+                "Face1920x480CycleZoneBBack",
+                "Face1920x480CycleZoneCBack",
+                "Face1920x480CycleZoneDBack",
                 "CompanionHoldQuickGlance",
                 "PitWallHoldQuickGlance",
+                "ToggleNightMode",
+                "BrightnessUp",
+                "BrightnessDown",
             }, expected);
         }
 
@@ -93,7 +102,8 @@ namespace OpenDashPlugin.Tests
             var companions = new OpenDashSettings { Rig = new List<ScreenInstance> { Screen(Contract.KindCompanion, 850, 480), Screen(Contract.KindCompanion, 480, 850) } };
             companions.Rig[1].Namespace = "Garage";
             companions.Normalise();
-            Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" }, Record(companions).Select(r => r.Name).ToArray());
+            Assert.Equal(new[] { "CompanionHoldQuickGlance", "GarageHoldQuickGlance" },
+                Record(companions).Select(r => r.Name).Where(n => !Contract.RigActionNames().Contains(n)).ToArray());
         }
 
         [Fact]
@@ -146,6 +156,108 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_zones_back_button_steps_it_backwards()
+        {
+            var settings = RigOfEveryKind();
+            var registered = Record(settings).ToDictionary(r => r.Name, StringComparer.Ordinal);
+            var face = settings.ScreenOf("Face1920x480").Face;
+            face.SetStart("A", 0);
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(3, face.Zones[0]);
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(2, face.Zones[0]);
+            registered["Face1920x480CycleZoneA"].Press();
+            Assert.Equal(3, face.Zones[0]);
+            // In the zone's own order, which is the driver's.
+            face.SetOrder("A", new[] { 3, 1, 0, 2 });
+            registered["Face1920x480CycleZoneABack"].Press();
+            Assert.Equal(2, face.Zones[0]);
+            Assert.Null(registered["Face1920x480CycleZoneABack"].Release);
+        }
+
+        [Fact]
+        public void The_rigs_own_buttons_toggle_night_and_step_the_brightness_and_save()
+        {
+            var settings = RigOfEveryKind();
+            settings.LightsBrightness = 60;
+            var saves = 0;
+            var registered = new Dictionary<string, Registered>(StringComparer.Ordinal);
+            ScreenActions.Register(() => settings, (name, press, release) => registered[name] = new Registered { Name = name, Press = press, Release = release }, () => saves++);
+
+            // Pressed, not held: no release.
+            foreach (var name in Contract.RigActionNames()) Assert.Null(registered[name].Release);
+
+            registered["BrightnessUp"].Press();
+            Assert.Equal(70, settings.LightsBrightness);
+            Assert.Equal(1, saves);
+            registered["BrightnessDown"].Press();
+            registered["BrightnessDown"].Press();
+            Assert.Equal(50, settings.LightsBrightness);
+            for (var press = 0; press < 10; press++) registered["BrightnessDown"].Press();
+            Assert.Equal(Contract.BrightnessStepFloor, settings.LightsBrightness);
+
+            registered["ToggleNightMode"].Press();
+            Assert.True(settings.LightsNightMode);
+            // At night the buttons move the night brightness.
+            var night = settings.LightsNightBrightness;
+            registered["BrightnessUp"].Press();
+            Assert.Equal(night + Contract.BrightnessStep, settings.LightsNightBrightness);
+            Assert.Equal(Contract.BrightnessStepFloor, settings.LightsBrightness);
+            registered["ToggleNightMode"].Press();
+            Assert.False(settings.LightsNightMode);
+            Assert.Equal(16, saves);
+
+            // Without a save to call, a press still changes the setting.
+            var unsaved = RigOfEveryKind();
+            var bare = Record(unsaved).ToDictionary(r => r.Name, StringComparer.Ordinal);
+            bare["ToggleNightMode"].Press();
+            Assert.True(unsaved.LightsNightMode);
+        }
+
+        [Fact]
+        public void A_rig_button_pressed_during_a_held_glance_leaves_the_glanced_zone_where_it_is()
+        {
+            // The glance shows zone C's page 12, which the zone's own cycle has turned off. The press
+            // saves, and the save must not repair the live zone off that page while the glance is held.
+            var settings = RigOfEveryKind();
+            var face = settings.ScreenOf("Face1920x480").Face;
+            face.QuickGlance = Contract.QuickGlanceValue(2, 12);
+            face.SetPageEnabled("C", 12, false);
+            // What only the plugin writes, which the save has to carry although no press touches it.
+            settings.CheckForUpdates = false;
+            settings.LastUpdateCheckTicks = 638000000000000000L;
+            settings.OfferedRelease = "0.4.0";
+            settings.ReplaceEditedFor = "0.4.0";
+            settings.FolderFingerprints["OpenDash 1920x480"] = "abc";
+            OpenDashSettings saved = null;
+            var registered = new Dictionary<string, Registered>(StringComparer.Ordinal);
+            ScreenActions.Register(() => settings, (name, press, release) => registered[name] = new Registered { Name = name, Press = press, Release = release },
+                () => saved = settings.NormalisedCopy());
+
+            var before = face.Zones[2];
+            registered["Face1920x480HoldQuickGlance"].Press();
+            Assert.Equal(12, face.Zones[2]);
+            registered["BrightnessUp"].Press();
+            registered["ToggleNightMode"].Press();
+            Assert.Equal(12, face.Zones[2]);
+            Assert.True(face.GlanceHeld);
+            // What was written is the pressed brightness and night mode, repaired as a save repairs it.
+            Assert.NotNull(saved);
+            Assert.True(saved.LightsNightMode);
+            Assert.Equal(settings.LightsBrightness, saved.LightsBrightness);
+            Assert.NotEqual(12, saved.ScreenOf("Face1920x480").Face.Zones[2]);
+            // And everything else as it is: a save that dropped these would turn the update checks back
+            // on and forget which dashboards the driver edited, until the next full save.
+            Assert.False(saved.CheckForUpdates);
+            Assert.Equal(638000000000000000L, saved.LastUpdateCheckTicks);
+            Assert.Equal("0.4.0", saved.OfferedRelease);
+            Assert.Equal("0.4.0", saved.ReplaceEditedFor);
+            Assert.Equal("abc", saved.FolderFingerprints["OpenDash 1920x480"]);
+            registered["Face1920x480HoldQuickGlance"].Release();
+            Assert.Equal(before, face.Zones[2]);
+        }
+
+        [Fact]
         public void A_press_reads_the_settings_it_is_pressed_under()
         {
             // The panel replaces the settings object whenever the user changes something, so a callback
@@ -189,6 +301,10 @@ namespace OpenDashPlugin.Tests
             var body = source.Substring(start, end - start);
             Assert.Contains("ScreenActions.Register(() => Settings,", body);
             Assert.Contains("pluginManager.AddAction(", body);
+            // The rig's own buttons save after each press, and save a normalised copy rather than
+            // normalising the live settings under a held glance.
+            Assert.Contains("() => OnInterfaceThread(SaveRigPress));", body);
+            Assert.Contains("this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy());", source);
             // The one registration in the file, and it is inside ScreenActions.Register's delegate: a second
             // AddAction with a name spelled by hand, here or anywhere in OpenDash.cs, fails this.
             Assert.Equal(1, Occurrences(source, ".AddAction("));

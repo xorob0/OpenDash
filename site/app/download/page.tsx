@@ -11,7 +11,7 @@ import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: `Download OpenDash ${VERSION}`,
-  description: `The plugin, with all 14 dashboards and 63 LED profiles inside it. Windows, SimHub ${SIMHUB_VERSION} or later.`,
+  description: `The plugin, with all 14 dashboards and 122 LED profiles inside it. Windows, SimHub ${SIMHUB_VERSION} or later.`,
 };
 
 export default function Download() {
@@ -38,7 +38,7 @@ export default function Download() {
         ) : null}
         <div className={styles.plugin}>
           <h2 className="h3">The plugin</h2>
-          <p className="prose">Installs all 14 dashboards and 63 LED profiles. Adds an OpenDash page to SimHub’s left menu. Updates itself from there.</p>
+          <p className="prose">Installs all 14 dashboards and 122 LED profiles. Adds an OpenDash page to SimHub’s left menu. Updates itself from there.</p>
           {plugin ? (
             <a href={`/downloads/${PLUGIN_ZIP}`} download className={styles.primary}>
               {PLUGIN_ZIP} <span className={`num ${styles.weight}`}>{weigh(plugin.bytes)}</span>
@@ -56,7 +56,7 @@ export default function Download() {
         </div>
       </Section>
 
-      <Section id="packages" title="What the zip carries" lede={`${ONLY_WAY_IN} No screen is a file of its own: add the ones your rig has on the Rig tab.`}>
+      <Section id="packages" title="What the zip carries" lede={`${ONLY_WAY_IN} No screen is a file of its own: add the ones your rig has on the Screens page.`}>
         <div className={styles.groups}>
           <div className={styles.group}>
             <h3 className="h3">Faces</h3>

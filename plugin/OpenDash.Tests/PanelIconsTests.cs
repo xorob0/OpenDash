@@ -97,6 +97,58 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(PanelIcons.Plus, sheet, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// The rebuilt panel's own set (#791), pinned where it is.
+        /// </summary>
+        /// <remarks>
+        /// The sidebar's eight are the `d` strings Sidebar.dc.html draws; Warning and Restart are Home's
+        /// fix rows; Close, Search, the chevrons, the grip and the plus are the redesign's glyphs redrawn on
+        /// the twenty unit box, because a typed "✕" or "›" is exactly what the test below forbids. None is on
+        /// PluginComponents.dc.html, whose icon row stays eight, so this is a pin and not a join until the
+        /// artboards are copied to design/canvas/plugin/.
+        /// </remarks>
+        [Fact]
+        public void The_redesigns_icons_are_pinned_where_they_are()
+        {
+            Assert.Equal("M3 9l7-5.5L17 9v8H3z M8 17v-5h4v5", PanelIcons.Home);
+            Assert.Equal("M2.5 3.5h9v6h-9z M13.5 3.5h4v4h-4z M2.5 12.5h15v3h-15z", PanelIcons.Rig);
+            Assert.Equal("M2.5 4.5h15v9h-15z M7 17h6", PanelIcons.Screens);
+            Assert.Equal("M2.5 8.5h3v3h-3z M8.5 8.5h3v3h-3z M14.5 8.5h3v3h-3z", PanelIcons.Leds);
+            Assert.Equal("M3 3h4v4H3z M8 3h4v4H8z M13 3h4v4h-4z M3 8h4v4H3z M8 8h4v4H8z M13 8h4v4h-4z M3 13h4v4H3z M8 13h4v4H8z M13 13h4v4h-4z", PanelIcons.Matrix);
+            Assert.Equal("M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 7.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5z", PanelIcons.Shortcuts);
+            Assert.Equal("M3 6h14 M3 14h14 M7 4v4 M13 12v4", PanelIcons.Settings);
+            Assert.Equal("M10 3v9M6 8.5l4 4 4-4M3.5 14v3h13v-3", PanelIcons.Updates);
+            Assert.Equal("M8.5 3a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M12.5 12.5l4.5 4.5", PanelIcons.Search);
+            Assert.Equal("M5 5l10 10M15 5L5 15", PanelIcons.Close);
+            Assert.Equal("M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M10 6v5 M10 13.5v.5", PanelIcons.Warning);
+            Assert.Equal("M15.5 6.5A6.5 6.5 0 1 0 16.5 11 M16 3v4h-4", PanelIcons.Restart);
+            Assert.Equal("M7.5 4.5v1 M12.5 4.5v1 M7.5 9.5v1 M12.5 9.5v1 M7.5 14.5v1 M12.5 14.5v1", PanelIcons.DragHandle);
+            Assert.Equal("M7.5 5l5 5-5 5", PanelIcons.ChevronRight);
+            Assert.Equal("M5 7.5l5 5 5-5", PanelIcons.ChevronDown);
+            Assert.Equal("M10 4v12M4 10h12", PanelIcons.Add);
+            Assert.Equal("M16 12.5A7 7 0 1 1 7.5 4a6.5 6.5 0 0 0 8.5 8.5z", PanelIcons.Night);
+            Assert.Equal(20, PanelIcons.NavBox);
+            Assert.Equal(18, PanelIcons.NavSize);
+            // The marks the LEDs page and the Add LEDs sheet draw, so neither page types path data: AddLeds'
+            // <circle cx="8" cy="8" r="6"/><path d="M8 7v4.5 M8 4.8v.4"/> on 16, and Leds' car line's
+            // <circle cx="7" cy="7" r="5.5"/> with "M4.8 7.2l1.6 1.6 3-3.2" or "M4.5 7h5" on 14.
+            Assert.Equal("M8 2a6 6 0 1 0 0 12a6 6 0 1 0 0-12z M8 7v4.5 M8 4.8v.4", PanelIcons.Info);
+            Assert.Equal(14, PanelIcons.RingBox);
+            Assert.Equal("M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.8 7.2l1.6 1.6 3-3.2", PanelIcons.RingCheck);
+            Assert.Equal("M7 1.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0-11z M4.5 7h5", PanelIcons.RingDash);
+
+            var sheet = Sheet();
+            foreach (var path in RedesignPaths) Assert.DoesNotContain(path, sheet, StringComparison.Ordinal);
+        }
+
+        private static readonly string[] RedesignPaths =
+        {
+            PanelIcons.Home, PanelIcons.Rig, PanelIcons.Screens, PanelIcons.Leds, PanelIcons.Matrix, PanelIcons.Shortcuts,
+            PanelIcons.Settings, PanelIcons.Updates, PanelIcons.Search, PanelIcons.Close, PanelIcons.Warning, PanelIcons.Restart,
+            PanelIcons.DragHandle, PanelIcons.ChevronRight, PanelIcons.ChevronDown, PanelIcons.Add, PanelIcons.Night,
+            PanelIcons.Info, PanelIcons.RingCheck, PanelIcons.RingDash,
+        };
+
         /// <summary>The set is one hand: one box, one weight, and two sizes named by the sheet's own
         /// caption rather than chosen here.</summary>
         [Fact]
@@ -141,7 +193,8 @@ namespace OpenDashPlugin.Tests
                 PanelIcons.Install, PanelIcons.Refresh, PanelIcons.Chevron, PanelIcons.Check,
                 PanelIcons.Alert, PanelIcons.External, PanelIcons.Display, PanelIcons.Grid,
                 PanelIcons.Phone, PanelIcons.Plus,
-            };
+            }.Concat(RedesignPaths).ToArray();
+            Assert.Equal(30, paths.Length);
             Assert.Equal(paths.Length, paths.Distinct(StringComparer.Ordinal).Count());
         }
 
@@ -188,6 +241,15 @@ namespace OpenDashPlugin.Tests
         /// A glyph is recognised as a literal with neither a letter nor a digit in it, so the emoji the
         /// requirement also forbids fail here as well. The empty string is allowed, since several labels
         /// are built empty and filled once telemetry arrives.
+        ///
+        /// Every factory of the kit counts, not only Text, Label and Numeral: the pages draw most of their
+        /// words through PageTitle, Prose, Chip, Crumbs, Button and the rows, and a "—" handed to any of
+        /// them is the same typed icon. An argument that is a literal on its own is read wherever it sits
+        /// in the call, so <c>Ui.Crumbs("Devices", "›")</c> fails, and so does a literal that starts an
+        /// argument even when more is joined after it (<c>Ui.Text("› " + name)</c>), which is a typed icon
+        /// leading a word; a literal joined into the middle of a longer string (a " · " between two names)
+        /// is a separator and is not held. Text, Label and Numeral are read whatever class qualifies them,
+        /// so a helper of another name cannot carry a glyph past the guard.
         /// </remarks>
         [Fact]
         public void The_panel_never_builds_an_icon_out_of_text()
@@ -198,20 +260,116 @@ namespace OpenDashPlugin.Tests
             var typed = new List<string>();
             foreach (var source in sources)
             {
-                foreach (Match call in Regex.Matches(File.ReadAllText(source),
-                    @"\b(?:Ui\.)?(?:Text|Label|Numeral)\s*\(\s*""(?<literal>[^""\\]*)"""))
-                {
-                    var literal = call.Groups["literal"].Value;
-                    if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit))
-                    {
-                        typed.Add(Path.GetFileName(source) + ": " + call.Value);
-                    }
-                }
+                var kit = Path.GetFileName(source).StartsWith("Widgets", StringComparison.Ordinal);
+                typed.AddRange(TypedGlyphs(File.ReadAllText(source), kit).Select(found => Path.GetFileName(source) + ": " + found));
             }
 
             Assert.True(typed.Count == 0,
                 "an icon is drawn and never typed, but a glyph is handed to a text factory in:" +
                 Environment.NewLine + string.Join(Environment.NewLine, typed));
+        }
+
+        /// <summary>
+        /// The glyphs handed to a text factory in one source: every Ui.* factory, Text, Label and Numeral
+        /// under any qualifier, and the pages' own heading helpers PageLayout and PageSection, which draw
+        /// their string as a page's title or a section's heading, with each argument that is a literal or
+        /// starts with one. Inside the kit (<paramref name="kit"/>), whose factories call one another without
+        /// the Ui. prefix -- Prose, Tracked, Tag -- every capitalised call is read.
+        /// </summary>
+        private static List<string> TypedGlyphs(string text, bool kit = false)
+        {
+            var typed = new List<string>();
+            var calls = kit
+                ? @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\(|\b(?:PageLayout|PageSection)\s*\(|(?<![\w.])[A-Z]\w*\s*\("
+                : @"\b(?:\w+\.)?(?:Text|Label|Numeral)\s*\(|\bUi\.[A-Z]\w*\s*\(|\b(?:PageLayout|PageSection)\s*\(";
+            foreach (Match call in Regex.Matches(text, calls))
+            {
+                foreach (var literal in LiteralArguments(text, call.Index + call.Length))
+                {
+                    if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit)) typed.Add(call.Value + "\"" + literal + "\"");
+                }
+            }
+            return typed;
+        }
+
+        /// <summary>The kit's factories are all held, not just the three this test was first written for,
+        /// and the cases the first guard caught are still caught.</summary>
+        [Fact]
+        public void The_glyph_guard_reads_every_factory_and_every_argument()
+        {
+            Assert.Equal(new[] { "›" }, LiteralArguments("Ui.Crumbs(\"Devices\", \"›\");", "Ui.Crumbs(".Length).Where(l => !l.Any(char.IsLetterOrDigit)).ToArray());
+            Assert.Equal(new[] { "—" }, LiteralArguments("Ui.Prose(\"—\", 13);", "Ui.Prose(".Length).ToArray());
+            Assert.Empty(LiteralArguments("Ui.Text(a + \" · \" + b, 13);", "Ui.Text(".Length));
+            Assert.Empty(LiteralArguments("Ui.Chip(Name(\"+\"), false, null);", "Ui.Chip(".Length));
+
+            // A glyph leading a joined argument is a typed icon beside a word.
+            Assert.Single(TypedGlyphs("Ui.Text(\"› \" + name, 13);"));
+            Assert.Single(TypedGlyphs("Ui.Label(\"— \" + value);"));
+            // Text, Label and Numeral under any qualifier, not only Ui's.
+            Assert.Single(TypedGlyphs("Kit.Text(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Text(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Ui.Crumbs(\"Devices\", \"›\");"));
+            // A separator between two words, and a word, pass.
+            Assert.Empty(TypedGlyphs("Ui.Text(a + \" · \" + b, 13);"));
+            Assert.Empty(TypedGlyphs("Ui.Text(\"Laps · \" + count, 13);"));
+            Assert.Empty(TypedGlyphs("SetText(\"—\");"));
+            // The pages' heading helpers, and the kit's factories calling one another unprefixed.
+            Assert.Single(TypedGlyphs("PageSection(\"›\", null);"));
+            Assert.Single(TypedGlyphs("PageLayout(\"—\", null, body);"));
+            Assert.Empty(TypedGlyphs("Prose(\"—\", 13);"));
+            Assert.Single(TypedGlyphs("Prose(\"—\", 13);", kit: true));
+            Assert.Single(TypedGlyphs("Tag(\"›\", Theme.Border, Theme.TextSecondary);", kit: true));
+        }
+
+        /// <summary>
+        /// The arguments of the call that opens just before <paramref name="start"/> which are a string
+        /// literal and nothing else, or which start with one (the literal is returned), read to the call's
+        /// closing parenthesis.
+        /// </summary>
+        private static List<string> LiteralArguments(string text, int start)
+        {
+            var literals = new List<string>();
+            var depth = 1;
+            var argument = new System.Text.StringBuilder();
+            string only = null;
+            string leading = null;
+            var parts = 0;
+            for (var i = start; i < text.Length && depth > 0; i++)
+            {
+                var c = text[i];
+                if (c == '"')
+                {
+                    var end = i + 1;
+                    var value = new System.Text.StringBuilder();
+                    while (end < text.Length && text[end] != '"')
+                    {
+                        if (text[end] == '\\' && end + 1 < text.Length) { value.Append(text[end + 1]); end += 2; continue; }
+                        value.Append(text[end]);
+                        end++;
+                    }
+                    if (depth == 1)
+                    {
+                        if (parts == 0) leading = value.ToString();
+                        only = value.ToString();
+                        parts++;
+                    }
+                    i = end;
+                    continue;
+                }
+                if (c == '(' || c == '[' || c == '{') { depth++; if (depth == 2) parts++; continue; }
+                if (c == ')' || c == ']' || c == '}') { depth--; if (depth > 0) continue; }
+                if (depth == 1 && c != ',' ) { if (!char.IsWhiteSpace(c)) parts++; continue; }
+                if (depth == 1 || depth == 0)
+                {
+                    if (parts == 1 && only != null) literals.Add(only);
+                    else if (leading != null) literals.Add(leading);
+                    only = null;
+                    leading = null;
+                    parts = 0;
+                    argument.Clear();
+                }
+            }
+            return literals;
         }
 
         /// <summary>The four names the cards ask PanelMetrics for are these paths and not a second copy

@@ -328,12 +328,15 @@ namespace OpenDashPlugin.Tests
             // in the source: one request for every car, so the car you are in is not disclosed.
             Assert.Contains("Every car is downloaded at once", PanelLights.CarTablesCaption);
             Assert.Contains("400 KB", PanelLights.CarTablesCaption);
-            // And what the tables are for, which is the one setting that cannot work without them.
-            Assert.Contains("Car-specific", PanelLights.CarTablesCaption);
+            // And what the tables are for, which is the one setting that cannot work without them: the LEDs
+            // page's switch (#369), by its own words.
+            Assert.Contains(PanelLeds.CarRevLightsTitle.Substring(1), PanelLights.CarTablesCaption);
             // CC BY-NC-SA 4.0 asks for attribution and OpenDash carries none of the data, so both the
             // licence and the project it came from are on the page for as long as the row is.
             Assert.Contains("CC BY-NC-SA 4.0", PanelLights.CarTablesAttribution);
             Assert.Contains(CarLightLibrary.ProjectUrl, PanelLights.CarTablesAttribution);
+            // The lights are rev lights, the panel's one noun for them (#792).
+            Assert.StartsWith("Rev lights come from Lovely Car Data, ", CarLightLibrary.Attribution);
         }
 
         [Theory]

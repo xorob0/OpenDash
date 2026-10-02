@@ -64,6 +64,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/*.ledsprofile
+            build/flag-box-glyphs.json
             build/fonts/*.ttf
           if-no-files-found: error
 
@@ -86,9 +87,14 @@ jobs:
           name: opendash-dash
           path: plugin/OpenDash/Resources/
 
+      # The csproj embeds the glyph sheet only where it exists, and a release without it draws its
+      # flag box previews bare with nothing going red (#791).
+      - name: Check the flag box glyphs arrived
+        run: test -s plugin/OpenDash/Resources/flag-box-glyphs.json
+
       # Gzipped in place, keeping the .ledsprofile name, as scripts/package.sh does for a local build.
-      # Plain, the sixty-three profiles are about twenty megabytes of NCalc in the assembly, and the
-      # zip this job builds is the one file a release hands over (#438).
+      # Plain, the hundred and twenty-two profiles are about forty-four megabytes of NCalc in the
+      # assembly, and the zip this job builds is the one file a release hands over (#438).
       - name: Compress the LED profiles
         run: |
           set -euo pipefail

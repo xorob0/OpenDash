@@ -32,6 +32,7 @@ namespace OpenDashPlugin
         private volatile Dictionary<string, CarLightTable> cars = new Dictionary<string, CarLightTable>(StringComparer.Ordinal);
         private volatile Frame frame = Frame.Dark();
         private volatile string status = "not loaded";
+        private volatile string error;
         private DateTime? fetchedAt;
 
         /// <summary>The car last looked up, so that a lookup happens on a car change and not every frame.</summary>
@@ -134,6 +135,16 @@ namespace OpenDashPlugin
             get { return status; }
         }
 
+        /// <summary>The status where the tables on disk could not be read, in the panel's failure form: what
+        /// failed, and where the reason is. The reason itself is <see cref="Error"/>, which the page logs.</summary>
+        public const string Unreadable = "Car Data could not be read. See SimHub's log.";
+
+        /// <summary>Why the last read failed, for SimHub's log; null while no read has failed.</summary>
+        public string Error
+        {
+            get { return error; }
+        }
+
         /// <summary>
         /// Reads whatever is on disk, and asks for nothing.
         ///
@@ -177,7 +188,8 @@ namespace OpenDashPlugin
             }
             catch (Exception e)
             {
-                status = "could not read the car light tables: " + e.Message;
+                error = e.Message;
+                status = Unreadable;
                 return CarLightRefresh.Failed(e.Message, cars.Count);
             }
 
@@ -231,9 +243,10 @@ namespace OpenDashPlugin
                 {
                     Load(DateTime.UtcNow);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    status = "the car light tables could not be loaded";
+                    error = e.Message;
+                    status = Unreadable;
                 }
             });
         }

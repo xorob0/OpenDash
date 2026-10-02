@@ -1,9 +1,13 @@
-// PanelLightRows.cs: which light profiles share a row on the Install tab, what that row is called, what
-// its caption says, and what it reports of the rig's own strips of those shapes.
+// PanelLightRows.cs: the census of the light profiles this build embeds -- which share a row, what a row is
+// called and captioned, and what it reports of the rig's own strips of those shapes -- and the light words
+// other pages read (DotHex, FlagBoxCaption, ShapeLabel, the Updates table's notes).
 //
-// Apart from SettingsControl.Install.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the
-// section is WPF and the net8.0 test project cannot compile a line of it, so everything a test can hold
-// lives here and the section draws from it. Pure: no WPF types.
+// NO PAGE DRAWS THE CENSUS ROWS NOW. The Install tab's Lights section drew them; the Updates page that
+// replaced it draws one row per strip on the rig (PanelUpdates.StripRow, SettingsControl.Updates.Lights.cs).
+// Rows, Label and NamedShapes stay because PanelLightRowsTests holds the embedded build to the generator
+// through them: the 121 profiles, the reversed twins, and the device captions against strip.ts. RowPlan and
+// OutdatedBars, which grouped the rig's strips by them for the Install tab's Update, went with their last
+// caller (#792). Pure: no WPF types.
 //
 // THE CENSUS IS WHAT THE BUILD EMBEDDED, and nothing here lists a shape. FlagBoxProfile.StripResourceNames
 // reads the profile resources out of the assembly, ShapeIdOf gives each one the id the generator wrote it
@@ -89,6 +93,9 @@ namespace OpenDashPlugin
             if (string.IsNullOrEmpty(id)) return null;
             if (id.StartsWith(PanelLightRows.BrowPrefix, StringComparison.Ordinal))
             {
+                // `brow-N` is an id from before the shape grid, read only so an old profile still finds
+                // its row; the generator writes a bare run as `0-N-0` now, and its reversed twin as
+                // `0-N-0-reversed`. No build has written a `brow-N-reversed`, so none is read.
                 int length;
                 if (!Number(id.Substring(PanelLightRows.BrowPrefix.Length), out length)) return null;
                 return new LightShape(id, PanelLightRows.Brow, 0, length, 0, null);
@@ -121,8 +128,9 @@ namespace OpenDashPlugin
         public string Name { get; private set; }
         public string Caption { get; private set; }
 
-        /// <summary>The shapes one press installs, in the order the row names them. One for most rows;
-        /// three, five or seven for the grouped ones.</summary>
+        /// <summary>The shapes one press installs, in the order the row names them: each of its
+        /// geometries' profiles, the plain wiring followed by its reversed twin where the build carries
+        /// one.</summary>
         public IReadOnlyList<string> ShapeIds { get; private set; }
     }
 
@@ -135,9 +143,10 @@ namespace OpenDashPlugin
         /// <summary>What the flag box row is under its name. The profile's own Name carries the name.</summary>
         public const string FlagBoxCaption = "8 × 8 matrix";
 
-        /// <summary>A build that embedded no profile at all has no rows to draw, and says why rather than
-        /// leaving the heading over nothing.</summary>
-        public const string NoProfiles = "This build ships no light profiles.";
+        /// <summary>Under the Updates table when the rig has a strip and this build embedded no strip profile
+        /// at all: the rows name the strips' profiles "LED profile", and the note uses the same word, in the
+        /// frame every note about the build takes (PanelUpdates.NoDashboards).</summary>
+        public const string NoProfiles = "This build ships no LED profiles.";
 
         /// <summary>
         /// What a strip row says when SimHub's LED driver cannot be reached.
@@ -211,12 +220,29 @@ namespace OpenDashPlugin
         /// The named shapes with a row each, then the generic runs with sides, the bare runs and the brows
         /// as one row apiece. A shape the build did not embed has no row at all, which is the honest answer:
         /// a row for a profile that is not there could only offer a press that does nothing.
+        ///
+        /// A reversed twin shares its plain sibling's row (#791). Reversal is a switch on a bar now rather
+        /// than a shape to pick, so the twin is the same strip wired from the other end: its row installs
+        /// it with the sibling, and a caption counts lengths, not wirings. The 4/14/4's twin is the one
+        /// exception and keeps the row it has always had, because it is named for a device of its own.
         /// </remarks>
         public static IList<LightRowPlan> Rows(IEnumerable<LightProfile> profiles)
         {
             var census = (profiles ?? Enumerable.Empty<LightProfile>())
                 .Where(p => p != null && !string.IsNullOrEmpty(p.ShapeId))
                 .ToList();
+
+            // Plain id to twin id, for every twin whose sibling this build carries and that has no row of
+            // its own; those twins then ride along behind their sibling wherever it lands.
+            var ids = new HashSet<string>(census.Select(p => p.ShapeId), StringComparer.Ordinal);
+            var namedIds = new HashSet<string>(NamedShapes.Select(n => n.Key), StringComparer.Ordinal);
+            var twinOf = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var id in ids)
+            {
+                var twin = id + "-" + ReversedSuffix;
+                if (ids.Contains(twin) && !namedIds.Contains(twin)) twinOf[id] = twin;
+            }
+            var folded = new HashSet<string>(twinOf.Values, StringComparer.Ordinal);
 
             var rows = new List<LightRowPlan>();
             var taken = new HashSet<string>(StringComparer.Ordinal);
@@ -226,11 +252,11 @@ namespace OpenDashPlugin
                 var profile = census.FirstOrDefault(p => string.Equals(p.ShapeId, key, StringComparison.Ordinal));
                 if (profile == null) continue;
                 taken.Add(profile.ShapeId);
-                rows.Add(new LightRowPlan(Prefixed(Label(profile)), named.Value, new[] { profile.ShapeId }));
+                rows.Add(new LightRowPlan(Prefixed(Label(profile)), named.Value, WithTwin(profile.ShapeId, twinOf)));
             }
 
             var rest = census
-                .Where(p => !taken.Contains(p.ShapeId))
+                .Where(p => !taken.Contains(p.ShapeId) && !folded.Contains(p.ShapeId))
                 .Select(p => new KeyValuePair<LightProfile, LightShape>(p, LightShape.Parse(p.ShapeId)))
                 .ToList();
 
@@ -242,16 +268,23 @@ namespace OpenDashPlugin
             foreach (var side in grid.Select(e => e.Value.Left).Distinct().OrderBy(n => n))
             {
                 var group = Sorted(grid.Where(e => e.Value.Left == side));
-                rows.Add(Range(group, SideNoun(side, 1), SideNoun(side, group.Count)));
+                rows.Add(Range(group, SideNoun(side, 1), SideNoun(side, group.Count), twinOf));
             }
 
             // Anything whose id this cannot read: its own row, under whatever the build called it. It is
             // still a profile of SimHub's LED driver, which is what the caption says and all it can say.
             foreach (var entry in rest.Where(e => e.Value == null))
             {
-                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "Strip", new[] { entry.Key.ShapeId }));
+                rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "Strip", WithTwin(entry.Key.ShapeId, twinOf)));
             }
             return rows;
+        }
+
+        /// <summary>An id followed by its folded twin, when it has one.</summary>
+        private static IReadOnlyList<string> WithTwin(string id, IDictionary<string, string> twinOf)
+        {
+            string twin;
+            return twinOf.TryGetValue(id, out twin) ? new[] { id, twin } : new[] { id };
         }
 
         /// <summary>What a row of one side length is called: a side of none is a bare run, which is what a
@@ -264,14 +297,14 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A group of lengths, named by its two ends: "OpenDash brow 9 … 25".</summary>
-        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many)
+        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many, IDictionary<string, string> twinOf)
         {
             var labels = group.Select(Label).ToList();
             var name = labels.Count == 1
                 ? Prefixed(labels[0])
                 : Prefixed(labels[0] + Ellipsis + WithoutSharedWords(labels[0], labels[labels.Count - 1]));
             var caption = group.Count == 1 ? one : many + ", " + Word(group.Count) + " lengths";
-            return new LightRowPlan(name, caption, Ids(group));
+            return new LightRowPlan(name, caption, group.SelectMany(e => WithTwin(e.Key.ShapeId, twinOf)).ToList());
         }
 
         /// <summary>
@@ -305,11 +338,6 @@ namespace OpenDashPlugin
                 .ThenBy(e => e.Value.Right)
                 .ThenBy(e => e.Key.ShapeId, StringComparer.Ordinal)
                 .ToList();
-        }
-
-        private static IReadOnlyList<string> Ids(IEnumerable<KeyValuePair<LightProfile, LightShape>> group)
-        {
-            return group.Select(e => e.Key.ShapeId).ToList();
         }
 
         private static string Label(KeyValuePair<LightProfile, LightShape> entry)
@@ -360,112 +388,29 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The colour of a row's status dot.
+        /// The colour of a light profile's status dot, for a page that draws one beside words of its own (the
+        /// base's Matrix pill did).
         /// </summary>
         /// <remarks>
-        /// Read off <see cref="PanelCopy.LightRow"/> rather than from a second table, so the dot cannot
-        /// disagree with the words beside it. The one pairing a table carrying a single colour per state
-        /// cannot say is the uninstalled one: the canvas draws that dot in status.notInstalled and its label
-        /// in text.label. SettingsControl.Install.Packages.cs resolves the same pair the same way.
+        /// A fixed ink per state, read off no page's table. It read PanelCopy.LightRow, then PanelMatrix.ProfileRow,
+        /// and each time the table it read was reworded by the page that owns it the dot moved with it: when
+        /// ProfileRow's words gave up their ink, this returned null and Ui.Brush(null) threw while the Matrix
+        /// page built. A profile in SimHub, older or current, is the installed green the pill's words sit beside;
+        /// a failed one is the failure red; every state with no profile to show, SimHub's settings out of reach
+        /// and a build with none included, is status.notInstalled, which the canvas draws that dot in.
         /// </remarks>
         public static string DotHex(FlagBoxInstallState state)
         {
-            var ink = PanelCopy.LightRow(state, null).StateHex;
-            return string.Equals(ink, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : ink;
-        }
-
-        /// <summary>
-        /// A strip row's state: what SimHub holds for the rig's own strips of the row's shapes.
-        /// </summary>
-        /// <remarks>
-        /// The rows are a census of the shapes this build carries, and what a driver reads off one is
-        /// whether any strip of theirs is in SimHub for those shapes and whether it is current. A strip
-        /// reaches SimHub as a bar's own profile, under the id the bar derives (LedBarProfile.IdFor), so
-        /// that is a question about the rig's bars. It used to be asked about the embedded profiles, whose
-        /// id no bar carries, and every row said Not installed on a rig full of strips (#457).
-        ///
-        /// Installed when any bar of the row's shapes is installed on any device, and Outdated when any
-        /// bar that is installed carries an older version than this build's, so the row cannot read
-        /// current while one of its strips is not. A bar whose profile is in no list at all does not pull
-        /// the row down to Not installed while another bar of its shapes is there: the row speaks for the
-        /// shapes, and a shape with a strip in SimHub is installed. Not installed is a rig with no strip of
-        /// these shapes in SimHub, and Unavailable is one where no LED device could be read.
-        /// </remarks>
-        public static FlagBoxPlan RowPlan(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars, bool reachable)
-        {
-            if (!reachable) return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
-            var installed = Members(shapeIds, bars)
-                .Select(entry => entry.Value)
-                .Where(plan => plan.State == FlagBoxInstallState.UpToDate || plan.State == FlagBoxInstallState.Outdated)
-                .ToList();
-            return installed.Count == 0
-                ? new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }
-                : FlagBoxInstallPlan.Combine(installed);
-        }
-
-        /// <summary>
-        /// The bars a row's Update rewrites: those of its shapes whose copy in SimHub is older than this
-        /// build's, and no others.
-        /// </summary>
-        /// <remarks>
-        /// Not a current one, which a rewrite could only cost the edits made to it in SimHub. Not one with
-        /// no copy anywhere either: its device has gone, and there is nothing to install into, or its
-        /// profile was taken out of SimHub by hand, which is the driver's decision rather than a version to
-        /// bring forward.
-        /// </remarks>
-        public static IList<LedBar> OutdatedBars(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
-        {
-            return Members(shapeIds, bars)
-                .Where(entry => entry.Value.State == FlagBoxInstallState.Outdated)
-                .Select(entry => entry.Key)
-                .ToList();
-        }
-
-        /// <summary>The rig's bars whose shape is one of the row's, each with what SimHub holds for it.</summary>
-        private static IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> Members(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
-        {
-            var shapes = new HashSet<string>(shapeIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
-            return (bars ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
-                .Where(entry => entry.Key != null && entry.Value != null && entry.Key.Shape != null && shapes.Contains(entry.Key.Shape));
-        }
-
-        /// <summary>
-        /// The sentence a strip row carries as its tooltip: what is true now of the rig's strips of the
-        /// row's shapes.
-        /// </summary>
-        /// <remarks>
-        /// A strip row has no Install press, since a strip is added on the Lights tab, so the uninstalled
-        /// row says where to go rather than what to press. The one press it can have is Update, while a
-        /// strip of its shapes is older than this build, and that sentence carries the warning the flag
-        /// box's carries: an update replaces the copy in SimHub by id, edits and all. The flag box keeps
-        /// FlagBoxInstallPlan.Summary, which is written about the one profile OpenDash also writes to disk.
-        /// </remarks>
-        public static string Tooltip(int members, FlagBoxPlan plan)
-        {
-            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
             switch (state)
             {
-                case FlagBoxInstallState.NotEmbedded:
-                    return "This build ships no such profile.";
-                case FlagBoxInstallState.Unavailable:
-                    return Unavailable;
-                case FlagBoxInstallState.NotInstalled:
-                    return (members <= 1 ? "No strip of this shape" : "No strip of these shapes") + " is in SimHub. Add one on the Lights tab.";
                 case FlagBoxInstallState.UpToDate:
-                    return "Installed and up to date" + (plan.InstalledVersion == null ? "." : " (" + plan.InstalledVersion + ").");
                 case FlagBoxInstallState.Outdated:
-                    return "A newer profile is available" + Versions(plan.InstalledVersion, plan.EmbeddedVersion) + ". " + FlagBoxInstallPlan.Replaces;
+                    return Theme.StatusUpToDate;
+                case FlagBoxInstallState.Failed:
+                    return Theme.StatusFailed;
                 default:
-                    return "Install failed. See SimHub's log.";
+                    return Theme.StatusNotInstalled;
             }
-        }
-
-        /// <summary>" (0.3.0-rc.8 to 0.3.0)", or the new version alone when the copy in SimHub carries
-        /// none, which every strip installed before strips were stamped does.</summary>
-        private static string Versions(string installed, string embedded)
-        {
-            if (embedded == null) return string.Empty;
-            return installed == null ? " (" + embedded + ")" : " (" + installed + " to " + embedded + ")";
         }
     }
 }

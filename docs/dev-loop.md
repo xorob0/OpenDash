@@ -28,15 +28,44 @@ bun run dev --scenario untimed                 # a lap race with no clock: #387'
 
 | | |
 |---|---|
-| [`bun run vm`](../scripts/vm.ts) | the VM and SimHub: `status`, `up`, `down`, `wait`, `install`, `plugin`, `logs`, `shot`, `claim`, `release` |
+| [`bun run vm`](../scripts/vm.ts) | the VM and SimHub: `status`, `up`, `down`, `wait`, `install`, `plugin`, `logs`, `shot`, `bind`, `unbind`, `claim`, `release` |
 | [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail` |
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
 | [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
 | [`bun run shots`](../scripts/shots.ts) | several packages photographed on one claim, into `build/shots/` |
 | [`bun run previews`](../scripts/previews.ts) | the same captures, scaled and committed as the thumbnails SimHub's dashboard list draws |
+| [`bun scripts/rig.ts`](../scripts/rig.ts) | a rig written into the plugin's settings: `panel` for the panel's captures, `gallery` for the site's, `clear`, `empty` for a first run, `show` |
+| [`bun run panel-shots`](../scripts/panel-shots.ts) | every page of the settings panel at every width, on one claim, into `build/panel/` |
 
 [testing-vm.md](testing-vm.md) describes the VM itself and is what to read when something in it
 breaks.
+
+## The settings panel is the same loop without Dash Studio
+
+The panel is WPF inside SimHub's window, so nothing has to be opened in Dash Studio: the plugin's
+entry in SimHub's left menu is clicked once and every page is one click on the sidebar.
+
+```bash
+OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel   # every page at every width
+```
+
+That one command claims the VM, packages and installs the plugin with its left-menu entry, puts the
+panel's rig on (`bun scripts/rig.ts panel`: five screens, two strips, two matrices, and Rim's folder
+deleted so it reads as missing) and photographs the eight pages into `build/panel/`. `--menu-y` is
+where OpenDash sits in SimHub's left menu, read off `bun run vm shot`; it moves with every plugin
+listed above it, so it has no default. `--rig empty` photographs a first run instead.
+
+To click through the pages by hand, the same steps are separate commands:
+
+```bash
+bun run vm claim "panel" && bun run vm plugin --menu && bun scripts/rig.ts panel
+bun run vm bind RimCycleZoneC F7 RimHoldQuickGlance F8     # keys for the Shortcuts rows
+bun run vm unbind && bun run vm release                    # when done
+```
+
+[testing-panel.md](testing-panel.md) is what to check on each page, and
+[testing-vm.md](testing-vm.md) has the details of `panel-shots` and `bind`, including why a glance
+bound this way needs the Shortcuts page opened once before it holds.
 
 ## Recording a trace is the one thing that has to happen here
 

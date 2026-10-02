@@ -23,4 +23,5 @@ Thumbs.db
 plugin/OpenDash/Resources/*.simhubdash
 plugin/OpenDash/Resources/*.ledsprofile
 plugin/OpenDash/Resources/fonts/
+plugin/OpenDash/Resources/flag-box-glyphs.json
 packages/dash/fonts/.generated/

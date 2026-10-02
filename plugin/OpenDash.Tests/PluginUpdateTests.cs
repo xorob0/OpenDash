@@ -138,9 +138,9 @@ namespace OpenDashPlugin.Tests
             // The one it replaces is copied aside first, so a release that turns out worse is one rename
             // away from being undone.
             Assert.Contains(PluginUpdate.BackupName, script);
-            Assert.True(script.IndexOf("copy /y", StringComparison.Ordinal) < script.IndexOf("move /y", StringComparison.Ordinal));
+            TextOrder.Before(script, "copy /y", "move /y");
             // It deletes itself only after the move, so a swap that never happened is tried again next time.
-            Assert.True(script.IndexOf("move /y", StringComparison.Ordinal) < script.IndexOf("del \"%~f0\"", StringComparison.Ordinal));
+            TextOrder.Before(script, "move /y", "del \"%~f0\"");
         }
 
         /// <summary>
@@ -165,8 +165,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("start \"\" \"" + exe + "\"", script);
             // Read and consumed before the swap, and the relaunch after it: a swap that fails leaves no
             // request behind, and a relaunch never happens before the file it was asked for is in place.
-            Assert.True(script.IndexOf("del \"" + reopen + "\"", StringComparison.Ordinal) < script.IndexOf("move /y", StringComparison.Ordinal));
-            Assert.True(script.IndexOf("move /y", StringComparison.Ordinal) < script.IndexOf("start \"\"", StringComparison.Ordinal));
+            TextOrder.Before(script, "del \"" + reopen + "\"", "move /y");
+            TextOrder.Before(script, "move /y", "start \"\"");
         }
 
         [Fact]

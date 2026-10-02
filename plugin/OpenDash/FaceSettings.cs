@@ -36,6 +36,17 @@ namespace OpenDashPlugin
         /// <summary>The zone and page a held button shows, encoded as zoneIndex * 100 + page.</summary>
         public int QuickGlance { get; set; } = Contract.DefaultQuickGlance;
 
+        /// <summary>
+        /// The order each zone cycles in, index 0 is zone A: every page of the zone's catalogue once.
+        /// </summary>
+        /// <remarks>
+        /// The driver's since #791, where the Screens page lets a zone's pages be dragged into the order
+        /// the button should step through them. The mask still says which pages are in the cycle; this
+        /// says in what order. A file written before it has none and reads the catalogue's own order,
+        /// which is what every zone cycled in before, so nothing moves until somebody reorders a zone.
+        /// </remarks>
+        public int[][] Orders { get; set; } = Contract.DefaultFaceZoneOrders();
+
         private int glanceZone = -1;
         private int glanceRestore = -1;
 
@@ -54,23 +65,28 @@ namespace OpenDashPlugin
             var zones = Contract.DefaultFaceZones();
             var masks = Contract.DefaultFaceZoneMasks();
             var starts = Contract.DefaultFaceZones();
+            var orders = new int[zones.Length][];
             for (var i = 0; i < zones.Length; i++)
             {
                 var pages = Contract.FaceZonePageCounts[i];
                 var all = Contract.DefaultZoneMask(i);
 
+                orders[i] = Contract.NormaliseOrder(Orders != null && i < Orders.Length ? Orders[i] : null, pages);
+
                 if (Masks != null && i < Masks.Length) masks[i] = Masks[i] & all;
                 if (masks[i] == 0) masks[i] = all;
 
+                // Forward in the zone's own order, which is where its button would carry on to.
                 if (Starts != null && i < Starts.Length) starts[i] = Contract.NormalisePage(Starts[i], pages, Contract.DefaultFaceZonePages[i]);
-                starts[i] = Contract.FirstEnabledFrom(starts[i], masks[i], pages);
+                starts[i] = Contract.FirstEnabledInOrder(starts[i], masks[i], orders[i]);
 
                 if (Zones != null && i < Zones.Length) zones[i] = Contract.NormalisePage(Zones[i], pages, starts[i]);
-                zones[i] = Contract.FirstEnabledFrom(zones[i], masks[i], pages);
+                zones[i] = Contract.FirstEnabledInOrder(zones[i], masks[i], orders[i]);
             }
             Zones = zones;
             Masks = masks;
             Starts = starts;
+            Orders = orders;
 
             var classOnly = Contract.DefaultFaceZoneClassOnly();
             if (ClassOnly != null)
@@ -145,6 +161,75 @@ namespace OpenDashPlugin
             return mask == 0 ? Contract.DefaultZoneMask(index) : mask;
         }
 
+        /// <summary>The order a zone cycles in, by its letter: every page of its catalogue once. Safe to
+        /// call before Normalise(), and a copy, so the caller cannot edit the zone through it.</summary>
+        public int[] Order(string letter)
+        {
+            var index = ZoneIndex(letter);
+            var stored = Orders != null && index < Orders.Length ? Orders[index] : null;
+            return Contract.NormaliseOrder(stored, Contract.FaceZonePageCounts[index]);
+        }
+
+        /// <summary>
+        /// Sets the order a zone cycles in. What the order leaves out is appended, and a repeated or
+        /// unknown page is dropped, so any list the panel hands over is a whole order.
+        /// </summary>
+        /// <remarks>
+        /// The page the zone is showing and the page it opens on stay where they are: reordering
+        /// changes where the button goes next, not what is on the screen.
+        /// </remarks>
+        public void SetOrder(string letter, int[] order)
+        {
+            var index = ZoneIndex(letter);
+            EnsureArrays();
+            Orders[index] = Contract.NormaliseOrder(order, Contract.FaceZonePageCounts[index]);
+        }
+
+        /// <summary>
+        /// Where the page a zone is showing sits in its cycle, counting from one: the enabled pages
+        /// before it in the zone's order, plus itself. What <see cref="Contract.ZonePositionProperty(string, string)"/> publishes.
+        /// </summary>
+        /// <remarks>
+        /// The same count zoneCyclePosition makes in contract.ts, taken in the zone's own order rather
+        /// than the catalogue's. A page the mask has turned off -- which a held glance can show -- still
+        /// counts itself, so it reads as the one after the enabled pages before it.
+        ///
+        /// A dashboard reads this for every zone of every face each frame, so it walks the stored order
+        /// in place when that is already whole, which Normalise and SetOrder see to, and builds the
+        /// repaired copy <see cref="Order"/> hands out only for a file nothing has normalised yet.
+        /// </remarks>
+        public int Position(string letter)
+        {
+            var index = ZoneIndex(letter);
+            var page = Zone(letter);
+            var mask = Mask(letter);
+            var stored = Orders != null && index < Orders.Length ? Orders[index] : null;
+            var order = IsWholeOrder(stored, Contract.FaceZonePageCounts[index]) ? stored : Order(letter);
+            var position = 1;
+            foreach (var candidate in order)
+            {
+                if (candidate == page) break;
+                if ((mask & (1 << candidate)) != 0) position++;
+            }
+            return position;
+        }
+
+        /// <summary>Whether an order holds every page of a catalogue of that many exactly once, which is
+        /// what <see cref="Contract.NormaliseOrder"/> would leave as it is. Allocates nothing.</summary>
+        private static bool IsWholeOrder(int[] order, int count)
+        {
+            if (order == null || order.Length != count || count > 64) return false;
+            var seen = 0UL;
+            foreach (var page in order)
+            {
+                if (page < 0 || page >= count) return false;
+                var bit = 1UL << page;
+                if ((seen & bit) != 0) return false;
+                seen |= bit;
+            }
+            return true;
+        }
+
         public bool PageEnabled(string letter, int page)
         {
             var index = ZoneIndex(letter);
@@ -166,8 +251,8 @@ namespace OpenDashPlugin
             var next = enabled ? mask | (1 << page) : mask & ~(1 << page);
             if (next == 0) return;
             Masks[index] = next;
-            Starts[index] = Contract.FirstEnabledFrom(Starts[index], next, Contract.FaceZonePageCounts[index]);
-            Zones[index] = Contract.FirstEnabledFrom(Zones[index], next, Contract.FaceZonePageCounts[index]);
+            Starts[index] = Contract.FirstEnabledInOrder(Starts[index], next, Orders[index]);
+            Zones[index] = Contract.FirstEnabledInOrder(Zones[index], next, Orders[index]);
         }
 
         /// <summary>Field an end of the bar shows, by its slot name. Safe to call before Normalise().</summary>
@@ -201,17 +286,31 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Advances a zone to its next enabled page and returns it. The mask is what sets the length of
-        /// the cycle, so a zone with one page enabled stays where it is rather than flickering.
+        /// Advances a zone to its next enabled page in its own order and returns it. The mask is what
+        /// sets the length of the cycle, so a zone with one page enabled stays where it is rather than
+        /// flickering.
         /// </summary>
         public int Cycle(string letter)
         {
             var index = ZoneIndex(letter);
             EnsureArrays();
-            var count = Contract.FaceZonePageCounts[index];
-            var next = Contract.FirstEnabledFrom((Zone(letter) + 1) % count, Mask(letter), count);
+            var next = Contract.FirstEnabledAfter(Zone(letter), Mask(letter), Orders[index]);
             Zones[index] = next;
             return next;
+        }
+
+        /// <summary>
+        /// Moves a zone back to its previous enabled page and returns it: the partner of <see
+        /// cref="Cycle"/>, for a driver who pressed once too often. A zone with one page enabled stays
+        /// where it is, as it does going forward.
+        /// </summary>
+        public int CycleBack(string letter)
+        {
+            var index = ZoneIndex(letter);
+            EnsureArrays();
+            var previous = Contract.LastEnabledBefore(Zone(letter), Mask(letter), Orders[index]);
+            Zones[index] = previous;
+            return previous;
         }
 
         /// <summary>
@@ -254,7 +353,16 @@ namespace OpenDashPlugin
                 ClassOnly = (bool[])ClassOnly?.Clone(),
                 BarFields = (int[])BarFields?.Clone(),
                 QuickGlance = QuickGlance,
+                Orders = CloneOrders(Orders),
             };
+        }
+
+        private static int[][] CloneOrders(int[][] orders)
+        {
+            if (orders == null) return null;
+            var copy = new int[orders.Length][];
+            for (var i = 0; i < orders.Length; i++) copy[i] = (int[])orders[i]?.Clone();
+            return copy;
         }
 
         private static int ZoneIndex(string letter)
@@ -277,10 +385,24 @@ namespace OpenDashPlugin
             if (Zones == null || Zones.Length != zones
                 || Masks == null || Masks.Length != zones
                 || Starts == null || Starts.Length != zones
-                || ClassOnly == null || ClassOnly.Length != zones)
+                || ClassOnly == null || ClassOnly.Length != zones
+                || !OrdersAreWhole())
             {
                 Normalise();
             }
+        }
+
+        /// <summary>Whether every zone holds an order of its whole catalogue, every page once, which is
+        /// what the cycle steps through; a hand-edited or partly read file, or an order assigned with a
+        /// page twice, is repaired before anything steps. Allocates nothing.</summary>
+        private bool OrdersAreWhole()
+        {
+            if (Orders == null || Orders.Length != Contract.FaceZoneLetters.Length) return false;
+            for (var i = 0; i < Orders.Length; i++)
+            {
+                if (!IsWholeOrder(Orders[i], Contract.FaceZonePageCounts[i])) return false;
+            }
+            return true;
         }
 
         /// <summary>Zones of this face showing the same page as another zone, which the panel says and allows.</summary>

@@ -39,6 +39,7 @@
 import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
+import { setting } from './contract.ts';
 import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
@@ -94,6 +95,18 @@ export const bitSet: BitTest = (bit) => eq(flagBit(bit), num(1));
  * why the difference is a parameter here rather than a second copy of the ranking.
  */
 export const safeBitSet: BitTest = (bit) => eq(isnull(flagBit(bit), num(0)), num(1));
+
+/**
+ * Whether a flag may show where the car is: anywhere, unless the driver has switched off
+ * `OpenDash.FlagsInPitLane` and the car is in the pit lane. #791.
+ *
+ * Here rather than in `contract.ts`, because the setting is the contract's and the pit lane is
+ * telemetry, and the contract reads none. Every surface that draws a flag asks it through the one
+ * reading below, `readingFlags`, which is what keeps the face, the companion, the pit wall and the
+ * box in agreement; the round faces' ring and the strips, which read the flags another way, ask it
+ * themselves. A car alert never does: it is about the car, and as true in the lane as out of it.
+ */
+export const flagsAllowedHere = (): Expr => or(eq(setting.flagsInPitLane(), 'true'), not(isInPitLane()));
 
 /**
  * The six SimHub flag properties, which are what the round face's ring and the pit wall header
@@ -540,11 +553,17 @@ export const conditionRaised = (condition: FlagCondition, test: BitTest = bitSet
  */
 export type RaisedTest = (condition: AlertCondition) => Expr;
 
-/** A reading of the flags, carried over the whole catalogue: a car alert is read by its `when`. */
+/**
+ * A reading of the flags, carried over the whole catalogue: a car alert is read by its `when`.
+ *
+ * A flag is raised only where {@link flagsAllowedHere} lets it be, and since this is the reading every
+ * ranking negates for the layers below, a flag silenced in the pit lane stops outranking what is under
+ * it: a car alert below a silenced flag shows rather than the band going dark.
+ */
 const readingFlags =
   (flag: (condition: FlagCondition) => Expr): RaisedTest =>
   (condition) =>
-    isFlag(condition) ? flag(condition) : condition.when;
+    isFlag(condition) ? and(flagsAllowedHere(), flag(condition)) : condition.when;
 
 /** The box's reading, and the default: the bits, as they are. */
 export const boxRaised: RaisedTest = readingFlags((condition) => conditionRaised(condition));

@@ -149,19 +149,14 @@ namespace OpenDashPlugin
         /// settings file written before ADR 0017 remembers none, and one whose package has been dropped
         /// from the build remembers a name that is gone, so both fall back: first to the package whose own
         /// folder the screen holds, which is every stock screen and was the only match the installer made
-        /// while it walked the packages rather than the rig, and then to the kind and the size.
+        /// while it walked the packages rather than the rig, and then to the kind and the size; see
+        /// <see cref="PackageCatalogue.EntryFor"/>, which the panel's Duplicate asks as well.
         /// </remarks>
         public static string PackageNameFor(ScreenInstance screen, IPackageSource packages, IInstallLog log)
         {
             if (packages == null || screen == null) return null;
             if (!string.IsNullOrEmpty(screen.Package) && packages.Names.Contains(screen.Package)) return screen.Package;
-            var catalogue = PackageCatalogue.From(packages, log);
-            var match = catalogue.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase))
-                ?? catalogue.FirstOrDefault(entry =>
-                    string.Equals(entry.Kind, screen.Kind, StringComparison.Ordinal)
-                    && entry.Width == screen.Width
-                    && entry.Height == screen.Height);
-            return match?.Package;
+            return PackageCatalogue.EntryFor(PackageCatalogue.From(packages, log), screen)?.Package;
         }
     }
 }

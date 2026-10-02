@@ -20,11 +20,11 @@ the thing that is wrong when the two disagree.
 | 0009 | [Does the plugin compute?](0009-does-the-plugin-compute.md) | No, and it turned out not to need to: SimHub already publishes almost all of it |
 | 0011 | [How far personalisation reaches](0011-personalisation.md) | Colour is a runtime setting, geometry is a build input, and nothing regenerates a package locally |
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | OpenDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
-| 0013 | [OpenDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package, but the user imports it rather than the plugin installing it |
+| 0013 | [OpenDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package; amended so the plugin installs it from a press on the device's own page, and never selects it |
 | 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
 | 0017 | [A screen is an instance](0017-a-screen-is-an-instance.md) | A rig is any number of named screens in any mix of sizes; the namespace is allocated once and the installer rewrites it into the copy. Amends 0003 and narrows 0011 |
-| 0018 | [The car's own lights, from a table OpenDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and OpenDash never ships. Amends 0014, reopens 0009, extends 0012 |
-| 0020 | [The panel draws what it configures](0020-the-panel-draws-what-it-configures.md) | The Rig tab hosts SimHub's own renderer, so the preview is the dashboard rather than a picture of one. Amends 0003, leaves 0001 standing, owes 0008 no fidelity check |
+| 0018 | [The car's own lights, from a table OpenDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and OpenDash never ships; the style is now a switch per strip. Amends 0014, reopens 0009, extends 0012 |
+| 0020 | [The panel draws what it configures](0020-the-panel-draws-what-it-configures.md) | The Screens page hosts SimHub's own renderer, one screen at a time, so the preview is the dashboard rather than a picture of one; the Rig page draws schematics only. Amends 0003, leaves 0001 standing, owes 0008 no fidelity check |
 
 ## Reserved
 
@@ -51,6 +51,13 @@ And once more on 2026-09-16, between two branches rather than two tickets: this 
 screen is an instance" were both written as 0017, neither knowing about the other, and the lights
 one moved to 0018 because the screens one reached main first. Same lesson as above, and the same
 remedy: take the number when the ticket is opened.
+
+## Amending one
+
+A record is not rewritten when the code moves on. An amendment is appended under "Amended, <date>:
+<what>", saying what moved, what did not, and what it costs, and the summary in the table above moves
+with it. The #791 rebuild, which replaced the panel's four tabs with pages, amended 0013, 0017, 0018 and
+0020 this way: where an older paragraph names a tab, the amendment names the page.
 
 ## Writing one
 

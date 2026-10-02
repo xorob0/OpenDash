@@ -508,6 +508,14 @@ export const click = (host: Host, x: number, y: number, dwellSeconds = 0): RunRe
   vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})\ntime.sleep(${dwellSeconds})\nclient.mousePress(1)`);
 
 /**
+ * Moves the pointer without pressing. A pointer left resting on a control opens its tooltip, and a
+ * WPF tooltip is a top-level window that `Process.MainWindowHandle` will hand back in place of the
+ * window itself, so a caller that clicks and then measures parks the pointer somewhere inert first.
+ */
+export const movePointer = (host: Host, x: number, y: number): RunResult =>
+  vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})`);
+
+/**
  * Types a string a key at a time. vncdotool's proxy has no `type`, and its key names are words for
  * anything that is not a bare character.
  */
@@ -548,7 +556,7 @@ let desktopCall = 0;
  * Runs PowerShell in the interactive desktop and brings its output back. It has to be the desktop:
  * a session 0 process enumerates session 0's windows, which are none of these.
  */
-function inDesktopScript(host: Host, script: string, timeoutSeconds = 120): RunResult {
+export function inDesktopScript(host: Host, script: string, timeoutSeconds = 120): RunResult {
   // A fresh name per call. Sharing one meant a second call could read the first call's output file
   // before its own task had written anything, which is how `openDashboards` once reported that the
   // open dashboard was called "maximised".
@@ -619,7 +627,7 @@ client.keyUp(${JSON.stringify(key)})`,
 }
 
 /** A window enumerator, shared by the calls below so the P/Invoke block is written once. */
-const WINDOW_HELPER = `
+export const WINDOW_HELPER = `
 Add-Type -TypeDefinition @'
 using System; using System.Collections.Generic; using System.Runtime.InteropServices; using System.Text;
 public class OpenDashWindows {
@@ -1161,17 +1169,56 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   };
 }
 
+/** A window to photograph: by its exact title, or as the main window of a process by its name. */
+export type WindowRef = string | { mainWindowOf: string };
+
+/** A rectangle in screen pixels. */
+export interface ScreenRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 /**
- * Photographs one dash window, at its own size, into a local PNG.
+ * Photographs one window into a local PNG, whole or cropped to a rectangle of the screen.
  *
  * `PrintWindow` with `PW_RENDERFULLCONTENT` asks the window to draw itself, so the result is the
- * dashboard rather than whatever happens to be on top of it. It only works while the window is
- * fully on screen: a window hanging off the bottom comes back with the off-screen part cut, which
- * looks exactly like a clipped glyph and wasted an afternoon. `placeDashboards` first.
+ * window rather than whatever happens to be on top of it. It only works while the window is fully
+ * on screen: a window hanging off the bottom comes back with the off-screen part cut, which looks
+ * exactly like a clipped glyph and wasted an afternoon.
+ *
+ * `crop` is in screen pixels, as `maximiseSimHub` and a UI Automation bounding rectangle report
+ * them, and is taken out of the window's own picture after it is drawn: the bitmap starts at the
+ * window's top-left, which on a maximised window is the invisible resize border at -8,-8, and the
+ * offset is worked out on the guest from the rectangle it photographed. A crop that misses the
+ * window is a failure rather than an empty file.
+ *
+ * SimHub's main window has to be named by its process: it shares its title with two other visible
+ * windows, one of them a full-screen overlay (see `maximiseSimHub`).
  */
-export function captureDashboard(host: Host, name: string, localPath: string): RunResult {
+export function captureWindow(host: Host, window: WindowRef, localPath: string, crop?: ScreenRect): RunResult {
   const guestPng = `${WINVM_DIR}/shared/capture_${Math.round(Date.now())}.png`;
   const guestUnc = `\\\\host.lan\\Data\\${path.basename(guestPng)}`;
+  const find =
+    typeof window === 'string'
+      ? `$target = ${psq(window)}
+$found = [IntPtr]::Zero
+foreach ($h in [OpenDashWindows]::Visible()) { if ([OpenDashWindows]::Title($h) -eq $target) { $found = $h; break } }
+if ($found -eq [IntPtr]::Zero) { "no window titled $target"; exit }`
+      : `$proc = Get-Process ${psq(window.mainWindowOf)} -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $proc -or $proc.MainWindowHandle -eq [IntPtr]::Zero) { ${psq(`no main window for the process ${window.mainWindowOf}`)}; exit }
+$found = $proc.MainWindowHandle`;
+  const cropping = crop
+    ? `# Parenthesised, since PowerShell's comma binds tighter than its minus; and the static Intersect,
+# since a method that changes a struct in a variable changes a copy.
+$asked = New-Object System.Drawing.Rectangle((${Math.round(crop.left)} - $r[0]), (${Math.round(crop.top)} - $r[1]), ${Math.round(crop.width)}, ${Math.round(crop.height)})
+$want = [System.Drawing.Rectangle]::Intersect($asked, (New-Object System.Drawing.Rectangle(0, 0, $r[2], $r[3])))
+if ($want.Width -le 0 -or $want.Height -le 0) { $bmp.Dispose(); "the crop misses the window at $($r[0]),$($r[1]) $($r[2])x$($r[3])"; exit }
+$whole = $bmp
+$bmp = $whole.Clone($want, $whole.PixelFormat)
+$whole.Dispose()`
+    : '';
   const captured = inDesktopScript(
     host,
     `${WINDOW_HELPER}
@@ -1191,22 +1238,18 @@ public class OpenDashShot {
   }
 }
 '@ -ReferencedAssemblies System.Drawing
-$target = ${psq(`${name} (WPF Renderer)`)}
-foreach ($h in [OpenDashWindows]::Visible()) {
-  if ([OpenDashWindows]::Title($h) -ne $target) { continue }
-  $r = [OpenDashWindows]::Rect($h)
-  $bmp = [OpenDashShot]::Shoot($h, $r[2], $r[3])
-  # Saved to local disk and then copied. GDI+ reports success saving straight to the UNC share and
-  # leaves nothing there, which is a silent way to lose every screenshot.
-  $local = Join-Path $env:TEMP ${psq(path.basename(guestPng))}
-  $bmp.Save($local, [System.Drawing.Imaging.ImageFormat]::Png)
-  $bmp.Dispose()
-  Copy-Item $local ${psq(guestUnc)} -Force
-  Remove-Item $local -Force -ErrorAction SilentlyContinue
-  "captured {0}x{1}" -f $r[2], $r[3]
-  exit
-}
-"no window titled $target"`,
+${find}
+$r = [OpenDashWindows]::Rect($found)
+$bmp = [OpenDashShot]::Shoot($found, $r[2], $r[3])
+${cropping}
+# Saved to local disk and then copied. GDI+ reports success saving straight to the UNC share and
+# leaves nothing there, which is a silent way to lose every screenshot.
+$local = Join-Path $env:TEMP ${psq(path.basename(guestPng))}
+$bmp.Save($local, [System.Drawing.Imaging.ImageFormat]::Png)
+"captured {0}x{1}" -f $bmp.Width, $bmp.Height
+$bmp.Dispose()
+Copy-Item $local ${psq(guestUnc)} -Force
+Remove-Item $local -Force -ErrorAction SilentlyContinue`,
   );
   if (!captured.ok || !captured.stdout.startsWith('captured')) {
     return { ok: false, code: 1, stdout: '', stderr: captured.stdout || captured.stderr || 'the capture produced nothing' };
@@ -1215,6 +1258,27 @@ foreach ($h in [OpenDashWindows]::Visible()) {
   onHost(host, `rm -f ${guestPng}`, 30_000);
   return fetched.ok ? { ...fetched, stdout: `${captured.stdout} to ${localPath}` } : fetched;
 }
+
+/**
+ * Photographs one dash window, at its own size, into a local PNG. `placeDashboards` first, so the
+ * window is wholly on the screen; see {@link captureWindow}.
+ */
+export const captureDashboard = (host: Host, name: string, localPath: string): RunResult => captureWindow(host, `${name} (WPF Renderer)`, localPath);
+
+/**
+ * Turns the mouse wheel over a point: down for a positive count of notches, up for a negative one.
+ * VNC's buttons 4 and 5 are the wheel, and WPF's ScrollViewer moves 48 device-independent pixels a
+ * notch (three lines of sixteen) unless the content scrolls by items.
+ */
+export const wheel = (host: Host, x: number, y: number, notches: number): RunResult =>
+  vnc(
+    host,
+    `client.mouseMove(${Math.round(x)}, ${Math.round(y)})
+time.sleep(0.3)
+for _ in range(${Math.abs(Math.trunc(notches))}):
+    client.mousePress(${notches < 0 ? 4 : 5})
+    time.sleep(0.04)`,
+  );
 
 /** Brings a file out of the share to a local path, directly or over SSH. */
 /** What one recording produced, parsed from the recorder's report line. */

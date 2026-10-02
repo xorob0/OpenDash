@@ -63,7 +63,7 @@ namespace OpenDashPlugin
         /// Who measured all this. Shown on the lights page, and not decoration: CC BY-NC-SA 4.0 asks
         /// for attribution, and a user is entitled to know whose numbers are lighting their wheel.
         /// </summary>
-        public const string Attribution = "Shift lights come from Lovely Car Data, by Lovely Sim Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0.";
+        public const string Attribution = "Rev lights come from Lovely Car Data, by Lovely Sim Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0.";
 
         /// <summary>Where the attribution points.</summary>
         public const string ProjectUrl = "https://github.com/Lovely-Sim-Racing/lovely-car-data";
@@ -79,8 +79,9 @@ namespace OpenDashPlugin
         /// every few weeks, and nothing about a wheel's lights is urgent enough to mention sooner.
         ///
         /// <para>It decides a sentence and not a request. Nothing refetches on its own since #789, so a
-        /// copy older than this is one the Lights tab mentions beside the button; pressing is the
-        /// driver's business and a rig that never presses again keeps the cars it has.</para>
+        /// copy older than this is one whose status line on the LEDs page says it was updated over a week
+        /// ago (PanelLights.CarTablesStale); pressing is the driver's business and a rig that never presses
+        /// again keeps the cars it has.</para>
         /// </summary>
         public static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 

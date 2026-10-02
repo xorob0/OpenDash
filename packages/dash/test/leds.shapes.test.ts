@@ -3,7 +3,7 @@
  * lighting profile from another.
  *
  * SimHub gives its RGB strips and its 8x8 matrix the same `.ledsprofile` extension, so a build drops
- * twenty files of two different kinds into one folder and the plugin embeds them side by side. Its
+ * a hundred and twenty-two files of two different kinds into one folder and the plugin embeds them side by side. Its
  * only discriminator is the file name: `FlagBoxProfile.SelectResource` takes the name it is looking
  * for and accepts nothing else, so a shape collects its own profile and the matrix driver is never
  * handed a ten-LED strip. That defence is only as good as the names being distinct, and the names
@@ -20,14 +20,25 @@ import { FLAG_BOX_FILE } from '../src/build.ts';
 const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`;
 
 describe('the profile file names', () => {
-  test('are the grid, less what a legacy shape already spells, plus the legacy shapes', () => {
-    // The count is the product of the two ranges rather than a number typed here, so widening a range
-    // moves it and dropping a shape from the legacy list moves it the other way. What is pinned is
-    // the arithmetic: every side against every centre, the long bare runs after them, and the shapes
-    // that shipped before the grid and fall outside it.
+  test('are the grid, less what a legacy shape already spells, plus the legacy shapes, plus a far-end twin of each plain one', () => {
+    // The count is the product of the two ranges, and what is pinned first is that arithmetic: every
+    // side against every centre, the long bare runs after them, and the shapes that shipped before the
+    // grid and fall outside it. The total of 121 is then pinned as well, on purpose, as the #791
+    // count: it is the number of strip profiles in the DLL (the flag box is the hundred and
+    // twenty-second), so widening a range fails here and says so.
     expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
     const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
-    expect(ALL_SHAPES.length).toBe(GRID_SHAPES.filter((shape) => !spelled.has(shape.id)).length + LEGACY_SHAPES.length);
+    const shapes = [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];
+    // And since #791 every plain one of those twice, once wired from each end; the Fanatec wiring is
+    // the one shape that is neither plain nor a reversal, so it has no twin. The spelled 4/14/4
+    // reversed is the twin of its plain sibling, and no second one is made.
+    const plain = shapes.filter((shape) => !shape.id.endsWith('-reversed') && !shape.id.endsWith('-fanatec'));
+    expect(shapes.filter((shape) => shape.id.endsWith('-fanatec'))).toHaveLength(1);
+    expect(ALL_SHAPES.length).toBe(2 * plain.length + 1);
+    expect(ALL_SHAPES.length).toBe(121);
+    // The twins come after every shape that was there before them, so no id moves.
+    expect(ALL_SHAPES.slice(0, shapes.length).map((shape) => shape.id)).toEqual(shapes.map((shape) => shape.id));
+    expect(ALL_SHAPES.slice(shapes.length).every((shape) => shape.id.endsWith('-reversed'))).toBe(true);
     // And the ranges themselves, which are the whole of what a driver picks between.
     expect(SIDE_LENGTHS).toEqual([0, 1, 2, 3, 4]);
     expect(CENTRE_LENGTHS[0]).toBe(4);

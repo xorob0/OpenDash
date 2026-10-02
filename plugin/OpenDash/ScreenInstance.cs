@@ -45,12 +45,12 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A rig built from a settings file written before ADR 0017 holds one screen per folder the old
         /// plugin wrote, which was every package it embedded, so most of them are screens nobody owns, and
-        /// only the driver can say which. The Rig tab asks the driver to remove those for as long as any
-        /// screen on the rig says this (PanelRig), which is why the fact is carried here rather than
+        /// only the driver can say which. The Screens page asks the driver to remove those for as long as any
+        /// screen on the rig says this (PanelScreens), which is why the fact is carried here rather than
         /// guessed from how many screens the rig holds: a rig of five added by hand was told to remove
         /// dashboards it had just asked for, and a migrated rig of four was never told at all (#478).
         ///
-        /// True from the migration until <see cref="Keep"/>, false on a screen added from the Rig tab.
+        /// True from the migration until <see cref="Keep"/>, false on a screen added from the Screens page.
         /// Null only in a settings file written before it was recorded, which OpenDashSettings.Normalise
         /// answers from what such a rig still holds.
         /// </remarks>
@@ -68,6 +68,21 @@ namespace OpenDashPlugin
         {
             Unclaimed = false;
         }
+
+        /// <summary>
+        /// Where this screen's tile sits on the Rig page's canvas, in the canvas's own units, or null
+        /// where the driver has not placed it.
+        /// </summary>
+        /// <remarks>
+        /// The Rig page draws every screen, strip and matrix as a tile the driver drags into the shape
+        /// of their rig, because "zone C" means nothing until you can see where the screen is (#791).
+        /// It is the panel's to read and write and no dashboard reads it, so it is not a property. Null
+        /// is a tile the page lays out itself, which is every screen until somebody drags it, and a
+        /// negative position, which the canvas cannot draw, is read the same way.
+        /// </remarks>
+        public int? LayoutX { get; set; }
+
+        public int? LayoutY { get; set; }
 
         /// <summary>The zones, the bar and the glance. Null on a screen that is not a face.</summary>
         public FaceSettings Face { get; set; }
@@ -388,6 +403,8 @@ namespace OpenDashPlugin
             if (Array.IndexOf(Contract.ScreenKinds, Kind) < 0) Kind = Contract.KindFace;
             if (string.IsNullOrEmpty(Namespace)) Namespace = StockNamespace;
             if (string.IsNullOrEmpty(Name)) Name = SizeLabel;
+            if (LayoutX < 0) LayoutX = null;
+            if (LayoutY < 0) LayoutY = null;
 
             if (IsFace)
             {
@@ -604,6 +621,8 @@ namespace OpenDashPlugin
                 Folder = Folder,
                 Package = Package,
                 Unclaimed = Unclaimed,
+                LayoutX = LayoutX,
+                LayoutY = LayoutY,
                 Face = Face == null ? null : Face.Clone(),
                 FlagFormat = FlagFormat,
                 LapReview = LapReview,

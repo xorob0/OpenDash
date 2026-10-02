@@ -32,6 +32,16 @@ namespace OpenDashPlugin.Tests
             // Twenty-four hours, which is what every clock drew before the setting existed. #324.
             Assert.Equal("24h", settings.ClockFormat);
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
+            // A flag shows in the pit lane, which is what every surface drew before it was a choice. #791.
+            Assert.True(settings.FlagsInPitLane);
+            // The rig's thresholds are unanswered until Normalise reads them off matrix 1, and a new
+            // install's matrix 1 has none, so they come back as zero: the profile's own default.
+            Assert.Null(settings.LightsOilTemp);
+            Assert.Null(settings.LightsWaterTemp);
+            settings.Normalise();
+            Assert.Equal(0, settings.LightsOilTemp);
+            Assert.Equal(0, settings.LightsWaterTemp);
+            Assert.True(settings.FlagsInPitLane);
         }
 
         /// <summary>
@@ -1100,10 +1110,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
 
             // Canonical casing, the way every other choice is normalised.
-            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "MEETINMIDDLE" };
+            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "LEFTTORIGHT" };
             typed.Normalise();
             Assert.Equal("throttleBrake", typed.LedCentre);
-            Assert.Equal("meetInMiddle", typed.LedRpmStyle);
+            Assert.Equal("leftToRight", typed.LedRpmStyle);
+
+            // And the two retired looks, whatever their casing, fill left to right: the set still holds
+            // them so the file stays legal, and the value moves on. #369, #791.
+            var retired = new OpenDashSettings { LedRpmStyle = "MEETINMIDDLE" };
+            retired.Normalise();
+            Assert.Equal("leftToRight", retired.LedRpmStyle);
         }
 
         [Fact]
@@ -1146,8 +1162,9 @@ namespace OpenDashPlugin.Tests
                 LightsNightMode = true,
                 FlagBoxLowFuelLaps = 5,
                 LedCentre = "fuel",
-                LedRpmStyle = "f1",
+                LedRpmStyle = "leftToRight",
                 LedFlagAnimation = false,
+                FlagsInPitLane = false,
             };
             source.Normalise();
             source.SetMatrixRest(2, "gear");
@@ -1156,8 +1173,9 @@ namespace OpenDashPlugin.Tests
             // The four that moved under the matrix are set per panel, so the copy has to carry the
             // arrays rather than four scalars.
             source.FlagBoxMatrixCriticalOnly[0] = true;
-            source.FlagBoxMatrixOilTemp[0] = 130;
-            source.FlagBoxMatrixWaterTemp[0] = 115;
+            // The two thresholds are the rig's since #791, and reach every panel's entry.
+            source.SetLightsOilTemp(130);
+            source.SetLightsWaterTemp(115);
 
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
@@ -1172,11 +1190,15 @@ namespace OpenDashPlugin.Tests
             Assert.False(copy.MatrixGear(4));
             Assert.Equal(130, copy.MatrixOilTemp(1));
             Assert.Equal(115, copy.MatrixWaterTemp(1));
+            Assert.Equal(130, copy.LightsOilTemp);
+            Assert.Equal(115, copy.LightsWaterTemp);
+            Assert.Equal(130, copy.MatrixOilTemp(4));
+            Assert.False(copy.FlagsInPitLane);
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
             Assert.Equal("fuel", copy.LedCentre);
-            Assert.Equal("f1", copy.LedRpmStyle);
+            Assert.Equal("leftToRight", copy.LedRpmStyle);
             Assert.False(copy.LedFlagAnimation);
 
             // A clone, not the same array: editing one settings object must not edit the other.
@@ -1262,6 +1284,194 @@ namespace OpenDashPlugin.Tests
             Assert.Null(settings.FlagBoxGear);
             Assert.Null(settings.FlagBoxOilTemp);
             Assert.Null(settings.FlagBoxWaterTemp);
+        }
+
+        [Fact]
+        public void The_temperature_thresholds_are_the_rigs_and_reach_every_panel()
+        {
+            // A file written before the thresholds were the rig's: matrix 1's value is the one a single
+            // box had, so it becomes the rig's and reaches all four panels. #791.
+            var json = "{\"FlagBoxMatrixOilTemp\":[125,0,0,0],\"FlagBoxMatrixWaterTemp\":[108,0,0,0]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            Assert.Null(settings.LightsOilTemp);
+            settings.Normalise();
+            Assert.Equal(125, settings.LightsOilTemp);
+            Assert.Equal(108, settings.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(125, settings.MatrixOilTemp(matrix));
+                Assert.Equal(108, settings.MatrixWaterTemp(matrix));
+            }
+
+            // A file that names no panel is read as one box, and takes matrix 1's value, even 0. Named
+            // panels with these numbers would give 130, the first that set one (the untouched case below).
+            var differing = JsonSerializer.Deserialize<OpenDashSettings>("{\"FlagBoxMatrixOilTemp\":[0,130,140,150]}");
+            differing.Normalise();
+            Assert.Equal(0, differing.LightsOilTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(0, differing.MatrixOilTemp(matrix));
+
+            // Unless slot 1 holds no panel. Removing one leaves its thresholds in the slot, so a rig that
+            // added Left and Right and then removed Left still carries Left's 150 in slot 1; the box that
+            // is on the rig is Right, and its 130 is the one it keeps warning at.
+            var removed = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[null,\"Right\",null,null],\"FlagBoxMatrixOilTemp\":[150,130,0,0],\"FlagBoxMatrixWaterTemp\":[0,112,0,0]}");
+            removed.Normalise();
+            Assert.Equal(130, removed.LightsOilTemp);
+            Assert.Equal(112, removed.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(130, removed.MatrixOilTemp(matrix));
+
+            // Nor when slot 1's panel left its box at 0, which is the profile's default and not an
+            // answer: a Left nobody touched beside a Right set to 130 and 112 is a rig that asked for
+            // 130 and 112 once, and the two are read apart. Zero only when no named panel set one.
+            var untouched = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[\"Left\",\"Right\",null,null],\"FlagBoxMatrixOilTemp\":[0,130,0,0],\"FlagBoxMatrixWaterTemp\":[105,112,0,0]}");
+            untouched.Normalise();
+            Assert.Equal(130, untouched.LightsOilTemp);
+            Assert.Equal(105, untouched.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices) Assert.Equal(130, untouched.MatrixOilTemp(matrix));
+            var unset = JsonSerializer.Deserialize<OpenDashSettings>(
+                "{\"FlagBoxMatrixName\":[\"Left\",null,null,null],\"FlagBoxMatrixOilTemp\":[0,150,0,0]}");
+            unset.Normalise();
+            Assert.Equal(0, unset.LightsOilTemp);
+
+            // Once the rig has an answer, a hand-edited panel entry is put back to it on the next load.
+            settings.FlagBoxMatrixOilTemp[2] = 90;
+            settings.Normalise();
+            Assert.Equal(125, settings.MatrixOilTemp(3));
+
+            // The setters refill every panel, and a negative is the unit's own default rather than a number.
+            settings.SetLightsOilTemp(250);
+            settings.SetLightsWaterTemp(230);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(250, settings.MatrixOilTemp(matrix));
+                Assert.Equal(230, settings.MatrixWaterTemp(matrix));
+            }
+            settings.SetLightsOilTemp(-3);
+            Assert.Equal(0, settings.LightsOilTemp);
+            Assert.Equal(0, settings.MatrixOilTemp(4));
+
+            // A panel added afterwards warns at the rig's temperature too.
+            var rig = new OpenDashSettings();
+            rig.Normalise();
+            rig.SetLightsWaterTemp(115);
+            var slot = rig.AddMatrixPanel("Top");
+            Assert.Equal(115, rig.MatrixWaterTemp(slot));
+        }
+
+        [Fact]
+        public void A_settings_file_from_before_the_panel_rebuild_loads_with_the_new_answers_defaulted()
+        {
+            // What a 0.3.0-rc.7 rig has on disk: no pit-lane switch, no rig thresholds but two named
+            // panels whose own differ (Left's water at 0), a face with no zone orders, a retired rev look
+            // on the rig and on both bars, a reversed 4/14/4 and a brow. Json.NET, which is what SimHub
+            // reads it with. #791.
+            var json = "{\"LedRpmStyle\":\"f1\","
+                + "\"FlagBoxMatrixName\":[\"Left\",\"Right\",null,null],"
+                + "\"FlagBoxMatrixOilTemp\":[120,135,150,0],\"FlagBoxMatrixWaterTemp\":[0,110,95,0],"
+                + "\"Rig\":[{\"Namespace\":\"Face1920x480\",\"Name\":\"Face 1920x480\",\"Kind\":\"face\",\"Width\":1920,\"Height\":480,"
+                + "\"Face\":{\"Zones\":[3,9,14,5],\"Masks\":[11,2097115,2097151,255],\"Starts\":[0,0,14,0],"
+                + "\"ClassOnly\":[false,false,false,false],\"BarFields\":[0,1,5,6],\"QuickGlance\":212}}],"
+                + "\"LedBars\":[{\"Name\":\"MLD\",\"Namespace\":\"LedMLD\",\"Shape\":\"4-14-4-reversed\",\"RpmStyle\":\"f1\"},"
+                + "{\"Name\":\"Brow\",\"Namespace\":\"LedBrow\",\"Shape\":\"brow-15\",\"RpmStyle\":\"meetInMiddle\"}]}";
+            var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.True(settings.FlagsInPitLane);
+            Assert.Equal("leftToRight", settings.LedRpmStyle);
+
+            // The rig's thresholds are the first named panel that set one: Left's oil, Right's water, as
+            // every panel now reads them.
+            Assert.Equal(120, settings.LightsOilTemp);
+            Assert.Equal(110, settings.LightsWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.Equal(120, settings.MatrixOilTemp(matrix));
+                Assert.Equal(110, settings.MatrixWaterTemp(matrix));
+            }
+
+            // A face with no orders steps in the catalogue's, and each zone's position is the one
+            // zoneCyclePosition has always derived from the mask.
+            var face = settings.ScreenFace("Face1920x480");
+            for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
+            {
+                var letter = Contract.FaceZoneLetters[i];
+                Assert.Equal(Enumerable.Range(0, Contract.FaceZonePageCounts[i]), face.Order(letter));
+                var below = Enumerable.Range(0, face.Zones[i]).Count(p => (face.Mask(letter) & (1 << p)) != 0);
+                Assert.Equal(1 + below, face.Position(letter));
+            }
+            Assert.Equal(new[] { 3, 8, 15, 6 }, Contract.FaceZoneLetters.Select(face.Position).ToArray());
+
+            var bar = settings.LedBarByNamespace("LedMLD");
+            Assert.Equal("leftToRight", bar.RpmStyle);
+            Assert.Equal("4-14-4", bar.Shape);
+            Assert.True(bar.Reversed);
+            Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
+            Assert.Null(bar.Brightness);
+            Assert.Empty(bar.EffectsOff);
+            var brow = settings.LedBarByNamespace("LedBrow");
+            Assert.Equal("leftToRight", brow.RpmStyle);
+            Assert.Equal("brow-15", brow.Shape);
+            Assert.False(brow.Reversed);
+            Assert.Equal("brow-15", brow.ProfileShapeId);
+
+            // And what this version writes, it reads back.
+            settings.FlagsInPitLane = false;
+            settings.SetLightsWaterTemp(230);
+            settings.SetBarBrightness("LedMLD", 40);
+            settings.SetBarEffect("LedMLD", "drs", false);
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.False(back.FlagsInPitLane);
+            Assert.Equal(120, back.LightsOilTemp);
+            Assert.Equal(230, back.MatrixWaterTemp(3));
+            Assert.Equal(40, back.BarBrightness("LedMLD"));
+            Assert.False(back.BarEffectEnabled("LedMLD", "drs"));
+            Assert.True(back.BarReversed("LedMLD"));
+        }
+
+        [Fact]
+        public void A_faces_zone_positions_are_declared_with_the_face()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Normalise();
+            var names = settings.DeclaredProperties().ToList();
+            foreach (var letter in Contract.FaceZoneLetters) Assert.Contains("Face1920x480Zone" + letter + "Position", names);
+            Assert.Contains(Contract.FlagsInPitLane, names);
+            // A zone opens on its start page, and the header counts from one.
+            settings.OpenOnStartPages();
+            Assert.Equal(1, settings.ScreenFace("Face1920x480").Position("A"));
+            Assert.Equal(15, settings.ScreenFace("Face1920x480").Position("C"));
+            // A screen the rig no longer holds reads a default rather than throwing on SimHub's thread.
+            Assert.Equal(1, settings.ScreenFace("Gone").Position("A"));
+        }
+
+        [Fact]
+        public void A_button_toggles_night_mode_and_steps_the_brightness_in_force()
+        {
+            var settings = new OpenDashSettings { LightsBrightness = 60, LightsNightBrightness = 25 };
+            settings.Normalise();
+            Assert.Equal(70, settings.StepBrightness(1));
+            Assert.Equal(70, settings.LightsBrightness);
+            Assert.Equal(50, settings.StepBrightness(-2));
+            // The ceiling, and the floor: a button never takes the lights out.
+            settings.LightsBrightness = 95;
+            Assert.Equal(100, settings.StepBrightness(1));
+            settings.LightsBrightness = 15;
+            Assert.Equal(Contract.BrightnessStepFloor, settings.StepBrightness(-1));
+            Assert.Equal(Contract.BrightnessStepFloor, settings.StepBrightness(-1));
+            // A brightness set below the floor on the panel is left alone by "dimmer", not raised.
+            settings.LightsBrightness = 5;
+            Assert.Equal(5, settings.StepBrightness(-1));
+
+            // Night mode moves the night brightness and leaves the day one where it was.
+            Assert.True(settings.ToggleNightMode());
+            Assert.True(settings.LightsNightMode);
+            Assert.Equal(35, settings.StepBrightness(1));
+            Assert.Equal(35, settings.LightsNightBrightness);
+            Assert.Equal(5, settings.LightsBrightness);
+            Assert.False(settings.ToggleNightMode());
+            Assert.False(settings.LightsNightMode);
         }
 
         [Fact]
@@ -1351,7 +1561,8 @@ namespace OpenDashPlugin.Tests
         public void The_lights_are_declared_whatever_the_rig_is()
         {
             // Unlike a screen the rig has not got. There is nothing to detect -- OpenDash does not
-            // install the profile (ADR 0013) -- and it is a fixed handful of names.
+            // install the profile (ADR 0013) -- and a hundred and nine names is still fewer than the
+            // screens' two hundred and sixty-four.
             var settings = new OpenDashSettings { Screens = new List<string>() };
             settings.Normalise();
             var declared = settings.DeclaredProperties().ToList();
@@ -1364,14 +1575,14 @@ namespace OpenDashPlugin.Tests
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
             // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
-            // best, the clock format and the delta's precision, which every screen shares, and one group
-            // per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+            // best, the clock format, the delta's precision and whether a flag shows in the pit lane,
+            // which every screen shares, and one group per screen the rig holds.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(25, shared);
+            Assert.Equal(26, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
-            // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
-            // rather than the hundred and thirty-six that made the screens worth narrowing.
+            // profile (ADR 0013), so there is nothing to detect, and a hundred and nine names is still
+            // fewer than the screens' two hundred and sixty-four, which are what was worth narrowing.
             var lights = Contract.LightsPropertyNames().Count();
 
             // An empty rig is a new install, and declares nothing of any screen's.
@@ -1415,6 +1626,222 @@ namespace OpenDashPlugin.Tests
         }
 
         // --- ADR 0017: a screen is an instance -------------------------------------------------
+
+        [Fact]
+        public void A_duplicate_is_the_same_screen_under_a_name_a_namespace_and_a_folder_of_its_own()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var main = settings.AddScreen(entry, "Main dash");
+            main.Face.SetStart("B", 3);
+            main.Face.SetPageEnabled("C", 2, false);
+            main.Face.SetClassOnly("C", true);
+            main.Face.SetBarField("Left1", 4);
+            main.FlagFormat = "full";
+            main.LapReview = "race";
+            main.Face.Cycle("B");
+            main.LayoutX = 120;
+            main.LayoutY = 40;
+
+            var copy = settings.DuplicateScreen(main.Namespace, entry);
+            // Placed by the Rig page until the driver drags it, rather than on top of its source.
+            Assert.Null(copy.LayoutX);
+            Assert.Null(copy.LayoutY);
+            Assert.Equal(120, main.LayoutX);
+            Assert.NotNull(copy);
+            Assert.Contains(copy, settings.RigScreens());
+            Assert.Equal(2, settings.RigScreens().Count);
+            // A different screen: its own card, its own properties, its own dashboard folder.
+            Assert.Equal("Main dash (2)", copy.Name);
+            Assert.Equal("MainDash2", copy.Namespace);
+            Assert.Equal("OpenDash Main dash (2)", copy.Folder);
+            Assert.NotEqual(main.Folder, copy.Folder);
+            Assert.False(copy.Unclaimed);
+            Assert.Equal(main.Kind, copy.Kind);
+            Assert.Equal(main.Width, copy.Width);
+            Assert.Equal(main.Package, copy.Package);
+            // Set up like the source.
+            Assert.Equal(3, copy.Face.Start("B"));
+            Assert.Equal(main.Face.Masks, copy.Face.Masks);
+            Assert.True(copy.Face.IsClassOnly("C"));
+            Assert.Equal(4, copy.Face.BarField("Left1"));
+            Assert.Equal("full", copy.FlagFormat);
+            Assert.Equal("race", copy.LapReview);
+            // And open on its start pages, as a face does when it starts, whatever the source is showing.
+            Assert.Equal(copy.Face.Starts, copy.Face.Zones);
+            // Apart, not shared: changing one leaves the other alone.
+            copy.Face.SetStart("B", 5);
+            Assert.Equal(3, main.Face.Start("B"));
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(names.Count, names.Distinct().Count());
+            Assert.Contains("MainDash2ZoneB", names);
+
+            // A name asked for is used, and made unique if it has to be.
+            var named = settings.DuplicateScreen(main.Namespace, entry, "  Rim ");
+            Assert.Equal("Rim", named.Name);
+            Assert.Equal("Rim", named.Namespace);
+            Assert.Equal("Main dash (3)", settings.DuplicateScreen(copy.Namespace, entry, "Main dash").Name);
+            // Nothing to duplicate is nothing added.
+            var before = settings.RigScreens().Count;
+            Assert.Null(settings.DuplicateScreen("Gone", entry));
+            Assert.Equal(before, settings.RigScreens().Count);
+            Assert.Throws<ArgumentNullException>(() => settings.DuplicateScreen(main.Namespace, (PackageEntry)null));
+
+            // The package's stock folder goes with the stock namespace, so a copy never takes it, even
+            // with the stock screen gone: a copy of the second screen at a size, named as the size, is
+            // not handed "OpenDash 1280x480", and the next screen added at that size is stock again.
+            var rig = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            rig.Normalise();
+            var rim = rig.AddScreen(entry, "Rim");
+            var second = rig.AddScreen(entry, "Main dash");
+            Assert.Equal("OpenDash 1280x480", rim.Folder);
+            Assert.Equal("OpenDash Main dash", second.Folder);
+            rig.RemoveScreen(rim.Namespace);
+            var sized = rig.DuplicateScreen(second.Namespace, entry, "1280x480");
+            Assert.NotEqual(entry.Folder, sized.Folder);
+            Assert.Equal("OpenDash 1280x480 2", sized.Folder);
+            var again = rig.AddScreen(entry, "Rim");
+            Assert.True(again.IsStock);
+            Assert.Equal(entry.Folder, again.Folder);
+        }
+
+        [Fact]
+        public void A_screen_migrated_without_a_package_is_duplicated_from_the_package_the_installer_would_use()
+        {
+            // A rig upgraded from folders: the migration remembers no package on any screen, so a panel
+            // that looked the source's package up by its Package field alone would find nothing for
+            // most upgraded rigs. The catalogue overload finds it the way the installer does.
+            var settings = new OpenDashSettings();
+            settings.FolderFingerprints["OpenDash 1920x480"] = "abc";
+            settings.Normalise();
+            var face = settings.RigScreens().Single();
+            Assert.Null(face.Package);
+            var catalogue = new List<PackageEntry>
+            {
+                new PackageEntry { Package = "companion", Folder = "OpenDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 },
+                new PackageEntry { Package = "face", Folder = "OpenDash 1920x480", Kind = Contract.KindFace, Width = 1920, Height = 480 },
+            };
+            Assert.Same(catalogue[1], PackageCatalogue.EntryFor(catalogue, face));
+
+            var copy = settings.DuplicateScreen(face.Namespace, catalogue, "Rim");
+            Assert.NotNull(copy);
+            Assert.Equal("OpenDash Rim", copy.Folder);
+            // The copy remembers its package, which its source never did.
+            Assert.Equal("face", copy.Package);
+            Assert.Null(face.Package);
+
+            // A screen off its stock folder is found by its kind and size, as the installer finds it.
+            var again = settings.DuplicateScreen(copy.Namespace, catalogue);
+            Assert.Equal("face", again.Package);
+            copy.Package = null;
+            Assert.Same(catalogue[1], PackageCatalogue.EntryFor(catalogue, copy));
+
+            // No package that makes it is no copy, rather than a card the installer cannot write.
+            var before = settings.RigScreens().Count;
+            Assert.Null(settings.DuplicateScreen(face.Namespace, new List<PackageEntry>()));
+            Assert.Null(settings.DuplicateScreen(face.Namespace, (IEnumerable<PackageEntry>)null));
+            Assert.Equal(before, settings.RigScreens().Count);
+        }
+
+        [Fact]
+        public void A_strip_and_a_matrix_keep_their_places_on_the_rig_canvas()
+        {
+            var settings = new OpenDashSettings();
+            var bar = settings.AddLedBar("3-9-3", "Rim", null);
+            var second = settings.AddLedBar("3-9-3", "Brow", null);
+            // Unplaced until dragged, like a screen.
+            Assert.Null(bar.LayoutX);
+            Assert.Equal(4, settings.MatrixLayoutX.Length);
+            Assert.All(settings.MatrixLayoutX, x => Assert.Null(x));
+            bar.LayoutX = 40;
+            bar.LayoutY = 300;
+            second.LayoutX = -1;
+            settings.MatrixLayoutX[1] = 520;
+            settings.MatrixLayoutY[1] = -5;
+            settings.Normalise();
+            Assert.Equal(40, bar.LayoutX);
+            Assert.Null(second.LayoutX);
+            Assert.Equal(520, settings.MatrixLayoutX[1]);
+            Assert.Null(settings.MatrixLayoutY[1]);
+
+            // Carried by the panel's copy and by Json.NET, and a short array from disk is four slots again.
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal(300, copy.LedBarList()[0].LayoutY);
+            Assert.Equal(520, copy.MatrixLayoutX[1]);
+            settings.MatrixLayoutX = new int?[] { 10 };
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.Equal(40, back.LedBarList()[0].LayoutX);
+            Assert.Equal(new int?[] { 10, null, null, null }, back.MatrixLayoutX);
+
+            // A removed panel's slot is laid out afresh for the next one.
+            back.MatrixLayoutX[0] = 10;
+            back.RemoveMatrixPanel(1);
+            Assert.Null(back.MatrixLayoutX[0]);
+            // The panel's, not a property.
+            Assert.DoesNotContain(settings.DeclaredProperties(), name => name.Contains("Layout"));
+        }
+
+        [Fact]
+        public void A_screen_keeps_its_place_on_the_rig_canvas()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            // Unplaced until dragged, which is every screen of a file written before the Rig page.
+            Assert.Null(settings.Rig[0].LayoutX);
+            Assert.Null(settings.Rig[0].LayoutY);
+            settings.Rig[0].LayoutX = 300;
+            settings.Rig[0].LayoutY = 0;
+            settings.Rig[1].LayoutX = -20;
+            settings.Rig[1].LayoutY = 60;
+            settings.Normalise();
+            Assert.Equal(300, settings.Rig[0].LayoutX);
+            Assert.Equal(0, settings.Rig[0].LayoutY);
+            // A position the canvas cannot draw is a tile it lays out itself.
+            Assert.Null(settings.Rig[1].LayoutX);
+            Assert.Equal(60, settings.Rig[1].LayoutY);
+
+            // Carried by the panel's copy and by Json.NET, which is how SimHub keeps it.
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal(300, copy.Rig[0].LayoutX);
+            Assert.Equal(60, copy.Rig[1].LayoutY);
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
+            back.Normalise();
+            Assert.Equal(300, back.Rig[0].LayoutX);
+            Assert.Null(back.Rig[1].LayoutX);
+            // And it is the panel's, not a property: nothing the rig declares names it.
+            Assert.DoesNotContain(settings.DeclaredProperties(), name => name.Contains("Layout"));
+        }
+
+        [Fact]
+        public void A_duplicated_pit_wall_prefixes_every_name_with_its_own_namespace()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Rig[0].Name = "Pit wall";
+            settings.Rig[0].Folder = "OpenDash Pit wall";
+            settings.Normalise();
+            settings.Rig[0].SetZonePage("TowerA", 9);
+            settings.Rig[0].WebViewUrl = "https://example.com/";
+
+            var copy = settings.DuplicateScreen(Contract.PitWallPrefix, new PackageEntry { Package = "w", Folder = "OpenDash Pit wall", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 });
+            Assert.Equal(Contract.KindPitWall, copy.Kind);
+            Assert.Equal("PitWall2", copy.Namespace);
+            Assert.False(copy.IsStock);
+            Assert.Equal(9, copy.ZonePage("TowerA"));
+            Assert.Equal("https://example.com/", copy.WebViewUrl);
+            // The stock pit wall's web view name carries no prefix; the copy's cannot, or the two would
+            // read one address.
+            Assert.All(copy.PropertyNames(), name => Assert.StartsWith(copy.Namespace, name, StringComparison.Ordinal));
+            Assert.Contains("PitWall2WebViewUrl", copy.PropertyNames());
+            Assert.Contains("PitWall2HoldQuickGlance", copy.ActionNames());
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(names.Count, names.Distinct().Count());
+        }
 
         [Fact]
         public void Two_faces_of_one_size_are_configured_apart()
@@ -1888,12 +2315,15 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_five_actions_are_named_as_verbs()
+        public void The_nine_actions_are_named_as_verbs()
         {
-            // Five per face, because two faces on one rig have to cycle apart.
+            // Nine per face, because two faces on one rig have to cycle apart: the five that shipped, and
+            // a zone's way back after them (#791).
             var actions = Contract.ActionNames().ToArray();
             Assert.Equal(new[] { "Face1920x480CycleZoneA", "Face1920x480CycleZoneB", "Face1920x480CycleZoneC", "Face1920x480CycleZoneD", "Face1920x480HoldQuickGlance" }, actions.Take(5).ToArray());
-            Assert.Equal(Contract.FaceSizes.Count * 5, actions.Length);
+            Assert.Equal(new[] { "Face1920x480CycleZoneABack", "Face1920x480CycleZoneBBack", "Face1920x480CycleZoneCBack", "Face1920x480CycleZoneDBack" }, actions.Skip(5).Take(4).ToArray());
+            Assert.Equal(Contract.FaceSizes.Count * 9, actions.Length);
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.CycleZoneBackAction(Face, "E"));
             // The action and the property it reads must not share a name: one is what the glance is
             // set to, the other is the button that shows it.
             Assert.DoesNotContain(Contract.HoldQuickGlanceActionFor(Face), Contract.PropertyNames());

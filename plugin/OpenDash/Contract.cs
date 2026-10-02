@@ -25,6 +25,18 @@ namespace OpenDashPlugin
         public const string DeltaPrecision = "DeltaPrecision";
 
         /// <summary>
+        /// Whether a flag is shown while the car is in the pit lane. Mirrors setting.flagsInPitLane() in
+        /// contract.ts. #791.
+        /// </summary>
+        /// <remarks>
+        /// Shared, because it is a question about the driver's attention rather than about a screen: a
+        /// driver who wants band D quiet on the way down the lane wants every surface quiet with it. The
+        /// plugin only publishes the choice; every reader is an expression. Appended to the shared group
+        /// after the delta's precision, since both halves of the contract assert that group by index.
+        /// </remarks>
+        public const string FlagsInPitLane = "FlagsInPitLane";
+
+        /// <summary>
         /// Whether a newer OpenDash than this rig runs exists, as the plugin last heard from GitHub. #755.
         /// </summary>
         /// <remarks>
@@ -132,16 +144,14 @@ namespace OpenDashPlugin
         /// What the top of a rectangular face carries: the shift lights, a plain RPM bar, or nothing
         /// at all -- in which case the face is drawn in its second arrangement, with the well's room
         /// given back to the zones. A mode rather than a second boolean, because the three are one
-        /// decision and two booleans would have a fourth state that means nothing.
+        /// decision and two booleans would have a fourth state that means nothing. `rpm` is retired and
+        /// still accepted.
         ///
         /// <para>"shift" names the state and not the source. Which ladder lights it is the car's
         /// business rather than a setting: the car's own RPMs where it publishes them, SimHub's bands
         /// where it does not (ADR 0014). There is no fourth value for that and there should not be
         /// one. The other half of this comment is REV_BAR_MODES in packages/dash/src/contract.ts,
         /// and the two are kept saying the same thing.</para>
-        /// </summary>
-        /// <summary>
-        /// What a face carries at the top. `rpm` is retired and still accepted.
         /// </summary>
         /// <remarks>
         /// Retired rather than removed, because it has shipped and a settings file naming it must keep
@@ -264,6 +274,10 @@ namespace OpenDashPlugin
         /// <summary>What every clock drew before there was a choice, so a rig that never opens the
         /// setting is unchanged.</summary>
         public const string DefaultClockFormat = "24h";
+
+        /// <summary>On, which is what every surface drew before there was a choice: a flag waved at the
+        /// pit exit is still a flag.</summary>
+        public const bool DefaultFlagsInPitLane = true;
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -540,6 +554,33 @@ namespace OpenDashPlugin
         /// in contract.ts.</summary>
         public static readonly string[] LedRpmStyles = { "car", "leftToRight", "meetInMiddle", "f1" };
 
+        /// <summary>
+        /// The two looks retired into left to right. The set keeps all four, so a file naming one stays
+        /// legal, and <see cref="NormaliseLedRpmStyle"/> moves it on. Mirrors RETIRED_LED_RPM_STYLES.
+        /// </summary>
+        /// <remarks>
+        /// The LEDs page offers one switch -- the car's own lights or not -- because a choice between
+        /// the car's bar and three looks of a worse one asked a driver to rank things that are not
+        /// comparable (#369). A strip that is not on the car's bar fills left to right. #791.
+        /// </remarks>
+        public static readonly string[] RetiredLedRpmStyles = { "meetInMiddle", "f1" };
+
+        public const string LedRpmStyleLeftToRight = "leftToRight";
+
+        /// <summary>A stored rev style, with the retired looks moved onto left to right.</summary>
+        public static string NormaliseLedRpmStyle(string value)
+        {
+            if (value != null)
+            {
+                var trimmed = value.Trim();
+                foreach (var retired in RetiredLedRpmStyles)
+                {
+                    if (string.Equals(retired, trimmed, StringComparison.OrdinalIgnoreCase)) return LedRpmStyleLeftToRight;
+                }
+            }
+            return NormaliseChoice(value, LedRpmStyles, DefaultLedRpmStyle);
+        }
+
         /// <summary>The car's own, because OpenDash's opinion is that the car is right. A car with no
         /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
         public const string DefaultLedRpmStyle = "car";
@@ -610,6 +651,126 @@ namespace OpenDashPlugin
         public const string LedSpotterWhole = "LedSpotterWhole";
 
         public const bool DefaultLedSpotterWhole = false;
+
+        /// <summary>
+        /// A strip's own brightness, in percent, or nothing when it follows the rig's. Mirrors
+        /// setting.ledBrightness() in contract.ts, which falls back to LightsBrightness and then to 100.
+        /// </summary>
+        /// <remarks>
+        /// The rig-wide name is attached and always reads null, because the answer lives on the bar: a
+        /// profile installed for a bar reads it under the bar's namespace, and the profile of a strip
+        /// nobody added reads the null and falls back to the rig. Night mode stays the rig's, and a
+        /// night brightness lower than a bar's own wins over it (setting.ledBrightnessInForce()). #791.
+        /// </remarks>
+        public const string LedBrightness = "LedBrightness";
+
+        /// <summary>
+        /// One switch per thing a strip can draw, in the order the panel lists them and the contract
+        /// declares them: the effect id the generator gives it, and the setting it is read through.
+        /// </summary>
+        /// <remarks>
+        /// Every flag row is one switch, LedEffectFlags, because a driver turns "flags on this strip"
+        /// off and not the debris flag alone. PushToPass is spelled out because a name here may carry
+        /// neither a 1 nor a 2, which is the rule that keeps a strip's own names apart from the mirror's
+        /// numbered runs. Mirrors setting.ledEffectOn() in contract.ts, and contract.test.ts reads this
+        /// literal pair by pair, so it stays an array literal assigned here. #370, #791.
+        ///
+        /// The lookups below walk it with a for over Count and the indexer: a bar's effect getters ask
+        /// them on every LED frame, and a foreach over the interface would allocate an enumerator each
+        /// time where the indexer allocates nothing.
+        /// </remarks>
+        public static readonly IReadOnlyList<KeyValuePair<string, string>> LedEffects = new[]
+        {
+            new KeyValuePair<string, string>("tc", "LedEffectTc"),
+            new KeyValuePair<string, string>("abs", "LedEffectAbs"),
+            new KeyValuePair<string, string>("drs", "LedEffectDrs"),
+            new KeyValuePair<string, string>("p2p", "LedEffectPushToPass"),
+            new KeyValuePair<string, string>("lowFuel", "LedEffectLowFuel"),
+            new KeyValuePair<string, string>("temperature", "LedEffectTemperature"),
+            new KeyValuePair<string, string>("oilPressure", "LedEffectOilPressure"),
+            new KeyValuePair<string, string>("flag.black", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.caution", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.yellow", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.debris", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.blue", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.white", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.green", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.chequered", "LedEffectFlags"),
+            new KeyValuePair<string, string>("spotter.left", "LedEffectSpotterLeft"),
+            new KeyValuePair<string, string>("spotter.right", "LedEffectSpotterRight"),
+            new KeyValuePair<string, string>("pit.lane", "LedEffectPitLane"),
+            new KeyValuePair<string, string>("pit.limiter", "LedEffectPitLimiter"),
+            new KeyValuePair<string, string>("pit.speeding", "LedEffectPitSpeeding"),
+            new KeyValuePair<string, string>("turn.left", "LedEffectTurnLeft"),
+            new KeyValuePair<string, string>("turn.right", "LedEffectTurnRight"),
+        };
+
+        /// <summary>The setting every flag row is switched by.</summary>
+        public const string LedEffectFlags = "LedEffectFlags";
+
+        /// <summary>The prefix every flag row's effect id carries: `flag.yellow`.</summary>
+        public const string LedEffectFlagPrefix = "flag.";
+
+        /// <summary>Every effect id a switch answers for, in <see cref="LedEffects"/> order.</summary>
+        public static IEnumerable<string> LedEffectIds()
+        {
+            foreach (var effect in LedEffects) yield return effect.Key;
+        }
+
+        /// <summary>The fifteen settings, once each, in the order they are declared.</summary>
+        public static IEnumerable<string> LedEffectSettings()
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var effect in LedEffects)
+            {
+                if (seen.Add(effect.Value)) yield return effect.Value;
+            }
+        }
+
+        /// <summary>The setting an effect is read through. Any `flag.` id is the flags' switch, so a
+        /// flag row added to the generator is switched with the others; anything else unknown throws.</summary>
+        public static string LedEffectSetting(string effectId)
+        {
+            var setting = LedEffectSettingOrNull(effectId);
+            if (setting == null) throw new ArgumentOutOfRangeException("effectId", effectId, "no strip effect has that id");
+            return setting;
+        }
+
+        /// <summary>Whether an id is one <see cref="LedEffectSetting"/> answers.</summary>
+        public static bool IsLedEffect(string effectId)
+        {
+            return LedEffectSettingOrNull(effectId) != null;
+        }
+
+        private static string LedEffectSettingOrNull(string effectId)
+        {
+            if (effectId == null) return null;
+            for (var i = 0; i < LedEffects.Count; i++)
+            {
+                var effect = LedEffects[i];
+                if (string.Equals(effect.Key, effectId, StringComparison.Ordinal)) return effect.Value;
+            }
+            if (effectId.StartsWith(LedEffectFlagPrefix, StringComparison.Ordinal) && effectId.Length > LedEffectFlagPrefix.Length)
+            {
+                return LedEffectFlags;
+            }
+            return null;
+        }
+
+        /// <summary>The first effect id a setting answers for, which is the one a switch is stored and
+        /// read under: `flag.black` for the flags.</summary>
+        public static string LedEffectPrimaryId(string setting)
+        {
+            for (var i = 0; i < LedEffects.Count; i++)
+            {
+                var effect = LedEffects[i];
+                if (string.Equals(effect.Value, setting, StringComparison.Ordinal)) return effect.Key;
+            }
+            throw new ArgumentOutOfRangeException("setting", setting, "no strip effect is read through that setting");
+        }
+
+        /// <summary>On: a strip draws everything it can until somebody turns a thing off.</summary>
+        public const bool DefaultLedEffect = true;
 
         /// <summary>
         /// The run lengths a mirrored bar is published for: every centre length a strip shape uses.
@@ -992,6 +1153,9 @@ namespace OpenDashPlugin
             yield return ClockFormat;
             // And the delta's precision, appended for the same reason and chosen on the Data tab. #322.
             yield return DeltaPrecision;
+            // And whether a flag shows in the pit lane, appended for the same reason and shared because
+            // a driver asking for quiet on the way down the lane asks it of every surface. #791.
+            yield return FlagsInPitLane;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -1170,6 +1334,54 @@ namespace OpenDashPlugin
             return CycleZoneAction(FacePrefix(face), letter);
         }
 
+        /// <summary>
+        /// Action that moves one zone of one face back a page: Face1920x480CycleZoneABack.
+        /// </summary>
+        /// <remarks>
+        /// The partner of <see cref="CycleZoneAction(string, string)"/>, for a driver who went one page
+        /// past the one they wanted. Suffixed rather than a verb of its own, so that the two sort side
+        /// by side in SimHub's Controls and events. #791.
+        /// </remarks>
+        public static string CycleZoneBackAction(string ns, string letter)
+        {
+            RequireFaceZone(letter);
+            return ns + "CycleZone" + letter + "Back";
+        }
+
+        public static string CycleZoneBackAction(FaceSize face, string letter)
+        {
+            return CycleZoneBackAction(FacePrefix(face), letter);
+        }
+
+        /// <summary>
+        /// The rig's own actions, which move no screen: night mode, and the brightness up and down a
+        /// step. Registered once for the rig, after every screen's.
+        /// </summary>
+        /// <remarks>
+        /// The two controls a driver reaches for between sessions, as buttons, so that a rig in a dark
+        /// room can be dimmed without a mouse. The brightness steps move whichever brightness is in
+        /// force: the night one while night mode is on, the day one otherwise. #791.
+        /// </remarks>
+        public const string ToggleNightModeAction = "ToggleNightMode";
+
+        public const string BrightnessUpAction = "BrightnessUp";
+
+        public const string BrightnessDownAction = "BrightnessDown";
+
+        public static IEnumerable<string> RigActionNames()
+        {
+            yield return ToggleNightModeAction;
+            yield return BrightnessUpAction;
+            yield return BrightnessDownAction;
+        }
+
+        /// <summary>How far one press of a brightness button moves it, in percent.</summary>
+        public const int BrightnessStep = 10;
+
+        /// <summary>The dimmest a button takes the lights. Not zero: a rig dimmed to nothing by a button
+        /// looks broken, and the panel is where somebody who wants them off turns them off.</summary>
+        public const int BrightnessStepFloor = 10;
+
         /// <summary>Action that holds the glance on one face: Face1920x480HoldQuickGlance.</summary>
         public static string HoldQuickGlanceActionFor(string ns)
         {
@@ -1197,11 +1409,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The actions of every stock face size, five apiece: the catalogue's names, not what the
+        /// The actions of every stock face size, nine apiece: the catalogue's names, not what the
         /// plugin registers.
         /// </summary>
         /// <remarks>
-        /// Per face and not five in total, because two faces on one rig have to cycle apart, which is
+        /// Per face and not nine in total, because two faces on one rig have to cycle apart, which is
         /// the same reason their properties are prefixed.
         ///
         /// This used to be the registration itself, every face whether the rig had it or not, on the
@@ -1216,8 +1428,7 @@ namespace OpenDashPlugin
         {
             foreach (var face in FaceSizes)
             {
-                foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(face, letter);
-                yield return HoldQuickGlanceActionFor(face);
+                foreach (var name in FaceActionNames(FacePrefix(face))) yield return name;
             }
         }
 
@@ -1281,6 +1492,27 @@ namespace OpenDashPlugin
             return BarFieldProperty(FacePrefix(face), slot);
         }
 
+        /// <summary>
+        /// Property name of where a zone's page sits in its cycle, counting from one:
+        /// Face1920x480ZoneAPosition.
+        /// </summary>
+        /// <remarks>
+        /// Published because the order a zone cycles in is the driver's now, and the header's "2 / 5"
+        /// cannot be derived from a mask once the order is not the catalogue's. Without the plugin the
+        /// package falls back to the mask arithmetic it has always done, which is right for the
+        /// catalogue order a zone has with no plugin. #791.
+        /// </remarks>
+        public static string ZonePositionProperty(string ns, string letter)
+        {
+            RequireFaceZone(letter);
+            return ns + "Zone" + letter + "Position";
+        }
+
+        public static string ZonePositionProperty(FaceSize face, string letter)
+        {
+            return ZonePositionProperty(FacePrefix(face), letter);
+        }
+
         /// <summary>Every property one face owns, in attachment order.</summary>
         public static IEnumerable<string> FacePropertyNames(string ns)
         {
@@ -1295,6 +1527,9 @@ namespace OpenDashPlugin
             yield return FlagFormatProperty(ns);
             yield return LapReviewProperty(ns);
             yield return RevBarProperty(ns);
+            // And where each zone's page sits in its own order, which the header counts: the order is
+            // the plugin's to hold, and an expression cannot sort. Appended for the reason above. #791.
+            foreach (var letter in FaceZoneLetters) yield return ZonePositionProperty(ns, letter);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
@@ -1302,11 +1537,14 @@ namespace OpenDashPlugin
             return FacePropertyNames(FacePrefix(face));
         }
 
-        /// <summary>Every action one face's screen owns, in registration order: one per zone and the glance.</summary>
+        /// <summary>Every action one face's screen owns, in registration order: one per zone and the
+        /// glance, then one per zone backwards. The five that shipped keep their places, so the back
+        /// buttons join the end. #791.</summary>
         public static IEnumerable<string> FaceActionNames(string ns)
         {
             foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(ns, letter);
             yield return HoldQuickGlanceActionFor(ns);
+            foreach (var letter in FaceZoneLetters) yield return CycleZoneBackAction(ns, letter);
         }
 
         private static void RequireFaceZone(string letter)
@@ -1774,10 +2012,12 @@ namespace OpenDashPlugin
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
         /// have: OpenDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
-        /// and sixty-one names is not the hundred and thirty-six that made the screens worth
-        /// narrowing. (Thirteen, this said before the matrices had a group each, thirty-four before
-        /// the four settings a box owns moved under it, and forty-nine before the mirror brought its
-        /// fit, its gate and a run per length; it is counted here rather than guessed at.)</summary>
+        /// and a hundred and nine names is still fewer than the screens' two hundred and
+        /// sixty-four that made those worth narrowing. (Thirteen, this said before the matrices had a
+        /// group each, thirty-four before the four settings a box owns moved under it, forty-nine
+        /// before the mirror brought its fit, its gate and a run per length, and sixty-one -- counted,
+        /// it had become ninety-three -- before a strip had a brightness of its own and a switch
+        /// per effect; it is counted here rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
         {
             yield return LightsBrightness;
@@ -1820,6 +2060,10 @@ namespace OpenDashPlugin
             yield return LedMirrorReady;
             foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
             yield return LedSpotterWhole;
+            // And a strip's own brightness and one switch per thing it can draw, appended for the reason
+            // LedSpotterWhole was: both halves of the contract pin this list in order. #370, #791.
+            yield return LedBrightness;
+            foreach (var setting in LedEffectSettings()) yield return setting;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
@@ -1899,6 +2143,118 @@ namespace OpenDashPlugin
                 if ((mask & (1 << candidate)) != 0) return candidate;
             }
             return from;
+        }
+
+        /// <summary>
+        /// The last enabled page before the given one in the catalogue's own order, wrapping: <see
+        /// cref="LastEnabledBefore(int, int, int[])"/> for a zone nobody has reordered, as <see
+        /// cref="FirstEnabledFrom"/> is <see cref="FirstEnabledInOrder"/> for one.
+        /// </summary>
+        public static int LastEnabledBefore(int page, int mask, int count)
+        {
+            return LastEnabledBefore(page, mask, NormaliseOrder(null, count));
+        }
+
+        /// <summary>
+        /// An order a zone cycles in, repaired: the values in range and seen for the first time, in the
+        /// order given, then every page it left out, ascending. Null is the catalogue's own order.
+        /// </summary>
+        /// <remarks>
+        /// Missing pages are appended rather than the order refused, so a catalogue that grows a page
+        /// puts it at the end of every stored order instead of resetting the driver's. #791.
+        /// </remarks>
+        public static int[] NormaliseOrder(int[] order, int count)
+        {
+            if (count <= 0) return new int[0];
+            var result = new List<int>(count);
+            var seen = new bool[count];
+            if (order != null)
+            {
+                foreach (var page in order)
+                {
+                    if (page < 0 || page >= count || seen[page]) continue;
+                    seen[page] = true;
+                    result.Add(page);
+                }
+            }
+            for (var page = 0; page < count; page++)
+            {
+                if (!seen[page]) result.Add(page);
+            }
+            return result.ToArray();
+        }
+
+        /// <summary>The catalogue's own order for every face zone, in letter order.</summary>
+        public static int[][] DefaultFaceZoneOrders()
+        {
+            var orders = new int[FaceZoneLetters.Length][];
+            for (var i = 0; i < orders.Length; i++) orders[i] = NormaliseOrder(null, FaceZonePageCounts[i]);
+            return orders;
+        }
+
+        /// <summary>
+        /// The first enabled page at or after the given one in a zone's own order, wrapping once: <see
+        /// cref="FirstEnabledFrom"/> for a zone whose order is not the catalogue's. A page the order
+        /// does not hold starts from its head, and a mask enabling nothing the order holds returns the
+        /// page unchanged.
+        /// </summary>
+        public static int FirstEnabledInOrder(int page, int mask, int[] order)
+        {
+            if (!AnyEnabled(mask, order)) return page;
+            var from = Array.IndexOf(order, page);
+            if (from < 0) from = 0;
+            for (var step = 0; step < order.Length; step++)
+            {
+                var candidate = order[(from + step) % order.Length];
+                if (Enabled(mask, candidate)) return candidate;
+            }
+            return page;
+        }
+
+        /// <summary>The next enabled page after the given one in a zone's order, wrapping: what a press
+        /// of the zone's button shows. A zone with one page enabled stays on it.</summary>
+        public static int FirstEnabledAfter(int page, int mask, int[] order)
+        {
+            if (!AnyEnabled(mask, order)) return page;
+            // A page the order does not hold is read as sitting just before its head.
+            var at = Array.IndexOf(order, page);
+            for (var step = 1; step <= order.Length; step++)
+            {
+                var candidate = order[(at + step) % order.Length];
+                if (Enabled(mask, candidate)) return candidate;
+            }
+            return page;
+        }
+
+        /// <summary>The last enabled page before the given one in a zone's order, wrapping: what a press
+        /// of the zone's back button shows. A zone with one page enabled stays on it.</summary>
+        public static int LastEnabledBefore(int page, int mask, int[] order)
+        {
+            if (!AnyEnabled(mask, order)) return page;
+            // A page the order does not hold is read as sitting just after its tail.
+            var at = Array.IndexOf(order, page);
+            if (at < 0) at = order.Length;
+            for (var step = 1; step <= order.Length; step++)
+            {
+                var candidate = order[(at - step + order.Length) % order.Length];
+                if (Enabled(mask, candidate)) return candidate;
+            }
+            return page;
+        }
+
+        private static bool Enabled(int mask, int page)
+        {
+            return page >= 0 && page < 31 && (mask & (1 << page)) != 0;
+        }
+
+        private static bool AnyEnabled(int mask, int[] order)
+        {
+            if (order == null) return false;
+            foreach (var page in order)
+            {
+                if (Enabled(mask, page)) return true;
+            }
+            return false;
         }
 
         /// <summary>The zone a quick glance shows, as an index into FaceZoneLetters.</summary>

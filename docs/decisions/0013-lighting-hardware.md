@@ -263,3 +263,21 @@ A device's LEDs are also not the only ones out of reach: a bitmap display device
 `LedsDriver` of its own (`BitmapDisplaySettings.LedsDriver`), and `BitmapDisplayDevice<T>` is
 generic with no non-generic interface exposing its settings, so those are reached by naming every
 concrete settings type or not at all. None is offered today.
+
+## Amended, 2026-10-02: the press moved to the device's own page (#791)
+
+**What moved.** The Lights tab and the Install tab are gone
+([#791](https://github.com/xorob0/OpenDash/issues/791)). The flag box profile's press is in the Matrix
+page's header, and a strip's is in its header on the LEDs page. Both read "Install" or "Update". The
+rows that say what is installed are on the Updates page, in the In SimHub table
+([plugin.md](../design/plugin.md#updates)). Where this record says **Install into SimHub** on the
+Lights page and **Update in SimHub**, read those two presses.
+
+**What did not move.** The consent half stands as written. Nothing installs at startup, nothing
+selects a profile on a device, and every Update press carries one hover on every page,
+`FlagBoxInstallPlan.Replaces`: "Replaces the copy in SimHub, including your changes to it."
+
+**What the move adds.** Home now says when a strip's profile is installed and not selected, with the
+steps in SimHub's own menus, and a Check again press that asks SimHub and never installs. Whether a
+matrix device shows a given content is not on SimHub's public surface, so the matching issue for a
+matrix is built and drawn on no rig until [#521](https://github.com/xorob0/OpenDash/issues/521).

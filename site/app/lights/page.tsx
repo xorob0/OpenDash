@@ -2,13 +2,11 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Attribution } from '../../components/Attribution';
-import { Capture } from '../../components/Capture';
 import { LedStrip } from '../../components/LedStrip';
 import { FRAMES } from '../../lib/stripFrames';
 import { Priority } from '../../components/Priority';
 import { Section } from '../../components/Section';
 import { StripGrid } from '../../components/StripGrid';
-import { CAPTURES, panelFile } from '../../lib/captures';
 import { STRIP_SHAPES } from '../../lib/content.generated';
 import { INSTALL } from '../../lib/site';
 import styles from './page.module.css';
@@ -22,8 +20,6 @@ export const metadata: Metadata = {
 const EXAMPLES = [FRAMES.shift!, FRAMES.blue!, FRAMES.yellow!, FRAMES.spotter!, FRAMES.fuel!, FRAMES.abs!, FRAMES.limiter!];
 
 export default function Lights() {
-  const panel = CAPTURES.files[panelFile('lights')];
-
   return (
     <>
       <Section
@@ -42,7 +38,7 @@ export default function Lights() {
             <h2 className="h3">Lit like the real car</h2>
             <p className="prose">
               A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Car Data, an open table of measured cars. One
-              click on the Lights tab fetches it, and nothing about you or your car leaves your machine.
+              click on the LEDs page fetches it, and nothing about you or your car leaves your machine.
             </p>
             <Attribution className={`prose ${styles.credit}`} />
           </div>
@@ -50,7 +46,7 @@ export default function Lights() {
             <h2 className="h3">Every strip, every wheel</h2>
             <p className="prose">
               Pick your strip by counting its LEDs: sides and centre. {STRIP_SHAPES.length} shapes are included, from a 3/9/3 rim to a 25-LED brow, and any
-              device SimHub drives can have one. A car without a table still gets the shift points iRacing publishes for it.
+              device SimHub drives can have one. Every shape on the grid can be wired from either end. A car without a table still gets the shift points iRacing publishes for it.
             </p>
           </div>
         </div>
@@ -99,7 +95,7 @@ export default function Lights() {
             </div>
             <div className={styles.point}>
               <h3 className="h3">Never installed for you</h3>
-              <p className="prose">OpenDash never installs a profile by itself. Press Install on the Lights tab.</p>
+              <p className="prose">OpenDash never installs a profile by itself. Press Install at the top of the Matrix page.</p>
             </div>
             <div className={styles.point}>
               <h3 className="h3">Checked, not yet driven</h3>
@@ -110,11 +106,10 @@ export default function Lights() {
       </Section>
 
       <Section
-        id="tab"
-        title="The Lights tab"
-        lede="The flag box and up to four matrix panels, a low fuel warning in laps, a strip per device with its centre display and rev style, the car tables, and brightness and night mode for every light."
+        id="plugin"
+        title="In the plugin"
+        lede="The LEDs page holds your strips, each with its rev lights, the car’s own rev lights and its centre display, and Car Data under Every strip. The Matrix page installs the flag box profile and holds its priority and up to four matrices. The Settings page holds the low fuel warning in laps, and brightness and night mode for every light."
       >
-        <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub" width={panel?.width ?? 1200} height={panel?.height ?? 1790} caption="The Lights tab" />
         <p className={`prose ${styles.more}`}>
           <Link href={INSTALL.href} className="link">
             How to install the plugin

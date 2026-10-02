@@ -1,706 +1,1007 @@
-// SettingsControl.Rig.cs: the Rig tab -- the row of screen cards, and the pane of whichever one is
-// selected.
+// SettingsControl.Rig.cs: the Rig page -- every screen, strip and matrix as a tile on a dotted ground the
+// driver drags into the shape of the rig, and a row of chips that paints a flag, a car alongside, the pit
+// lane, a warning or the revs on every tile at once.
 //
-// A screen is the unit (ADR 0017). A face is configured on a picture of itself, because "zone C" means
-// nothing until you see where zone C is; a pit wall gets a picture of its three pages for the same
-// reason; a companion gets its rotation. The wheel buttons are on the screen they cycle, which is what
-// lets a second face sit still while the one in front of the driver cycles.
+// "Zone C" and "matrix 2" mean nothing until you see where they are, and the only way to check a flag used to
+// be to own the hardware and wait for one (#791). Rig.dc.html is the artboard. Every size, word and rule is
+// PanelRigMap's, where PanelRigMapTests holds it; this file only draws. A drop keeps every tile where it is
+// drawn (ScreenInstance's, LedBar's or the matrix slot's LayoutX and LayoutY), so the rig is one arrangement;
+// before the first, PanelRigMap.DefaultLayout places them. A chip repaints the tiles' pictures in place and
+// rebuilds nothing.
+// Nothing here lights the real hardware: that is #506, greyed in the header.
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        /// <summary>The namespace of the screen whose pane is showing. Null means the first one.</summary>
-        private string selected;
-
-        private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
-        private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
-        private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
-        private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
-        private TextBlock faceWarningText;
-        private FrameworkElement faceWarningRow;
-
-        /// <summary>The screen the pane belongs to, or null when the rig is empty.</summary>
-        private ScreenInstance Selected
+        /// <summary>
+        /// The scenario the tiles are painted with: the Rig page's selection, which is a PanelEmulation
+        /// scenario id, so another page opens Rig on one with Open(PanelPage.Rig, id) -- Settings' "Try".
+        /// </summary>
+        private string rigScenario
         {
             get
             {
-                var rig = Settings.RigScreens();
-                if (rig.Count == 0) return null;
-                var chosen = Settings.ScreenByNamespace(selected);
-                return chosen ?? rig[0];
+                var id = Selected(PanelPage.Rig);
+                return id != null && PanelEmulation.Find(id) != null ? id : PanelEmulation.Default;
             }
         }
 
-        /// <summary>The size an icon is drawn at when it stands beside a line of prose rather than inside a
-        /// control, which is the second of the two sizes control.icon describes.</summary>
-        // TODO: read this from Theme once design/tokens.json carries the standing-alone size as a token of
-        // its own; control.icon mirrors the 16 and says the 20 in its description only.
-        private const double IconAlone = 20;
-
-        private FrameworkElement BuildRigTab()
-        {
-            var rig = Settings.RigScreens();
-            var rows = new List<UIElement> { BuildCardRow(rig) };
-            if (rig.Count == 0)
-            {
-                rows.Add(BuildEmptyRig());
-                return Ui.VStack(0, Ui.Section("Your rig", rows.ToArray()));
-            }
-            if (PanelRig.ShowsUnclaimedNote(rig)) rows.Add(BuildUnclaimedNote());
-
-            var screen = Selected;
-            rows.Add(BuildScreenHeader(screen));
-            // The screen itself, between the name of the thing and the controls that change it. Null
-            // when its package is not installed, which the pane below says in its own words.
-            var preview = BuildScreenPreview(screen);
-            if (preview != null) rows.Add(preview);
-            // The pane takes a section of its own rather than a place inside "Your rig". Ui.Section nests
-            // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
-            // section of its own in the wheel buttons, and a heading that sits one level deeper than the
-            // heading beneath it reads as a mistake.
-            // A pit wall brings its own two headings, "Layout" over the picture and "Zones" over the
-            // rows, because one wrapper here could only ever carry one of them and the canvas draws
-            // both. Every other kind takes a single heading from here.
-            var pane = BuildScreenPane(screen);
-            return Ui.VStack(0,
-                Ui.Section("Your rig", rows.ToArray()),
-                screen.IsPitWall ? pane : Ui.Section(PaneTitle(screen), pane));
-        }
-
-        /// <summary>
-        /// The heading over the selected screen's pane, which names what the pane is a list of.
-        /// </summary>
+        /// <summary>The z-order the last tile picked up was raised to, so the tile in the hand is on top.</summary>
         /// <remarks>
-        /// A pit wall is not here: it carries its own two headings, so this is never asked for one. Slots
-        /// is the kind the canvas never drew, and it leaves with #146, so it borrows the shape of the
-        /// face's heading rather than being given a design of its own.
+        /// Only while it is in the pointer's hand: Panel.ZIndex reorders the canvas's visual children as well as its
+        /// drawing, and keyboard navigation and the shell's FocusPath walk the visual children. A tile left
+        /// raised moved to the end of the Tab order, and after a rebuild focus was restored by its raised
+        /// index to another tile, which the next arrow key moved and saved. RigLower puts it back.
         /// </remarks>
-        private static string PaneTitle(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return "Modules";
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "Slots";
-            return "Zones";
-        }
+        private int rigTopZ;
 
-        /// <summary>The cards, wrapped, and the add card after them.</summary>
-        private FrameworkElement BuildCardRow(IReadOnlyList<ScreenInstance> rig)
-        {
-            var wrap = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Left };
-            var current = Selected;
-            foreach (var screen in rig)
-            {
-                var captured = screen;
-                var missing = !Installed(captured);
-                var card = Ui.Card(
-                    captured.Name,
-                    // A screen whose package is gone has no size to show, and "0 × 0" is worse than
-                    // the folder it lives in.
-                    captured.Width > 0 ? captured.SizeLabel : (captured.Folder ?? string.Empty),
-                    // The kind itself rather than a word for it: the card draws the icon the canvas gives
-                    // it, and writes the word only for the kind that has none.
-                    captured.Kind,
-                    current != null && ReferenceEquals(current, captured),
-                    missing ? Theme.StatusFailed : null,
-                    () =>
-                    {
-                        selected = captured.Namespace;
-                        Redraw();
-                    });
-                // The card holds a minimum width rather than a fixed one, so a long name widens it rather
-                // than being cut short. Rename accepts a name of any length, though, and a card wider than
-                // the row it wraps inside is arranged past the panel's edge instead of wrapping; the row is
-                // therefore the ceiling, and a name that reaches it ellipsises, which is what the card's
-                // trimming is there for.
-                card.MaxWidth = BodyWidth;
-                wrap.Children.Add(card);
-            }
-            wrap.Children.Add(Ui.AddCard(ShowAddScreen));
-            return wrap;
-        }
-
-        /// <summary>The kind as a word, for the fact line under the screen's name. The card draws an icon
-        /// instead, so this is the one place the kind is still spelled out.</summary>
-        private static string KindLabel(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return "Companion";
-            if (screen.IsPitWall) return "Pit wall";
-            return string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : "Face";
-        }
-
-        private bool Installed(ScreenInstance screen)
-        {
-            try
-            {
-                return screen.Folder != null && PackageExtractor.IsInstalled(plugin.Installer.SimHubRoot, screen.Folder);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not tell whether " + screen.Folder + " is installed: " + ex.Message);
-                return true;
-            }
-        }
-
-        /// <summary>
-        /// The first run, which is the empty state of the thing itself rather than a wizard in front of it.
-        /// </summary>
+        /// <summary>The tile in the pointer's hand, by its id, from the press to the drop.</summary>
         /// <remarks>
-        /// #85's design, and the reason it is one fewer surface to build: nothing has to be dismissed,
-        /// because the empty state stops appearing exactly when it stops being true.
+        /// Outside the build, since a rebuild can land mid-drag: a wheel's lighting press rebuilds the page
+        /// 120 ms later on a Background timer, which fires between two moves of the pointer. The shell takes
+        /// the focus's place before the build is let go of, while the tile in the hand is still raised and so
+        /// last among the canvas's children, and restores it to whichever tile the new build draws last. The
+        /// next build gives the focus back to the tile that was in the hand, after the shell's restore.
         /// </remarks>
-        private FrameworkElement BuildEmptyRig()
+        private string rigHeld;
+
+        /// <summary>One tile as drawn: its place on the canvas, and how to paint its picture again.</summary>
+        private sealed class RigTileView
         {
-            var pill = Ui.StatusPill(Theme.TextDim, "No screens yet", Theme.TextLabel);
-            // The pill states the rig is empty, so the sentence under it no longer says so as well: it
-            // is the explanation of what adding a screen does, not a second announcement.
-            var text = Ui.Caption(PanelCopy.EmptyRig);
-            var stack = Ui.VStack(4, pill, text);
-            stack.Margin = new Thickness(0, 4, 0, 0);
+            public RigTileView(RigTile tile, FrameworkElement element, Action<string> paint)
+            {
+                Tile = tile;
+                Element = element;
+                Paint = paint;
+            }
+
+            public RigTile Tile { get; private set; }
+            public FrameworkElement Element { get; private set; }
+
+            /// <summary>Repaints the tile's picture under a scenario, in place.</summary>
+            public Action<string> Paint { get; private set; }
+        }
+
+        /// <summary>The room the tiles are laid out in, in their own pixels (RigPlan's Width and Height), which
+        /// a drag and a drop are held to, so the place a tile is dropped at is the place the next build draws
+        /// it at.</summary>
+        private sealed class RigExtent
+        {
+            public double Width { get; set; }
+            public double Height { get; set; }
+
+            /// <summary>Whether this build is still the page's. A rebuild removes the tile that has the focus
+            /// or the pointer's capture, and WPF raises LostKeyboardFocus or a cancelled DragCompleted on it
+            /// afterwards: a save from there wrote the discarded build's places over the new build's.</summary>
+            public bool Live { get; set; }
+
+            /// <summary>The tile an arrow key has moved and nothing has saved yet: the key is still held, and
+            /// the save waits for it to come up. The build saves it when it is let go of, so a rebuild in
+            /// between plans from the move rather than drawing the tile back where it was.</summary>
+            public RigTile Pending { get; set; }
+
+            /// <summary>The scale the room is drawn at, which a tile's focus ring is measured against.</summary>
+            public double Scale { get; set; }
+        }
+
+        private FrameworkElement BuildRigPage(PanelRoute to)
+        {
+            // The header draws the night switch, so a wheel's night-mode press rebuilds the page and the switch
+            // and the lights' dim follow it.
+            DrawsLighting();
+            var views = new List<RigTileView>();
+            var canvas = Ui.Anchor(BuildRigCanvas(views), PanelRigMap.AnchorCanvas);
+            var chips = Ui.Anchor(BuildRigScenarios(views), PanelRigMap.AnchorScenarios);
+
+            var gap = PanelShell.SectionGapFor(PanelPage.Rig);
+            canvas.Margin = new Thickness(0, gap, 0, 0);
+            chips.Margin = new Thickness(0, gap, 0, 0);
+            var stack = new StackPanel { Orientation = Orientation.Vertical };
+            stack.Children.Add(BuildRigHeader());
+            stack.Children.Add(canvas);
+            stack.Children.Add(chips);
             return stack;
         }
 
-        /// <summary>
-        /// The line an upgrading user meets, and only them.
-        /// </summary>
-        /// <remarks>
-        /// Older versions installed every package the plugin embeds, so a rig migrated from one of them
-        /// holds a dozen cards for screens nobody owns. Nothing is deleted on their behalf (ADR 0017),
-        /// so the panel says what to do instead, and the line goes when it stops being true rather than
-        /// when somebody dismisses it. PanelRig decides when that is.
-        /// </remarks>
-        private FrameworkElement BuildUnclaimedNote()
+        /// <summary>The title and its New tag, and on its right the night switch, the greyed Real hardware
+        /// switch and Reset layout; under the title when there is not the room for both on one line.</summary>
+        private FrameworkElement BuildRigHeader()
         {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(PanelRig.UnclaimedNote);
-            var row = Ui.HStack(10, icon, text);
-            row.Margin = new Thickness(0, 4, 0, 4);
-            return row;
+            var title = PageTitleRow(PanelRigMap.Title, Ui.NewTag());
+
+            var night = Ui.Switch(Settings.LightsNightMode, on =>
+            {
+                Settings.LightsNightMode = on;
+                Save();
+                ShowLightingChange();
+            });
+            AutomationProperties.SetName(night, PanelSettings.NightModeTitle);
+            var nightGroup = Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(PanelSettings.NightModeTitle), night);
+
+            var real = PanelSoon.RealHardware;
+            // Ui.Soon names its wrapper, a group a screen reader announces, so the switch inside needs no name.
+            var realSwitch = Ui.Switch(false, null);
+            var hardware = Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real);
+
+            var reset = Ui.Button(PanelRigMap.ResetLayout, PanelButtonKind.Outline, PanelButtonSize.Small);
+            reset.Height = PanelRigMap.ResetButtonHeight;
+            reset.Padding = new Thickness(PanelRigMap.ResetButtonPaddingX, 0, PanelRigMap.ResetButtonPaddingX, 0);
+            reset.Click += (sender, args) => RigResetLayout();
+
+            var controls = new FrameworkElement[] { nightGroup, hardware, reset };
+            if (TwoColumns)
+            {
+                var right = Ui.HStack(PanelRigMap.HeaderGap, controls);
+                right.VerticalAlignment = VerticalAlignment.Center;
+                return Ui.Row(title, right);
+            }
+
+            // Stacked: the controls wrap under the title, so a narrow column never pushes one off the page.
+            // Each control carries its gap on its right and under it; the panel takes back the last line's and
+            // the last control's, so the canvas stands its section gap under the controls and a control wraps
+            // only when it does not fit.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, PanelRigMap.HeaderStackGap, -PanelRigMap.HeaderGap, -PanelRigMap.HeaderLabelGap) };
+            foreach (var control in controls)
+            {
+                control.Margin = new Thickness(0, 0, PanelRigMap.HeaderGap, PanelRigMap.HeaderLabelGap);
+                control.VerticalAlignment = VerticalAlignment.Center;
+                wrap.Children.Add(control);
+            }
+            return Ui.VStack(0, title, wrap);
         }
 
-        /// <summary>The name, the facts under it, and the two buttons that act on the screen itself.</summary>
-        private FrameworkElement BuildScreenHeader(ScreenInstance screen)
+        private static TextBlock RigHeaderLabel(string text)
         {
-            var title = Ui.Text(screen.Name, Theme.SizeTitle, FontWeights.SemiBold, Theme.TextPrimary);
-            var facts = Ui.Label(ScreenFacts(screen));
-            // The folder and the namespace, quieter than the two facts above them because the canvas draws
-            // neither. The namespace is here because ADR 0017 freezes it at creation and a rename does not
-            // move it, so a screen called "Rim" whose properties say MainDash has to be able to say so
-            // rather than leave it to be discovered.
-            var origin = Ui.Caption((screen.Folder ?? "not installed") + " · properties OpenDash." + screen.Namespace + "*");
-            var text = Ui.VStack(4, title, facts, origin);
-            text.HorizontalAlignment = HorizontalAlignment.Left;
+            var label = Ui.Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            label.VerticalAlignment = VerticalAlignment.Center;
+            return label;
+        }
 
-            // One link and not three. Renaming, resizing and writing the dashboard again are the same
-            // errand -- a screen that is not the one the driver meant -- and splitting them left the
-            // third with nowhere to live at all, so a rig whose dashboards had been overwritten had no
-            // press that put them back.
-            var edit = Ui.LinkButton("Edit");
-            edit.ToolTip = "Change this screen's name or size, or install its dashboard again.";
-            edit.Click += (sender, args) => ShowEdit(screen);
-            // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
-            // action from being an accident is the confirmation behind it rather than its own weight.
-            var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
-            remove.ToolTip = "Removes this screen, its settings and its dashboard.";
-            remove.Click += (sender, args) => ShowRemove(screen);
+        /// <summary>Forgets where every tile was put, and draws the canvas in its default layout again.</summary>
+        private void RigResetLayout()
+        {
+            PanelRigMap.ClearLayout(Settings);
+            Save();
+            Redraw();
+        }
 
-            var actions = Ui.HStack(12, edit, remove);
-            var rows = new List<UIElement> { Ui.Row(text, actions) };
-            if (!Installed(screen)) rows.Add(BuildMissingFolder(screen));
-            var stack = Ui.VStack(10, rows.ToArray());
-            stack.Margin = new Thickness(0, 8, 0, PanelMetrics.SectionGap);
-            // The rule closes the header rather than opening the pane: the pane's own section draws its
-            // own, and the two say different things about what they separate.
+        /// <summary>The dotted ground and every tile on it, where the driver put it or where PanelRigMap puts a
+        /// tile nobody has moved. Fills <paramref name="views"/> with what the chips repaint.</summary>
+        private FrameworkElement BuildRigCanvas(IList<RigTileView> views)
+        {
+            // Planned once, at the width the shell gives the page, which leaves room for a scroll bar whether
+            // or not one is showing: a canvas planned again at the width it has with the bar gone switched
+            // layouts and heights as the bar came and went, and its height brought the bar back.
+            var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);
+            var plan = PanelRigMap.Plan(Settings, width);
+            var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };
+            // The room on the dotted ground: the tiles' room as drawn, which a shrunk arrangement leaves
+            // shorter than the frame, so the band under it takes no drop and has no dots.
+            var dots = RigDots(plan.Scale);
+            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true };
+            // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
+            // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
+            var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };
+            var tiles = plan.Tiles;
+
+            TextBlock hint = null;
+            if (tiles.Count == 0)
+            {
+                // The way out Home's empty-rig tile offers, in its words: the Screens page's add tile, which opens
+                // the Add sheet on arrival (#792), rather than the page with the tile still to find.
+                var screensPress = Ui.Button(PanelAddScreen.SectionTitle, PanelButtonKind.Outline, PanelButtonSize.Small);
+                screensPress.Click += (sender, args) => Go(PanelPage.Screens, PanelScreens.AnchorAdd);
+                var empty = Ui.HStack(PanelRigMap.EmptyGap, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
+                Canvas.SetLeft(empty, PanelRigMap.LayoutMargin);
+                Canvas.SetTop(empty, PanelRigMap.LayoutMargin);
+                canvas.Children.Add(empty);
+            }
+            else
+            {
+                // In the frame's lower left, as the artboard puts it, rather than the room's, which a shrunk
+                // arrangement draws shorter than the frame and which scrolls across; and under the tiles, so a
+                // tile dragged into the corner covers it rather than the other way round.
+                hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
+                hint.HorizontalAlignment = HorizontalAlignment.Left;
+                hint.VerticalAlignment = VerticalAlignment.Bottom;
+                hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom);
+            }
+            canvas.Children.Add(layer);
+
+            var scenario = rigScenario;
+            foreach (var tile in tiles)
+            {
+                var view = BuildRigTile(tile, extent, scenario, views);
+                views.Add(view);
+                layer.Children.Add(view.Element);
+            }
+            // A build that has been replaced writes nothing: the shell lets go of it before the next is built.
+            // A move an arrow key made and has not saved is saved first, while the tiles are still where the
+            // key put them, so the next build plans from it.
+            OnDrop(() =>
+            {
+                var pending = extent.Pending;
+                extent.Pending = null;
+                if (pending != null) RigDrop(pending, views);
+                extent.Live = false;
+            });
+
+            // Past the least it is shrunk to, the room is wider than the canvas and scrolls across inside it.
+            var frame = new Grid { Height = plan.DrawnHeight, ClipToBounds = true };
+            var outline = new Border
+            {
+                Background = Ui.Brush(Theme.SurfaceInset),
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Child = frame,
+            };
+            canvas.HorizontalAlignment = HorizontalAlignment.Left;
+            canvas.VerticalAlignment = VerticalAlignment.Top;
+            if (plan.Scrolls(width))
+            {
+                // A focused tile's ring stands outside it, and a scroller clips what it holds to its view, so
+                // the room is held off the scroller's edges by the ring's outset and a tile at an edge keeps
+                // its whole ring. The room itself, and so every place a tile is kept at, is unchanged.
+                var outset = Theme.FocusRingOffset + Theme.FocusRing;
+                canvas.Margin = new Thickness(outset);
+                // The ground scrolls across with the room.
+                canvas.Background = dots;
+                // A RigScroller, so the page keys a focused tile does not take go on to the page.
+                var scroller = new RigScroller
+                {
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, and no focus
+                    // taken by a press on the ground (which scrolled the page back up to the canvas). That is
+                    // all Focusable = false does: the keys are RigScroller's. A tile's arrow keys still scroll
+                    // it across, through the tile's BringIntoView.
+                    Focusable = false,
+                    Content = canvas,
+                };
+                scroller.PreviewMouseWheel += RigPassWheel;
+                RigKeepScroll(scroller, extent);
+                // The scroller fills the frame, so its bar lies along the frame's foot.
+                frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;
+                // The hint stands above the bar and the room's outset over it, behind the scroller, which is
+                // clear between the dots.
+                if (hint != null)
+                {
+                    hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom + outset + SystemParameters.HorizontalScrollBarHeight);
+                    frame.Children.Add(hint);
+                }
+                frame.Children.Add(scroller);
+            }
+            else
+            {
+                // The outline spans the column, flush with the header and Reset layout above it, as the
+                // artboard draws it. The room is planned at ContentWidth, which leaves the page's scroll bar
+                // its 17 px whether or not it is showing, so the dotted ground goes across the whole frame,
+                // as high as the room is drawn, while a drag still stops at the room's own right edge.
+                frame.Children.Add(new Border { Height = canvas.Height, VerticalAlignment = VerticalAlignment.Top, Background = dots });
+                if (hint != null) frame.Children.Add(hint);
+                frame.Children.Add(canvas);
+            }
+            return outline;
+        }
+
+        /// <summary>Where a canvas that scrolls across was scrolled to, so a rebuild -- the night switch, a
+        /// wheel's lighting press, a resize -- draws it there again rather than at its left end.</summary>
+        private double rigScrollX;
+
+        /// <summary>The scroller a canvas wider than the page scrolls across in, which leaves the page keys to
+        /// the page.</summary>
+        /// <remarks>
+        /// Focusable = false only stops a scroller taking the focus. ScrollViewer.OnKeyDown is a class handler
+        /// and still runs for a key bubbling up from a focused tile, and it marks PageUp, PageDown and Ctrl+Home
+        /// or End handled whatever the axis. With a tile focused those keys did nothing: this scroller cannot
+        /// scroll down, and the page's never saw them. They now go on unhandled. Home and End alone still
+        /// throw the canvas to its ends, and the arrows are the tile's, which handles them first.
+        /// </remarks>
+        private sealed class RigScroller : ScrollViewer
+        {
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.Key == Key.PageUp || e.Key == Key.PageDown) return;
+                if ((e.Key == Key.Home || e.Key == Key.End) && (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;
+                base.OnKeyDown(e);
+            }
+        }
+
+        /// <summary>Restores the canvas's scroll across once the scroller is laid out, and keeps it as it
+        /// changes while this build is the page's.</summary>
+        private void RigKeepScroll(ScrollViewer scroller, RigExtent extent)
+        {
+            var restore = rigScrollX;
+            var restored = false;
+            scroller.Loaded += (sender, args) =>
+            {
+                if (restored) return;
+                restored = true;
+                scroller.ScrollToHorizontalOffset(restore);
+            };
+            scroller.ScrollChanged += (sender, args) =>
+            {
+                if (!restored || !extent.Live) return;
+                rigScrollX = scroller.HorizontalOffset;
+            };
+        }
+
+        /// <summary>The wheel over a canvas that scrolls across goes on to the page: the canvas's scroller
+        /// scrolls only across, and would otherwise swallow the wheel that scrolls the page down.</summary>
+        private static void RigPassWheel(object sender, MouseWheelEventArgs args)
+        {
+            if (args.Handled) return;
+            var parent = (sender as FrameworkElement)?.Parent as UIElement;
+            if (parent == null) return;
+            args.Handled = true;
+            parent.RaiseEvent(new MouseWheelEventArgs(args.MouseDevice, args.Timestamp, args.Delta) { RoutedEvent = UIElement.MouseWheelEvent, Source = sender });
+        }
+
+        /// <summary>The dotted ground at the tiles' scale, so a tile dropped on a step of the grid still has
+        /// its corner between four dots when the arrangement is shrunk.</summary>
+        private static Brush RigDots(double scale)
+        {
+            var dots = Ui.DotGrid();
+            if (scale >= 1) return dots;
+            var scaled = dots.Clone();
+            scaled.Transform = new ScaleTransform(scale, scale);
+            scaled.Freeze();
+            return scaled;
+        }
+
+        /// <summary>
+        /// One tile: its name (and the warning dot, when the device is on Home's list) over its picture, with a
+        /// transparent Thumb over the whole of it that takes the drag and the arrow keys.
+        /// </summary>
+        private RigTileView BuildRigTile(RigTile tile, RigExtent extent, string scenario, IList<RigTileView> views)
+        {
+            var warns = PanelRigMap.Warns(tile, issues);
+            var name = Ui.Text(tile.Name, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            name.VerticalAlignment = VerticalAlignment.Center;
+            name.MaxWidth = Math.Max(0, tile.Width - (warns ? PanelRigMap.WarnDot + PanelRigMap.WarnGap : 0));
+            var nameLine = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Height = PanelRigMap.NameHeight,
+                Margin = new Thickness(0, 0, 0, PanelRigMap.NameGap),
+            };
+            nameLine.Children.Add(name);
+            if (warns)
+            {
+                nameLine.Children.Add(new Ellipse
+                {
+                    Width = PanelRigMap.WarnDot,
+                    Height = PanelRigMap.WarnDot,
+                    Fill = Ui.Brush(Theme.Caution),
+                    Margin = new Thickness(PanelRigMap.WarnGap, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                });
+            }
+
+            var host = new Border { Width = tile.Width, Height = tile.Height, HorizontalAlignment = HorizontalAlignment.Left };
+            Action<string> paint = id => host.Child = BuildRigPicture(tile, id);
+            paint(scenario);
+            // A wheel button pages a face's zones, and the quick glance moves a face's or a pit wall's, without
+            // a save or a rebuild, so the clock looks.
+            var seen = PanelRigMap.LiveState(Settings, tile);
+            if (seen != null)
+            {
+                OnTick(() =>
+                {
+                    var now = PanelRigMap.LiveState(Settings, tile);
+                    if (now == seen) return;
+                    seen = now;
+                    paint(rigScenario);
+                });
+            }
+
+            var body = new StackPanel { Orientation = Orientation.Vertical };
+            body.Children.Add(nameLine);
+            body.Children.Add(host);
+
+            var thumb = new Thumb
+            {
+                Template = RigThumbTemplate,
+                Cursor = Cursors.SizeAll,
+                Focusable = true,
+                IsTabStop = true,
+                FocusVisualStyle = Ui.FocusRing(),
+                // The whole name where the line above the picture trims it, and what the dot means; the Thumb
+                // is what the pointer is on, the dot included. Nothing where the tile already says it all.
+                ToolTip = PanelRigMap.TileTooltip(tile, warns, RigNameTrimmed(tile.Name, name.MaxWidth)),
+            };
+            AutomationProperties.SetName(thumb, PanelRigMap.TileLabel(tile, warns));
+            // The tile that was in the hand when a rebuild landed has the focus again, after the shell's own
+            // restore (Loaded) has put it on whichever tile its place now finds.
+            if (rigHeld == tile.Id)
+            {
+                rigHeld = null;
+                thumb.Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(thumb)), DispatcherPriority.Input);
+            }
+
+            var root = new Grid { Width = PanelRigMap.FootprintWidth(tile), Height = PanelRigMap.FootprintHeight(tile) };
+            root.Children.Add(body);
+            root.Children.Add(thumb);
+            Canvas.SetLeft(root, tile.X);
+            Canvas.SetTop(root, tile.Y);
+            // The Thumb is focusable for the arrow keys, so a press focuses it, and focus brings a tile into view
+            // after the Thumb has taken its grip: a tile half out of view would scroll the page and jump that far
+            // on the first move. Only the keyboard's focus, and the drop (showing), scroll to a tile.
+            var showing = false;
+            root.RequestBringIntoView += (sender, args) =>
+            {
+                if (!showing && Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
+            };
+
+            var moved = false;
+            double startLeft = 0, startTop = 0;
+            thumb.DragStarted += (sender, args) =>
+            {
+                moved = false;
+                startLeft = Canvas.GetLeft(root);
+                startTop = Canvas.GetTop(root);
+                Panel.SetZIndex(root, ++rigTopZ);
+                rigHeld = tile.Id;
+            };
+            thumb.DragDelta += (sender, args) =>
+            {
+                if (args.HorizontalChange == 0 && args.VerticalChange == 0) return;
+                // A press is a click until the pointer has gone the system's drag distance: a pixel of jitter
+                // on a click that only focuses the tile would otherwise snap it to the grid and keep the whole
+                // default layout as an arrangement. The Thumb measures from the press while the tile has not
+                // moved, so the change is the whole distance so far.
+                if (!moved && Math.Abs(args.HorizontalChange) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(args.VerticalChange) < SystemParameters.MinimumVerticalDragDistance) return;
+                moved = true;
+                Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
+                Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
+                // Nothing scrolls here. The Thumb reports the pointer against the tile, so a scroll that slid
+                // the tile under a pointer that had not moved came back as the next move: a tile followed past
+                // a scroller's edge ran away from the pointer, a scroll and a jump on every event. The drop
+                // brings it into view instead.
+            };
+            // Saved on the drop, never in End(): SimHub is force-killed on the VM. A drag that is cancelled --
+            // the capture lost, or the build replaced under it -- is no drop: the tile goes back.
+            thumb.DragCompleted += (sender, args) =>
+            {
+                RigLower(root);
+                // Out of the hand: a build that replaced this one has already taken it, and a page left
+                // mid-drag leaves nothing to give the focus back to.
+                rigHeld = null;
+                if (!extent.Live) return;
+                if (args.Canceled)
+                {
+                    Canvas.SetLeft(root, startLeft);
+                    Canvas.SetTop(root, startTop);
+                    return;
+                }
+                if (!moved) return;
+                RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
+                // A tile dropped past the canvas's scrolled edge, or below the fold where the rows run down the
+                // page, is brought into view with its focus ring, across the canvas and down the page alike.
+                showing = true;
+                root.BringIntoView(RigRingBounds(root, extent));
+                showing = false;
+                RigDrop(tile, views);
+            };
+            // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
+            // the key comes up (or focus leaves first), rather than on every repeat, or when a rebuild lets
+            // the build go first (extent.Pending). The key does not raise the tile: a raised tile is last
+            // among the canvas's children, and a rebuild while the key is held restored focus by that index
+            // to another tile, which the next repeat moved and saved.
+            thumb.KeyDown += (sender, args) =>
+            {
+                double dx = 0, dy = 0;
+                switch (args.Key)
+                {
+                    case Key.Left: dx = -PanelRigMap.GridStep; break;
+                    case Key.Right: dx = PanelRigMap.GridStep; break;
+                    case Key.Up: dy = -PanelRigMap.GridStep; break;
+                    case Key.Down: dy = PanelRigMap.GridStep; break;
+                    default: return;
+                }
+                args.Handled = true;
+                if (!extent.Live) return;
+                if (!RigPlace(root, Canvas.GetLeft(root) + dx, Canvas.GetTop(root) + dy, extent)) return;
+                extent.Pending = tile;
+                // WPF does not scroll to a focused element that moves; the left button is up, so the guard
+                // above lets this through. The tile is brought in with its focus ring round it.
+                root.BringIntoView(RigRingBounds(root, extent));
+            };
+            thumb.KeyUp += (sender, args) =>
+            {
+                RigLower(root);
+                if (!extent.Live) return;
+                if (extent.Pending != tile) return;
+                extent.Pending = null;
+                RigDrop(tile, views);
+            };
+            thumb.LostKeyboardFocus += (sender, args) =>
+            {
+                RigLower(root);
+                if (!extent.Live) return;
+                if (extent.Pending != tile) return;
+                extent.Pending = null;
+                RigDrop(tile, views);
+            };
+
+            return new RigTileView(tile, root, paint);
+        }
+
+        /// <summary>A tile with its focus ring round it, in the tile's own pixels: the ring stands its outset
+        /// outside the tile on the screen, which is more of the tile's pixels when the room is shrunk.</summary>
+        private static Rect RigRingBounds(FrameworkElement root, RigExtent extent)
+        {
+            var outset = (Theme.FocusRingOffset + Theme.FocusRing) / (extent.Scale > 0 ? extent.Scale : 1);
+            return new Rect(-outset, -outset, root.Width + 2 * outset, root.Height + 2 * outset);
+        }
+
+        /// <summary>Whether a tile's name is wider than the room over its picture, so the line trims it.</summary>
+        private static bool RigNameTrimmed(string text, double room)
+        {
+            var probe = Ui.Text(text ?? string.Empty, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);
+            probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return probe.DesiredSize.Width > room;
+        }
+
+        /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
+        /// focus restore walk the tiles in the order they were built. A tile it is over may now draw over it,
+        /// as the next build draws them anyway.</summary>
+        private static void RigLower(FrameworkElement root)
+        {
+            root.ClearValue(Panel.ZIndexProperty);
+        }
+
+        /// <summary>Puts a tile on the nearest step of the grid inside the canvas, the place it will be kept at.
+        /// Returns whether that moved it.</summary>
+        private static bool RigPlace(FrameworkElement root, double x, double y, RigExtent extent)
+        {
+            var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);
+            var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);
+            var moved = left != Canvas.GetLeft(root) || top != Canvas.GetTop(root);
+            Canvas.SetLeft(root, left);
+            Canvas.SetTop(root, top);
+            return moved;
+        }
+
+        /// <summary>
+        /// Keeps every tile where it is drawn, the dropped one included, so the rig is kept as one
+        /// arrangement (PanelRigMap.Plan). Arranging a screen is setting it up, so the dropped tile's screen
+        /// is saved with Save(screen), which keeps a migrated screen as Home's list asks; that answers Home's
+        /// unclaimed screens, so the first keep asks again what needs fixing, and the Screens item's dot and
+        /// Home's count follow it. An ordinary drop asks SimHub nothing.
+        /// </summary>
+        private void RigDrop(RigTile tile, IList<RigTileView> views)
+        {
+            PanelRigMap.SavePlaces(Settings, views.Select(view => view.Tile.At(Canvas.GetLeft(view.Element), Canvas.GetTop(view.Element))));
+            var screen = PanelRigMap.ScreenOf(Settings, tile);
+            var claiming = screen != null && screen.Unclaimed == true;
+            if (screen != null) Save(screen);
+            else Save();
+            if (claiming)
+            {
+                RefreshAttention();
+                RefreshSidebar();
+            }
+        }
+
+        /// <summary>The Thumb over a tile: nothing to see, so the tile shows through and the drag is the tile's.
+        /// Made on first use, on the interface thread, rather than whenever the class is first touched.</summary>
+        private static ControlTemplate RigThumbTemplate
+        {
+            get
+            {
+                if (rigThumbTemplate == null)
+                {
+                    var face = new FrameworkElementFactory(typeof(Border));
+                    face.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+                    var template = new ControlTemplate(typeof(Thumb)) { VisualTree = face };
+                    template.Seal();
+                    rigThumbTemplate = template;
+                }
+                return rigThumbTemplate;
+            }
+        }
+
+        private static ControlTemplate rigThumbTemplate;
+
+        /// <summary>How bright the lights are drawn: the night brightness at night. The screens do not dim (#740).</summary>
+        private double RigLights()
+        {
+            return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);
+        }
+
+        /// <summary>A tile's picture under a scenario, from that device's own settings.</summary>
+        private FrameworkElement BuildRigPicture(RigTile tile, string scenario)
+        {
+            switch (tile.Kind)
+            {
+                case RigTileKind.Strip:
+                    var bar = Settings.LedBarByNamespace(tile.Key);
+                    var strip = PanelRigMap.StripOptionsFor(Settings, bar);
+                    var frame = PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, strip);
+                    return Ui.Strip(frame, StripStyle.Rig, RigLights());
+                case RigTileKind.Matrix:
+                    var options = PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario);
+                    return Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Rig, RigLights());
+                case RigTileKind.Round:
+                    return RigRound(tile, scenario);
+                case RigTileKind.Companion:
+                    return RigCompanion(tile, Settings.ScreenByNamespace(tile.Key), scenario);
+                case RigTileKind.PitWall:
+                    return RigPitWall(tile, Settings.ScreenByNamespace(tile.Key), scenario);
+                default:
+                    return RigFace(tile, Settings.ScreenByNamespace(tile.Key), scenario);
+            }
+        }
+
+        /// <summary>A screen's frame: inset ground, the border, 4 in.</summary>
+        private static Border RigScreenFrame(RigTile tile, UIElement child)
+        {
             return new Border
             {
-                BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
-                Child = stack,
+                Width = tile.Width,
+                Height = tile.Height,
+                Padding = new Thickness(PanelRigMap.ScreenPadding),
+                Background = Ui.Brush(Theme.SurfaceInset),
+                BorderBrush = Ui.Brush(Theme.Border),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                CornerRadius = new CornerRadius(PanelRigMap.ScreenRadius),
+                Child = child,
             };
-        }
-
-        /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
-        /// through Ui.Label, which draws them as written, so the kind leads in sentence case.</summary>
-        private static string ScreenFacts(ScreenInstance screen)
-        {
-            return KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty);
         }
 
         /// <summary>
-        /// A screen whose folder has gone: marked, and offered back rather than dropped.
+        /// A face: its rev strip across the top, its three zones on the pages they are on, and its band, in
+        /// the dash's own words for the scenario; a flag goes on the band or over the zones by the face's own
+        /// flag format.
         /// </summary>
-        /// <remarks>
-        /// Removing the card would destroy the zone setup behind it and hide the thing that needs
-        /// fixing, which is the reasoning #176 already applies to a failed install.
-        /// </remarks>
-        private FrameworkElement BuildMissingFolder(ScreenInstance screen)
+        private FrameworkElement RigFace(RigTile tile, ScreenInstance screen, string scenario)
         {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption("This screen's dashboard is missing from SimHub.");
-            var write = BuildSecondaryButton("Install it again", "Puts this screen's dashboard back into SimHub.");
-            write.Click += (sender, args) =>
+            var dock = new DockPanel { LastChildFill = true };
+
+            var revs = PanelRigMap.FaceRevs(scenario, Settings, screen);
+            var segments = new UniformGrid { Rows = 1, Columns = revs.Length };
+            foreach (var led in revs)
             {
-                var result = plugin.Installer.Write(screen);
-                Save(screen);
-                plugin.Installer.Refresh();
-                Redraw();
-                if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-            };
-            return Ui.Row(Ui.HStack(10, icon, text), write);
-        }
-
-        private FrameworkElement BuildScreenPane(ScreenInstance screen)
-        {
-            if (screen.IsCompanion) return BuildCompanionPane(screen);
-            if (screen.IsPitWall) return BuildPitWallPane(screen);
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return BuildSlotsPane(screen);
-            return BuildFacePane(screen);
-        }
-
-        // --- Adding, editing and removing --------------------------------------------------------
-
-        /// <summary>
-        /// The add panel, in place rather than in a dialog.
-        /// </summary>
-        /// <remarks>
-        /// A modal in a settings page is worse than a panel that appears where the card was, which is
-        /// the same reasoning the update button's two-click confirmation already follows.
-        /// </remarks>
-        private void ShowAddScreen()
-        {
-            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var types = PanelAddScreen.Types(catalogue);
-            if (types.Count == 0)
-            {
-                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                    Ui.Caption("This build ships no dashboards."),
-                    BackRow()));
-                return;
-            }
-
-            // The three answers, held here and read by whichever control last wrote one. The name is the
-            // only one the driver types, so it is the only one that has to remember whether they have.
-            var type = types[0];
-            PackageEntry entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
-            var typed = false;
-
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-            name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
-
-            var sizeHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Left };
-            var note = Ui.Caption(string.Empty);
-
-            Action fillName = () =>
-            {
-                // Only while the driver has not typed one of their own: a default that overwrites what
-                // somebody has just written is worse than no default at all.
-                if (typed) return;
-                name.Text = PackageCatalogue.UniqueName(PanelAddScreen.DefaultName(entry), Settings.RigScreens().Select(s => s.Name));
-            };
-            Action refreshNote = () =>
-            {
-                var second = Settings.RigScreens().Any(s => string.Equals(s.Namespace, StockNamespaceOf(entry), StringComparison.Ordinal));
-                note.Text = PanelAddScreen.Note(entry, second);
-            };
-            Action<PackageEntry> choose = chosen =>
-            {
-                entry = chosen;
-                fillName();
-                refreshNote();
-            };
-            Action showSize = () =>
-            {
-                var offered = PanelAddScreen.Offered(type);
-                entry = offered[PanelAddScreen.PreferredIndex(type)];
-                var question = PanelAddScreen.Question(type);
-                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, PanelAddScreen.PreferredIndex(type), choose);
-                fillName();
-                refreshNote();
-            };
-
-            // What the chosen kind is, under the control that chose it: two words on a button cannot say
-            // what a companion is, and a driver adding their first screen has nowhere else to find out.
-            var typeCaption = Ui.Caption(type.Caption);
-
-            var typeRow = Ui.Row(
-                PanelAddScreen.TypeTitle,
-                PanelAddScreen.TypeCaption,
-                BuildSegmented(
-                    types.Select(t => t.Kind).ToArray(),
-                    types.Select(t => t.Label).ToArray(),
-                    type.Kind,
-                    kind =>
-                    {
-                        type = types.First(t => string.Equals(t.Kind, kind, StringComparison.Ordinal));
-                        typeCaption.Text = type.Caption;
-                        showSize();
-                    }));
-            typeRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            showSize();
-
-            var add = Ui.OutlineButton(PanelAddScreen.AddButton, PanelMetrics.RowButtonHeight);
-            add.MinWidth = ButtonMinWidth;
-            add.ToolTip = "Creates the screen and installs its dashboard.";
-            add.Click += (sender, args) => AddScreen(entry, name.Text);
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Goes back without adding anything.";
-            cancel.Click += (sender, args) => Redraw();
-
-            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                typeRow,
-                typeCaption,
-                sizeHost,
-                nameRow,
-                note,
-                Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
-        }
-
-        /// <summary>The size or the orientation control, in the row the question calls for.</summary>
-        private FrameworkElement BuildSizeRow(ScreenType type, IReadOnlyList<PackageEntry> offered, SizeQuestion question, int selected, Action<PackageEntry> chose)
-        {
-            var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
-            var labels = offered.Select((e, i) => PanelAddScreen.SizeLabel(type, e, i)).ToArray();
-            Action<string> changed = value =>
-            {
-                int index;
-                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
-                if (index < 0 || index >= offered.Count) return;
-                chose(offered[index]);
-            };
-            // Two answers are a pair of buttons; eight are a list. The orientation question is always the
-            // pair, which is what makes it read as "which way round" rather than as a resolution.
-            var opens = values[selected < 0 || selected >= values.Length ? 0 : selected];
-            var control = question == SizeQuestion.Orientation || offered.Count <= 3
-                ? (FrameworkElement)BuildSegmented(values, labels, opens, changed)
-                : BuildChoice(values, labels, opens, 280, changed);
-            var row = question == SizeQuestion.Orientation
-                ? Ui.Row(PanelAddScreen.OrientationTitle, PanelAddScreen.OrientationCaption, control)
-                : Ui.Row(PanelAddScreen.SizeTitle, PanelAddScreen.SizeCaption, control);
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
-            return row;
-        }
-
-        /// <summary>
-        /// The one panel for a screen that is already on the rig: its name, its size, and its dashboard.
-        /// </summary>
-        /// <remarks>
-        /// Three corrections that used to be two panels and one missing button. A driver who picked the
-        /// wrong size had to remove the screen and add another, which threw away their zones and left
-        /// every wheel button bound to it pointing at nothing; a driver whose dashboard had been
-        /// overwritten -- which is what an update of the stock folder does -- had no press at all that
-        /// wrote it again, only the Install tab's Reinstall, which does the whole rig.
-        ///
-        /// The namespace is frozen at creation (ADR 0017) and none of the three moves it, so the
-        /// settings and the bindings survive all of them and only the folder in DashTemplates is written.
-        /// </remarks>
-        private void ShowEdit(ScreenInstance screen)
-        {
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = screen.Name,
-            };
-
-            // The size question is asked only where this build has another size to offer, which is the
-            // same rule the add panel follows; a kind that ships one package draws no row at all rather
-            // than a control with one answer in it.
-            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
-            var question = type == null ? SizeQuestion.None : PanelAddScreen.Question(type);
-            FrameworkElement sizeRow = null;
-            PackageEntry chosen = null;
-            if (question != SizeQuestion.None)
-            {
-                var offered = PanelAddScreen.Offered(type);
-                var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
-                chosen = current;
-                // Opened on the size the screen already is, so the control says what it is before it is
-                // used to say what it should be.
-                var opensOn = 0;
-                for (var i = 0; i < offered.Count; i++)
+                segments.Children.Add(new Border
                 {
-                    if (ReferenceEquals(offered[i], current)) opensOn = i;
+                    Margin = new Thickness(PanelRigMap.RevGap / 2, 0, PanelRigMap.RevGap / 2, 0),
+                    CornerRadius = new CornerRadius(PanelRigMap.RevRadius),
+                    Background = Ui.Brush(led ?? Theme.SurfaceRaised),
+                });
+            }
+            var revRow = new Border
+            {
+                Height = PanelRigMap.RevRowHeight,
+                Padding = new Thickness(PanelRigMap.RevPadX - PanelRigMap.RevGap / 2, PanelRigMap.RevPadY, PanelRigMap.RevPadX - PanelRigMap.RevGap / 2, PanelRigMap.RevPadY),
+                Background = Ui.Brush(Theme.SurfaceBase),
+                Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap),
+                Child = segments,
+            };
+            DockPanel.SetDock(revRow, Dock.Top);
+            dock.Children.Add(revRow);
+
+            var format = PanelRigMap.FaceFlagFormat(Settings, screen);
+            var inner = PanelRigMap.ScreenInner(tile.Width);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.FaceBandFor(scenario, format), inner));
+            band.Height = PanelRigMap.BandHeight(tile.Height);
+            band.Margin = new Thickness(0, PanelRigMap.ScreenGap, 0, 0);
+            DockPanel.SetDock(band, Dock.Bottom);
+            dock.Children.Add(band);
+
+            var column = PanelRigMap.FaceColumn(screen);
+            var zones = new Grid();
+            var list = PanelRigMap.FaceZones(screen);
+            for (var i = 0; i < list.Count; i++)
+            {
+                var zone = list[i];
+                var length = new GridLength(zone.Weight, GridUnitType.Star);
+                if (column) zones.RowDefinitions.Add(new RowDefinition { Height = length });
+                else zones.ColumnDefinitions.Add(new ColumnDefinition { Width = length });
+                TextBlock text;
+                if (zone.Gear)
+                {
+                    text = Ui.Text(zone.Text, PanelRigMap.FaceGearSize(tile.Height, column), FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
                 }
-                sizeRow = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
+                else
+                {
+                    text = Ui.Text(zone.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);
+                    text.TextTrimming = TextTrimming.CharacterEllipsis;
+                }
+                text.HorizontalAlignment = HorizontalAlignment.Center;
+                text.VerticalAlignment = VerticalAlignment.Center;
+                var cell = new Border
+                {
+                    Background = Ui.Brush(Theme.SurfaceZone),
+                    Margin = column ? new Thickness(0, i == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0) : new Thickness(i == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0, 0),
+                    ClipToBounds = true,
+                    Child = text,
+                };
+                if (column) Grid.SetRow(cell, i);
+                else Grid.SetColumn(cell, i);
+                zones.Children.Add(cell);
             }
+            var covered = RigCovered(zones, PanelRigMap.FaceBlockFor(scenario, format), inner);
+            var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.ZoneWidth(list, "A", column, inner));
+            dock.Children.Add(RigOverZoneA(covered, list, column, limiter, PanelRigMap.PopUpPaint(scenario)));
 
-            var edited = Edited(screen);
-            var reinstall = Ui.OutlineButton(PanelAddScreen.ReinstallButton, PanelMetrics.RowButtonHeight);
-            reinstall.MinWidth = ButtonMinWidth;
-            reinstall.ToolTip = "Writes this screen's dashboard into SimHub again.";
-            reinstall.Click += (sender, args) => ReinstallScreen(screen);
-            var reinstallRow = Ui.Row(
-                PanelAddScreen.ReinstallTitle,
-                edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption,
-                reinstall);
-            reinstallRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            var save = Ui.OutlineButton(PanelAddScreen.SaveButton, PanelMetrics.RowButtonHeight);
-            save.MinWidth = ButtonMinWidth;
-            save.ToolTip = "Applies the name and the size, and writes the dashboard.";
-            save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);
-            var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Goes back without changing anything.";
-            cancel.Click += (sender, args) => Redraw();
-
-            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
-            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-            var rows = new List<UIElement> { nameRow };
-            if (sizeRow != null) rows.Add(sizeRow);
-            rows.Add(Ui.Caption(PanelAddScreen.EditCaption));
-            rows.Add(reinstallRow);
-            rows.Add(Ui.Row(new Border(), Ui.HStack(8, cancel, save)));
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.EditTitle + " " + screen.Name, rows.ToArray()));
+            return RigScreenFrame(tile, dock);
         }
 
         /// <summary>
-        /// Whether this screen's folder no longer matches what OpenDash last wrote into it.
+        /// A face's body, and over its zone A what the dash draws there: the limiter's banner across the top,
+        /// and a pop-up over the whole of it. Both over a full-screen flag, as face.ts draws them last.
         /// </summary>
-        /// <remarks>
-        /// Which is to say, whether somebody has opened it in Dash Studio and saved. The Install tab asks
-        /// before replacing one of those and keeps the copy under a name no later install claims; one
-        /// screen's reinstall costs the same thing, so it says so and keeps the copy the same way. A
-        /// folder we cannot fingerprint reads as unedited: the alternative is warning everybody whose
-        /// disk we could not read about work they may not have done.
-        /// </remarks>
-        private bool Edited(ScreenInstance screen)
+        private static UIElement RigOverZoneA(UIElement body, IList<RigZone> zones, bool column, RigPaint limiter, RigPaint popUp)
         {
-            try
+            if (limiter == null && popUp == null) return body;
+            var over = new Grid { IsHitTestVisible = false };
+            var at = 0;
+            for (var i = 0; i < zones.Count; i++)
             {
-                if (screen.Folder == null || plugin.Installer.Record == null) return false;
-                var recorded = plugin.Installer.Record.Get(screen.Folder);
-                if (recorded == null) return false;
-                var now = FolderFingerprint.Of(PackageExtractor.InstalledFolder(plugin.Installer.SimHubRoot, screen.Folder));
-                return now != null && !string.Equals(now, recorded, StringComparison.Ordinal);
+                var length = new GridLength(zones[i].Weight, GridUnitType.Star);
+                if (column) over.RowDefinitions.Add(new RowDefinition { Height = length });
+                else over.ColumnDefinitions.Add(new ColumnDefinition { Width = length });
+                if (zones[i].Letter == "A") at = i;
             }
-            catch (Exception ex)
+            var margin = column ? new Thickness(0, at == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0) : new Thickness(at == 0 ? 0 : PanelRigMap.ScreenGap, 0, 0, 0);
+            foreach (var paint in new[] { limiter, popUp })
             {
-                Log.Warn("Could not tell whether " + screen.Folder + " has been edited: " + ex.Message);
-                return false;
+                if (paint == null) continue;
+                var box = RigBand(paint);
+                box.Margin = margin;
+                if (paint == limiter)
+                {
+                    box.Height = PanelRigMap.LimiterHeight;
+                    box.VerticalAlignment = VerticalAlignment.Top;
+                }
+                if (column) Grid.SetRow(box, at);
+                else Grid.SetColumn(box, at);
+                over.Children.Add(box);
             }
+            var grid = new Grid();
+            grid.Children.Add(body);
+            grid.Children.Add(over);
+            return grid;
         }
 
-        /// <summary>Applies whichever of the two answers was changed, and writes the dashboard when
-        /// either was: SimHub lists a dashboard under its title, so a rename that stopped at the card
-        /// left the screen listed under the name the driver had just stopped using.</summary>
-        private void SaveEdit(ScreenInstance screen, string wanted, PackageEntry entry)
+        /// <summary>A screen's body, and over it the flag's block when the screen draws its flags full screen.</summary>
+        private static UIElement RigCovered(UIElement body, FaceBand block, double width)
         {
-            // Whatever was changed, even nothing: pressing Save on a screen's own edit panel is the driver
-            // saying that this one is theirs.
-            screen.Keep();
-            var sizeChanged = entry != null && (entry.Width != screen.Width || entry.Height != screen.Height);
-            switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
+            if (block == null || !block.Alert) return body;
+            var grid = new Grid();
+            grid.Children.Add(body);
+            grid.Children.Add(RigBand(PanelRigMap.BandPaint(block, width)));
+            return grid;
+        }
+
+        /// <summary>A pit wall: its band on top, and the panels of the page it is on, each named; a flag goes on
+        /// the band or over the panels by the pit wall's own flag format, and nowhere when that is off.</summary>
+        private FrameworkElement RigPitWall(RigTile tile, ScreenInstance screen, string scenario)
+        {
+            var dock = new DockPanel { LastChildFill = true };
+            var format = PanelRigMap.PitWallFlagFormat(Settings, screen);
+            var inner = PanelRigMap.ScreenInner(tile.Width);
+            var band = RigBand(PanelRigMap.BandPaint(PanelRigMap.PitWallBandFor(scenario, format), inner));
+            band.Height = PanelRigMap.PitWallBandHeight;
+            band.Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap);
+            DockPanel.SetDock(band, Dock.Top);
+            dock.Children.Add(band);
+
+            var bodyWidth = inner;
+            var bodyHeight = tile.Height - 2 * (PanelRigMap.ScreenPadding + PanelMetrics.BorderWeight) - PanelRigMap.PitWallBandHeight - PanelRigMap.ScreenGap;
+            var body = new Canvas { Width = bodyWidth, Height = bodyHeight, ClipToBounds = true };
+            foreach (var cell in PanelRigMap.PitWallCells(screen))
             {
-                case ScreenEdit.Resize:
-                    // The name first, so the folder ResizeScreen writes is titled with it rather than
-                    // with the name the screen is about to stop having.
-                    RenameScreen(screen, wanted);
-                    ResizeScreen(screen, entry);
-                    return;
-                case ScreenEdit.Rename:
-                    RenameScreen(screen, wanted);
-                    Save();
-                    var result = plugin.Installer.Write(screen);
-                    Save();
-                    plugin.Installer.Refresh();
-                    selected = screen.Namespace;
-                    Redraw();
-                    Announce(
-                        result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name, result.Error),
-                        result.Ok ? Theme.TextSecondary : Theme.Caution);
-                    return;
-                default:
-                    Save();
-                    Redraw();
-                    return;
+                var text = Ui.Text(cell.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);
+                text.TextTrimming = TextTrimming.CharacterEllipsis;
+                var box = new Border
+                {
+                    Width = Math.Max(0, Math.Floor(cell.Width * bodyWidth)),
+                    Height = Math.Max(0, Math.Floor(cell.Height * bodyHeight)),
+                    Padding = new Thickness(PanelRigMap.PitWallCellPadding),
+                    Background = Ui.Brush(Theme.SurfaceZone),
+                    Child = text,
+                };
+                Canvas.SetLeft(box, Math.Floor(cell.X * bodyWidth));
+                Canvas.SetTop(box, Math.Floor(cell.Y * bodyHeight));
+                body.Children.Add(box);
             }
+            dock.Children.Add(RigCovered(body, PanelRigMap.PitWallBlockFor(scenario, format), inner));
+            return RigScreenFrame(tile, dock);
         }
 
-        /// <summary>Takes the name from the box, kept distinct from every other screen's. An empty box
-        /// keeps the name it had, which is what PanelAddScreen.Edit has already decided.</summary>
-        private void RenameScreen(ScreenInstance screen, string wanted)
+        /// <summary>A phone: the module it opens on, the flag over the whole of it, or the flag's strip at its
+        /// foot, by the phone's own flag format.</summary>
+        private FrameworkElement RigCompanion(RigTile tile, ScreenInstance screen, string scenario)
         {
-            var trimmed = (wanted ?? string.Empty).Trim();
-            if (trimmed.Length == 0 || string.Equals(trimmed, screen.Name, StringComparison.Ordinal)) return;
-            screen.Name = PackageCatalogue.UniqueName(
-                trimmed,
-                Settings.RigScreens().Where(s => !ReferenceEquals(s, screen)).Select(s => s.Name));
-        }
+            var format = PanelRigMap.CompanionFlagFormat(Settings, screen);
+            var paint = PanelRigMap.CompanionPaint(PanelRigMap.CompanionBand(scenario, format), PanelRigMap.CompanionIdle(screen));
+            var phone = RigPainted(paint, PanelRigMap.CompanionTextSize, PanelRigMap.CompanionTracking);
+            phone.Width = tile.Width;
+            phone.Height = tile.Height;
+            phone.CornerRadius = new CornerRadius(PanelRigMap.CompanionRadius);
+            var words = phone.Child as FrameworkElement;
+            if (words != null) words.Margin = new Thickness(PanelRigMap.ScreenPadding);
 
-        /// <summary>
-        /// Writes this one screen's dashboard again, at the name and size it already has.
-        /// </summary>
-        /// <remarks>
-        /// The repair for a dashboard that is there but wrong: overwritten by an update, edited by
-        /// accident, or listed in SimHub under a name that is no longer the screen's. The Install tab's
-        /// Reinstall does the whole rig and is the wrong instrument for one screen; the "Install it
-        /// again" button on the card is the same press but appears only once the folder has gone.
-        /// </remarks>
-        private void ReinstallScreen(ScreenInstance screen)
-        {
-            var result = plugin.Installer.Write(screen);
-            Save(screen);
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-            Announce(
-                result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error),
-                result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
-        {
-            if (entry == null || (entry.Width == screen.Width && entry.Height == screen.Height))
+            var strip = PanelRigMap.StripPaint(PanelRigMap.CompanionStrip(scenario, format));
+            if (strip != null)
             {
-                Redraw();
-                return;
+                var bar = RigBand(strip);
+                bar.Height = PanelRigMap.CompanionStripHeight;
+                bar.Margin = new Thickness(PanelRigMap.ScreenPadding, 0, PanelRigMap.ScreenPadding, PanelRigMap.ScreenPadding);
+                var dock = new DockPanel { LastChildFill = true };
+                DockPanel.SetDock(bar, Dock.Bottom);
+                dock.Children.Add(bar);
+                phone.Child = null;
+                if (words != null) dock.Children.Add(words);
+                phone.Child = dock;
             }
-            var log = new SimHubInstallLog();
-            // The old folder first: a screen that was the stock one at its old size owns that package's
-            // own folder, and leaving it behind would put a dashboard in SimHub's list that nothing on
-            // the rig answers for.
-            var old = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, log);
-            if (!old.Ok) Log.Warn("The old folder of " + screen.Name + " could not be removed: " + old.Error);
-
-            Settings.ResizeScreen(screen, entry);
-            Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-            Announce(
-                result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, result.Error),
-                result.Ok ? Theme.TextSecondary : Theme.Caution);
+            return phone;
         }
 
-        private static string StockNamespaceOf(PackageEntry entry)
+        /// <summary>A round face: its ring, in the flag's colour while a flag is picked and the revs' colour
+        /// otherwise, and the gear inside it.</summary>
+        private FrameworkElement RigRound(RigTile tile, string scenario)
         {
-            var probe = new ScreenInstance { Kind = entry.Kind, Width = entry.Width, Height = entry.Height, Folder = entry.Folder };
-            return probe.StockNamespace;
-        }
-
-        private static string Describe(PackageEntry entry)
-        {
-            var kind = string.Equals(entry.Kind, Contract.KindCompanion, StringComparison.Ordinal) ? "companion"
-                : string.Equals(entry.Kind, Contract.KindPitWall, StringComparison.Ordinal) ? "pit wall"
-                : string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal) ? "slots"
-                : "face";
-            return entry.Width > 0 ? entry.SizeLabel + "  ·  " + kind : entry.Folder + "  ·  " + kind;
-        }
-
-        private void AddScreen(PackageEntry entry, string name)
-        {
-            var screen = Settings.AddScreen(entry, name);
-            Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            selected = screen.Namespace;
-            Redraw();
-
-            // Said at the moment it becomes true rather than left to be found: SimHub reads its
-            // template list once, at startup, and assigning a dashboard to a display is in another part
-            // of SimHub entirely. Both are the steps a new user gives up on.
-            // The dashboard is listed in SimHub under its *title*, which the installer sets to the name
-            // the driver just chose -- not under the folder. Naming the folder here sent them looking
-            // through Dash Studio for a row that does not exist under that word.
-            var line = result.Ok
-                ? PanelAddScreen.Added(screen.Name, screen.Name)
-                : PanelAddScreen.AddFailed(screen.Name, result.Error);
-            Announce(line, result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        /// <summary>
-        /// The remove confirmation, which says the two things that are easy to miss.
-        /// </summary>
-        /// <remarks>
-        /// The folder goes, and a wheel button bound to this screen's actions stops doing anything,
-        /// because the action is no longer registered. ADR 0017 accepts that cost and this is where it
-        /// is paid: a driver who removes a screen and finds a dead button three laps into a race is a
-        /// bug report one sentence prevents.
-        /// </remarks>
-        private void ShowRemove(ScreenInstance screen)
-        {
-            var bound = screen.IsFace
-                ? " Any wheel button you bound to it stops working."
-                : string.Empty;
-            var remove = Ui.DestructiveButton("Remove it");
-            remove.ToolTip = "Removes the screen, its settings and its dashboard.";
-            remove.Click += (sender, args) =>
+            var ring = PanelRigMap.RingFor(scenario, Settings);
+            var grid = new Grid { Width = tile.Width, Height = tile.Height };
+            grid.Children.Add(new Ellipse
             {
-                var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
-                Settings.RemoveScreen(screen.Namespace);
-                Save();
-                plugin.Installer.Refresh();
-                selected = null;
-                Redraw();
-                Announce(
-                    result.Ok
-                        ? "Removed " + screen.Name + ". SimHub still lists its dashboard until you restart it."
-                        : "Removed " + screen.Name + ", but its dashboard could not be deleted: " + result.Error,
-                    result.Ok ? Theme.TextSecondary : Theme.Caution);
+                Fill = Ui.Brush(Theme.SurfaceInset),
+                Stroke = ring.Chequer ? RigChequer : Ui.Brush(ring.Hex),
+                StrokeThickness = ring.Thickness,
+            });
+            var gear = Ui.Text(PanelEmulation.Gear, PanelRigMap.RoundGearSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
+            gear.HorizontalAlignment = HorizontalAlignment.Center;
+            gear.VerticalAlignment = VerticalAlignment.Center;
+            grid.Children.Add(gear);
+            // The limiter's block above the gear, as the round face's hero draws it.
+            var limiter = PanelRigMap.LimiterPaint(scenario, PanelRigMap.RoundLimiterWidth);
+            if (limiter != null)
+            {
+                var banner = RigBand(limiter);
+                banner.Width = PanelRigMap.RoundLimiterWidth;
+                banner.Height = PanelRigMap.LimiterHeight;
+                banner.HorizontalAlignment = HorizontalAlignment.Center;
+                banner.VerticalAlignment = VerticalAlignment.Top;
+                banner.Margin = new Thickness(0, PanelRigMap.RoundLimiterTop, 0, 0);
+                grid.Children.Add(banner);
+            }
+            return grid;
+        }
+
+        /// <summary>A band, a block or a strip as PanelRigMap paints it, in the band's words.</summary>
+        private static Border RigBand(RigPaint paint)
+        {
+            return RigPainted(paint, PanelRigMap.BandTextSize, PanelRigMap.BandTracking);
+        }
+
+        /// <summary>What PanelRigMap's paint says, drawn: the ground or the chequer, the outline, and the words
+        /// tracked, or wrapped where they are not.</summary>
+        private static Border RigPainted(RigPaint paint, double textSize, double tracking)
+        {
+            var box = new Border { ClipToBounds = true };
+            if (paint.Chequer) box.Background = RigChequer;
+            else if (paint.FillHex != null) box.Background = Ui.Brush(paint.FillHex);
+            if (paint.BorderHex != null)
+            {
+                box.BorderBrush = Ui.Brush(paint.BorderHex);
+                box.BorderThickness = paint.RuleOnTop ? new Thickness(0, paint.BorderWidth, 0, 0) : new Thickness(paint.BorderWidth);
+            }
+
+            if (string.IsNullOrEmpty(paint.Words)) return box;
+            FrameworkElement text;
+            if (paint.Tracked) text = Ui.Tracked(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex, tracking);
+            else
+            {
+                var block = Ui.Text(paint.Words, textSize, FontWeights.SemiBold, paint.InkHex);
+                block.TextWrapping = TextWrapping.Wrap;
+                block.TextAlignment = TextAlignment.Center;
+                text = block;
+            }
+            text.HorizontalAlignment = HorizontalAlignment.Center;
+            text.VerticalAlignment = VerticalAlignment.Center;
+            box.Child = text;
+            return box;
+        }
+
+        /// <summary>The chequered flag: squares of the base ground and the flag's white.</summary>
+        private static Brush RigChequer
+        {
+            get { return rigChequer ?? (rigChequer = RigChequerBrush()); }
+        }
+
+        private static Brush rigChequer;
+
+        private static Brush RigChequerBrush()
+        {
+            var square = PanelRigMap.ChequerSquare;
+            var group = new DrawingGroup();
+            group.Children.Add(new GeometryDrawing(Ui.Brush(Theme.SurfaceBase), null, new RectangleGeometry(new Rect(0, 0, 2 * square, 2 * square))));
+            group.Children.Add(new GeometryDrawing(Ui.Brush(Theme.FlagChequer), null, new RectangleGeometry(new Rect(square, 0, square, square))));
+            group.Children.Add(new GeometryDrawing(Ui.Brush(Theme.FlagChequer), null, new RectangleGeometry(new Rect(0, square, square, square))));
+            var brush = new DrawingBrush(group)
+            {
+                TileMode = TileMode.Tile,
+                Viewport = new Rect(0, 0, 2 * square, 2 * square),
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewbox = new Rect(0, 0, 2 * square, 2 * square),
+                ViewboxUnits = BrushMappingMode.Absolute,
+                Stretch = Stretch.None,
             };
-            var cancel = BuildSecondaryButton("Keep it", "Leaves this screen alone.");
-            // The answer to the question the line over the cards asks of a migrated screen, as much as
-            // Remove it is, so it keeps the screen as well as going back.
-            cancel.Click += (sender, args) =>
+            brush.Freeze();
+            return brush;
+        }
+
+        /// <summary>The chips, in PanelEmulation's five groups; picking one repaints every tile's picture with
+        /// it in place, and nothing else on the page.</summary>
+        private FrameworkElement BuildRigScenarios(IList<RigTileView> views)
+        {
+            var host = new GroupBorder();
+            AutomationProperties.SetName(host, PanelRigMap.ScenariosName);
+            RigDrawChips(host, views, null);
+            return host;
+        }
+
+        private void RigDrawChips(Border host, IList<RigTileView> views, string focus)
+        {
+            var current = rigScenario;
+            // Every group carries the gap across on its right and the gap down under it, and the panel takes
+            // back the last column's and the last row's: a group wraps only when it does not fit, as the
+            // artboard's flex-wrap does, and the page ends its own padding under the chips, not 18 more.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, -PanelRigMap.GroupGapY) };
+            Button focusChip = null;
+            foreach (var group in PanelEmulation.Groups)
             {
-                Save(screen);
-                Redraw();
-            };
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
-                Ui.Caption("Removes the screen, its dashboard and its settings." + bound),
-                Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
+                var chips = new WrapPanel { Orientation = Orientation.Horizontal };
+                foreach (var scenario in group.Scenarios)
+                {
+                    var id = scenario.Id;
+                    // The kit names a swatch chip by its label and says whether it is pressed.
+                    var chip = Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id));
+                    chip.Margin = new Thickness(0, 0, PanelRigMap.ChipGap, PanelRigMap.ChipGap);
+                    if (id == focus) focusChip = chip;
+                    chips.Children.Add(chip);
+                }
+                var title = Ui.Eyebrow(group.Title);
+                title.Margin = new Thickness(0, 0, 0, PanelRigMap.GroupTitleGap);
+                var column = Ui.VStack(0, title, chips);
+                // The last chip's own 6 on its right is part of the 32 between two groups, and the chips' 6
+                // under them part of the 18 between two rows of groups.
+                column.Margin = new Thickness(0, 0, PanelRigMap.GroupGapX - PanelRigMap.ChipGap, PanelRigMap.GroupGapY - PanelRigMap.ChipGap);
+                wrap.Children.Add(column);
+            }
+            host.Child = wrap;
+            // A chip picked from the keyboard keeps the focus through its redraw.
+            if (focusChip != null)
+            {
+                var chip = focusChip;
+                chip.Dispatcher.BeginInvoke(new Action(() => chip.Focus()), DispatcherPriority.Input);
+            }
         }
 
-        /// <summary>A line under the cards saying what just happened, until the next thing happens.</summary>
-        private void Announce(string line, string colour)
+        /// <summary>Paints every tile with a scenario and presses its chip. The selection outlives a rebuild,
+        /// so a night-mode change or a resize keeps it.</summary>
+        private void RigPick(Border host, IList<RigTileView> views, string id)
         {
-            var stack = bodyHost.Content as StackPanel;
-            var section = stack?.Children.Count > 0 ? stack.Children[0] as Border : null;
-            var rows = section?.Child as StackPanel;
-            if (rows == null) return;
-            var text = Ui.Text(line, Theme.SizeSmall, FontWeights.Normal, colour);
-            text.TextWrapping = TextWrapping.Wrap;
-            text.MaxWidth = BodyWidth;
-            text.Margin = new Thickness(0, 8, 0, 0);
-            rows.Children.Insert(Math.Min(2, rows.Children.Count), text);
-        }
-
-        private FrameworkElement BackRow()
-        {
-            var back = BuildSecondaryButton("Back", "Goes back to your rig.");
-            back.Click += (sender, args) => Redraw();
-            return Ui.Row(new Border(), back);
+            Select(PanelPage.Rig, id);
+            foreach (var view in views) view.Paint(id);
+            RigDrawChips(host, views, id);
         }
     }
 }

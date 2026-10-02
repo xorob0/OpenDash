@@ -8,22 +8,25 @@
  */
 import { STRIP_SHAPES } from './content.generated';
 import type { SiteStripShape } from '../scripts/content';
+import { stripGrid } from './stripGrid';
 
 export const SHAPES: readonly SiteStripShape[] = STRIP_SHAPES;
 
+const GRID = stripGrid(SHAPES);
+
 /** The sided grid: every shape with something at its ends, legacy ones excluded. */
-export const SIDED: readonly SiteStripShape[] = SHAPES.filter((s) => !s.legacy && s.left > 0);
+export const SIDED: readonly SiteStripShape[] = GRID.sided;
 
 /** Bare runs, brows included: nothing at the ends. */
-export const BARE: readonly SiteStripShape[] = SHAPES.filter((s) => !s.legacy && s.left === 0);
+export const BARE: readonly SiteStripShape[] = GRID.bare;
 
-export const LEGACY: readonly SiteStripShape[] = SHAPES.filter((s) => s.legacy);
+export const LEGACY: readonly SiteStripShape[] = GRID.legacy;
 
 /** The side lengths the grid has, ascending, with the bare runs as the row of none. */
-export const SIDES: readonly number[] = [0, ...new Set(SIDED.map((s) => s.left))].sort((a, b) => a - b);
+export const SIDES: readonly number[] = GRID.sides;
 
 /** The centre lengths the sided grid has, ascending. */
-export const CENTRES: readonly number[] = [...new Set(SIDED.map((s) => s.centre))].sort((a, b) => a - b);
+export const CENTRES: readonly number[] = GRID.centres;
 
 /** The shape with these sides and this centre, if the grid has it. Legacy shapes fill the one hole. */
 export const shapeAt = (side: number, centre: number): SiteStripShape | undefined =>

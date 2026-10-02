@@ -22,8 +22,10 @@ import {
   FLAG_BOX_MATRIX_DEFAULTS,
   type FlagBoxMatrix,
   PROPERTY_PREFIX,
+  setting,
 } from '../src/contract.ts';
 import { ALERT_CATALOGUE, conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
+import { isInPitLane } from '../src/second/values.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
 import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
@@ -90,17 +92,27 @@ const profile = buildFlagBoxProfile();
 const all = [...walkContainers(profile.containers)];
 const kinds = all.map((c) => c.kind);
 
+/** Where the car is, and what the driver asked of a flag there. On the circuit by default. #791. */
+interface PitLane {
+  inLane: boolean;
+  flagsInPitLane: boolean;
+}
+const ON_CIRCUIT: PitLane = { inLane: false, flagsInPitLane: true };
+
 /**
  * Evaluates one of these conditions with the named bits set. Handles exactly what flags.ts emits:
- * parenthesised `and`, `or`, `!`, and `[prop] = 1`. Anything else throws rather than guessing,
- * so a change to how the conditions are built fails here instead of passing wrongly.
+ * parenthesised `and`, `or`, `!`, `[prop] = 1`, and the two reads `flagsAllowedHere` makes, taken
+ * whole from the expressions that write them. Anything else throws rather than guessing, so a
+ * change to how the conditions are built fails here instead of passing wrongly.
  */
-function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOnly = false): boolean {
+function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOnly = false, pit: PitLane = ON_CIRCUIT): boolean {
   const truths = new Map<string, string>();
   for (const condition of FLAG_CATALOGUE) {
     for (const bit of condition.bits) truths.set(flagBit(bit), set.includes(bit) ? '1' : '0');
   }
   let s = expression;
+  s = s.split(isInPitLane()).join(String(pit.inLane));
+  s = s.split(setting.flagsInPitLane()).join(String(pit.flagsInPitLane));
   for (const [property, value] of truths) s = s.split(property).join(value);
   s = s.split('isnull([OpenDash.FlagBoxMatrix1CriticalOnly], false)').join(criticalOnly ? 'true' : 'false');
   // NCalc's operators to JavaScript's, on a string that now holds only literals and operators.
@@ -141,10 +153,10 @@ function restingState(matrix: FlagBoxMatrix, attached: { rest?: string; gear?: b
 }
 
 /** Which flag the box shows with these bits raised, or undefined when it shows none. */
-function shown(set: readonly SessionFlagBit[], criticalOnly = false): string | undefined {
+function shown(set: readonly SessionFlagBit[], criticalOnly = false, pit: PitLane = ON_CIRCUIT): string | undefined {
   const lit = flagContainers(1).filter((c) => {
     const formula = (c as Extract<MatrixContainer, { kind: 'when' }>).formula;
-    return evaluate(typeof formula === 'string' ? formula : formula.expression, set, criticalOnly);
+    return evaluate(typeof formula === 'string' ? formula : formula.expression, set, criticalOnly, pit);
   });
   expect(lit.length).toBeLessThanOrEqual(1);
   return lit[0]?.description;
@@ -300,6 +312,24 @@ describe('several conditions true at once', () => {
     // Every pair in the catalogue, which is the case a hand-written list of examples misses.
     const bits = FLAG_CATALOGUE.flatMap((c) => c.bits);
     for (const a of bits) for (const b of bits) expect(() => shown([a, b])).not.toThrow();
+  });
+});
+
+describe('flags in the pit lane', () => {
+  // #791: a driver who switches FlagsInPitLane off has asked for a quiet box in the lane, and only
+  // in the lane. The switch is part of the catalogue's own reading, so the box asks it too.
+  test('the box goes quiet in the lane with the switch off, and nowhere else', () => {
+    expect(shown(['blue'], false, { inLane: true, flagsInPitLane: false })).toBeUndefined();
+    expect(shown(['black', 'yellow'], false, { inLane: true, flagsInPitLane: false })).toBeUndefined();
+    expect(shown(['blue'], false, { inLane: true, flagsInPitLane: true })).toBe('blue');
+    expect(shown(['blue'], false, { inLane: false, flagsInPitLane: false })).toBe('blue');
+  });
+
+  test('and what the flags would have covered shows while they are silenced there', () => {
+    // A flag the switch has silenced stops holding down what is under it, as a flag silenced by
+    // critical-only does, so the panel is not left dark for a flag it is not drawing.
+    expect(evaluate(noFlagShowing(1), ['blue'], false, { inLane: true, flagsInPitLane: false })).toBe(true);
+    expect(evaluate(noFlagShowing(1), ['blue'], false, { inLane: true, flagsInPitLane: true })).toBe(false);
   });
 });
 

@@ -89,17 +89,27 @@ anybody adding it anywhere. Until then the entry is a claim, `scripts/trace.test
 being a constant -- nobody hand-writes two hundred frames of a moving value honestly -- and a reader
 replaying the file can see which one line of it nobody watched.
 
-No committed trace asserts a column at present. All seven were recorded again on 2026-09-29 for
-#322, which observed every column they had been carrying by hand, and the observations bear the
-entries out where they said they would. `DataCorePlugin.GameRunning` was 1, `OpenDash.ClockFormat`
-`24h` and `OpenDash.DeltaPrecision` `hundredths`, and #762's `PushToPassActive`, `dcHeadlightFlash`
-and `EngineStarted` were `false`, `false` and 1, as asserted. The three entries that said they were
-not what a recording would write were not: `DataCorePlugin.GameData.BestLapOpponentSameClassPosition`
-is 6 in the yellow scenario rather than -1, and iRacing's live delta to the last lap,
+All seven were recorded again on 2026-09-29 for #322, which observed every column they had been
+carrying by hand and left none asserted, and the observations bear the entries out where they said
+they would. `DataCorePlugin.GameRunning` was 1, `OpenDash.ClockFormat` `24h` and
+`OpenDash.DeltaPrecision` `hundredths`, and #762's `PushToPassActive`, `dcHeadlightFlash` and
+`EngineStarted` were `false`, `false` and 1, as asserted. The three entries that said they were not
+what a recording would write were not: `DataCorePlugin.GameData.BestLapOpponentSameClassPosition` is
+6 in the yellow scenario rather than -1, and iRacing's live delta to the last lap,
 `DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap`, moves through the lap with its
-`_OK` flag true from the first frame rather than standing at 0 and `false`. No replay had read any of
-those three, since every trace had been taken with the settings that do not read them, which is the
-argument each entry made and the only condition under which a column is worth typing at all.
+`_OK` flag true from the first frame rather than standing at 0 and `false`. No replay had read any
+of those three, since every trace had been taken with the settings that do not read them, which is
+the argument each entry made and the only condition under which a column is worth typing at all.
+
+#791 asserts seventeen in each, typed on top of that recording because the plugin it was taken with
+did not publish them yet, and all of them are what a re-record will write. Sixteen are
+`OpenDash.Face<size>Zone{B,C}Position`, where the page a zone is showing sits in its cycle, which
+the plugin publishes because the panel lets a driver arrange a zone's pages and an expression cannot
+read an ordered list. They are null wherever the recording's page is null, which is every face but
+the 850x480, and 1 and 15 on the 850x480, which is where pages 0 and 14 sit in a zone whose mask is
+full and whose order is the catalogue's -- the plugin's answer for a zone nobody has arranged. The
+seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened
+publishes. The next `bun run record` reads all of them from the plugin and drops the entries.
 
 ## Why a recording waits two minutes first
 

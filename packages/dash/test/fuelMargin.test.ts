@@ -25,8 +25,8 @@ import { MINUS, monoWidth, cells } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { ds } from '../src/tokens.ts';
-import { walkItems } from '../src/walk.ts';
-import { CHARS, FUEL_TO_END_WIDEST, NO_VALUE } from '../src/second/values.ts';
+import { expressionsOf, walkItems } from '../src/walk.ts';
+import { CHARS, FUEL_TO_END_WIDEST, NO_VALUE, tankIsLow } from '../src/second/values.ts';
 import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
@@ -290,3 +290,21 @@ const cellsOf = (text: string, mono: { charWidth: number; specialCharsWidth: num
   const specials = [...text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
   return (text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
 };
+
+describe('the fuel page goes red where every light does', () => {
+  test('the level, the estimate and the bar under the level read the rig threshold', () => {
+    // #791: one answer to "am I low" on a rig. The page went red under a lap of its own beside a strip
+    // lit at the threshold the panel sets, so a number in the panel moved only one of them.
+    const module = MODULES.find((m) => m.id === 'fuel')!;
+    const items = [...walkItems(module.build({ frame: rect(0, 0, 1007, 211), density: 'zone', prefix: '' }))];
+    const red = `'${ds.purpose.fuel.low}'`;
+    const lowPainted = items.flatMap((item) => expressionsOf(item).filter((f) => f.includes(red)).map((f) => ({ name: item.name, f })));
+    // The margin to the end is red when it is short, which is a sign and not a threshold; it is the
+    // one other reading on the page that uses the colour, and is left out.
+    expect(lowPainted.map((x) => x.name).sort()).toEqual(['gauge', 'lapsLeft.value', 'level.value', 'toEnd.value']);
+    for (const { name, f } of lowPainted.filter((x) => x.name !== 'toEnd.value')) {
+      expect({ name, threshold: f.includes(tankIsLow()) }).toEqual({ name, threshold: true });
+      expect({ name, rig: f.includes('[OpenDash.LightsLowFuelLaps]') }).toEqual({ name, rig: true });
+    }
+  });
+});

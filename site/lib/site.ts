@@ -58,7 +58,7 @@ export const NO_TRACKING = 'No analytics, no cookies. This site records nothing 
 
 /**
  * The attribution the car light data carries. It is required wherever the lights are described,
- * on the site as in the plugin's Lights tab, because the data is CC BY-NC-SA 4.0 and a site is
+ * on the site as on the plugin's LEDs page, because the data is CC BY-NC-SA 4.0 and a site is
  * marketing material.
  */
 export const CAR_DATA_CREDIT =
