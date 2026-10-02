@@ -570,7 +570,7 @@ namespace OpenDashPlugin.Tests
                 "return Ui.VStack(0, title, wrap);");
 
             // The page's own words: its title and New tag, the canvas's hint, and the empty rig.
-            InOrder(header, "Ui.PageTitle(PanelRigMap.Title), Ui.NewTag()");
+            InOrder(header, "var title = PageTitleRow(PanelRigMap.Title, Ui.NewTag());");
             var canvas = RigMethod("private FrameworkElement BuildRigCanvas(");
             InOrder(canvas, "Ui.Prose(PanelRigMap.Empty,", "Ui.Text(PanelRigMap.CanvasHint,");
         }

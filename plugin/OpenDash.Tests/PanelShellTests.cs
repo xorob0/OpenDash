@@ -88,6 +88,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
+        /// <summary>A page's title takes a tag after it in the shell's layout (#523), 12 apart as Rig.dc.html and
+        /// Map.dc.html draw New, so no page rebuilds the title PageLayout drew to add one.</summary>
+        [Fact]
+        public void A_page_title_takes_its_tag_in_the_shells_layout()
+        {
+            Assert.Equal(12, PanelShell.TitleTagGap);
+            Assert.Equal(PanelShell.TitleTagGap, PanelRigMap.TitleTagGap);
+            var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("private FrameworkElement PageLayout(string title, FrameworkElement actions, params UIElement[] sections) { return TaggedPageLayout(title, null, actions, sections); }", shell);
+            Assert.Contains("var head = actions == null ? PageTitleRow(title, tag) : Ui.Row(PageTitleRow(title, tag), actions);", shell);
+            Assert.Contains("if (tag == null) return Ui.PageTitle(title); return Ui.HStack(PanelShell.TitleTagGap, Ui.PageTitle(title), tag);", shell);
+        }
+
         /// <summary>Each artboard's &lt;main&gt; puts its own gap between sections, and PageLayout reads it.</summary>
         [Fact]
         public void Each_page_spaces_its_sections_as_its_artboard_does()

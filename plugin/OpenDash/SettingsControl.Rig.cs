@@ -123,7 +123,7 @@ namespace OpenDashPlugin
         /// switch and Reset layout; under the title when there is not the room for both on one line.</summary>
         private FrameworkElement BuildRigHeader()
         {
-            var title = Ui.HStack(PanelRigMap.TitleTagGap, Ui.PageTitle(PanelRigMap.Title), Ui.NewTag());
+            var title = PageTitleRow(PanelRigMap.Title, Ui.NewTag());
 
             var night = Ui.Switch(Settings.LightsNightMode, on =>
             {

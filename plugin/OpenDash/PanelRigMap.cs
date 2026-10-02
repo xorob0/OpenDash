@@ -252,9 +252,8 @@ namespace OpenDashPlugin
 
         // --- The header -----------------------------------------------------------------------------
 
-        /// <summary>Between the title and its New tag, between the header's controls, and between a
-        /// switch's words and the switch.</summary>
-        public const double TitleTagGap = 12;
+        /// <summary>Between the title and its New tag: the shell's (PageTitleRow draws it).</summary>
+        public const double TitleTagGap = PanelShell.TitleTagGap;
         public const double HeaderGap = 18;
         public const double HeaderLabelGap = 10;
 

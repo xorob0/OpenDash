@@ -794,7 +794,16 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement PageLayout(string title, FrameworkElement actions, params UIElement[] sections)
         {
-            var head = actions == null ? (FrameworkElement)Ui.PageTitle(title) : Ui.Row(Ui.PageTitle(title), actions);
+            return TaggedPageLayout(title, null, actions, sections);
+        }
+
+        /// <summary>
+        /// <see cref="PageLayout"/> with a tag after the title (<see cref="PageTitleRow"/>): Shortcuts' New, as the
+        /// Map tags the page. Named apart rather than an overload, so a page's sections are never read as a tag.
+        /// </summary>
+        private FrameworkElement TaggedPageLayout(string title, FrameworkElement tag, FrameworkElement actions, params UIElement[] sections)
+        {
+            var head = actions == null ? PageTitleRow(title, tag) : Ui.Row(PageTitleRow(title, tag), actions);
             var gap = PanelShell.SectionGapFor(route.Page);
             var stack = new StackPanel { Orientation = Orientation.Vertical };
             stack.Children.Add(head);
@@ -810,6 +819,14 @@ namespace OpenDashPlugin
                 stack.Children.Add(section);
             }
             return stack;
+        }
+
+        /// <summary>A page's title, with <paramref name="tag"/> after it, <see cref="PanelShell.TitleTagGap"/>
+        /// apart, when the page gives one: what PageLayout draws and Rig's own header draws.</summary>
+        private static FrameworkElement PageTitleRow(string title, FrameworkElement tag)
+        {
+            if (tag == null) return Ui.PageTitle(title);
+            return Ui.HStack(PanelShell.TitleTagGap, Ui.PageTitle(title), tag);
         }
 
         /// <summary>A section of a page: its heading at 17, and what is under it 14 below.</summary>

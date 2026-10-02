@@ -1049,7 +1049,7 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"Action attach = \(\) =>\s*\{[^}]*rewatchTriggers\(\);\s*changed\(\);\s*\};", body);
             Assert.Contains("if (args.PropertyName == null || args.PropertyName == \"Model\") attach();", body);
             Assert.Contains("editor.Loaded += (sender, args) => attach();", body);
-            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = TaggedPageLayout(");
             Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\)\s*\{\s*var editor = row\.Editor as ControlsEditor;\s*if \(editor != null\) ShortcutsWatch\(editor, changed\);\s*if \(editor != null\) editors\.Add\(editor\);", page);
 
             // The step every re-read goes through: a burst of changes is read once, after it, by the page's
@@ -1079,7 +1079,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OnDrop(release);", follow);
             Assert.Single(Regex.Matches(code, @"InputMappingsChanged \+="));
 
-            var reconcile = Between(code, "private static void ShortcutsReconcile(", "private static FrameworkElement ShortcutsTitleTagged(");
+            var reconcile = Between(code, "private static void ShortcutsReconcile(", "private FrameworkElement BuildShortcutsHeader(");
             // It runs from a Dispatcher callback, so a surprise from SimHub's model is caught and logged here
             // rather than thrown onto SimHub's UI thread: the whole body is the try, and its catch is its own.
             Assert.Matches(@"^private static void ShortcutsReconcile\(ControlsEditor editor\)\s*\{\s*try\s*\{\s*var model = editor\.Model;", reconcile);
@@ -1261,12 +1261,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var empty = Ui.Caption(string.Empty, BodyWidth);", code);
             // The page opens on All, as the artboard presses it.
             Assert.Contains("private string shortcutsFilter = PanelShortcuts.FilterAll;", code);
-            // The title leaves the page's stack before it goes into the row with its tag: WPF will not give
-            // an element a second parent, and the page would draw PageFailed.
-            Assert.Matches(@"stack\.Children\.RemoveAt\(0\);\s*stack\.Children\.Insert\(0, Ui\.HStack\(12, title, Ui\.NewTag\(\)\)\);", code);
-            // The title is PageLayout's first child, and it alone is moved: the page's title carries the tag.
-            var tagged = Between(code, "private static FrameworkElement ShortcutsTitleTagged(", "\n        }");
-            Assert.Matches(@"var stack = page as StackPanel;\s*if \(stack == null \|\| stack\.Children\.Count == 0\) return page;\s*var title = stack\.Children\[0\] as TextBlock;\s*if \(title == null\) return page;\s*stack\.Children\.RemoveAt\(0\);", tagged);
+            // The shell's layout draws the title with its tag (#523), so the page no longer takes its title out
+            // of PageLayout's stack to put it in a row with the tag.
+            Assert.DoesNotContain("ShortcutsTitleTagged", code);
+            Assert.DoesNotContain("stack.Children.RemoveAt(0);", code);
         }
 
         /// <summary>
@@ -1292,7 +1290,7 @@ namespace OpenDashPlugin.Tests
             var nothing = Between(code, "private static bool ShortcutsFocusOnNothing(", "\n        }");
             Assert.Contains("var at = Keyboard.FocusedElement;", nothing);
             Assert.Contains("return at == null || at is Window;", nothing);
-            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = ShortcutsTitleTagged(");
+            var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = TaggedPageLayout(");
             Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\.Where\(row => row\.Bindable\)\)\s*\{\s*var touched = row;\s*row\.Shown\.PreviewMouseDown \+= \(sender, args\) => touch\.Row = touched;\s*row\.Shown\.GotKeyboardFocus \+= \(sender, args\) => touch\.Row = touched;", page);
             Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
             var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
@@ -1395,8 +1393,7 @@ namespace OpenDashPlugin.Tests
             // the header's two columns only where TwoColumns says, and every anchor id AnchorTable pins drawn.
             Assert.Contains("Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth)", code);
             // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's does.
-            Assert.Contains("var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));", code);
-            Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
+            Assert.Contains("var page = TaggedPageLayout(PanelShortcuts.Title, Ui.NewTag(), null, sections.ToArray());", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
             // The filter stands alone at the header's right, under no row title, so it carries a group name for
             // a screen reader: its three choices are never read out bare. The name is on the filter itself,

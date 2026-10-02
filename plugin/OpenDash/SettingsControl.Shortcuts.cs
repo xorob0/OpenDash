@@ -155,7 +155,9 @@ namespace OpenDashPlugin
             var sections = new List<UIElement> { header, banner };
             sections.AddRange(groups.Select(group => (UIElement)group.Card));
             sections.Add(empty);
-            var page = ShortcutsTitleTagged(PageLayout(PanelShortcuts.Title, null, sections.ToArray()));
+            // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's does
+            // (ruling 7).
+            var page = TaggedPageLayout(PanelShortcuts.Title, Ui.NewTag(), null, sections.ToArray());
             ShortcutsFollowSimHub(page, editors, changed, () => dropped);
             return page;
         }
@@ -231,22 +233,6 @@ namespace OpenDashPlugin
             {
                 Log.Warn("Could not read SimHub's bindings for " + editor.ActionName + " again: " + ex.Message);
             }
-        }
-
-        /// <summary>
-        /// The page's title with the New tag beside it, as the Rig page draws its own: Map.dc.html tags "Every
-        /// button in one list" New, and a thing new only on the Map carries the tag on its control (ruling 7).
-        /// PageLayout draws the title alone, so its first child is put in a row with the tag.
-        /// </summary>
-        private static FrameworkElement ShortcutsTitleTagged(FrameworkElement page)
-        {
-            var stack = page as StackPanel;
-            if (stack == null || stack.Children.Count == 0) return page;
-            var title = stack.Children[0] as TextBlock;
-            if (title == null) return page;
-            stack.Children.RemoveAt(0);
-            stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));
-            return page;
         }
 
         /// <summary>

@@ -463,6 +463,10 @@ namespace OpenDashPlugin
         public const double TagHeight = 18;
         public const double TagPaddingX = 6;
         public const double TagTextSize = 10;
+        /// <summary>Between a page's title and the tag after it (a page new in this release carries New):
+        /// Rig.dc.html's and Map.dc.html's 12.</summary>
+        public const double TitleTagGap = 12;
+
         public const double CrumbHeight = 22;
         public const double CrumbPaddingX = 7;
 
