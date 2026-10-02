@@ -547,8 +547,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The fix box's title, drawn only when something has read that no device shows the matrix: the
-        /// card's state, one phrase for the one state on the card, on Home and here (#524, ruling 8). The matrix
-        /// number is in the steps under it (<see cref="FixSteps"/>'s Content line).</summary>
+        /// card's state, one phrase for the one state on the card, on Home and here, so a driver who meets it in
+        /// one place recognises it in the others (voice.md, "One word per thing"). The matrix number is in the
+        /// steps under it (<see cref="FixSteps"/>'s Content line), which is where a driver acts on it.</summary>
         public const string FixTitle = NotShown;
 
         /// <summary>SimHub names its devices itself, so the crumb names the one a driver is to open.</summary>
@@ -705,7 +706,8 @@ namespace OpenDashPlugin
 
         /// <summary>What the chips are, for a screen reader: a noun, as voice.md's "The caption" says a heading
         /// is, the artboard's own from its clause "What to preview", and one noun for the one set of chips on
-        /// every page (#524, ruling 6). Not "scenarios", which is the code's word for PanelEmulation's chips and
+        /// every page, Rig, Matrix, LEDs and Settings alike, since they are one control a driver learns once
+        /// (#524). Not "scenarios", which is the code's word for PanelEmulation's chips and
         /// no page shows a driver.</summary>
         public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
@@ -768,7 +770,8 @@ namespace OpenDashPlugin
         public const string SpotterAnimationCaption = "Every matrix.";
 
         /// <summary>The link on the Warnings row: the triggers are the rig's, on Settings' Alerts, named by the
-        /// plural of the column they are in there (#524, ruling 7).</summary>
+        /// plural of the column they are in there, so the link names what it opens onto in the word the driver
+        /// finds when it lands (#524).</summary>
         public const string ThresholdsLink = PanelSettings.ThresholdColumn + "s";
         public static readonly PanelRoute ThresholdsRoute = new PanelRoute(PanelPage.Settings, PanelSettings.AnchorAlerts);
 
