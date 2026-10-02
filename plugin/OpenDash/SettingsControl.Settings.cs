@@ -294,7 +294,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
         /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510. The
-        /// width is read only up to the threshold, so a resize above it rebuilds nothing.
+        /// width is read only up to the threshold, so a resize above it rebuilds nothing. Below the alert
+        /// table's 680 every settled resize still rebuilds the page, since the shell reads the largest cap as
+        /// one continuous width; a read of which side of a threshold the build saw is the shell's to add.
         /// </summary>
         private Border SettingsFit(Border row)
         {

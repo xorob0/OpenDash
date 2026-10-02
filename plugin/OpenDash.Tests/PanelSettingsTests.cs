@@ -816,7 +816,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
             // Every read of the width stops at the threshold it decides (PanelShell.RebuildsOnResize): a bare
             // ContentWidth has no ceiling, and a page that reads it is rebuilt by every settled resize at every
-            // width, which commits whatever is in a threshold box and takes the keyboard out of it.
+            // width, which commits whatever is in a threshold box and takes the keyboard out of it. The caps
+            // stop that only above the largest of them, the fold's 680: the shell keeps the largest cap a build
+            // asks for and reads min(680, content) as one continuous width, so below 680 of content every
+            // settled resize still rebuilds the page, although it draws differently only at 320, 560 and 680.
+            // A read that records only which side of a threshold the build saw is the shell's to add.
             var bare = new Regex(@"(?<![\w.])ContentWidth(?!UpTo)\b");
             Assert.DoesNotMatch(bare, page);
             Assert.Matches(bare, "PanelSettings.StacksControls(ContentWidth)");
