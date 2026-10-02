@@ -1,12 +1,13 @@
-// PanelLights.cs: the words the Lights tab puts beside a value, and the section that answers for the
-// whole rig.
+// PanelLights.cs: the words the LEDs page puts beside a value -- the strips, the Add LEDs sheet and Lovely
+// Car Data -- and the matrix words the Matrix page still reads until it lands copies of its own.
 //
-// Apart from SettingsControl.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the tab is
+// Apart from SettingsControl.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the page is
 // WPF and the net8.0 test project cannot compile a line of it, so what a test can hold has to live where
-// it can reach. What it holds here is the pairing. BuildChoice and BuildSegmented are handed the values
+// it can reach. PanelLeds holds the page's own decisions; this file holds the strip words it shares with
+// the shell's comments and the Matrix page. What it holds here is the pairing. BuildChoice and BuildSegmented are handed the values
 // and the labels as two arrays and read them by index, so a value set that gains or loses one leaves the
 // labels beside it wrong without saying so: the centre drop-down carried a label for a retired fifth
-// value that way, and a segmented bar one label short throws while a tab is being drawn. Pure: no WPF
+// value that way, and a segmented bar one label short throws while a page is being drawn. Pure: no WPF
 // types.
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ namespace OpenDashPlugin
 
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
-        public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
+        public static readonly string[] MirrorFitLabels = { "Stretch to fit", "Actual size" };
 
         /// <summary>One label per <see cref="Contract.FlagBoxRests"/> value, in its order.</summary>
         public static readonly string[] RestLabels = { "Dark", "Gear" };
@@ -29,11 +30,8 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.FlagBoxSides"/> value, in its order.</summary>
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
-        /// <summary>The heading over the strips a driver has added.</summary>
-        public const string BarsTitle = "Your LED strips";
-
         /// <summary>
-        /// The line under it.
+        /// What the strips a driver has added are, as a group: the cards' accessible name.
         /// </summary>
         /// <remarks>
         /// A strip used to be a shape the Install tab offered and nothing more, so two strips on one rig
@@ -42,8 +40,11 @@ namespace OpenDashPlugin
         /// name, a shape and settings of its own, and installing it is what puts a profile of that name
         /// into SimHub.
         /// </remarks>
-        public const string BarsCaption = "Add one for each RGB strip you have.";
+        public const string BarsTitle = "Your LED strips";
 
+        /// <summary>The tile beside the cards and the sheet it opens: voice.md's own example beside "No strips
+        /// yet", since the strips are strips throughout. It departs from the artboard's "Add LEDs", which
+        /// docs/design/plugin.md does not record yet; search still finds the tile by it.</summary>
         public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";
@@ -52,10 +53,14 @@ namespace OpenDashPlugin
 
         public const string BarEndsTitle = "LEDs at each end";
 
+        /// <summary>What the ends carry, and how to have none, in a driver's words rather than the generator's
+        /// ("lamps"). Not drawn: the artboard has no caption there and voice.md's default is none. Kept, with its
+        /// pin, as BarFanatecCaption is, as the reason the choice includes None.</summary>
         public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
 
-        /// <summary>The device row of the add flow and of every bar.</summary>
-        public const string BarDeviceTitle = "LED device";
+        /// <summary>The device row of the add flow and of every strip: SimHub's word for it, since SimHub's
+        /// Devices list is where the driver finds it.</summary>
+        public const string BarDeviceTitle = "SimHub device";
 
         /// <summary>
         /// The line under it, which has to carry a fact about SimHub rather than a preference.
@@ -71,14 +76,15 @@ namespace OpenDashPlugin
 
         /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
         /// to choose, and a drop-down of one is a question with one answer.</summary>
-        public static string OneDevice(string name)
+        public static string OneDevice(string name, bool connected = true)
         {
-            return "Goes to " + name + ".";
+            return connected ? "Goes to " + name + "." : "Goes to " + name + ", which is not connected.";
         }
 
-        /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
-        /// cannot have is a profile anywhere, which is a thing about the rig and not about OpenDash.</summary>
-        public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
+        /// <summary>Said when SimHub has none, in the row's own noun ("SimHub device"). The bar is still added
+        /// and still configurable; what it cannot have is a profile anywhere, which is a thing about the rig
+        /// and not about OpenDash.</summary>
+        public const string NoDevices = "No SimHub device has LEDs. Add your wheel or Arduino in SimHub first.";
 
         /// <summary>
         /// Said beside the picker when SimHub has devices with some sign of LEDs that OpenDash did not
@@ -94,7 +100,23 @@ namespace OpenDashPlugin
         public static string NotOffered(System.Collections.Generic.IList<string> names)
         {
             if (names == null || names.Count == 0) return null;
-            return NameList(names) + (names.Count == 1 ? " has" : " have") + " no LEDs OpenDash can reach; see SimHub's log.";
+            return NameList(names) + Unreachable(names);
+        }
+
+        /// <summary>The devices passed over and what they have, with no full stop and no pointer at the log, for a
+        /// line that goes on to say the steps after it: "Rim has no LEDs OpenDash can reach". Null with none.</summary>
+        public static string Unreached(System.Collections.Generic.IList<string> names)
+        {
+            if (names == null || names.Count == 0) return null;
+            return NameList(names) + (names.Count == 1 ? " has" : " have") + UnreachableFact;
+        }
+
+        private const string UnreachableFact = " no LEDs OpenDash can reach";
+
+        /// <summary>What the devices passed over have, and where the reason is.</summary>
+        private static string Unreachable(System.Collections.Generic.IList<string> names)
+        {
+            return (names.Count == 1 ? " has" : " have") + UnreachableFact + ". See SimHub's log.";
         }
 
         /// <summary>At most this many names are spelled out before the rest are counted.</summary>
@@ -106,15 +128,34 @@ namespace OpenDashPlugin
         /// <remarks>
         /// With no device offered, <see cref="NoDevices"/> would be wrong: it says there is no LED device
         /// in SimHub while the wheel is there in SimHub's list, which is the report this answers. The
-        /// sentence naming the device replaces it. With one or more offered, it follows whatever the row
-        /// already said.
+        /// sentence naming the device replaces it. With one offered, the device it goes to and the ones
+        /// passed over are one sentence, so the caption stays at voice.md's two: "Goes to Arduino RGB LEDs,
+        /// not Rim, which has no LEDs OpenDash can reach. See SimHub's log."
         /// </remarks>
         public static string DeviceRowCaption(int offered, string caption, System.Collections.Generic.IList<string> declined)
         {
             var passed = NotOffered(declined);
             if (passed == null) return offered == 0 ? NoDevices : caption;
             if (offered == 0 || string.IsNullOrEmpty(caption)) return passed;
-            return caption + " " + passed;
+            return caption.Trim().TrimEnd('.') + ", not " + NameList(declined) + ", which" + Unreachable(declined);
+        }
+
+        /// <summary>
+        /// The caption under the device row where SimHub has the one device and the strip is on it: where it goes,
+        /// whether SimHub is talking to it, and the devices passed over.
+        /// </summary>
+        /// <remarks>
+        /// Built from the device's name and state rather than by trimming <see cref="OneDevice"/>'s sentence: a
+        /// device that is not connected is already a "which" clause, and a second ", not Rim, which ..." stacked on
+        /// it read as part of "not connected". There the two facts are joined, each beside its own device, and the
+        /// caption stays at voice.md's two sentences.
+        /// </remarks>
+        public static string OneDeviceCaption(string name, bool connected, System.Collections.Generic.IList<string> declined)
+        {
+            var unreached = Unreached(declined);
+            if (unreached == null) return OneDevice(name, connected);
+            if (connected) return DeviceRowCaption(1, OneDevice(name), declined);
+            return "Goes to " + name + ", which is not connected, and " + unreached + ". See SimHub's log.";
         }
 
         private static string NameList(System.Collections.Generic.IList<string> names)
@@ -128,30 +169,36 @@ namespace OpenDashPlugin
             return string.Join(", ", spelled.GetRange(0, spelled.Count - 1)) + " and " + spelled[spelled.Count - 1];
         }
 
-        /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
-        /// happened rather than silently reading as the first device in the list.</summary>
-        public const string DeviceGone = "The device it was on (no longer on this rig)";
+        /// <summary>What a bar pointed at a device SimHub does not list is shown as, so the row says what the
+        /// code knows rather than silently reading as the first device in the list. A chooser's value is read
+        /// without its label, so it names the device and not an "it".</summary>
+        public const string DeviceGone = "Device not in SimHub";
 
-        /// <summary>Said beside a device that SimHub is not talking to. A profile installs into it all the
-        /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
-        public const string DeviceOffline = " (not connected)";
+        /// <summary>Said beside a device that SimHub is not talking to, in the picker's value, joined as the Add
+        /// sheet's device rows join their meta. A profile installs into it all the same -- the profile list is
+        /// SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
+        public const string DeviceOffline = PanelLeds.Dot + PanelLeds.NotConnected;
 
-        public const string BarCentreTitle = "LEDs in the middle";
+        /// <summary>The centre's count, in the word the rest of the page uses for it ("Centre display").</summary>
+        public const string BarCentreTitle = "LEDs in the centre";
 
+        /// <summary>How to arrive at the centre's number. Not drawn, as <see cref="BarEndsCaption"/> is not: the
+        /// note under the picture ("15 LEDs in all, as 3 · 9 · 3.") is where the count is checked.</summary>
         public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
 
-        /// <summary>The line under the two numbers: what they add up to and what the profile will be
-        /// called. A driver counts LEDs, and this is where the two counts are checked against the total
-        /// they actually have.</summary>
+        /// <summary>The line under the two numbers: what they add up to, and the shape written as the cards
+        /// write it. A driver counts LEDs, and this is where the two counts are checked against the total
+        /// they actually have. A bare run is its total alone, since "0 · 15 · 0" is the id talking.</summary>
         public static string BarShapeNote(int side, int centre)
         {
             var total = side * 2 + centre;
-            var shape = side + "/" + centre + "/" + side;
-            return total + (total == 1 ? " LED in all" : " LEDs in all") + ", as " + shape + ".";
+            var all = total + (total == 1 ? " LED in all" : " LEDs in all");
+            if (side <= 0) return all + ".";
+            return all + ", as " + PanelLeds.ShapeDots(BarShapeId(side, centre)) + ".";
         }
 
-        /// <summary>The same line for the form as it stands, the switch included: on, the two numbers are
-        /// the wheel's whatever the controls held before, and the profile is the Fanatec one.</summary>
+        /// <summary>The same line for the form as it stands, the tile included: the Fanatec wheel's shape is
+        /// its own whatever the controls held before, and the profile is the Fanatec one.</summary>
         public static string BarShapeNote(int side, int centre, bool fanatec)
         {
             if (!fanatec) return BarShapeNote(side, centre);
@@ -159,17 +206,19 @@ namespace OpenDashPlugin
             return plain.Substring(0, plain.Length - 1) + " Fanatec.";
         }
 
-        /// <summary>What a bar of this shape is called before the driver types over it.</summary>
+        /// <summary>The id of a plain A/B/A shape, which the census and the Add sheet ask over.</summary>
         public static string BarShapeId(int side, int centre)
         {
             return side + "-" + centre + "-" + side;
         }
 
-        /// <summary>The switch above the two numbers, which decides them when it is on.</summary>
+        /// <summary>The hardware tile that decides the shape when it is chosen.</summary>
         public const string BarFanatecTitle = "Fanatec wheel";
 
         /// <summary>
-        /// The line under it: why a Fanatec wheel is not simply a 3/9/3.
+        /// Why a Fanatec wheel is not simply a 3/9/3. Not drawn: it explains how SimHub presents the LEDs,
+        /// which voice.md keeps off the panel, and the tile already says Fanatec wheel and 3 · 9 · 3. Kept, with
+        /// PanelLedBarFormTests' pin, as the reason the tile exists.
         /// </summary>
         /// <remarks>
         /// The plain 3/9/3 on a Fanatec wheel lights only some of its LEDs and starts the bar from the
@@ -228,8 +277,8 @@ namespace OpenDashPlugin
         /// that is not a wiring to pick here: a bar is reversed by its own switch (LedBar.Reversed), which
         /// installs the twin in place of the plain profile (#503). The Fanatec wiring is not a reversal --
         /// it is the order SimHub's Fanatec LED device presents a wheel's runs in, which reverses nothing
-        /// -- so it stays a switch of its own on the form. The reversed 4/14/4 keeps a row of its own on the Install tab only because it is named for
-        /// a device, as the plain 4/14/4 is.
+        /// -- so it stays a tile of its own on the Add LEDs sheet. The reversed 4/14/4 keeps a row of its own on the
+        /// Updates page only because it is named for a device, as the plain 4/14/4 is.
         /// </remarks>
         public static bool OffersFanatec(IEnumerable<string> census)
         {
@@ -246,42 +295,45 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is said once a bar exists, which is the step SimHub does not take for you: installing
-        /// adds a profile, it does not select one on the device.
+        /// What is said once a bar exists: the steps OpenDash does not take, in the order they are done, as
+        /// voice.md's own example has them. The restart comes first, since the plugin publishes a strip's own
+        /// settings only for the strips it held when SimHub started; then selecting the profile, which
+        /// installing adds and does not select. A note the install returned (the device lists only its maker's
+        /// profiles) comes before both, since nothing is listed to select until it is done.
         /// </summary>
         /// <remarks>
         /// It names the device, because "your LED device" was the whole confusion: a profile goes into
         /// one device's list and OpenDash used to always pick the Arduino's, so somebody reading this
         /// line went to their wheel and found nothing. Now the line says where to look.
         /// </remarks>
-        public static string BarAdded(string name, string device)
+        public static string BarAdded(string name, string device, string note = null)
         {
-            var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
-            return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
+            var select = PanelLeds.SelectIt(name, device);
+            var steps = BarAddedRestart + char.ToLowerInvariant(select[0]) + select.Substring(1);
+            return "Added " + name + ". " + (string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim() + " ") + steps;
         }
 
+        /// <summary>The restart BarAdded asks for, pinned apart so it goes when the plugin attaches a strip's
+        /// settings as the strip is added.</summary>
+        public const string BarAddedRestart = "Restart SimHub, then ";
+
         /// <summary>
-        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form):
-        /// no page offers a press that installs it again -- the Updates row for a profile that is not in SimHub
-        /// has none, and its hover sends the driver back to LEDs -- until the LEDs header carries ReinstallBar's.
+        /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form),
+        /// then names the steps left in order: the LEDs header's Install, and the restart the strip's own
+        /// settings wait on, as <see cref="BarAdded"/> says it.
         /// </summary>
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See SimHub's log.";
+            return "Added " + name + ", but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.";
         }
 
-        /// <summary>A strip whose profile could not be moved to another device: nothing was added.</summary>
-        public static string BarMoveFailed(string name)
-        {
-            return "Could not move " + name + "'s profile. See SimHub's log.";
-        }
-
-        /// <summary>The strip's Rename press. It renames the strip; no page reinstalls a profile yet, so the
-        /// tooltip does not send the driver to one.</summary>
+        /// <summary>The strip's Rename press. Saving installs the profile again where SimHub holds it, so
+        /// SimHub's list carries the new name as well; the tooltip promises only what always happens.</summary>
         public const string RenameBarTooltip = "Renames this strip.";
 
-        /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
-        public const string CarTablesTitle = "Car light tables";
+        /// <summary>The row that offers the car light tables, under Every strip: the source's own name, which
+        /// is what a driver who met the tables at Lovely Sim Racing knows them by.</summary>
+        public const string CarTablesTitle = "Lovely Car Data";
 
         /// <summary>
         /// What the button will do, said before it is pressed rather than after.
@@ -301,18 +353,23 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for a strip using the car's own rev lights. Every car is downloaded at once, about 400 KB, "
-            + "so your car is never disclosed.";
+            "Needed for the car's own rev lights and car-specific shift points. Every car is downloaded at once, "
+            + "about 400 KB, so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
-        /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
-        public const string CarTablesButtonTooltip = "Downloads the car light tables.";
+        /// of what the tables are for, and a tooltip on the button says what the button does, in the verb its
+        /// label carries (<see cref="CarTablesButton"/>), so a first download that turns Download into Update
+        /// turns the hover with it.</summary>
+        public static string CarTablesButtonTooltip(int cars)
+        {
+            return cars > 0 ? "Updates Lovely Car Data." : "Downloads Lovely Car Data.";
+        }
 
         /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
         public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
 
         /// <summary>The state a rig is in until somebody presses the button, which is every rig on a fresh install.</summary>
-        public const string CarTablesNone = "No car light tables yet.";
+        public const string CarTablesNone = "Not downloaded yet.";
 
         /// <summary>Said after a download that did not answer, beside whatever is already on disk.</summary>
         public static string CarTablesFailed(string reason)
@@ -335,8 +392,111 @@ namespace OpenDashPlugin
             return cars > 0 ? "Update" : "Download";
         }
 
-        /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
-        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
+        /// <summary>
+        /// Said in place of the status's ", updated ..." once the copy is over a week old
+        /// (<see cref="CarTablesStale"/>), which is worked out as the row is drawn: the status is written when the
+        /// tables are read, at start and after a download, so its age can be days behind a SimHub left running. In
+        /// place of it rather than after it, so the line never gives the age twice or says "updated just now"
+        /// beside "over a week ago". The copy is what was updated, so the age is the update's, not the cars'.
+        /// </summary>
+        public const string CarTablesStaleAge = ", updated over a week ago";
+
+        /// <summary>The step a copy over a week old is offered, after the count.</summary>
+        public const string CarTablesUpdateStep = "Press Update for a newer copy.";
+
+        /// <summary>A download that did not answer, with no copy on disk: voice.md's failure form, with the reason
+        /// in SimHub's log, where the page writes it, rather than the fetch's own message on the panel.</summary>
+        public const string CarTablesDownloadFailed = "Could not download Lovely Car Data. See SimHub's log.";
+
+        /// <summary>A download that did not answer beside a copy that works, said as voice.md's "Could not reach
+        /// GitHub. You have 0.3.0-rc.4." is: what failed, then what the driver still has, with the copy the subject
+        /// of the count (<see cref="CarTablesCopyHas"/>).</summary>
+        public const string CarTablesNewerFailed = "Could not download a newer copy.";
+
+        /// <summary>What leads the count after a failed download: the cars are the copy's, not the driver's.</summary>
+        public const string CarTablesCopyHas = "Your copy has ";
+
+        /// <summary>Said while the tables are still being read at start, which a page opened at once can see.</summary>
+        public const string CarTablesLoading = "Loading…";
+
+        /// <summary>Said where the tables on disk could not be read. The reason is in SimHub's log, where the
+        /// page writes it, since an exception's message is not the panel's to show.</summary>
+        public const string CarTablesUnreadable = "Could not read Lovely Car Data. See SimHub's log.";
+
+        /// <summary>CarLightService's status before the start's read has finished, as it writes it.</summary>
+        public const string ServiceNotLoaded = "not loaded";
+
+        /// <summary>The start of CarLightService's status where reading the folder threw, as it writes it.</summary>
+        public const string ServiceUnreadPrefix = "could not read the car light tables";
+
+        /// <summary>CarLightService's status where the read at start threw, as it writes it.</summary>
+        public const string ServiceUnloaded = "the car light tables could not be loaded";
+
+        /// <summary>The age clause of CarLightService's status ("84 cars, updated 9 days ago"), as Describe
+        /// writes it.</summary>
+        public const string ServiceAge = ", updated ";
+
+        /// <summary>The tail CarLightService's status carries after a download that did not answer beside a
+        /// copy that works, as Describe writes it, with the fetch's own message after it.</summary>
+        public const string ServiceFailedTail = " (last download failed: ";
+
+        /// <summary>Whether CarLightService's status is one of its two failures to read the tables, which the
+        /// row says in its own words and the page writes to the log.</summary>
+        public static bool CarTablesUnread(string status)
+        {
+            var said = (status ?? string.Empty).Trim();
+            return said.StartsWith(ServiceUnreadPrefix, StringComparison.Ordinal) || said == ServiceUnloaded;
+        }
+
+        /// <summary>
+        /// The row's status line: CarLightService's status, with "updated over a week ago" in place of its age where
+        /// the copy is, and a full stop in every state. The service's lowercase states, which name the tables by the noun the row retired and carry an
+        /// exception's message, and its two failed downloads, which carry the fetch's message, are said in the
+        /// row's own words; the page writes the reasons to SimHub's log.
+        /// </summary>
+        public static string CarTablesLine(string status, bool stale)
+        {
+            var said = (status ?? string.Empty).Trim();
+            if (said == ServiceNotLoaded) return CarTablesLoading;
+            if (CarTablesUnread(said)) return CarTablesUnreadable;
+            if (said.StartsWith(CarTablesNone, StringComparison.Ordinal))
+            {
+                // "Not downloaded yet. Download failed: <reason>." where a download did not answer.
+                return said.Length > CarTablesNone.Length ? CarTablesDownloadFailed : CarTablesNone;
+            }
+            var failedAt = said.IndexOf(ServiceFailedTail, StringComparison.Ordinal);
+            var failed = failedAt >= 0;
+            if (failed) said = said.Substring(0, failedAt).TrimEnd();
+            if (said.Length == 0) return string.Empty;
+            var agedAt = said.IndexOf(ServiceAge, StringComparison.Ordinal);
+            // Over a week ago replaces the age; a copy with no fetch stamp has no age to replace, and is stale
+            // only because nothing says when it came, so it is not called over a week old.
+            var copy = !stale ? said : agedAt >= 0 ? said.Substring(0, agedAt) + CarTablesStaleAge : said;
+            if (failed) return CarTablesNewerFailed + " " + CarTablesCopyHas + copy + ".";
+            return stale ? copy + ". " + CarTablesUpdateStep : copy + ".";
+        }
+
+        /// <summary>
+        /// Whether the copy is over a week old, from what CarLightService holds in memory: its count of cars and
+        /// its fetch stamp, both written by the read that wrote its status. CarLightLibrary.IsStale's rule (no
+        /// stamp, a stamp <see cref="CarLightLibrary.MaxAge"/> old, or a stamp in the future) over the same stamp
+        /// without reading the folder, so the row can be drawn from a tick: nothing is read from disk on one.
+        /// </summary>
+        public static bool CarTablesStale(int cars, DateTime? fetchedAt, DateTime nowUtc)
+        {
+            if (cars <= 0) return false;
+            if (fetchedAt == null) return true;
+            return nowUtc - fetchedAt.Value >= CarLightLibrary.MaxAge || fetchedAt.Value > nowUtc;
+        }
+
+        /// <summary>Whether CarLightService's status says a download did not answer, with a copy on disk or
+        /// without: the page writes its reason to SimHub's log, since the row says only that it failed.</summary>
+        public static bool CarTablesDownloadDidNotAnswer(string status)
+        {
+            var said = (status ?? string.Empty).Trim();
+            return said.IndexOf(ServiceFailedTail, StringComparison.Ordinal) >= 0
+                || (said.StartsWith(CarTablesNone, StringComparison.Ordinal) && said.Length > CarTablesNone.Length);
+        }
 
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";

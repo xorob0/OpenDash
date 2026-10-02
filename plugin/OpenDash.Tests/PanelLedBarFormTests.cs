@@ -64,10 +64,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_note_and_the_default_name_follow_the_switch()
         {
-            Assert.Equal("15 LEDs in all, as 3/9/3.", PanelLights.BarShapeNote(3, 9, false));
-            Assert.Equal("24 LEDs in all, as 4/16/4.", PanelLights.BarShapeNote(4, 16, false));
-            Assert.Equal("15 LEDs in all, as 3/9/3 Fanatec.", PanelLights.BarShapeNote(3, 9, true));
-            Assert.Equal("15 LEDs in all, as 3/9/3 Fanatec.", PanelLights.BarShapeNote(0, 20, true));
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3.", PanelLights.BarShapeNote(3, 9, false));
+            Assert.Equal("24 LEDs in all, as 4 · 16 · 4.", PanelLights.BarShapeNote(4, 16, false));
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3 Fanatec.", PanelLights.BarShapeNote(3, 9, true));
+            Assert.Equal("15 LEDs in all, as 3 · 9 · 3 Fanatec.", PanelLights.BarShapeNote(0, 20, true));
             // What DefaultBarName prefixes with "OpenDash ", which is the Name the generator gives the profile.
             Assert.Equal("3/9/3 Fanatec", PanelLightRows.ShapeLabel(PanelLights.BarShapeId(0, 20, true)));
             Assert.Equal("3/9/3", PanelLightRows.ShapeLabel(PanelLights.BarShapeId(3, 9, false)));
