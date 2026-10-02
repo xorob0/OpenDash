@@ -2,8 +2,8 @@
 // that is mirrored out of the dash build rather than read back from it.
 //
 // No page draws the census rows since the Install tab went (#503): the Updates page draws a row per strip
-// on the rig, which PanelUpdatesTests pins. What these tests hold is the census the frozen RowPlan and
-// OutdatedBars group by, and through it the embedded build against the generator: every shape a build
+// on the rig, which PanelUpdatesTests pins. What these tests hold is the census, and through it the
+// embedded build against the generator: every shape a build
 // emits lands in exactly one group, the reversed twins included, and the device captions are held against
 // packages/dash/src/leds/strip.ts in both directions, since a strip profile's JSON has a Name and nothing
 // else a caption could be read from.
@@ -284,141 +284,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
         }
 
-        /// <summary>What a strip built by this checkout's VERSION says in its description.</summary>
-        private const string Current = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0; do not edit here, it is replaced on update.";
-
-        private const string Older = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0-rc.8; do not edit here, it is replaced on update.";
-
-        private static IList<KeyValuePair<LedBar, FlagBoxPlan>> Census(IEnumerable<LedBar> bars, params IEnumerable<InstalledProfile>[] devices)
-        {
-            return bars.Select(bar => new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, Current, devices))).ToList();
-        }
-
-        /// <summary>
-        /// The rig #457 was reported from: a 3/9/3 and a 3/9/3 Fanatec added on the Arduino, and every
-        /// strip row saying Not installed beside them.
-        /// </summary>
-        /// <remarks>
-        /// The two ids are the ones SimHub wrote into ArduinoRGBLedsSettings.json on that run, and they
-        /// are what the two bars derive from their namespaces, which is the whole of the fix: a row asks
-        /// about the ids the rig's bars derive. It used to ask about the embedded profile's own id,
-        /// cf7dc3c7-... for the 3/9/3, which no bar ever carries, so it could never find one. A profile
-        /// under that id is not a bar's and the row does not speak for it.
-        /// </remarks>
+        /// <summary>The Install tab's Update and its grouping went with their last caller (#523): the Updates page
+        /// writes per strip (SettingsControl.Updates.Lights.cs), and the shell's UpdateBars and
+        /// EmbeddedProfileNames had none.</summary>
         [Fact]
-        public void A_row_finds_the_rigs_strips_by_the_ids_their_bars_derive()
+        public void The_grouped_update_is_gone_with_its_last_caller()
         {
-            var plain = new LedBar { Name = "OpenDash 3/9/3", Namespace = "Led393", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
-            var fanatec = new LedBar { Name = "OpenDash 3/9/3 Fanatec", Namespace = "Led393Fanatec", Shape = "3-9-3-fanatec", Device = LedBar.ArduinoDevice };
-            var arduino = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), Name = "OpenDash 3/9/3", Description = Current },
-                new InstalledProfile { ProfileId = Guid.Parse("cf2f576b-a3e3-5f53-be30-5d74ece9cf6c"), Name = "OpenDash 3/9/3 Fanatec", Description = Current },
-                new InstalledProfile { ProfileId = Guid.NewGuid(), Name = "Somebody's own" },
-            };
-            Assert.Equal(arduino[0].ProfileId, LedBarProfile.IdFor(plain.Namespace));
-            Assert.Equal(arduino[1].ProfileId, LedBarProfile.IdFor(fanatec.Namespace));
-
-            var census = Census(new[] { plain, fanatec }, arduino);
-            var rows = PanelLightRows.Rows(FullBuild());
-            var sideThree = rows.Single(row => row.ShapeIds.Contains("3-9-3"));
-            var fanatecRow = rows.Single(row => row.ShapeIds.Contains("3-9-3-fanatec"));
-            Assert.Equal("OpenDash 3/4/3 … 3/12/3", sideThree.Name);
-
-            var plan = PanelLightRows.RowPlan(sideThree.ShapeIds, census, true);
-            Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
-            Assert.Equal("0.3.0", plan.InstalledVersion);
-            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(fanatecRow.ShapeIds, census, true).State);
-            // Every other shape has no strip on this rig, and says so.
-            foreach (var row in rows.Where(row => row != sideThree && row != fanatecRow))
-            {
-                Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(row.ShapeIds, census, true).State);
-            }
-
-            // The embedded profile's own id is not a strip of the rig's: a copy of it in SimHub reads the
-            // rig-wide settings and belongs to no bar, and a row with no bar of its shape is Not installed.
-            var embeddedOnly = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = Current },
-            };
-            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(sideThree.ShapeIds, Census(new LedBar[0], embeddedOnly), true).State);
-        }
-
-        [Fact]
-        public void A_reversed_bar_is_found_by_the_row_of_the_profile_it_installs()
-        {
-            // A 4/14/4 wired from the far end installs the reversed profile, whose row is its own; a
-            // reversed 3/10/3 installs a twin that rides in the 3/10/3's row. #503.
-            var mld = new LedBar { Name = "MLD", Namespace = "LedMLD", Shape = "4-14-4-reversed", Device = LedBar.ArduinoDevice };
-            var gtsl = new LedBar { Name = "GTSL", Namespace = "LedGTSL", Shape = "3-10-3", Reversed = true, Device = LedBar.ArduinoDevice };
-            mld.Normalise();
-            gtsl.Normalise();
-            var arduino = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(mld.Namespace), Name = "MLD", Description = Current },
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(gtsl.Namespace), Name = "GTSL", Description = Current },
-            };
-            var census = Census(new[] { mld, gtsl }, arduino);
-            var built = FullBuild().Concat(new[] { new LightProfile("3-10-3-reversed", "OpenDash 3/10/3 reversed") }).ToList();
-            var rows = PanelLightRows.Rows(built);
-
-            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 4/14/4 reversed").ShapeIds, census, true).State);
-            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 4/14/4").ShapeIds, census, true).State);
-            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(rows.Single(r => r.Name == "OpenDash 3/10/3").ShapeIds, census, true).State);
-        }
-
-        /// <summary>
-        /// A group's plan (the frozen RowPlan) reads Outdated while any strip of its shapes that is in SimHub
-        /// is older than this build, and OutdatedBars names exactly those strips. No page draws the group or
-        /// presses on it; the Updates page's row per strip is PanelUpdatesTests'.
-        /// </summary>
-        [Fact]
-        public void A_group_s_plan_is_older_while_one_strip_is_and_only_that_strip_is_outdated()
-        {
-            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
-            var dash = new LedBar { Name = "Dash", Namespace = "LedDash", Shape = "3-12-3" };
-            var unstamped = new LedBar { Name = "Old", Namespace = "LedOld", Shape = "3-4-3" };
-            var gone = new LedBar { Name = "Gone", Namespace = "LedGone", Shape = "3-8-3" };
-            var arduino = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(rim.Namespace), Description = Older },
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(dash.Namespace), Description = Current },
-            };
-            var sideThree = new[] { "3-4-3", "3-8-3", "3-9-3", "3-12-3" };
-
-            // Rim alone is older: the row cannot read current while it is.
-            var plan = PanelLightRows.RowPlan(sideThree, Census(new[] { rim, dash, gone }, arduino), true);
-            Assert.Equal(FlagBoxInstallState.Outdated, plan.State);
-            Assert.Equal("0.3.0", plan.EmbeddedVersion);
-            // Two strips at two versions: the pill names neither rather than one of them.
-            Assert.Null(plan.InstalledVersion);
-            Assert.Equal(new[] { rim }, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
-
-            // Gone has no copy anywhere, and neither pulls the row down to Not installed nor is rewritten
-            // by an Update: there is nothing of it in SimHub to bring forward.
-            Assert.DoesNotContain(gone, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
-
-            // A strip installed before strips carried a version is older too, because nothing says it is
-            // current; its copy names no version and the row invents none.
-            arduino.Add(new InstalledProfile { ProfileId = LedBarProfile.IdFor(unstamped.Namespace), Description = null });
-            var alone = PanelLightRows.RowPlan(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino), true);
-            Assert.Equal(FlagBoxInstallState.Outdated, alone.State);
-            Assert.Null(alone.InstalledVersion);
-            Assert.Equal(new[] { unstamped }, PanelLightRows.OutdatedBars(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino)));
-
-            // And a row whose strips are all current has nothing to update.
-            Assert.Empty(PanelLightRows.OutdatedBars(new[] { "3-12-3" }, Census(new[] { rim, dash, gone }, arduino)));
-        }
-
-        /// <summary>No LED device could be read: the row says so rather than Not installed.</summary>
-        [Fact]
-        public void A_rig_whose_LED_devices_cannot_be_read_is_unavailable_rather_than_empty()
-        {
-            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
-            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new[] { rim }), false).State);
-            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0]), false).State);
-            // Reachable and holding nothing of ours is a rig with no such strip, which is a fact.
-            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0], new List<InstalledProfile>()), true).State);
+            Assert.Null(typeof(PanelLightRows).GetMethod("RowPlan"));
+            Assert.Null(typeof(PanelLightRows).GetMethod("OutdatedBars"));
+            var profiles = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Profiles.cs"));
+            Assert.DoesNotContain("UpdateBars(", profiles);
+            Assert.DoesNotContain("EmbeddedProfileNames(", profiles);
         }
 
         [Fact]

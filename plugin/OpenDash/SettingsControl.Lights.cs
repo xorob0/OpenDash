@@ -318,7 +318,7 @@ namespace OpenDashPlugin
         /// among <paramref name="targets"/>, the devices the press walked.
         /// </summary>
         /// <remarks>
-        /// UpdateBars' guard, for the same reason: InstallBar takes the strip's copy out of every device first,
+        /// The Updates page's guard, for the same reason: InstallBar takes the strip's copy out of every device first,
         /// so running it for a device SimHub does not list would remove a profile that still lights and install
         /// nothing. A result that is not an install is logged too, so every "See SimHub's log" has a line behind it.
         /// </remarks>

@@ -342,7 +342,7 @@ namespace OpenDashPlugin
         // CheckAgain, which asks SimHub again and redraws (SettingsControl.Status.cs); ProfileSelected;
         // updateStatus and Check(manual), the update check's answer and asking it (SettingsControl.Live.cs);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
-        // InstallBar, InstallFlagBox, BarCensus, ReinstallBar and UpdateBars (SettingsControl.Profiles.cs);
+        // InstallBar, InstallFlagBox, BarCensus and ReinstallBar (SettingsControl.Profiles.cs);
         // BuildScreenPreview(screen, width).
         //
         // Ownership, file by file (each Panel*.cs with its own test, PanelFooTests.cs):
@@ -377,15 +377,16 @@ namespace OpenDashPlugin
         // agent may not edit, so the page keeps each one's name and meaning and may change only what it says.
         //   read by the shell: every page's Title, Search and SoonDrawn (PanelNav, PanelSearch, PanelAttention);
         //     PanelSettings.NightModeTitle (Sidebar); PanelShortcuts.Title (Bindings); PanelAddScreen.Reinstalled,
-        //     ReinstallFailed and KindName (Profiles, PanelCopy); PanelLightRows.RowPlan, OutdatedBars and
-        //     FanatecSuffix (Profiles, PanelLights); PanelReorder.TargetIndex (Widgets.Kit); PanelRigMap.GridStep
+        //     ReinstallFailed and KindName (Profiles, PanelCopy); PanelLightRows.FanatecSuffix (LedBar,
+        //     PanelLights); PanelReorder.TargetIndex (Widgets.Kit); PanelRigMap.GridStep
         //     (Widgets.Lights: DotGrid snaps to it) and RealHardwareTitle (PanelSoon); PanelLeds.StripUpdateRoute
         //     (PanelAttention).
         //   read by another page: PanelScreens.NoScreens and Title, PanelLeds.NoStrips, PanelMatrix.NoPanels,
         //     PanelRigMap.Title, PanelSettings.BrightnessTitle, NightBrightnessTitle and NightModeTitle (Home,
         //     Rig); PanelFacePlan.ZoneLabel and ZoneOrder, PanelShortcuts.QuickGlanceTitle (Shortcuts, Screens);
         //     PanelDataTab.RevBarTitle, RevBarCaption, RevBarValues and RevBarLabels (Screens);
-        //     PanelLightRows.DotHex, FlagBoxCaption and ShapeLabel, PanelUpdates.AnchorLights (Matrix, LEDs).
+        //     PanelLightRows.ShapeLabel (Home, LEDs, Updates). PanelLightRows.DotHex reads no page's table
+        //     since it stopped reading PanelMatrix.ProfileRow, so ProfileRow is the Matrix page's alone.
         // A page's greyed rows and its search-label exemptions are its own: SoonDrawn and
         // SearchDrawnOtherwise in its Panel<Page>.cs. All pages share one partial class, so every member a
         // page adds for itself is private and carries its page's name as a prefix (ScreensTile,

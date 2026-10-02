@@ -159,36 +159,6 @@ namespace OpenDashPlugin
             return ids;
         }
 
-        /// <summary>Every embedded strip profile's name, by shape id in resource order, once read.</summary>
-        private static List<KeyValuePair<string, string>> embeddedNames;
-
-        /// <summary>
-        /// The name of every strip profile this build embedded, by shape id, in the order the resources are:
-        /// what the Updates page's census rows are called.
-        /// </summary>
-        /// <remarks>
-        /// A profile's name is inside its JSON, so each is opened once, for the plugin's lifetime, and only
-        /// its name is kept: <see cref="EmbeddedJsonFor"/> would pin all 44 million characters for as long.
-        /// </remarks>
-        private static IList<KeyValuePair<string, string>> EmbeddedProfileNames(Assembly assembly)
-        {
-            lock (embeddedJson)
-            {
-                if (embeddedNames != null) return embeddedNames;
-                var names = new List<KeyValuePair<string, string>>();
-                var seen = new HashSet<string>(StringComparer.Ordinal);
-                var log = new SimHubInstallLog();
-                foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
-                {
-                    var id = FlagBoxProfile.ShapeIdOf(resource);
-                    if (id == null || !seen.Add(id)) continue;
-                    names.Add(new KeyValuePair<string, string>(id, FlagBoxProfile.ProfileNameOf(FlagBoxProfile.ResourceText(assembly, resource, log))));
-                }
-                embeddedNames = names;
-                return names;
-            }
-        }
-
         /// <summary>The profiles already opened, by shape id: a resource cannot change while the plugin runs.</summary>
         private static readonly Dictionary<string, string> embeddedJson = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -299,42 +269,6 @@ namespace OpenDashPlugin
                 census.Add(new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, description, devices)));
             }
             return census;
-        }
-
-        /// <summary>
-        /// Rewrites every strip of these shapes whose copy in SimHub is older than this build's, each into the
-        /// device it names, and reports the row as it then stands.
-        /// </summary>
-        /// <remarks>
-        /// The census is read again at the press rather than carried from the draw, so what is rewritten is
-        /// what SimHub holds when the button is pressed. A strip whose device SimHub no longer has is left
-        /// alone and reported as failed with the reason in SimHub's log: InstallBar takes the strip's copy
-        /// out of every device first, so running it there would remove a strip that still lights.
-        /// </remarks>
-        private FlagBoxPlan UpdateBars(IReadOnlyList<string> shapeIds, IDictionary<string, string> embedded)
-        {
-            bool reachable;
-            var outdated = PanelLightRows.OutdatedBars(shapeIds, BarCensus(embedded, out reachable));
-            var results = new List<FlagBoxPlan>();
-            foreach (var bar in outdated)
-            {
-                string json;
-                if (!embedded.TryGetValue(bar.ProfileShapeId, out json))
-                {
-                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
-                }
-                else if (LedTargets.Find(bar.Device) == null)
-                {
-                    Log.Warn("The profile for " + bar.Name + " was not updated: the LED device it names is no longer in SimHub.");
-                    results.Add(new FlagBoxPlan { State = FlagBoxInstallState.Failed });
-                }
-                else
-                {
-                    results.Add(InstallBar(bar, json));
-                }
-            }
-            if (results.Any(plan => plan.State != FlagBoxInstallState.UpToDate)) return FlagBoxInstallPlan.Combine(results);
-            return PanelLightRows.RowPlan(shapeIds, BarCensus(embedded, out reachable), reachable);
         }
     }
 }

@@ -291,7 +291,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The page's presses go through one guarded install, UpdateBars' own guard, and never straight to
+        /// The page's presses go through one guarded install, the Updates page's own guard, and never straight to
         /// ReinstallBar or InstallBar: read as text because the page is WPF.
         /// </summary>
         [Fact]

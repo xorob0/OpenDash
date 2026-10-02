@@ -265,7 +265,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// An install takes the strip's profile out of every device before it writes the new one, so pressing it
         /// for a device SimHub no longer lists would remove a profile that still lights and install nothing,
-        /// which is why Updates' UpdateBars leaves such a strip alone. And a strip whose profile the build does
+        /// which is why the Updates page's writes leave such a strip alone. And a strip whose profile the build does
         /// not carry (a pre-grid brow, say) is compared against nothing, which the census reads as an update.
         /// </remarks>
         public static string ProfileAction(FlagBoxInstallState? profile, bool embedded, bool deviceListed)

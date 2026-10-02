@@ -4,9 +4,10 @@
 //
 // NO PAGE DRAWS THE CENSUS ROWS NOW. The Install tab's Lights section drew them; the Updates page that
 // replaced it draws one row per strip on the rig (PanelUpdates.StripRow, SettingsControl.Updates.Lights.cs).
-// Rows, Label and NamedShapes stay because RowPlan and OutdatedBars, which SettingsControl.Profiles.cs still
-// reads, group by them, and because PanelLightRowsTests holds the embedded build to the generator through
-// them: the 121 profiles, the reversed twins, and the device captions against strip.ts. Pure: no WPF types.
+// Rows, Label and NamedShapes stay because PanelLightRowsTests holds the embedded build to the generator
+// through them: the 121 profiles, the reversed twins, and the device captions against strip.ts. RowPlan and
+// OutdatedBars, which grouped the rig's strips by them for the Install tab's Update, went with their last
+// caller (#523). Pure: no WPF types.
 //
 // THE CENSUS IS WHAT THE BUILD EMBEDDED, and nothing here lists a shape. FlagBoxProfile.StripResourceNames
 // reads the profile resources out of the assembly, ShapeIdOf gives each one the id the generator wrote it
@@ -410,63 +411,6 @@ namespace OpenDashPlugin
                 default:
                     return Theme.StatusNotInstalled;
             }
-        }
-
-        /// <summary>
-        /// A strip row's state: what SimHub holds for the rig's own strips of the row's shapes.
-        /// </summary>
-        /// <remarks>
-        /// The rows are a census of the shapes this build carries, and what a driver reads off one is
-        /// whether any strip of theirs is in SimHub for those shapes and whether it is current. A strip
-        /// reaches SimHub as a bar's own profile, under the id the bar derives (LedBarProfile.IdFor), so
-        /// that is a question about the rig's bars. It used to be asked about the embedded profiles, whose
-        /// id no bar carries, and every row said Not installed on a rig full of strips (#457).
-        ///
-        /// Installed when any bar of the row's shapes is installed on any device, and Outdated when any
-        /// bar that is installed carries an older version than this build's, so the row cannot read
-        /// current while one of its strips is not. A bar whose profile is in no list at all does not pull
-        /// the row down to Not installed while another bar of its shapes is there: the row speaks for the
-        /// shapes, and a shape with a strip in SimHub is installed. Not installed is a rig with no strip of
-        /// these shapes in SimHub, and Unavailable is one where no LED device could be read.
-        /// </remarks>
-        public static FlagBoxPlan RowPlan(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars, bool reachable)
-        {
-            if (!reachable) return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
-            var installed = Members(shapeIds, bars)
-                .Select(entry => entry.Value)
-                .Where(plan => plan.State == FlagBoxInstallState.UpToDate || plan.State == FlagBoxInstallState.Outdated)
-                .ToList();
-            return installed.Count == 0
-                ? new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }
-                : FlagBoxInstallPlan.Combine(installed);
-        }
-
-        /// <summary>
-        /// The bars a row's Update rewrites: those of its shapes whose copy in SimHub is older than this
-        /// build's, and no others.
-        /// </summary>
-        /// <remarks>
-        /// Not a current one, which a rewrite could only cost the edits made to it in SimHub. Not one with
-        /// no copy anywhere either: its device has gone, and there is nothing to install into, or its
-        /// profile was taken out of SimHub by hand, which is the driver's decision rather than a version to
-        /// bring forward.
-        /// </remarks>
-        public static IList<LedBar> OutdatedBars(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
-        {
-            return Members(shapeIds, bars)
-                .Where(entry => entry.Value.State == FlagBoxInstallState.Outdated)
-                .Select(entry => entry.Key)
-                .ToList();
-        }
-
-        /// <summary>The rig's bars whose profile is one of the row's, each with what SimHub holds for it. By
-        /// the profile a bar installs, which is its shape's reversed twin while the bar is reversed: a
-        /// reversed 4/14/4 is in SimHub as the reversed profile, and that row is the one that says so.</summary>
-        private static IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> Members(IEnumerable<string> shapeIds, IEnumerable<KeyValuePair<LedBar, FlagBoxPlan>> bars)
-        {
-            var shapes = new HashSet<string>(shapeIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
-            return (bars ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
-                .Where(entry => entry.Key != null && entry.Value != null && entry.Key.ProfileShapeId != null && shapes.Contains(entry.Key.ProfileShapeId));
         }
     }
 }
