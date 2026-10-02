@@ -61,12 +61,6 @@ namespace OpenDashPlugin
         /// in the list's popup and nothing else would bring it back into the panel.</summary>
         private bool ledsFocusDevice;
 
-        /// <summary>Set by the Reverse direction switch, which redraws the whole page and then says a line at its
-        /// top: the switch lets go of keyboard focus before the redraw, so the shell hands none back (which would
-        /// scroll the line away again), and the next build hands it to the switch drawn in its place without
-        /// scrolling.</summary>
-        private bool ledsFocusReverse;
-
         /// <summary>The label of the search hit that last went to this page, which tells LedsFollow which of the
         /// effects block's switches it was for; let go of on the way in.</summary>
         private string ledsSearchedLabel;
@@ -582,20 +576,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Lets go of keyboard focus where it is in <paramref name="control"/>, as CommitTyping does before a
-        /// rebuild, and says whether it was: a redraw then hands none back, since the shell's hand-back scrolls the
-        /// control into view and away from the line said at the top.
-        /// </summary>
-        private static bool LedsLetGoOfFocus(UIElement control)
-        {
-            if (control == null || !control.IsKeyboardFocusWithin) return false;
-            var scope = FocusManager.GetFocusScope(control);
-            if (scope != null) FocusManager.SetFocusedElement(scope, null);
-            Keyboard.ClearFocus();
-            return true;
-        }
-
-        /// <summary>
         /// Paints the LEDs of one group drawn by Ui.Strip in place: the preview repaints rather than draws its
         /// groups again, which on a tick would be every LED and label rebuilt each second.
         /// </summary>
@@ -780,23 +760,9 @@ namespace OpenDashPlugin
             // Only a shape that has a twin wired from the far end: a Fanatec wheel's wiring is its own.
             if (bar.SupportsReversal)
             {
-                ToggleButton reverse = null;
-                reverse = Ui.Switch(Settings.BarReversed(ns), on =>
-                {
-                    ledsFocusReverse = LedsLetGoOfFocus(reverse);
-                    ReverseLedBar(ns, on);
-                    // A press that drew nothing again (the strip gone, the direction already so) hands focus back here.
-                    if (ledsFocusReverse)
-                    {
-                        ledsFocusReverse = false;
-                        LedsFocusLater(() => reverse);
-                    }
-                });
-                if (ledsFocusReverse)
-                {
-                    ledsFocusReverse = false;
-                    LedsFocusLater(() => reverse);
-                }
+                // The press redraws the page and then says a line at its top; the shell hands focus back to the switch
+                // without scrolling the line away (RestoreFocus gives way to Say).
+                var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));
                 rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));
             }
             rows.Add(LedsSoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));

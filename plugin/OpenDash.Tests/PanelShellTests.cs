@@ -106,7 +106,43 @@ namespace OpenDashPlugin.Tests
         {
             var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
             Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, offset);", shell);
-            Assert.Contains("if (last != null) Keyboard.Focus(last); else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); mainScroll.ScrollToVerticalOffset(offset); Dispatcher.BeginInvoke(new Action(() => mainScroll.ScrollToVerticalOffset(offset)), DispatcherPriority.Loaded);", shell);
+            Assert.Contains("if (last != null) Keyboard.Focus(last); else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }", shell);
+            Assert.Contains("if (spoke) return; mainScroll.ScrollToVerticalOffset(offset); Dispatcher.BeginInvoke(new Action(() => { if (saidCount == said) mainScroll.ScrollToVerticalOffset(offset); }), DispatcherPriority.Loaded);", shell);
+        }
+
+        /// <summary>
+        /// A line said after a rebuild stays in view: nearly every press runs Redraw and then Say, and the
+        /// rebuild's queued focus hand-back used to put the old offset back after Say had scrolled to the top, so
+        /// a press below the fold wrote its outcome above the visible area. Say counts its lines; the hand-back
+        /// compares the count it was queued at, and where a line has been said since it focuses without bringing
+        /// the control into view and leaves the scroll alone.
+        /// </summary>
+        [Fact]
+        public void A_line_said_after_a_rebuild_stays_in_view()
+        {
+            var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            var messages = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Messages.cs")), @"\s+", " ");
+            Assert.Contains("messageHost.Margin = new Thickness(0, 0, 0, 12); saidCount++; mainScroll.ScrollToTop();", messages);
+            var restore = shell.Substring(shell.IndexOf("private void RestoreFocus(", System.StringComparison.Ordinal));
+            restore = restore.Substring(0, restore.IndexOf("private FrameworkElement BuildPage(", System.StringComparison.Ordinal));
+            var order = new[]
+            {
+                "var said = saidCount; Dispatcher.BeginInvoke(",
+                "var spoke = saidCount != said;",
+                "if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
+                "if (last != null) Keyboard.Focus(last);",
+                "if (spoke) pageHost.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
+                "if (spoke) return;",
+                "mainScroll.ScrollToVerticalOffset(offset);",
+            };
+            var at = -1;
+            foreach (var pin in order)
+            {
+                var found = restore.IndexOf(pin, at + 1, System.StringComparison.Ordinal);
+                Assert.True(found > at, "RestoreFocus no longer carries, in order: " + pin);
+                at = found;
+            }
+            Assert.Contains("RequestBringIntoViewEventHandler stay = (sender, args) => args.Handled = true;", restore);
         }
 
         /// <summary>A repeat of the click that opened or closed the sheet is dropped on the control's root, until a

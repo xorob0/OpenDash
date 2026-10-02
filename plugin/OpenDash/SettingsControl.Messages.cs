@@ -10,6 +10,10 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        /// <summary>How many lines have been said, which a focus hand-back queued by a rebuild compares with the
+        /// count it was queued at (RestoreFocus): a line said since wins, and the view stays on it.</summary>
+        private int saidCount;
+
         /// <summary>Says something at the top of the page. Call it after Redraw or Go, which clear the lines.</summary>
         private void Say(PanelMessage message)
         {
@@ -19,6 +23,7 @@ namespace OpenDashPlugin
             line.HorizontalAlignment = HorizontalAlignment.Left;
             messageHost.Children.Add(line);
             messageHost.Margin = new Thickness(0, 0, 0, 12);
+            saidCount++;
             mainScroll.ScrollToTop();
         }
 

@@ -577,7 +577,7 @@ namespace OpenDashPlugin.Tests
                 "var live = Settings.LedBarByNamespace(ns); if (live != null) live.Centre = Contract.LedCentres[i]; Save(); redrawPreview(); drawCentre(); LedsFocusLater(() => LedsFirstControl(centre.Child));");
             Holds(Body(leds, "private FrameworkElement LedsThisStrip(", "private FrameworkElement LedsEffects("), "LedsThisStrip",
                 "var value = PanelLeds.BrightnessValue(i); Settings.SetBarBrightness(ns, value); Save(); redrawPreview(); drawBrightness(true);",
-                "reverse = Ui.Switch(Settings.BarReversed(ns), on => { ledsFocusReverse = LedsLetGoOfFocus(reverse); ReverseLedBar(ns, on);");
+                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));");
             // The Add sheet's device radios hand AddLedBar the device's id, never its name.
             var sheet = Body(leds, "private void ShowAddLedBar()", "private static FrameworkElement LedsSheetRow(");
             Holds(sheet, "ShowAddLedBar",
@@ -1650,8 +1650,7 @@ namespace OpenDashPlugin.Tests
                 // The entry picked is the value written: an index off by one would store 70% for 60%.
                 "var value = PanelLeds.BrightnessValue(i);",
                 "if (bar.SupportsReversal)",
-                "reverse = Ui.Switch(Settings.BarReversed(ns), on =>",
-                "ReverseLedBar(ns, on);",
+                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));",
                 "Ui.Switch(Settings.BarFlagAnimation(ns),",
                 "if (PanelLeds.HasFullStripSpotter(bar.Shape))",
                 "Ui.Switch(Settings.BarSpotterWhole(ns),",
@@ -2135,18 +2134,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("(sender, args) => args.Handled = true", focus);
             // And no control on the page is focused around it.
             Assert.Equal(1, Occurrences(leds, ".Focus()"));
-            // Reverse direction redraws the page and then says a line: the switch lets go of focus first, so the
-            // shell's hand-back (which scrolls) has nothing to hand back, and the rebuilt switch takes it here.
-            var reverse = leds.Substring(leds.IndexOf("reverse = Ui.Switch(Settings.BarReversed(ns), on =>", StringComparison.Ordinal));
-            reverse = reverse.Substring(0, reverse.IndexOf("rows.Add(", StringComparison.Ordinal));
-            Assert.Contains("ledsFocusReverse = LedsLetGoOfFocus(reverse);", reverse);
-            Assert.Contains("ReverseLedBar(ns, on);", reverse);
-            Assert.True(reverse.IndexOf("ledsFocusReverse = LedsLetGoOfFocus(reverse);", StringComparison.Ordinal) < reverse.IndexOf("ReverseLedBar(ns, on);", StringComparison.Ordinal));
-            Assert.Equal(2, Occurrences(reverse, "LedsFocusLater(() => reverse);"));
-            var letGo = leds.Substring(leds.IndexOf("private static bool LedsLetGoOfFocus(", StringComparison.Ordinal));
-            letGo = letGo.Substring(0, letGo.IndexOf("return true;", StringComparison.Ordinal));
-            Assert.Contains("FocusManager.SetFocusedElement(scope, null);", letGo);
-            Assert.Contains("Keyboard.ClearFocus();", letGo);
+            // Reverse direction redraws the page and then says a line: the shell's hand-back gives way to the line
+            // (PanelShellTests.A_line_said_after_a_rebuild_stays_in_view), so the page keeps no workaround of its own.
+            Assert.Contains("var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));", leds);
+            Assert.DoesNotContain("LedsLetGoOfFocus", leds);
+            Assert.DoesNotContain("ledsFocusReverse", leds);
             // The line after the press is said after the redraw, which is what it has to stay in view of.
             var press = leds.Substring(leds.IndexOf("private void ReverseLedBar(", StringComparison.Ordinal));
             press = press.Substring(0, press.IndexOf("private void ShowRenameLedBar(", StringComparison.Ordinal));

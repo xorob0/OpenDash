@@ -732,15 +732,21 @@ namespace OpenDashPlugin
 
         /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
         /// focusable thing above it when the rebuild is shaped differently there, and leaves the main scroll
-        /// at <paramref name="offset"/>, where the driver had it.</summary>
+        /// at <paramref name="offset"/>, where the driver had it -- unless a line has been said since, which
+        /// wins: the view stays at the top, on the line.</summary>
         /// <remarks>
         /// Focusing a control raises its BringIntoView, which pulled the main scroll back to whatever the
         /// driver had last pressed and then scrolled away from: a wheel's lighting press or a threshold resize
         /// rebuilt Settings and threw it back to its heading (#523). The offset is put back after the focus,
         /// and again once that has been laid out, since the scroll viewer applies the pull during layout.
+        /// Nearly every press runs Redraw and then Say, synchronously, before this runs: putting the offset
+        /// back then wrote the press's outcome above the visible area whenever the press sat below the fold.
+        /// So where Say has spoken since the rebuild (saidCount moved), focus goes back without bringing its
+        /// control into view and the scroll is left where Say put it.
         /// </remarks>
         private void RestoreFocus(DependencyObject root, List<int> path, double offset)
         {
+            var said = saidCount;
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 DependencyObject node = root;
@@ -752,10 +758,24 @@ namespace OpenDashPlugin
                     var element = node as UIElement;
                     if (element != null && element.Focusable && element.IsVisible && element.IsEnabled) last = element;
                 }
-                if (last != null) Keyboard.Focus(last);
-                else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                var spoke = saidCount != said;
+                RequestBringIntoViewEventHandler stay = (sender, args) => args.Handled = true;
+                if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
+                try
+                {
+                    if (last != null) Keyboard.Focus(last);
+                    else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                }
+                finally
+                {
+                    if (spoke) pageHost.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
+                }
+                if (spoke) return;
                 mainScroll.ScrollToVerticalOffset(offset);
-                Dispatcher.BeginInvoke(new Action(() => mainScroll.ScrollToVerticalOffset(offset)), DispatcherPriority.Loaded);
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (saidCount == said) mainScroll.ScrollToVerticalOffset(offset);
+                }), DispatcherPriority.Loaded);
             }), DispatcherPriority.Loaded);
         }
 
