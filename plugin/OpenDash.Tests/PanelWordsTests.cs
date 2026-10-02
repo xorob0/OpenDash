@@ -47,7 +47,7 @@ namespace OpenDashPlugin.Tests
             // Each page draws the name it reads.
             Assert.Contains("AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", Source("SettingsControl.Rig.cs"));
             Assert.Contains("AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", Source("SettingsControl.Matrix.cs"));
-            Assert.Contains("var chipGroup = new RigGroup { Child = chips }; AutomationProperties.SetName(chipGroup, PanelLeds.PreviewChipsName); top.Children.Add(chipGroup);", Source("SettingsControl.Lights.cs"));
+            Assert.Contains("var chipGroup = new GroupBorder { Child = chips }; AutomationProperties.SetName(chipGroup, PanelLeds.PreviewChipsName); top.Children.Add(chipGroup);", Source("SettingsControl.Lights.cs"));
             Assert.Contains("Ui.Eyebrow(PanelSettings.PreviewTitle)", Source("SettingsControl.Settings.cs"));
         }
 

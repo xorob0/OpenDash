@@ -18,7 +18,9 @@ namespace OpenDashPlugin
 {
     /// <summary>
     /// A Border that UI Automation sees as a named group: what a Soon wraps its greyed row in, so the row's name
-    /// is announced and its controls are read as the group's children.
+    /// is announced and its controls are read as the group's children, and what a page wraps a panel in whose
+    /// name a screen reader should hear (a WrapPanel of chips, the card grid): the pages' one way to name a
+    /// group, rather than a peer of their own each.
     /// </summary>
     internal sealed class GroupBorder : Border
     {
@@ -34,6 +36,31 @@ namespace OpenDashPlugin
             protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Group; }
 
             protected override string GetClassNameCore() { return "Group"; }
+
+            protected override bool IsControlElementCore() { return true; }
+
+            protected override bool IsContentElementCore() { return true; }
+        }
+    }
+
+    /// <summary>
+    /// A Border that UI Automation sees as a named picture, the artboard's role=img: what the Matrix page frames
+    /// its 8x8 preview in, so the frame's name is read as the picture's alt text.
+    /// </summary>
+    internal sealed class ImageBorder : Border
+    {
+        protected override AutomationPeer OnCreateAutomationPeer()
+        {
+            return new ImageBorderPeer(this);
+        }
+
+        private sealed class ImageBorderPeer : FrameworkElementAutomationPeer
+        {
+            public ImageBorderPeer(ImageBorder owner) : base(owner) { }
+
+            protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Image; }
+
+            protected override string GetClassNameCore() { return "Image"; }
 
             protected override bool IsControlElementCore() { return true; }
 

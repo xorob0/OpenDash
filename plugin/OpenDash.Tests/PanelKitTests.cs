@@ -327,6 +327,14 @@ namespace OpenDashPlugin.Tests
             var peers = Regex.Replace(RepoPaths.Code(Path.Combine(root, "Widgets.Automation.cs")), @"\s+", " ");
             Assert.Contains("internal sealed class GroupBorder : Border { protected override AutomationPeer OnCreateAutomationPeer() { return new GroupBorderPeer(this); }", peers);
             Assert.Contains("protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Group; }", peers);
+            // The role=img border the Matrix preview is framed in: a page names a group or a picture through the
+            // kit, never through a peer of its own.
+            Assert.Contains("internal sealed class ImageBorder : Border { protected override AutomationPeer OnCreateAutomationPeer() { return new ImageBorderPeer(this); }", peers);
+            Assert.Contains("protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Image; }", peers);
+            foreach (var page in System.Linq.Enumerable.Where(RepoPaths.SettingsControlSources(), path => Path.GetFileName(path) != "SettingsControl.cs"))
+            {
+                Assert.DoesNotContain("OnCreateAutomationPeer", RepoPaths.Code(page));
+            }
             Assert.Contains("private sealed class SliderSurfacePeer : FrameworkElementAutomationPeer, IRangeValueProvider", peers);
             Assert.Contains("protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Slider; }", peers);
             Assert.Contains("return patternInterface == PatternInterface.RangeValue ? this : base.GetPattern(patternInterface);", peers);

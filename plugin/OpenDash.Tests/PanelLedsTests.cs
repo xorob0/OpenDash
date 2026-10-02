@@ -1736,6 +1736,8 @@ namespace OpenDashPlugin.Tests
                 "var shown = PanelLeds.ShownStrip(bars.Select(bar => bar.Namespace).ToList(), Selected(PanelPage.Leds));",
                 "ReferenceEquals(bar, current),",
                 "ledsScenario = PanelLeds.ScenarioFor(ledsScenario, ledsScenarioFor, ns);",
+                // The cards' name is set on the kit's group around the grid, which a screen reader hears.
+                "var grid = new GroupBorder { Child = Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray()) };",
                 "AutomationProperties.SetName(grid, PanelLights.BarsTitle);",
                 // Rulings 22 and 50: the pictures dim at night to the brightness in force.
                 "return PanelLeds.PreviewDim(Settings.LightsNightMode, Settings.LightsNightBrightness, Settings.BarBrightness(ns));",

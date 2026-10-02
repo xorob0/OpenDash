@@ -615,7 +615,7 @@ namespace OpenDashPlugin.Tests
                 "var panels = Settings.MatrixPanels().ToList();",
                 "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
                 "if (m == selected) selectedPicture(picture);",
-                "cards.Add(add); var grid = new MatrixNamed(AutomationControlType.Group) { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };",
+                "cards.Add(add); var grid = new GroupBorder { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };",
                 "ToolTipService.SetShowOnDisabled(add, true);",
                 "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
                 // The title's line: the version SimHub holds, the press for the line's own state, clicked, and
@@ -1288,10 +1288,10 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("MatrixFrame(GlyphSheet, MatrixDrawn(m), options)", flatSource);
             // The preview is named for what it draws, when it is built and on every repaint, on its frame: the
             // one element there that a screen reader is told about, as an image.
-            Assert.Contains("var frame = new MatrixNamed(AutomationControlType.Image) {", flatSource);
+            Assert.Contains("var frame = new ImageBorder {", flatSource);
             Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));", flatSource);
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flatSource, System.Text.RegularExpressions.Regex.Escape("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));")).Count);
-            Assert.Contains("var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips }; AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", flatSource);
+            Assert.Contains("var chipGroup = new GroupBorder { Child = chips }; AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", flatSource);
             foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
                 "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })
             {
@@ -1406,10 +1406,6 @@ namespace OpenDashPlugin.Tests
                 // The chip the page opens on, and no chip held focus until one is found to.
                 "private string matrixPreviewScenario = PanelMatrix.IdleScenario;",
                 "var focused = -1;",
-                // Each MatrixNamed is told about as the type it is given: without the assignments every one would
-                // be AutomationControlType's zero, Button.
-                "public MatrixNamed(AutomationControlType type) { this.type = type; }",
-                "public Peer(MatrixNamed owner, AutomationControlType type) : base(owner) { this.type = type; }",
             })
             {
                 Assert.Contains(pin, flatNumbers);
@@ -1438,7 +1434,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// Every name the page gives a screen reader lands on something WPF tells it about: a Button, a switch,
-        /// or the page's own MatrixNamed, which gives a border a peer. A Border, a WrapPanel or the card grid's
+        /// or the kit's GroupBorder and ImageBorder, which give a border a peer. A Border, a WrapPanel or the card grid's
         /// panel has none, so a name set on one is never heard.
         /// </summary>
         [Fact]
@@ -1450,12 +1446,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "add", "card", "chipGroup", "control", "frame", "grid" }, targets.Distinct().OrderBy(t => t, StringComparer.Ordinal));
             foreach (var pin in new[]
             {
-                // The peer: a border told about as the control type it is given.
-                "private sealed class MatrixNamed : Border",
-                "protected override AutomationPeer OnCreateAutomationPeer() { return new Peer(this, type); }",
-                "private sealed class Peer : FrameworkElementAutomationPeer",
-                "protected override AutomationControlType GetAutomationControlTypeCore() { return type; }",
-                "protected override string GetClassNameCore() { return \"Border\"; }",
+                // The peers are the kit's: the groups a GroupBorder, the preview's frame an ImageBorder.
+                "var grid = new GroupBorder {",
+                "var chipGroup = new GroupBorder {",
+                "var frame = new ImageBorder {",
                 // The cards' group, each card by its name and the add tile by its words.
                 "AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);",
                 "AutomationProperties.SetName(add, PanelMatrix.AddPanel);",

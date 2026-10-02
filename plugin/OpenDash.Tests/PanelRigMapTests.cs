@@ -452,11 +452,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("return id != null && PanelEmulation.Find(id) != null ? id : PanelEmulation.Default;", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
 
             // The chips' section is announced under its name: a plain Border has no automation peer, so the
-            // host is one that reports itself as a group.
-            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "var host = new RigGroup();", "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", "RigDrawChips(host, views, null);", "return host;");
+            // host is the kit's GroupBorder, which reports itself as a group; the page keeps no peer of its own.
+            InOrder(RigMethod("private FrameworkElement BuildRigScenarios("), "var host = new GroupBorder();", "AutomationProperties.SetName(host, PanelRigMap.ScenariosName);", "RigDrawChips(host, views, null);", "return host;");
             var rigPage = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
-            InOrder(rigPage, "private sealed class RigGroup : Border", "protected override AutomationPeer OnCreateAutomationPeer()", "return new RigGroupPeer(this);",
-                "private sealed class RigGroupPeer : FrameworkElementAutomationPeer", "return AutomationControlType.Group;");
+            Assert.DoesNotContain("RigGroup :", rigPage);
+            Assert.DoesNotContain("AutomationPeer", rigPage);
         }
 
         /// <remarks>
@@ -750,7 +750,6 @@ namespace OpenDashPlugin.Tests
                 "var column = Ui.VStack(0, title, chips);",
                 "wrap.Children.Add(column);",
                 "host.Child = wrap;");
-            Assert.Contains("return \"RigGroup\";", RigMethod("protected override string GetClassNameCore("));
 
             // The header's labels, the canvas's outline, its empty rig and its hint, in the artboard's sizes
             // and inks.

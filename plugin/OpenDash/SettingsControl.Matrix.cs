@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
-using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -194,7 +193,7 @@ namespace OpenDashPlugin
             // The artboard's tablist "Your matrices", as a group a screen reader is told about: the grid itself
             // is a panel, which it never sees.
             cards.Add(add);
-            var grid = new MatrixNamed(AutomationControlType.Group) { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };
+            var grid = new GroupBorder { Child = Ui.CardGrid(PanelMatrix.CardMinWidth, PanelMatrix.CardGap, PanelMatrix.CardColumns, cards.ToArray()) };
             AutomationProperties.SetName(grid, PanelMatrix.PanelsTitle);
             if (panels.Count > 0) return grid;
             // An empty rig names the emptiness beside the one press there is.
@@ -294,46 +293,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A border a screen reader is told about, as the control type it is given: WPF gives a Border, a
-        /// WrapPanel or a custom panel no automation peer, so a name set on one is never heard. The artboard's
-        /// role=img preview, its "Your matrices" and its chip group are these.
-        /// </summary>
-        private sealed class MatrixNamed : Border
-        {
-            private readonly AutomationControlType type;
-
-            public MatrixNamed(AutomationControlType type)
-            {
-                this.type = type;
-            }
-
-            protected override AutomationPeer OnCreateAutomationPeer()
-            {
-                return new Peer(this, type);
-            }
-
-            private sealed class Peer : FrameworkElementAutomationPeer
-            {
-                private readonly AutomationControlType type;
-
-                public Peer(MatrixNamed owner, AutomationControlType type) : base(owner)
-                {
-                    this.type = type;
-                }
-
-                protected override AutomationControlType GetAutomationControlTypeCore()
-                {
-                    return type;
-                }
-
-                protected override string GetClassNameCore()
-                {
-                    return "Border";
-                }
-            }
-        }
-
-        /// <summary>
         /// The 8x8 at the size of the real thing's cells under its New tag, what it shows under the chip chosen
         /// (its frame named for a screen reader as the artboard's alt text), the link to every device at once,
         /// and the chips. A chip repaints the picture and the chips in place.
@@ -345,7 +304,7 @@ namespace OpenDashPlugin
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
             // The frame is the picture a screen reader is told about, the artboard's role=img.
-            var frame = new MatrixNamed(AutomationControlType.Image)
+            var frame = new ImageBorder
             {
                 Padding = new Thickness(PanelMatrix.PreviewFramePadding),
                 Background = Ui.Brush(Theme.SurfaceInset),
@@ -369,7 +328,7 @@ namespace OpenDashPlugin
             var tagged = Ui.VStack(PanelMatrix.NewTagGap, tag, frame);
 
             var chips = new WrapPanel { Orientation = Orientation.Horizontal };
-            var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips };
+            var chipGroup = new GroupBorder { Child = chips };
             AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);
             Action drawChips = null;
             Action repaint = () =>

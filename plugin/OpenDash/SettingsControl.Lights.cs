@@ -173,7 +173,9 @@ namespace OpenDashPlugin
                 cards.Add(card);
             }
             cards.Add(Ui.InlineAddCard(PanelLights.AddBar, PanelKit.StripAddIcon, ShowAddLedBar));
-            var grid = Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray());
+            // The card grid is a panel, which a screen reader never sees: its name is set on a group around it, as
+            // Matrix names its cards.
+            var grid = new GroupBorder { Child = Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray()) };
             AutomationProperties.SetName(grid, PanelLights.BarsTitle);
             if (bars.Count > 0) return grid;
             // The empty state names the emptiness beside the tile that ends it; Home reads the same words.
@@ -506,7 +508,7 @@ namespace OpenDashPlugin
             top.Children.Add(link);
             // A WrapPanel has no automation peer, so the chips are named on a group around them, as the Rig and
             // Matrix pages name theirs (PanelLeds.PreviewChipsName).
-            var chipGroup = new RigGroup { Child = chips };
+            var chipGroup = new GroupBorder { Child = chips };
             AutomationProperties.SetName(chipGroup, PanelLeds.PreviewChipsName);
             top.Children.Add(chipGroup);
 
