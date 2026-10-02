@@ -76,16 +76,31 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A state that does not fit a card at the grid's narrowest wraps to a second line rather than
-        /// being trimmed or clipped (#524, ruling 1), and its dot stays on the first line.</summary>
+        /// being trimmed or clipped, since a state is a step a driver follows, and its dot stays on the first line.
+        /// The screen, strip and matrix cards share the one layout, so "Not shown in SimHub" on a narrow Matrix card
+        /// wraps as "Restart SimHub to load it" does on a Screens card (#541).</summary>
         [Fact]
         public void A_cards_state_line_wraps_and_is_never_trimmed()
         {
-            var card = Factory("DeviceCard");
-            Assert.Contains("word.TextWrapping = TextWrapping.Wrap;", card);
-            Assert.DoesNotContain("word.TextTrimming", card);
-            Assert.Contains("VerticalAlignment = VerticalAlignment.Top };", card);
-            Assert.Contains("dot.Margin = new Thickness(0, PanelKit.CardStateDotTop, PanelKit.CardStateGap, 0);", card);
-            Assert.Equal((PanelKit.CardStateLineHeight - PanelKit.CardStateDot) / 2, PanelKit.CardStateDotTop);
+            var state = Regex.Replace(Factory("CardState"), @"\s+", " ");
+            Assert.Contains("word.TextWrapping = TextWrapping.Wrap;", state);
+            Assert.DoesNotContain("TextTrimming", state);
+            Assert.Contains("word.LineHeight = lineHeight; word.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;", state);
+            Assert.Contains("VerticalAlignment = VerticalAlignment.Top };", state);
+            Assert.Contains("dot.Margin = new Thickness(0, (lineHeight - dotSize) / 2, PanelKit.CardStateGap, 0);", state);
+            Assert.Contains("DockPanel.SetDock(dot, Dock.Left); line.Children.Add(dot); line.Children.Add(word);", state);
+
+            Assert.Contains("rows.Children.Add(CardState(state, stateHex, PanelKit.CardStateSize, PanelKit.CardStateDot, PanelKit.CardStateLineHeight, PanelKit.CardGap));", Factory("DeviceCard"));
+            Assert.Contains("rows.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.StripCardGap));", Factory("StripCard"));
+            Assert.Contains("words.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.MatrixCardTextGap));", Factory("MatrixCard"));
+            foreach (var card in new[] { "DeviceCard", "StripCard", "MatrixCard" })
+            {
+                Assert.DoesNotContain("word.", Factory(card));
+                Assert.DoesNotContain("new Ellipse", Factory(card));
+            }
+            // Both lines at 1.4 of their words, the dot centred in the first.
+            Assert.Equal(PanelKit.CardStateSize * 1.4, PanelKit.CardStateLineHeight, 6);
+            Assert.Equal(PanelKit.LightCardStateSize * 1.4, PanelKit.LightCardStateLineHeight, 6);
         }
 
         [Fact]
@@ -132,7 +147,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelKit.LightCardStateSize);
             Assert.Equal(10, PanelKit.StripCardGap);
             Assert.Equal(14, PanelKit.StripCardShapeSize);
-            Assert.Equal(7, PanelKit.StripCardStateDot);
+            Assert.Equal(7, PanelKit.LightCardStateDot);
             Assert.Equal(12, PanelKit.MatrixCardGap);
             Assert.Equal(3, PanelKit.MatrixCardTextGap);
             // The dashed tile on one line: "gap: 8px ... font-size: 14px; font-weight: 500", the plus an
@@ -385,7 +400,8 @@ namespace OpenDashPlugin.Tests
         [InlineData("StripCard", "PanelKit.LightCardStateSize")]
         [InlineData("StripCard", "PanelKit.StripCardGap")]
         [InlineData("StripCard", "PanelKit.StripCardShapeSize")]
-        [InlineData("StripCard", "PanelKit.StripCardStateDot")]
+        [InlineData("StripCard", "PanelKit.LightCardStateDot")]
+        [InlineData("MatrixCard", "PanelKit.LightCardStateDot")]
         [InlineData("MatrixCard", "PanelKit.LightCardPaddingX")]
         [InlineData("MatrixCard", "PanelKit.LightCardNameSize")]
         [InlineData("MatrixCard", "PanelKit.LightCardStateSize")]

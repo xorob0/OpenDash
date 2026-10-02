@@ -151,8 +151,9 @@ Home's line under a device reads the same constant as the card.
 | matrix | its content and side, "Matrix 2 · Left", while neither can be read | secondary | `PanelMatrix.CardLine` |
 
 A state is never trimmed. On a card too narrow for it, it wraps to a second line
-(`PanelKit.CardStateLineHeight`). A state SimHub could not be asked for is drawn as no state, never as a
-good one.
+(`PanelKit.CardStateLineHeight`). The screen, strip and matrix cards lay a state out alike, the dot on the
+first line and the words wrapping under it (`Ui.CardState`), so the matrix card draws the dot the Matrix
+artboard leaves off. A state SimHub could not be asked for is drawn as no state, never as a good one.
 
 ## Home
 

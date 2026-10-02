@@ -909,31 +909,44 @@ namespace OpenDashPlugin
             }
             if (!string.IsNullOrEmpty(state))
             {
-                var hex = stateHex ?? Theme.TextSecondary;
-                var dot = new Ellipse { Width = PanelKit.CardStateDot, Height = PanelKit.CardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Top };
-                dot.Margin = new Thickness(0, PanelKit.CardStateDotTop, PanelKit.CardStateGap, 0);
-                // Docked rather than stacked, so the word has the card's width to wrap in: a card at the grid's
-                // narrowest cannot hold every state on one line, and a state is a step a driver follows, so it
-                // wraps to a second line and is never trimmed (#524, ruling 1). The dot stays on the first line.
-                var word = Text(state, PanelKit.CardStateSize, FontWeights.Normal, hex);
-                word.TextWrapping = TextWrapping.Wrap;
-                word.LineHeight = PanelKit.CardStateLineHeight;
-                word.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-                var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, PanelKit.CardGap, 0, 0) };
-                DockPanel.SetDock(dot, Dock.Left);
-                line.Children.Add(dot);
-                line.Children.Add(word);
-                rows.Children.Add(line);
+                rows.Children.Add(CardState(state, stateHex, PanelKit.CardStateSize, PanelKit.CardStateDot, PanelKit.CardStateLineHeight, PanelKit.CardGap));
             }
 
             return CardButton(rows, new Thickness(PanelKit.CardPadding), selected, click);
         }
 
         /// <summary>
+        /// A card's state, one layout for the screen, strip and matrix cards: the dot on the first line and the
+        /// words beside it, wrapping under it rather than trimmed. Each card passes its own sizes.
+        /// </summary>
+        /// <remarks>
+        /// Docked rather than stacked, so the words have the card's width to wrap in. A card at the grid's
+        /// narrowest cannot hold every state on one line, and a state is a step a driver follows ("Restart SimHub
+        /// to load it", "Not shown in SimHub"), so it wraps to a second line and is never cut (#524, #541). The
+        /// line height is fixed so that the dot, centred in the first line, stays there when the words wrap.
+        /// </remarks>
+        private static DockPanel CardState(string state, string stateHex, double textSize, double dotSize, double lineHeight, double top)
+        {
+            var hex = stateHex ?? Theme.TextSecondary;
+            var dot = new Ellipse { Width = dotSize, Height = dotSize, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Top };
+            dot.Margin = new Thickness(0, (lineHeight - dotSize) / 2, PanelKit.CardStateGap, 0);
+            var word = Text(state, textSize, FontWeights.Normal, hex);
+            word.TextWrapping = TextWrapping.Wrap;
+            word.LineHeight = lineHeight;
+            word.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+            var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, top, 0, 0) };
+            DockPanel.SetDock(dot, Dock.Left);
+            line.Children.Add(dot);
+            line.Children.Add(word);
+            return line;
+        }
+
+        /// <summary>
         /// A strip's card, as Leds.dc.html draws its .dcard: the name at 15/600 with the shape's numerals at
         /// 14 in the display family on the right of the same line, the strip under it (a picture made with
         /// <see cref="Strip"/> in <see cref="StripStyle.Card"/>), and the state at 12 led by a 7 px dot, the
-        /// three 10 apart inside 12 by 14. Selected as every card is.
+        /// three 10 apart inside 12 by 14. Selected as every card is, and its state laid out as every card's is
+        /// (<see cref="CardState"/>).
         /// </summary>
         public static Button StripCard(string name, string shape, FrameworkElement strip, string state, string stateHex, bool selected, Action click)
         {
@@ -960,17 +973,7 @@ namespace OpenDashPlugin
             }
             if (!string.IsNullOrEmpty(state))
             {
-                var hex = stateHex ?? Theme.TextSecondary;
-                var dot = new Ellipse { Width = PanelKit.StripCardStateDot, Height = PanelKit.StripCardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
-                dot.Margin = new Thickness(0, 0, PanelKit.CardStateGap, 0);
-                var word = Text(state, PanelKit.LightCardStateSize, FontWeights.Normal, hex);
-                word.TextTrimming = TextTrimming.CharacterEllipsis;
-                word.ToolTip = state;
-                var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, PanelKit.StripCardGap, 0, 0) };
-                DockPanel.SetDock(dot, Dock.Left);
-                line.Children.Add(dot);
-                line.Children.Add(word);
-                rows.Children.Add(line);
+                rows.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.StripCardGap));
             }
             return CardButton(rows, new Thickness(PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY, PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY), selected, click);
         }
@@ -978,7 +981,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// A matrix's card, as Matrix.dc.html draws its .mcard: a row, the 8x8 (a picture made with
         /// <see cref="Matrix"/> in <see cref="MatrixStyle.Card"/>) 12 before a column of the name at 15/600
-        /// and, 3 under it, the state at 12 in its own ink with no dot, inside 12 by 14.
+        /// and, 3 under it, the state at 12 in its own ink, inside 12 by 14. The artboard draws the state with no
+        /// dot; it is led by the strip card's 7 px dot here, so the three cards lay a state out alike
+        /// (<see cref="CardState"/>, #541).
         /// </summary>
         public static Button MatrixCard(FrameworkElement picture, string name, string state, string stateHex, bool selected, Action click)
         {
@@ -996,11 +1001,7 @@ namespace OpenDashPlugin
             words.Children.Add(title);
             if (!string.IsNullOrEmpty(state))
             {
-                var word = Text(state, PanelKit.LightCardStateSize, FontWeights.Normal, stateHex ?? Theme.TextSecondary);
-                word.TextTrimming = TextTrimming.CharacterEllipsis;
-                word.ToolTip = state;
-                word.Margin = new Thickness(0, PanelKit.MatrixCardTextGap, 0, 0);
-                words.Children.Add(word);
+                words.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.MatrixCardTextGap));
             }
             row.Children.Add(words);
             return CardButton(row, new Thickness(PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY, PanelKit.LightCardPaddingX, PanelKit.LightCardPaddingY), selected, click);

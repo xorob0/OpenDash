@@ -27,10 +27,9 @@ namespace OpenDashPlugin
         public const double CardStateDot = 6;
         public const double CardStateGap = 6;
 
-        /// <summary>A card's state line, fixed so that a state that wraps (#524, ruling 1: never trimmed) keeps
-        /// its dot on the first line: 11 at 1.4, and the 6 px dot centred in that line.</summary>
+        /// <summary>A card's state line, fixed so that a state that wraps, since a state is never trimmed, keeps
+        /// its dot on the first line: 11 at 1.4, and the 6 px dot centred in that line (Ui.CardState).</summary>
         public const double CardStateLineHeight = 15.4;
-        public const double CardStateDotTop = (CardStateLineHeight - CardStateDot) / 2;
 
         /// <summary>The accent bar along a selected card's foot.</summary>
         public const double CardFootBar = 2;
@@ -41,7 +40,7 @@ namespace OpenDashPlugin
         /// minimum; at its 1200 px, beside the full sidebar and less the scroll bar, the content is 879 px,
         /// so six cards are (879 - 5 x 10) / 6 = 138 each. 138 is the widest minimum that keeps the artboard's
         /// six at its own width; it was 150, which pushed "Add a screen" of a five-screen rig onto a second
-        /// row there. A state line that does not fit a card this narrow trims, with the word as its tooltip.
+        /// row there. A state line that does not fit a card this narrow wraps to a second line.
         /// </summary>
         public const double CardGridGap = 10;
         public const double CardMinWidth = 138;
@@ -68,12 +67,19 @@ namespace OpenDashPlugin
         public const double LightCardNameSize = 15;
         public const double LightCardStateSize = 12;
 
+        /// <summary>The light cards' state dot, 7 across and 6 before the word (<see cref="CardStateGap"/>): .dcard's,
+        /// and .mcard's too, which the artboard draws with no dot, so that the three cards lay a state out alike
+        /// (#541).</summary>
+        public const double LightCardStateDot = 7;
+
+        /// <summary>The light cards' state line, fixed as the screen card's is (<see cref="CardStateLineHeight"/>)
+        /// so that a state that wraps keeps its dot on the first line: 12 at the same 1.4.</summary>
+        public const double LightCardStateLineHeight = 16.8;
+
         /// <summary>.dcard's column gap of 10 between the name line, the strip and the state; the shape's
-        /// numerals on the name line at 14 (.num); the state's dot 7 across, 6 before the word
-        /// (<see cref="CardStateGap"/>). The strip's own numbers are StripStyle.Card's.</summary>
+        /// numerals on the name line at 14 (.num). The strip's own numbers are StripStyle.Card's.</summary>
         public const double StripCardGap = 10;
         public const double StripCardShapeSize = 14;
-        public const double StripCardStateDot = 7;
 
         /// <summary>.mcard's row gap of 12 between the 8x8 and the words, and the words' column gap of 3. The
         /// 8x8's own numbers are MatrixStyle.Card's.</summary>
