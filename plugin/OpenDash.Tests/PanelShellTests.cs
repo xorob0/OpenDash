@@ -475,12 +475,13 @@ namespace OpenDashPlugin.Tests
             // The shell asks the rule, reading the width counts only when a build reads it, and a build starts
             // having read none.
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
-            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);", shell);
+            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, builtThresholds, SystemParameters.VerticalScrollBarWidth);", shell);
             Assert.Contains("private double ContentWidth => ContentWidthUpTo(double.PositiveInfinity);", shell);
             Assert.Contains("private bool TwoColumns => PanelShell.TwoColumns(layout, ColumnRoom);", shell);
             var build = shell.Substring(shell.IndexOf("private FrameworkElement BuildPage(PanelRoute to)", StringComparison.Ordinal));
             build = build.Substring(0, build.IndexOf("switch (to.Page)", StringComparison.Ordinal));
             Assert.Contains("builtWidthRead = 0;", build);
+            Assert.Contains("builtThresholds.Clear();", build);
             // Only a page's own build reads ContentWidth: the shell reads ColumnRoom, which does not count, and
             // names ContentWidth only to declare it.
             string Code(string name) => RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == name));
@@ -489,6 +490,60 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, Reads(Code("SettingsControl.Sheet.cs")));
             Assert.Equal(0, Reads(Code("SettingsControl.Sidebar.cs")));
             Assert.Equal(0, Reads(Code("SettingsControl.Messages.cs")));
+        }
+
+        /// <summary>
+        /// A page that reads the content width as thresholds is rebuilt only when a resize crosses one (#543):
+        /// Settings draws differently at 560 and 680 and nowhere between, and read as a cap every settled resize
+        /// under 680 rebuilt it, committing the box being typed in and taking the keyboard out of it.
+        /// </summary>
+        [Fact]
+        public void A_resize_between_two_thresholds_rebuilds_nothing()
+        {
+            const double bar = 17;
+            var settings = new[] { PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom };
+            // In the rail, 770 to 800 px of control is 633 to 663 of content: read as a cap at 680 the page
+            // was rebuilt by the resize...
+            Assert.Equal(PanelLayout.Rail, PanelShell.Layout(770));
+            Assert.InRange(PanelShell.ContentWidth(770, bar), PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom);
+            Assert.InRange(PanelShell.ContentWidth(800, bar), PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom);
+            Assert.True(PanelShell.RebuildsOnResize(770, 800, PanelSettings.AlertSurfacesFrom, bar));
+            // ...and read as thresholds, beside the sliders' 320, nothing is rebuilt between 560 and 680...
+            Assert.False(PanelShell.RebuildsOnResize(770, 800, PanelSettings.SliderWidth, settings, bar));
+            Assert.False(PanelShell.RebuildsOnResize(800, 770, PanelSettings.SliderWidth, settings, bar));
+            // ...nor past the higher, beside the full sidebar in one column and in two, nor under the lower.
+            Assert.False(PanelShell.RebuildsOnResize(1001, 1079, PanelSettings.SliderWidth, settings, bar));
+            Assert.False(PanelShell.RebuildsOnResize(1200, 1400, PanelSettings.SliderWidth, settings, bar));
+            Assert.True(PanelShell.ContentWidth(620, bar) < PanelSettings.StackControlsBelow);
+            Assert.False(PanelShell.RebuildsOnResize(600, 620, PanelSettings.SliderWidth, settings, bar));
+            // A resize across either rebuilds, in either direction, where nothing else moved.
+            foreach (var threshold in settings)
+            {
+                var across = Enumerable.Range(600, 400).First(w => PanelShell.ContentWidth(w, bar) >= threshold);
+                Assert.Equal(PanelShell.Layout(across - 1), PanelShell.Layout(across));
+                Assert.False(PanelShell.RebuildsOnResize(across - 1, across, 0, null, bar));
+                Assert.True(PanelShell.RebuildsOnResize(across - 1, across, 0, settings, bar));
+                Assert.True(PanelShell.RebuildsOnResize(across, across - 1, 0, settings, bar));
+            }
+            // No thresholds is the rule as it was.
+            Assert.Equal(PanelShell.RebuildsOnResize(1000, 1060, 880, bar), PanelShell.RebuildsOnResize(1000, 1060, 880, null, bar));
+
+            // Several steps read as one width: the highest the content reaches, every step asked, so each is
+            // recorded as read.
+            var asked = new System.Collections.Generic.List<double>();
+            System.Func<double, System.Func<double, bool>> at = content => step => { asked.Add(step); return content >= step; };
+            var steps = new double[] { 480, 520, 560 };
+            Assert.Equal(520, PanelShell.WidthAtSteps(steps, at(559)));
+            Assert.Equal(steps, asked);
+            Assert.Equal(560, PanelShell.WidthAtSteps(steps, at(3000)));
+            Assert.Equal(0, PanelShell.WidthAtSteps(steps, at(479)));
+            Assert.Equal(480, PanelShell.WidthAtSteps(steps, at(480)));
+            Assert.Equal(0, PanelShell.WidthAtSteps(null, at(600)));
+
+            // The shell records each threshold a build reads and answers from the column's room.
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("private bool ContentWidthAtLeast(double threshold) { if (!builtThresholds.Contains(threshold)) builtThresholds.Add(threshold); return ColumnRoom >= threshold; }", shell);
+            Assert.Contains("private double ContentWidthAtSteps(IEnumerable<double> steps) { return PanelShell.WidthAtSteps(steps, ContentWidthAtLeast); }", shell);
         }
 
         [Fact]

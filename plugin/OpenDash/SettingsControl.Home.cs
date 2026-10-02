@@ -102,9 +102,9 @@ namespace OpenDashPlugin
         /// to do, the steps in SimHub where there are some, and the one press that helps.</summary>
         private FrameworkElement HomeAttentionCard()
         {
-            // Read once, and only up to where the rows stop changing: past PressBesideFrom every press sits
-            // beside its text, so a resize there leaves the page alone (PanelShell.RebuildsOnResize).
-            var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom));
+            // Read once, as the threshold the rows change at: from PressBesideFrom every press sits beside its
+            // text, so only a resize across it rebuilds the page (PanelShell.RebuildsOnResize).
+            var beside = ContentWidthAtLeast(PanelHome.PressBesideFrom);
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             for (var i = 0; i < issues.Count; i++)
             {

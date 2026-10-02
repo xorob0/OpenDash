@@ -9,6 +9,7 @@
 //
 // Pure: no WPF and no SimHub types. Compiled into OpenDash.Tests by the Panel*.cs wildcard.
 using System;
+using System.Collections.Generic;
 
 namespace OpenDashPlugin
 {
@@ -425,7 +426,8 @@ namespace OpenDashPlugin
         /// the layout or <see cref="TwoColumns"/> moved, or when the build read the content width and what it
         /// read has moved by a pixel. <paramref name="widthRead"/> is the most of the content width the build
         /// asked for: 0 when it read none, a cap when it read the width only up to one (the live preview stops
-        /// at 880), infinity when it read it whole.
+        /// at 880), infinity when it read it whole. A build that read only thresholds passes them to the
+        /// overload that takes them.
         /// </summary>
         /// <remarks>
         /// With no ceiling on the column the content width follows the control pixel for pixel, so rebuilding
@@ -437,14 +439,54 @@ namespace OpenDashPlugin
         /// </remarks>
         public static bool RebuildsOnResize(double builtControlWidth, double controlWidth, double widthRead, double scrollBar = 0)
         {
+            return RebuildsOnResize(builtControlWidth, controlWidth, widthRead, null, scrollBar);
+        }
+
+        /// <summary>
+        /// The same, for a build that also read the content width as thresholds: whether it is at least each
+        /// of <paramref name="thresholds"/> (ContentWidthAtLeast). A threshold rebuilds the page only when the
+        /// width crossed it, so a resize between two thresholds rebuilds nothing.
+        /// </summary>
+        /// <remarks>
+        /// Settings draws differently only at 560, where a control goes under its title, and at 680, where the
+        /// alert table folds its surface columns. Read as a cap, min(680, content) was one continuous width,
+        /// and every settled resize under 680 of content rebuilt the page -- committing the box being typed in
+        /// and taking the keyboard out of it -- although nothing on it moves between the two (#543).
+        /// </remarks>
+        public static bool RebuildsOnResize(double builtControlWidth, double controlWidth, double widthRead, IEnumerable<double> thresholds, double scrollBar = 0)
+        {
             var was = Layout(builtControlWidth);
             var now = Layout(controlWidth);
             if (was != now) return true;
             var before = ContentWidth(builtControlWidth, scrollBar);
             var after = ContentWidth(controlWidth, scrollBar);
             if (TwoColumns(was, before) != TwoColumns(now, after)) return true;
+            if (thresholds != null)
+            {
+                foreach (var threshold in thresholds)
+                {
+                    if (before >= threshold != after >= threshold) return true;
+                }
+            }
             if (!(widthRead > 0)) return false;
             return Math.Abs(Math.Min(widthRead, after) - Math.Min(widthRead, before)) >= 1;
+        }
+
+        /// <summary>
+        /// The content width as a page that draws differently only at <paramref name="steps"/> sees it: the
+        /// highest step it is at least, or 0 below them all. Every decision the page makes is "at least this
+        /// step", so it decides the same from this as from the width itself, and the page is rebuilt only when
+        /// a resize crosses a step. Every step is asked, so each is recorded as read.
+        /// </summary>
+        public static double WidthAtSteps(IEnumerable<double> steps, Func<double, bool> atLeast)
+        {
+            var at = 0.0;
+            if (steps == null || atLeast == null) return at;
+            foreach (var step in steps)
+            {
+                if (atLeast(step) && step > at) at = step;
+            }
+            return at;
         }
 
         /// <summary>

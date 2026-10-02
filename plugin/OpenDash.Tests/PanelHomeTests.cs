@@ -179,17 +179,13 @@ namespace OpenDashPlugin.Tests
                 PanelMetrics.BorderWeight * 2 + PanelHome.IssuePaddingX * 2 + PanelHome.IconWell + PanelHome.IconGap + PanelHome.IconGap + PanelHome.PressMaxWidth + PanelHome.PressTextMinWidth);
             Assert.Equal(PanelHome.PressTextMinWidth,
                 PanelHome.PressBesideFrom - PanelMetrics.BorderWeight * 2 - PanelHome.IssuePaddingX * 2 - PanelHome.IconWell - PanelHome.IconGap - PanelHome.IconGap - PanelHome.PressMaxWidth);
-            Assert.True(PanelHome.PressBeside(602));
-            Assert.False(PanelHome.PressBeside(601));
-            Assert.False(PanelHome.PressBeside(600));
             // The rail's content, from a control of 760 with a scroll bar, keeps its presses beside, as the
             // full sidebar's does.
             Assert.Equal(PanelLayout.Rail, PanelShell.Layout(760));
-            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(760, 17)));
-            Assert.True(PanelHome.PressBeside(PanelShell.TwoColumnFrom));
+            Assert.True(PanelShell.ContentWidth(760, 17) >= PanelHome.PressBesideFrom);
+            Assert.True(PanelShell.TwoColumnFrom >= PanelHome.PressBesideFrom);
             // The column has no ceiling, and a 4K window's keeps its presses beside too.
-            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(3840, 17)));
-            Assert.False(PanelHome.PressBeside(400));
+            Assert.True(PanelShell.ContentWidth(3840, 17) >= PanelHome.PressBesideFrom);
         }
 
         private static AttentionStrip Brow(FlagBoxInstallState? profile, bool? selected, string device = "Wheel")
@@ -1279,13 +1275,17 @@ namespace OpenDashPlugin.Tests
         {
             var code = PageCode();
             // An issue's press asks the content's width, since it is a row's trailing action and not a second
-            // block, read once for the card and only up to PressBesideFrom, past which nothing is drawn
-            // differently: a resize of a wide panel then leaves Home alone (PanelShell.RebuildsOnResize).
-            Assert.Contains("var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom)); var rows = new StackPanel", code);
-            Assert.Single(Regex.Matches(code, @"\bContentWidthUpTo\("));
+            // block, read once for the card as the threshold PressBesideFrom, on either side of which nothing is
+            // drawn differently: only a resize across it rebuilds Home (PanelShell.RebuildsOnResize).
+            Assert.Contains("var beside = ContentWidthAtLeast(PanelHome.PressBesideFrom); var rows = new StackPanel", code);
+            Assert.Single(Regex.Matches(code, @"\bContentWidthAtLeast\("));
+            Assert.Empty(Regex.Matches(code, @"\bContentWidthUpTo\("));
             Assert.Empty(Regex.Matches(code, @"\bContentWidth\b(?!\s*\()"));
-            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, PanelHome.PressBesideFrom, 17));
-            Assert.False(PanelShell.RebuildsOnResize(1300, 1301, PanelHome.PressBesideFrom, 17));
+            var beside = new[] { PanelHome.PressBesideFrom };
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 0, beside, 17));
+            Assert.False(PanelShell.RebuildsOnResize(1300, 1301, 0, beside, 17));
+            Assert.False(PanelShell.RebuildsOnResize(680, 700, 0, beside, 17));
+            Assert.True(PanelShell.RebuildsOnResize(700, 720, 0, beside, 17));
             Assert.Contains("var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;", code);
             Assert.Contains("var beside = TwoColumns;", code);
             Assert.DoesNotContain("!Narrow", code);

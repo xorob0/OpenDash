@@ -588,14 +588,20 @@ namespace OpenDashPlugin
         /// </summary>
         public static double VersionWidth(double contentWidth, bool hasPress = false)
         {
-            var name = contentWidth - TableBorder - 2 * TableRowPaddingX - ColumnWidth(TableVersionWidth) - ColumnWidth(TableStateWidth)
-                - (hasPress ? TablePressColumn : 0);
-            return name >= TableNameMin ? TableVersionWidth : 0;
+            return contentWidth >= VersionFrom(hasPress) ? TableVersionWidth : 0;
+        }
+
+        /// <summary>The content width from which the version column is drawn: 480 without a press, 560 with
+        /// one, where the name keeps <see cref="TableNameMin"/>.</summary>
+        public static double VersionFrom(bool hasPress)
+        {
+            return TableBorder + 2 * TableRowPaddingX + ColumnWidth(TableVersionWidth) + ColumnWidth(TableStateWidth)
+                + (hasPress ? TablePressColumn : 0) + TableNameMin;
         }
 
         /// <summary>
-        /// The widest content width the page draws anything differently at, and so the most of it the build
-        /// reads (ContentWidthUpTo): <see cref="VersionWidth"/>'s threshold with a press, 2 + 32 + 126 + 166 +
+        /// The widest content width the page draws anything differently at, the highest of
+        /// <see cref="WidthSteps"/>: <see cref="VersionWidth"/>'s threshold with a press, 2 + 32 + 126 + 166 +
         /// 80 + 154 = 560, the highest of the page's three width decisions (the other two are the version
         /// column's 480 without a press and <see cref="ButtonBesideFrom"/>'s 520). Past it the page is drawn
         /// the same at every width, so a resize there leaves the page alone -- its question, the by-hand
@@ -604,6 +610,15 @@ namespace OpenDashPlugin
         /// </summary>
         public const double WidthDrawnUpTo = TableBorder + 2 * TableRowPaddingX + TableVersionWidth + TableGap + TableStateWidth + TableGap
             + TablePressColumn + TableNameMin;
+
+        /// <summary>
+        /// The content widths the page draws differently at, and the only ones it reads the width as
+        /// (ContentWidthAtSteps): the version column's 480 without a press, <see cref="ButtonBesideFrom"/>'s 520
+        /// and the version column's 560 with one. Every width decision on the page is "at least one of these",
+        /// so the page decides the same from the highest step the content reaches as from the width itself,
+        /// and a resize rebuilds it only when it crosses one: not at every pixel under 560, as a cap did.
+        /// </summary>
+        public static readonly double[] WidthSteps = { VersionFrom(false), ButtonBesideFrom, VersionFrom(true) };
 
         /// <summary>Whether any light row draws its Update press, which takes the press column's room from
         /// every row: a profile older than this build's, on a device SimHub lists.</summary>

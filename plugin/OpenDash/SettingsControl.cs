@@ -90,11 +90,12 @@ namespace OpenDashPlugin
         /// it held. Run and cleared on every Go and on every rebuild in place.</summary>
         private readonly List<Action> dropActions = new List<Action>();
 
-        /// <summary>The control width the page that is showing was built at, and the most of the content width
-        /// its build read (0 for none), so a resize rebuilds it only when what it was drawn from has moved
-        /// (PanelShell.RebuildsOnResize).</summary>
+        /// <summary>The control width the page that is showing was built at, the most of the content width
+        /// its build read (0 for none) and the thresholds it read the width as, so a resize rebuilds it only
+        /// when what it was drawn from has moved (PanelShell.RebuildsOnResize).</summary>
         private double builtControlWidth = -1;
         private double builtWidthRead;
+        private readonly List<double> builtThresholds = new List<double>();
 
         /// <summary>Holds a resize's rebuild until the window has stopped moving.</summary>
         private DispatcherTimer resizeSettle;
@@ -269,7 +270,7 @@ namespace OpenDashPlugin
         /// <summary>Whether the page that is showing was drawn from room that has moved since it was built.</summary>
         private bool PageRoomMoved()
         {
-            return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);
+            return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, builtThresholds, SystemParameters.VerticalScrollBarWidth);
         }
 
         private void SettleThenRebuild()
@@ -324,14 +325,19 @@ namespace OpenDashPlugin
         // bar, with no ceiling: the page fills it, rows and grids stretch, and prose keeps a measure --
         // PanelShell.ProseMaxWidth 620 for a caption or paragraph, 520 for a row's caption, BodyWidth 880 for
         // a message line, a caption that asks for it and the live preview), ContentWidthUpTo(most) (the same,
-        // for a build that draws nothing differently past most), Narrow (the rail: the sidebar is icons,
+        // for a build that draws nothing differently past most), ContentWidthAtLeast(threshold) (whether the
+        // content is at least that wide, for a build that draws differently only on either side of it: a resize
+        // rebuilds it only when the width crossed the threshold), ContentWidthAtSteps(steps) (the highest of
+        // several thresholds the content reaches, for a build that hands the width to rules that each test one
+        // of them), Narrow (the rail: the sidebar is icons,
         // below 1000 px, Rail and Compact alike) and
         // TwoColumns (the only test for laying two blocks side by side: the full sidebar and at least
         // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit -- from 1000 to
         // about 1080 px the sidebar is full and the content is 679 to 759 -- so a page lays blocks side by
         // side only when TwoColumns is true and stacks them otherwise, never testing !Narrow), all read while
         // building. After a resize the shell rebuilds the page when the layout or TwoColumns moved, or when
-        // the build read the width and what it read moved (PanelShell.RebuildsOnResize); a build that never
+        // the build read the width and what it read moved, or crossed a threshold it read
+        // (PanelShell.RebuildsOnResize); a build that never
         // read ContentWidth is not rebuilt by a resize at all. So anything a page has in flight (a download, a
         // press it is waiting on) lives in a field outside the build and the next build draws it from there,
         // and a page reads ContentWidth only where it draws from it. Every page takes the whole column, so no
@@ -626,11 +632,29 @@ namespace OpenDashPlugin
 
         /// <summary>The content width, or <paramref name="most"/> where the column is wider: for a build that
         /// draws nothing differently past it, such as the live preview at BodyWidth. A resize that leaves the
-        /// answer where it was does not rebuild the page.</summary>
+        /// answer where it was does not rebuild the page. A build that draws differently only on either side
+        /// of a width asks <see cref="ContentWidthAtLeast"/> instead, and is rebuilt only when it is crossed.</summary>
         private double ContentWidthUpTo(double most)
         {
             if (most > builtWidthRead) builtWidthRead = most;
             return Math.Min(most, ColumnRoom);
+        }
+
+        /// <summary>Whether the content is at least <paramref name="threshold"/> wide: for a build that draws
+        /// differently only on either side of it, such as Settings' stacked rows below 560. A resize rebuilds
+        /// the page only when the width crosses the threshold, so one between two thresholds rebuilds nothing.</summary>
+        private bool ContentWidthAtLeast(double threshold)
+        {
+            if (!builtThresholds.Contains(threshold)) builtThresholds.Add(threshold);
+            return ColumnRoom >= threshold;
+        }
+
+        /// <summary>The content width as a build that draws differently only at <paramref name="steps"/> sees
+        /// it (PanelShell.WidthAtSteps): the highest step it reaches, each read as a threshold. For a page that
+        /// hands the width to rules that each test one of the steps, as Updates does.</summary>
+        private double ContentWidthAtSteps(IEnumerable<double> steps)
+        {
+            return PanelShell.WidthAtSteps(steps, ContentWidthAtLeast);
         }
 
         /// <summary>The content width as the shell reads it for itself, which does not count as the build
@@ -813,6 +837,7 @@ namespace OpenDashPlugin
         {
             builtControlWidth = controlWidth;
             builtWidthRead = 0;
+            builtThresholds.Clear();
             pageDrawsLighting = false;
             lightingActions.Clear();
             try

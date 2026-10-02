@@ -28,7 +28,7 @@ namespace OpenDashPlugin
         /// <summary>The update card's place on the page, redrawn in place when the check answers.</summary>
         private Border updatesCardHost;
 
-        /// <summary>The content width this build was drawn at, up to PanelUpdates.WidthDrawnUpTo, which the card
+        /// <summary>The content width this build was drawn at, as PanelUpdates.WidthSteps see it, which the card
         /// is redrawn at.</summary>
         private double updatesWidth;
 
@@ -106,9 +106,9 @@ namespace OpenDashPlugin
             // and on the row otherwise (UpdatesRefreshCheck); its answer redraws the card.
             OnUpdate(UpdatesRefreshCheck, manual => UpdateAnswered());
 
-            // Read only up to the widest width the page draws anything differently at, so a resize past it
+            // Read only as the steps the page draws differently at, so a resize that crosses none of them
             // does not rebuild the page (PanelShell.RebuildsOnResize).
-            updatesWidth = ContentWidthUpTo(PanelUpdates.WidthDrawnUpTo);
+            updatesWidth = ContentWidthAtSteps(PanelUpdates.WidthSteps);
             // What the installer says of the rig's folders, read from the disk once per visit: the table's
             // dashboards and the kept card both read it. Not on every build, since a resize or a return to
             // the panel rebuilds the page, and each read re-hashes every folder on this thread and logs a

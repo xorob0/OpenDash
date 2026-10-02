@@ -291,14 +291,12 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
-        /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510. The
-        /// width is read only up to the threshold, so a resize above it rebuilds nothing. Below the alert
-        /// table's 680 every settled resize still rebuilds the page, since the shell reads the largest cap as
-        /// one continuous width; a read of which side of a threshold the build saw is the shell's to add.
+        /// (PanelSettings.StackControlsBelow): the widest row, the greyed Colour vision, needs about 510. The
+        /// width is read as a threshold, so only a resize across it rebuilds the page.
         /// </summary>
         private Border SettingsFit(Border row)
         {
-            if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;
+            if (ContentWidthAtLeast(PanelSettings.StackControlsBelow)) return row;
             var parts = row.Tag as RowParts;
             var grid = row.Child as Grid;
             if (parts == null || parts.Control == null || grid == null) return row;
@@ -597,8 +595,8 @@ namespace OpenDashPlugin
         private FrameworkElement SettingsAlerts(string[] units)
         {
             var temperature = units[1];
-            // The width is read only up to the fold, so a resize above it rebuilds nothing.
-            var surfaces = PanelSettings.AlertSurfacesFit(ContentWidthUpTo(PanelSettings.AlertSurfacesFrom));
+            // The width is read as the fold's threshold, so only a resize across it rebuilds the page.
+            var surfaces = ContentWidthAtLeast(PanelSettings.AlertSurfacesFrom);
             var grid = new Grid();
             // With the surface columns, the names take the artboard's 30% and the slack spreads over the four
             // (each held to its heading's width, SettingsAlertHeader); without them the names take it all.

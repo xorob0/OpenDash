@@ -724,7 +724,21 @@ namespace OpenDashPlugin.Tests
             }
             Assert.NotEqual(PanelUpdates.VersionWidth(at, hasPress: true), PanelUpdates.VersionWidth(at - 1, hasPress: true));
             var code = PageCode();
-            Assert.Contains("updatesWidth = ContentWidthUpTo(PanelUpdates.WidthDrawnUpTo);", code);
+            // Read as the steps it draws differently at (#543): the highest the content reaches decides every
+            // rule the same as the width itself, so a resize between two steps rebuilds nothing.
+            Assert.Equal(new double[] { 480, 520, 560 }, PanelUpdates.WidthSteps);
+            Assert.Equal(PanelUpdates.WidthDrawnUpTo, PanelUpdates.WidthSteps.Max());
+            Assert.Equal(PanelUpdates.WidthDrawnUpTo, PanelUpdates.VersionFrom(true));
+            for (var width = 300.0; width <= 700; width += 0.5)
+            {
+                var seen = PanelShell.WidthAtSteps(PanelUpdates.WidthSteps, step => width >= step);
+                Assert.Equal(PanelUpdates.ButtonBeside(width), PanelUpdates.ButtonBeside(seen));
+                Assert.Equal(PanelUpdates.VersionWidth(width), PanelUpdates.VersionWidth(seen));
+                Assert.Equal(PanelUpdates.VersionWidth(width, hasPress: true), PanelUpdates.VersionWidth(seen, hasPress: true));
+            }
+            Assert.False(PanelShell.RebuildsOnResize(1000, 1060, 0, PanelUpdates.WidthSteps, 17));
+            Assert.Contains("updatesWidth = ContentWidthAtSteps(PanelUpdates.WidthSteps);", code);
+            Assert.DoesNotContain("ContentWidthUpTo(", code);
             Assert.DoesNotContain("= ContentWidth;", code);
             Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\bContentWidth\b(?!UpTo)"), "the Updates files never read the width whole");
         }

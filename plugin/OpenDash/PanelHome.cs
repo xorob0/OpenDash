@@ -206,17 +206,13 @@ namespace OpenDashPlugin
         /// column of words, and the press goes under the text instead.</summary>
         public const double PressTextMinWidth = 300;
 
-        /// <summary>The content width from which an issue's press sits beside its text: the attention card's
-        /// border on each side (Ui.CardBox), the row's padding, the icon well and its gap, the press's gap and
-        /// its widest, and the text column's narrowest.</summary>
+        /// <summary>The content width from which an issue's press sits beside its text, as a row's trailing
+        /// action does at any width the text column keeps its room, the rail's included; under it the press
+        /// goes under the text. The attention card's border on each side (Ui.CardBox), the row's padding, the
+        /// icon well and its gap, the press's gap and its widest, and the text column's narrowest. The page
+        /// reads it as a threshold (ContentWidthAtLeast).</summary>
         public const double PressBesideFrom = PanelMetrics.BorderWeight * 2 + IssuePaddingX * 2 + IconWell + IconGap + IconGap + PressMaxWidth + PressTextMinWidth;
 
-        /// <summary>Whether an issue's press sits beside its text, as a row's trailing action does at any width
-        /// the text column keeps its room, the rail's included; where it would not, it goes under the text.</summary>
-        public static bool PressBeside(double contentWidth)
-        {
-            return contentWidth >= PressBesideFrom;
-        }
 
         /// <summary>
         /// What Home says after Check again, from the issues and the strip's facts as SimHub gave them the second
