@@ -508,6 +508,14 @@ export const click = (host: Host, x: number, y: number, dwellSeconds = 0): RunRe
   vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})\ntime.sleep(${dwellSeconds})\nclient.mousePress(1)`);
 
 /**
+ * Moves the pointer without pressing. A pointer left resting on a control opens its tooltip, and a
+ * WPF tooltip is a top-level window that `Process.MainWindowHandle` will hand back in place of the
+ * window itself, so a caller that clicks and then measures parks the pointer somewhere inert first.
+ */
+export const movePointer = (host: Host, x: number, y: number): RunResult =>
+  vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})`);
+
+/**
  * Types a string a key at a time. vncdotool's proxy has no `type`, and its key names are words for
  * anything that is not a bare character.
  */

@@ -27,7 +27,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
-import { captureWindow, click, guiProblem, inDesktopScript, maximiseSimHub, parseClientArea, wheel, WINDOW_HELPER, type ClientArea, type ScreenRect } from './gui.ts';
+import { captureWindow, click, guiProblem, inDesktopScript, maximiseSimHub, movePointer, parseClientArea, wheel, WINDOW_HELPER, type ClientArea, type ScreenRect } from './gui.ts';
 import { applyPreset, type Preset } from './rig.ts';
 import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
 import { claim, claimLost, installPlugin, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host, type RunResult } from './vm.ts';
@@ -369,8 +369,8 @@ $inv = [Globalization.CultureInfo]::InvariantCulture
 $proc = Get-Process SimHubWPF -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $proc -or $proc.MainWindowHandle -eq [IntPtr]::Zero) { 'SimHub has no main window'; exit }
 $h = $proc.MainWindowHandle
-"window {0} {1} {2} {3}" -f [OpenDashWindows]::Rect($h)
-"client {0} {1} {2} {3}" -f [OpenDashWindows]::Client($h)
+$r = [OpenDashWindows]::Rect($h); "window {0} {1} {2} {3}" -f $r[0], $r[1], $r[2], $r[3]
+$c = [OpenDashWindows]::Client($h); "client {0} {1} {2} {3}" -f $c[0], $c[1], $c[2], $c[3]
 $dpi = 96
 try { $d = [OpenDashDpi]::GetDpiForWindow($h); if ($d -gt 0) { $dpi = $d } } catch { }
 "dpi $dpi"
@@ -436,7 +436,7 @@ ${fit}
 [OpenDashWindows]::SetForegroundWindow($h) | Out-Null
 Start-Sleep -Milliseconds 900
 $c = [OpenDashWindows]::Client($h)
-"client {0},{1} {2}x{3}" -f $c`,
+"client {0},{1} {2}x{3}" -f $c[0], $c[1], $c[2], $c[3]`,
     120,
   );
   if (!r.ok) return r;
@@ -561,6 +561,11 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
 
     const menu = { x: client.left + opts.menuX, y: client.top + opts.menuY };
     if (!step(`opening OpenDash from the left menu at ${menu.x},${menu.y}`, () => click(host, menu.x, menu.y, 1))) return 1;
+    // Off every control, onto the taskbar's empty middle: a pointer left on the menu entry or a
+    // sidebar button opens its tooltip, which SimHub's MainWindowHandle then reports as the window,
+    // and every measurement and capture after it would be of a 70 x 24 popup.
+    const park = (): void => void movePointer(host, client.left + client.width / 2, client.top + client.height + 20);
+    park();
     sleep(3);
 
     mkdirSync(opts.outDir, { recursive: true });
@@ -601,6 +606,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
           shots.push({ file: shotFile(pageName, width), ok: false, why: 'the click failed' });
           continue;
         }
+        park();
         sleep(1.5);
 
         const after = measurePanel(host);
@@ -617,6 +623,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
             // The last part is scrolled to the very bottom, so it ends where the page ends.
             const notches = part === parts ? notchesPerViewport(viewport) * parts + 10 : notchesPerViewport(viewport);
             wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, notches);
+            park();
             sleep(1);
           }
           const file = shotFile(pageName, width, part, parts);
@@ -627,6 +634,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
         }
         // Back to the top, so the next page is not opened scrolled and a re-run starts where this one did.
         if (parts > 1 && column) wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, -(notchesPerViewport(column.rect.height / measure.scale) * parts + 10));
+        park();
       }
       // Written after every width, so a run that stops short still says what it photographed.
       writeRun(opts.outDir, run);
