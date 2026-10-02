@@ -12,7 +12,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | id | control | setup | action | expected | how |
 |---|---|---|---|---|---|
 | SB-01 | Wordmark + version | RF, B:cur | Open OpenDash from SimHub's left menu | wordmark, the assembly version | U PanelShellTests; V |
-| SB-02 | Search | RF | Click the box | Draws with the placeholder "Search"; no log error | V; N typing (a panel TextBox never takes focus over VNC) → U PanelSearchTests (index covers every row label; "blue" → "Blue flag detail · Settings"; no match → "No setting matches."; a hit navigates + scrolls) |
+| SB-02 | Search | RF | Click the box | Draws with the placeholder "Search"; no log error | V (typing reaches the rail's flyout box over VNC, as #529 found); U PanelSearchTests (index covers every row label; "blue" → "Blue flag detail · Settings"; no match → "No setting matches."; a hit navigates + scrolls) |
 | SB-03 | Live card | RF, E:race | Observe | "Live · <game>", car, track · session, green dot | V; J GameRunning |
 | SB-04 | Live card, no game | RF, E:none | Stop emulator | "No game running", grey dot | V |
 | SB-05 | Nav items + counts | RF | Observe | Home, Rig, sep, Screens 5 (dot), LEDs 2 (dot), Matrix 2, sep, Shortcuts N, Settings; Night mode and Updates at the foot. Matrix wears no dot for a dark matrix until #521 | U PanelNavTests; V |
@@ -58,7 +58,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 ## SC Screens · AS Add a screen
 | id | control | setup | action | expected | how |
 |---|---|---|---|---|---|
-| SC-01 | Cards | RF | Open | 5 cards (thumb by kind, name, "<kind> · <size>", state: In SimHub / Missing / Restart SimHub to load it) + Add a screen tile | U PanelScreensTests; V |
+| SC-01 | Cards | RF | Open | 5 cards (thumb by kind, name, kind, state: In SimHub / Missing / Restart SimHub to load it; the header carries "<kind> · <size>") + Add a screen tile | U PanelScreensTests; V |
 | SC-02 | Select | RF | Click Pit wall | header + pit pane | V |
 | SC-03 | Fix box | RF (Rim) | Select Rim | Missing; "This screen's settings are kept."; Install it again | U; V |
 | SC-04 | Edit sheet | RF | Click Edit | Name, Size or Orientation, Dashboard › Reinstall; prefilled; Cancel writes nothing | V; J hash unchanged |
@@ -81,7 +81,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | SC-21 | Quick glance | K:on | Track in Zone C; bind F8 on Shortcuts | setting; mapping PressType During; `captureWhileHeld(f8)` shows Track then returns | J; V |
 | SC-22 | Seven Soon rows | Main dash | Hover each | greyed; "Coming soon · #N" (Rev fill under the lights, Spotter at the rev bar ends, Pit page in the pit lane, Pop-ups, Edge lights for the delta, Screen care, Fit) | U PanelSoonTests; V; J unchanged on click |
 | SC-23 | Details | Main dash | Expand | SimHub name, Folder as stored, Properties OpenDash.<ns>*, Version | V |
-| SC-24 | Clash line | zone C and Quick glance on Track | Observe | FacePageClash warning under the zone aside, allowed | U; V |
+| SC-24 | Clash line | zone C starting on Track (its First page) and Quick glance on Zone C › Track | Observe | FacePageClash warning under the zone aside, allowed | U; V |
 | SC-25 | Pit: Page on screen | Pit wall | Race / Tower / Telemetry | PitWallPage; picture and zone rows change | J; V ×3 |
 | SC-26 | Pit: Race zones | Pit wall | Zone A → Relative | PitWallZones; property; no Board row (the race board is fixed) | J |
 | SC-27 | Web view address | Pit wall | set via JSON; observe | shown; `ftp://` ignored; empty hover "Sets what the web view shows, from an http or https address." | J; U |
@@ -92,7 +92,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | SC-32 | Phone: Flag display | Phone, E:yellow | Full screen | CompanionFlagFormat; companion shows it | J; V |
 | SC-33 | Phone: Quick glance + Next module | Phone | Observe | CompanionQuickGlance select; PanelCopy.CompanionPaging verbatim + crumbs Controls and events › NextScreen | U PanelCopyTests |
 | SC-34 | Round: Cards / Rev ring | Round | Card 1 → Current lap; Rev ring Off; hover Zones instead of cards #146 | Slot01; RevBar; tooltip | J; V |
-| SC-35 | Card columns at width | RF | Resize (RS) | 6 → 3 → 2 columns; Add a screen tile last | U PanelShellTests; V |
+| SC-35 | Card columns at width | RF | Resize (RS) | 6 → 4 → 2 columns (six, fewer where a card would fall under CardMinWidth); Add a screen tile last | U PanelShellTests; V |
 | AS-01 | Open sheet | RF | Add a screen tile | sheet over dimmed page, close icon | V |
 | AS-02 | Kind tiles | sheet | Dash face / Pit wall / Companion / Round | Size tiles follow the kind; Orientation (Landscape \| Portrait) for pit wall and companion | U PanelAddScreenTests; V |
 | AS-03 | Flags screen #116 | sheet | Hover / click | greyed, "A second display for flags", tooltip, no selection | U; V |
@@ -108,7 +108,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 |---|---|---|---|---|---|
 | LD-01 | Cards | RF | Open | Wheel rim 3 · 9 · 3, Dash brow 15, Add an LED strip tile; states Showing / Not selected in SimHub / Update available / Installed / Not installed | U PanelLedsTests; V |
 | LD-02 | Header chip and profile state | Wheel rim | Observe | "Fanatec wheel · 3 · 9 · 3"; Install, Update, or no press when current | U; V |
-| LD-03 | Fix box | Dash brow | Observe; Check again | steps; re-survey logged | V; J `[OpenDash] LED device` lines; N resolved branch |
+| LD-03 | Fix box | Dash brow | Observe; Check again | steps; "Checked again." line; an `[OpenDash] LED device` line is logged when a device is new or its line changed | V; J `[OpenDash] LED device` lines; N resolved branch |
 | LD-04 | Preview, 6 chips | Wheel rim, E:shiftlights | Live / Shift point / Yellow / Blue / Car left / Pit limiter | frames per rule; Live follows CarLights.Run | U; V; J |
 | LD-05 | All devices at once | | Click | Rig | V |
 | LD-06 | Car's own rev lights | E:race | Flip | RpmStyle car\|leftToRight; "<car> is in Lovely Car Data." / "… is not in Lovely Car Data." (drive a car without a table via the emulator car name) / no line when off | U; J; V ×3 |
@@ -118,7 +118,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-10 | Brightness | | 60% | bar LedBrightness property; default label "Same as rig · N%" | J; U |
 | LD-11 | Reverse direction | | Flip | ProfileShapeId -reversed; profile reinstalled; NCalc tester on the remap | J; N hardware |
 | LD-12 | Each LED in turn #434 | | Hover | greyed | V |
-| LD-13 | Effects | Wheel rim / Dash brow | Observe; flip TC | 15 switches with ends, 4 on the brow; LedEffectTc property false; profile EnabledFormula reads it | U; V; J NCalc tester |
+| LD-13 | Effects | Wheel rim / Dash brow | Observe; flip TC | 15 switches with ends, 9 on the brow (PanelLeds.EffectsFor); LedEffectTc property false; profile EnabledFormula reads it | U; V; J NCalc tester |
 | LD-14 | Flag animation / Full-strip spotter | | Flip | FlagAnimation, SpotterWhole; Full-strip hidden on the brow | J; V |
 | LD-15 | Pit limiter lights #509 | | Hover | greyed | V |
 | LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #300, Car data for AC, ACC and LMU #479 | | Hover | greyed | V |
