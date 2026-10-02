@@ -909,7 +909,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Then assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
             Assert.DoesNotContain("Restart SimHub", waiting.Tooltip);
             // About 140 of the 135 the dot leaves it, so the phrase wraps "it" to a second line: the cell wraps
-            // (TextWrapping.Wrap in UpdatesStateCell) and the ruling has the phrase wrap rather than be trimmed.
+            // (state.TextWrapping in UpdatesTableRow, pinned by The_table_and_cards_wrap_and_stretch_rather_than_clip)
+            // and the ruling has the phrase wrap rather than be trimmed.
             Assert.True(StateWidth(PanelCopy.RestartToLoad) > PanelUpdates.TableStateRoom, "the measure tells a state that wraps from one that fits");
 
             // Unknown facts say nothing of a restart.
