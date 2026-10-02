@@ -872,14 +872,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Reinstall everything installs it.", none.Tooltip);
         }
 
-        /// <summary>A failure outranks everything, then a folder that has gone, then one SimHub has not loaded
-        /// yet, which is said only when the shell's facts know it. The restart is said in ruling 69's words,
+        /// <summary>A folder that has gone outranks everything, as the Screens card and Home read it, then a
+        /// failure, then one SimHub has not loaded yet, which is said only when the shell's facts know it. The restart is said in ruling 69's words,
         /// which fit the state column on one line where the Screens card's step does not, and the hover says
         /// only the step after it, never the state beside it again.</summary>
         [Fact]
-        public void A_dashboard_row_puts_a_failure_then_a_missing_folder_then_a_restart_first()
+        public void A_dashboard_row_puts_a_missing_folder_then_a_failure_then_a_restart_first()
         {
-            var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false, true);
+            // A failed install whose folder has gone is Missing on all three pages: one state, one word.
+            var failedAndGone = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false, true);
+            Assert.Equal(PanelUpdates.Missing, failedAndGone.State);
+            Assert.Equal(PanelScreens.StateLabel(PanelScreens.StateOf(false, true)), failedAndGone.State);
+            var gone = new AttentionInput();
+            gone.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = false, AddedSinceStart = true });
+            Assert.StartsWith(PanelAttention.ScreenMissing, System.Linq.Enumerable.Single(PanelAttention.Find(gone)).Id);
+
+            var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), true, true);
             Assert.Equal("Install failed", failed.State);
             Assert.Equal(Theme.StatusFailed, failed.StateHex);
             Assert.Equal("See SimHub's log.", failed.Tooltip);

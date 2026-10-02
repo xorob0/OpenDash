@@ -644,8 +644,8 @@ namespace OpenDashPlugin
         /// <param name="installed">Whether the folder is in DashTemplates, or null when unknown.</param>
         /// <param name="waitsForRestart">Whether SimHub has yet to load it (ScreenFacts.AddedSinceStart).</param>
         /// <remarks>
-        /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
-        /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
+        /// A folder that has gone outranks everything, in the failure ink, as the Screens card and Home say of it
+        /// even after a failed install; then a failure; then one SimHub has not loaded yet, known only when the shell's facts say so; then the installer's own status. The
         /// state words are held here (<see cref="Missing"/>), except the restart's, which is the panel's one
         /// phrase for that state (PanelCopy.RestartToLoad, #524 ruling 1) and wraps to a second line in the cell. A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
@@ -662,13 +662,15 @@ namespace OpenDashPlugin
                 if (installed == true) return Row(name, DashboardKind, string.Empty, PanelCopy.Installed, Theme.StatusUpToDate, shipsNo);
                 return Row(name, DashboardKind, string.Empty, Unknown, Theme.TextLabel, shipsNo);
             }
-            if (package.Status == InstallStatus.Failed)
-            {
-                return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, SeeLog);
-            }
+            // A folder that has gone is Missing whatever the last install did, as the Screens card (PanelScreens.StateOf)
+            // and Home's issue say of the same screen; Reinstall everything puts it back either way.
             if (installed == false)
             {
                 return Row(name, DashboardKind, string.Empty, Missing, Theme.StatusFailed, MissingTooltip);
+            }
+            if (package.Status == InstallStatus.Failed)
+            {
+                return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, SeeLog);
             }
             if (waitsForRestart == true)
             {
