@@ -457,7 +457,9 @@ namespace OpenDashPlugin
             if (caption != null)
             {
                 caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);
-                caption.MaxWidth = Math.Min(caption.MaxWidth, PanelShortcuts.CaptionMaxWidth);
+                // The measure every row caption keeps, as Ui.SettingRow draws it: the caption runs under the line
+                // that holds the name, across the press and the binder, not wrapped to the name column's floor.
+                caption.MaxWidth = Math.Min(caption.MaxWidth, PanelShell.RowCaptionMaxWidth);
             }
             pressText = Ui.Text(press, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
             pressText.VerticalAlignment = VerticalAlignment.Center;

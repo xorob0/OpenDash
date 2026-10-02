@@ -941,7 +941,8 @@ namespace OpenDashPlugin
         {
             var line = Ui.Prose(text);
             line.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
-            line.MaxWidth = PanelLeds.CaptionMaxWidth;
+            // As the kit caps a row's own caption: prose that runs the width of a desk is a line nobody finishes.
+            line.MaxWidth = PanelShell.RowCaptionMaxWidth;
             line.HorizontalAlignment = HorizontalAlignment.Left;
             return line;
         }

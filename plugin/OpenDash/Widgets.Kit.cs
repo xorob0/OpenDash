@@ -237,7 +237,7 @@ namespace OpenDashPlugin
             left.Children.Add(titleLine);
             if (!string.IsNullOrEmpty(caption))
             {
-                var cap = Caption(caption, 520);
+                var cap = Caption(caption, PanelShell.RowCaptionMaxWidth);
                 cap.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
                 left.Children.Add(cap);
             }

@@ -1199,7 +1199,7 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"return new Border\s*\{\s*BorderBrush = Ui\.Brush\(Theme\.Rule\),\s*BorderThickness = new Thickness\(0, PanelMetrics\.BorderWeight, 0, 0\),\s*Padding = new Thickness\(PanelShortcuts\.RowPaddingX, PanelShortcuts\.RowPaddingY, PanelShortcuts\.RowPaddingX, PanelShortcuts\.RowPaddingY\),\s*Child = new ShortcutsRowPanel\(nameLine, caption, pressText, slot\),\s*Tag = new RowParts\(nameLine, control\),\s*\};", row);
             // A caption, where a row has one, under the name's line at its gap and a row caption's measure;
             // a row with none (every zone, Lights and greyed row) is drawn without.
-            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShortcuts\.CaptionMaxWidth\);\s*\}", row);
+            Assert.Matches(@"if \(caption != null\)\s*\{\s*caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShell\.RowCaptionMaxWidth\);\s*\}", row);
             // A long name wraps; the press is the artboard's .cap, 16 after the name; the slot holds the
             // control, keeps the panel's corner and the clash outline's room, and is centred on the line.
             Assert.Matches(@"var name = Ui\.Text\(label, [^;]*\);\s*name\.TextWrapping = TextWrapping\.Wrap;\s*name\.VerticalAlignment = VerticalAlignment\.Center;", row);
@@ -1326,10 +1326,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("caption.Margin = new Thickness(0, PanelShortcuts.CaptionGap, 0, 0);", code);
             // A glance's caption keeps a row caption's 520, as Ui.SettingRow draws every other, however wide
             // the name column grows.
-            Assert.Equal(520, PanelShortcuts.CaptionMaxWidth);
-            Assert.Matches(@"caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShortcuts\.CaptionMaxWidth\);", code);
+            // The shell's one constant, which the kit reads too: the page keeps no copy of the number.
+            Assert.Equal(520, PanelShell.RowCaptionMaxWidth);
+            Assert.Null(typeof(PanelShortcuts).GetField("CaptionMaxWidth"));
+            Assert.Matches(@"caption\.Margin = new Thickness\(0, PanelShortcuts\.CaptionGap, 0, 0\);\s*caption\.MaxWidth = Math\.Min\(caption\.MaxWidth, PanelShell\.RowCaptionMaxWidth\);", code);
             var widgets = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
-            Assert.Contains("Caption(caption, " + PanelShortcuts.CaptionMaxWidth.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")", widgets);
+            Assert.Contains("Caption(caption, PanelShell.RowCaptionMaxWidth)", widgets);
             // Every number the model takes from the artboard is drawn with: none is left for the view to
             // spell as a literal of its own.
             foreach (var name in new[]

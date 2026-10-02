@@ -313,6 +313,11 @@ namespace OpenDashPlugin
         /// </remarks>
         public const double ProseMaxWidth = 620;
 
+        /// <summary>A row's caption's measure, the 520 of <see cref="ProseMaxWidth"/>'s summary: what Ui.SettingRow
+        /// caps its caption at, and every line a page draws under a row in its stead (the LEDs page's car and car
+        /// tables lines, a Shortcuts glance's caption), so a change here moves them all.</summary>
+        public const double RowCaptionMaxWidth = 520;
+
         /// <summary>Whether a page may lay its blocks side by side: only beside the full sidebar and only
         /// where the content has at least this much room. With no ceiling on the column this holds at every
         /// full-sidebar width from about 1080 px up, a 4K window included.</summary>

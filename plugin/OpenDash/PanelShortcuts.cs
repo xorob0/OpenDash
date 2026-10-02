@@ -797,12 +797,6 @@ namespace OpenDashPlugin
             return Math.Max(0, rest);
         }
 
-        /// <summary>A row's caption (the glance's) keeps the measure every row caption in the panel keeps,
-        /// as Ui.SettingRow draws it, rather than a paragraph's 620. It runs under the line that holds the
-        /// row's name, from the name's left edge across the press and the binder, so it is not wrapped to
-        /// the name column's floor.</summary>
-        public const double CaptionMaxWidth = 520;
-
         // --- Search -------------------------------------------------------------------------------------
 
         /// <summary>Whether search lists a row of this page on <paramref name="rig"/>: the screens' rows only

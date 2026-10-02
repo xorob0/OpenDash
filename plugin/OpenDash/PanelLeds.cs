@@ -623,10 +623,6 @@ namespace OpenDashPlugin
         /// <summary>The width is the rig's (LedMirrorFit), so the row says so.</summary>
         public const string MirrorFitCaption = "Every strip.";
 
-        /// <summary>The widest a line under a row runs, as the kit caps a row's own caption: prose that runs the
-        /// width of a desk is a line nobody finishes.</summary>
-        public const double CaptionMaxWidth = 520;
-
         /// <summary>The widest the SimHub device picker is drawn, so a long device name trims inside it rather
         /// than crushing the row's title; the full name is its tooltip.</summary>
         public const double DevicePickerMaxWidth = 260;

@@ -1893,7 +1893,10 @@ namespace OpenDashPlugin.Tests
         public void Long_words_are_bounded()
         {
             Assert.Equal(260, PanelLeds.DevicePickerMaxWidth);
-            Assert.Equal(520, PanelLeds.CaptionMaxWidth);
+            // A line under a row is capped as the kit caps a row's caption, by the shell's one constant.
+            Assert.Equal(520, PanelShell.RowCaptionMaxWidth);
+            Assert.Null(typeof(PanelLeds).GetField("CaptionMaxWidth"));
+            Assert.Contains("line.MaxWidth = PanelShell.RowCaptionMaxWidth;", RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs")));
         }
 
         /// <summary>
