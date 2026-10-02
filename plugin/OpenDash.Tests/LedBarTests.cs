@@ -122,6 +122,28 @@ namespace OpenDashPlugin.Tests
             // ToByteArray(), whose first three groups are little-endian and so do not put the version
             // nibble where the RFC does.
             Assert.Equal('5', LedBarProfile.IdFor("LedRim").ToString("D")[14]);
+
+            // The ids SimHub wrote into ArduinoRGBLedsSettings.json on the rig #457 was reported from (#464,
+            // ADR 0017): a 3/9/3 and a 3/9/3 Fanatec on the Arduino. Every strip already installed on a
+            // driver's rig is found by these, so a change to the prefix, the hash or the version bits that
+            // kept IdFor self-consistent would still lose them, and the next install would add a second copy.
+            Assert.Equal(Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), LedBarProfile.IdFor("Led393"));
+            Assert.Equal(Guid.Parse("cf2f576b-a3e3-5f53-be30-5d74ece9cf6c"), LedBarProfile.IdFor("Led393Fanatec"));
+
+            // The embedded 3/9/3 profile's own id is no bar's: a copy under it in SimHub reads the rig-wide
+            // settings and belongs to no strip, so a bar of that shape is still not installed beside it.
+            var current = "Built by OpenDash 0.3.0; do not edit here.";
+            var bar = new LedBar { Name = "OpenDash 3/9/3", Namespace = "Led393", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
+            var embeddedOnly = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = current },
+            };
+            Assert.Equal(FlagBoxInstallState.NotInstalled, LedBarProfile.Plan(bar, current, new[] { embeddedOnly }).State);
+            var installed = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), Name = "OpenDash 3/9/3", Description = current },
+            };
+            Assert.Equal(FlagBoxInstallState.UpToDate, LedBarProfile.Plan(bar, current, new[] { installed }).State);
         }
 
         /// <summary>
