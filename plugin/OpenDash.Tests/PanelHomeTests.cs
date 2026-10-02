@@ -1216,7 +1216,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var ns = screen.Namespace; return new KeyValuePair<HomeScreen, Button>(row, HomeRow(dock, screen.Name, () => Open(PanelPage.Screens, ns)));", code);
             Assert.Contains("var ns = bar.Namespace; rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), bar.Name, () => Open(PanelPage.Leds, ns)));", code);
             Assert.Contains("var id = slot.ToString(System.Globalization.CultureInfo.InvariantCulture); return HomeRow(dock, title, () => Open(PanelPage.Matrix, id));", code);
-            Assert.Contains("rig.Click += (sender, args) => Go(PanelPage.Rig);", code);
+            Assert.Contains("rig.Click += (sender, args) => Open(PanelPage.Rig, PanelHome.TryScenario(Selected(PanelPage.Rig)));", code);
             Assert.Contains("open.Click += (sender, args) => Go(page);", code);
             // The empty rig's tile routes to the Screens page's add tile, and that page opens its own sheet
             // (#523): Home no longer calls the page's private sheet.
@@ -1314,6 +1314,18 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (wrap) text.TextWrapping = TextWrapping.Wrap; else text.TextTrimming = TextTrimming.CharacterEllipsis;", code);
             Assert.Contains("strip.KeepsRoom = PanelHome.StripLineKeepsRoom(Settings.BarRpmStyle(bar.Namespace), Settings.BarCentre(bar.Namespace), strip.Profile, strip.Selected);", code);
             Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom);", code);
+        }
+
+        /// <summary>The "Flags and spotter" cell opens Rig on a flag, not on Rig's default revs chip, unless the
+        /// driver picked a chip there this session, which it keeps.</summary>
+        [Fact]
+        public void Flags_and_spotter_opens_rig_on_a_flag()
+        {
+            Assert.Equal(PanelEmulation.Yellow, PanelHome.TryScenario(null));
+            Assert.Equal(PanelEmulation.Yellow, PanelHome.TryScenario("not-a-chip"));
+            Assert.NotEqual(PanelEmulation.Default, PanelHome.TryScenario(null));
+            Assert.Equal(PanelEmulation.CarLeft, PanelHome.TryScenario(PanelEmulation.CarLeft));
+            Assert.NotNull(PanelEmulation.Find(PanelHome.TryScenario(null)));
         }
     }
 }

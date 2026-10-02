@@ -666,7 +666,8 @@ namespace OpenDashPlugin
             var rig = Ui.Button(PanelHome.OpenRig, PanelButtonKind.Outline, PanelButtonSize.Small);
             rig.Padding = new Thickness(PanelHome.QuickRigPaddingX, 0, PanelHome.QuickRigPaddingX, 0);
             rig.HorizontalAlignment = HorizontalAlignment.Left;
-            rig.Click += (sender, args) => Go(PanelPage.Rig);
+            // On a flag, as the cell's title promises, unless the driver has picked a chip on Rig this session.
+            rig.Click += (sender, args) => Open(PanelPage.Rig, PanelHome.TryScenario(Selected(PanelPage.Rig)));
 
             var cells = new FrameworkElement[]
             {

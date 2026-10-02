@@ -59,6 +59,13 @@ namespace OpenDashPlugin
         public const string TryTitle = "Flags and spotter";
         public static readonly string OpenRig = PanelAttention.Open(PanelRigMap.Title);
 
+        /// <summary>The chip the cell's press opens Rig on: the one the driver picked there this session, else the
+        /// yellow flag, so a press under "Flags and spotter" never lands on Rig's default revs chip.</summary>
+        public static string TryScenario(string selected)
+        {
+            return selected != null && PanelEmulation.Find(selected) != null ? selected : PanelEmulation.Yellow;
+        }
+
         /// <summary>The link in each Right now card's head, to that card's page.</summary>
         public const string OpenLink = "Open";
 
