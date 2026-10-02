@@ -294,7 +294,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
         /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510. The
-        /// width is read only up to the threshold, so a resize above it rebuilds nothing.
+        /// width is read only up to the threshold, so a resize above it rebuilds nothing. Below the alert
+        /// table's 680 every settled resize still rebuilds the page, since the shell reads the largest cap as
+        /// one continuous width; a read of which side of a threshold the build saw is the shell's to add.
         /// </summary>
         private Border SettingsFit(Border row)
         {
@@ -319,7 +321,9 @@ namespace OpenDashPlugin
         /// <remarks>
         /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322), the clock
         /// (#324), the night-mode action the button row binds and the Units row landed after v0.3.0-rc.7,
-        /// whose contract has none of the first three and whose panel never read SimHub's units.
+        /// whose contract has none of the first three and whose panel never read SimHub's units. The Delta
+        /// reference row is rc.7's, but its third answer, Last lap, is not: rc.7's references are session and
+        /// all-time only, so the row carries New for the choice it gained (#322).
         /// </remarks>
         private static Border SettingsNew(Border row)
         {
@@ -422,6 +426,7 @@ namespace OpenDashPlugin
         private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed, out TextBlock placeholder)
         {
             var box = SettingsNumberField(PanelSettings.ThresholdText(value));
+            SettingsTypeAtEnd(box);
             var last = value ?? 0;
             Action commit = () =>
             {
@@ -438,6 +443,25 @@ namespace OpenDashPlugin
             };
             placeholder = SettingsHint(box, PanelSettings.ThresholdText(fallback));
             return SettingsOverlaid(box, placeholder);
+        }
+
+        /// <summary>
+        /// A number box focused by anything but a press -- Tab, or the shell putting the keyboard back after a
+        /// rebuild -- takes its next digit after its value, where a right-aligned number is read from.
+        /// </summary>
+        /// <remarks>
+        /// The page draws the lighting, so a wheel's night-mode or brightness press, or a resize across a
+        /// threshold, rebuilds it under a driver typing a threshold. The shell commits what is typed and
+        /// focuses the new box, whose caret starts at 0, left of the digits: '13' and then '0' became '013',
+        /// which reads 13, and the oil warning stayed at 13. A press leaves the caret where it landed. The
+        /// shell's RestoreFocus putting the caret back is the whole fix, and is the shell's to make.
+        /// </remarks>
+        private static void SettingsTypeAtEnd(TextBox box)
+        {
+            box.GotKeyboardFocus += (sender, args) =>
+            {
+                if (Mouse.LeftButton != MouseButtonState.Pressed) box.CaretIndex = box.Text.Length;
+            };
         }
 
         /// <summary>Whether the last read of SimHub's units failed, so a failure the tick meets every second is
@@ -541,17 +565,18 @@ namespace OpenDashPlugin
             showUnits(units);
             settingsUnitsFollow.Add(showUnits);
 
+            // Each live row under its own anchor, which its search entry lands on (PanelSettings.Search).
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
-                SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
-                SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),
-                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),
-                SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),
-                SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),
-                Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
-                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)), PanelSettings.AnchorPosition),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))), PanelSettings.AnchorDelta),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))), PanelSettings.AnchorDeltaPrecision),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)), PanelSettings.AnchorSession),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)), PanelSettings.AnchorDriverNames),
+                Ui.Anchor(Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName), PanelSettings.AnchorTeamNames),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))), PanelSettings.AnchorClock),
                 Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),
-                SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));
+                Ui.Anchor(SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)), PanelSettings.AnchorUnits));
         }
 
         // --- Flags -----------------------------------------------------------------------------------
@@ -572,9 +597,9 @@ namespace OpenDashPlugin
                 Save();
             });
             return PageSection(PanelSettings.FlagsTitle, true, PanelKit.SectionHeadingGapSettings,
-                SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)), PanelSettings.AnchorBlueFlag),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title, SettingsGreyedChoice(PanelSettings.YellowFlagLabels))), PanelSoon.YellowFlags),
-                Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()));
+                Ui.Anchor(Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()), PanelSettings.AnchorFlagsInPitLane));
         }
 
         // --- Alerts ----------------------------------------------------------------------------------
@@ -614,6 +639,7 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });
+            SettingsTypeAtEnd(lowFuel);
             TextBlock oilDefault, waterDefault;
             var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); }, out oilDefault);
             var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); }, out waterDefault);
@@ -721,7 +747,9 @@ namespace OpenDashPlugin
                 under.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
                 nameCell.Children.Add(under);
             }
-            SettingsAlertCell(grid, row, column++, nameCell, soon, false);
+            var nameBox = SettingsAlertCell(grid, row, column++, nameCell, soon, false);
+            // A live alert's search entry lands on its row, through its name cell.
+            if (alert.Anchor != null) Ui.Anchor(nameBox, alert.Anchor);
 
             // Every row draws a box, Pit window open's too, which has no word before it and no unit after, as
             // the artboard draws it; a greyed row's is disabled inside the row's Soon.
@@ -919,9 +947,9 @@ namespace OpenDashPlugin
 
             return PageSection(PanelSettings.LightingTitle, true, PanelKit.SectionHeadingGapSettings,
                 card,
-                SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),
-                SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),
-                Ui.Row(PanelSettings.NightModeTitle, null, nightMode),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)), PanelSettings.AnchorBrightness),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)), PanelSettings.AnchorNightBrightness),
+                Ui.Anchor(Ui.Row(PanelSettings.NightModeTitle, null, nightMode), PanelSettings.AnchorNightMode),
                 // SimHub's trigger name sets the chip's width, so the row stacks like the sliders above it.
                 SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))),
                 Ui.SoonRow(PanelSoon.SimTimeOfDay),

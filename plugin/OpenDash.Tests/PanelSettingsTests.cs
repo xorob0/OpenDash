@@ -96,6 +96,9 @@ namespace OpenDashPlugin.Tests
                 }))
                 .ToList();
             Assert.Contains("TyreDisplayLabels[] = Pressure", texts);
+            // Low fuel's two units, both drawn alone after the box, both read here and in the voice loop.
+            Assert.Contains("LapUnit = lap", texts);
+            Assert.Contains("LapsUnit = laps", texts);
             Assert.Contains("Alert.Example = 70%", texts);
             Assert.DoesNotContain(texts, text =>
             {
@@ -197,10 +200,26 @@ namespace OpenDashPlugin.Tests
             {
                 "AnchorAlerts = settings.alerts",
                 "AnchorAppearance = settings.appearance",
+                "AnchorBlueFlag = settings.blue-flag-detail",
+                "AnchorBrightness = settings.brightness",
+                "AnchorClock = settings.clock",
+                "AnchorDelta = settings.delta-reference",
+                "AnchorDeltaPrecision = settings.delta-precision",
                 "AnchorDriver = settings.driver",
+                "AnchorDriverNames = settings.driver-names",
                 "AnchorFlags = settings.flags",
+                "AnchorFlagsInPitLane = settings.flags-in-pit-lane",
                 "AnchorLighting = settings.lighting",
+                "AnchorLowFuel = settings.low-fuel",
+                "AnchorNightBrightness = settings.night-brightness",
+                "AnchorNightMode = settings.night-mode",
+                "AnchorOilTemp = settings.oil-temperature",
+                "AnchorPosition = settings.position",
                 "AnchorRaceData = settings.race-data",
+                "AnchorSession = settings.session-progress",
+                "AnchorTeamNames = settings.team-names",
+                "AnchorUnits = settings.units",
+                "AnchorWaterTemp = settings.water-temperature",
             }, AnchorTable.Of(typeof(PanelSettings)));
         }
 
@@ -254,7 +273,7 @@ namespace OpenDashPlugin.Tests
             {
                 new[]
                 {
-                    "SettingsFit(Ui.Row(PanelDataTab.PositionTitle,", "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle,",
+                    "SettingsFit(Ui.Row(PanelDataTab.PositionTitle,", "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", "SettingsFit(Ui.Row(PanelDataTab.SessionTitle,",
                     "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", "Ui.Row(PanelDataTab.TeamNameTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", "Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title,",
@@ -410,7 +429,9 @@ namespace OpenDashPlugin.Tests
         /// landed after v0.3.0-rc.7, the tagged release, although no artboard tags them: delta precision
         /// (#322), the clock (#324), the night-mode button, whose action rc.7 does not register, and the Units
         /// line, which rc.7's panel never drew: nothing in it read SimHub's GameUnitSettings. A read-only row
-        /// is no exception, since what the tag says is that the row is new.
+        /// is no exception, since what the tag says is that the row is new. Nor is an old row that gained an
+        /// answer: rc.7's Delta reference offered session and all-time best only, and Last lap (#322) is
+        /// something rc.7 cannot do, so the row carries New for it.
         /// </summary>
         [Fact]
         public void New_marks_what_the_artboards_tag_and_what_rc7_lacks()
@@ -419,6 +440,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag())", page);
             Assert.Contains("Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag()", page);
             Assert.Contains("Ui.HStack(PanelSettings.TitleTagGap, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))", page);
+            // rc.7 had the first two; the third is the one the tag is for.
+            Assert.Equal(new[] { "session", "alltime", "lastlap" }, Contract.DeltaReferences);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))", page);
@@ -443,7 +467,8 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"var all = new List<UIElement> \{ SettingsIndex\(sections, to\) \};\s*all\.AddRange\(sections\);", page);
             Assert.Contains("return PageLayout(PanelSettings.Title, null, all.ToArray());", page);
             // A link for every section from the first, each kept, to be lit, and drawn in the row's wrap, which
-            // is what the row's border holds.
+            // is what the row's border holds: a row, wrapping onto a second line where the six do not fit.
+            Assert.Contains("var wrap = new WrapPanel { Orientation = Orientation.Horizontal };", page);
             Assert.Matches(Lines(
                 "for (var i = 0; i < PanelSettings.SectionTitles.Length; i++)",
                 "{",
@@ -633,6 +658,10 @@ namespace OpenDashPlugin.Tests
             // ...and lets go once it has scrolled out of view, below it or above it.
             Assert.Equal(3, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, 10, 800, 1300 }, PanelSettings.IndexReadLine, 700, false, 4));
             Assert.Equal(5, PanelSettings.CurrentSection(new double[] { -3000, -2500, -2000, -1500, -100, 20 }, PanelSettings.IndexReadLine, 700, false, 4));
+            // Above the top, the hold lasts until the heading is a read line past it: nudged 20 up it still
+            // holds, even at the foot; 40 up, past the 36, it lets go.
+            Assert.Equal(4, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, -20, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
+            Assert.Equal(5, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, -40, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
             Assert.Equal(0, PanelSettings.CurrentSection(new double[0], PanelSettings.IndexReadLine, 700, false, -1));
             Assert.Equal(0, PanelSettings.CurrentSection(null, PanelSettings.IndexReadLine, 700, true, 2));
         }
@@ -691,6 +720,25 @@ namespace OpenDashPlugin.Tests
             // its foot marks the short last section.
             Assert.Matches(@"var current = PanelSettings\.CurrentSection\(tops, PanelSettings\.IndexReadLine, scroll\.ViewportHeight, atEnd, held\);\s*if \(current != held\) held = -1;\s*mark\(current\);", page);
             Assert.Contains("var atEnd = scroll.ScrollableHeight > 0 && scroll.VerticalOffset >= scroll.ScrollableHeight - 1;", page);
+
+            // What those calls are fed: the route's own anchor, so a search or a Home fix landing on Flags marks
+            // Flags; each section's top as its distance down from the top of the view, so the mark follows the
+            // scroll and a press's jump lands its heading the margin under the top; and a jump to a section the
+            // scroller cannot measure brings it into view instead.
+            Assert.Contains("var anchor = to == null ? null : to.Anchor;", page);
+            Assert.Matches(Lines(
+                "if (!section.IsVisible) return double.MaxValue;",
+                "try",
+                "{",
+                "return section.TranslatePoint(new Point(0, 0), scroll).Y;"), page);
+            Assert.Matches(Lines(
+                "var top = scroll == null ? double.MaxValue : SettingsTopIn(scroll, section);",
+                "if (top == double.MaxValue)",
+                "{",
+                "section.BringIntoView();",
+                "return;",
+                "}",
+                "scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset + top - PanelSettings.IndexJumpMargin));"), page);
         }
 
         [Fact]
@@ -704,6 +752,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelSettings.SectionOf(PanelSoon.Incidents.Anchor));
             Assert.Equal(4, PanelSettings.SectionOf(PanelSoon.ColourVision.Anchor));
             Assert.Equal(0, PanelSettings.SectionOf("elsewhere"));
+            // A search hit on a live row lands in the section that draws it.
+            Assert.Equal(0, PanelSettings.SectionOf(PanelSettings.AnchorUnits));
+            Assert.Equal(1, PanelSettings.SectionOf(PanelSettings.AnchorFlagsInPitLane));
+            Assert.Equal(2, PanelSettings.SectionOf(PanelSettings.AnchorWaterTemp));
+            Assert.Equal(3, PanelSettings.SectionOf(PanelSettings.AnchorNightMode));
+            Assert.Equal(PanelSettings.SectionAnchors.Length, PanelSettings.RowAnchorsBySection.Length);
+            for (var s = 0; s < PanelSettings.RowAnchorsBySection.Length; s++)
+            {
+                foreach (var anchor in PanelSettings.RowAnchorsBySection[s]) Assert.Equal(s, PanelSettings.SectionOf(anchor));
+            }
+            // Every Anchor* constant but the sections' is a live row's, filed under its section once.
+            var rows = AnchorTable.Of(typeof(PanelSettings)).Select(line => line.Substring(line.IndexOf(" = ", StringComparison.Ordinal) + 3))
+                .Where(anchor => !PanelSettings.SectionAnchors.Contains(anchor))
+                .OrderBy(a => a, StringComparer.Ordinal);
+            Assert.Equal(rows, PanelSettings.RowAnchorsBySection.SelectMany(section => section).OrderBy(a => a, StringComparer.Ordinal));
         }
 
         /// <summary>
@@ -753,7 +816,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
             // Every read of the width stops at the threshold it decides (PanelShell.RebuildsOnResize): a bare
             // ContentWidth has no ceiling, and a page that reads it is rebuilt by every settled resize at every
-            // width, which commits whatever is in a threshold box and takes the keyboard out of it.
+            // width, which commits whatever is in a threshold box and takes the keyboard out of it. The caps
+            // stop that only above the largest of them, the fold's 680: the shell keeps the largest cap a build
+            // asks for and reads min(680, content) as one continuous width, so below 680 of content every
+            // settled resize still rebuilds the page, although it draws differently only at 320, 560 and 680.
+            // A read that records only which side of a threshold the build saw is the shell's to add.
             var bare = new Regex(@"(?<![\w.])ContentWidth(?!UpTo)\b");
             Assert.DoesNotMatch(bare, page);
             Assert.Matches(bare, "PanelSettings.StacksControls(ContentWidth)");
@@ -917,6 +984,19 @@ namespace OpenDashPlugin.Tests
                 "line.Children.Add(name);",
                 "line.Children.Add(tag);",
                 "nameLine = line;"), page);
+            // The name cell: the name against the cell's left edge with its caption under it, and a greyed
+            // name's tag after it, centred on the name's line.
+            Assert.Matches(Lines(
+                "nameLine = line;",
+                "}",
+                "nameLine.HorizontalAlignment = HorizontalAlignment.Left;",
+                "var nameCell = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };",
+                "nameCell.Children.Add(nameLine);"), page);
+            Assert.Matches(Lines(
+                "var tag = Ui.SoonTag(soon);",
+                "tag.Margin = new Thickness(PanelSettings.TitleTagGap, 0, 0, 0);",
+                "tag.VerticalAlignment = VerticalAlignment.Center;",
+                "line.Children.Add(name);"), page);
             Assert.Matches(Lines(
                 "content.VerticalAlignment = VerticalAlignment.Center;",
                 "if (centred) content.HorizontalAlignment = HorizontalAlignment.Center;",
@@ -1104,25 +1184,25 @@ namespace OpenDashPlugin.Tests
             var page = Page();
             foreach (var row in new[]
             {
-                "SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),",
-                "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),",
-                "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),",
-                "SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),",
-                "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),",
-                "Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),",
-                "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)), PanelSettings.AnchorPosition),",
+                "Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))), PanelSettings.AnchorDelta),",
+                "Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))), PanelSettings.AnchorDeltaPrecision),",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)), PanelSettings.AnchorSession),",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)), PanelSettings.AnchorDriverNames),",
+                "Ui.Anchor(Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName), PanelSettings.AnchorTeamNames),",
+                "Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))), PanelSettings.AnchorClock),",
                 "Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),",
-                "SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));",
-                "SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)),",
+                "Ui.Anchor(SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)), PanelSettings.AnchorUnits));",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)), PanelSettings.AnchorBlueFlag),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title, SettingsGreyedChoice(PanelSettings.YellowFlagLabels))), PanelSoon.YellowFlags),",
-                "Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()));",
+                "Ui.Anchor(Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()), PanelSettings.AnchorFlagsInPitLane));",
                 "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.LowFuelTitle), lowFuel, null, temperature, surfaces, null);",
                 "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.OilTempTitle), oilTemp, PanelSettings.TemperatureCaption, temperature, surfaces, null);",
                 "SettingsAlertRow(grid, row++, PanelSettings.Alert(PanelSettings.WaterTempTitle), waterTemp, PanelSettings.TemperatureCaption, temperature, surfaces, null);",
-                "SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),",
-                "SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),",
-                "Ui.Row(PanelSettings.NightModeTitle, null, nightMode),",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)), PanelSettings.AnchorBrightness),",
+                "Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)), PanelSettings.AnchorNightBrightness),",
+                "Ui.Anchor(Ui.Row(PanelSettings.NightModeTitle, null, nightMode), PanelSettings.AnchorNightMode),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.DashTheme.Title, SettingsGreyedChoice(PanelSettings.ThemeLabels))), PanelSoon.DashTheme),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.ColourVision.Title, SettingsGreyedChoice(PanelSettings.ColourVisionLabels))), PanelSoon.ColourVision),",
                 "Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.Colours.Title, SettingsGreyedChoice(PanelSettings.ColoursLabels))), PanelSoon.Colours));",
@@ -1194,6 +1274,25 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("box.LostFocus += (sender, args) => commit();", box);
             Assert.Contains("if (args.Key == Key.Enter) commit();", box);
             Assert.Matches(@"placeholder = SettingsHint\(box, PanelSettings\.ThresholdText\(fallback\)\);\s*return SettingsOverlaid\(box, placeholder\);", box);
+
+            // Every box the driver types a number in -- both temperatures and Low fuel -- takes its next digit
+            // after its value when it is focused by Tab or by the shell's focus restore after a rebuild, whose
+            // new box starts with its caret at 0: "13", a rebuild, then "0" would read 013, which is 13.
+            Assert.Matches(Lines(
+                "var box = SettingsNumberField(PanelSettings.ThresholdText(value));",
+                "SettingsTypeAtEnd(box);"), box);
+            Assert.Matches(Lines(
+                "var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });",
+                "SettingsTypeAtEnd(lowFuel);"), page);
+            Assert.Matches(Lines(
+                "private static void SettingsTypeAtEnd(TextBox box)",
+                "{",
+                "box.GotKeyboardFocus += (sender, args) =>",
+                "{",
+                "if (Mouse.LeftButton != MouseButtonState.Pressed) box.CaretIndex = box.Text.Length;",
+                "};",
+                "}"), page);
+            Assert.Equal(2, Regex.Matches(page, @"SettingsTypeAtEnd\(\w+\);").Count);
         }
 
         /// <summary>
@@ -1341,6 +1440,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("else if (align == HorizontalAlignment.Right) content.HorizontalAlignment = HorizontalAlignment.Right;", page);
             Assert.Matches(@"Background = Brushes\.Transparent,\s*Child = content,", page);
             Assert.Contains("SettingsAlertCell(grid, row, column++, nameCell, soon, false);", page);
+            // A live alert's name cell carries its row's anchor, which its search entry lands on.
+            Assert.Matches(Lines(
+                "var nameBox = SettingsAlertCell(grid, row, column++, nameCell, soon, false);",
+                "if (alert.Anchor != null) Ui.Anchor(nameBox, alert.Anchor);"), page);
 
             // A link of the On this page row: a hand over it, the panel's focus ring, the zone ground under the
             // pointer, and back to its mark when the pointer leaves.
@@ -1440,6 +1543,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle,", page);
             Assert.Contains("Go(PanelPage.Shortcuts, PanelBindings.Anchor(action))", page);
             Assert.Contains(Contract.ToggleNightModeAction, Contract.RigActionNames());
+            // What the chip reads: the bindings of the action it was handed, and SimHub's name for them, or Not
+            // bound when there are none. The page draws the chip itself for the .key size, so no shell test
+            // covers these lines.
+            Assert.Matches(Lines(
+                "var triggers = TriggersOf(action);",
+                "Action open = () => Go(PanelPage.Shortcuts, PanelBindings.Anchor(action));"), page);
+            Assert.Matches(Lines(
+                "var text = PanelBindings.ChipText(triggers);",
+                "chip = Ui.BindingChip(text ?? Ui.NotBound, text != null, open, true);"), page);
         }
 
         /// <summary>Every greyed row of the page is one of the registry's Settings entries, and it draws all of
@@ -1476,9 +1588,24 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(labels.Count, labels.Distinct().Count());
             Assert.DoesNotContain(PanelSettings.NightModeButtonTitle, labels);
             Assert.DoesNotContain(labels, label => PanelSettings.SoonDrawn.Any(item => item.Title == label));
-            Assert.All(PanelSettings.Search, entry => Assert.Contains(entry.Route.Anchor, PanelSettings.SectionAnchors));
-            Assert.Equal(PanelSettings.AnchorAlerts, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
-            Assert.Equal(PanelSettings.AnchorRaceData, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.UnitsTitle).Route.Anchor);
+            // A section's heading lands on its section, and a live row on its own row, never on its section's
+            // top, which a section taller than the view would leave the row below.
+            for (var s = 0; s < PanelSettings.SectionTitles.Length; s++)
+            {
+                Assert.Equal(PanelSettings.SectionAnchors[s], PanelSettings.Search.Single(entry => entry.Label == PanelSettings.SectionTitles[s]).Route.Anchor);
+            }
+            var rowEntries = PanelSettings.Search.Where(entry => !PanelSettings.SectionTitles.Contains(entry.Label)).ToList();
+            Assert.Equal(16, rowEntries.Count);
+            Assert.All(rowEntries, entry => Assert.DoesNotContain(entry.Route.Anchor, PanelSettings.SectionAnchors));
+            Assert.Equal(rowEntries.Count, rowEntries.Select(entry => entry.Route.Anchor).Distinct().Count());
+            Assert.Equal(PanelSettings.AnchorOilTemp, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
+            Assert.Equal(PanelSettings.AnchorUnits, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.UnitsTitle).Route.Anchor);
+            // The three live alerts land on the anchor their name cell carries.
+            foreach (var alert in PanelSettings.Alerts)
+            {
+                if (!alert.Live) Assert.Null(alert.Anchor);
+                else Assert.Equal(alert.Anchor, PanelSettings.Search.Single(entry => entry.Label == alert.Title).Route.Anchor);
+            }
             Assert.NotEmpty(PanelSearch.Find(PanelSearch.All(), "night mode button"));
             // The words a driver may search for each entry by, where its label does not say them: every entry's,
             // in the order the page lists them, so a word dropped or loosened is a test that fails.
@@ -1512,11 +1639,11 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Equal(pair.Skip(1), PanelSettings.Search.Single(entry => entry.Label == pair[0]).Keywords);
             }
-            Assert.Equal(PanelSettings.AnchorRaceData, PanelSearch.Find(PanelSearch.All(), "fahrenheit").First().Route.Anchor);
+            Assert.Equal(PanelSettings.AnchorUnits, PanelSearch.Find(PanelSearch.All(), "fahrenheit").First().Route.Anchor);
             Assert.Equal(PanelSettings.AnchorDriver, PanelSearch.Find(PanelSearch.All(), "branding").First().Route.Anchor);
 
-            // Each entry lands on the section whose own method draws its label's constant, so a hit scrolls to
-            // the row it names and marks that section's link.
+            // Each entry lands in the section whose own method draws its label's constant, so a hit marks that
+            // section's link; and a row's entry lands on the anchor that section wraps the row in.
             var page = Page();
             var constants = new[] { typeof(PanelSettings), typeof(PanelDataTab) }
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -1531,7 +1658,13 @@ namespace OpenDashPlugin.Tests
                     .Where(section => names.Any(name => Regex.IsMatch(SectionBody(page, section), Regex.Escape(name) + @"\b")))
                     .ToList();
                 Assert.True(drawnIn.Count == 1, entry.Label + " is drawn in " + drawnIn.Count + " sections");
-                Assert.True(PanelSettings.SectionAnchors[drawnIn[0]] == entry.Route.Anchor, entry.Label + " routes to " + entry.Route.Anchor);
+                Assert.True(PanelSettings.SectionOf(entry.Route.Anchor) == drawnIn[0], entry.Label + " routes to " + entry.Route.Anchor);
+                if (PanelSettings.SectionAnchors.Contains(entry.Route.Anchor)) continue;
+                var body = SectionBody(page, drawnIn[0]);
+                var anchorName = AnchorName(entry.Route.Anchor);
+                var wrapped = names.Any(name => Regex.IsMatch(body, @"Ui\.Anchor\((SettingsFit\(|SettingsNew\()*Ui\.(Row|SettingRow)\(" + Regex.Escape(name) + @",[^\n]*\), PanelSettings\." + anchorName + @"\)"));
+                var alertRow = PanelSettings.Alerts.Any(alert => alert.Title == entry.Label && alert.Anchor == entry.Route.Anchor);
+                Assert.True(wrapped || alertRow, entry.Label + " is drawn under " + anchorName);
             }
         }
     

@@ -18,7 +18,7 @@ namespace OpenDashPlugin
     /// <summary>One line of the alert table: what warns, at what, and where it shows today.</summary>
     public sealed class SettingsAlert
     {
-        public SettingsAlert(string title, string op, string unit, string example, bool screens, bool leds, bool matrix, bool racesOnly, string scenarioId)
+        public SettingsAlert(string title, string op, string unit, string example, bool screens, bool leds, bool matrix, bool racesOnly, string scenarioId, string anchor = null)
         {
             Title = title;
             Op = op;
@@ -29,6 +29,7 @@ namespace OpenDashPlugin
             Matrix = matrix;
             RacesOnly = racesOnly;
             ScenarioId = scenarioId;
+            Anchor = anchor;
         }
 
         /// <summary>The row's name, which is the registry's title on a greyed row.</summary>
@@ -60,6 +61,10 @@ namespace OpenDashPlugin
         /// <summary>The Rig page's scenario "Try" opens, or null on a row that is not built.</summary>
         public string ScenarioId { get; private set; }
 
+        /// <summary>Where a search for a live row lands, its name cell; null on a greyed row, whose cells carry
+        /// its ticket's anchor.</summary>
+        public string Anchor { get; private set; }
+
         /// <summary>Whether the row is live: a greyed row has nothing to try.</summary>
         public bool Live { get { return ScenarioId != null; } }
 
@@ -90,6 +95,39 @@ namespace OpenDashPlugin
         public static readonly string[] SectionTitles = { PanelDataTab.SectionTitle, FlagsTitle, AlertsTitle, LightingTitle, AppearanceTitle, DriverTitle };
 
         public static readonly string[] SectionAnchors = { AnchorRaceData, AnchorFlags, AnchorAlerts, AnchorLighting, AnchorAppearance, AnchorDriver };
+
+        // Every live row's own anchor, which its search entry lands on: a section's anchor brings the whole
+        // section into view, and where the section is taller than the view WPF puts its top at the top, so a
+        // hit on the section's last row would land with the row below the fold. An alert's is on its name cell.
+
+        public const string AnchorPosition = "settings.position";
+        public const string AnchorDelta = "settings.delta-reference";
+        public const string AnchorDeltaPrecision = "settings.delta-precision";
+        public const string AnchorSession = "settings.session-progress";
+        public const string AnchorDriverNames = "settings.driver-names";
+        public const string AnchorTeamNames = "settings.team-names";
+        public const string AnchorClock = "settings.clock";
+        public const string AnchorUnits = "settings.units";
+        public const string AnchorBlueFlag = "settings.blue-flag-detail";
+        public const string AnchorFlagsInPitLane = "settings.flags-in-pit-lane";
+        public const string AnchorLowFuel = "settings.low-fuel";
+        public const string AnchorOilTemp = "settings.oil-temperature";
+        public const string AnchorWaterTemp = "settings.water-temperature";
+        public const string AnchorBrightness = "settings.brightness";
+        public const string AnchorNightBrightness = "settings.night-brightness";
+        public const string AnchorNightMode = "settings.night-mode";
+
+        /// <summary>Each section's live rows' anchors, in the order it draws them, so a route to a row marks
+        /// its section's link (SectionOf).</summary>
+        public static readonly string[][] RowAnchorsBySection =
+        {
+            new[] { AnchorPosition, AnchorDelta, AnchorDeltaPrecision, AnchorSession, AnchorDriverNames, AnchorTeamNames, AnchorClock, AnchorUnits },
+            new[] { AnchorBlueFlag, AnchorFlagsInPitLane },
+            new[] { AnchorLowFuel, AnchorOilTemp, AnchorWaterTemp },
+            new[] { AnchorBrightness, AnchorNightBrightness, AnchorNightMode },
+            new string[0],
+            new string[0],
+        };
 
         // --- The "On this page" row -------------------------------------------------------------------
 
@@ -153,12 +191,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The section a route's anchor lands in: a section's own anchor, or the section that draws
-        /// a greyed row when it is one of this page's. 0 for anything else.</summary>
+        /// a live row or a greyed row when it is one of this page's. 0 for anything else.</summary>
         public static int SectionOf(string anchor)
         {
             if (anchor == null) return 0;
             var index = Array.IndexOf(SectionAnchors, anchor);
             if (index >= 0) return index;
+            for (var s = 0; s < RowAnchorsBySection.Length; s++)
+            {
+                if (Array.IndexOf(RowAnchorsBySection[s], anchor) >= 0) return s;
+            }
             for (var s = 0; s < SoonBySection.Length; s++)
             {
                 if (SoonBySection[s].Any(item => item.Anchor == anchor)) return s;
@@ -170,8 +212,10 @@ namespace OpenDashPlugin
 
         /// <summary>Below this much content a row's control goes under its title rather than beside it. The
         /// widest row is the greyed Colour vision: its four options beside its title and Soon tag need about
-        /// 510, measured with Barlow's advances, so 560 clears it by about 50. Next are Colours and Theme at
-        /// about 410 and the driver names' four examples at about 430.</summary>
+        /// 510, measured with Barlow's advances, so 560 clears it by about 50. Next are Night brightness at
+        /// about 455, its title beside the sliders' fixed 320, and the driver names' four examples at about
+        /// 430, then Theme, Colours and Name at about 420 and Brightness at about 415: past Colour vision, a
+        /// wider slider is the next thing to push a row over the threshold.</summary>
         public const double StackControlsBelow = 560;
 
         /// <summary>Between a title and the control stacked under it.</summary>
@@ -373,9 +417,9 @@ namespace OpenDashPlugin
         /// </remarks>
         public static readonly IReadOnlyList<SettingsAlert> Alerts = new[]
         {
-            new SettingsAlert(LowFuelTitle, Under, LapsUnit, null, true, true, true, false, PanelEmulation.LowFuel),
-            new SettingsAlert(OilTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Oil),
-            new SettingsAlert(WaterTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Water),
+            new SettingsAlert(LowFuelTitle, Under, LapsUnit, null, true, true, true, false, PanelEmulation.LowFuel, AnchorLowFuel),
+            new SettingsAlert(OilTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Oil, AnchorOilTemp),
+            new SettingsAlert(WaterTempTitle, Over, null, null, false, false, true, false, PanelEmulation.Water, AnchorWaterTemp),
             new SettingsAlert(PanelSoon.TyreWear.Title, Over, string.Empty, "70%", true, false, false, true, null),
             new SettingsAlert(PanelSoon.PitWindowOpen.Title, string.Empty, string.Empty, null, true, true, true, true, null),
             new SettingsAlert(PanelSoon.Incidents.Title, At, "x", "12", true, false, false, true, null),
@@ -606,30 +650,31 @@ namespace OpenDashPlugin
 
         // --- Search ------------------------------------------------------------------------------------
 
-        /// <summary>Every section heading and every live row label, each routed to its section. The greyed
-        /// rows are listed by PanelSearch.Soon from SoonDrawn, and the night-mode button's row by Shortcuts.</summary>
+        /// <summary>Every section heading, routed to its section, and every live row label, routed to its own
+        /// row. The greyed rows are listed by PanelSearch.Soon from SoonDrawn, and the night-mode button's row
+        /// by Shortcuts.</summary>
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(PanelDataTab.SectionTitle, PanelPage.Settings, AnchorRaceData),
-            new PanelSearch.Entry(PanelDataTab.PositionTitle, PanelPage.Settings, AnchorRaceData, "overall", "class"),
-            new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorRaceData, "session best", "all-time best", "last lap"),
-            new PanelSearch.Entry(PanelDataTab.DeltaPrecisionTitle, PanelPage.Settings, AnchorRaceData, "hundredths", "thousandths", "decimals"),
-            new PanelSearch.Entry(PanelDataTab.SessionTitle, PanelPage.Settings, AnchorRaceData, "laps", "time"),
-            new PanelSearch.Entry(PanelDataTab.DriverNameTitle, PanelPage.Settings, AnchorRaceData, "name format", "surname"),
-            new PanelSearch.Entry(PanelDataTab.TeamNameTitle, PanelPage.Settings, AnchorRaceData, "team"),
-            new PanelSearch.Entry(PanelDataTab.ClockTitle, PanelPage.Settings, AnchorRaceData, "24h", "12h", "time of day"),
-            new PanelSearch.Entry(UnitsTitle, PanelPage.Settings, AnchorRaceData, "km/h", "mph", "celsius", "fahrenheit", "litres", "gallons"),
+            new PanelSearch.Entry(PanelDataTab.PositionTitle, PanelPage.Settings, AnchorPosition, "overall", "class"),
+            new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorDelta, "session best", "all-time best", "last lap"),
+            new PanelSearch.Entry(PanelDataTab.DeltaPrecisionTitle, PanelPage.Settings, AnchorDeltaPrecision, "hundredths", "thousandths", "decimals"),
+            new PanelSearch.Entry(PanelDataTab.SessionTitle, PanelPage.Settings, AnchorSession, "laps", "time"),
+            new PanelSearch.Entry(PanelDataTab.DriverNameTitle, PanelPage.Settings, AnchorDriverNames, "name format", "surname"),
+            new PanelSearch.Entry(PanelDataTab.TeamNameTitle, PanelPage.Settings, AnchorTeamNames, "team"),
+            new PanelSearch.Entry(PanelDataTab.ClockTitle, PanelPage.Settings, AnchorClock, "24h", "12h", "time of day"),
+            new PanelSearch.Entry(UnitsTitle, PanelPage.Settings, AnchorUnits, "km/h", "mph", "celsius", "fahrenheit", "litres", "gallons"),
             new PanelSearch.Entry(FlagsTitle, PanelPage.Settings, AnchorFlags),
-            new PanelSearch.Entry(PanelDataTab.BlueFlagTitle, PanelPage.Settings, AnchorFlags, "blue flag"),
-            new PanelSearch.Entry(FlagsInPitLaneTitle, PanelPage.Settings, AnchorFlags, "pit", "band d"),
+            new PanelSearch.Entry(PanelDataTab.BlueFlagTitle, PanelPage.Settings, AnchorBlueFlag, "blue flag"),
+            new PanelSearch.Entry(FlagsInPitLaneTitle, PanelPage.Settings, AnchorFlagsInPitLane, "pit", "band d"),
             new PanelSearch.Entry(AlertsTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "trigger"),
-            new PanelSearch.Entry(LowFuelTitle, PanelPage.Settings, AnchorAlerts, "warning", "laps", "fuel"),
-            new PanelSearch.Entry(OilTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "hot"),
-            new PanelSearch.Entry(WaterTempTitle, PanelPage.Settings, AnchorAlerts, "warning", "threshold", "coolant", "hot"),
+            new PanelSearch.Entry(LowFuelTitle, PanelPage.Settings, AnchorLowFuel, "warning", "laps", "fuel"),
+            new PanelSearch.Entry(OilTempTitle, PanelPage.Settings, AnchorOilTemp, "warning", "threshold", "hot"),
+            new PanelSearch.Entry(WaterTempTitle, PanelPage.Settings, AnchorWaterTemp, "warning", "threshold", "coolant", "hot"),
             new PanelSearch.Entry(LightingTitle, PanelPage.Settings, AnchorLighting, "lights", "preview"),
-            new PanelSearch.Entry(BrightnessTitle, PanelPage.Settings, AnchorLighting, "lights", "leds", "dim"),
-            new PanelSearch.Entry(NightBrightnessTitle, PanelPage.Settings, AnchorLighting, "night", "dim"),
-            new PanelSearch.Entry(NightModeTitle, PanelPage.Settings, AnchorLighting, "dark", "dim"),
+            new PanelSearch.Entry(BrightnessTitle, PanelPage.Settings, AnchorBrightness, "lights", "leds", "dim"),
+            new PanelSearch.Entry(NightBrightnessTitle, PanelPage.Settings, AnchorNightBrightness, "night", "dim"),
+            new PanelSearch.Entry(NightModeTitle, PanelPage.Settings, AnchorNightMode, "dark", "dim"),
             new PanelSearch.Entry(AppearanceTitle, PanelPage.Settings, AnchorAppearance, "look", "theme", "colours"),
             new PanelSearch.Entry(DriverTitle, PanelPage.Settings, AnchorDriver, "branding", "logo", "race number"),
         };
