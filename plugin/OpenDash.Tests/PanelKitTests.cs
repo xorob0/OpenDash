@@ -31,11 +31,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelKit.CardGridGap);
         }
 
-        /// <summary>
-        /// Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart, so at its own 1200 px --
-        /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
-        /// keeps "Add a screen" on the first row. At 150 the grid took five there.
-        /// </summary>
         /// <summary>A picture drawn at a fixed size shrinks to a narrower column and never grows past its own
         /// size, set against the column's left edge: grown, the 846 px face filled a 4K column four times over;
         /// centred, it stood in the middle of an empty band.</summary>
@@ -49,6 +44,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Stretch = Stretch.Uniform", fit);
         }
 
+        /// <summary>
+        /// Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart, so at its own 1200 px --
+        /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
+        /// keeps "Add a screen" on the first row. At 150 the grid took five there.
+        /// </summary>
         [Fact]
         public void The_card_grid_holds_the_artboards_six_at_its_own_width()
         {
@@ -76,16 +76,31 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A state that does not fit a card at the grid's narrowest wraps to a second line rather than
-        /// being trimmed or clipped (#524, ruling 1), and its dot stays on the first line.</summary>
+        /// being trimmed or clipped, since a state is a step a driver follows, and its dot stays on the first line.
+        /// The screen, strip and matrix cards share the one layout, so "Not shown in SimHub" on a narrow Matrix card
+        /// wraps as "Restart SimHub to load it" does on a Screens card (#541).</summary>
         [Fact]
         public void A_cards_state_line_wraps_and_is_never_trimmed()
         {
-            var card = Factory("DeviceCard");
-            Assert.Contains("word.TextWrapping = TextWrapping.Wrap;", card);
-            Assert.DoesNotContain("word.TextTrimming", card);
-            Assert.Contains("VerticalAlignment = VerticalAlignment.Top };", card);
-            Assert.Contains("dot.Margin = new Thickness(0, PanelKit.CardStateDotTop, PanelKit.CardStateGap, 0);", card);
-            Assert.Equal((PanelKit.CardStateLineHeight - PanelKit.CardStateDot) / 2, PanelKit.CardStateDotTop);
+            var state = Regex.Replace(Factory("CardState"), @"\s+", " ");
+            Assert.Contains("word.TextWrapping = TextWrapping.Wrap;", state);
+            Assert.DoesNotContain("TextTrimming", state);
+            Assert.Contains("word.LineHeight = lineHeight; word.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;", state);
+            Assert.Contains("VerticalAlignment = VerticalAlignment.Top };", state);
+            Assert.Contains("dot.Margin = new Thickness(0, (lineHeight - dotSize) / 2, PanelKit.CardStateGap, 0);", state);
+            Assert.Contains("DockPanel.SetDock(dot, Dock.Left); line.Children.Add(dot); line.Children.Add(word);", state);
+
+            Assert.Contains("rows.Children.Add(CardState(state, stateHex, PanelKit.CardStateSize, PanelKit.CardStateDot, PanelKit.CardStateLineHeight, PanelKit.CardGap));", Factory("DeviceCard"));
+            Assert.Contains("rows.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.StripCardGap));", Factory("StripCard"));
+            Assert.Contains("words.Children.Add(CardState(state, stateHex, PanelKit.LightCardStateSize, PanelKit.LightCardStateDot, PanelKit.LightCardStateLineHeight, PanelKit.MatrixCardTextGap));", Factory("MatrixCard"));
+            foreach (var card in new[] { "DeviceCard", "StripCard", "MatrixCard" })
+            {
+                Assert.DoesNotContain("word.", Factory(card));
+                Assert.DoesNotContain("new Ellipse", Factory(card));
+            }
+            // Both lines at 1.4 of their words, the dot centred in the first.
+            Assert.Equal(PanelKit.CardStateSize * 1.4, PanelKit.CardStateLineHeight, 6);
+            Assert.Equal(PanelKit.LightCardStateSize * 1.4, PanelKit.LightCardStateLineHeight, 6);
         }
 
         [Fact]
@@ -146,7 +161,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(12, PanelKit.LightCardStateSize);
             Assert.Equal(10, PanelKit.StripCardGap);
             Assert.Equal(14, PanelKit.StripCardShapeSize);
-            Assert.Equal(7, PanelKit.StripCardStateDot);
+            Assert.Equal(7, PanelKit.LightCardStateDot);
             Assert.Equal(12, PanelKit.MatrixCardGap);
             Assert.Equal(3, PanelKit.MatrixCardTextGap);
             // The dashed tile on one line: "gap: 8px ... font-size: 14px; font-weight: 500", the plus an
@@ -362,7 +377,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("surface.Report(current);", slider);
             Assert.Contains("surface.Set = next =>", slider);
             var chip = Regex.Replace(Factory("Chip"), @"\s+", " ");
-            Assert.Contains("if (swatchHex != null) { AutomationName(button, text); System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? \"checked\" : \"unchecked\"); }", chip);
+            // Every chip says whether it is pressed, the plain chips of Matrix's and LEDs' Preview as much as
+            // Rig's swatch chips (#534): the name and the status are set at the top of the factory, after the hover
+            // block closes, outside any branch on the swatch.
+            Assert.Contains("button.MouseLeave += (sender, args) => label.Foreground = Brush(Theme.TextSecondary); } AutomationName(button, text); System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? \"checked\" : \"unchecked\"); if (click != null) button.Click", chip);
+            Assert.Single(Regex.Matches(chip, @"SetItemStatus\("));
             Assert.Contains("return new SegmentedPeer(this);", RepoPaths.Code(Path.Combine(root, "Segmented.cs")));
             // The two assemblies the patterns live in are referenced, or the plugin does not build.
             var project = File.ReadAllText(Path.Combine(root, "OpenDash.csproj"));
@@ -395,7 +414,8 @@ namespace OpenDashPlugin.Tests
         [InlineData("StripCard", "PanelKit.LightCardStateSize")]
         [InlineData("StripCard", "PanelKit.StripCardGap")]
         [InlineData("StripCard", "PanelKit.StripCardShapeSize")]
-        [InlineData("StripCard", "PanelKit.StripCardStateDot")]
+        [InlineData("StripCard", "PanelKit.LightCardStateDot")]
+        [InlineData("MatrixCard", "PanelKit.LightCardStateDot")]
         [InlineData("MatrixCard", "PanelKit.LightCardPaddingX")]
         [InlineData("MatrixCard", "PanelKit.LightCardNameSize")]
         [InlineData("MatrixCard", "PanelKit.LightCardStateSize")]

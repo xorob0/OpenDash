@@ -318,8 +318,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelShell.SectionGapFor(PanelPage.Rig));
         }
 
-        /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
-        /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
         /// <summary>How long a resize and a burst of wheel presses are let settle before a page is rebuilt.
         /// Page agents take LightingSettleMs as the coalescing hook, so a change is a decision, not a drift.</summary>
         [Fact]
@@ -329,6 +327,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(120, PanelShell.LightingSettleMs);
         }
 
+        /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
+        /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
         [Fact]
         public void The_rail_holds_what_fits_inside_its_rule()
         {
@@ -751,23 +751,54 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DropPreview(); ClearTicks(); ClearUpdateHandlers(); lightingActions.Clear(); pageDrawsLighting = false; RunDropActions();", build);
         }
 
-        /// <summary>No member of the panel carries two summaries: a merge that stacks one member's summary over
-        /// another's leaves the first member undocumented and the second documented twice, and the compiler takes
-        /// the pair without a word.</summary>
+        /// <summary>No member of the plugin or its tests carries two summaries: a merge that stacks one member's
+        /// summary over another's leaves the first member undocumented and the second documented twice, and the
+        /// compiler takes the pair without a word. Every source is read, not the panel's alone, since the seam
+        /// opened in Contract.cs and OpenDashSettings.cs as well (#535).</summary>
         [Fact]
-        public void No_member_of_the_panel_carries_two_summaries()
+        public void No_member_of_the_plugin_carries_two_summaries()
         {
-            var root = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
-            var files = System.IO.Directory.GetFiles(root, "*.cs")
-                .Where(path =>
-                {
-                    var name = System.IO.Path.GetFileName(path);
-                    return name.StartsWith("SettingsControl", StringComparison.Ordinal) || name.StartsWith("Panel", StringComparison.Ordinal) || name.StartsWith("Widgets", StringComparison.Ordinal);
-                });
+            var plugin = System.IO.Path.Combine(RepoPaths.Root(), "plugin");
+            var files = new[] { "OpenDash", "OpenDash.Tests" }
+                .SelectMany(project => System.IO.Directory.GetFiles(System.IO.Path.Combine(plugin, project), "*.cs"))
+                .ToList();
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "Contract.cs");
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "PanelShellTests.cs");
             foreach (var path in files)
             {
                 var text = System.IO.File.ReadAllText(path);
                 Assert.False(Regex.IsMatch(text, @"</summary>\s*///\s*<summary>"), System.IO.Path.GetFileName(path) + " stacks two summaries on one member");
+            }
+        }
+
+        /// <summary>
+        /// The plugin justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
+        /// table, the artboards, a ticket -- or by the reason itself, and never by a numbered finding of a
+        /// workflow's scratch files, which nobody reading the code can open: a ruling, an ambiguity or an
+        /// uncovered case with a number after it. #524's rulings are rows of plugin.md's departures table, so a
+        /// comment says the reason the row gives rather than the number (#538). Every source is read whole,
+        /// comments included, since that is where a citation lives.
+        /// </summary>
+        [Fact]
+        public void No_comment_cites_a_finding_the_tree_does_not_hold()
+        {
+            var plugin = System.IO.Path.Combine(RepoPaths.Root(), "plugin");
+            var files = new[] { "OpenDash", "OpenDash.Tests" }
+                .SelectMany(project => System.IO.Directory.GetFiles(System.IO.Path.Combine(plugin, project), "*.cs"))
+                .ToList();
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "PanelUpdates.cs");
+            // Split, so this file is no citation of its own.
+            var finding = new Regex(@"\b(?:" + "rul" + "ings?|" + "ambigu" + "it(?:y|ies)|" + "uncov" + @"ered) \d+", RegexOptions.IgnoreCase);
+            foreach (var path in files)
+            {
+                var flat = Regex.Replace(System.IO.File.ReadAllText(path), @"\s*(///|//)?\s+", " ");
+                var cited = finding.Matches(flat).Cast<Match>().Select(m => m.Value).ToList();
+                Assert.True(cited.Count == 0, System.IO.Path.GetFileName(path) + ": " + string.Join(" | ", cited));
+                Assert.DoesNotContain("critic's " + "rulings", flat);
+                Assert.DoesNotContain("critic's " + "answer", flat);
+                Assert.DoesNotContain("#503 " + "inventory", flat);
+                Assert.DoesNotContain("voice_" + "rulings", flat);
+                Assert.DoesNotContain("rulings-" + "524", flat);
             }
         }
     }

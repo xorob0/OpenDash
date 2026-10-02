@@ -347,7 +347,7 @@ namespace OpenDashPlugin.Tests
                 "save.Click += (sender, args) => RenameLedBar(ns, name.Text);",
                 "Ui.InlineAddCard(PanelLights.AddBar, PanelKit.StripAddIcon, ShowAddLedBar)",
                 "add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre, fanatec), name.Text, device);",
-                // Lovely Car Data's press, and the row's label and line, ruling 51.
+                // Lovely Car Data's press, and the row's label and line.
                 "carTablesButton.Click += (sender, args) => DownloadCarTables();",
                 "carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);",
                 // The hover follows the label, a first download turning both from Download to Update.
@@ -372,7 +372,7 @@ namespace OpenDashPlugin.Tests
             var download = Body(leds, "private void DownloadCarTables()", "private static Border BuildLedDeviceRow(");
             Assert.Contains("UpdateService.InBackground(() =>", download);
             Assert.Contains("plugin.CarLights.Download(DateTime.UtcNow);", download);
-            // Ruling 50: every press says what it did, and the page chooses the success or the failure from what
+            // Every press says what it did, and the page chooses the success or the failure from what
             // the install returned, in each press's own body.
             foreach (var (method, next, said) in new[]
             {
@@ -631,8 +631,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The Add LEDs sheet's call sites, each with the words and the gate it draws by: the Fanatec tile only
-        /// where the build embeds its profile (ruling 53), the name box on the hardware's own name until the driver
-        /// types (ruling 54), the shape step's fixed shape for the wheel, and every step's label.
+        /// where the build embeds its profile, the name box on the hardware's own name until the driver
+        /// types, the shape step's fixed shape for the wheel, and every step's label.
         /// </summary>
         [Fact]
         public void The_Add_sheet_draws_each_step_by_its_own_gate_and_words()
@@ -865,7 +865,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_tick_redraws_only_Live_and_only_a_changed_frame()
         {
-            // Ruling 49: the page ticks Live, and repaints only a frame that moved; the car line follows the car.
+            // The page ticks Live, and repaints only a frame that moved; the car line follows the car.
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var preview = Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl(");
             Assert.Contains("OnTick(()=>{if(PanelLeds.TickRedraws(ledsScenario))draw();});", string.Concat(preview.Where(ch => !char.IsWhiteSpace(ch))));
@@ -1126,7 +1126,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>With no tables on disk no car can be found in them, so the line never says a car is missing
         /// from Lovely Car Data then: it says the tables are, and where the row that fetches them is. With no car
-        /// loaded, which is every fresh install at the desk, it says nothing (ruling 48).</summary>
+        /// loaded, which is every fresh install at the desk, it says nothing.</summary>
         [Fact]
         public void With_no_tables_the_car_line_says_they_are_missing_rather_than_the_car()
         {
@@ -1518,7 +1518,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Install", PanelLeds.InstallProfile);
             Assert.Equal("Update", PanelLeds.UpdateProfile);
             Assert.Equal("Installs this strip's profile in SimHub.", PanelLeds.InstallTooltip);
-            // What the press costs, as the Matrix and Updates pages' Update say it (#524, ruling 12): never
+            // What the press costs, as the Matrix and Updates pages' Update say it, one way on every page: never
             // "this build's version".
             Assert.Equal("Replaces the copy in SimHub, including your changes to it.", PanelLeds.UpdateTooltip);
             Assert.Equal("Rename", PanelLeds.RenameButton);
@@ -1528,7 +1528,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove it", PanelLeds.RemoveConfirm);
             Assert.Equal("Removes the strip, its settings and its profile in SimHub.", PanelLeds.RemoveBody);
             Assert.Equal("Start", PanelLeds.EachLedStart);
-            // Ruling 3: the file is an LED profile, in the Updates table's words (PanelWordsTests holds both pages).
+            // The file is an LED profile, in the Updates table's words (PanelWordsTests holds both pages).
             Assert.Equal("This build ships no LED profiles.", PanelLightRows.NoProfiles);
             Assert.Equal(new[] { "1 LED" }, PanelLeds.PreviewLabels(0, 1));
         }
@@ -1665,13 +1665,13 @@ namespace OpenDashPlugin.Tests
                 "var rig = PanelLeds.RigScenario(ledsScenario);",
                 "if (rig != null) Open(PanelPage.Rig, rig);",
                 "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
-                // Ruling 47: the width row only while the switch is on.
+                // The width row only while the switch is on.
                 "width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;",
-                // Ruling 48: the car line only while the switch is on, in the game the tables cover.
+                // The car line only while the switch is on, in the game the tables cover.
                 "var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));",
                 "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName))",
                 "var missing = PanelLeds.TablesMissing(plugin.CarLights.CarCount, plugin.CarLights.Status);",
-                // Ruling 49: Live draws the car's run only where the profile does.
+                // Live draws the car's run only where the profile does.
                 "var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));",
                 // The fix box, for a profile SimHub holds and has not selected.
                 "var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace);",
@@ -1716,7 +1716,7 @@ namespace OpenDashPlugin.Tests
                 "var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);",
                 "found ? PanelLeds.FoundInSimHub : null",
                 "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
-                // Rulings 53 and 54: the Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
+                // The Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
                 // from the rule PanelLeds pins.
                 "var found = PanelLeds.FoundFanatec(targets.Select(t => t.Name));",
                 "var sides = PanelLights.BarSides(census);",
@@ -1739,9 +1739,9 @@ namespace OpenDashPlugin.Tests
                 // The cards' name is set on the kit's group around the grid, which a screen reader hears.
                 "var grid = new GroupBorder { Child = Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray()) };",
                 "AutomationProperties.SetName(grid, PanelLights.BarsTitle);",
-                // Rulings 22 and 50: the pictures dim at night to the brightness in force.
+                // The pictures dim at night to the brightness in force.
                 "return PanelLeds.PreviewDim(Settings.LightsNightMode, Settings.LightsNightBrightness, Settings.BarBrightness(ns));",
-                // Ruling 48: the car line, its icon and its ink.
+                // The car line, its icon and its ink.
                 "carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;",
                 "var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);",
                 "var hex = PanelLeds.CarLineHex(known);",
@@ -1753,7 +1753,7 @@ namespace OpenDashPlugin.Tests
                 "name.TextChanged += (sender, args) => save.IsEnabled = PanelLeds.CanRename(name.Text);",
                 "save.IsEnabled = PanelLeds.CanRename(name.Text);",
                 "if (bar == null || !PanelLeds.CanRename(wanted)) return;",
-                // Rulings 46 and 47: the captions the width and spotter rows carry.
+                // The captions the width and spotter rows carry.
                 "}), PanelLeds.MirrorFitCaption), PanelLeds.AnchorMirrorFit));",
                 "PanelLeds.SpotterCaption), PanelLeds.AnchorSpotter)));",
                 // The greyed rows are drawn greyed: a live control whose writer writes nothing is a lie.
@@ -1772,7 +1772,7 @@ namespace OpenDashPlugin.Tests
             // The car data row is declared and drawn once, inside Ui.Soon.
             Assert.Equal(2, Occurrences(leds, "carData"));
             Assert.Equal(1, Occurrences(leds, "var carData = "));
-            // Ruling 46: the flag animation row on every strip, ahead of the spotter's gate rather than inside it.
+            // The flag animation row on every strip, ahead of the spotter's gate rather than inside it.
             var effects = Body(leds, "private FrameworkElement LedsEffects(", "private static Border LedsEffectTile(");
             Assert.InRange(effects.IndexOf("rows.Add(Ui.SubRow(Ui.Anchor(flags, PanelLeds.AnchorFlagAnimation)));", StringComparison.Ordinal),
                 0, effects.IndexOf("if (PanelLeds.HasFullStripSpotter(bar.Shape))", StringComparison.Ordinal));
@@ -2165,7 +2165,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("open.Unchecked -= closed;", lighting);
         }
 
-        /// <summary>A Brightness pick says what it set (ruling 50), in a line of its own.</summary>
+        /// <summary>A Brightness pick says what it set, as every press says what it did, in a line of its own.</summary>
         [Fact]
         public void A_brightness_pick_says_what_it_set()
         {
@@ -2246,6 +2246,27 @@ namespace OpenDashPlugin.Tests
                 Assert.DoesNotContain("openDash", word);
                 Assert.DoesNotContain(" tab", word);
             }
+        }
+
+        /// <summary>
+        /// docs/scope.md is the line that has to move before the code that crosses it is written, and this page
+        /// crossed it: it adds strips (<see cref="PanelLights.AddBar"/>) and installs a profile for each. So the
+        /// scope claims the strips, one profile per strip, on this page, and keeps refusing the LED families the
+        /// build has no profile for (#537).
+        /// </summary>
+        [Fact]
+        public void The_scope_claims_the_strips_this_page_adds()
+        {
+            Assert.Equal("Add an LED strip", PanelLights.AddBar);
+            var scope = File.ReadAllText(Path.Combine(RepoPaths.Root(), "docs", "scope.md"));
+            var start = scope.IndexOf("### The LED strips", StringComparison.Ordinal);
+            Assert.True(start >= 0, "scope.md has no section for the LED strips");
+            var end = scope.IndexOf("\n## ", start, StringComparison.Ordinal);
+            var strips = System.Text.RegularExpressions.Regex.Replace(scope.Substring(start, (end < 0 ? scope.Length : end) - start), @"\s+", " ");
+            Assert.Contains("**One profile per strip.**", strips);
+            Assert.Contains("adds on the LEDs page", strips);
+            Assert.Contains("**What is still not claimed** is the rest of the LED families: wheel buttons, button boxes and ambient lighting.", strips);
+            Assert.DoesNotMatch(@"strips[^.]*not claimed", scope);
         }
     }
 }

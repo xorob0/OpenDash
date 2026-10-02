@@ -302,6 +302,38 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(RepoPaths.SettingsControlSources(), path => Path.GetFileName(path) == "SettingsControl.Profiles.cs");
         }
 
+        /// <summary>
+        /// plugin.md's Soon catalogue is the registry, row for row and in order: the page (", Add sheet" for an entry
+        /// drawn only in a sheet), the row's title and its ticket, the ticket's link naming the same number. So a
+        /// greyed row cannot be added, renamed, moved or closed in code without the doc moving (#544).
+        /// </summary>
+        [Fact]
+        public void The_soon_catalogue_in_plugin_md_is_the_registry()
+        {
+            var doc = File.ReadAllText(Path.Combine(RepoPaths.Root(), "docs", "design", "plugin.md"));
+            var start = doc.IndexOf("\n## Soon\n", StringComparison.Ordinal);
+            Assert.True(start >= 0, "plugin.md has no Soon section");
+            var end = doc.IndexOf("\n## ", start + 1, StringComparison.Ordinal);
+            var section = doc.Substring(start, (end < 0 ? doc.Length : end) - start);
+            var rows = new List<string>();
+            foreach (var line in section.Split('\n').Where(l => l.StartsWith("| ", StringComparison.Ordinal) && !l.StartsWith("| page |", StringComparison.Ordinal)))
+            {
+                var row = Regex.Match(line, @"^\| (?<page>[^|]+?) \| (?<title>[^|]+?) \| \[#(?<ticket>\d+)\]\(https://github\.com/xorob0/OpenDash/issues/(?<link>\d+)\) \|$");
+                Assert.True(row.Success, "a Soon row reads page | row | [#n](link): " + line);
+                Assert.Equal(row.Groups["ticket"].Value, row.Groups["link"].Value);
+                rows.Add(row.Groups["page"].Value + " | " + row.Groups["title"].Value + " | " + row.Groups["ticket"].Value);
+            }
+            Assert.Equal(
+                PanelSoon.All.Select(item => PageName(item.Page) + (item.InSheetOnly ? ", Add sheet" : "") + " | " + item.Title + " | " + item.Ticket),
+                rows);
+        }
+
+        /// <summary>A page as the catalogue names it: the sidebar's word, which is "LEDs" where the enum says Leds.</summary>
+        private static string PageName(PanelPage page)
+        {
+            return page == PanelPage.Leds ? "LEDs" : page.ToString();
+        }
+
         /// <summary>A Find argument as the title it names: a literal, or a Panel constant read by reflection.</summary>
         private static string Resolve(string argument)
         {

@@ -23,7 +23,7 @@ namespace OpenDashPlugin.Tests
         public void Shortcuts_says_what_the_artboard_says()
         {
             Assert.Equal("Shortcuts", PanelShortcuts.Title);
-            // Ruling 49's intro, and nothing the rows under it already show: no touch, and no mechanism.
+            // The intro, and nothing the rows under it already show: no touch, and no mechanism.
             Assert.Equal("A wheel button, a button box or a key.", PanelShortcuts.IntroCaption);
             Assert.Equal("Lights", PanelShortcuts.RigGroupTitle);
             Assert.Equal("Every strip and matrix", PanelShortcuts.RigGroupDetail);
@@ -114,7 +114,7 @@ namespace OpenDashPlugin.Tests
             // count although it has that row; the departure is listed for the author.
             Assert.Equal("1 of 1", PanelShortcuts.CardCount(new[] { Bound }, true));
             Assert.Equal("0 of 1", PanelShortcuts.CardCount(new[] { NotBound }, true));
-            // Ruling 60: when any row cannot be read, no card counts, and neither the filter nor the clash
+            // When any row cannot be read, no card counts, and neither the filter nor the clash
             // line is drawn.
             Assert.Null(PanelShortcuts.CardCount(new[] { Bound, NotBound }, false));
             Assert.True(PanelShortcuts.Readable(new[] { Bound, NotBound, Greyed }));
@@ -273,7 +273,7 @@ namespace OpenDashPlugin.Tests
             // The rig test and the alert's dismissal are coming, and are the page's two greyed rows, each
             // read by the registry's title: a noun phrase, as plugin.md's voice replacements and every other
             // page's greyed rows have it, and the words search lists the row by and its automation name says.
-            // Rulings 7 and 62 name which rows exist, not their copy.
+            // The registry decides which rows exist, not the page's copy.
             Assert.Equal(new[] { PanelSoon.RigTest, PanelSoon.AlertDismissal }, PanelShortcuts.SoonDrawn);
             Assert.Equal("Rig test", PanelSoon.RigTest.Title);
             Assert.Equal("Alert dismissal", PanelSoon.AlertDismissal.Title);
@@ -1450,8 +1450,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var titleLine = new WrapPanel", code);
 
             // What the model decides from the bindings read, each drawn through it: the row's state, the
-            // page's readability, the filter, the counts, and ruling 60's three
-            // hides when a row cannot be read.
+            // page's readability, the filter, the counts, and the three hides
+            // when a row cannot be read.
             Assert.Contains("states[row] = PanelShortcuts.StateOf(row.Bindable, read == null ? (int?)null : read.Count);", code);
             Assert.Contains("var readable = PanelShortcuts.Readable(states.Values);", code);
             Assert.Contains("var chosen = PanelShortcuts.FilterFor(shortcutsFilter, null, readable);", code);
@@ -1501,7 +1501,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("banner.Visibility = banner.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;", code);
             Assert.Contains("empty.Visibility = emptyText == null ? Visibility.Collapsed : Visibility.Visible;", code);
             // The clash line is the trigger's name, strong, then the rest after a space, and nothing else:
-            // ruling 50's deleted aside ("Fine if you meant it.") cannot come back as a third run.
+            // the artboard's aside ("Fine if you meant it."), which voice.md drops, cannot come back as a third run.
             var clashLine = Between(code, "private static Border ShortcutsClashLine(", "return line;");
             Assert.Contains("text.Inlines.Add(new Run(clash.Lead) { FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush(Theme.TextPrimary) });", clashLine);
             Assert.Contains("text.Inlines.Add(new Run(\" \" + clash.Rest));", clashLine);
@@ -1526,7 +1526,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("read.Select(trigger => new PanelShortcuts.BindingUse(trigger, row.Place, row.Does)).ToList();", usesOf);
             Assert.Contains(".Where(mapping => mapping != null && !string.IsNullOrWhiteSpace(mapping.Trigger))", usesOf);
             Assert.Contains(".Select(mapping => new PanelShortcuts.BindingUse(mapping.Trigger, row.Place, row.Does, PanelShortcuts.FiresOn(mapping.PressType.ToString())))", usesOf);
-            // Ruling 60's null, which the view alone gives: an editor that could not be made, a shell read
+            // The null that means unreadable, which the view alone gives: an editor that could not be made, a shell read
             // that failed and a read that threw each read as "cannot be read", never as nothing bound.
             var usesAll = Between(code, "private IList<PanelShortcuts.BindingUse> ShortcutsUses(", "private void ShortcutsWatch(");
             Assert.Contains("if (editor == null) return null;", usesAll);

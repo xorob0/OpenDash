@@ -763,7 +763,7 @@ namespace OpenDashPlugin
             }
             else if (alert.Unit == PanelSettings.LapsUnit && box is TextBox)
             {
-                // "lap" or "laps" by the number beside it, as it is typed (ruling 11).
+                // "lap" or "laps" by the number beside it, as it is typed: the unit agrees with its number.
                 var typed = (TextBox)box;
                 var unit = Ui.Caption(PanelSettings.LapsUnitFor(typed.Text));
                 typed.TextChanged += (sender, args) => unit.Text = PanelSettings.LapsUnitFor(typed.Text);

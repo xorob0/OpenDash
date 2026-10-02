@@ -356,14 +356,14 @@ namespace OpenDashPlugin
         public const string OilTempTitle = "Oil temperature";
         public const string WaterTempTitle = "Water temperature";
 
-        /// <summary>Under both temperatures: what the number is in, which is SimHub's unit and not OpenDash's
-        /// (ruling 66), so a Fahrenheit rig types Fahrenheit. The default is the box's placeholder.</summary>
+        /// <summary>Under both temperatures: what the number is in, which is SimHub's unit and not OpenDash's,
+        /// so a Fahrenheit rig types Fahrenheit. The default is the box's placeholder.</summary>
         public const string TemperatureCaption = "In SimHub's unit.";
 
         public const string AlertColumn = "Alert";
 
         /// <summary>What sets each row off. The artboard heads the column "When", an adverb; voice.md makes a
-        /// heading a noun, and voice.md beats artboard copy. The noun is "Trigger" (#524, ruling 7), which also
+        /// heading a noun, and voice.md beats artboard copy. The noun is "Trigger", which also
         /// covers Pit window open, an event whose row draws an empty box and has no threshold; the Matrix page's
         /// Warnings row links here as its plural (PanelMatrix.ThresholdsLink), and search still finds the table by
         /// "threshold". A departure from the artboard that plugin.md records.</summary>
@@ -383,7 +383,7 @@ namespace OpenDashPlugin
         public const string LapsUnit = "laps";
         public const string LapUnit = "lap";
 
-        /// <summary>"under [1] lap", "under [2] laps": the unit follows the number (#524, ruling 11), and so
+        /// <summary>"under [1] lap", "under [2] laps": the unit agrees with its number, and so
         /// does an empty or unreadable box, which reads as more than one.</summary>
         public static string LapsUnitFor(int laps)
         {
@@ -521,7 +521,7 @@ namespace OpenDashPlugin
         /// binding lives on Shortcuts, where "night mode button" finds it.</summary>
         public const string NightModeButtonTitle = "Night mode button";
 
-        /// <summary>The scenario chips' section, in the Rig page's one noun for it (#524, ruling 6).</summary>
+        /// <summary>The scenario chips' section, in the Rig page's one noun for it: one noun for one set of chips.</summary>
         public const string PreviewTitle = PanelRigMap.ScenariosName;
 
         public const string PreviewDay = "day";

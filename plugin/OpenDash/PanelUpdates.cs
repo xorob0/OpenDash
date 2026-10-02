@@ -469,7 +469,7 @@ namespace OpenDashPlugin
         public const string UpdateAvailable = "Update available";
 
         /// <summary>A rig dashboard whose folder has gone from DashTemplates, in the ruled word the Screens card
-        /// and Home use for the same state (ambiguity 27, PanelScreens.Missing), so the panel says it one way.
+        /// and Home use for the same state (PanelScreens.Missing), so the panel says it one way.
         /// Held here as this table's own literal rather than read from PanelScreens, whose constants are that
         /// page's to change; "from SimHub" would repeat the section's own heading.</summary>
         public const string Missing = "Missing";
@@ -484,7 +484,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The sentences under the table, in order: what this build ships and what the installer could not
-        /// do, then the light profiles' own (uncovered 24): OpenDash never installs one on its own, said only
+        /// do, then the light profiles' own: OpenDash never installs one on its own, said only
         /// over a light row, a build with none for the rig's strips, and SimHub's LED settings out of reach.
         /// </summary>
         /// <param name="shipsDashboards">DashboardInstaller.HasEmbeddedPackage.</param>
@@ -647,7 +647,7 @@ namespace OpenDashPlugin
         /// A folder that has gone outranks everything, in the failure ink, as the Screens card and Home say of it
         /// even after a failed install; then a failure; then one SimHub has not loaded yet, known only when the shell's facts say so; then the installer's own status. The
         /// state words are held here (<see cref="Missing"/>), except the restart's, which is the panel's one
-        /// phrase for that state (PanelCopy.RestartToLoad, #524 ruling 1) and wraps to a second line in the cell. A screen this build ships nothing for is said from the facts alone -- installed
+        /// phrase for that state (PanelCopy.RestartToLoad) and wraps to a second line in the cell. A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
         /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
         /// </remarks>
@@ -816,8 +816,7 @@ namespace OpenDashPlugin
             return bar != null && devices != null && devices.TryGetValue(LedBar.NormaliseDevice(bar.Device) ?? string.Empty, out name) ? name : null;
         }
 
-        /// <summary>Whether the table draws the flag box profile's row: whenever the rig has a matrix (ruling
-        /// 69). A build that carries no profile still draws it, reading "Unknown" with the hover "This build
+        /// <summary>Whether the table draws the flag box profile's row: whenever the rig has a matrix. A build that carries no profile still draws it, reading "Unknown" with the hover "This build
         /// ships no flag box profile." (FlagBoxRow), as a strip whose profile the build lacks is drawn, so a
         /// matrix never goes missing from the table without a word. Only the writes need the profile, and
         /// they check for it themselves (UpdatesBringLightsForward).</summary>
@@ -939,8 +938,8 @@ namespace OpenDashPlugin
         public const string MatrixDevice = "your matrix's device in SimHub";
         public const string EachMatrixDevice = "each matrix's device in SimHub";
 
-        /// <summary>The device's field that picks which matrix it draws, spelt as SimHub labels it (ruling 69,
-        /// PanelMatrix.ContentField).</summary>
+        /// <summary>The device's field that picks which matrix it draws, spelt as SimHub labels it
+        /// (PanelMatrix.ContentField).</summary>
         public const string MatrixContentField = "RGB Matrix content";
 
         /// <summary>
@@ -981,7 +980,7 @@ namespace OpenDashPlugin
         public const string RowUpdate = "Update";
 
         /// <summary>A light row's Update press: what it costs, in the words the Matrix page's flag box Update
-        /// warns with (FlagBoxInstallPlan.Replaces), and the LEDs page's strip Update too (#524, ruling 12). The
+        /// warns with (FlagBoxInstallPlan.Replaces), and the LEDs page's strip Update too: one way on every page. The
         /// row's hover names the version the press brings; this is the press's own.</summary>
         public const string RowUpdateTooltip = FlagBoxInstallPlan.Replaces;
 
@@ -1017,7 +1016,7 @@ namespace OpenDashPlugin
         public const string ReinstallTooltip = "Installs every dashboard on your rig again, and each older or missing LED and matrix profile. An older profile you have edited is replaced.";
 
         /// <summary>
-        /// Whether Reinstall everything writes a light profile SimHub holds in this state (ruling 70): an
+        /// Whether Reinstall everything writes a light profile SimHub holds in this state: an
         /// older one, and one that is missing or whose install failed. Never one that is current, since a
         /// rewrite could only cost the edits made to it in SimHub, and never where SimHub cannot be reached
         /// or the build carries no profile.
@@ -1255,7 +1254,7 @@ namespace OpenDashPlugin
         public const double KeptTextGap = 3;
         public const double KeptTitleSize = 15;
 
-        /// <summary>The kept card's heading, a noun as voice.md has a heading (#524, ruling 4): "Kept copy", or
+        /// <summary>The kept card's heading, a noun as voice.md has a heading: "Kept copy", or
         /// "Kept copies" for more than one.</summary>
         public static string KeptHeading(int count)
         {
@@ -1263,7 +1262,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The kept card's first line: "Your edited Rim was kept.", "Your edited Rim and Pit wall were
-        /// kept." (#524, ruling 4).</summary>
+        /// kept.", the clause the artboard titled the card with.</summary>
         public static string KeptClause(IList<string> names)
         {
             var list = (names ?? new string[0]).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
@@ -1298,7 +1297,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether a folder is drawn on the kept card: whenever a copy kept from edited work is there to put
-        /// back, as the artboard draws it (#524, ruling 5), whether or not the folder in SimHub has been edited
+        /// back, as the artboard draws it, whether or not the folder in SimHub has been edited
         /// since. The ordinary one-deep backup is not anybody's work and never shows.
         /// </summary>
         /// <remarks>

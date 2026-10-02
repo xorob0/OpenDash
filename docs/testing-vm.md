@@ -95,7 +95,7 @@ checks still need a real rig.
 | Commands | `run_powershell(script, timeout_seconds)` `run_cmd(command)` | Runs over SSH as the admin user in **session 0**. Anything with a window started here is invisible; use `run_in_desktop`. |
 | Desktop | `run_in_desktop(command, arguments, working_dir)` | Launches into the logged-in desktop via a scheduled task. Returns immediately. |
 | Files | `upload_file` `download_file` `read_file(remote_path, tail_lines)` `write_file` | SCP under the hood. Windows paths, backslashes escaped in JSON. |
-| GUI | `screenshot(max_width)` `screen_size` `click(x,y,button,double)` `mouse_move` `drag` `type_text` `press_keys` | Coordinates are full-resolution (1280×800). `screenshot` defaults to 1024 px wide; scale your click coordinates by 1280/1024 = 1.25 or ask for `max_width=0`. Works even while Windows is installing. |
+| GUI | `screenshot(max_width)` `screen_size` `click(x,y,button,double)` `mouse_move` `drag` `type_text` `press_keys` | Coordinates are full-resolution (3840×2160, what `screen_size` reports). `screenshot` defaults to 1024 px wide; scale your click coordinates by 3840/1024 = 3.75 or ask for `max_width=0`. A guest at 1280×800 has lost its display mode in a container restart, and [dev-loop.md](dev-loop.md) says how `setres.ps1` puts it back. Works even while Windows is installing. |
 | SimHub | `simhub_status` `simhub_start` `simhub_stop(force)` `simhub_logs(lines)` `simhub_install_plugin(local_dll_path)` | `simhub_install_plugin` copies a DLL into the SimHub folder, unblocks it and restarts SimHub. |
 
 `press_keys` uses vncdotool names: `enter`, `tab`, `esc`, `ctrl-c`, `alt-f4`, `super`, `f5`,

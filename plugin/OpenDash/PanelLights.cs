@@ -43,8 +43,8 @@ namespace OpenDashPlugin
         public const string BarsTitle = "Your LED strips";
 
         /// <summary>The tile beside the cards and the sheet it opens: voice.md's own example beside "No strips
-        /// yet", since the strips are strips throughout. It departs from the artboard's "Add LEDs", which
-        /// docs/design/plugin.md does not record yet; search still finds the tile by it.</summary>
+        /// yet", since the strips are strips throughout. It departs from the artboard's "Add LEDs", a row of
+        /// docs/design/plugin.md's departures table; search still finds the tile by it.</summary>
         public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";

@@ -144,9 +144,9 @@ namespace OpenDashPlugin.Tests
                 Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.Speeding, options)[0], led => Assert.Equal(Theme.Danger, led));
                 Assert.Equal(Theme.PitLimiter, PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, options)[1][0]);
                 Assert.Null(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, options)[1][1]);
-                // The full-strip spotter's half, over the stand-in.
+                // The full-strip spotter paints over the stand-in as over the revs: the whole centre.
                 var whole = new StripOptions { Centre = centre, SpotterWhole = true };
-                Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole)[1].Take(5), led => Assert.Equal(Theme.Caution, led));
+                Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole)[1], led => Assert.Equal(Theme.Caution, led));
                 Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarRight, options)[0], led => Assert.Equal(Theme.Caution, led));
             }
             // The brake bar at rest is dark; the throttle and brake bar keeps its standing mark on an odd run;
@@ -174,12 +174,31 @@ namespace OpenDashPlugin.Tests
             Assert.All(both[0].Concat(both[2]), led => Assert.Equal(Theme.Caution, led));
         }
 
+        /// <summary>The full-strip spotter lights every LED of the strip, the ends and the centre, for whichever side
+        /// the car is on, as the profile does: rpmStrip.ts's spotterWhole is a group over the whole run (#533). A
+        /// side switched off stays dark with the switch on, since the profile's rows are the gated ones.</summary>
         [Fact]
-        public void The_full_strip_spotter_lights_the_half_on_the_cars_side()
+        public void The_full_strip_spotter_lights_the_whole_strip()
         {
-            var frame = PanelEmulation.StripFrame(3, 8, PanelEmulation.CarLeft, new StripOptions { SpotterWhole = true });
-            Assert.All(frame[1].Take(4), led => Assert.Equal(Theme.Caution, led));
-            Assert.NotEqual(Theme.Caution, frame[1][4]);
+            var whole = new StripOptions { SpotterWhole = true };
+            foreach (var id in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
+            {
+                var frame = PanelEmulation.StripFrame(3, 9, id, whole);
+                Assert.Equal(15, frame.Sum(group => group.Length));
+                Assert.All(frame.SelectMany(group => group), led => Assert.Equal(Theme.Caution, led));
+            }
+
+            var leftOff = new StripOptions { SpotterWhole = true };
+            leftOff.EffectsOff.Add("spotter.left");
+            var dark = PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, leftOff);
+            Assert.All(dark[0].Concat(dark[2]), led => Assert.Null(led));
+            Assert.Equal(PanelEmulation.Centre(9, PanelEmulation.CarLeft, leftOff), dark[1]);
+            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarBoth, leftOff).SelectMany(group => group), led => Assert.Equal(Theme.Caution, led));
+
+            var rpmStrip = RepoPaths.StripComments(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "rpmStrip.ts")));
+            var spotterWhole = rpmStrip.Substring(rpmStrip.IndexOf("const spotterWhole =", StringComparison.Ordinal));
+            spotterWhole = spotterWhole.Substring(0, spotterWhole.IndexOf("}));", StringComparison.Ordinal));
+            Assert.Contains("children: effectContainers(effect, 1, stripLength(shape))", spotterWhole);
         }
 
         [Fact]
@@ -358,7 +377,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The emulation writes the dash's own band words (ruling 26), so each face band's text is read out of
+        /// The emulation writes the dash's own band words, so each face band's text is read out of
         /// packages/dash/src/flags.ts -- and the limiter's out of pitAlerts.ts -- rather than typed twice.
         /// </summary>
         [Theory]

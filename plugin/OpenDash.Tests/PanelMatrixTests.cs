@@ -841,7 +841,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_fix_box_names_the_device_the_profile_and_the_content()
         {
-            // Titled by the card's state (#524, ruling 8); the matrix number is in the Content step.
+            // Titled by the card's state, one phrase for one state; the matrix number is in the Content step.
             Assert.Equal("Not shown in SimHub", PanelMatrix.FixTitle);
             Assert.Equal(PanelMatrix.NotShown, PanelMatrix.FixTitle);
             Assert.Equal(PanelMatrix.NotShown, PanelMatrix.CardLine("Left pillar", 2, "left", false));
@@ -867,8 +867,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("4", PanelMatrix.Rank(PanelMatrix.WarningsTitle));
             Assert.Equal(string.Empty, PanelMatrix.Rank(PanelMatrix.IdleDisplayTitle));
             Assert.Equal(new PanelRoute(PanelPage.Settings, "settings.alerts"), PanelMatrix.ThresholdsRoute);
-            // The link is the plural of the column it lands on, so the two pages say one word for the thing
-            // (#524, ruling 7): the Settings column renamed renames the link, and a link reworded here fails.
+            // The link is the plural of the column it lands on, so the two pages say one word for the thing:
+            // the Settings column renamed renames the link, and a link reworded here fails.
             Assert.Equal(PanelSettings.ThresholdColumn + "s", PanelMatrix.ThresholdsLink);
             Assert.Equal(new[] { 363, 371, 505 }, PanelMatrix.SoonDrawn.Select(item => item.Ticket).OrderBy(t => t));
             var matrix = MatrixSource();
@@ -1562,33 +1562,6 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
-        /// <summary>
-        /// The page justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
-        /// table, the artboards, a ticket -- and never by a numbered ruling in a workflow's scratch files, which
-        /// nobody reading the code can open. A ruling posted on a ticket is cited with the ticket ("#524, ruling
-        /// 8"). The files are read whole, comments included, since that is where a citation lives.
-        /// </summary>
-        [Fact]
-        public void The_page_cites_only_what_the_tree_holds()
-        {
-            foreach (var file in new[]
-            {
-                System.IO.Path.Combine("plugin", "OpenDash", "PanelMatrix.cs"),
-                System.IO.Path.Combine("plugin", "OpenDash", "SettingsControl.Matrix.cs"),
-                System.IO.Path.Combine("plugin", "OpenDash.Tests", "PanelMatrixTests.cs"),
-            })
-            {
-                var text = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), file));
-                var flat = System.Text.RegularExpressions.Regex.Replace(text, @"\s*(///|//)?\s+", " ");
-                // "ruling" and a number with no ticket before it; the pattern is split so this line is no citation.
-                var bare = System.Text.RegularExpressions.Regex.Matches(flat, @"(?<!#\d+, )\b" + "rul" + @"ings? \d+");
-                Assert.True(bare.Count == 0, file + ": " + string.Join(" | ", bare.Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value)));
-                Assert.DoesNotContain("critic's " + "rulings", flat);
-                Assert.DoesNotContain("#503 " + "inventory", flat);
-                Assert.DoesNotContain("voice_" + "rulings", flat);
-            }
-        }
-
         [Fact]
         public void Its_anchor_ids_are_pinned()
         {

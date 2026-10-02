@@ -55,8 +55,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { PanelSoon.RealHardware }, PanelRigMap.SoonDrawn);
             Assert.Equal("Leaderboard", PanelRigMap.BoardLabel);
             // The artboard's <section aria-label="What to emulate"> is a wh-clause posing as a heading; a
-            // heading is a noun (voice.md), and the one noun for the chips on every page is "Preview" (#524,
-            // ruling 6). The name a screen reader announces is one search finds, and "emulation" still does.
+            // heading is a noun (voice.md), and the one noun for the chips on every page is "Preview". The
+            // name a screen reader announces is one search finds, and "emulation" still does.
             Assert.Equal("Preview", PanelRigMap.ScenariosName);
             Assert.Contains(PanelSearch.Find(PanelSearch.All(), PanelRigMap.ScenariosName), hit => hit.Route.Page == PanelPage.Rig);
             Assert.All(PanelSearch.Find(PanelSearch.All(), "emulation"), hit => Assert.Equal(PanelPage.Rig, hit.Route.Page));
@@ -466,7 +466,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_rig_page_paints_each_tile_from_its_own_settings_and_lights_nothing_real()
         {
-            // The lights dim at night (ruling 22), and the header's night switch follows a wheel's press.
+            // The lights dim at night, and the header's night switch follows a wheel's press.
             Assert.Contains("return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);", RigMethod("private double RigLights("));
             // The page is its header, the canvas and the chips, in that order, each under the anchor search and
             // Home's fix rows route to.

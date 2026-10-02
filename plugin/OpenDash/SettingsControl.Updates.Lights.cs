@@ -8,7 +8,7 @@
 // NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS (ADR 0013). A profile installed by an older build is reported
 // with an Update press, as the strip's header on LEDs is (where PanelLeds.StripUpdateRoute sends a driver), and
 // is not rewritten until that or Reinstall everything is pressed; a missing one is installed by Reinstall
-// everything alone (ruling 70), and one that is current is never rewritten.
+// everything alone, and one that is current is never rewritten.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -250,7 +250,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Reinstall everything's lights (ruling 70): every strip whose profile in SimHub is older than this
+        /// Reinstall everything's lights (PanelUpdates.BringsForward): every strip whose profile in SimHub is older than this
         /// build's, missing or failed, and the flag box profile likewise on a rig with a matrix, and nothing
         /// that is current.
         /// </summary>

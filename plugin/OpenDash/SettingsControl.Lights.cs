@@ -1105,7 +1105,7 @@ namespace OpenDashPlugin
             if (state != null)
             {
                 var hex = PanelLeds.StateHex(profile, selected);
-                var dot = new Ellipse { Width = PanelKit.StripCardStateDot, Height = PanelKit.StripCardStateDot, Fill = Ui.Brush(hex), VerticalAlignment = VerticalAlignment.Center };
+                var dot = new Ellipse { Width = PanelKit.LightCardStateDot, Height = PanelKit.LightCardStateDot, Fill = Ui.Brush(hex), VerticalAlignment = VerticalAlignment.Center };
                 dot.Margin = new Thickness(0, 0, PanelKit.CardStateGap, 0);
                 var word = Ui.Text(state, PanelKit.LightCardStateSize, FontWeights.Normal, hex);
                 word.VerticalAlignment = VerticalAlignment.Center;

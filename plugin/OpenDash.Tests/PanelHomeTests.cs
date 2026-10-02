@@ -463,7 +463,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
-            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing", #524 ruling 1),
+            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing"),
             // the Screens card's too.
             Assert.Equal("Restart SimHub to load it", restart.Text);
             Assert.Equal(PanelCopy.RestartToLoad, restart.Text);
@@ -478,7 +478,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// One phrase for the one state on both pages: Home's line is the Screens card's state for each state
-        /// it says, and Home names no state with a constant of its own (#524, ruling 1).
+        /// it says, and Home names no state with a constant of its own.
         /// </summary>
         [Fact]
         public void Home_names_a_screens_state_as_its_card_does()
@@ -1329,7 +1329,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// Ruling 1 has the restart phrase wrap and never be trimmed. Home's screen line trims (CharacterEllipsis),
+        /// The restart phrase wraps on a card and is never trimmed. Home's screen line trims (CharacterEllipsis),
         /// so the phrase has to fit it at the narrowest card: measured in the face it is drawn in, Barlow Regular
         /// at PanelHome.LineSize, against the card's minimum less its frame, the row's padding, and the dot and
         /// the gap beside the line.

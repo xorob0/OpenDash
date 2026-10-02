@@ -327,7 +327,7 @@ namespace OpenDashPlugin
 
         public const string InstallTooltip = "Installs this strip's profile in SimHub.";
         /// <summary>The Update press over an older profile says what it costs, in the words the Matrix page's
-        /// flag box Update and the Updates table's row press say it (#524, ruling 12).</summary>
+        /// flag box Update and the Updates table's row press say it: one way on every page.</summary>
         public const string UpdateTooltip = FlagBoxInstallPlan.Replaces;
 
         public const string RenameButton = "Rename";
@@ -353,7 +353,7 @@ namespace OpenDashPlugin
         public const string LiveScenario = "live";
 
         /// <summary>What a screen reader calls the preview's chips: the Rig page's one noun for the scenario
-        /// chips' section, as Matrix and Settings name theirs (#524, ruling 6).</summary>
+        /// chips' section, as Matrix and Settings name theirs.</summary>
         public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
         /// <summary>
@@ -507,7 +507,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether a card draws its strip lit: only while SimHub shows the profile, which is while SimHub holds it
         /// and has it selected. A card that says "Not selected in SimHub" or "Not installed" beside lit LEDs
-        /// contradicts its own state line, which is the fake output ruling 20 keeps off Home's pictures; the
+        /// contradicts its own state line, the same fake output Home keeps off its pictures; the
         /// artboard draws the unselected brow dark.
         /// </summary>
         /// <remarks>
@@ -736,7 +736,7 @@ namespace OpenDashPlugin
 
         public const string ReverseTitle = "Reverse direction";
 
-        /// <summary>The line after a Brightness pick (ruling 50: every press says what it did): what the strip
+        /// <summary>The line after a Brightness pick, since every press says what it did: what the strip
         /// runs at now, its own value or the rig's. A statement rather than "Set ...", which reads as the fix box's
         /// imperative, and never a possessive with no noun after it. At night the profile runs a strip at the lower
         /// of its own value and the night brightness (contract.ts ledBrightnessInForce), as
@@ -987,7 +987,7 @@ namespace OpenDashPlugin
 
         /// <summary>Whether the sheet has a shape to offer at all: a plain shape or the Fanatec wheel. Where it
         /// has neither it says <see cref="PanelLightRows.NoProfiles"/>, the Updates table's words for the same fact
-        /// (#524, ruling 3: the file is an LED profile), and nothing else.</summary>
+        /// (the file is an LED profile, as a strip is the device), and nothing else.</summary>
         public static bool SheetHasShapes(int plainSides, bool offersFanatec)
         {
             return plainSides > 0 || offersFanatec;
