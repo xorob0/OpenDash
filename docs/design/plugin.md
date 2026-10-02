@@ -112,6 +112,18 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   | Settings: "Next to a blue flag" | "Blue flag detail" | a noun phrase, not a prepositional fragment |
   | Settings: the oil and water captions | "In SimHub's unit; 0 uses 120 °C (248 °F)." and 110 °C (230 °F) | the row says which unit to type, and names its own default |
   | Updates: "Something wrong?" | "Support" | a heading is never a question |
+  | Screens, Main, Updates: "Rim isn't in SimHub yet", "Not in SimHub yet", "Waiting for a restart" | one phrase, "Restart SimHub to load it" (`PanelCopy.RestartToLoad`), as the Screens card's state and fix box title, Home's line and issue step, and the Updates state; Home's issue title still names the screen, "Rim is not in SimHub yet" | one phrase for one state (#524, ruling 1); a card too narrow for it wraps it, never trims it |
+  | Updates: "Unknown" for a strip whose profile the build does not ship | "Not installed", as the LEDs card and Home say it | one word for one state (#524, ruling 2); the flag box's row, and any row while SimHub cannot be read, keep "Unknown" |
+  | LEDs, Updates, Main: "strip" and "LED profile" side by side | both stay: a *strip* is the device ("Add an LED strip", "No strips yet"), an *LED profile* is the file SimHub loads ("This build ships no LED profiles.", "SimHub's LED profile list") | two things, two nouns (#524, ruling 3) |
+  | Updates: "Your edited Rim was kept" as the card's title | heading "Kept copy" or "Kept copies", and "Your edited Rim was kept." as the first line under it | a heading is a noun (#524, ruling 4) |
+  | Updates: the kept card | shown whenever a kept copy exists, as the artboard draws it; Put mine back leaves a folder edited since as it is and says so | the build used to hide it once the folder was edited again (#524, ruling 5) |
+  | Rig: "What to emulate"; Matrix, LEDs, Settings: "What to preview" | "Preview" on all four, `PanelRigMap.ScenariosName`; Rig's "Emulation" goes | a heading is a noun, and one noun for the one set of chips (#524, ruling 6) |
+  | Settings: the alert table's "When" | "Trigger"; Matrix's Warnings link is its plural, "Triggers" | a heading is a noun, and it covers Pit window open, which has no threshold (#524, ruling 7) |
+  | Matrix, Main: "Not shown in SimHub" beside "No device in SimHub shows matrix 2" and "is dark" | "Not shown in SimHub" on the Matrix card, Home's line, the Matrix fix box's title and Home's issue ("Left pillar is not shown in SimHub"); the matrix number is in the steps | one phrase for one state (#524, ruling 8) |
+  | AddScreen: the artboard's second-copy note | the build's wording (`PanelAddScreen.Note`) | ruled to stay as the build words it (#524, ruling 9) |
+  | Settings: the greyed "Tyres show" row's "Temperature" / "then Pressure" | "Temperature" \| "Pressure" | two nouns, no fragment; #325 owns the words once it builds the row (#524, ruling 10) |
+  | Settings: "under [2] laps" for every value | "lap" or "laps" by the value: "under [1] lap", "under [2] laps" | the unit agrees with its number (#524, ruling 11) |
+  | LEDs: the strip header's Update hover, "Updates this strip's profile in SimHub." | `FlagBoxInstallPlan.Replaces`, "Replaces the copy in SimHub, including your changes to it.", as on Matrix and Updates | the press says what it costs, one way on every page (#524, ruling 12) |
 
 ### The geometry is not in the token file
 
