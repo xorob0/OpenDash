@@ -132,10 +132,14 @@ namespace OpenDashPlugin
 
             // The answers arrive from the plugin, which asks for Init and for this page alike. Held only
             // while the page is on screen, so a page SimHub has let go of is not kept alive by the plugin;
-            // the clock is the same, and nothing ticks behind a panel nobody is looking at.
+            // the clock is the same, and nothing ticks behind a panel nobody is looking at. Only the update
+            // check's answer is taken before Loaded, since it can land before the page is shown: SimHub builds
+            // a new control on every GetWPFSettingsControl, and one it builds and never shows raises no
+            // Unloaded, so a static event taken here (InputMappingsChanged) would keep it alive and run its
+            // binding counts for the session behind a page nobody sees. The mappings and the wheel's lighting
+            // presses are taken at Loaded: the page reads both as it builds, and one loaded again catches up
+            // (CatchUp forgets the binding counts and rebuilds).
             plugin.UpdateChecked += ShowUpdateAnswer;
-            plugin.RigLightingPressed += ShowLightingChange;
-            PluginManager.InputMappingsChanged += MappingsChanged;
             Loaded += (sender, args) =>
             {
                 PluginManager.InputMappingsChanged -= MappingsChanged;

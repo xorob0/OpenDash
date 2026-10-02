@@ -607,5 +607,24 @@ namespace OpenDashPlugin.Tests
                 Assert.False(Regex.IsMatch(code, @"\b" + Regex.Escape(gone)), gone + " is back");
             }
         }
+
+        /// <summary>A control SimHub builds and never shows raises no Unloaded, so the constructor takes only the
+        /// update check's answer, which can land before Loaded; SimHub's static InputMappingsChanged and the
+        /// wheel's lighting presses are taken at Loaded and let go of at Unloaded, so an unshown control is not
+        /// kept alive by them nor runs its binding counts for nobody.</summary>
+        [Fact]
+        public void Only_the_update_answer_is_taken_before_the_page_is_loaded()
+        {
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            var ctor = shell.Substring(shell.IndexOf("public SettingsControl(OpenDash plugin)", StringComparison.Ordinal));
+            var beforeLoaded = ctor.Substring(0, ctor.IndexOf("Loaded += (sender, args) =>", StringComparison.Ordinal));
+            Assert.Contains("plugin.UpdateChecked += ShowUpdateAnswer;", beforeLoaded);
+            Assert.DoesNotContain("InputMappingsChanged +=", beforeLoaded);
+            Assert.DoesNotContain("RigLightingPressed +=", beforeLoaded);
+            var loaded = ctor.Substring(ctor.IndexOf("Loaded += (sender, args) =>", StringComparison.Ordinal));
+            loaded = loaded.Substring(0, loaded.IndexOf("Unloaded += (sender, args) =>", StringComparison.Ordinal));
+            Assert.Contains("PluginManager.InputMappingsChanged -= MappingsChanged; PluginManager.InputMappingsChanged += MappingsChanged;", loaded);
+            Assert.Contains("plugin.RigLightingPressed -= ShowLightingChange; plugin.RigLightingPressed += ShowLightingChange;", loaded);
+        }
     }
 }
