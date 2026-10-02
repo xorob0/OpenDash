@@ -106,10 +106,12 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The step after the restart, under PanelCopy.RestartToLoad: SimHub lists the dashboard
-        /// under the screen's name, so that is the name to look for.</summary>
+        /// under the screen's name, so that is the name to look for. The panel's one phrasing of the step, on the
+        /// Screens fix box, Home's issue and the Updates row alike: "its display", since Home's list and the
+        /// Updates table have no display for "this" to point at.</summary>
         public static string RestartDetail(string name)
         {
-            return "Then assign \"" + name + "\" to this display in Dash Studio.";
+            return "Then assign \"" + name + "\" to its display in Dash Studio.";
         }
 
         /// <summary>The state a card shows. A missing folder wins, because restarting will not bring it back.</summary>

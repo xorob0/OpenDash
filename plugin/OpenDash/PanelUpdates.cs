@@ -690,11 +690,11 @@ namespace OpenDashPlugin
         /// already says it is missing.</summary>
         public const string MissingTooltip = PanelConfirmation.ReinstallLabel + " installs it again.";
 
-        /// <summary>A dashboard SimHub has not loaded yet: the step after the restart the state already names,
-        /// on the dashboard's own display, since the row names a dashboard and no display.</summary>
+        /// <summary>A dashboard SimHub has not loaded yet: the step after the restart the state already names, in
+        /// the words the Screens fix box and Home's issue use for it (PanelScreens.RestartDetail).</summary>
         public static string AfterRestart(string name)
         {
-            return "After the restart, assign \"" + name + "\" to its display in Dash Studio.";
+            return PanelScreens.RestartDetail(name);
         }
 
         public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";

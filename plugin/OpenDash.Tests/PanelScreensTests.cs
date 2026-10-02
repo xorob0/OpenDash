@@ -288,7 +288,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
             Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));
             Assert.Equal(PanelCopy.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
-            Assert.Equal("Then assign \"Rim\" to this display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
+            Assert.Equal("Then assign \"Rim\" to its display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
             // The fix box under each state is titled with the card's phrase.
             Assert.Equal(PanelScreens.MissingTitle, PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
@@ -1197,7 +1197,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("return Ui.FixBox(PanelCopy.RestartToLoad,", ScreensSource("SettingsControl.Screens.cs"));
 
             // Home: the screen's line, and the issue's step.
-            var rim = new ScreenInstance { Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var rim = new ScreenInstance { Name = "Rim", Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 };
             rim.Normalise();
             Assert.Equal(phrase, PanelHome.ScreenLine(new OpenDashSettings(), rim, true, true).Text);
             var waiting = new AttentionInput();
@@ -1212,6 +1212,14 @@ namespace OpenDashPlugin.Tests
             var package = new PackageStatus { FolderName = "Rim", Status = InstallStatus.UpToDate, InstalledVersion = "0.5.0", EmbeddedVersion = "0.5.0" };
             Assert.Equal(phrase, PanelUpdates.DashboardRow(rim, package, true, true).State);
             Assert.Null(typeof(PanelUpdates).GetField("WaitingForRestart"));
+
+            // The step after the restart is one phrasing on all three: the fix box's detail, Home's issue and the
+            // Updates row's hover, with no "this display" where Home and Updates have no display to point at.
+            var step = PanelScreens.RestartDetail("Rim");
+            Assert.Contains("return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name),", ScreensSource("SettingsControl.Screens.cs"));
+            Assert.Equal(phrase + ". " + step, issue.Detail);
+            Assert.Equal(step, PanelUpdates.DashboardRow(rim, package, true, true).Tooltip);
+            Assert.DoesNotContain("this display", step);
         }
 
         /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>

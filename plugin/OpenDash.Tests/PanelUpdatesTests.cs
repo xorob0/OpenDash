@@ -897,7 +897,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelCopy.RestartToLoad, waiting.State);
             Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
-            Assert.Equal("After the restart, assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
+            Assert.Equal("Then assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
             Assert.DoesNotContain("Restart SimHub", waiting.Tooltip);
             // About 140 of the 135 the dot leaves it, so the phrase wraps "it" to a second line: the cell wraps
             // (TextWrapping.Wrap in UpdatesStateCell) and the ruling has the phrase wrap rather than be trimmed.
