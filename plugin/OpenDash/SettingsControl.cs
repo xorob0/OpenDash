@@ -364,11 +364,10 @@ namespace OpenDashPlugin
         //              PanelMatrix.ProfileRow); the empty states are the pages' own (PanelScreens.NoScreens,
         //              PanelLeds.NoStrips, PanelMatrix.NoPanels).
         //   PanelLights.cs is the LEDs page's to edit, so two agents never edit it at once. The Matrix page
-        //              draws some of its words today (PanelsTitle, AddPanel, PanelAdded and the rest); it
-        //              copies the ones it draws into PanelMatrix.cs and rewords its copy there. What the shell
-        //              reads keeps its name: BarSides (Profiles), CarTablesCaption (OpenDash.cs),
-        //              CarTablesFailed and CarTablesNone (CarLightService), NoDevices (LedDeviceSurvey), and
-        //              whatever SettingsControl.Matrix.cs still reads until Matrix has its copy.
+        //              owns its words in PanelMatrix.cs (its section title, add tile, name caption, the line an
+        //              add says) and reads none from here. What the shell reads keeps its name: BarSides
+        //              (Profiles), CarTablesCaption (OpenDash.cs), CarTablesFailed and CarTablesNone
+        //              (CarLightService) and NoDevices (LedDeviceSurvey).
         //   shell      everything else: SettingsControl.cs and its other partials (.Sidebar, .Sheet, .Status,
         //              .Live, .Messages, .Preview, .Bindings, .Profiles), Widgets*.cs, Segmented.cs,
         //              PanelShell.cs, PanelKit.cs, PanelNav.cs, PanelAttention.cs, PanelSearch.cs,
@@ -384,7 +383,7 @@ namespace OpenDashPlugin
         //   read by another page: PanelScreens.NoScreens and Title, PanelLeds.NoStrips, PanelMatrix.NoPanels,
         //     PanelRigMap.Title, PanelSettings.BrightnessTitle, NightBrightnessTitle and NightModeTitle (Home,
         //     Rig); PanelFacePlan.ZoneLabel and ZoneOrder, PanelShortcuts.QuickGlanceTitle (Shortcuts, Screens);
-        //     PanelDataTab.RevBarTitle, RevBarCaption, RevBarValues and RevBarLabels (Screens);
+        //     PanelDataTab.RevBarValues and RevBarLabels (Screens);
         //     PanelLightRows.ShapeLabel (Home, LEDs, Updates). PanelLightRows.DotHex reads no page's table
         //     since it stopped reading PanelMatrix.ProfileRow, so ProfileRow is the Matrix page's alone.
         // A page's greyed rows and its search-label exemptions are its own: SoonDrawn and
