@@ -320,3 +320,22 @@ free, and [#353](https://github.com/xorob0/OpenDash/issues/353) decided it: **th
 the palette wins.** The amendment at the foot of the Decision says so and names the two answers it
 was chosen against. Rung 1 now reaches the rev bar, the rev arc, the companion's speedo and the
 Redline beside it; it still does not reach them as colour, and no part of it is read twice.
+
+## Amended, 2026-10-02: the style is a switch, and the Lights tab is the LEDs page (#369, #503)
+
+**What moved.** Part 5 kept three styles beside `car`. The LEDs page offers one switch per strip,
+"Car's own rev lights" ([#369](https://github.com/xorob0/OpenDash/issues/369)): on writes `car`, off
+writes `leftToRight`. `meetInMiddle` and `f1` stay in the contract's set so an older settings file
+reads, and a strip carrying either reads as off. The gate in the amendment of 2026-09-27 is unchanged:
+`OpenDash.CarLadderChosen` is any strip asking for the car's own lights.
+
+**Where it lives.** The Lights tab is gone ([#503](https://github.com/xorob0/OpenDash/issues/503)).
+The switch is in the strip's Rev lights. The download, the car count, the attribution and the licence
+are in Every strip at the foot of the LEDs page, under the name Lovely Car Data. The download is still
+user-initiated and still the only thing that fetches. The Matrix page's digit switch reads
+"Car-specific shift points".
+
+**What the panel now says.** The car line under the switch names the car and whether Lovely Car Data
+has it, and says nothing outside iRacing, since the plugin reads iRacing's data only. When nothing was
+ever downloaded it points at Every strip. A failed download beside a working copy keeps the count and
+age of that copy in the line.
