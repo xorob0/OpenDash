@@ -348,7 +348,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("surface.Report(current);", slider);
             Assert.Contains("surface.Set = next =>", slider);
             var chip = Regex.Replace(Factory("Chip"), @"\s+", " ");
-            Assert.Contains("if (swatchHex != null) { AutomationName(button, text); System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? \"checked\" : \"unchecked\"); }", chip);
+            // Every chip says whether it is pressed, the plain chips of Matrix's and LEDs' Preview as much as
+            // Rig's swatch chips (#534): the name and the status are set at the top of the factory, after the hover
+            // block closes, outside any branch on the swatch.
+            Assert.Contains("button.MouseLeave += (sender, args) => label.Foreground = Brush(Theme.TextSecondary); } AutomationName(button, text); System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? \"checked\" : \"unchecked\"); if (click != null) button.Click", chip);
+            Assert.Single(Regex.Matches(chip, @"SetItemStatus\("));
             Assert.Contains("return new SegmentedPeer(this);", RepoPaths.Code(Path.Combine(root, "Segmented.cs")));
             // The two assemblies the patterns live in are referenced, or the plugin does not build.
             var project = File.ReadAllText(Path.Combine(root, "OpenDash.csproj"));

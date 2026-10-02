@@ -664,14 +664,11 @@ namespace OpenDashPlugin
                 button.MouseEnter += (sender, args) => label.Foreground = Brush(Theme.TextPrimary);
                 button.MouseLeave += (sender, args) => label.Foreground = Brush(Theme.TextSecondary);
             }
-            if (swatchHex != null)
-            {
-                // The content is a panel, which gives the button no name of its own, so the chip is named by its
-                // label; and the pressed chip is the artboard's aria-pressed, said as RadioRow and ChoiceTile
-                // say theirs (#523).
-                AutomationName(button, text);
-                System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? "checked" : "unchecked");
-            }
+            // The chip is named by its label, since a swatch chip's content is a panel that gives the button no
+            // name of its own; and every chip, with a swatch or without, says whether it is the pressed one: the
+            // artboard's aria-pressed, said as RadioRow and ChoiceTile say theirs (#523, #534).
+            AutomationName(button, text);
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? "checked" : "unchecked");
             if (click != null) button.Click += (sender, args) => click();
             return button;
         }
