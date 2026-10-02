@@ -164,9 +164,13 @@ plugin with its left-menu entry, seeds a rig of every kind of screen, strip and 
 (`bun scripts/rig.ts panel`; `empty` is a genuine first run), and photographs every page at SimHub
 widths of 700, 1000 and 1600 px and maximised into `build/panel/`, cropped to the panel. `--menu-y` is
 where OpenDash sits in SimHub's left menu, read off a `bun run vm shot`, and has no default. The
-panel's own width is measured by UI Automation and decides where each sidebar item is clicked, from a
-mirror of `PanelShell` that `scripts/panel-shots.test.ts` holds to the C#; `bun run panel-shots --help`
-has the rest.
+panel is found by its own colours in a picture of SimHub's window, since SimHub 9.12.6 exposes no UI
+Automation tree to ask (#640): its sidebar is `Theme.SurfaceInset` from top to bottom, read along the
+row half-way down the client area and down a column inside it. Maximised, SimHub centres a plugin's page
+in a column about 1400 px wide, so the panel is never simply the window less the menu. The panel's
+width decides where each sidebar item is clicked, from a mirror of `PanelShell` that
+`scripts/panel-shots.test.ts` holds to the C#, and a page is scrolled a viewport at a time until its
+column stops changing; `bun run panel-shots --help` has the rest.
 
 The pages are the sidebar's eight: Home, Rig, Screens, LEDs, Matrix, Shortcuts, Settings and Updates.
 `--pages` takes a few of them and `--scenario race` gives the live card a session. A page taller than

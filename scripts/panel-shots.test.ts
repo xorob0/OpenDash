@@ -1,7 +1,8 @@
 /**
  * What `scripts/panel-shots.ts` decides without a VM: that its mirror of the panel's sidebar is the
  * panel's, where each page is clicked at each width, what the pictures are called, and how the
- * command line and the guest's measurements are read.
+ * command line and the guest's measurements are read: the panel found by its colours in a picture
+ * of SimHub's window, held here to rows read on the VM.
  *
  * The mirror is held to the C# the way ThemeTests holds Theme.cs to tokens.json: PanelShell.cs,
  * PanelNav.cs and PanelMetrics.cs are read as text, every constant the mirror carries is evaluated
@@ -12,28 +13,35 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
+  activeProbe,
   BORDER_WEIGHT,
-  buttonAt,
   clickFor,
   COLUMN,
+  drawnLayout,
+  findPanel,
   GAP_AFTER,
   ITEM_TOP_TERMS,
   itemCentre,
   itemCentreX,
   layoutFor,
   mainColumn,
+  MAX_PARTS,
+  MIN_SIDEBAR_RUN,
   notchesPerViewport,
   PAGES,
+  PANEL_COLOURS,
   parseArgs,
   parseMeasure,
-  partsFor,
+  parseSpans,
   SHELL,
   shotFile,
   sidebarWidthFor,
+  SIMHUB_PAGE,
   updatesCentre,
   USAGE,
   type PanelShotsOptions,
 } from './panel-shots.ts';
+import { hex } from './gui.ts';
 
 const plugin = path.resolve(import.meta.dir, '..', 'plugin', 'OpenDash');
 /**
@@ -219,7 +227,7 @@ describe('where each item is', () => {
 });
 
 describe('where a page is clicked', () => {
-  // A control as UI Automation would report it: SimHub's own menu takes the left of its window, so
+  // A control as the measurement would report it: SimHub's own menu takes the left of its window, so
   // the control starts right of it and is narrower than SimHub by that much.
   const control = (left: number, width: number, height = 2000, top = 60) => ({ left, top, width, height });
 
@@ -309,61 +317,134 @@ describe('what a picture is called', () => {
   });
 });
 
+describe('the colours the panel is found by', () => {
+  const theme = code(readFileSync(path.join(plugin, 'Theme.cs'), 'utf8'));
+
+  test.each(Object.entries(PANEL_COLOURS))("carries Theme.%s as Theme.cs has it", (name, rgb) => {
+    const declared = new RegExp(`public const string ${name} = "(#[0-9A-Fa-f]{6})";`).exec(theme)?.[1];
+    expect({ name, hex: declared?.toLowerCase() }).toEqual({ name, hex: hex(rgb) });
+  });
+
+  test("none of them is SimHub's page, which is what every gap around the panel is drawn in", () => {
+    expect(hex(SIMHUB_PAGE)).toBe('#252525');
+    for (const rgb of Object.values(PANEL_COLOURS)) expect(hex(rgb)).not.toBe(hex(SIMHUB_PAGE));
+  });
+
+  test("a sidebar run is shorter than the rail's and longer than any stray pixel", () => {
+    expect(MIN_SIDEBAR_RUN).toBeLessThan(SHELL.RailWidth - BORDER_WEIGHT);
+    expect(MIN_SIDEBAR_RUN).toBeGreaterThan(10);
+  });
+});
+
 describe("the guest's measurement", () => {
-  // What measurePanel's script prints, byte order mark and all, for SimHub maximised on the VM.
-  const report = [
-    '﻿window -8 -8 3856 2136',
-    'client 0 0 3840 2120',
-    'dpi 96',
-    'zoomed 1',
-    'control 250 64 3590 2056',
-    'scroller 254 64 211 1980 0 100 -1',
-    'scroller 466 64 3374 2056 1 48.5 0',
-    'scroller 900 400 300 200 1 20 0',
-    'button 262 278 191 40 Home',
-    'button 262 2066 191 40 Updates',
+  // What measurePanel's script printed on the VM (SimHub 9.12.6, 3840 x 2160 at 100 %) on 2026-10-02,
+  // with the Screens page open. The rows are whole; each column is cut where it leaves the panel, since
+  // below it is SimHub's licence offer, which this does not read.
+  const head = (window: string, client: string, zoomed: 0 | 1) => [`﻿window ${window}`, `client ${client}`, 'dpi 96', `zoomed ${zoomed}`];
+  const at700 = [
+    ...head('0 0 700 2120', '0 0 700 2120', 0),
+    'row 1060 [[0,0,[128,128,128]],[1,213,[37,37,37]],[214,214,[22,22,22]],[215,268,[6,7,8]],[269,269,[28,31,36]],[270,682,[10,11,13]],[683,692,[27,28,30]],[693,694,[10,11,13]],[695,698,[37,37,37]],[699,699,[128,128,128]]]',
+    'col 217 [[0,0,[128,128,128]],[1,78,[37,37,37]],[79,1867,[6,7,8]],[1868,1868,[14,15,15]],[1869,1871,[37,37,37]]]',
+  ].join('\r\n');
+  const at1600 = [
+    ...head('0 0 1600 2120', '0 0 1600 2120', 0),
+    'row 1060 [[0,0,[128,128,128]],[1,214,[37,37,37]],[215,429,[6,7,8]],[430,430,[28,31,36]],[431,1121,[10,11,13]],[1122,1122,[51,56,63]],[1123,1163,[28,31,36]],[1164,1164,[51,56,63]],[1165,1208,[10,11,13]],[1209,1209,[51,56,63]],[1210,1233,[10,11,13]],[1234,1234,[28,31,36]],[1235,1548,[20,22,26]],[1549,1549,[28,31,36]],[1550,1593,[10,11,13]],[1594,1598,[37,37,37]],[1599,1599,[128,128,128]]]',
+    'col 217 [[0,0,[128,128,128]],[1,78,[37,37,37]],[79,1868,[6,7,8]],[1869,1871,[37,37,37]]]',
+  ].join('\r\n');
+  const maximised = [
+    ...head('-8 -8 3856 2136', '0 0 3840 2120', 1),
+    'row 1060 [[-8,-1,[0,0,0]],[0,1324,[37,37,37]],[1325,1539,[6,7,8]],[1540,1540,[28,31,36]],[1541,2252,[10,11,13]],[2253,2253,[51,56,63]],[2254,2294,[28,31,36]],[2295,2295,[51,56,63]],[2296,2339,[10,11,13]],[2340,2340,[51,56,63]],[2341,2364,[10,11,13]],[2365,2365,[28,31,36]],[2366,2679,[20,22,26]],[2680,2680,[28,31,36]],[2681,2724,[10,11,13]],[2725,3839,[37,37,37]],[3840,3847,[0,0,0]]]',
+    'col 1327 [[-8,-1,[0,0,0]],[0,78,[37,37,37]],[79,1868,[6,7,8]],[1869,1871,[37,37,37]]]',
+    'signature BB329C1A',
+    'probe 1433 432 [20,22,26]',
   ].join('\r\n');
 
-  test('reads the rectangles, the scale and what can scroll', () => {
-    const m = parseMeasure(report)!;
+  test('reads the rectangles, the scale, the signature and the probes', () => {
+    const m = parseMeasure(maximised)!;
     expect(m.window).toEqual({ left: -8, top: -8, width: 3856, height: 2136 });
     expect(m.client).toEqual({ left: 0, top: 0, width: 3840, height: 2120 });
     expect([m.scale, m.zoomed]).toEqual([1, true]);
-    expect(m.control).toEqual({ left: 250, top: 64, width: 3590, height: 2056 });
-    expect(m.scrollers).toHaveLength(3);
-    expect(m.buttons.map((b) => b.name)).toEqual(['Home', 'Updates']);
+    expect(m.signature).toBe('bb329c1a');
+    expect(m.probes).toEqual([{ x: 1433, y: 432, colour: [20, 22, 26] }]);
   });
 
-  test('says there is no control when SimHub is showing another page', () => {
-    expect(parseMeasure('window 0 0 700 2000\nclient 8 30 684 1962\ndpi 144\nzoomed 0\ncontrol none')).toMatchObject({ control: null, scale: 1.5, zoomed: false });
+  test("maximised, the panel is SimHub's centred column, 1400 wide, not the client area less the menu", () => {
+    const m = parseMeasure(maximised)!;
+    expect(m.control).toEqual({ left: 1325, top: 79, width: 1400, height: 1790 });
+    expect(m.sidebar).toBe(216);
+    expect(drawnLayout(m.sidebar, m.control!.width)).toBe(layoutFor(m.control!.width));
+  });
+
+  test('at 1600 px it fills the client area right of the menu, short of a four-pixel margin', () => {
+    const m = parseMeasure(at1600)!;
+    expect(m.control).toEqual({ left: 215, top: 79, width: 1379, height: 1790 });
+    expect([m.sidebar, drawnLayout(m.sidebar, m.control!.width), layoutFor(m.control!.width)]).toEqual([216, 'Full', 'Full']);
+  });
+
+  test('at 700 px it draws the rail, its blended edges counted in and its scroll bar inside the crop', () => {
+    const m = parseMeasure(at700)!;
+    expect(m.control).toEqual({ left: 214, top: 79, width: 481, height: 1790 });
+    expect([m.sidebar, drawnLayout(m.sidebar, m.control!.width), layoutFor(m.control!.width)]).toEqual([56, 'Compact', 'Compact']);
+  });
+
+  test('says there is no panel when no run of the sidebar colour is long enough to be one', () => {
+    const other = [...head('0 0 700 2120', '8 30 684 1962', 0).map((l) => l.replace('dpi 96', 'dpi 144')), 'row 1000 [[0,699,[37,37,37]]]'].join('\n');
+    expect(parseMeasure(other)).toMatchObject({ control: null, sidebar: 0, scale: 1.5, zoomed: false });
+    const stray = [...head('0 0 700 2120', '0 0 700 2120', 0), 'row 1000 [[0,299,[37,37,37]],[300,320,[6,7,8]],[321,699,[37,37,37]]]', 'col 302 [[0,1999,[6,7,8]]]'].join('\n');
+    expect(parseMeasure(stray)?.control).toBeNull();
+  });
+
+  test('says there is no panel when the column the guest read is not the sidebar where the row crosses it', () => {
+    const row = parseSpans(at700, 'row')!;
+    expect(findPanel(row.spans, row.at, null)).toBeNull();
+    expect(findPanel(row.spans, row.at, [{ from: 0, to: 2119, colour: SIMHUB_PAGE }])).toBeNull();
   });
 
   test('says there is nothing to measure when SimHub has no window', () => {
     expect(parseMeasure('SimHub has no main window')).toBeNull();
   });
 
-  test("finds the page's own scroll viewer: right of the sidebar, and the largest there", () => {
-    expect(mainColumn(parseMeasure(report)!)?.rect).toEqual({ left: 466, top: 64, width: 3374, height: 2056 });
+  test('refuses a line of spans it cannot read', () => {
+    expect(parseSpans('row 10 [[0,1,[1,2]]]', 'row')).toBeNull();
+    expect(parseSpans('row 10 not json', 'row')).toBeNull();
+    expect(parseSpans('col 5 [[0,1,[1,2,3]]]', 'row')).toBeNull();
+    expect(parseSpans('col 5 [[0,1,[1,2,3]]]', 'col')).toEqual({ at: 5, spans: [{ from: 0, to: 1, colour: [1, 2, 3] }] });
   });
 
-  test('takes as many pictures as the page is viewports tall', () => {
-    const column = mainColumn(parseMeasure(report)!);
-    expect(partsFor(column)).toBe(3);
-    expect(partsFor({ ...column!, viewSize: 50 })).toBe(2);
-    expect(partsFor({ ...column!, viewSize: 100 })).toBe(1);
-    expect(partsFor({ ...column!, scrollable: false, viewSize: 40 })).toBe(1);
-    expect(partsFor(null)).toBe(1);
+  test("the page's own column is the panel right of its sidebar", () => {
+    expect(mainColumn(parseMeasure(maximised)!)).toEqual({ left: 1541, top: 79, width: 1184, height: 1790 });
+    expect(mainColumn(parseMeasure(at700)!)).toEqual({ left: 270, top: 79, width: 425, height: 1790 });
+    expect(mainColumn(parseMeasure('window 0 0 1 1\nclient 0 0 1 1')!)).toBeNull();
   });
 
-  test('scrolls a viewport a time, a notch short so the parts overlap', () => {
-    expect(notchesPerViewport(2056)).toBe(41);
+  test('a rail read at a scale is still a rail', () => {
+    expect(drawnLayout(84, 1350, 1.5)).toBe('Rail');
+    expect(drawnLayout(324, 1350, 1.5)).toBe('Full');
+    expect(drawnLayout(56, 700)).toBe('Compact');
+  });
+
+  test('the clicks the mirror makes land on the sidebar the measurement found, and read the open item low in it', () => {
+    for (const report of [at700, at1600, maximised]) {
+      const m = parseMeasure(report)!;
+      for (const page of PAGES) {
+        const at = clickFor(page, m.control!);
+        expect(at.x).toBeGreaterThan(m.control!.left);
+        expect(at.x).toBeLessThan(m.control!.left + m.sidebar);
+        expect(at.y).toBeLessThan(m.control!.top + m.control!.height);
+        const probe = activeProbe(at);
+        expect(probe.y - at.y).toBe(16);
+        expect(probe.y).toBeLessThan(at.y + SHELL.NavItemHeight / 2);
+      }
+    }
+    // The probe of the maximised report is where Screens is clicked, read 16 px lower: the open item's colour.
+    const m = parseMeasure(maximised)!;
+    expect(activeProbe(clickFor('screens', m.control!))).toEqual({ x: 1432.5, y: 432 });
+    expect(m.probes[0]!.colour).toEqual([...PANEL_COLOURS.SurfaceZone]);
+  });
+
+  test('scrolls a viewport a time, a notch short so the parts overlap, and stops at a bound', () => {
+    expect(notchesPerViewport(1790)).toBe(36);
     expect(notchesPerViewport(40)).toBe(1);
-  });
-
-  test('knows which sidebar button a click lands on', () => {
-    const m = parseMeasure(report)!;
-    expect(buttonAt(clickFor('home', m.control!), m.buttons)).toBe('Home');
-    expect(buttonAt(clickFor('updates', m.control!), m.buttons)).toBe('Updates');
-    expect(buttonAt({ x: 10, y: 10 }, m.buttons)).toBeNull();
+    expect(MAX_PARTS).toBeGreaterThanOrEqual(4);
   });
 });
