@@ -30,6 +30,7 @@ import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
   positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+import { assistPresent } from '../second/tracked.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
@@ -257,9 +258,10 @@ export function trackPanel(name: string, frame: Rect): Item[] {
           // bar and the car settings page both apply to the same readings: SimHub normalises traction
           // control and ABS into `TCLevel` and `ABSLevel` and reports 0 for a car with neither, so a
           // cell drawn unconditionally says the dial is turned off where there is no dial. The test is
-          // the raw iRacing field behind each, which is absent rather than zero.
-          fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcTractionControl')) }),
-          fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcABS')) }),
+          // `assistPresent`, the one the bar's strip and the settings page read: the raw iRacing knob,
+          // or a level above zero, which is all a sim without the knob can say.
+          fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: assistPresent(raw('dcTractionControl'), game('TCLevel')) }),
+          fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: assistPresent(raw('dcABS'), game('ABSLevel')) }),
           fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
         ],
         right,

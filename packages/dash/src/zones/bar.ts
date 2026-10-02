@@ -7,13 +7,14 @@
  *
  * Two fields at each end, from a catalogue of ten, and the car settings strip between them. The
  * strip is the part worth care. It draws what the game exposes and hides what it does not, because
- * a strip drawing an empty box for a setting iRacing has no property for is worse than a narrower
+ * a strip drawing an empty box for a setting the sim has no property for is worse than a narrower
  * strip — and iRacing really does omit `dcTractionControl` and `dcABS` on cars without the
- * controls, which is what the `quali` capture scenario is for.
+ * controls, which is what the `quali` capture scenario is for. What says a car has a setting is
+ * `hasSetting` in `second/tracked.ts`, and nothing here second-guesses it.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withMoreBindings } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
@@ -23,7 +24,7 @@ import { mark, type Mark, unmarked } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { charsOfText, drawnFigure, drawnWithin, type DrawnFigure } from '../second/drawn.ts';
 import { rank, type RankMember } from '../second/rank.ts';
-import { TRACKED_VALUES } from '../second/tracked.ts';
+import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
@@ -222,8 +223,8 @@ interface StripCell {
   sample: string;
   expr: string;
   pattern: string;
-  /** What says the car has this setting; the value's own property when they are the same. */
-  present?: string;
+  /** True when the car has this setting: `hasSetting` of the tracked value, which is the one rule. */
+  present: Expr;
 }
 
 /** The strip, in the order the canvas draws it, under the strip's own names. */
@@ -233,7 +234,7 @@ export const STRIP_CELLS: readonly StripCell[] = TRACKED_VALUES.map((value) => (
   sample: value.sample,
   expr: value.read,
   pattern: value.pattern,
-  ...(value.present === undefined ? {} : { present: value.present }),
+  present: hasSetting(value),
 }));
 
 /**
@@ -445,7 +446,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   const strip = rank(
     STRIP_CELLS.map((cell) => {
       const w = stripCellWidth(cell, opts.scale);
-      const present = ncalc.not(ncalc.isNull(cell.present ?? cell.expr));
+      const present = cell.present;
       const name = `${prefix}strip.${cell.id}`;
       return {
         id: cell.id,

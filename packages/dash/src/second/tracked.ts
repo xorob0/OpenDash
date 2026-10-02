@@ -21,16 +21,17 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { absLevel, antiRollRear, brakeBias, fuelMixture, tcLevel } from './values.ts';
 
-const { game, raw } = ncalc;
+const { game, raw, isNull, isnull, not, or, gt, num } = ncalc;
 
 /**
  * One watched setting.
  *
- * `present` exists because for three of the seven the value and the evidence the car has the
- * control are not the same property: SimHub normalises traction control and ABS into `TCLevel` and
+ * `has` exists because for three of the seven the value and the evidence the car has the control
+ * are not the same property: SimHub normalises traction control and ABS into `TCLevel` and
  * `ABSLevel` and reports 0 for a car that has neither, which is indistinguishable from a driver who
  * has turned them off, and the brake bias's reading is already wrapped in a default so is never null
- * itself. The raw iRacing field behind each is simply absent on a car without the control.
+ * itself. It is a condition rather than a property to null-test, because for two of the three the
+ * answer is two properties, not one: see {@link assistPresent}.
  */
 export interface TrackedValue {
   id: string;
@@ -43,9 +44,38 @@ export interface TrackedValue {
   read: Expr;
   /** .NET format string the reading is written with. */
   pattern: string;
-  /** What says the car has this setting; the value's own property when they are the same. */
-  present?: Expr;
+  /** True when the car has this setting; the reading being published when nothing else says so. */
+  has?: Expr;
 }
+
+/**
+ * Whether the car has the setting, which is what every consumer asks before it draws or announces
+ * one: the strip hides a cell without it, the notification stays quiet.
+ */
+export const hasSetting = (value: TrackedValue): Expr => value.has ?? not(isNull(value.read));
+
+/**
+ * Present when the sim publishes the driver-adjustable control, or when SimHub has a level for it
+ * anyway.
+ *
+ * Two questions, because iRacing's `dcTractionControl` and `dcABS` answer "can the driver turn
+ * this knob", which is narrower than "does this car have the system". A car with fixed traction
+ * control publishes no knob, and the settings grid then drew no TC cell at all -- which reads as a
+ * car without traction control rather than one whose TC is not adjustable. Reported from a rig as
+ * the settings page maybe missing TC and ABS.
+ *
+ * SimHub's normalised `TCLevel` and `ABSLevel` are the second answer: zero for a car with neither,
+ * so a level above zero is a system that exists whether or not its knob does. Either signal shows
+ * the cell; neither still hides it, which is the rule the strip, the pit wall and the settings page
+ * are all built on.
+ *
+ * The second answer is also the only one a sim other than iRacing can give. The `dc*` knobs are
+ * iRacing's raw telemetry and exist nowhere else, so a strip that asked the knob alone showed an
+ * Assetto Corsa car its brake bias and hid its TC and ABS (#549). What that sim writes into the
+ * level, and from what, is #549's to measure; a level of zero there still hides the cell, which is
+ * honest where a zero drawn as a dial would not be.
+ */
+export const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(knob)), gt(isnull(level, num(0)), num(0)));
 
 /**
  * The seven, in the order the canvas draws the strip. Cut is `dcTractionControl2`, the second
@@ -66,10 +96,10 @@ export interface TrackedValue {
  */
 export const TRACKED_VALUES: readonly TrackedValue[] = [
   { id: 'slip', strip: 'Slip', notice: 'Slip', sample: '4', read: raw('dcThrottleShape'), pattern: '0' },
-  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), pattern: '0', present: raw('dcTractionControl') },
+  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), pattern: '0', has: assistPresent(raw('dcTractionControl'), tcLevel()) },
   { id: 'cut', strip: 'Cut', notice: 'TC cut', sample: '2', read: raw('dcTractionControl2'), pattern: '0' },
-  { id: 'bias', strip: 'Bias', notice: 'Brake bias', sample: '50.5', read: brakeBias(), pattern: '0.0', present: game('BrakeBias') },
-  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), pattern: '0', present: raw('dcABS') },
+  { id: 'bias', strip: 'Bias', notice: 'Brake bias', sample: '50.5', read: brakeBias(), pattern: '0.0', has: not(isNull(game('BrakeBias'))) },
+  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), pattern: '0', has: assistPresent(raw('dcABS'), absLevel()) },
   { id: 'map', strip: 'Map', notice: 'Engine map', sample: '1', read: fuelMixture(), pattern: '0' },
   { id: 'diff', strip: 'Diff', notice: 'Diff', sample: '4', read: antiRollRear(), pattern: '0' },
 ];
