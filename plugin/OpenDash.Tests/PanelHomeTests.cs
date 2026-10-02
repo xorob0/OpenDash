@@ -703,6 +703,11 @@ namespace OpenDashPlugin.Tests
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Outdated, null), "Update available", Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, true), "Showing", Theme.TextSecondary, Theme.StatusUpToDate);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, null), "Installed", Theme.TextSecondary, null);
+            // #642: a copy newer than this build's has no update to offer, and reads as a current one does.
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, true), "Showing", Theme.TextSecondary, Theme.StatusUpToDate);
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, null), "Installed", Theme.TextSecondary, null);
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, false), "Not selected in SimHub", Theme.Caution, Theme.Caution);
+            Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Newer, true), "Car's own rev lights · Car", Theme.TextSecondary, Theme.StatusUpToDate);
 
             // Not there: the LEDs card's Install press, in the secondary ink. A failed install is one that is not
             // installed, as the LEDs card says it: nothing Home reads ever reports Failed.

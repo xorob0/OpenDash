@@ -244,7 +244,7 @@ namespace OpenDashPlugin
             if (still != null) return PanelMessage.Caution(Checked + still.Title + ".");
             var profile = strip == null ? null : strip.Profile;
             if (profile == FlagBoxInstallState.NotEmbedded) return PanelMessage.Caution(Checked + CheckedNoProfile + StripName(strip, false) + ".");
-            var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            var installed = FlagBoxInstallPlan.InSimHub(profile ?? FlagBoxInstallState.NotInstalled);
             var missing = profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed;
             // SimHub's LED settings could not be read, or say nothing about this strip's profile.
             if (!installed && !missing) return PanelMessage.Caution(Checked + PanelLightRows.Unavailable);
@@ -532,7 +532,7 @@ namespace OpenDashPlugin
         public static HomeLine StripLine(bool live, string carName, FlagBoxInstallState? profile, bool? selected)
         {
             if (StripNotInstalledFor(profile)) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
-            var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            var installed = FlagBoxInstallPlan.InSimHub(profile ?? FlagBoxInstallState.NotInstalled);
             if (installed && selected == false) return new HomeLine(StripNotSelected, Theme.Caution, Theme.Caution);
             if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripUpdateAvailable, Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
             var dot = installed && selected == true ? Theme.StatusUpToDate : null;

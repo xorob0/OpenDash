@@ -169,6 +169,21 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelAttention.Find(input).Last().Detail);
         }
 
+        /// <summary>#642: a profile newer than this build's has nothing to update to, so Home files no item for it,
+        /// on a strip or on the flag box; one that is not selected is still named, as a current one is.</summary>
+        [Fact]
+        public void A_newer_profile_is_not_an_update()
+        {
+            var input = new AttentionInput { FlagBox = FlagBoxInstallState.Newer };
+            input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Newer, true));
+            input.Matrices.Add(new AttentionMatrix { Slot = 1, Name = "Flag box", Shown = true });
+            Assert.Empty(PanelAttention.Find(input));
+            Assert.False(PanelNav.Warns(PanelPage.Leds, PanelAttention.Find(input)));
+            Assert.False(PanelNav.Warns(PanelPage.Matrix, PanelAttention.Find(input)));
+            input.Strips[0].Selected = false;
+            Assert.Equal(new[] { PanelAttention.StripUnselected + input.Strips[0].Namespace }, PanelAttention.Find(input).Select(i => i.Id));
+        }
+
         [Fact]
         public void A_waiting_restart_outranks_the_offer_that_caused_it()
         {

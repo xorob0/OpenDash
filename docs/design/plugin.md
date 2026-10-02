@@ -454,8 +454,15 @@ Reinstall everything under it, the kept copies, and Support (`Updates` artboard)
 its version and state. An older light profile whose device SimHub lists gets a small Update press in
 its row, and Home's strip-update fix lands on the first row that offers one.
 
+**A light profile newer than this build** (a later OpenDash installed it and an earlier one is running)
+reads "Newer than this build" in the installed ink, with no Update press, and its hover names the
+version this build ships and the plugin's own update as the way forward. Home files no item for it.
+The versions are compared as versions, so 0.3.0-rc.10 is later than 0.3.0-rc.9 (#642).
+
 **Reinstall everything** installs every dashboard on the rig again, and each older or missing LED and
-matrix profile. A dashboard the driver edited is kept as a copy first.
+matrix profile. A dashboard the driver edited is kept as a copy first. A newer profile is left alone; the
+Matrix page's Reinstall is the one press that puts this build's older flag box profile over it, and only
+when the driver asks for it there.
 
 **The kept card** shows whenever a kept copy exists. Put mine back writes it back, and leaves a folder
 edited since as it is and says so, since putting back keeps no copy of what it replaces.
@@ -637,6 +644,7 @@ row names is in its built column.
 | Updates: "Repair everything" | "Reinstall everything" | the press reinstalls, and its hover and the Screens page say so; not yet ruled. `PanelConfirmation.ReinstallLabel` |
 | Screens: "In band D" | "Band D" | the zone's name as the picture draws it; not yet ruled. `PanelScreens.FlagLabels` |
 | Updates: "Car tables:" in the support report | "Lovely Car Data:" | one name for the data. `PanelUpdates.Report` |
+| Updates, Matrix: no state for a light profile newer than the plugin | "Newer than this build" on the Updates row and the Matrix line, with the hover "Update OpenDash to match it" and the version this build ships | no artboard draws the state; a press over it would go back a version (#642). `PanelCopy.NewerThanBuild`, `PanelCopy.NewerStep` |
 
 **Two groups carry two words each, as the artboards do**, and are left for the author since the canvas
 is theirs: the rig's night mode and brightness are "Lights" on Shortcuts (its rig group) and "Lighting"

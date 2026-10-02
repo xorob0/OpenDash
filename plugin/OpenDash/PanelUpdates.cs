@@ -868,7 +868,8 @@ namespace OpenDashPlugin
         /// and neither has one SimHub's LED settings hide, since the note under the table says why
         /// (PanelLightRows.Unavailable, TableNotes). An older profile names the version its Update brings, in
         /// the dashboard rows' form (BringsItTo), and leaves what the press costs to the press's own tooltip; a
-        /// missing one names the press on this page that installs it, whose own line then gives the select
+        /// newer one, which offers no press, names the version this build ships and the plugin's own update
+        /// (PanelCopy.NewerHover); a missing one names the press on this page that installs it, whose own line then gives the select
         /// step in the page's one form.
         /// </summary>
         public static string StripTooltip(FlagBoxPlan plan)
@@ -882,6 +883,8 @@ namespace OpenDashPlugin
                     return null;
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Newer:
+                    return PanelCopy.NewerHover(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Unavailable:
                     return null;
                 case FlagBoxInstallState.NotEmbedded:
@@ -917,8 +920,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, a missing one
-        /// names the press on this page, and a current one has none, as a current strip's has none. A failed
+        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, and so is a newer
+        /// one, a missing one names the press on this page, and a current one has none, as a current strip's has none. A failed
         /// one says where to look. One SimHub's matrix settings hide has none: the by-hand route under the
         /// table prints FlagBoxInstallPlan.Summary's sentence for it, and the hover would repeat it. The rest,
         /// a build with no profile among them, are FlagBoxInstallPlan.Summary's.
@@ -934,6 +937,8 @@ namespace OpenDashPlugin
                     return null;
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Newer:
+                    return PanelCopy.NewerHover(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Failed:
                     return LightFailed;
                 case FlagBoxInstallState.Unavailable:
@@ -1033,8 +1038,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether Reinstall everything writes a light profile SimHub holds in this state: an
         /// older one, and one that is missing or whose install failed. Never one that is current, since a
-        /// rewrite could only cost the edits made to it in SimHub, and never where SimHub cannot be reached
-        /// or the build carries no profile.
+        /// rewrite could only cost the edits made to it in SimHub, never one newer than this build's, which a
+        /// rewrite would put back a version (the Matrix page's Reinstall does, when the driver asks for that
+        /// one), and never where SimHub cannot be reached or the build carries no profile.
         /// </summary>
         public static bool BringsForward(FlagBoxInstallState state)
         {

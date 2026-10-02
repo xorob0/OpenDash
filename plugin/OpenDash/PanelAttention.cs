@@ -365,7 +365,7 @@ namespace OpenDashPlugin
 
         private static bool IsInstalled(FlagBoxInstallState? state)
         {
-            return state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
+            return state.HasValue && FlagBoxInstallPlan.InSimHub(state.Value);
         }
     }
 }
