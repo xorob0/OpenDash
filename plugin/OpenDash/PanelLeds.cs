@@ -453,14 +453,16 @@ namespace OpenDashPlugin
             return new[] { "Left" + Dot + Digits(ends), "Centre" + Dot + Digits(centre), "Right" + Dot + Digits(ends) };
         }
 
-        /// <summary>What a strip is set to that changes its picture: the full-strip spotter and the effects
-        /// it has switched off.</summary>
-        public static StripOptions OptionsFor(bool spotterWhole, IEnumerable<string> effectsOff)
+        /// <summary>What a strip is set to that changes its picture: the full-strip spotter, the effects it has
+        /// switched off, and its Centre display, whose stand-in PanelEmulation.StripFrame draws where the
+        /// centre does not show the revs.</summary>
+        public static StripOptions OptionsFor(bool spotterWhole, IEnumerable<string> effectsOff, string centre = null)
         {
             return new StripOptions
             {
                 SpotterWhole = spotterWhole,
                 EffectsOff = new HashSet<string>((effectsOff ?? Enumerable.Empty<string>()).Where(id => id != null), StringComparer.Ordinal),
+                Centre = centre,
             };
         }
 
@@ -473,45 +475,24 @@ namespace OpenDashPlugin
         /// draws: the car's lights are loaded and the strip uses them. Otherwise it is the strip at rest, since a
         /// picture of lights that are not lit is worse than none. Every other chip is PanelEmulation's rules.
         /// </remarks>
-        public static string[][] PreviewFrame(string scenario, int ends, int centre, StripOptions options, bool live, string packed, bool centreShowsRevs = true)
+        public static string[][] PreviewFrame(string scenario, int ends, int centre, StripOptions options, bool live, string packed)
         {
             if (scenario == LiveScenario || PanelEmulation.Find(scenario) == null)
             {
                 return live ? PanelEmulation.LiveFrame(packed, ends, centre) : PanelEmulation.StripFrame(ends, centre, PanelEmulation.Idle, options);
             }
-            return SpotterOnBareRun(CentreAtRest(PanelEmulation.StripFrame(ends, centre, scenario, options), scenario, centreShowsRevs), ends, scenario, options);
+            return PanelEmulation.StripFrame(ends, centre, scenario, options);
         }
 
-        /// <summary>
-        /// A car alongside on a strip with no ends: the whole run in the spotter's amber, for a side whose switch is
-        /// on, as the profile draws it (rpmStrip.ts takes the side role over the whole run where a shape has no
-        /// lamps). PanelEmulation.StripFrame lights a car alongside only on an end, so on a bare run it would draw
-        /// the moment as no car at all, and Spotter left and right would change nothing in the preview.
-        /// </summary>
-        private static string[][] SpotterOnBareRun(string[][] frame, int ends, string scenario, StripOptions options)
-        {
-            if (ends > 0 || frame == null || frame.Length != 1 || frame[0] == null) return frame;
-            options = options ?? StripOptions.Default;
-            var left = (scenario == PanelEmulation.CarLeft || scenario == PanelEmulation.CarBoth) && options.Draws(SpotterLeft);
-            var right = (scenario == PanelEmulation.CarRight || scenario == PanelEmulation.CarBoth) && options.Draws(SpotterRight);
-            if (!left && !right) return frame;
-            for (var i = 0; i < frame[0].Length; i++) frame[0][i] = Theme.Caution;
-            return frame;
-        }
-
-        /// <summary>The spotter's two effect ids, as Contract.LedEffects and the generator name them.</summary>
-        private const string SpotterLeft = "spotter.left";
-
-        private const string SpotterRight = "spotter.right";
-
-        /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on, in a centre that
-        /// shows them, while the strip is showing in SimHub (<see cref="CardLit"/>); every LED dark otherwise.</summary>
-        public static string[][] CardFrame(string shapeId, StripOptions options, bool centreShowsRevs = true, bool lit = true)
+        /// <summary>The frame a strip's card draws: the revs half way, as the Rig page opens on, in the centre the
+        /// strip's options say, while the strip is showing in SimHub (<see cref="CardLit"/>); every LED dark
+        /// otherwise.</summary>
+        public static string[][] CardFrame(string shapeId, StripOptions options, bool lit = true)
         {
             var ends = Ends(shapeId);
             var centre = Centre(shapeId);
             if (!lit) return ends > 0 ? new[] { new string[ends], new string[centre], new string[ends] } : new[] { new string[centre] };
-            return CentreAtRest(PanelEmulation.StripFrame(ends, centre, PanelEmulation.Mid, options), PanelEmulation.Mid, centreShowsRevs);
+            return PanelEmulation.StripFrame(ends, centre, PanelEmulation.Mid, options);
         }
 
         /// <summary>
@@ -528,35 +509,6 @@ namespace OpenDashPlugin
         public static bool CardLit(FlagBoxInstallState? profile, bool? selected)
         {
             return HeldInSimHub(profile) && selected == true;
-        }
-
-        /// <summary>Whether a strip's centre shows the revs (Centre display on RPM), which is the only centre the
-        /// profile draws the rev ladder in.</summary>
-        public static bool CentreShowsRevs(string centre)
-        {
-            return Contract.NormaliseLedCentre(centre) == Contract.DefaultLedCentre;
-        }
-
-        /// <summary>A moment that is the revs alone: the shift point, half way, and idle.</summary>
-        public static bool IsRevMoment(string scenario)
-        {
-            return scenario == PanelEmulation.Shift || scenario == PanelEmulation.Mid || scenario == PanelEmulation.Idle;
-        }
-
-        /// <summary>
-        /// A rev moment on a strip whose centre shows the brake, the pedals or the fuel: the centre at rest,
-        /// since the profile never draws the revs there. Its brake or fuel is not the moment's to draw.
-        /// </summary>
-        /// <remarks>
-        /// Only the rev moments: under a flag, a car alongside or the limiter, PanelEmulation.StripFrame draws
-        /// the revs under the effect in every centre, which is the emulation's to change (it is frozen here).
-        /// </remarks>
-        private static string[][] CentreAtRest(string[][] frame, string scenario, bool centreShowsRevs)
-        {
-            if (centreShowsRevs || !IsRevMoment(scenario) || frame == null || frame.Length == 0) return frame;
-            var middle = frame.Length == 3 ? 1 : 0;
-            frame[middle] = new string[frame[middle] == null ? 0 : frame[middle].Length];
-            return frame;
         }
 
         /// <summary>

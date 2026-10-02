@@ -69,13 +69,96 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Black)[0], led => Assert.Equal(Theme.FlagBlack, led));
         }
 
+        /// <summary>A bare run has no lamps, so rpmStrip.ts gives a flag and a car alongside the whole run (#523),
+        /// and a side whose switch is off lights nothing there.</summary>
         [Fact]
-        public void A_bare_run_carries_a_flag_across_itself_and_no_spotter()
+        public void A_bare_run_carries_a_flag_and_a_car_alongside_across_itself()
         {
             var flag = PanelEmulation.StripFrame(0, 15, PanelEmulation.Blue);
             Assert.Single(flag);
             Assert.All(flag[0], led => Assert.Equal(Theme.FlagBlue, led));
-            Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.CarLeft), PanelEmulation.StripFrame(0, 15, PanelEmulation.CarLeft)[0]);
+            foreach (var car in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
+            {
+                Assert.All(PanelEmulation.StripFrame(0, 15, car)[0], led => Assert.Equal(Theme.Caution, led));
+            }
+            var leftOff = new StripOptions();
+            leftOff.EffectsOff.Add("spotter.left");
+            Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.CarLeft), PanelEmulation.StripFrame(0, 15, PanelEmulation.CarLeft, leftOff)[0]);
+            Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarBoth, leftOff)[0], led => Assert.Equal(Theme.Caution, led));
+        }
+
+        /// <summary>Low fuel and the temperature warning light each side's car lamp, as lamps.ts places it, in
+        /// the fuel's low colour or the caution amber, only when the strip draws the effect; a bare run has no car
+        /// lamp (#523).</summary>
+        [Fact]
+        public void Low_fuel_and_a_hot_engine_light_the_car_lamp_of_each_side()
+        {
+            Assert.Equal(0, PanelEmulation.CarLamp(1));
+            Assert.Equal(1, PanelEmulation.CarLamp(2));
+            Assert.Equal(2, PanelEmulation.CarLamp(3));
+            Assert.Equal(2, PanelEmulation.CarLamp(4));
+            Assert.Equal(2, PanelEmulation.CarLamp(5));
+            var fuel = PanelEmulation.StripFrame(3, 9, PanelEmulation.LowFuel);
+            Assert.Equal(new[] { null, null, Theme.FuelLow }, fuel[0]);
+            Assert.Equal(new[] { Theme.FuelLow, null, null }, fuel[2]);
+            Assert.Equal(PanelEmulation.Revs(9, PanelEmulation.LowFuel), fuel[1]);
+            foreach (var hot in new[] { PanelEmulation.Oil, PanelEmulation.Water })
+            {
+                var two = PanelEmulation.StripFrame(2, 9, hot);
+                Assert.Equal(new[] { null, Theme.Caution }, two[0]);
+                Assert.Equal(new[] { Theme.Caution, null }, two[2]);
+                var one = PanelEmulation.StripFrame(1, 9, hot);
+                Assert.Equal(new[] { Theme.Caution }, one[0]);
+                Assert.Equal(new[] { Theme.Caution }, one[2]);
+            }
+            Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.LowFuel), PanelEmulation.StripFrame(0, 15, PanelEmulation.LowFuel)[0]);
+            var off = new StripOptions();
+            off.EffectsOff.Add("lowFuel");
+            off.EffectsOff.Add("temperature");
+            foreach (var id in new[] { PanelEmulation.LowFuel, PanelEmulation.Oil, PanelEmulation.Water })
+            {
+                var frame = PanelEmulation.StripFrame(3, 9, id, off);
+                Assert.All(frame[0].Concat(frame[2]), led => Assert.Null(led));
+            }
+        }
+
+        /// <summary>A centre whose Centre display is not the revs starts from its stand-in, never the rev ladder,
+        /// and the effects compose over it as over the revs (#523).</summary>
+        [Fact]
+        public void A_centre_that_is_not_the_revs_draws_its_stand_in_under_the_effects()
+        {
+            Assert.True(StripOptions.Default.CentreShowsRevs);
+            Assert.True(new StripOptions { Centre = Contract.RetiredLedCentre }.CentreShowsRevs);
+            foreach (var centre in Contract.LedCentres.Where(c => c != Contract.DefaultLedCentre))
+            {
+                var options = new StripOptions { Centre = centre };
+                Assert.False(options.CentreShowsRevs, centre);
+                foreach (var revs in new[] { PanelEmulation.Idle, PanelEmulation.Mid, PanelEmulation.Shift })
+                {
+                    var frame = PanelEmulation.StripFrame(3, 9, revs, options);
+                    Assert.Equal(PanelEmulation.Centre(9, revs, options), frame[1]);
+                    Assert.DoesNotContain(frame[1], led => led == Theme.ShiftStage1 || led == Theme.ShiftStage2 || led == Theme.ShiftStage3);
+                }
+                // A flag and speeding fill a bare run and the ends; the limiter alternates over the whole strip.
+                Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, options)[0], led => Assert.Equal(Theme.FlagYellow, led));
+                Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.Speeding, options)[0], led => Assert.Equal(Theme.Danger, led));
+                Assert.Equal(Theme.PitLimiter, PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, options)[1][0]);
+                Assert.Null(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, options)[1][1]);
+                // The full-strip spotter's half, over the stand-in.
+                var whole = new StripOptions { Centre = centre, SpotterWhole = true };
+                Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole)[1].Take(5), led => Assert.Equal(Theme.Caution, led));
+                Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarRight, options)[0], led => Assert.Equal(Theme.Caution, led));
+            }
+            // The brake bar at rest is dark; the throttle and brake bar keeps its standing mark on an odd run;
+            // the fuel gauge shows its last LED low only under Low fuel, and only where the strip draws it.
+            Assert.All(PanelEmulation.Centre(9, PanelEmulation.Mid, new StripOptions { Centre = "brake" }), led => Assert.Null(led));
+            Assert.Equal(new[] { null, null, null, null, Theme.TextPrimary, null, null, null, null }, PanelEmulation.Centre(9, PanelEmulation.Mid, new StripOptions { Centre = "throttleBrake" }));
+            Assert.All(PanelEmulation.Centre(8, PanelEmulation.Mid, new StripOptions { Centre = "throttleBrake" }), led => Assert.Null(led));
+            Assert.All(PanelEmulation.Centre(9, PanelEmulation.Mid, new StripOptions { Centre = "fuel" }), led => Assert.Null(led));
+            Assert.Equal(Theme.FuelLow, PanelEmulation.Centre(9, PanelEmulation.LowFuel, new StripOptions { Centre = "fuel" })[0]);
+            var noFuel = new StripOptions { Centre = "fuel" };
+            noFuel.EffectsOff.Add("lowFuel");
+            Assert.All(PanelEmulation.Centre(9, PanelEmulation.LowFuel, noFuel), led => Assert.Null(led));
         }
 
         [Fact]

@@ -962,33 +962,34 @@ namespace OpenDashPlugin.Tests
             return table;
         }
 
-        /// <summary>The Viewbox draws the preview and the card as they are, so a centre that does not show the
-        /// revs is at rest at the shift point and half way: the profile never draws the revs there.</summary>
+        /// <summary>The preview and the card carry the strip's Centre display in its options, and the emulation
+        /// draws a centre that does not show the revs as its stand-in at every moment (#523): the profile never
+        /// draws the revs there.</summary>
         [Fact]
         public void A_centre_that_is_not_the_revs_is_at_rest_at_a_rev_moment()
         {
             var options = PanelLeds.OptionsFor(false, null);
-            Assert.True(PanelLeds.CentreShowsRevs("rpm"));
-            Assert.True(PanelLeds.CentreShowsRevs(null));
-            Assert.False(PanelLeds.CentreShowsRevs("fuel"));
-            Assert.False(PanelLeds.CentreShowsRevs("brake"));
-            var shift = PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, options, false, null, false);
+            var fuel = PanelLeds.OptionsFor(false, null, "fuel");
+            Assert.True(options.CentreShowsRevs);
+            Assert.False(fuel.CentreShowsRevs);
+            Assert.False(PanelLeds.OptionsFor(false, null, "brake").CentreShowsRevs);
+            var shift = PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, fuel, false, null);
             Assert.All(shift[1], c => Assert.Null(c));
-            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift, options), PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, options, false, null, true));
-            Assert.All(PanelLeds.CardFrame("0-15-0", options, false)[0], c => Assert.Null(c));
-            Assert.Contains(PanelLeds.CardFrame("0-15-0", options, true)[0], c => c != null);
-            // Not a rev moment: the effect is drawn as the emulation draws it.
-            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, options), PanelLeds.PreviewFrame(PanelEmulation.Yellow, 0, 15, options, false, null, false));
-            Assert.True(PanelLeds.IsRevMoment(PanelEmulation.Mid));
-            Assert.False(PanelLeds.IsRevMoment(PanelEmulation.CarLeft));
+            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift, options), PanelLeds.PreviewFrame(PanelEmulation.Shift, 3, 9, options, false, null));
+            Assert.All(PanelLeds.CardFrame("0-15-0", fuel)[0], c => Assert.Null(c));
+            Assert.Contains(PanelLeds.CardFrame("0-15-0", options)[0], c => c != null);
+            // Under an effect the centre is the stand-in too, with the effect over it.
+            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.Yellow, 3, 9, fuel, false, null)[1], c => Assert.Null(c));
+            Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, fuel), PanelLeds.PreviewFrame(PanelEmulation.Yellow, 0, 15, fuel, false, null));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Equal(2, Occurrences(leds, "PanelLeds.CentreShowsRevs(Settings.BarCentre(ns))"));
+            Assert.Contains("return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace));", leds);
+            Assert.DoesNotContain("CentreShowsRevs", leds);
         }
 
         /// <summary>
         /// A car alongside on a bare run lights the whole run in the spotter's amber, for a side whose switch is on,
-        /// as the profile draws it (rpmStrip.ts takes the side role over the whole run where a shape has no lamps):
-        /// the emulation lights only an end, and a brow has none, so Car left drew the same frame as no car at all.
+        /// as the profile draws it (rpmStrip.ts takes the side role over the whole run where a shape has no lamps).
+        /// The emulation draws it since #523, so the preview is its frame as it is.
         /// </summary>
         [Fact]
         public void A_car_alongside_lights_a_bare_run_where_its_side_is_switched_on()
@@ -1012,6 +1013,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, on), PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 3, 9, on, false, null));
             // The card's rev moment on a bare run is untouched.
             Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Mid, on), PanelLeds.CardFrame("0-15-0", on));
+            foreach (var chip in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
+            {
+                Assert.Equal(PanelEmulation.StripFrame(0, 15, chip, leftOff), PanelLeds.PreviewFrame(chip, 0, 15, leftOff, false, null));
+            }
         }
 
         /// <summary>A card draws its strip lit only while SimHub shows the profile: a card that says it is not
@@ -1032,7 +1037,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(lit, PanelLeds.CardLit(profile, selected));
             var options = PanelLeds.OptionsFor(false, null);
-            var frame = PanelLeds.CardFrame("3-9-3", options, true, PanelLeds.CardLit(profile, selected));
+            var frame = PanelLeds.CardFrame("3-9-3", options, PanelLeds.CardLit(profile, selected));
             Assert.Equal(new[] { 3, 9, 3 }, frame.Select(group => group.Length));
             if (lit) Assert.Contains(frame.SelectMany(group => group), c => c != null);
             else Assert.All(frame.SelectMany(group => group), c => Assert.Null(c));
@@ -1041,11 +1046,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_dark_card_keeps_its_shape_and_the_page_passes_whether_it_is_lit()
         {
-            Assert.Equal(new[] { 15 }, PanelLeds.CardFrame("0-15-0", null, true, false).Select(group => group.Length));
-            Assert.Equal(PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null)), PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null), true, true));
+            Assert.Equal(new[] { 15 }, PanelLeds.CardFrame("0-15-0", null, false).Select(group => group.Length));
+            Assert.Equal(PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null)), PanelLeds.CardFrame("3-9-3", PanelLeds.OptionsFor(false, null), true));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             Assert.Contains("var lit = PanelLeds.CardLit(profile, selected);", leds);
-            Assert.Contains("PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)), lit)", leds);
+            Assert.Contains("PanelLeds.CardFrame(live.Shape, LedsOptions(live), lit)", leds);
         }
 
         [Fact]

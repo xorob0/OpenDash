@@ -46,6 +46,7 @@ namespace OpenDashPlugin
         public const string ShiftStage2 = "#FFB300"; // purpose.shift.stage2
         public const string ShiftStage3 = "#FF2D46"; // purpose.shift.stage3
         public const string ShiftUnlit = "#33383F"; // purpose.shift.unlit
+        public const string FuelLow = "#FF2D46"; // purpose.fuel.low
 
         // The panel's own second shades: the border of a fix box, the ink of a destructive press, and the
         // tag a new control carries for one release.

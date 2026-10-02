@@ -62,6 +62,16 @@ namespace OpenDashPlugin
         /// <summary>The effect ids (Contract.LedEffects) the strip does not draw.</summary>
         public ISet<string> EffectsOff { get; set; }
 
+        /// <summary>What the strip's centre shows, one of Contract.LedCentres (OpenDashSettings.BarCentre); null
+        /// reads as the revs, the default. Only the revs centre draws the rev ladder.</summary>
+        public string Centre { get; set; }
+
+        /// <summary>Whether the centre carries the rev ladder: its Centre display is the revs.</summary>
+        public bool CentreShowsRevs
+        {
+            get { return Contract.NormaliseLedCentre(Centre) == Contract.DefaultLedCentre; }
+        }
+
         public static readonly StripOptions Default = new StripOptions();
 
         public bool Draws(string effectId)
@@ -371,12 +381,23 @@ namespace OpenDashPlugin
         /// centre alone on a bare run.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// Rig.dc.html's rules: a flag fills the ends, a car alongside lights its own side's end (both ends
         /// for both, and the whole strip on that side's half with the full-strip spotter), the limiter
         /// alternates every LED, speeding reddens the ends, and the centre carries the revs. A bare run
-        /// carries flags and the pit lane across itself and no spotter, which is what the generator draws
-        /// there (rpmStrip.ts); the artboard's brow leaves the flag off and is wrong about it. An effect the
-        /// strip has switched off is not drawn.
+        /// carries flags and the pit lane across itself, which is what the generator draws there
+        /// (rpmStrip.ts); the artboard's brow leaves the flag off and is wrong about it. An effect the strip
+        /// has switched off is not drawn.
+        /// </para>
+        /// <para>
+        /// Where the generator differs from the artboard, the generator wins (#523). A bare run has no lamps,
+        /// so a car alongside takes the whole run (rpmStrip.ts gives the side role the run where a shape has
+        /// none). Low fuel and the temperature warning light each side's car lamp, the LED lampsForSide gives
+        /// the car's own warnings (the one LED of a one-LED side, the inner of two, the third from the
+        /// outside of three or more), in the fuel's low colour or the caution amber; a bare run has no car
+        /// lamp and shows neither. A centre whose Centre display is not the revs (StripOptions.Centre) starts
+        /// from its stand-in rather than the rev ladder, and every effect composes over it as over the revs.
+        /// </para>
         /// </remarks>
         public static string[][] StripFrame(int ends, int centre, string scenarioId, StripOptions options = null)
         {
@@ -384,7 +405,7 @@ namespace OpenDashPlugin
             ends = Math.Max(0, ends);
             var left = new string[ends];
             var right = new string[ends];
-            var middle = Revs(centre, scenarioId);
+            var middle = Centre(centre, scenarioId, options);
             var effect = EffectOf(scenarioId);
             var draws = effect == null || options.Draws(effect);
 
@@ -394,7 +415,13 @@ namespace OpenDashPlugin
                 if (ends > 0) { Fill(left, colour); Fill(right, colour); }
                 else Fill(middle, colour);
             }
-            else if (ends > 0 && (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth))
+            else if (ends == 0 && (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth))
+            {
+                var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
+                var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
+                if (lightLeft || lightRight) Fill(middle, Theme.Caution);
+            }
+            else if (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth)
             {
                 var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
                 var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
@@ -422,8 +449,44 @@ namespace OpenDashPlugin
                 if (ends > 0) { Fill(left, Theme.Danger); Fill(right, Theme.Danger); }
                 else Fill(middle, Theme.Danger);
             }
+            else if ((scenarioId == LowFuel || scenarioId == Oil || scenarioId == Water) && draws && ends > 0)
+            {
+                var lamp = CarLamp(ends);
+                var colour = scenarioId == LowFuel ? Theme.FuelLow : Theme.Caution;
+                left[lamp] = colour;
+                right[ends - 1 - lamp] = colour;
+            }
 
             return ends > 0 ? new[] { left, middle, right } : new[] { middle };
+        }
+
+        /// <summary>
+        /// Which LED of an end, counted from the outside, is the car lamp, which carries the car's own
+        /// warnings: lampsForSide's (lamps.ts) "car" role, shared with the side and race roles on a one-LED
+        /// side, with the race role on a two-LED side, and the third lamp of every longer side.
+        /// </summary>
+        public static int CarLamp(int ends)
+        {
+            return Math.Max(0, Math.Min(ends - 1, 2));
+        }
+
+        /// <summary>
+        /// A centre before any effect is drawn over it: the rev ladder where its Centre display is the revs,
+        /// and otherwise a stand-in for what it shows, which the emulation has no value for. A brake bar is dark,
+        /// the pedals at rest; the throttle and brake bar lights only its standing mark, the middle LED of an
+        /// odd run, which the profile lights always; the fuel gauge is dark except under Low fuel, where the
+        /// tank's last LED is lit in the low colour, as the gauge blinks there (rpmStrip.ts fuelBar), when
+        /// the strip draws Low fuel.
+        /// </summary>
+        public static string[] Centre(int count, string scenarioId, StripOptions options = null)
+        {
+            options = options ?? StripOptions.Default;
+            if (options.CentreShowsRevs) return Revs(count, scenarioId);
+            var leds = new string[Math.Max(0, count)];
+            var shows = Contract.NormaliseLedCentre(options.Centre);
+            if (shows == "throttleBrake" && leds.Length % 2 == 1) leds[leds.Length / 2] = Theme.TextPrimary;
+            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = Theme.FuelLow;
+            return leds;
         }
 
         /// <summary>The width of one colour in a packed run: "#AARRGGBB".</summary>

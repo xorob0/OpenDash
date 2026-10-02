@@ -459,8 +459,8 @@ namespace OpenDashPlugin.Tests
             // included, which needs the scenario.
             var picture = RigMethod("private FrameworkElement BuildRigPicture(");
             InOrder(picture,
-                "var strip = PanelRigMap.StripOptionsFor(bar);",
-                "PanelRigMap.StripPicture(PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, strip), PanelRigMap.StripCentreDisplay(Settings, bar), scenario, strip)",
+                "var strip = PanelRigMap.StripOptionsFor(Settings, bar);",
+                "var frame = PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, strip);",
                 "Ui.Strip(frame, StripStyle.Rig, RigLights())",
                 "PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario)",
                 "Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, scenario, options), MatrixStyle.Rig, RigLights())");
@@ -1977,6 +1977,9 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelRigMap.MatrixOptionsFor(settings, 2).Flags);
         }
 
+        /// <summary>A strip's tile carries its Centre display into the emulation, which draws a centre that is not
+        /// the revs as its stand-in (PanelEmulationTests holds the stand-ins); the page no longer takes the rev
+        /// ladder out of a frame after the fact (#523).</summary>
         [Fact]
         public void A_strip_whose_centre_is_not_the_revs_draws_no_rev_lights_there()
         {
@@ -1984,98 +1987,20 @@ namespace OpenDashPlugin.Tests
             var wheel = settings.LedBarByNamespace("LedWheelRim");
             Assert.Equal(Contract.DefaultLedCentre, PanelRigMap.StripCentreDisplay(settings, wheel));
             Assert.Equal(Contract.DefaultLedCentre, PanelRigMap.StripCentreDisplay(null, wheel));
-            Assert.True(PanelRigMap.StripCentreShowsRevs(null));
-            // The retired "rpmOnly" was the revs.
-            Assert.True(PanelRigMap.StripCentreShowsRevs(Contract.RetiredLedCentre));
-            var shift = PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift);
-            Assert.Same(shift, PanelRigMap.StripPicture(shift, Contract.DefaultLedCentre, PanelEmulation.Shift));
+            Assert.True(PanelRigMap.StripOptionsFor(settings, wheel).CentreShowsRevs);
+            Assert.Equal(PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift), PanelEmulation.StripFrame(3, 9, PanelEmulation.Shift, PanelRigMap.StripOptionsFor(settings, wheel)));
             wheel.Centre = "fuel";
             Assert.Equal("fuel", PanelRigMap.StripCentreDisplay(settings, wheel));
-
-            var whole = new StripOptions { SpotterWhole = true };
-            foreach (var centre in Contract.LedCentres.Where(c => c != Contract.DefaultLedCentre))
+            var options = PanelRigMap.StripOptionsFor(settings, wheel);
+            Assert.Equal("fuel", options.Centre);
+            Assert.False(options.CentreShowsRevs);
+            Assert.Equal(PanelRigMap.StripOptionsFor(wheel).SpotterWhole, options.SpotterWhole);
+            Assert.Equal(PanelRigMap.StripOptionsFor(wheel).EffectsOff, options.EffectsOff);
+            foreach (var revs in new[] { PanelEmulation.Idle, PanelEmulation.Mid, PanelEmulation.Shift })
             {
-                Assert.False(PanelRigMap.StripCentreShowsRevs(centre), centre);
-                // The revs chips light nothing in the centre, on either shape, and leave the ends as they were.
-                foreach (var revs in new[] { PanelEmulation.Idle, PanelEmulation.Mid, PanelEmulation.Shift })
-                {
-                    var frame = PanelEmulation.StripFrame(3, 9, revs);
-                    var picture = PanelRigMap.StripPicture(frame, centre, revs);
-                    Assert.All(picture[1], led => Assert.Null(led));
-                    Assert.Equal(frame[0], picture[0]);
-                    Assert.Equal(frame[2], picture[2]);
-                    Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(0, 15, revs), centre, revs)[0], led => Assert.Null(led));
-                }
-
-                // What an effect puts over any centre stays: a bare run's flag and speeding fill, all of it.
-                foreach (var scenario in PanelEmulation.Scenarios().Select(s => s.Id).Where(id => PanelEmulation.IsFlag(id) || id == PanelEmulation.Speeding))
-                {
-                    var brow = PanelRigMap.StripPicture(PanelEmulation.StripFrame(0, 15, scenario), centre, scenario)[0];
-                    var colour = scenario == PanelEmulation.Speeding ? Theme.Danger : PanelEmulation.FlagColour(scenario);
-                    Assert.All(brow, led => Assert.Equal(colour, led));
-                    // On a strip with ends they fill the ends, and the centre is dark.
-                    var rim = PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, scenario), centre, scenario);
-                    Assert.All(rim[0], led => Assert.Equal(colour, led));
-                    Assert.All(rim[1], led => Assert.Null(led));
-                }
-                // The limiter across the whole run, the centre included, alternating as the frame has it.
-                var limiter = PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter);
-                Assert.Equal(limiter, PanelRigMap.StripPicture(limiter, centre, PanelEmulation.Limiter));
-                Assert.Equal(Theme.PitLimiter, limiter[1][0]);
-                var browLimiter = PanelEmulation.StripFrame(0, 15, PanelEmulation.Limiter);
-                Assert.Equal(browLimiter, PanelRigMap.StripPicture(browLimiter, centre, PanelEmulation.Limiter));
-                // The full-strip spotter's half, and nothing on the other half; without it the centre is dark.
-                var left = PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole), centre, PanelEmulation.CarLeft, whole)[1];
-                Assert.Equal(new[] { Theme.Caution, Theme.Caution, Theme.Caution, Theme.Caution, Theme.Caution, null, null, null, null }, left);
-                var right = PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarRight, whole), centre, PanelEmulation.CarRight, whole)[1];
-                Assert.Equal(new[] { null, null, null, null, Theme.Caution, Theme.Caution, Theme.Caution, Theme.Caution, Theme.Caution }, right);
-                Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarBoth, whole), centre, PanelEmulation.CarBoth, whole)[1], led => Assert.Equal(Theme.Caution, led));
-                Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft), centre, PanelEmulation.CarLeft)[1], led => Assert.Null(led));
-                // An effect the strip has switched off lights nothing, so the centre is dark under it.
-                var noFlags = new StripOptions();
-                noFlags.EffectsOff.Add("flag.yellow");
-                Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, noFlags), centre, PanelEmulation.Yellow, noFlags)[0], led => Assert.Null(led));
-                var noLimiter = new StripOptions();
-                noLimiter.EffectsOff.Add("pit.limiter");
-                Assert.All(PanelRigMap.StripPicture(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, noLimiter), centre, PanelEmulation.Limiter, noLimiter)[1], led => Assert.Null(led));
+                Assert.All(PanelEmulation.StripFrame(3, 9, revs, options)[1], led => Assert.Null(led));
             }
-
-            // Held to StripFrame: over every shape, scenario and switch, an LED the picture darkens is one the
-            // rev ladder lit, and an LED it keeps is kept as the frame drew it.
-            var variants = new List<StripOptions> { new StripOptions(), whole };
-            foreach (var effect in Contract.LedEffectIds())
-            {
-                var off = new StripOptions { SpotterWhole = true };
-                off.EffectsOff.Add(effect);
-                variants.Add(off);
-            }
-            foreach (var shape in new[] { new[] { 0, 15 }, new[] { 3, 9 }, new[] { 4, 12 }, new[] { 2, 7 } })
-            {
-                foreach (var scenario in PanelEmulation.Scenarios().Select(s => s.Id))
-                {
-                    foreach (var options in variants)
-                    {
-                        var frame = PanelEmulation.StripFrame(shape[0], shape[1], scenario, options);
-                        var c = shape[0] > 0 ? 1 : 0;
-                        var picture = PanelRigMap.StripPicture(frame, "brake", scenario, options);
-                        var revs = PanelEmulation.Revs(shape[1], scenario);
-                        var label = shape[0] + "-" + shape[1] + " " + scenario;
-                        for (var i = 0; i < shape[1]; i++)
-                        {
-                            if (picture[c][i] != frame[c][i]) Assert.Equal(revs[i], frame[c][i]);
-                            // Either kept as the frame drew it, or dark.
-                            Assert.True(picture[c][i] == null || picture[c][i] == frame[c][i], label);
-                        }
-                        // An effect that drew nothing over the centre leaves it as the revs, all of which go.
-                        if (frame[c].SequenceEqual(revs)) Assert.All(picture[c], led => Assert.Null(led));
-                    }
-                }
-            }
-
-            // The frame it was given is left as it was.
-            PanelRigMap.StripPicture(shift, "brake", PanelEmulation.Shift);
-            Assert.All(shift[1], led => Assert.Equal(Theme.ShiftStage3, led));
-            Assert.Null(PanelRigMap.StripPicture(null, "brake", PanelEmulation.Shift));
+            Assert.DoesNotContain("StripPicture", RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelRigMap.cs")));
         }
 
         [Fact]

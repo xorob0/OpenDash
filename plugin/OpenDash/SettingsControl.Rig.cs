@@ -605,8 +605,8 @@ namespace OpenDashPlugin
             {
                 case RigTileKind.Strip:
                     var bar = Settings.LedBarByNamespace(tile.Key);
-                    var strip = PanelRigMap.StripOptionsFor(bar);
-                    var frame = PanelRigMap.StripPicture(PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, strip), PanelRigMap.StripCentreDisplay(Settings, bar), scenario, strip);
+                    var strip = PanelRigMap.StripOptionsFor(Settings, bar);
+                    var frame = PanelEmulation.StripFrame(PanelRigMap.StripEnds(bar), PanelRigMap.StripCentre(bar), scenario, strip);
                     return Ui.Strip(frame, StripStyle.Rig, RigLights());
                 case RigTileKind.Matrix:
                     var options = PanelRigMap.MatrixOptionsFor(Settings, PanelRigMap.MatrixSlot(tile), scenario);

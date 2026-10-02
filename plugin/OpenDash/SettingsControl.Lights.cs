@@ -100,7 +100,7 @@ namespace OpenDashPlugin
         /// <summary>What a strip is set to that changes its picture.</summary>
         private StripOptions LedsOptions(LedBar bar)
         {
-            return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff);
+            return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace));
         }
 
         // --- The cards ----------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ namespace OpenDashPlugin
                 Action paint = () =>
                 {
                     var live = Settings.LedBarByNamespace(ns) ?? bar;
-                    picture = Ui.Strip(PanelLeds.CardFrame(live.Shape, LedsOptions(live), PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)), lit), StripStyle.Card, LedsDim(ns));
+                    picture = Ui.Strip(PanelLeds.CardFrame(live.Shape, LedsOptions(live), lit), StripStyle.Card, LedsDim(ns));
                     fitted.Child = picture;
                 };
                 paint();
@@ -427,8 +427,7 @@ namespace OpenDashPlugin
                 var live = Settings.LedBarByNamespace(ns) ?? bar;
                 var lights = plugin.CarLights;
                 var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));
-                var frame = PanelLeds.PreviewFrame(ledsScenario, ends, centre, LedsOptions(live), running, running ? lights.Run(centre) : null,
-                    PanelLeds.CentreShowsRevs(Settings.BarCentre(ns)));
+                var frame = PanelLeds.PreviewFrame(ledsScenario, ends, centre, LedsOptions(live), running, running ? lights.Run(centre) : null);
                 var key = PanelLeds.FrameKey(frame);
                 if (key == drawn) return;
                 drawn = key;
