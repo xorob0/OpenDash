@@ -200,8 +200,10 @@ namespace OpenDashPlugin
             TextBlock hint = null;
             if (tiles.Count == 0)
             {
-                var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);
-                screensPress.Click += (sender, args) => Go(PanelPage.Screens);
+                // The way out Home's empty-rig tile offers, in its words: the Screens page's add tile, which opens
+                // the Add sheet on arrival (#523), rather than the page with the tile still to find.
+                var screensPress = Ui.Button(PanelAddScreen.SectionTitle, PanelButtonKind.Outline, PanelButtonSize.Small);
+                screensPress.Click += (sender, args) => Go(PanelPage.Screens, PanelScreens.AnchorAdd);
                 var empty = Ui.HStack(PanelRigMap.EmptyGap, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);
                 Canvas.SetLeft(empty, PanelRigMap.LayoutMargin);
                 Canvas.SetTop(empty, PanelRigMap.LayoutMargin);

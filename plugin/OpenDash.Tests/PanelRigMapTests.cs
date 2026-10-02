@@ -318,12 +318,12 @@ namespace OpenDashPlugin.Tests
             InOrder(RigMethod("private void RigKeepScroll("), "var restore = rigScrollX;", "scroller.Loaded +=", "scroller.ScrollToHorizontalOffset(restore);", "scroller.ScrollChanged +=", "if (!restored || !extent.Live) return;", "rigScrollX = scroller.HorizontalOffset;");
             Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
             InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
-            // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
-            // the frame's lower left, wherever the room is drawn, and under the tiles.
+            // The empty rig's press opens the Add sheet on Screens in the add tile's words, as Home's empty-rig
+            // tile does; the hint is in the frame's lower left, wherever the room is drawn, and under the tiles.
             InOrder(canvas,
                 "if (tiles.Count == 0)",
-                "Ui.Button(PanelAttention.Open(PanelScreens.Title),",
-                "screensPress.Click += (sender, args) => Go(PanelPage.Screens);",
+                "Ui.Button(PanelAddScreen.SectionTitle,",
+                "screensPress.Click += (sender, args) => Go(PanelPage.Screens, PanelScreens.AnchorAdd);",
                 "canvas.Children.Add(empty);",
                 "hint = Ui.Text(PanelRigMap.CanvasHint,",
                 "hint.HorizontalAlignment = HorizontalAlignment.Left;",
@@ -758,7 +758,7 @@ namespace OpenDashPlugin.Tests
                 "var label = Ui.Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);",
                 "label.VerticalAlignment = VerticalAlignment.Center;");
             InOrder(RigMethod("private FrameworkElement BuildRigCanvas("),
-                "var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "var screensPress = Ui.Button(PanelAddScreen.SectionTitle, PanelButtonKind.Outline, PanelButtonSize.Small);",
                 "var empty = Ui.HStack(PanelRigMap.EmptyGap, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);",
                 "Canvas.SetLeft(empty, PanelRigMap.LayoutMargin);",
                 "Canvas.SetTop(empty, PanelRigMap.LayoutMargin);",
