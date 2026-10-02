@@ -848,13 +848,17 @@ describe('what the face does with a field that is not there', () => {
     }
   });
 
-  test("the strip asks the property that says the car has the setting, not the one it reads", () => {
+  test("the strip asks what says the car has the setting, not only the property it reads", () => {
     // SimHub reports TCLevel 0 for a car with no traction control at all, which is what a driver
     // who has turned it off also sees. The raw dc field is absent on the car that has none, and
-    // that is the difference between a cell drawn as OFF and a cell that is not there.
+    // that is the difference between a cell drawn as OFF and a cell that is not there. The knob is
+    // iRacing's alone, though, so a level above zero is the second signal: it is what shows the
+    // cell on a car with fixed traction control, and on a sim that publishes no knob at all (#549).
     const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480), scale: zoneFace1920x480.bar! }));
     const tc = items.find((i) => i.name === 'bar.strip.tc.value')!;
-    expect(bound(tc, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))');
+    expect(bound(tc, 'Visible')).toBe(
+      '(!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))',
+    );
     expect(bound(tc, 'Text')).toContain('[DataCorePlugin.GameData.TCLevel]');
   });
 
