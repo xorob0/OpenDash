@@ -23,7 +23,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Updates", PanelUpdates.Title);
             Assert.Equal("You have", PanelUpdates.YouHave);
-            Assert.Equal("Restart SimHub to finish updating. Your settings are kept.", PanelUpdates.RestartNote);
+            Assert.Equal("Needs a SimHub restart. Your settings are kept.", PanelUpdates.RestartNote);
             Assert.Equal("Release notes", PanelUpdates.ReleaseNotesTitle);
             Assert.Equal("Every release on GitHub", PanelUpdates.EveryRelease);
             Assert.Equal("Check for updates", PanelUpdates.CheckTitle);
@@ -140,6 +140,19 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelUpdates.CardNote(UpdatesCard.Downloading, null));
             Assert.Equal(UpdateWording.RestartLater, PanelUpdates.CardNote(UpdatesCard.Staged, "0.5.1"));
             Assert.Null(PanelUpdates.CardNote(UpdatesCard.None, "0.5.1"));
+        }
+
+        /// <summary>An offer says what the update costs; only a downloaded one says to restart. A driver who
+        /// restarted on the offer's words before pressing Download would finish nothing, so the step "Restart
+        /// SimHub to finish updating" belongs to the Staged card and Home's restart issue alone.</summary>
+        [Fact]
+        public void Only_a_downloaded_update_says_to_restart()
+        {
+            var offer = PanelUpdates.CardNote(UpdatesCard.Available, "0.5.1");
+            Assert.DoesNotContain(UpdateWording.RestartTitle, offer);
+            Assert.DoesNotContain("Restart SimHub", offer);
+            Assert.Contains(UpdateWording.RestartTitle, PanelUpdates.CardNote(UpdatesCard.Staged, "0.5.1"));
+            Assert.Contains(UpdateWording.RestartTitle, UpdateWording.RestartLater);
         }
 
         /// <summary>The card says "You have" only beside a version it knows, and heads its foot "Release notes"

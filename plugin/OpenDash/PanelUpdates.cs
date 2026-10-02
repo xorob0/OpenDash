@@ -239,8 +239,11 @@ namespace OpenDashPlugin
             return !string.IsNullOrWhiteSpace(rigVersion);
         }
 
-        /// <summary>Under the heading of an offer. OpenDash has no presets, and the step is what is said.</summary>
-        public const string RestartNote = "Restart SimHub to finish updating. Your settings are kept.";
+        /// <summary>Under the heading of an offer: what taking it will cost, said as a fact. Nothing is downloaded
+        /// yet, so restarting now finishes nothing; "Restart SimHub to finish updating" is the next state's step
+        /// (the Staged card's UpdateWording.RestartLater, Home's restart issue), never the offer's. OpenDash has
+        /// no presets.</summary>
+        public const string RestartNote = "Needs a SimHub restart. Your settings are kept.";
 
         public const string ReleaseNotesTitle = "Release notes";
 
