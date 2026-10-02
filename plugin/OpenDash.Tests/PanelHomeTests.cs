@@ -1140,7 +1140,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("foreach (var slot in matrices) {", code);
             Assert.Contains("} return facts; }", code);
             // An issue's press is an outline press: one Primary per page, and there may be several issues.
-            Assert.Contains("var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);", code);
+            Assert.Contains("var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline, trims: true);", code);
             Assert.DoesNotContain("PanelButtonKind.Primary", code);
             // A device row: padded, ruled on top, its content stretched so the dot sits at the right edge, the
             // hand, the kit's focus ring, and the template whose chrome takes the hover ground.
@@ -1297,7 +1297,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DockPanel.SetDock(figure, Dock.Right); dock.Children.Add(figure);", code);
             Assert.Contains("title.TextWrapping = TextWrapping.Wrap; title.VerticalAlignment = VerticalAlignment.Center; dock.Children.Add(title);", code);
             Assert.DoesNotContain("title.TextTrimming", code);
-            Assert.Contains("press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis }; press.Click += (sender, args) => HomeAct(issue);", code);
+            Assert.Contains("var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline, trims: true); press.Click += (sender, args) => HomeAct(issue);", code);
+            Assert.DoesNotContain("press.Content =", code);
             Assert.DoesNotContain("press.ToolTip", code);
             Assert.Contains("if (beside) { press.VerticalAlignment = align; press.MaxWidth = PanelHome.PressMaxWidth; press.Margin = new Thickness(PanelHome.IconGap, 0, 0, 0); DockPanel.SetDock(press, Dock.Right); dock.Children.Add(press); dock.Children.Add(text); } else { press.HorizontalAlignment = HorizontalAlignment.Left; press.Margin = new Thickness(0, PanelHome.StepsGap, 0, 0); text.Children.Add(press); dock.Children.Add(text); }", code);
             Assert.Contains("rows.Add(HomeRow(Ui.VStack(0, top, host, strip.Line), bar.Name, () => Open(PanelPage.Leds, ns)));", code);

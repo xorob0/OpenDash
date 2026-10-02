@@ -314,9 +314,11 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The label is the button's own content when it carries no icon, so a caller that rewrites it for
-        /// the length of a run keeps the face; with an icon it is a row of the two.
+        /// the length of a run keeps the face; with an icon it is a row of the two. A label neither wraps nor
+        /// trims, unless <paramref name="trims"/> asks for it: then it is a text that ends in an ellipsis where
+        /// the press is capped narrower than its words (a name the driver typed, which nothing caps).
         /// </remarks>
-        public static Button Button(string text, PanelButtonKind kind = PanelButtonKind.Outline, PanelButtonSize size = PanelButtonSize.Regular, string iconPath = null)
+        public static Button Button(string text, PanelButtonKind kind = PanelButtonKind.Outline, PanelButtonSize size = PanelButtonSize.Regular, string iconPath = null, bool trims = false)
         {
             double height, padding, font;
             switch (size)
@@ -365,9 +367,11 @@ namespace OpenDashPlugin
                 Cursor = Cursors.Hand,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Content = iconPath == null
-                    ? (object)text
-                    : HStack(8, NavIcon(iconPath, ink, 16), Text(text, font, FontWeights.Medium, ink)),
+                Content = iconPath != null
+                    ? HStack(8, NavIcon(iconPath, ink, 16), Text(text, font, FontWeights.Medium, ink))
+                    : trims
+                        ? new TextBlock { Text = text, TextTrimming = TextTrimming.CharacterEllipsis }
+                        : (object)text,
                 Template = ButtonTemplate(hover, false),
                 FocusVisualStyle = FocusRing(),
             };

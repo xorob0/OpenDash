@@ -158,12 +158,11 @@ namespace OpenDashPlugin
                 text.Children.Add(steps);
             }
 
-            var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);
             // "Open " and a name the driver typed, which nothing caps: the label trims, at PressMaxWidth beside
             // the text and at its column under it, rather than losing its end and its right border or taking
             // the title's room. No hover: the title, which wraps, is where the whole name is read, and a hover
             // that repeats the label says nothing (voice.md).
-            press.Content = new TextBlock { Text = issue.ActionLabel, TextTrimming = TextTrimming.CharacterEllipsis };
+            var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline, trims: true);
             press.Click += (sender, args) => HomeAct(issue);
 
             var dock = new DockPanel { LastChildFill = true };

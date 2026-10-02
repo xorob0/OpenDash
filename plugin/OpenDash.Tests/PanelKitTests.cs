@@ -290,6 +290,16 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Brush(hex ?? style.UnlitHex); } return true; }", flat);
         }
 
+        /// <summary>A press's label neither wraps nor trims unless the caller asks it to trim, and then it is a
+        /// text ending in an ellipsis, so no page sets its own content to cap a name (#523).</summary>
+        [Fact]
+        public void A_press_trims_its_label_only_when_asked()
+        {
+            var button = Regex.Replace(Factory("Button"), @"\s+", " ");
+            Assert.Contains("string iconPath = null, bool trims = false)", button);
+            Assert.Contains(": trims ? new TextBlock { Text = text, TextTrimming = TextTrimming.CharacterEllipsis } : (object)text,", button);
+        }
+
         /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
         private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 
