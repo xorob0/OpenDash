@@ -13,17 +13,31 @@
  * they are. Its name is the package's own name, because SimHub lists a dashboard by its title and
  * `bun run shots` finds it by that.
  *
+ * Every write deletes SimHub's copies of the settings file as well. `ReadCommonSettings` falls back
+ * to `PluginsData\Common\_Backups\OpenDash.GeneralSettings_b1.json` and on through `_b5` whenever the
+ * file itself cannot be read (docs/research/simhub-plugin-sdk.md, Settings), so a copy left behind is
+ * an older rig waiting to come back the first time anything goes wrong with the one written here.
+ *
  *   bun scripts/rig.ts show       # what is on the rig now
  *   bun scripts/rig.ts gallery    # the rig the website's captures are taken on
- *   bun scripts/rig.ts clear      # back to one screen, as a first run leaves it
+ *   bun scripts/rig.ts panel      # the rig the settings panel's captures are taken on
+ *   bun scripts/rig.ts clear      # back to no screens, keeping every other setting
+ *   bun scripts/rig.ts empty      # a first run: no settings at all and no OpenDash dashboards
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
-import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, toShare, type Host, type RunResult } from './vm.ts';
+import { GRID_SHAPES, shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
+import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, sleep, toShare, type Host, type RunResult } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
-const SETTINGS = 'C:\\Program Files (x86)\\SimHub\\PluginsData\\Common\\OpenDash.GeneralSettings.json';
+const SIMHUB_DIR = 'C:\\Program Files (x86)\\SimHub';
+const COMMON = `${SIMHUB_DIR}\\PluginsData\\Common`;
+const SETTINGS = `${COMMON}\\OpenDash.GeneralSettings.json`;
+/** Where SimHub keeps the rolling copies it restores the settings from: `_b1` to `_b10`. */
+const BACKUPS = `${COMMON}\\_Backups`;
+const BACKUP_FILTER = 'OpenDash.GeneralSettings_b*.json';
+const DASH_TEMPLATES = `${SIMHUB_DIR}\\DashTemplates`;
 const SHARE_UNC = '\\\\host.lan\\Data';
 
 /** A zone's page, by the id the catalogue gives it, so a table of names cannot drift into numbers. */
@@ -69,8 +83,16 @@ export interface ManifestPackage {
 /** Every mask bit set: the button cycles the whole catalogue, which is what a fresh screen does. */
 const FULL_MASKS = [(1 << ZONE_A_PAGES.length) - 1, (1 << MODULE_CATALOGUE.length) - 1, (1 << MODULE_CATALOGUE.length) - 1, (1 << BAND_D_PAGES.length) - 1];
 
+/** The bits of a zone B or C mask that leave exactly these catalogue pages in the cycle. */
+export function catalogueMask(ids: readonly string[]): number {
+  return ids.reduce((mask, id) => mask | (1 << page(id)), 0);
+}
+
+/** The resource name MSBuild gives an embedded package (OpenDash.csproj). */
+const packageResource = (pkg: ManifestPackage): string => `OpenDashPlugin.Resources.${pkg.file}`;
+
 /** One screen of the gallery rig, in the shape ScreenInstance serialises to. */
-export function screenFor(pkg: ManifestPackage, zones: [string, string, string, string], name?: string): Record<string, unknown> {
+export function screenFor(pkg: ManifestPackage, zones: [string, string, string, string], name?: string, masks: readonly number[] = FULL_MASKS): Record<string, unknown> {
   const pages = [zoneA(zones[0]), page(zones[1]), page(zones[2]), band(zones[3])];
   return {
     Namespace: `Face${pkg.width}x${pkg.height}`,
@@ -84,7 +106,7 @@ export function screenFor(pkg: ManifestPackage, zones: [string, string, string, 
       // Starts as well as Zones: the plugin opens every zone on its start page, so a zone set
       // without one comes back to the default the moment SimHub restarts.
       Zones: pages,
-      Masks: FULL_MASKS,
+      Masks: [...masks],
       Starts: pages,
       ClassOnly: [false, false, false, false],
       BarFields: [0, 1, 5, 6],
@@ -99,55 +121,277 @@ export function screenFor(pkg: ManifestPackage, zones: [string, string, string, 
 export function galleryRig(manifest: { packages: ManifestPackage[] }): Record<string, unknown>[] {
   const rig: Record<string, unknown>[] = [];
   for (const [folder, spec] of Object.entries(GALLERY)) {
-    const pkg = manifest.packages.find((p) => p.folder.toLowerCase() === folder.toLowerCase());
-    if (!pkg) throw new RangeError(`build/manifest.json has no package ${JSON.stringify(folder)}; run bun run build`);
-    rig.push(screenFor(pkg, spec.zones, spec.name));
+    rig.push(screenFor(packageNamed(manifest, folder), spec.zones, spec.name));
   }
   return rig;
 }
 
-/** The settings file on the guest, read through the share. */
+function packageNamed(manifest: { packages: ManifestPackage[] }, folder: string): ManifestPackage {
+  const pkg = manifest.packages.find((p) => p.folder.toLowerCase() === folder.toLowerCase());
+  if (!pkg) throw new RangeError(`build/manifest.json has no package ${JSON.stringify(folder)}; run bun run build`);
+  return pkg;
+}
+
+// --------------------------------------------------------------------------------- the panel rig
+
+/**
+ * The second 1280 by 480 screen's folder. It is not the stock one, since Main dash holds that, so
+ * the plugin gives it `OpenDash` and its name (PackageCatalogue.UniqueFolder), and the preset
+ * deletes it once SimHub is up, so the Screens page has a screen whose dashboard is missing.
+ */
+export const RIM_FOLDER = 'OpenDash Rim';
+
+/** Rim's zone B cycle: six pages, lap times among them and first. */
+export const RIM_ZONE_B = ['lapTimes', 'delta', 'sectors', 'fuel', 'tyres', 'lapHistory'] as const;
+/** Rim's zone C cycle: four pages, the relative among them and first. */
+export const RIM_ZONE_C = ['relative', 'leaderboard', 'opponents', 'radar'] as const;
+
+/** The wheel's own strip: the Fanatec wiring of a 3/9/3. */
+export const RIM_SHAPE = '3-9-3-fanatec';
+
+/**
+ * The brow's shape: a plain 0/15/0, or the plain 15-LED shape nearest to it when the census stops
+ * offering that one. "Nearest" is the fewest side LEDs, since the brow has no ends to speak of.
+ */
+export function browShape(): string {
+  if (shapeById('0-15-0')) return '0-15-0';
+  const fifteen = GRID_SHAPES.filter((s) => stripLength(s) === 15 && !s.positions).sort((a, b) => a.left + a.right - (b.left + b.right));
+  if (fifteen.length === 0) throw new RangeError('the LED census offers no plain 15-LED shape for the brow');
+  return fifteen[0]!.id;
+}
+
+/** SimHub's Arduino RGB LEDs device, as LedBar.ArduinoDevice spells it. */
+const ARDUINO = 'arduino';
+
+/**
+ * The rig the settings panel is photographed on: every kind of screen, two strips and two matrix
+ * panels, so that no page is photographed empty.
+ *
+ * Five screens. Main dash is the stock 1280 by 480 and so takes its namespace and folder. Rim is a
+ * second screen of that size, which is what ADR 0017 exists for, with a zone B of six pages and a zone
+ * C of four so the Screens page shows cycles that are not the whole catalogue; its folder is the one
+ * deleted afterwards. A pit wall, a phone in portrait and the 480 round face make up the kinds.
+ *
+ * Two strips, both on the Arduino device, as a wheel and a brow: a Fanatec 3/9/3, which cannot be
+ * reversed, and a plain 15. Two matrix panels, one in each state a panel's switches can leave it in:
+ * the flag box showing both sides and the gear at rest, and a pillar showing its left side and dark.
+ * Slots 3 and 4 are empty, as RemoveMatrixPanel leaves one.
+ *
+ * Every field is one ScreenInstance, LedBar, FaceSettings or OpenDashSettings reads, which
+ * rig.test.ts checks against the C# itself, and every value is one Normalise keeps.
+ */
+export function panelRig(manifest: { packages: ManifestPackage[] }): Record<string, unknown> {
+  const main = packageNamed(manifest, 'OpenDash 1280x480');
+  const pitWall = packageNamed(manifest, 'OpenDash Pit wall');
+  const phone = packageNamed(manifest, 'OpenDash Companion portrait');
+  const round = packageNamed(manifest, 'OpenDash 480 round');
+
+  // Chosen, as a screen added from the Screens page is: an unclaimed screen puts a note over the
+  // cards that belongs to an upgrade and not to this rig.
+  const owned = { Unclaimed: false };
+  const mainDash = { ...screenFor(main, GALLERY['OpenDash 1280x480']!.zones, 'Main dash'), ...owned };
+  const rim = {
+    ...screenFor(main, ['gearSpeedRevs', RIM_ZONE_B[0], RIM_ZONE_C[0], 'fuel'], 'Rim', [FULL_MASKS[0]!, catalogueMask(RIM_ZONE_B), catalogueMask(RIM_ZONE_C), FULL_MASKS[3]!]),
+    Namespace: 'Rim',
+    Folder: RIM_FOLDER,
+    Package: packageResource(main),
+    ...owned,
+  };
+  const other = (pkg: ManifestPackage, name: string, kind: string, namespace: string): Record<string, unknown> => ({
+    Namespace: namespace,
+    Name: name,
+    Kind: kind,
+    Width: pkg.width,
+    Height: pkg.height,
+    Folder: pkg.folder,
+    Package: packageResource(pkg),
+    ...owned,
+  });
+
+  const bar = (name: string, namespace: string, shape: string): Record<string, unknown> => ({
+    Namespace: namespace,
+    Name: name,
+    Shape: shape,
+    Device: ARDUINO,
+    Reversed: false,
+    Brightness: null,
+    EffectsOff: [],
+  });
+
+  return {
+    Rig: [
+      mainDash,
+      rim,
+      other(pitWall, 'Pit wall', 'pitwall', 'PitWall'),
+      other(phone, 'Phone', 'companion', 'Companion'),
+      other(round, 'Round', 'slots', `Slots${round.width}x${round.height}`),
+    ],
+    LedBars: [bar('Wheel rim', 'LedWheelRim', RIM_SHAPE), bar('Dash brow', 'LedDashBrow', browShape())],
+    FlagBoxMatrixName: ['Flag box', 'Left pillar', null, null],
+    FlagBoxSide: ['both', 'left', 'both', 'both'],
+    FlagBoxRest: ['gear', 'dark', 'dark', 'dark'],
+    FlagBoxFlags: [true, true, false, false],
+    FlagBoxPit: [true, true, false, false],
+    FlagBoxSpotter: [true, true, false, false],
+    FlagBoxWarnings: [true, true, false, false],
+  };
+}
+
+// --------------------------------------------------------------------------------- the guest
+
+/** The settings file on the guest, read through the share, or an empty object when there is none. */
 function readSettings(host: Host): Record<string, unknown> {
-  const copied = powershell(host, `Copy-Item ${psq(SETTINGS)} ${psq(`${SHARE_UNC}\\opendash-settings.json`)} -Force; 'copied'`, 90);
+  const copied = powershell(
+    host,
+    `if (Test-Path -LiteralPath ${psq(SETTINGS)}) { Copy-Item -LiteralPath ${psq(SETTINGS)} -Destination ${psq(`${SHARE_UNC}\\opendash-settings.json`)} -Force; 'copied' } else { 'missing' }`,
+    90,
+  );
   if (!copied.ok) throw new Error(copied.stderr || 'could not read the settings file');
+  if (copied.stdout.trim() === 'missing') return {};
   const local = path.join(repoRoot, 'build', 'vm-settings.json');
   mkdirSync(path.dirname(local), { recursive: true });
   const fetched = fromShare(host, 'opendash-settings.json', local);
   if (!fetched.ok) throw new Error(fetched.stderr);
-  return JSON.parse(readFileSync(local, 'utf8')) as Record<string, unknown>;
+  return JSON.parse(readFileSync(local, 'utf8').replace(/^\uFEFF/, '')) as Record<string, unknown>;
 }
 
-/** Writes the settings file with SimHub stopped, then starts it again so the plugin reads it. */
+/** Deletes SimHub's copies of the settings file; PowerShell, to be run with SimHub stopped. */
+const DELETE_BACKUPS = `Get-ChildItem -LiteralPath ${psq(BACKUPS)} -Filter ${psq(BACKUP_FILTER)} -ErrorAction SilentlyContinue | Remove-Item -Force`;
+
+/**
+ * Writes the settings file with SimHub stopped, deletes the copies SimHub would restore an older rig
+ * from, then starts it again so the plugin reads it.
+ */
 function writeSettings(host: Host, settings: Record<string, unknown>): RunResult {
   const local = path.join(repoRoot, 'build', 'vm-settings.json');
+  mkdirSync(path.dirname(local), { recursive: true });
   writeFileSync(local, JSON.stringify(settings));
   simhubStop(host);
   const sent = toShare(host, local, 'opendash-settings.json');
   if (!sent.ok) return sent;
-  const copied = powershell(host, `Copy-Item ${psq(`${SHARE_UNC}\\opendash-settings.json`)} ${psq(SETTINGS)} -Force; 'written'`, 120);
+  const copied = powershell(
+    host,
+    `$ErrorActionPreference = 'Stop'
+Copy-Item ${psq(`${SHARE_UNC}\\opendash-settings.json`)} -Destination ${psq(SETTINGS)} -Force
+${DELETE_BACKUPS}
+'written'`,
+    120,
+  );
   if (!copied.ok) return copied;
   return simhubStart(host);
 }
 
+/**
+ * A first run: SimHub stopped, the settings file and every copy of it deleted, and every OpenDash
+ * dashboard folder taken out of DashTemplates, so the plugin starts with no rig and installs nothing.
+ * Deleting the file alone brings the previous rig back from `_b1`, which is why the copies go too.
+ */
+function resetSettings(host: Host): RunResult {
+  simhubStop(host);
+  const cleared = powershell(
+    host,
+    `$ErrorActionPreference = 'Stop'
+Remove-Item -LiteralPath ${psq(SETTINGS)} -Force -ErrorAction SilentlyContinue
+${DELETE_BACKUPS}
+$gone = @(Get-ChildItem -LiteralPath ${psq(DASH_TEMPLATES)} -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'OpenDash*' })
+$gone | Remove-Item -Recurse -Force
+"removed the settings, their copies and $($gone.Count) OpenDash dashboard folder(s)"`,
+    180,
+  );
+  if (!cleared.ok) return cleared;
+  const started = simhubStart(host);
+  return started.ok ? cleared : started;
+}
+
+/**
+ * Deletes a screen's folder once the plugin has written it, so the Screens page reads that screen's
+ * dashboard as missing.
+ *
+ * It has to wait. SimHub was just started, and the plugin's Init writes every folder on the rig
+ * (DashboardInstaller.EnsureInstalled), so a folder deleted before Init has run is simply written
+ * again, and one deleted before SimHub starts is written at its start. The folder appearing is the
+ * sign Init has reached it; a few seconds more let it finish the rest of the rig.
+ */
+function dropFolderOnceWritten(host: Host, folder: string, waitSeconds = 240): RunResult {
+  return powershell(
+    host,
+    `$target = Join-Path ${psq(DASH_TEMPLATES)} ${psq(folder)}
+$deadline = (Get-Date).AddSeconds(${Math.trunc(waitSeconds)})
+while (-not (Test-Path -LiteralPath $target) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+if (-not (Test-Path -LiteralPath $target)) { "the plugin never wrote $target, so there is nothing to delete; is it installed?"; exit 1 }
+Start-Sleep -Seconds 8
+Remove-Item -LiteralPath $target -Recurse -Force
+"deleted $target, so its screen reads as missing"`,
+    waitSeconds + 90,
+  );
+}
+
 const describe = (settings: Record<string, unknown>): string => {
-  const rig = (settings.Rig as { Name?: string; Namespace?: string; Face?: { Zones?: number[] } }[] | undefined) ?? [];
+  const rig = (settings.Rig as { Name?: string; Namespace?: string; Kind?: string; Face?: { Zones?: number[] } }[] | undefined) ?? [];
   if (rig.length === 0) return '  (no screens)';
   return rig
     .map((s) => {
       const z = s.Face?.Zones;
-      const pages = z ? `A ${ZONE_A_PAGES[z[0]!]?.name}, B ${MODULE_CATALOGUE[z[1]!]?.name}, C ${MODULE_CATALOGUE[z[2]!]?.name}, D ${BAND_D_PAGES[z[3]!]?.name}` : 'no zones';
+      const pages = z ? `A ${ZONE_A_PAGES[z[0]!]?.name}, B ${MODULE_CATALOGUE[z[1]!]?.name}, C ${MODULE_CATALOGUE[z[2]!]?.name}, D ${BAND_D_PAGES[z[3]!]?.name}` : (s.Kind ?? 'no zones');
       return `  ${(s.Name ?? s.Namespace ?? '?').padEnd(26)} ${pages}`;
     })
     .join('\n');
 };
 
+/** The presets a caller may ask for by name. */
+export const PRESETS = ['gallery', 'panel', 'clear', 'empty'] as const;
+export type Preset = (typeof PRESETS)[number];
+
+const readManifest = (): { packages: ManifestPackage[] } | string => {
+  const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
+  if (!existsSync(manifestPath)) return 'build/manifest.json is missing; run bun run build';
+  return JSON.parse(readFileSync(manifestPath, 'utf8')) as { packages: ManifestPackage[] };
+};
+
+/**
+ * Puts a preset on the VM and leaves SimHub running on it. The caller holds the VM's claim: this
+ * stops and starts SimHub, and `panel` waits for the plugin before it deletes a folder.
+ */
+export function applyPreset(host: Host, preset: Preset): RunResult {
+  if (preset === 'empty') return resetSettings(host);
+  const settings = readSettings(host);
+  if (preset === 'clear') {
+    settings.Rig = [];
+  } else {
+    const manifest = readManifest();
+    if (typeof manifest === 'string') return { ok: false, code: 1, stdout: '', stderr: manifest };
+    try {
+      if (preset === 'gallery') settings.Rig = galleryRig(manifest);
+      else Object.assign(settings, panelRig(manifest));
+    } catch (e) {
+      return { ok: false, code: 1, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  const written = writeSettings(host, settings);
+  if (!written.ok) return written;
+  if (preset !== 'panel') return { ...written, stdout: describe(settings) };
+  // SimHub's process is up a second after it is started and the plugin's Init some while later; the
+  // wait is on the folder, so this pause only spares the guest a few polls it would answer "no" to.
+  sleep(5);
+  const dropped = dropFolderOnceWritten(host, RIM_FOLDER);
+  return dropped.ok ? { ...dropped, stdout: `${describe(settings)}\n  ${dropped.stdout}` } : dropped;
+}
+
 const USAGE = `rig: put a set of screens on the VM's plugin, so the captures show more than one layout.
 
   bun scripts/rig.ts show       what is on the rig now
   bun scripts/rig.ts gallery    the rig the website's captures are taken on
-  bun scripts/rig.ts clear      back to one screen, as a first run leaves it
+  bun scripts/rig.ts panel      the rig the settings panel's captures are taken on: Main dash and Rim
+                                (1280x480 twice), a pit wall, a phone and the 480 round; a Fanatec
+                                3/9/3 wheel rim and a 15-LED brow; a flag box and a left pillar.
+                                Rim's dashboard folder is deleted once SimHub is up, so it reads
+                                as missing
+  bun scripts/rig.ts clear      no screens, every other setting kept
+  bun scripts/rig.ts empty      a genuine first run: the settings and SimHub's copies of them
+                                deleted, and every OpenDash folder taken out of DashTemplates
 
-SimHub is stopped and started again, because the plugin reads its settings once at startup.
+SimHub is stopped and started again, because the plugin reads its settings once at startup. Claim
+the VM first (bun run vm claim), and chain on the claim with &&.
 `;
 
 export async function main(argv: readonly string[]): Promise<number> {
@@ -156,41 +400,19 @@ export async function main(argv: readonly string[]): Promise<number> {
     console.log(USAGE);
     return 0;
   }
+  if (command !== 'show' && !(PRESETS as readonly string[]).includes(command)) {
+    console.error(USAGE);
+    return 2;
+  }
   const host = resolveHost();
-  const settings = readSettings(host);
-
   if (command === 'show') {
-    console.log(describe(settings));
+    console.log(describe(readSettings(host)));
     return 0;
   }
-  if (command === 'gallery') {
-    const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
-    if (!existsSync(manifestPath)) {
-      console.error('build/manifest.json is missing; run bun run build');
-      return 1;
-    }
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { packages: ManifestPackage[] };
-    settings.Rig = galleryRig(manifest);
-    const written = writeSettings(host, settings);
-    if (!written.ok) {
-      console.error(written.stderr || written.stdout);
-      return 1;
-    }
-    console.log(describe(settings));
-    return 0;
-  }
-  if (command === 'clear') {
-    settings.Rig = [];
-    const written = writeSettings(host, settings);
-    if (!written.ok) {
-      console.error(written.stderr || written.stdout);
-      return 1;
-    }
-    console.log('  (no screens)');
-    return 0;
-  }
-  console.error(USAGE);
-  return 2;
+  const applied = applyPreset(host, command as Preset);
+  if (applied.stdout) console.log(applied.stdout);
+  if (!applied.ok) console.error(applied.stderr || 'the preset did not take');
+  return applied.ok ? 0 : 1;
 }
 
 if (import.meta.main) process.exit(await main(process.argv.slice(2)));
