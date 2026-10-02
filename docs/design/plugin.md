@@ -125,6 +125,17 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   | Settings: "under [2] laps" for every value | "lap" or "laps" by the value: "under [1] lap", "under [2] laps" | the unit agrees with its number (#524, ruling 11) |
   | LEDs: the strip header's Update hover, "Updates this strip's profile in SimHub." | `FlagBoxInstallPlan.Replaces`, "Replaces the copy in SimHub, including your changes to it.", as on Matrix and Updates | the press says what it costs, one way on every page (#524, ruling 12) |
 
+### Requests to the shell and the kit that were not applied (#523)
+
+The page agents' requests to the frozen shell and kit were applied after the merge. Two were not:
+
+- **Record that `PanelLightRows.DotHex` (Updates) reads `PanelMatrix.ProfileRow`.** That read no longer
+  happens. `DotHex` is a fixed ink for each state and reads no page's table, so `ProfileRow` belongs to
+  the Matrix page alone. The ownership table in `SettingsControl.cs` says so instead.
+- **Drop `RowAction.Style` as read by no drawn row.** The Matrix page's profile press reads it since the
+  merge, to choose between its primary and its ghost press, so it stays. Only `PanelCopy.ScreenRow`, which
+  nothing drew, went.
+
 ### The geometry is not in the token file
 
 Every colour the panel draws is a `Theme` constant, and `ThemeTests` holds each one against the token it
