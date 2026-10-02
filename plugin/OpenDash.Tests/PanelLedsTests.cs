@@ -2247,5 +2247,26 @@ namespace OpenDashPlugin.Tests
                 Assert.DoesNotContain(" tab", word);
             }
         }
+
+        /// <summary>
+        /// docs/scope.md is the line that has to move before the code that crosses it is written, and this page
+        /// crossed it: it adds strips (<see cref="PanelLights.AddBar"/>) and installs a profile for each. So the
+        /// scope claims the strips, one profile per strip, on this page, and keeps refusing the LED families the
+        /// build has no profile for (#537).
+        /// </summary>
+        [Fact]
+        public void The_scope_claims_the_strips_this_page_adds()
+        {
+            Assert.Equal("Add an LED strip", PanelLights.AddBar);
+            var scope = File.ReadAllText(Path.Combine(RepoPaths.Root(), "docs", "scope.md"));
+            var start = scope.IndexOf("### The LED strips", StringComparison.Ordinal);
+            Assert.True(start >= 0, "scope.md has no section for the LED strips");
+            var end = scope.IndexOf("\n## ", start, StringComparison.Ordinal);
+            var strips = System.Text.RegularExpressions.Regex.Replace(scope.Substring(start, (end < 0 ? scope.Length : end) - start), @"\s+", " ");
+            Assert.Contains("**One profile per strip.**", strips);
+            Assert.Contains("adds on the LEDs page", strips);
+            Assert.Contains("**What is still not claimed** is the rest of the LED families: wheel buttons, button boxes and ambient lighting.", strips);
+            Assert.DoesNotMatch(@"strips[^.]*not claimed", scope);
+        }
     }
 }
