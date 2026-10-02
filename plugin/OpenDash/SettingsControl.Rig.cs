@@ -192,13 +192,15 @@ namespace OpenDashPlugin
             var plan = PanelRigMap.Plan(Settings, width);
             var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };
             // The room on the dotted ground: the tiles' room as drawn, which a shrunk arrangement leaves
-            // shorter than the frame, so the band under it takes no drop.
-            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
+            // shorter than the frame, so the band under it takes no drop and has no dots.
+            var dots = RigDots(plan.Scale);
+            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true };
             // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
             // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
             var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };
             var tiles = plan.Tiles;
 
+            TextBlock hint = null;
             if (tiles.Count == 0)
             {
                 var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);
@@ -210,11 +212,13 @@ namespace OpenDashPlugin
             }
             else
             {
-                // Under the tiles, so a tile dragged into the corner covers it rather than the other way round.
-                var hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
-                Canvas.SetLeft(hint, PanelRigMap.HintLeft);
-                Canvas.SetBottom(hint, PanelRigMap.HintBottom);
-                canvas.Children.Add(hint);
+                // In the frame's lower left, as the artboard puts it, rather than the room's, which a shrunk
+                // arrangement draws shorter than the frame and which scrolls across; and under the tiles, so a
+                // tile dragged into the corner covers it rather than the other way round.
+                hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
+                hint.HorizontalAlignment = HorizontalAlignment.Left;
+                hint.VerticalAlignment = VerticalAlignment.Bottom;
+                hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom);
             }
             canvas.Children.Add(layer);
 
@@ -255,6 +259,8 @@ namespace OpenDashPlugin
                 // its whole ring. The room itself, and so every place a tile is kept at, is unchanged.
                 var outset = Theme.FocusRingOffset + Theme.FocusRing;
                 canvas.Margin = new Thickness(outset);
+                // The ground scrolls across with the room.
+                canvas.Background = dots;
                 var scroller = new ScrollViewer
                 {
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -272,14 +278,23 @@ namespace OpenDashPlugin
                 extent.Inset = outset;
                 // The scroller fills the frame, so its bar lies along the frame's foot.
                 frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;
+                // The hint stands above the bar and the room's outset over it, behind the scroller, which is
+                // clear between the dots.
+                if (hint != null)
+                {
+                    hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom + outset + SystemParameters.HorizontalScrollBarHeight);
+                    frame.Children.Add(hint);
+                }
                 frame.Children.Add(scroller);
             }
             else
             {
-                // The frame is the room's own width, so its outline, the dotted ground and the room a drag
-                // is held to are one rectangle whether or not the page's scroll bar is showing.
-                outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;
-                outline.HorizontalAlignment = HorizontalAlignment.Left;
+                // The outline spans the column, flush with the header and Reset layout above it, as the
+                // artboard draws it. The room is planned at ContentWidth, which leaves the page's scroll bar
+                // its 17 px whether or not it is showing, so the dotted ground goes across the whole frame,
+                // as high as the room is drawn, while a drag still stops at the room's own right edge.
+                frame.Children.Add(new Border { Height = canvas.Height, VerticalAlignment = VerticalAlignment.Top, Background = dots });
+                if (hint != null) frame.Children.Add(hint);
                 frame.Children.Add(canvas);
             }
             return outline;

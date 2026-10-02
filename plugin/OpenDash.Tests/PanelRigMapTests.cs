@@ -247,7 +247,8 @@ namespace OpenDashPlugin.Tests
                 "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
                 "var plan = PanelRigMap.Plan(Settings, width);",
                 "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };",
-                "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
+                "var dots = RigDots(plan.Scale);",
+                "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true };",
                 "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
                 "var tiles = plan.Tiles;",
                 "canvas.Children.Add(layer);",
@@ -272,6 +273,8 @@ namespace OpenDashPlugin.Tests
                 // Held off the scroller's clip by the focus ring's outset, so a tile at an edge keeps its ring.
                 "var outset = Theme.FocusRingOffset + Theme.FocusRing;",
                 "canvas.Margin = new Thickness(outset);",
+                // The ground on the room, so it scrolls across with it.
+                "canvas.Background = dots;",
                 "HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,",
                 "VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,",
                 // No Tab stop, no focus taken by a press on the ground, no page key swallowed.
@@ -283,13 +286,25 @@ namespace OpenDashPlugin.Tests
                 "extent.Inset = outset;",
                 // The scroller fills the frame, so its bar is along the frame's foot.
                 "frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;",
+                // The hint above the bar and the outset, behind the scroller.
+                "if (hint != null)",
+                "hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom + outset + SystemParameters.HorizontalScrollBarHeight);",
+                "frame.Children.Add(hint);",
                 "frame.Children.Add(scroller);",
-                // A canvas that fits is framed at the room's own width: outline, ground and room agree.
-                "outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;",
-                "outline.HorizontalAlignment = HorizontalAlignment.Left;",
+                // A canvas that fits: the outline spans the column, flush with the header, and the ground
+                // goes across the whole frame as high as the room is drawn; the hint is behind the room.
+                "frame.Children.Add(new Border { Height = canvas.Height, VerticalAlignment = VerticalAlignment.Top, Background = dots });",
+                "if (hint != null) frame.Children.Add(hint);",
                 "frame.Children.Add(canvas);",
                 "return outline;");
-            Assert.DoesNotContain("VerticalAlignment = VerticalAlignment.Top,", canvas);
+            // The scroller fills the frame rather than standing at its top, so its bar is along the foot.
+            Assert.DoesNotContain("VerticalAlignment", Handler(canvas, "var scroller = new "));
+            Assert.DoesNotContain("outline.Width", canvas);
+            Assert.DoesNotContain("outline.HorizontalAlignment", canvas);
+            Assert.Equal(1, canvas.Split("canvas.Background = dots;").Length - 1);
+            Assert.DoesNotContain("frame.Background", canvas);
+            Assert.DoesNotContain("Canvas.SetBottom(hint", canvas);
+            Assert.DoesNotContain("canvas.Children.Add(hint)", canvas);
             // A rebuild draws a canvas that scrolls across where it was scrolled to, and only the build that
             // is the page's keeps the place.
             InOrder(RigMethod("private void RigKeepScroll("), "var restore = rigScrollX;", "scroller.Loaded +=", "scroller.ScrollToHorizontalOffset(restore);", "scroller.ScrollChanged +=", "if (!restored || !extent.Live) return;", "rigScrollX = scroller.HorizontalOffset;");
@@ -299,15 +314,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
             InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
             // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
-            // the lower left, under the tiles.
+            // the frame's lower left, wherever the room is drawn, and under the tiles.
             InOrder(canvas,
                 "if (tiles.Count == 0)",
                 "Ui.Button(PanelAttention.Open(PanelScreens.Title),",
                 "screensPress.Click += (sender, args) => Go(PanelPage.Screens);",
                 "canvas.Children.Add(empty);",
-                "Canvas.SetLeft(hint, PanelRigMap.HintLeft);",
-                "Canvas.SetBottom(hint, PanelRigMap.HintBottom);",
-                "canvas.Children.Add(hint);",
+                "hint = Ui.Text(PanelRigMap.CanvasHint,",
+                "hint.HorizontalAlignment = HorizontalAlignment.Left;",
+                "hint.VerticalAlignment = VerticalAlignment.Bottom;",
+                "hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom);",
                 "canvas.Children.Add(layer);");
             Assert.DoesNotContain("SizeChanged", canvas);
             Assert.DoesNotContain("ActualWidth", canvas);
