@@ -814,6 +814,15 @@ namespace OpenDashPlugin
                 // A preview the build started before it threw was never added to the tree, so its own
                 // Unloaded would never dispose it: SimHub's renderer would run behind the error page.
                 DropPreview();
+                // Nor is anything else the partial build asked for kept: its ticks would write every second into
+                // controls never shown, its update handlers into detached hosts, and a page that said it draws
+                // lighting would be built again, and fail again, on every wheel press. What it asked to have let
+                // go of is let go of now (the drop actions ran before the build, so these are its own).
+                ClearTicks();
+                ClearUpdateHandlers();
+                lightingActions.Clear();
+                pageDrawsLighting = false;
+                RunDropActions();
                 return Ui.VStack(12,
                     Ui.PageTitle(PanelNav.Label(to.Page)),
                     Ui.Prose(PanelShell.PageFailed, Theme.SizeBody, Theme.Caution));

@@ -626,5 +626,18 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("PluginManager.InputMappingsChanged -= MappingsChanged; PluginManager.InputMappingsChanged += MappingsChanged;", loaded);
             Assert.Contains("plugin.RigLightingPressed -= ShowLightingChange; plugin.RigLightingPressed += ShowLightingChange;", loaded);
         }
+
+        /// <summary>A page whose build throws keeps nothing the partial build registered: its ticks, update
+        /// handlers, lighting actions and DrawsLighting go, and what it asked to have dropped is dropped, so the
+        /// error page has nothing running behind it and a wheel press does not build the failing page again.</summary>
+        [Fact]
+        public void A_page_that_fails_to_build_leaves_nothing_running()
+        {
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            var build = shell.Substring(shell.IndexOf("private FrameworkElement BuildPage(PanelRoute to)", StringComparison.Ordinal));
+            build = build.Substring(build.IndexOf("catch (Exception ex)", StringComparison.Ordinal));
+            build = build.Substring(0, build.IndexOf("return Ui.VStack(12,", StringComparison.Ordinal));
+            Assert.Contains("DropPreview(); ClearTicks(); ClearUpdateHandlers(); lightingActions.Clear(); pageDrawsLighting = false; RunDropActions();", build);
+        }
     }
 }
