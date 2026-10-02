@@ -473,6 +473,7 @@ namespace OpenDashPlugin
             try
             {
                 var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
+                var caret = focus != null ? CaretOf(Keyboard.FocusedElement as TextBox) : null;
                 CommitTyping();
                 DropPreview();
                 ClearTicks();
@@ -481,7 +482,7 @@ namespace OpenDashPlugin
                 var offset = mainScroll.VerticalOffset;
                 pageHost.Content = BuildPage(route);
                 mainScroll.ScrollToVerticalOffset(offset);
-                if (focus != null) RestoreFocus(pageHost, focus, offset);
+                if (focus != null) RestoreFocus(pageHost, focus, caret, offset);
             }
             finally
             {
@@ -727,6 +728,23 @@ namespace OpenDashPlugin
             return node == root ? path : null;
         }
 
+        /// <summary>Where the caret and the selection are in the box being typed in, or null when the focus is
+        /// not in a text box. Read before CommitTyping takes the focus off it.</summary>
+        private static PanelCaret CaretOf(TextBox box)
+        {
+            return box == null ? null : new PanelCaret(box.CaretIndex, box.SelectionStart, box.SelectionLength);
+        }
+
+        /// <summary>Puts the caret and the selection a rebuild recorded back on the box focused again, kept
+        /// inside the text it holds now (PanelCaret.Within).</summary>
+        private static void PutCaret(TextBox box, PanelCaret caret)
+        {
+            if (box == null || caret == null) return;
+            var at = caret.Within(box.Text.Length);
+            if (at.Selects) box.Select(at.SelectionStart, at.SelectionLength);
+            else box.CaretIndex = at.CaretIndex;
+        }
+
         /// <summary>Puts keyboard focus on the first control of the page that is showing, once it is laid out.</summary>
         private void FocusPageStart()
         {
@@ -736,7 +754,8 @@ namespace OpenDashPlugin
         /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
         /// focusable thing above it when the rebuild is shaped differently there, and leaves the main scroll
         /// at <paramref name="offset"/>, where the driver had it -- unless a line has been said since, which
-        /// wins: the view stays at the top, on the line.</summary>
+        /// wins: the view stays at the top, on the line. A text box focused again takes back the caret and the
+        /// selection <paramref name="caret"/> recorded (#542).</summary>
         /// <remarks>
         /// Focusing a control raises its BringIntoView, which pulled the main scroll back to whatever the
         /// driver had last pressed and then scrolled away from: a wheel's lighting press or a threshold resize
@@ -747,7 +766,7 @@ namespace OpenDashPlugin
         /// So where Say has spoken since the rebuild (saidCount moved), focus goes back without bringing its
         /// control into view and the scroll is left where Say put it.
         /// </remarks>
-        private void RestoreFocus(DependencyObject root, List<int> path, double offset)
+        private void RestoreFocus(DependencyObject root, List<int> path, PanelCaret caret, double offset)
         {
             var said = saidCount;
             Dispatcher.BeginInvoke(new Action(() =>
@@ -766,7 +785,11 @@ namespace OpenDashPlugin
                 if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
                 try
                 {
-                    if (last != null) Keyboard.Focus(last);
+                    if (last != null)
+                    {
+                        Keyboard.Focus(last);
+                        PutCaret(last as TextBox, caret);
+                    }
                     else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 }
                 finally

@@ -216,9 +216,53 @@ namespace OpenDashPlugin.Tests
         public void A_rebuild_keeps_the_scroll_where_the_driver_left_it()
         {
             var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
-            Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, offset);", shell);
-            Assert.Contains("if (last != null) Keyboard.Focus(last); else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }", shell);
+            Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, caret, offset);", shell);
+            Assert.Contains("if (last != null) { Keyboard.Focus(last); PutCaret(last as TextBox, caret); } else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }", shell);
             Assert.Contains("if (spoke) return; mainScroll.ScrollToVerticalOffset(offset); Dispatcher.BeginInvoke(new Action(() => { if (saidCount == said) mainScroll.ScrollToVerticalOffset(offset); }), DispatcherPriority.Loaded);", shell);
+        }
+
+        /// <summary>
+        /// A rebuild in place keeps the caret and the selection of the box being typed in (#542): a rebuilt box
+        /// starts with its caret at 0, so "13", a wheel's night-mode press, then "0" read 013, which is 13. The
+        /// shell records them before CommitTyping takes the focus off the box and puts them back on the box it
+        /// focuses again, inside the text the box holds now; Settings' own fix for its number boxes is gone.
+        /// </summary>
+        [Fact]
+        public void A_rebuild_keeps_the_caret_where_the_driver_was_typing()
+        {
+            // Committing can rewrite the text, so every index is kept inside the text the box holds now.
+            var caret = new PanelCaret(3, 3, 0).Within(2);
+            Assert.Equal(2, caret.CaretIndex);
+            Assert.False(caret.Selects);
+            var held = new PanelCaret(1, 1, 0).Within(3);
+            Assert.Equal(1, held.CaretIndex);
+            Assert.False(held.Selects);
+            var selected = new PanelCaret(3, 1, 2).Within(3);
+            Assert.True(selected.Selects);
+            Assert.Equal(1, selected.SelectionStart);
+            Assert.Equal(2, selected.SelectionLength);
+            var shortened = new PanelCaret(4, 1, 3).Within(2);
+            Assert.Equal(1, shortened.SelectionStart);
+            Assert.Equal(1, shortened.SelectionLength);
+            Assert.Equal(2, shortened.CaretIndex);
+            var emptied = new PanelCaret(2, 0, 2).Within(0);
+            Assert.False(emptied.Selects);
+            Assert.Equal(0, emptied.CaretIndex);
+
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            // Recorded before CommitTyping, which takes the focus off the box, and handed to RestoreFocus.
+            Assert.Contains("var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null; var caret = focus != null ? CaretOf(Keyboard.FocusedElement as TextBox) : null; CommitTyping();", shell);
+            Assert.Contains("return box == null ? null : new PanelCaret(box.CaretIndex, box.SelectionStart, box.SelectionLength);", shell);
+            Assert.Contains("private void RestoreFocus(DependencyObject root, List<int> path, PanelCaret caret, double offset)", shell);
+            Assert.Contains("Keyboard.Focus(last); PutCaret(last as TextBox, caret);", shell);
+            Assert.Contains("var at = caret.Within(box.Text.Length); if (at.Selects) box.Select(at.SelectionStart, at.SelectionLength); else box.CaretIndex = at.CaretIndex;", shell);
+
+            // The Settings page's own fix, which put the caret at the end of every number box focused by
+            // anything but a press, is gone: the shell puts it where it was.
+            foreach (var source in RepoPaths.SettingsControlSources())
+            {
+                Assert.DoesNotContain("SettingsTypeAtEnd", RepoPaths.Code(source));
+            }
         }
 
         /// <summary>
@@ -241,7 +285,7 @@ namespace OpenDashPlugin.Tests
                 "var said = saidCount; Dispatcher.BeginInvoke(",
                 "var spoke = saidCount != said;",
                 "if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
-                "if (last != null) Keyboard.Focus(last);",
+                "if (last != null) { Keyboard.Focus(last);",
                 "if (spoke) pageHost.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
                 "if (spoke) return;",
                 "mainScroll.ScrollToVerticalOffset(offset);",

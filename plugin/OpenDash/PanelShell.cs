@@ -122,6 +122,50 @@ namespace OpenDashPlugin
         public override string ToString() { return Anchor == null ? Page.ToString() : Page + "#" + Anchor; }
     }
 
+    /// <summary>
+    /// Where the caret and the selection were in the box being typed in when the page was rebuilt in place,
+    /// so the box focused again in the new build carries on from there.
+    /// </summary>
+    /// <remarks>
+    /// A rebuilt box starts with its caret at 0, left of its digits: a driver typing "13" into the Oil
+    /// temperature box while a wheel's night-mode press rebuilt Settings went on to type "013", which reads
+    /// 13 (#542). The shell records this before it commits the typing and puts it back on the box it focuses
+    /// again. A selection made from right to left comes back made from left to right: a TextBox takes a
+    /// selection by its start and length, and its caret then sits at the end.
+    /// </remarks>
+    public sealed class PanelCaret
+    {
+        public PanelCaret(int caretIndex, int selectionStart, int selectionLength)
+        {
+            CaretIndex = caretIndex;
+            SelectionStart = selectionStart;
+            SelectionLength = selectionLength;
+        }
+
+        public int CaretIndex { get; private set; }
+
+        public int SelectionStart { get; private set; }
+
+        public int SelectionLength { get; private set; }
+
+        /// <summary>Whether something was selected, which is put back as a selection rather than as a caret.</summary>
+        public bool Selects { get { return SelectionLength > 0; } }
+
+        /// <summary>The same place in a box holding <paramref name="textLength"/> characters: committing can
+        /// rewrite the text (a typed "013" is saved and shown as 13), so every index is kept inside it.</summary>
+        public PanelCaret Within(int textLength)
+        {
+            var length = Math.Max(0, textLength);
+            var start = Clamp(SelectionStart, 0, length);
+            return new PanelCaret(Clamp(CaretIndex, 0, length), start, Clamp(SelectionLength, 0, length - start));
+        }
+
+        private static int Clamp(int value, int least, int most)
+        {
+            return value < least ? least : value > most ? most : value;
+        }
+    }
+
     /// <summary>Every number the frame is drawn with, read off Sidebar.dc.html and the page artboards.</summary>
     public static class PanelShell
     {

@@ -1274,25 +1274,6 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("box.LostFocus += (sender, args) => commit();", box);
             Assert.Contains("if (args.Key == Key.Enter) commit();", box);
             Assert.Matches(@"placeholder = SettingsHint\(box, PanelSettings\.ThresholdText\(fallback\)\);\s*return SettingsOverlaid\(box, placeholder\);", box);
-
-            // Every box the driver types a number in -- both temperatures and Low fuel -- takes its next digit
-            // after its value when it is focused by Tab or by the shell's focus restore after a rebuild, whose
-            // new box starts with its caret at 0: "13", a rebuild, then "0" would read 013, which is 13.
-            Assert.Matches(Lines(
-                "var box = SettingsNumberField(PanelSettings.ThresholdText(value));",
-                "SettingsTypeAtEnd(box);"), box);
-            Assert.Matches(Lines(
-                "var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });",
-                "SettingsTypeAtEnd(lowFuel);"), page);
-            Assert.Matches(Lines(
-                "private static void SettingsTypeAtEnd(TextBox box)",
-                "{",
-                "box.GotKeyboardFocus += (sender, args) =>",
-                "{",
-                "if (Mouse.LeftButton != MouseButtonState.Pressed) box.CaretIndex = box.Text.Length;",
-                "};",
-                "}"), page);
-            Assert.Equal(2, Regex.Matches(page, @"SettingsTypeAtEnd\(\w+\);").Count);
         }
 
         /// <summary>
