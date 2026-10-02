@@ -160,24 +160,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextLabel, PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).StateHex);
         }
 
-        /// <summary>Written and not yet drawn: plugin-63 has not settled whether the Install tab removes a
-        /// screen. The table is what the answer will be wired to.</summary>
-        [Fact]
-        public void A_screen_row_pairs_installed_with_remove_and_neither_is_the_primary()
-        {
-            var installed = PanelCopy.ScreenRow(true);
-            Assert.Equal("Installed", installed.State);
-            Assert.Equal(Theme.StatusUpToDate, installed.StateHex);
-            Assert.Equal("Remove", installed.Button);
-            Assert.Equal(PanelButton.Outline, installed.Style);
-
-            var absent = PanelCopy.ScreenRow(false);
-            Assert.Equal("Not installed", absent.State);
-            Assert.Equal(Theme.TextLabel, absent.StateHex);
-            Assert.Equal("Add", absent.Button);
-            Assert.Equal(PanelButton.Outline, absent.Style);
-        }
-
         /// <summary>
         /// A glance row says the binding is a hold, since the binder rewrites whatever press type the
         /// dialog was set to (#435), and every glance binder on the panel sits under that sentence.
@@ -235,15 +217,12 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>One primary per page. The Updates table's light rows are held to it where they are drawn
-        /// (PanelUpdatesTests.The_page_draws_one_primary_and_it_is_Download); this is the screen row's table.</summary>
+        /// <summary>The screen package row nobody drew is gone (#523): the Screens page's cards and the Updates
+        /// table say a screen's state, and a table of words no page reads only drifts from theirs.</summary>
         [Fact]
-        public void No_pairing_in_the_table_is_a_primary()
+        public void No_undrawn_screen_row_is_kept()
         {
-            var primaries = 0;
-            if (PanelCopy.ScreenRow(true).Style == PanelButton.Primary) primaries++;
-            if (PanelCopy.ScreenRow(false).Style == PanelButton.Primary) primaries++;
-            Assert.Equal(0, primaries);
+            Assert.Null(typeof(PanelCopy).GetMethod("ScreenRow"));
         }
     }
 }

@@ -196,20 +196,5 @@ namespace OpenDashPlugin
         {
             return LightRow(state == FlagBoxInstallState.NotEmbedded ? FlagBoxInstallState.NotInstalled : state, installedVersion);
         }
-
-        /// <summary>
-        /// What a screen package's row says and offers.
-        /// </summary>
-        /// <remarks>
-        /// Written and not yet drawn: whether the Install tab removes a screen at all is XOR's plugin-63,
-        /// which is not settled. The table is here so that the answer, when it comes, is a call rather
-        /// than a second set of strings.
-        /// </remarks>
-        public static RowAction ScreenRow(bool installed)
-        {
-            return installed
-                ? new RowAction(Installed, Theme.StatusUpToDate, "Remove", PanelButton.Outline)
-                : new RowAction(NotInstalled, Theme.TextLabel, "Add", PanelButton.Outline);
-        }
     }
 }
