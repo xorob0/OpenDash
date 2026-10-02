@@ -185,7 +185,7 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     ScreenRestart + screen.Namespace, PanelPage.Screens, screen.Namespace,
                     screen.Name + " is not in SimHub yet",
-                    "Restart SimHub, then assign \"" + screen.Name + "\" to this display in Dash Studio.",
+                    ScreenRestartDetail(screen.Name),
                     null, Open(screen.Name), PanelIssueAction.Navigate));
             }
 
@@ -310,6 +310,16 @@ namespace OpenDashPlugin
         public const string UnselectedDetail = "Installed, but not selected in SimHub.";
 
         public const string RestartDetail = "Until then you are running the old version.";
+
+        /// <summary>
+        /// Under a screen SimHub has not read yet: the panel's one phrase for that state as the step
+        /// (PanelCopy.RestartToLoad, #524 ruling 1), then the step after it in the Screens fix box's words. The
+        /// title names the screen, so a list of issues is read by what each is about.
+        /// </summary>
+        public static string ScreenRestartDetail(string name)
+        {
+            return PanelCopy.RestartToLoad + ". " + PanelScreens.RestartDetail(name);
+        }
 
         /// <summary>"1 screen came with an older OpenDash", "2 screens ...".</summary>
         public static string UnclaimedTitle(int count)

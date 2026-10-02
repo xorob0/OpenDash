@@ -463,11 +463,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
             var restart = PanelHome.ScreenLine(settings, face, true, true);
-            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing"), the Screens card's
-            // too. The attention card's title for the same state still says "is not in SimHub yet"
-            // (PanelAttention), which PanelAttention's owner settles at the #503 merge.
+            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing", #524 ruling 1),
+            // the Screens card's too.
             Assert.Equal("Restart SimHub to load it", restart.Text);
-            Assert.Equal(PanelHome.RestartToLoad, restart.Text);
+            Assert.Equal(PanelCopy.RestartToLoad, restart.Text);
             Assert.Equal(Theme.Caution, restart.TextHex);
             Assert.Equal(Theme.Caution, restart.DotHex);
             var fine = PanelHome.ScreenLine(settings, face, true, false);
@@ -478,19 +477,18 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// One phrase for the one state on both pages: the moment PanelScreens carries the restart state's
-        /// phrase (the Screens branch's RestartToLoad), Home's must be it, and Home names no state with a
-        /// constant of its own besides that one.
+        /// One phrase for the one state on both pages: Home's line is the Screens card's state for each state
+        /// it says, and Home names no state with a constant of its own (#524, ruling 1).
         /// </summary>
         [Fact]
         public void Home_names_a_screens_state_as_its_card_does()
         {
-            // The Screens branch drops the base's NotInSimHubYet for RestartToLoad: once the old word is gone the
-            // new one must be there, so a rename on Screens fails here rather than turning this guard off.
-            var cards = typeof(PanelScreens).GetField("RestartToLoad");
-            Assert.True((cards == null) == (typeof(PanelScreens).GetField("NotInSimHubYet") != null),
-                "PanelScreens carries neither NotInSimHubYet nor RestartToLoad, or both: Home's guard needs the new name.");
-            if (cards != null) Assert.Equal(PanelHome.RestartToLoad, (string)cards.GetValue(null));
+            var face = Screen(Contract.KindFace, 1280, 480);
+            var settings = new OpenDashSettings();
+            Assert.Equal(PanelScreens.StateLabel(ScreenState.Restart), PanelHome.ScreenLine(settings, face, true, true).Text);
+            Assert.Equal(PanelScreens.StateLabel(ScreenState.Missing), PanelHome.ScreenLine(settings, face, false, false).Text);
+            Assert.Null(typeof(PanelHome).GetField("RestartToLoad"));
+            Assert.Null(typeof(PanelScreens).GetField("RestartToLoad"));
             Assert.Null(typeof(PanelHome).GetField("Missing"));
             Assert.Null(typeof(PanelHome).GetField("NotInSimHubYet"));
         }

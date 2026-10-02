@@ -75,14 +75,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Background = Brush(Theme.SurfaceZone),", card);
         }
 
-        /// <summary>A state that does not fit a card at the grid's narrowest trims rather than clips, and says
-        /// itself in full as its tooltip.</summary>
+        /// <summary>A state that does not fit a card at the grid's narrowest wraps to a second line rather than
+        /// being trimmed or clipped (#524, ruling 1), and its dot stays on the first line.</summary>
         [Fact]
-        public void A_cards_state_line_trims()
+        public void A_cards_state_line_wraps_and_is_never_trimmed()
         {
             var card = Factory("DeviceCard");
-            Assert.Contains("word.TextTrimming = TextTrimming.CharacterEllipsis;", card);
-            Assert.Contains("word.ToolTip = state;", card);
+            Assert.Contains("word.TextWrapping = TextWrapping.Wrap;", card);
+            Assert.DoesNotContain("word.TextTrimming", card);
+            Assert.Contains("VerticalAlignment = VerticalAlignment.Top };", card);
+            Assert.Contains("dot.Margin = new Thickness(0, PanelKit.CardStateDotTop, PanelKit.CardStateGap, 0);", card);
+            Assert.Equal((PanelKit.CardStateLineHeight - PanelKit.CardStateDot) / 2, PanelKit.CardStateDotTop);
         }
 
         [Fact]

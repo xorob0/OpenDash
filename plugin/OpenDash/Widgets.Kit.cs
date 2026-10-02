@@ -906,13 +906,15 @@ namespace OpenDashPlugin
             if (!string.IsNullOrEmpty(state))
             {
                 var hex = stateHex ?? Theme.TextSecondary;
-                var dot = new Ellipse { Width = PanelKit.CardStateDot, Height = PanelKit.CardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
-                dot.Margin = new Thickness(0, 0, PanelKit.CardStateGap, 0);
-                // Docked rather than stacked, so the word has the card's width to trim in: a card at the
-                // grid's narrowest cannot hold every state in full.
+                var dot = new Ellipse { Width = PanelKit.CardStateDot, Height = PanelKit.CardStateDot, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Top };
+                dot.Margin = new Thickness(0, PanelKit.CardStateDotTop, PanelKit.CardStateGap, 0);
+                // Docked rather than stacked, so the word has the card's width to wrap in: a card at the grid's
+                // narrowest cannot hold every state on one line, and a state is a step a driver follows, so it
+                // wraps to a second line and is never trimmed (#524, ruling 1). The dot stays on the first line.
                 var word = Text(state, PanelKit.CardStateSize, FontWeights.Normal, hex);
-                word.TextTrimming = TextTrimming.CharacterEllipsis;
-                word.ToolTip = state;
+                word.TextWrapping = TextWrapping.Wrap;
+                word.LineHeight = PanelKit.CardStateLineHeight;
+                word.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
                 var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, PanelKit.CardGap, 0, 0) };
                 DockPanel.SetDock(dot, Dock.Left);
                 line.Children.Add(dot);

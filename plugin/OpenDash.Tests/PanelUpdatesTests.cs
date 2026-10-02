@@ -869,16 +869,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
 
             var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            Assert.Equal("Waiting for a restart", waiting.State);
-            Assert.Equal("Waiting for a restart", PanelUpdates.WaitingForRestart);
+            // The panel's one phrase for the state (#524, ruling 1), which drops ruling 69's "Waiting for a restart".
+            Assert.Equal("Restart SimHub to load it", waiting.State);
+            Assert.Equal(PanelCopy.RestartToLoad, waiting.State);
             Assert.Equal(Theme.Caution, waiting.StateHex);
             Assert.Equal("0.5.0", waiting.Version);
             Assert.Equal("After the restart, assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
             Assert.DoesNotContain("Restart SimHub", waiting.Tooltip);
-            // One line in the cell: ruling 69's words at about 113 of the 135 the dot leaves them, where the
-            // Screens card's "Restart SimHub to load it" is about 140 and wraps "it" alone.
-            Assert.True(StateWidth(PanelUpdates.WaitingForRestart) <= PanelUpdates.TableStateRoom);
-            Assert.True(StateWidth("Restart SimHub to load it") > PanelUpdates.TableStateRoom, "the measure tells a state that wraps from one that fits");
+            // About 140 of the 135 the dot leaves it, so the phrase wraps "it" to a second line: the cell wraps
+            // (TextWrapping.Wrap in UpdatesStateCell) and the ruling has the phrase wrap rather than be trimmed.
+            Assert.True(StateWidth(PanelCopy.RestartToLoad) > PanelUpdates.TableStateRoom, "the measure tells a state that wraps from one that fits");
 
             // Unknown facts say nothing of a restart.
             Assert.Equal("Up to date", PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), null, null).State);
@@ -887,7 +887,8 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// Every word the State column writes, dashboard and light rows alike, fits the cell on one line: the
         /// 150 column less the 7 dot and its 8 gap, measured in Barlow Regular 13 from the font the panel
-        /// bundles. A longer state word wraps and makes its row the one taller row of the table.
+        /// bundles. A longer state word wraps and makes its row the one taller row of the table, which the
+        /// restart's phrase does by ruling (#524, ruling 1), and so is measured on its own above.
         /// </summary>
         [Fact]
         public void Every_state_fits_its_cell_on_one_line()
@@ -895,7 +896,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(135, PanelUpdates.TableStateRoom);
             var states = new[]
             {
-                PanelUpdates.UpToDate, PanelUpdates.UpdateAvailable, PanelUpdates.Missing, PanelUpdates.WaitingForRestart,
+                PanelUpdates.UpToDate, PanelUpdates.UpdateAvailable, PanelUpdates.Missing,
                 PanelUpdates.Unknown, PanelCopy.Installed, PanelCopy.NotInstalled, PanelCopy.InstallFailed,
             }.Concat(Enum.GetValues(typeof(FlagBoxInstallState)).Cast<FlagBoxInstallState>().Select(state => PanelCopy.LightRow(state, "0.4.0").State));
             foreach (var state in states)

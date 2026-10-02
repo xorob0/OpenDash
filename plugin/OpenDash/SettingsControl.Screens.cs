@@ -278,7 +278,7 @@ namespace OpenDashPlugin
                     return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);
                 case ScreenState.Restart:
                     // The card above says this state in the same words: one phrase for one state.
-                    return Ui.FixBox(PanelScreens.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);
+                    return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);
                 default:
                     return null;
             }

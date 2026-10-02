@@ -296,19 +296,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A dashboard written after SimHub started, which SimHub has not read: one phrase for that state on
-        /// every page (voice.md, "One word per thing"), which the Screens card and its fix box say too, where
-        /// Main.dc.html's line says "Not in SimHub yet".
-        /// </summary>
-        /// <remarks>
-        /// The base's PanelScreens has no constant with these words: its NotInSimHubYet is the wording this
-        /// replaces, and the Screens branch drops it for PanelScreens.RestartToLoad. PanelHomeTests holds
-        /// this one to PanelScreens' own the moment that constant exists, so the two pages cannot drift; once
-        /// it does, Home should draw PanelScreens.StateLabel and lose this copy.
-        /// </remarks>
-        public const string RestartToLoad = "Restart SimHub to load it";
-
-        /// <summary>
         /// A screen's line: what SimHub is missing when something is, in the Screens card's words and ink, and
         /// otherwise what the screen shows now.
         /// </summary>
@@ -317,7 +304,7 @@ namespace OpenDashPlugin
         public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed, bool waitsForRestart)
         {
             if (installed == false) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
-            if (waitsForRestart) return new HomeLine(RestartToLoad, Theme.Caution, Theme.Caution);
+            if (waitsForRestart) return new HomeLine(PanelCopy.RestartToLoad, Theme.Caution, Theme.Caution);
             return new HomeLine(ScreenShows(settings, screen), Theme.TextSecondary, installed == true ? Theme.StatusUpToDate : null);
         }
 

@@ -287,7 +287,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
             Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
             Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));
-            Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
+            Assert.Equal(PanelCopy.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
             Assert.Equal("Then assign \"Rim\" to this display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
             // The fix box under each state is titled with the card's phrase.
             Assert.Equal(PanelScreens.MissingTitle, PanelScreens.StateLabel(ScreenState.Missing));
@@ -1179,28 +1179,38 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A screen written after SimHub started is said as the rulings word it on each page: its card and its fix
-        /// box say PanelScreens.RestartToLoad, one phrase for the one state (ambiguity 27), and Home's issue, which
-        /// PanelAttention titles, says "Rim is not in SimHub yet" (the voice ruling on Main.dc.html's "Rim isn't
-        /// in SimHub yet"), its detail naming the restart.
+        /// A screen written after SimHub started is said one way on every page (#524, ruling 1): the Screens
+        /// card's state and its fix box's title, Home's screen line, the first step under Home's issue and the
+        /// Updates table's state are all PanelCopy.RestartToLoad. Home's issue title names the screen ("Rim is
+        /// not in SimHub yet", the voice ruling on Main.dc.html's "Rim isn't in SimHub yet") and so does not
+        /// repeat the phrase its step says.
         /// </summary>
-        /// <remarks>
-        /// Whether Home's title should take the card's phrase too is an open question for Tim, not a ruling, so
-        /// this holds the pair as ruled rather than a skipped test asserting the other way. A title built from
-        /// RestartToLoad would say Restart SimHub twice beside a detail that already does. If Tim rules one
-        /// phrase across the pages, both pins move together in that commit.
-        /// </remarks>
         [Fact]
-        public void A_screen_waiting_for_the_restart_is_said_as_ruled_on_each_page()
+        public void A_screen_waiting_for_the_restart_is_said_one_way_on_every_page()
         {
-            Assert.Equal("Restart SimHub to load it", PanelScreens.RestartToLoad);
-            Assert.Equal(PanelScreens.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
+            const string phrase = "Restart SimHub to load it";
+            Assert.Equal(phrase, PanelCopy.RestartToLoad);
+
+            // Screens: the card, and the fix box under it.
+            Assert.Equal(phrase, PanelScreens.StateLabel(ScreenState.Restart));
+            Assert.Contains("return Ui.FixBox(PanelCopy.RestartToLoad,", ScreensSource("SettingsControl.Screens.cs"));
+
+            // Home: the screen's line, and the issue's step.
+            var rim = new ScreenInstance { Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            rim.Normalise();
+            Assert.Equal(phrase, PanelHome.ScreenLine(new OpenDashSettings(), rim, true, true).Text);
             var waiting = new AttentionInput();
             waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
             var issue = System.Linq.Enumerable.Single(PanelAttention.Find(waiting));
             Assert.Equal("Rim is not in SimHub yet", issue.Title);
-            Assert.StartsWith("Restart SimHub", issue.Detail);
+            Assert.StartsWith(phrase + ". ", issue.Detail);
+            Assert.EndsWith(PanelScreens.RestartDetail("Rim"), issue.Detail);
             Assert.DoesNotContain("Restart SimHub", issue.Title);
+
+            // Updates: the dashboard's row in the In SimHub table, whatever the installer last found.
+            var package = new PackageStatus { FolderName = "Rim", Status = InstallStatus.UpToDate, InstalledVersion = "0.5.0", EmbeddedVersion = "0.5.0" };
+            Assert.Equal(phrase, PanelUpdates.DashboardRow(rim, package, true, true).State);
+            Assert.Null(typeof(PanelUpdates).GetField("WaitingForRestart"));
         }
 
         /// <summary>The page's own source file, its whitespace collapsed so a pin can span statements.</summary>
@@ -1452,7 +1462,7 @@ namespace OpenDashPlugin.Tests
                 "remove.Click += (sender, args) => ShowRemove(screen);",
                 "write.Click += (sender, args) => InstallScreenAgain(screen); return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);",
                 "case ScreenState.Restart:",
-                "return Ui.FixBox(PanelScreens.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);",
+                "return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);",
                 "ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),",
                 // Keep it keeps a migrated screen as well as going back.
                 "keep.Click += (sender, args) => { Save(screen); Redraw(); };",

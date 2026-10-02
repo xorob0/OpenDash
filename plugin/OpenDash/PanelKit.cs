@@ -27,6 +27,11 @@ namespace OpenDashPlugin
         public const double CardStateDot = 6;
         public const double CardStateGap = 6;
 
+        /// <summary>A card's state line, fixed so that a state that wraps (#524, ruling 1: never trimmed) keeps
+        /// its dot on the first line: 11 at 1.4, and the 6 px dot centred in that line.</summary>
+        public const double CardStateLineHeight = 15.4;
+        public const double CardStateDotTop = (CardStateLineHeight - CardStateDot) / 2;
+
         /// <summary>The accent bar along a selected card's foot.</summary>
         public const double CardFootBar = 2;
 

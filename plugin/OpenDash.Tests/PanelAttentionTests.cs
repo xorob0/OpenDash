@@ -65,7 +65,7 @@ namespace OpenDashPlugin.Tests
             input.Screens.Add(Screen("Rim", written: true));
             var issue = PanelAttention.Find(input).Single();
             Assert.Equal("Rim is not in SimHub yet", issue.Title);
-            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", issue.Detail);
+            Assert.Equal("Restart SimHub to load it. Then assign \"Rim\" to this display in Dash Studio.", issue.Detail);
             Assert.Equal("Open Rim", issue.ActionLabel);
             Assert.Equal(PanelIssueAction.Navigate, issue.Action);
             // A folder that is gone is not also waiting for a restart.

@@ -81,12 +81,8 @@ namespace OpenDashPlugin
         /// <summary>A card's state: its dashboard is in SimHub.</summary>
         public const string InSimHub = "In SimHub";
 
-        /// <summary>A card's state, and the title of the fix box under it: written after SimHub started, so
-        /// SimHub has not read it. One phrase for the one state, on the card and in the box.</summary>
-        public const string RestartToLoad = "Restart SimHub to load it";
-
         /// <summary>A card's state, and the title of the fix box under it: the dashboard's folder is gone. One
-        /// word for the one state, on the card and in the box, as <see cref="RestartToLoad"/> is one phrase;
+        /// word for the one state, on the card and in the box, as PanelCopy.RestartToLoad is one phrase;
         /// Home's screen line draws this constant too, so the three say it alike.</summary>
         public const string Missing = "Missing";
 
@@ -109,7 +105,7 @@ namespace OpenDashPlugin
             return OwnsSettings(screen) ? MissingDetail : null;
         }
 
-        /// <summary>The step after the restart, under <see cref="RestartToLoad"/>: SimHub lists the dashboard
+        /// <summary>The step after the restart, under PanelCopy.RestartToLoad: SimHub lists the dashboard
         /// under the screen's name, so that is the name to look for.</summary>
         public static string RestartDetail(string name)
         {
@@ -128,7 +124,7 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case ScreenState.Missing: return Missing;
-                case ScreenState.Restart: return RestartToLoad;
+                case ScreenState.Restart: return PanelCopy.RestartToLoad;
                 default: return InSimHub;
             }
         }

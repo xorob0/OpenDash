@@ -61,6 +61,19 @@ namespace OpenDashPlugin
         public const string InstallFailed = "Install failed";
 
         /// <summary>
+        /// A dashboard written after SimHub started, which SimHub has not read yet: one phrase for the one state
+        /// on every page that draws it (#524, ruling 1). The Screens card's state and its fix box's title, Home's
+        /// screen line and the first step of Home's issue, and the Updates table's state all read this constant.
+        /// </summary>
+        /// <remarks>
+        /// Home's issue keeps a title that names the screen ("Rim is not in SimHub yet"), since a list of issues
+        /// is read by what each is about, and says this phrase as its step. Where a card or a cell is too narrow
+        /// for it the phrase wraps to a second line; it is never trimmed, since a trimmed step is one nobody can
+        /// follow.
+        /// </remarks>
+        public const string RestartToLoad = "Restart SimHub to load it";
+
+        /// <summary>
         /// The sentence a glance row ends on: the binding is a hold, and the press type the dialog
         /// offers is not the driver's to choose.
         /// </summary>

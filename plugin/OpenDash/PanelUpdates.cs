@@ -471,14 +471,6 @@ namespace OpenDashPlugin
         /// page's to change; "from SimHub" would repeat the section's own heading.</summary>
         public const string Missing = "Missing";
 
-        /// <summary>
-        /// A rig dashboard SimHub has not loaded since it was written, in ruling 69's words for this table. The
-        /// Screens card and Home say the state as the step, "Restart SimHub to load it", which is 140 px in the
-        /// state's Barlow 13 and wraps its last word alone in the 135 the state cell leaves after its dot:
-        /// the table's state column holds a state, and the step is the row's hover.
-        /// </summary>
-        public const string WaitingForRestart = "Waiting for a restart";
-
         /// <summary>Under the table when this build carries no dashboard at all, as a dev build does: every
         /// row would otherwise read as if Reinstall everything could write it. Every note about what the build
         /// carries opens "This build ships no", as PanelLightRows.NoProfiles does.</summary>
@@ -671,8 +663,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A failure outranks everything; then a folder that has gone, in the failure ink; then one SimHub has
         /// not loaded yet, known only when the shell's facts say so; then the installer's own status. The
-        /// state words are held here (<see cref="Missing"/>, <see cref="WaitingForRestart"/>), not read
-        /// from another page. A screen this build ships nothing for is said from the facts alone -- installed
+        /// state words are held here (<see cref="Missing"/>), except the restart's, which is the panel's one
+        /// phrase for that state (PanelCopy.RestartToLoad, #524 ruling 1) and wraps to a second line in the cell. A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
         /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
         /// </remarks>
@@ -697,7 +689,7 @@ namespace OpenDashPlugin
             }
             if (waitsForRestart == true)
             {
-                return Row(name, DashboardKind, version, WaitingForRestart, Theme.Caution, AfterRestart(name));
+                return Row(name, DashboardKind, version, PanelCopy.RestartToLoad, Theme.Caution, AfterRestart(name));
             }
             switch (package.Status)
             {
