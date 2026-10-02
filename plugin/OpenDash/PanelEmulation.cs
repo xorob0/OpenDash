@@ -383,8 +383,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// <para>
         /// Rig.dc.html's rules: a flag fills the ends, a car alongside lights its own side's end (both ends
-        /// for both, and the whole strip on that side's half with the full-strip spotter), the limiter
-        /// alternates every LED, speeding reddens the ends, and the centre carries the revs. A bare run
+        /// for both), the limiter alternates every LED, speeding reddens the ends, and the centre carries the revs. A bare run
         /// carries flags and the pit lane across itself, which is what the generator draws there
         /// (rpmStrip.ts); the artboard's brow leaves the flag off and is wrong about it. An effect the strip
         /// has switched off is not drawn.
@@ -395,8 +394,11 @@ namespace OpenDashPlugin
         /// none). Low fuel and the temperature warning light each side's car lamp, the LED lampsForSide gives
         /// the car's own warnings (the one LED of a one-LED side, the inner of two, the third from the
         /// outside of three or more), in the fuel's low colour or the caution amber; a bare run has no car
-        /// lamp and shows neither. A centre whose Centre display is not the revs (StripOptions.Centre) starts
-        /// from its stand-in rather than the rev ladder, and every effect composes over it as over the revs.
+        /// lamp and shows neither. The full-strip spotter lights every LED of the strip, the ends and the
+        /// centre, for a side that is switched on, as rpmStrip.ts's spotterWhole does; the artboard lights only
+        /// the centre's half on the car's side. A centre whose Centre display is not the revs
+        /// (StripOptions.Centre) starts from its stand-in rather than the rev ladder, and every effect composes
+        /// over it as over the revs.
         /// </para>
         /// </remarks>
         public static string[][] StripFrame(int ends, int centre, string scenarioId, StripOptions options = null)
@@ -425,17 +427,18 @@ namespace OpenDashPlugin
             {
                 var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
                 var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
-                if (lightLeft) Fill(left, Theme.Caution);
-                if (lightRight) Fill(right, Theme.Caution);
-                if (options.SpotterWhole)
+                if (options.SpotterWhole && (lightLeft || lightRight))
                 {
-                    // The whole strip on the side the car is on: the centre's half nearer it.
-                    var half = middle.Length / 2;
-                    for (var i = 0; i < middle.Length; i++)
-                    {
-                        var onLeft = i < half || (middle.Length % 2 == 1 && i == half && lightLeft && !lightRight);
-                        if ((onLeft && lightLeft) || (!onLeft && lightRight)) middle[i] = Theme.Caution;
-                    }
+                    // Every LED of the strip, the ends and the centre, as rpmStrip.ts's spotterWhole draws a
+                    // side that is switched on over the whole run.
+                    Fill(left, Theme.Caution);
+                    Fill(middle, Theme.Caution);
+                    Fill(right, Theme.Caution);
+                }
+                else
+                {
+                    if (lightLeft) Fill(left, Theme.Caution);
+                    if (lightRight) Fill(right, Theme.Caution);
                 }
             }
             else if (scenarioId == Limiter && draws)

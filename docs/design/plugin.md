@@ -322,6 +322,9 @@ migration; OpenDash has no store, since a setting is a SimHub property.
 - **A car alongside lights a bare strip.** With Car left, Car right or Both sides chosen, the preview
   fills the run in the caution ink for each side switched on, as the installed profile does. The
   artboard draws nothing.
+- **The Full-strip spotter lights the whole strip**, the ends and the centre, for a car on a side that
+  is switched on, because the installed profile does (`rpmStrip.ts` draws it over the whole run). The
+  artboard lights only the centre's half on the car's side.
 - **The car line says nothing outside iRacing**, because the car data the plugin reads is iRacing's.
   When nothing was ever downloaded it says "Lovely Car Data is not downloaded yet. Download it under
   Every strip." (`PanelLeds.CarTablesMissing`).
