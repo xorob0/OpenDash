@@ -42,6 +42,24 @@ bun run package                                 # build + plugin with the packag
 dotnet test plugin/OpenDash.Tests               # plugin unit tests
 ```
 
+**Those four compile neither the panel nor the site**, and CI compiles both, so a change to either
+passes here and goes red there. Run the one that covers what you touched:
+
+```bash
+dotnet build plugin/OpenDash/OpenDash.csproj    # the WPF panel: SettingsControl*.cs, Widgets.cs, Segmented.cs
+cd site && bun run typecheck                    # the site, which the root typecheck does not reach
+```
+
+`plugin/OpenDash.Tests` targets net8.0 and the panel is net48 WPF, so the test project picks up only
+the pure `Panel*.cs` classes by pattern and a panel that does not compile passes every test. The way
+to make something in the panel testable is to lift it into a `Panel*.cs` class, which needs no csproj
+edit. The panel build wants `plugin/OpenDash/Resources/fonts`, which is build output:
+`bun run build && cp -R build/fonts plugin/OpenDash/Resources/fonts`, and never commit it.
+
+**`bun run check` does not build**, so `build/` holds whatever was last built in this checkout. The
+tests that read it skip when it is from another version and say so, rather than failing by the
+handful about photographs that are missing only because the manifest is old.
+
 Snapshots are meant to be read. When one changes, look at the diff before refreshing it with
 `bun test --update-snapshots` and say in the commit message what moved and why.
 

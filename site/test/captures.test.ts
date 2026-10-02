@@ -13,14 +13,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
 import { pageFile, packageFile, readCaptures, type CapturesSidecar } from '../lib/captures.ts';
-import { SUPERSEDED, type Manifest } from '../scripts/content.ts';
+import { readBuildManifest, SUPERSEDED, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const shots = path.resolve(import.meta.dir, '..', 'public', 'shots');
 const sidecarPath = path.join(shots, 'captures.json');
 const version = readFileSync(path.join(repoRoot, 'VERSION'), 'utf8').trim();
-const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
-const manifest: Manifest | null = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Manifest) : null;
+const manifest: Manifest | null = readBuildManifest(repoRoot);
 
 const exists = (file: string): boolean => existsSync(path.join(shots, file));
 

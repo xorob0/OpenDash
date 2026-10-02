@@ -284,7 +284,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_press_fetches_however_fresh_the_copy_is()
         {
-            var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
+            // Anchored to the wall clock rather than written as a date, because the last assertion
+            // crosses two clocks: `Download` stamps the folder with the time it is handed, and
+            // `Stale` is a live property that asks `DateTime.UtcNow` what the time is now. A fixed
+            // date therefore passes only while the real clock is within MaxAge of it, and this test
+            // duly began failing a week after the day it was written. An hour back leaves the second
+            // press, a minute later, safely in the past and far inside the week.
+            var now = DateTime.UtcNow.AddHours(-1);
             var source = new Source { Bytes = Archive("test one") };
             var service = new CarLightService(source, root);
 
