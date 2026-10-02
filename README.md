@@ -244,6 +244,7 @@ docs/
   decisions/           Architecture decision records
   research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis
   design/              Brand and visual direction
+  testing-panel.md     The scenario matrix for the settings panel, one row per control
   testing-vm.md        The Windows VM that runs SimHub for tests
 ```
 
