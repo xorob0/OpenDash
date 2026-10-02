@@ -356,8 +356,6 @@ namespace OpenDashPlugin
             return null;
         }
 
-        /// <summary>What one bar's middle shows, or the rig's own answer when the bar has gone. An
-        /// attached delegate outlives the bar it was attached for until SimHub restarts.</summary>
         /// <summary>Which LED device one bar's profile is installed into. The Arduino's when the bar is
         /// unknown, which is what a bar written before OpenDash knew there was more than one is read as.</summary>
         public string BarDevice(string ns)
@@ -366,6 +364,8 @@ namespace OpenDashPlugin
             return LedBar.NormaliseDevice(bar == null ? null : bar.Device);
         }
 
+        /// <summary>What one bar's middle shows, or the rig's own answer when the bar has gone. An
+        /// attached delegate outlives the bar it was attached for until SimHub restarts.</summary>
         public string BarCentre(string ns)
         {
             var bar = LedBarByNamespace(ns);

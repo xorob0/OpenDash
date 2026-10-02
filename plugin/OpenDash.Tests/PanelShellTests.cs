@@ -318,8 +318,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelShell.SectionGapFor(PanelPage.Rig));
         }
 
-        /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
-        /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
         /// <summary>How long a resize and a burst of wheel presses are let settle before a page is rebuilt.
         /// Page agents take LightingSettleMs as the coalescing hook, so a change is a decision, not a drift.</summary>
         [Fact]
@@ -329,6 +327,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(120, PanelShell.LightingSettleMs);
         }
 
+        /// <summary>The rail's inside is 39, not 40: its 56 less the rule and 8 each side. What it holds is
+        /// drawn to that, and a capture script finds an item's x from the layout as it finds its y.</summary>
         [Fact]
         public void The_rail_holds_what_fits_inside_its_rule()
         {
@@ -751,19 +751,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DropPreview(); ClearTicks(); ClearUpdateHandlers(); lightingActions.Clear(); pageDrawsLighting = false; RunDropActions();", build);
         }
 
-        /// <summary>No member of the panel carries two summaries: a merge that stacks one member's summary over
-        /// another's leaves the first member undocumented and the second documented twice, and the compiler takes
-        /// the pair without a word.</summary>
+        /// <summary>No member of the plugin or its tests carries two summaries: a merge that stacks one member's
+        /// summary over another's leaves the first member undocumented and the second documented twice, and the
+        /// compiler takes the pair without a word. Every source is read, not the panel's alone, since the seam
+        /// opened in Contract.cs and OpenDashSettings.cs as well (#535).</summary>
         [Fact]
-        public void No_member_of_the_panel_carries_two_summaries()
+        public void No_member_of_the_plugin_carries_two_summaries()
         {
-            var root = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
-            var files = System.IO.Directory.GetFiles(root, "*.cs")
-                .Where(path =>
-                {
-                    var name = System.IO.Path.GetFileName(path);
-                    return name.StartsWith("SettingsControl", StringComparison.Ordinal) || name.StartsWith("Panel", StringComparison.Ordinal) || name.StartsWith("Widgets", StringComparison.Ordinal);
-                });
+            var plugin = System.IO.Path.Combine(RepoPaths.Root(), "plugin");
+            var files = new[] { "OpenDash", "OpenDash.Tests" }
+                .SelectMany(project => System.IO.Directory.GetFiles(System.IO.Path.Combine(plugin, project), "*.cs"))
+                .ToList();
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "Contract.cs");
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "PanelShellTests.cs");
             foreach (var path in files)
             {
                 var text = System.IO.File.ReadAllText(path);

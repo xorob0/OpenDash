@@ -144,16 +144,14 @@ namespace OpenDashPlugin
         /// What the top of a rectangular face carries: the shift lights, a plain RPM bar, or nothing
         /// at all -- in which case the face is drawn in its second arrangement, with the well's room
         /// given back to the zones. A mode rather than a second boolean, because the three are one
-        /// decision and two booleans would have a fourth state that means nothing.
+        /// decision and two booleans would have a fourth state that means nothing. `rpm` is retired and
+        /// still accepted.
         ///
         /// <para>"shift" names the state and not the source. Which ladder lights it is the car's
         /// business rather than a setting: the car's own RPMs where it publishes them, SimHub's bands
         /// where it does not (ADR 0014). There is no fourth value for that and there should not be
         /// one. The other half of this comment is REV_BAR_MODES in packages/dash/src/contract.ts,
         /// and the two are kept saying the same thing.</para>
-        /// </summary>
-        /// <summary>
-        /// What a face carries at the top. `rpm` is retired and still accepted.
         /// </summary>
         /// <remarks>
         /// Retired rather than removed, because it has shipped and a settings file naming it must keep

@@ -322,11 +322,11 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelUpdates.AppliesWhenAnswered(true, UpdateState.UpToDate, false));
         }
 
-        /// <summary>The page's own code, the draw files, as one string without comments.</summary>
         /// <summary>The shell's SettingsControl.Profiles.cs, whose by-hand route the page draws, flattened.</summary>
         private static string ProfilesCode() => System.Text.RegularExpressions.Regex.Replace(
             RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Profiles.cs")), @"\s+", " ");
 
+        /// <summary>The page's own code, the draw files, as one string without comments.</summary>
         private static string PageCode()
         {
             return string.Concat(RepoPaths.SettingsControlSources()

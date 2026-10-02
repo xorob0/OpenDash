@@ -31,11 +31,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelKit.CardGridGap);
         }
 
-        /// <summary>
-        /// Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart, so at its own 1200 px --
-        /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
-        /// keeps "Add a screen" on the first row. At 150 the grid took five there.
-        /// </summary>
         /// <summary>A picture drawn at a fixed size shrinks to a narrower column and never grows past its own
         /// size, set against the column's left edge: grown, the 846 px face filled a 4K column four times over;
         /// centred, it stood in the middle of an empty band.</summary>
@@ -49,6 +44,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Stretch = Stretch.Uniform", fit);
         }
 
+        /// <summary>
+        /// Screens.dc.html lays its cards out as repeat(6, minmax(0,1fr)) 10 apart, so at its own 1200 px --
+        /// the full sidebar, the gutter, and the scroll bar taken out -- six cards fit, and a five-screen rig
+        /// keeps "Add a screen" on the first row. At 150 the grid took five there.
+        /// </summary>
         [Fact]
         public void The_card_grid_holds_the_artboards_six_at_its_own_width()
         {

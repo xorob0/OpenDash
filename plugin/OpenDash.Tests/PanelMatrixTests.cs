@@ -1560,8 +1560,6 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
-        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
         /// <summary>
         /// The page justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
         /// table, the artboards, a ticket -- and never by a numbered ruling in a workflow's scratch files, which
@@ -1589,6 +1587,8 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
+        /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
         [Fact]
         public void Its_anchor_ids_are_pinned()
         {
