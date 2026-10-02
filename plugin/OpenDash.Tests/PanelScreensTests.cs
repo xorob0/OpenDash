@@ -1511,7 +1511,7 @@ namespace OpenDashPlugin.Tests
                 AssertOnce(page, pin, "Screens.cs");
             }
             // The empty rig returns before anything that needs a selected screen.
-            Assert.True(page.IndexOf("Ui.Prose(PanelCopy.EmptyRig", System.StringComparison.Ordinal) < page.IndexOf("BuildScreenHeader(screen)", System.StringComparison.Ordinal));
+            TextOrder.Before(page, "Ui.Prose(PanelCopy.EmptyRig", "BuildScreenHeader(screen)");
             Assert.Equal(6, PanelScreens.CardColumns);
 
             var round = ScreensSource("SettingsControl.Screens.Round.cs");

@@ -929,7 +929,7 @@ namespace OpenDashPlugin.Tests
             // SimHub's "Trigger now" rides on the name; it moves to the editor's border before the name goes.
             Assert.Contains("var menuOwner = named.Select(ShortcutsMenuOwner).FirstOrDefault(owner => owner != null);", drop);
             Assert.Matches(@"if \(menuOwner != null && border\.ContextMenu == null\)\s*\{\s*var menu = menuOwner\.ContextMenu;\s*menuOwner\.ContextMenu = null;\s*border\.ContextMenu = menu;", drop);
-            Assert.True(drop.IndexOf("border.ContextMenu = menu;", StringComparison.Ordinal) < drop.IndexOf("child.Visibility = Visibility.Collapsed;", StringComparison.Ordinal), "the menu moves before the name is collapsed");
+            TextOrder.Before(drop, "border.ContextMenu = menu;", "child.Visibility = Visibility.Collapsed;", "the menu moves before the name is collapsed");
             var owner = Between(code, "private static FrameworkElement ShortcutsMenuOwner(", "\n        }");
             Assert.Contains("if (element != null && element.ContextMenu != null) return element;", owner);
             Assert.Contains("var content = label == null ? null : label.Content as FrameworkElement;", owner);
@@ -1290,13 +1290,13 @@ namespace OpenDashPlugin.Tests
             // and a focused Clear leaves the tree), so the row last pressed or focused in stands for it while
             // the focus is on nothing but a bare window.
             Assert.Contains("if (focused == null && touch.Row != null && touch.Row.Shown.Visibility == Visibility.Visible && ShortcutsFocusOnNothing()) focused = touch.Row;", evaluate);
-            Assert.True(evaluate.IndexOf("focused = touch.Row;", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "the touched row is taken before the rows are hidden");
+            TextOrder.Before(evaluate, "focused = touch.Row;", "row.Shown.Visibility = shows", "the touched row is taken before the rows are hidden");
             var nothing = Between(code, "private static bool ShortcutsFocusOnNothing(", "\n        }");
             Assert.Contains("var at = Keyboard.FocusedElement;", nothing);
             Assert.Contains("return at == null || at is Window;", nothing);
             var page = Between(code, "private FrameworkElement BuildShortcutsPage(", "var page = TaggedPageLayout(");
             Assert.Matches(@"foreach \(var row in groups\.SelectMany\(group => group\.Rows\)\.Where\(row => row\.Bindable\)\)\s*\{\s*var touched = row;\s*row\.Shown\.PreviewMouseDown \+= \(sender, args\) => touch\.Row = touched;\s*row\.Shown\.GotKeyboardFocus \+= \(sender, args\) => touch\.Row = touched;", page);
-            Assert.True(evaluate.IndexOf("var focused =", StringComparison.Ordinal) < evaluate.IndexOf("row.Shown.Visibility = shows", StringComparison.Ordinal), "focus is read before the rows are hidden");
+            TextOrder.Before(evaluate, "var focused =", "row.Shown.Visibility = shows", "focus is read before the rows are hidden");
             var keep = Between(code, "private static void ShortcutsKeepFocus(", "\n        }");
             Assert.Contains("row.Bindable && row.Shown.Visibility == Visibility.Visible", keep);
             // From the hidden row's own place, and the first row that takes the focus keeps it.

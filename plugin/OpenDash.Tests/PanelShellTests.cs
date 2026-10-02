@@ -522,7 +522,7 @@ namespace OpenDashPlugin.Tests
 
             var sidebar = Code("SettingsControl.Sidebar.cs");
             Assert.DoesNotContain("DockPanel.SetDock(foot", sidebar);
-            Assert.True(sidebar.IndexOf("Content = top,", StringComparison.Ordinal) < sidebar.IndexOf("dock.Children.Add(foot);", StringComparison.Ordinal), "the sidebar adds its items before its foot");
+            TextOrder.Before(sidebar, "Content = top,", "dock.Children.Add(foot);", "the sidebar adds its items before its foot");
 
             var shell = Code("SettingsControl.cs");
             var mainScroll = shell.Substring(shell.IndexOf("private readonly ScrollViewer mainScroll", StringComparison.Ordinal));
