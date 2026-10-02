@@ -3,9 +3,10 @@
 //
 // The page is Matrix.dc.html: the flag box profile on the title's line, a card for each matrix the rig has,
 // and for the one selected its preview beside what may take it over, in priority order, and what it shows
-// at rest. The words follow docs/design/voice.md where the artboard differs (the critic's rulings in the
-// #503 inventory): one noun, "matrix", for the thing a driver owns; the row names the panel has always used
-// ("Idle display", "Mounting side", "Redline flash"); and a profile named the way SimHub lists it.
+// at rest. The words follow docs/design/voice.md where the artboard differs, and docs/design/plugin.md's
+// departures table records each difference: one noun, "matrix", for the thing a driver owns; the row names
+// the panel has always used ("Idle display", "Mounting side", "Redline flash"); and a profile named the way
+// SimHub lists it.
 //
 // The matrix copy PanelLights still holds for the old tab is copied here rather than moved, because
 // PanelLights is the LEDs page's; this page reads none of it. Pure: no WPF.
@@ -21,9 +22,9 @@ namespace OpenDashPlugin
         public const string Title = "Matrix";
 
         /// <summary>
-        /// The empty state, here and under Home's Matrix eyebrow, which reads this constant. One noun for the
-        /// thing a driver owns (ruling 59): a matrix, never a panel, which in this panel is the settings
-        /// window itself.
+        /// The empty state, here and under Home's Matrix eyebrow, which reads this constant. One noun for the thing
+        /// a driver owns (voice.md, "One word per thing"): a matrix, never a panel, which in this panel is the
+        /// settings window itself.
         /// </summary>
         public const string NoPanels = "No matrices yet.";
 
@@ -33,13 +34,13 @@ namespace OpenDashPlugin
         // --- The profile, on the title's line ---------------------------------------------------------
 
         /// <summary>
-        /// What the flag box profile's line says after the profile's name, the ink of the dot beside it, and
-        /// the press. The Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither
-        /// page rewords a state for the other. The state is the version SimHub holds, since the name already
-        /// says which profile it is: "OpenDash Flag box · 0.5.0". With the line reduced to the name and the
-        /// version (ruling 55) the dot is the one part of it that tells an older profile from a current one, so
-        /// each state's ink is the dot's, drawn by the page itself (the words are text.secondary in every
-        /// state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
+        /// What the flag box profile's line says after the profile's name, the ink of the dot beside it, and the
+        /// press. The Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither page
+        /// rewords a state for the other. The state is the version SimHub holds, since the name already says which
+        /// profile it is: "OpenDash Flag box · 0.5.0". With the line reduced to the name and the version, as
+        /// Matrix.dc.html's title line draws it, the dot is the one part of it that tells an older profile from a
+        /// current one, so each state's ink is the dot's, drawn by the page itself (the words are text.secondary in
+        /// every state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
         /// Home and the Updates artboard draw it, a failed one red, and none purpose.status.notInstalled.
         /// </summary>
         public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
@@ -85,8 +86,8 @@ namespace OpenDashPlugin
             return plan == null ? FlagBoxInstallState.NotEmbedded : plan.State;
         }
 
-        /// <summary>Whether the by-hand import is drawn under the title's line (ruling 55): only when SimHub's
-        /// matrix settings could not be reached, since the press there does the rest.</summary>
+        /// <summary>Whether the by-hand import is drawn under the title's line, which Matrix.dc.html does not draw:
+        /// only when SimHub's matrix settings could not be reached, since the press there does the rest.</summary>
         public static bool ShowsImportFallback(FlagBoxInstallState state)
         {
             return state == FlagBoxInstallState.Unavailable;
@@ -144,18 +145,18 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is said once the press has run, as one message in the order the driver acts on it, or null
-        /// when the line above already says it all. The verb first, one per press (ruling 67): Installed,
-        /// Updated over an older copy, Reinstalled over a current one, the name unquoted after it as on the
-        /// other pages. Then the installer's note when it has one (FlagBoxInstallPlan.BuiltInModeNote), which
-        /// has to be done before the profile can be selected at all, and makes the message caution rather
-        /// than information, as the LEDs page says the same note. Then, after a first install, which adds the
-        /// profile and does not select it, the select step in the form <see cref="StepsLeft"/> gives it
-        /// (<see cref="SelectStep"/>): for the one matrix, for each of several, and none on a rig with none.
-        /// A press that failed is said in its own verb, the one on the press the line drew
-        /// (<paramref name="pressedIn"/>, the line's state): Could not update after Update, Could not
-        /// reinstall after Reinstall, Could not install after Install, the Install offered after a failure
-        /// included, as the LEDs and Updates pages word the same failure.
+        /// What is said once the press has run, as one message in the order the driver acts on it, or null when the
+        /// line above already says it all. The verb first, one per press (voice.md, "One word per thing", which
+        /// holds verbs to it too): Installed, Updated over an older copy, Reinstalled over a current one, the name
+        /// unquoted after it as on the other pages. Then the installer's note when it has one
+        /// (FlagBoxInstallPlan.BuiltInModeNote), which has to be done before the profile can be selected at all,
+        /// and makes the message caution rather than information, as the LEDs page says the same note. Then, after
+        /// a first install, which adds the profile and does not select it, the select step in the form <see
+        /// cref="StepsLeft"/> gives it (<see cref="SelectStep"/>): for the one matrix, for each of several, and
+        /// none on a rig with none. A press that failed is said in its own verb, the one on the press the line drew
+        /// (<paramref name="pressedIn"/>, the line's state): Could not update after Update, Could not reinstall
+        /// after Reinstall, Could not install after Install, the Install offered after a failure included, as the
+        /// LEDs and Updates pages word the same failure.
         /// </summary>
         public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState pressedIn, FlagBoxInstallState after, string profile, string note, IList<int> panels)
         {
@@ -212,9 +213,13 @@ namespace OpenDashPlugin
         /// The hover on the title's line: in one sentence what the line cannot show, and nothing where the
         /// line, its press or the by-hand import under it already says it all (Not installed, whose press says
         /// what Install does; no profile in this build; SimHub's matrix settings out of reach). What a press
-        /// replaces is the press's own tooltip. The words are the Updates page's for the same profile in the
-        /// same state (PanelUpdates.UpdateBringsItTo and LightFailed on that branch), so one profile is never
-        /// hovered two ways on two pages.
+        /// replaces is the press's own tooltip. An older profile and a failed one are hovered in the Updates
+        /// page's words for the same profile in the same state (PanelUpdates.UpdateBringsItTo and
+        /// PanelUpdates.LightFailed). The other two states are hovered differently on the two pages, on
+        /// purpose. A current profile's hover here is the select step, which an earlier review asked for, while
+        /// the Updates row has none (PanelUpdates.FlagBoxTooltip: "a current one has none"). A missing profile
+        /// has no hover here, since the press beside the line is Install, while the Updates row names the press
+        /// (PanelUpdates.FlagBoxNotInstalled).
         /// </summary>
         /// <param name="profile">The profile as SimHub lists it, which the select step quotes.</param>
         /// <param name="panels">The rig's matrices: a current profile's hover is the select step, in the one
@@ -403,7 +408,9 @@ namespace OpenDashPlugin
         public const string Rename = "Rename";
         public const string RenameTooltip = "Renames this matrix.";
         public const string Remove = "Remove";
-        public const string RemoveTooltip = "Removes this matrix.";
+        /// <summary>Remove's hover: what goes with the matrix, as <see cref="RemoveCaption"/> says it in the sheet
+        /// and as the Screens and LEDs pages' Remove hovers name what goes with theirs.</summary>
+        public const string RemoveTooltip = "Removes this matrix and its settings.";
 
         public static string RenameTitle(string name)
         {
@@ -450,7 +457,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The device's field that picks which matrix it draws, spelt as SimHub labels it (ruling 69): the
+        /// The device's field that picks which matrix it draws, spelt as SimHub labels it: the
         /// localisation key ArduinoHardwareSettings_Label_RGBMatrixContent in SimHub.Plugins.dll and the same
         /// string in SimHubWPF.exe read "RGB Matrix content", and docs/flag-box.md tells drivers to set it by
         /// that name. Matrix.dc.html's "Matrix content: 2" names a field SimHub does not have.
@@ -461,10 +468,11 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The line under the name box, which says what the name is not: one profile paints every matrix, so
-        /// SimHub's list carries the profile's name and never this one. One sentence, in the form the Screens
-        /// and LEDs sheets give the same row ("Also shown in SimHub's ... list").
+        /// SimHub's matrix profile list carries the profile's name and never this one. One sentence, in the form
+        /// the Screens and LEDs sheets give the same row ("Also shown in SimHub's LED profile list."), the list
+        /// named as docs/flag-box.md and FlagBoxInstaller's log name it.
         /// </summary>
-        public const string NameCaption = "Not shown in SimHub's profile list.";
+        public const string NameCaption = "Not shown in SimHub's matrix profile list.";
 
         public const string Cancel = "Cancel";
 
@@ -589,15 +597,20 @@ namespace OpenDashPlugin
         };
 
         /// <summary>
-        /// What the preview draws, for a screen reader (the artboard's role=img alt text): the scenario the
-        /// matrix is drawn in, as <see cref="DrawnScenario"/> leaves it, and at rest the gear or nothing. The
-        /// revs chip with Shift colours on draws the gear in its first shift colour, which is the one picture
-        /// that tells it from the idle display, so it is named for that; with the switch off it draws the
-        /// idle display's white gear and is named as it is.
+        /// What the preview draws, for a screen reader (the artboard's role=img alt text): the glyph the matrix
+        /// shows under the chip drawn (<see cref="DrawnScenario"/>), in the options it is drawn with
+        /// (<see cref="OptionsFor"/> with that chip), so the name is always the picture's. The gear in its first
+        /// shift colour is named for that colour, which is the one picture that tells it from the idle display:
+        /// under the revs chip with Shift colours on, and under any chip the matrix does not show, since a gear
+        /// matrix that nothing takes over draws the gear at that chip's revs (PanelEmulation's rest glyph), as
+        /// the Rig page draws it.
         /// </summary>
         public static string PreviewAlt(string drawn, MatrixOptions options)
         {
-            if (drawn == RevsScenario && options != null && options.Bands && ShowsGearRows(options.Rest)) return PreviewRevs;
+            var glyph = PanelEmulation.GlyphFor(drawn, options);
+            if (glyph == null) return PreviewDark;
+            if (glyph == RestGearGlyph) return PreviewGear;
+            if (glyph == RevsGearGlyph) return PreviewRevs;
             switch (drawn)
             {
                 case PanelEmulation.Yellow: return "Yellow flag";
@@ -607,9 +620,16 @@ namespace OpenDashPlugin
                 case PanelEmulation.LowFuel: return "Fuel pump";
                 case PanelEmulation.Chequer: return "Chequered flag";
             }
-            var gear = options != null && ShowsGearRows(options.Rest);
-            return gear ? "Gear " + PanelEmulation.Gear : PreviewDark;
+            return PreviewLabel(drawn);
         }
+
+        /// <summary>The glyphs the gear is drawn in at rest, and at revs with Shift colours on, as
+        /// PanelEmulation names them from flag-box-glyphs.json.</summary>
+        private const string RestGearGlyph = "Gear " + PanelEmulation.Gear + " rest";
+        private const string RevsGearGlyph = "Gear " + PanelEmulation.Gear + " stage1";
+
+        /// <summary>The preview's alt text when the gear is drawn in its one white.</summary>
+        public const string PreviewGear = "Gear " + PanelEmulation.Gear;
 
         /// <summary>The preview's alt text when the idle display rests dark.</summary>
         public const string PreviewDark = "Dark";
@@ -652,60 +672,37 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A matrix's settings as its picture reads them, the families included: a family switched off
-        /// leaves the matrix at its idle display under that chip, which is what the matrix would do.
+        /// A matrix's settings as its picture reads them under a chip: the Rig page's own
+        /// (PanelRigMap.MatrixOptionsFor), called rather than copied, so the preview and the matrix's tile on
+        /// the Rig page, which "All devices at once" opens on the same chip, draw one matrix under one chip
+        /// alike. A family switched off, or a car on the side the matrix is not mounted on, leaves the matrix
+        /// at its idle display (PanelEmulation.GlyphFor); with Critical flags only on, the flags are off for a
+        /// flag that is news rather than a warning (the chequer, the white and the green: flags.ts's
+        /// "critical"). Without a chip, the settings alone.
         /// </summary>
-        public static MatrixOptions OptionsFor(OpenDashSettings settings, int matrix)
+        public static MatrixOptions OptionsFor(OpenDashSettings settings, int matrix, string scenario = null)
         {
-            return new MatrixOptions
-            {
-                Side = settings.MatrixSide(matrix),
-                Rest = settings.MatrixRest(matrix),
-                Bands = settings.MatrixGearBands(matrix),
-                CarLadder = settings.MatrixGearCarLadder(matrix),
-                Flags = settings.MatrixFlags(matrix),
-                Pit = settings.MatrixPit(matrix),
-                Spotter = settings.MatrixSpotter(matrix),
-                Warnings = settings.MatrixWarnings(matrix),
-            };
+            return PanelRigMap.MatrixOptionsFor(settings, matrix, scenario);
         }
 
         /// <summary>
-        /// The scenario a chip is drawn in, which is the chip's own unless the matrix would not show it: a
-        /// family switched off, a car on the side the matrix is not mounted on, or, with Critical flags only on,
-        /// a flag that is news rather than a warning (the chequer, the white and the green). Each of those
-        /// leaves the matrix at its idle display, so it is drawn as the first chip draws it. The flag box's
-        /// catalogue is packages/dash/src/flags.ts ("critical"); docs/design/flag-box.md says what it drops.
+        /// The scenario a chip is drawn in: the chip's own, as the Rig page draws it, so a chip the matrix
+        /// would not show draws what the matrix shows then -- on a matrix that rests on the gear, the gear at
+        /// that chip's revs (PanelEmulation.MatrixFrame) rather than the idle display's white gear. The idle
+        /// display alone is drawn as the idle scenario, and so is the revs chip on a matrix that rests dark,
+        /// whose revs change nothing it shows.
         /// </summary>
-        public static string DrawnScenario(string scenario, MatrixOptions options, bool criticalOnly)
+        public static string DrawnScenario(string scenario, MatrixOptions options)
         {
             if (scenario == null || scenario == IdleScenario) return IdleScenario;
-            if (criticalOnly && IsNewsFlag(scenario)) return IdleScenario;
-            // The revs are the idle display's own: drawn while the matrix rests on the gear, which is the only
-            // thing they change.
-            if (scenario == RevsScenario) return options != null && ShowsGearRows(options.Rest) ? RevsScenario : IdleScenario;
-            // Whether anything but the idle display shows: the chip on a matrix that rests dark.
-            var dark = new MatrixOptions
-            {
-                Side = options == null ? Contract.FlagBoxSides[0] : options.Side,
-                Rest = "dark",
-                Flags = options == null || options.Flags,
-                Pit = options == null || options.Pit,
-                Spotter = options == null || options.Spotter,
-                Warnings = options == null || options.Warnings,
-            };
-            return PanelEmulation.GlyphFor(scenario, dark) == null ? IdleScenario : scenario;
+            if (scenario == RevsScenario && (options == null || !ShowsGearRows(options.Rest))) return IdleScenario;
+            return scenario;
         }
 
-        /// <summary>The flags Critical flags only drops, among those the emulation draws.</summary>
-        public static bool IsNewsFlag(string scenario)
-        {
-            return scenario == PanelEmulation.Chequer || scenario == PanelEmulation.White || scenario == PanelEmulation.Green;
-        }
-
-        /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
-        /// the artboard's own from its clause "What to preview". Not "scenarios", which is the code's word for
-        /// PanelEmulation's chips and no page shows a driver.</summary>
+        /// <summary>What the chips are, for a screen reader: a noun, as voice.md's "The caption" says a heading
+        /// is, the artboard's own from its clause "What to preview", and one noun for the one set of chips on
+        /// every page (#524, ruling 6). Not "scenarios", which is the code's word for PanelEmulation's chips and
+        /// no page shows a driver.</summary>
         public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
@@ -722,9 +719,9 @@ namespace OpenDashPlugin
         /// <summary>The gap between the preview and the priority list when they are stacked: the page's own.</summary>
         public const double StackedGap = 22;
 
-        /// <summary>The gap under the New tag, which sits on its own line over the preview's frame (ruling 7
-        /// tags the preview itself): the frame's padding is narrower than the tag is tall, so it cannot sit
-        /// inside the frame clear of the lamps.</summary>
+        /// <summary>The gap under the New tag, which sits on its own line over the preview's frame (Map.dc.html
+        /// marks the Live 8×8 preview itself new): the frame's padding is narrower than the tag is tall, so it
+        /// cannot sit inside the frame clear of the lamps.</summary>
         public const double NewTagGap = 8;
 
         // --- What may take the matrix over -------------------------------------------------------------
@@ -741,11 +738,11 @@ namespace OpenDashPlugin
         public const string WarningsTitle = "Warnings";
 
         /// <summary>
-        /// What may take the matrix over, first first, as ruling 56 and the artboard number it, fixed until
-        /// #505 lets a driver change it. This is not quite the box's own order: flag-box.md and profile.ts
-        /// (belowFlags) paint the spotter as an overlay over everything, a standing yellow included, and rank
-        /// the rest flags, pit lane, warnings, gear. The numbers are the ruling's; the disagreement is the
-        /// author's to settle, not this page's.
+        /// What may take the matrix over, first first, as Matrix.dc.html numbers it, fixed until #505 lets a
+        /// driver change it. This is not quite the box's own order: flag-box.md and profile.ts (belowFlags)
+        /// paint the spotter as an overlay over everything, a standing yellow included, and rank the rest
+        /// flags, pit lane, warnings, gear. The numbers are the artboard's; the disagreement is the author's
+        /// to settle, not this page's.
         /// </summary>
         public static readonly string[] Layers = { FlagsTitle, PitLaneTitle, SpotterTitle, WarningsTitle };
 
@@ -775,9 +772,9 @@ namespace OpenDashPlugin
         public const string ShiftColoursTitle = "Shift colours";
         public const string RedlineFlashTitle = "Redline flash";
 
-        /// <summary>The digit's colours following the car's own shift lights: "shift points", as voice.md's
-        /// rulings name them, since "thresholds" is the settings model's word and not the driver's; and
-        /// "Car-specific", the name voice.md gives the car's own tables, which is also what Lovely Sim Racing
+        /// <summary>The digit's colours following the car's own shift lights: "shift points", as plugin.md's
+        /// departures table records the row, since "thresholds" is the settings model's word and not the driver's;
+        /// and "Car-specific", the name voice.md gives the car's own tables, which is also what Lovely Sim Racing
         /// calls the tables behind them, so a driver who met them there recognises the word.</summary>
         public const string CarShiftPointsTitle = "Car-specific shift points";
 
@@ -867,8 +864,9 @@ namespace OpenDashPlugin
         // 12-padded line of its number (16 in the display family, 14 wide), 12, its name at 15 and its switch;
         // each option under it padded 7, at 14, its control 16 from its words; a line under an option at 12,
         // 2 below; the Thresholds link 8 before the switch. The artboard indents the options 46 because its
-        // lines start with a 10 px grip and 12; ruling 56 took the grips out, so the options and the rank-less
-        // SimHub device row start where a layer's name now does, the rank's 14 and 12 in.
+        // lines start with a 10 px grip and 12; the build draws no grip until #505 makes the order draggable, so
+        // the options and the rank-less SimHub device row start where a layer's name now does, the rank's 14 and 12
+        // in.
         public const double PriorityHeadGap = 8;
         public const double LayerPaddingY = 12;
         public const double LayerGap = 12;

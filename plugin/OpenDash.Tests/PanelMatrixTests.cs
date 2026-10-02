@@ -36,7 +36,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_matrix_rows_say_what_the_artboard_and_the_voice_rulings_say()
+        public void The_matrix_rows_say_what_the_artboard_and_voice_md_say()
         {
             Assert.Equal("Matrix", PanelMatrix.Title);
             Assert.Equal("Priority", PanelMatrix.PriorityTitle);
@@ -69,8 +69,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// One noun for the thing a driver owns (ruling 59): a matrix, never a panel. The empty state is the
-        /// Matrix page's own and Home reads it, as it reads NoScreens and NoStrips.
+        /// One noun for the thing a driver owns (voice.md, "One word per thing"): a matrix, never a panel. The
+        /// empty state is the Matrix page's own and Home reads it, as it reads NoScreens and NoStrips.
         /// </summary>
         [Fact]
         public void A_matrix_is_called_a_matrix()
@@ -81,7 +81,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("All four matrices are in use.", PanelMatrix.AllInUse);
             Assert.Equal("Adds a matrix.", PanelMatrix.AddTooltip);
             Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
-            Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
+            // What goes with it, as the Remove sheet says it and as every other Remove hover names it
+            // ("Removes this screen, its dashboard and its settings.", "Removes this strip, its settings and its profile.").
+            Assert.Equal("Removes this matrix and its settings.", PanelMatrix.RemoveTooltip);
+            Assert.StartsWith(PanelMatrix.RemoveTooltip.Replace("this matrix", "Left pillar"), PanelMatrix.RemoveCaption("Left pillar"));
             Assert.Equal("Cancel", PanelMatrix.Cancel);
             Assert.Equal("Preview", PanelMatrix.PreviewChipsName);
             // The code's word for the chips never reaches a driver.
@@ -143,9 +146,9 @@ namespace OpenDashPlugin.Tests
                 pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
             Assert.Equal(PanelMatrix.Update, outdated.Button);
             // Every state carries the dot's ink, which the page draws itself: the line is the name and the version
-            // (ruling 55), so the dot is what tells an older profile from a current one, in the amber the
-            // sidebar's dot, Home and the Updates artboard give an update. The page hands it to Ui.Brush, which
-            // throws on a null one, so a state left without an ink would fail the whole page.
+            // (as Matrix.dc.html draws it), so the dot is what tells an older profile from a current one, in the
+            // amber the sidebar's dot, Home and the Updates artboard give an update. The page hands it to Ui.Brush,
+            // which throws on a null one, so a state left without an ink would fail the whole page.
             Assert.Equal(Theme.StatusUpdateAvailable, outdated.StateHex);
             Assert.Equal(Theme.StatusUpToDate, current.StateHex);
             Assert.NotEqual(current.StateHex, outdated.StateHex);
@@ -185,8 +188,9 @@ namespace OpenDashPlugin.Tests
                 Assert.True(PanelMatrix.ProfileHasButton(state));
             }
 
-            // One message in the order the driver acts on it: the verb (ruling 67: one per press; the name
-            // unquoted), the installer's note, then after a first install the select step in StepsLeft's form.
+            // One message in the order the driver acts on it: the verb (one per press, voice.md's "One word per
+            // thing"; the name unquoted), the installer's note, then after a first install the select step in
+            // StepsLeft's form.
             var one = new List<int> { 2 };
             var several = new List<int> { 1, 3 };
             var none = new List<int>();
@@ -270,6 +274,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " ", "OpenDash Flag box", one));
             Assert.Equal("See SimHub's log.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Failed, "0.5.0", "OpenDash Flag box", one));
             Assert.Equal("See SimHub's log.", PanelMatrix.SeeLog);
+            // The Updates page's flag box row, state by state: older and failed alike; a current profile and a
+            // missing one hovered apart, as the summary says, and nowhere claimed to match.
+            foreach (FlagBoxInstallState state in new[] { FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed })
+            {
+                Assert.Equal(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = state, EmbeddedVersion = "0.5.0" }, null),
+                    PanelMatrix.ProfileLineTooltip(state, "0.5.0", "OpenDash Flag box", one));
+            }
+            Assert.Null(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, EmbeddedVersion = "0.5.0" }, null));
+            Assert.NotNull(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "OpenDash Flag box", one));
+            Assert.NotNull(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled, EmbeddedVersion = "0.5.0" }, null));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotInstalled, "0.5.0", "OpenDash Flag box", one));
+            // The summary claims no more than that (comments included, so the file is read whole).
+            var panelMatrix = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs"));
+            Assert.DoesNotContain("one profile is never hovered two ways", panelMatrix);
+            Assert.Contains("An older profile and a failed one are hovered in the Updates", panelMatrix);
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
                 var hover = PanelMatrix.ProfileLineTooltip(state, "0.5.0", "OpenDash Flag box", one);
@@ -549,6 +568,17 @@ namespace OpenDashPlugin.Tests
             }
             // Every sheet's Cancel closes it.
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("cancel.Click += (sender, args) => CloseSheet();")).Count);
+            // A double-click on Cancel: the first press closes the sheet through CloseSheet, which marks the sheet
+            // moved, and the shell drops the second press on the control's root (SettingsControl.Sheet.cs, #523),
+            // so it never reaches a control the sheet hid. Cancel has no other handler and no guard of its own,
+            // and closes the sheet no other way.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("cancel.Click +=")).Count);
+            Assert.DoesNotContain("cancel.Preview", flat);
+            var sheetFlat = System.Text.RegularExpressions.Regex.Replace(
+                RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Sheet.cs")), @"\s+", " ");
+            Assert.Contains("private void CloseSheet() { CloseSheet(restoreFocus: true); }", sheetFlat);
+            Assert.Contains("sheetLayer.Visibility = Visibility.Collapsed; sheetPanel.Child = null; SheetMoved();", sheetFlat);
+            Assert.Contains("if (PanelShell.SheetSwallowsPress(sheetMoved, args.ClickCount)) { args.Handled = true; return; }", sheetFlat);
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(matrix, @"\}, PanelKit\.SegmentedHeightMatrix\);").Count);
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.Button\(PanelMatrix\.Cancel, PanelButtonKind\.Ghost, PanelButtonSize\.Large\)").Count);
         }
@@ -614,7 +644,7 @@ namespace OpenDashPlugin.Tests
                 "var fresh = Ui.Matrix(cells, style, MatrixDim()); var lamps = fresh.Child; fresh.Child = null; picture.Child = lamps;",
                 "if (cardPicture != null) MatrixRepaint(cardPicture,",
                 // The repaint reads the settings of the matrix it is drawn for.
-                "Action repaint = () => { var options = PanelMatrix.OptionsFor(Settings, m); MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);",
+                "Action repaint = () => { var options = PanelMatrix.OptionsFor(Settings, m); MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview);",
                 "return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);",
                 // The priority list's own words and greyed rows.
                 "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary)",
@@ -746,7 +776,11 @@ namespace OpenDashPlugin.Tests
             // A change of case is a rename, and is said.
             Assert.Equal("Renamed to left pillar.", PanelMatrix.RenameSaid("Left pillar", "left pillar"));
             Assert.Equal("Name", PanelMatrix.NameTitle);
-            Assert.Equal("Not shown in SimHub's profile list.", PanelMatrix.NameCaption);
+            // The list named as docs/flag-box.md and the installer's log name it, and as the LEDs row names its own
+            // (PanelLights.BarNameCaption, "SimHub's LED profile list"): the title line names a profile SimHub does
+            // list, so the bare "profile list" would leave the driver to work out which.
+            Assert.Equal("Not shown in SimHub's matrix profile list.", PanelMatrix.NameCaption);
+            Assert.Contains("SimHub's matrix profile list", PanelMatrix.NameCaption);
             // Remove is a sheet with one press; Rename is a sheet; neither acts on the first press.
             var matrix = MatrixSource();
             Assert.Contains("ShowSheet(PanelMatrix.RemoveTitle(name),", matrix);
@@ -805,6 +839,8 @@ namespace OpenDashPlugin.Tests
         {
             // Titled by the card's state (#524, ruling 8); the matrix number is in the Content step.
             Assert.Equal("Not shown in SimHub", PanelMatrix.FixTitle);
+            Assert.Equal(PanelMatrix.NotShown, PanelMatrix.FixTitle);
+            Assert.Equal(PanelMatrix.NotShown, PanelMatrix.CardLine("Left pillar", 2, "left", false));
             var steps = PanelMatrix.FixSteps(2, "OpenDash Flag box");
             Assert.Equal(3, steps.Count);
             Assert.Equal(new[] { "Devices", "your matrix" }, steps[0]);
@@ -1092,10 +1128,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOff));
             // Shift colours can be seen: under the revs chip the gear takes its first shift colour with the
             // switch on and stays white with it off; on a matrix that rests dark the chip draws the idle display.
-            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false));
-            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false), bandsOn));
-            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOff, false), bandsOff));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, new MatrixOptions { Rest = "dark", Bands = true }, false));
+            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn));
+            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn), bandsOn));
+            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOff), bandsOff));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, new MatrixOptions { Rest = "dark", Bands = true }));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, null));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(null, bandsOn));
 
             // What a screen reader is told the preview draws: the artboard's alt text, as the matrix leaves it.
             var gear = new MatrixOptions { Rest = "gear" };
@@ -1139,7 +1177,12 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelMatrix.OptionsFor(settings, slot).Bands);
             Assert.True(PanelMatrix.OptionsFor(settings, slot).CarLadder);
 
-            // A family switched off leaves the matrix at its idle display under its chip, and only under its chip.
+            // A chip the matrix would not show is drawn in its own scenario, as the Rig page draws it
+            // (PanelRigMap.MatrixOptionsFor and PanelEmulation.MatrixFrame), so "All devices at once" opens on the
+            // same picture: a family switched off leaves the matrix at what it shows when nothing takes it over,
+            // which on a gear matrix with Shift colours on is the gear at that chip's revs, in its first shift
+            // colour, and never the idle display's white gear (PanelEmulationTests pins the same for a car on the
+            // side the matrix is not mounted on). The chip's own family is the only one it leaves.
             var chips = new Dictionary<string, string>
             {
                 { "Flags", PanelEmulation.Yellow }, { "Pit", PanelEmulation.Limiter },
@@ -1162,44 +1205,84 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(family != "Warnings", read.Warnings);
                 foreach (var chip in chips)
                 {
-                    var drawn = PanelMatrix.DrawnScenario(chip.Value, read, false);
-                    if (chip.Key == family) Assert.Equal(PanelMatrix.IdleScenario, drawn);
-                    else Assert.Equal(chip.Value, drawn);
-                    var glyph = PanelEmulation.GlyphFor(drawn, read);
-                    if (chip.Key == family) Assert.Equal(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
-                    else Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                    var drawn = PanelMatrix.DrawnScenario(chip.Value, read);
+                    Assert.Equal(chip.Value, drawn);
+                    var drawnWith = PanelMatrix.OptionsFor(one, n, drawn);
+                    var glyph = PanelEmulation.GlyphFor(drawn, drawnWith);
+                    // The Rig page's tile for this matrix under the same chip.
+                    Assert.Equal(PanelEmulation.GlyphFor(chip.Value, PanelRigMap.MatrixOptionsFor(one, n, chip.Value)), glyph);
+                    Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                    if (chip.Key == family)
+                    {
+                        Assert.Equal("Gear 4 stage1", glyph);
+                        Assert.Equal(PanelMatrix.PreviewRevs, PanelMatrix.PreviewAlt(drawn, drawnWith));
+                    }
+                    else Assert.Equal(PanelMatrix.PreviewAlt(chip.Value, new MatrixOptions()), PanelMatrix.PreviewAlt(drawn, drawnWith));
                 }
             }
-            // A car on the side the matrix is not mounted on leaves it at rest too.
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "right" }, false));
-            Assert.Equal(PanelEmulation.CarLeft, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "left" }, false));
+            // A car on the side the matrix is not mounted on: the gear at the car's revs, named for that, with
+            // Shift colours on; the white gear with it off; nothing on a matrix that rests dark.
+            var mountedRight = new MatrixOptions { Side = "right", Rest = "gear", Bands = true };
+            Assert.Equal(PanelEmulation.CarLeft, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, mountedRight));
+            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, mountedRight), mountedRight));
+            Assert.Equal("Gear 4 in the first shift colour", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, mountedRight));
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "right", Rest = "gear", Bands = false }));
+            Assert.Equal("Dark", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "right", Rest = "dark" }));
+            Assert.Equal("Car on the left", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "left", Rest = "gear" }));
 
-            // Critical flags only drops the news, the chequer among the chips, and keeps the warnings.
-            Assert.Equal(PanelEmulation.Chequer, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), false));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), true));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.White, new MatrixOptions(), true));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Green, new MatrixOptions(), true));
-            foreach (var critical in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Red, PanelEmulation.Black })
+            // Critical flags only reaches the picture as the Rig page's does: the flags off under a flag that is
+            // news (the chequer, the white, the green), on under one that is critical, and the chip kept.
+            var critical = new OpenDashSettings();
+            critical.Normalise();
+            var c = critical.AddMatrixPanel("A");
+            critical.SetMatrixRest(c, "gear");
+            critical.FlagBoxMatrixCriticalOnly[c - 1] = true;
+            foreach (var news in new[] { PanelEmulation.Chequer, PanelEmulation.White, PanelEmulation.Green })
             {
-                Assert.Equal(critical, PanelMatrix.DrawnScenario(critical, new MatrixOptions(), true));
-                Assert.False(PanelMatrix.IsNewsFlag(critical));
+                Assert.Equal(news, PanelMatrix.DrawnScenario(news, PanelMatrix.OptionsFor(critical, c)));
+                Assert.False(PanelMatrix.OptionsFor(critical, c, news).Flags);
+                Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(news, PanelMatrix.OptionsFor(critical, c, news)));
             }
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.IdleScenario, new MatrixOptions(), true));
+            Assert.Equal("Gear 4 in the first shift colour", PanelMatrix.PreviewAlt(PanelEmulation.Chequer, PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer)));
+            foreach (var flag in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Red, PanelEmulation.Black })
+            {
+                Assert.True(PanelMatrix.OptionsFor(critical, c, flag).Flags);
+                Assert.Equal(flag, PanelEmulation.GlyphFor(flag, PanelMatrix.OptionsFor(critical, c, flag)));
+            }
+            critical.FlagBoxMatrixCriticalOnly[c - 1] = false;
+            Assert.True(PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer).Flags);
+            Assert.Equal("Chequered flag", PanelMatrix.PreviewAlt(PanelEmulation.Chequer, PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer)));
+            // The options are the Rig page's for every chip, Critical flags only on or off.
+            foreach (var on in new[] { true, false })
+            {
+                critical.FlagBoxMatrixCriticalOnly[c - 1] = on;
+                foreach (var chip in PanelMatrix.PreviewScenarios.Concat(new[] { PanelEmulation.White, PanelEmulation.Green, (string)null }))
+                {
+                    var mine = PanelMatrix.OptionsFor(critical, c, chip);
+                    var rig = PanelRigMap.MatrixOptionsFor(critical, c, chip);
+                    Assert.Equal(new object[] { rig.Side, rig.Rest, rig.Bands, rig.CarLadder, rig.Flags, rig.Pit, rig.Spotter, rig.Warnings },
+                        new object[] { mine.Side, mine.Rest, mine.Bands, mine.CarLadder, mine.Flags, mine.Pit, mine.Spotter, mine.Warnings });
+                }
+            }
 
             var source = MatrixSource();
-            Assert.Contains("var options = PanelMatrix.OptionsFor(Settings, matrix); return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options, Settings.MatrixCriticalOnly(matrix));", FlatSource());
+            var flatSource = FlatSource();
+            Assert.Contains("var options = PanelMatrix.OptionsFor(Settings, matrix); return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options);", flatSource);
+            Assert.Contains("private MatrixOptions MatrixDrawnOptions(int matrix) { return PanelMatrix.OptionsFor(Settings, matrix, MatrixDrawn(matrix)); }", flatSource);
             Assert.Contains("Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint();", source);
-            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());", source);
-            Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);", source);
+            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview, MatrixDim());", source);
+            Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview);", source);
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
             Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)))", source);
+            // The picture is never drawn in the settings alone, which leave Critical flags only out of it.
+            Assert.DoesNotContain("MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m))", flatSource);
+            Assert.DoesNotContain("MatrixFrame(GlyphSheet, MatrixDrawn(m), options)", flatSource);
             // The preview is named for what it draws, when it is built and on every repaint, on its frame: the
             // one element there that a screen reader is told about, as an image.
-            var flatSource = FlatSource();
             Assert.Contains("var frame = new MatrixNamed(AutomationControlType.Image) {", flatSource);
-            Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));", flatSource);
-            Assert.Contains("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));", source);
+            Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));", flatSource);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flatSource, System.Text.RegularExpressions.Regex.Escape("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));")).Count);
             Assert.Contains("var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips }; AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", flatSource);
             foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
                 "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })
@@ -1481,6 +1564,33 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        /// <summary>
+        /// The page justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
+        /// table, the artboards, a ticket -- and never by a numbered ruling in a workflow's scratch files, which
+        /// nobody reading the code can open. A ruling posted on a ticket is cited with the ticket ("#524, ruling
+        /// 8"). The files are read whole, comments included, since that is where a citation lives.
+        /// </summary>
+        [Fact]
+        public void The_page_cites_only_what_the_tree_holds()
+        {
+            foreach (var file in new[]
+            {
+                System.IO.Path.Combine("plugin", "OpenDash", "PanelMatrix.cs"),
+                System.IO.Path.Combine("plugin", "OpenDash", "SettingsControl.Matrix.cs"),
+                System.IO.Path.Combine("plugin", "OpenDash.Tests", "PanelMatrixTests.cs"),
+            })
+            {
+                var text = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), file));
+                var flat = System.Text.RegularExpressions.Regex.Replace(text, @"\s*(///|//)?\s+", " ");
+                // "ruling" and a number with no ticket before it; the pattern is split so this line is no citation.
+                var bare = System.Text.RegularExpressions.Regex.Matches(flat, @"(?<!#\d+, )\b" + "rul" + @"ings? \d+");
+                Assert.True(bare.Count == 0, file + ": " + string.Join(" | ", bare.Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value)));
+                Assert.DoesNotContain("critic's " + "rulings", flat);
+                Assert.DoesNotContain("#503 " + "inventory", flat);
+                Assert.DoesNotContain("voice_" + "rulings", flat);
+            }
+        }
+
         [Fact]
         public void Its_anchor_ids_are_pinned()
         {

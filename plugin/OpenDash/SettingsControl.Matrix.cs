@@ -340,7 +340,7 @@ namespace OpenDashPlugin
         private MatrixPreviewColumn BuildMatrixPreview(int matrix, Border cardPicture)
         {
             var m = matrix;
-            var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());
+            var preview = Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview, MatrixDim());
             OnLighting(() => Ui.Redim(preview, MatrixDim()));
             preview.HorizontalAlignment = HorizontalAlignment.Center;
             // The frame is the picture a screen reader is told about, the artboard's role=img.
@@ -353,14 +353,14 @@ namespace OpenDashPlugin
                 CornerRadius = new CornerRadius(Theme.Radius),
                 Child = preview,
             };
-            AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));
+            AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));
 
             var all = Ui.LinkButton(PanelMatrix.AllDevices);
             all.FontSize = Theme.SizeSmall;
             all.Height = double.NaN;
             all.HorizontalAlignment = HorizontalAlignment.Left;
             all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)));
-            // New in this release (the Map's "Live 8×8 preview", ruling 7). The preview has no title to follow
+            // New in this release (Map.dc.html marks the "Live 8×8 preview" new). The preview has no title to follow
             // and the frame's padding is narrower than the tag is tall, so the tag has the frame's own line,
             // over it and clear of the lamps, rather than following the link to Rig.
             var tag = Ui.NewTag();
@@ -374,8 +374,8 @@ namespace OpenDashPlugin
             Action repaint = () =>
             {
                 var options = PanelMatrix.OptionsFor(Settings, m);
-                MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);
-                AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));
+                MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview);
+                AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));
                 if (cardPicture != null) MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);
             };
             drawChips = () =>
@@ -415,7 +415,14 @@ namespace OpenDashPlugin
         private string MatrixDrawn(int matrix)
         {
             var options = PanelMatrix.OptionsFor(Settings, matrix);
-            return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options, Settings.MatrixCriticalOnly(matrix));
+            return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options);
+        }
+
+        /// <summary>The settings the preview is drawn with under that scenario, the Rig page's for the same chip:
+        /// Critical flags only reaches the picture here, as the flags off for a flag it drops.</summary>
+        private MatrixOptions MatrixDrawnOptions(int matrix)
+        {
+            return PanelMatrix.OptionsFor(Settings, matrix, MatrixDrawn(matrix));
         }
 
         /// <summary>Puts a fresh frame's lamps into a picture already on the page, so what re-dims it through
