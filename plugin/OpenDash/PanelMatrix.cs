@@ -801,8 +801,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The line under Car-specific shift points, which says what the LEDs page's line under its car switch
-        /// says (PanelLeds.CarLine on the LEDs branch) and in the same cases: only while the switch is on and a
+        /// The line under Car-specific shift points, which is the LEDs page's line under its car switch
+        /// (PanelLeds.CarLine), called rather than copied, and so in the same cases: only while the switch is on and a
         /// car is loaded in a game the tables cover. Then, with no tables ever downloaded, that they are not
         /// and where the download is, since this page has none; else whether the tables have measured the
         /// car, which says whether the gear takes the car's own points or falls back to openDash's. Null
@@ -814,11 +814,12 @@ namespace OpenDashPlugin
         /// contradict it, and be false.
         /// </summary>
         /// <param name="tablesMissing">Whether no tables were ever downloaded (<see cref="TablesMissing"/>).</param>
+        /// <remarks>Only the missing-tables sentence is this page's own, since it names the page the download is
+        /// on, which the LEDs page's need not.</remarks>
         public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)
         {
-            if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
-            if (!tablesLoaded) return tablesMissing ? CarTablesMissing : null;
-            return car.Trim() + (hasTable ? " is in Lovely Car Data." : " is not in Lovely Car Data.");
+            var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame);
+            return line == PanelLeds.CarTablesMissing ? CarTablesMissing : line;
         }
 
         /// <summary>The car line with no tables on disk: the tables are downloaded on the LEDs page only
@@ -828,23 +829,22 @@ namespace OpenDashPlugin
 
         /// <summary>Whether no tables were ever downloaded: none read, and the service's status opens with the
         /// sentence it gives a rig with none (a failed download adds its reason after it), rather than saying
-        /// that it is still reading them or could not read the copy on disk. PanelLeds.TablesMissing on the LEDs
-        /// branch; this page calls that once LEDs lands.</summary>
+        /// that it is still reading them or could not read the copy on disk: the LEDs page's own test
+        /// (PanelLeds.TablesMissing), called rather than copied.</summary>
         public static bool TablesMissing(int carCount, string status)
         {
-            var none = CarLightService.Describe(0, null, DateTime.UtcNow, null);
-            return carCount <= 0 && (status ?? string.Empty).Trim().StartsWith(none, StringComparison.Ordinal);
+            return PanelLeds.TablesMissing(carCount, status);
         }
 
         /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing",
-        /// "IRacing"). PanelLeds.TablesGame on the LEDs branch; this page calls that once LEDs lands.</summary>
-        public const string TablesGame = "iRacing";
+        /// "IRacing"): the LEDs page's (PanelLeds.TablesGame).</summary>
+        public const string TablesGame = PanelLeds.TablesGame;
 
-        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone, tested as the LEDs
-        /// page tests it (PanelLeds.TablesCoverGame on the LEDs branch).</summary>
+        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone, the LEDs page's test
+        /// (PanelLeds.TablesCoverGame).</summary>
         public static bool TablesCoverGame(string game)
         {
-            return game != null && string.Equals(game.Trim(), TablesGame, StringComparison.OrdinalIgnoreCase);
+            return PanelLeds.TablesCoverGame(game);
         }
 
         /// <summary>Whether the car line is the good news, in green, rather than something to act on, in

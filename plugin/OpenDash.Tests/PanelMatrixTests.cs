@@ -968,6 +968,29 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelMatrix.ShowsRedlineFlash("dark", true));
         }
 
+        /// <summary>The car line and the tables' tests are the LEDs page's, called rather than copied (#522): the
+        /// two lines agree in every case but the missing tables', which names the page the download is on.</summary>
+        [Fact]
+        public void The_car_line_is_the_LEDs_pages_own()
+        {
+            var bools = new[] { false, true };
+            foreach (var car in new[] { null, " ", "Porsche 911 GT3 R (992)" })
+                foreach (var on in bools) foreach (var hasTable in bools) foreach (var loaded in bools) foreach (var missing in bools) foreach (var covers in bools)
+                {
+                    var leds = PanelLeds.CarLine(on, car, hasTable, loaded, missing, covers);
+                    var matrix = PanelMatrix.CarLine(on, car, hasTable, loaded, missing, covers);
+                    Assert.Equal(leds == PanelLeds.CarTablesMissing ? PanelMatrix.CarTablesMissing : leds, matrix);
+                }
+            foreach (var status in new[] { null, "not loaded", PanelLights.CarTablesNone, "  " + PanelLights.CarTablesNone })
+                foreach (var count in new[] { 0, 12 })
+                    Assert.Equal(PanelLeds.TablesMissing(count, status), PanelMatrix.TablesMissing(count, status));
+            Assert.Equal(PanelLeds.TablesGame, PanelMatrix.TablesGame);
+            foreach (var game in new[] { null, "iRacing", " IRacing ", "AssettoCorsa" }) Assert.Equal(PanelLeds.TablesCoverGame(game), PanelMatrix.TablesCoverGame(game));
+            var code = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs")), @"\s+", " ");
+            Assert.Contains("var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame);", code);
+            Assert.Contains("return PanelLeds.TablesMissing(carCount, status);", code);
+        }
+
         /// <summary>The line under Car-specific shift points says what LEDs says (PanelLeds.CarLine), and only
         /// while the switch is on and a car is loaded in the game the tables cover: with no tables ever
         /// downloaded it says so and where the download is, rather than that the car is missing from them; while
