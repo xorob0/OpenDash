@@ -1,13 +1,15 @@
-// SettingsControl.Screens.Face.cs: what a face shows under its card on the Screens page.
+// SettingsControl.Screens.Face.cs: a face's editor on the Screens page (Screens.dc.html) -- a picture of the
+// face that is also its controls, the aside the picture opens, and the rows under it.
 //
-// The face is drawn as a plan of itself -- the rev bar, the bar if it has one, zones B, A and C across the
-// body and band D at the foot -- at that face's own proportions, so the portrait reads as a column and the
-// nano at 800 x 286 shows no bar because it has none. It is a plan rather than a list because "zone C" means
-// nothing until you see where zone C is. Re-hosted from the old Rig tab by the #503 foundation; the Screens
-// page agent owns it. Every change is saved through Save(screen), because setting something on a screen is
-// the driver keeping it.
+// The picture is drawn at the face's own proportions (PanelFacePlan): twenty rev segments, the info bar where
+// the face has one, zones B, A and C across the body (A over B over C on the portrait), and band D at the
+// foot. Each part is a press that opens what it shows in the aside: the Info bar's four fields, or a zone's
+// pages as a list to tick and drag. The aside stands beside the picture when the page has two columns and
+// under it otherwise. Every change is saved through ScreensSave(screen), because setting something on a screen
+// is the driver keeping it, and the editor redraws itself in place so the picture says what was just set.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,602 +21,721 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
-        private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
-        private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
-        private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
-        private TextBlock faceWarningText;
-        private FrameworkElement faceWarningRow;
+        /// <summary>What each face's aside shows (a zone letter or PanelScreens.BarKey), by namespace, for the
+        /// session.</summary>
+        private readonly Dictionary<string, string> screensFaceAside = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        /// <summary>Whether a zone list shows every page or only the ticked ones, for the session.</summary>
+        private bool screensShowAll;
+
+        private static ControlTemplate screensZoneTemplate;
 
         private FrameworkElement BuildFacePane(ScreenInstance screen)
         {
             var size = screen.FaceSize;
             if (size == null)
             {
-                return Ui.Caption(
-                    "OpenDash no longer ships a " + screen.SizeLabel + " face. Your settings are kept.",
-                    BodyWidth);
+                return Ui.VStack(12, Ui.Prose(PanelScreens.NoLongerShipped(screen.SizeLabel), Theme.SizeBody), BuildScreenDetails(screen));
             }
             var face = size.Value;
+            var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            Action redraw = null;
+            redraw = () => ScreensRedraw(host, () => BuildFaceEditor(screen, face, redraw));
+            redraw();
+            return host;
+        }
 
-            // The controls this build holds go with the page: a refresh after it has gone must not write into
-            // a control nobody can see and read as having done something.
-            OnDrop(() =>
+        /// <summary>The picture and the aside it opens, then the rows: in two columns where there is room, one
+        /// under the other where there is not.</summary>
+        private FrameworkElement BuildFaceEditor(ScreenInstance screen, Contract.FaceSize face, Action redraw)
+        {
+            string picked;
+            screensFaceAside.TryGetValue(screen.Namespace, out picked);
+            var key = PanelScreens.AsideKey(picked, face);
+            Action<string> pick = chosen =>
             {
-                zoneSelects.Clear();
-                zoneMaskButtons.Clear();
-                zoneMaskBoxes.Clear();
-                barEndButtons.Clear();
-                faceWarningText = null;
-                faceWarningRow = null;
-            });
-            // Drawn at the artboard's 844 and shrunk to a narrower column, never clipped by it.
-            var picture = Ui.FitWidth(BuildFacePicture(screen, face));
-            picture.Margin = new Thickness(0, 0, 0, 12);
-            var warning = BuildFaceWarning(screen);
-            warning.Margin = new Thickness(0, 0, 0, 12);
-            var rows = new List<UIElement>
-            {
-                Ui.Anchor(picture, PanelScreens.AnchorZones),
-                warning,
-                Ui.Anchor(BuildRevBarRow(screen), PanelScreens.AnchorRevBar),
-                Ui.Anchor(BuildFlagFormatRow(screen), PanelScreens.AnchorFlagDisplay),
-                Ui.Anchor(BuildLapReviewRow(screen), PanelScreens.AnchorLapReview),
-                BuildFaceGlanceRow(screen),
+                screensFaceAside[screen.Namespace] = chosen;
+                // A zone picked opens on its ticked pages, as the artboard's does, whatever the last one showed.
+                screensShowAll = PanelScreens.ShowAllAfterPick;
+                redraw();
             };
-            RefreshFaceWarning(screen);
-            return Ui.VStack(0, rows.ToArray());
+
+            // Beside the aside whenever the page has two columns, the picture no taller than the page can show
+            // beside its rows. The width is read only as far as anything drawn from it changes, so a wider
+            // window re-lays the aside without rebuilding the page and reloading its live preview.
+            var twoColumns = TwoColumns;
+            var content = ContentWidthUpTo(PanelFacePlan.ContentMost(face, twoColumns));
+            var column = PanelFacePlan.PictureWidthFor(content, twoColumns);
+            var picture = Ui.Anchor(BuildFacePicture(screen, face, PanelFacePlan.FitWidth(face, column), key, pick), PanelScreens.AnchorZones);
+            var card = Ui.CardBox(key == PanelScreens.BarKey ? BuildInfoBarAside(screen, face, redraw) : BuildZoneAside(screen, key, redraw));
+            // Two zones, or a zone and the glance, opening on the same page: said in a line under the aside,
+            // where the zones are listed. Said, and allowed.
+            var clash = PanelScreens.PageClash(screen.Face);
+            FrameworkElement aside = clash.Length > 0 ? Ui.VStack(0, card, BuildScreensWarning(clash)) : card;
+            var rows = BuildFaceRows(screen, redraw, column);
+
+            if (!twoColumns) return Ui.VStack(16, picture, aside, rows);
+            // The artboard's grid, minmax(0,1fr) 316px: the picture's column takes the rest, the picture fitted
+            // into it from the left and the rows stretching across it, and the aside is its own 316 beside them.
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideGap) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.AsideWidth) });
+            var left = Ui.VStack(16, picture, rows);
+            grid.Children.Add(left);
+            aside.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetColumn(aside, 2);
+            grid.Children.Add(aside);
+            return grid;
         }
 
-        /// <summary>
-        /// What this screen carries at the top: the shift lights, a plain RPM bar, or nothing.
-        /// </summary>
-        /// <remarks>
-        /// On the screen's own pane rather than on the Data tab, and it is the row that most obviously
-        /// never belonged there: a wheel whose rim already carries LEDs across its top wants no rev bar
-        /// and the display on the desk beside it wants one, and the rig-wide switch answered for both.
-        /// Both arrangements are built into every face and SimHub shows the one this picks, so the
-        /// choice costs no reinstall; off redraws the face without the well, and the zones start where
-        /// the recess did.
-        ///
-        /// First of the three rows under the plan, because it is the one that changes the plan: the
-        /// other two decide what covers the face and this decides what the face is.
-        /// </remarks>
-        private FrameworkElement BuildRevBarRow(ScreenInstance screen)
+        // --- The rows under the picture -----------------------------------------------------------------
+
+        private FrameworkElement BuildFaceRows(ScreenInstance screen, Action redraw, double column)
         {
-            var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
+            var ns = screen.Namespace;
+            // The screen's own rev bar: off redraws the face without the well, and the strip above goes dark.
+            var revBar = ScreensSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(ns), value =>
             {
-                Settings.SetScreenRevBar(screen.Namespace, value);
-                Save(screen);
-                // The plan above redraws without the well, which is the whole of what Off does.
-                Redraw();
+                Settings.SetScreenRevBar(ns, value);
+                ScreensSave(screen, redraw);
             });
-            return Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, control);
-        }
-
-        /// <summary>Which of the two formats a flag takes on this screen.</summary>
-        /// <remarks>
-        /// On the screen's own pane rather than on the Data tab, because it is the one flag setting that
-        /// is not the same decision everywhere: a rig with a rim and a display in the corner of the eye
-        /// wants the rim readable and the corner impossible to miss. Both formats are built into every
-        /// face and SimHub shows the one this picks, as it does with the rev bar, so the choice costs no
-        /// reinstall. Under the plan of the face rather than above it, since the plan is what shows where
-        /// band D and the body are.
-        /// </remarks>
-        private FrameworkElement BuildFlagFormatRow(ScreenInstance screen)
-        {
-            var control = BuildSegmented(Contract.FlagFormats, new[] { "Band D", "Full screen" }, Settings.ScreenFlagFormat(screen.Namespace), value =>
+            revBar.Uid = "screens.revbar";
+            var flags = ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value =>
             {
                 screen.FlagFormat = value;
-                Save(screen);
+                ScreensSave(screen);
             });
-            var row = Ui.Row(
-                PanelScreens.FlagDisplayTitle,
-                "Full screen covers the zones while the flag is out.",
-                control);
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
-            return row;
-        }
-
-        /// <summary>When this screen shows the lap review.</summary>
-        /// <remarks>
-        /// On the screen's own pane rather than on the Data tab, and for a stronger version of the
-        /// reason the flag format is there: the panel takes the hero for four seconds at every
-        /// crossing, so a rig with a display on the desk and a rim in the driver's hands wants it on
-        /// the one and certainly not on the other. Under the flag format, because the two are the
-        /// same question asked about two things that cover the face.
-        ///
-        /// Off leads the control, which is also the default: what takes the face is asked for.
-        /// </remarks>
-        private FrameworkElement BuildLapReviewRow(ScreenInstance screen)
-        {
-            var control = BuildSegmented(Contract.LapReviewModes, new[] { "Off", "Races", "Always" }, Settings.ScreenLapReview(screen.Namespace), value =>
+            flags.Uid = "screens.flags";
+            var lapReview = ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value =>
             {
                 screen.LapReview = value;
-                Save(screen);
+                ScreensSave(screen);
             });
-            var row = Ui.Row(
-                PanelScreens.LapReviewTitle,
-                "Shows your last lap for four seconds after the line.",
-                control);
-            row.HorizontalAlignment = HorizontalAlignment.Stretch;
+            lapReview.Uid = "screens.lapreview";
+
+            var rows = new List<UIElement>
+            {
+                Ui.Anchor(Ui.SettingRow(PanelScreens.RevBarTitle, revBar), PanelScreens.AnchorRevBar),
+                Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags), PanelScreens.AnchorFlagDisplay),
+                Ui.Anchor(Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption), PanelScreens.AnchorLapReview),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw, column), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
+            };
+            rows.Add(Ui.SoonRow(PanelSoon.RevFill));
+            rows.Add(Ui.SoonRow(PanelSoon.SpotterAtRevBarEnds));
+            rows.Add(Ui.SoonRow(PanelSoon.PitPageInPitLane));
+            rows.Add(Ui.SoonRow(PanelSoon.PopUps));
+            rows.Add(Ui.SoonRow(PanelSoon.DeltaEdgeLights));
+            rows.Add(Ui.SoonRow(PanelSoon.ScreenCare));
+            rows.Add(Ui.SoonRow(PanelSoon.Fit));
+            rows.Add(BuildScreenDetails(screen));
+            return Ui.Rows(rows.ToArray());
+        }
+
+        /// <summary>
+        /// The quick glance: which zone lends its place, then which of that zone's pages it shows, and the
+        /// chip saying what the held button is bound to (the binding is on Shortcuts).
+        /// </summary>
+        /// <remarks>
+        /// Two choices in the order a driver makes them, and the second offers only the pages the first zone
+        /// carries, so no pair the dash does not draw can be picked. The value stays zone × 100 + page.
+        /// </remarks>
+        private FrameworkElement BuildFaceGlance(ScreenInstance screen, Action redraw, double column)
+        {
+            var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
+            var zoneIndex = Contract.QuickGlanceZone(glance);
+            var zone = Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen =>
+            {
+                screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);
+                ScreensSave(screen, redraw);
+            }, PanelScreens.GlanceZoneWidth);
+            zone.Uid = "screens.glance.zone";
+            var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
+            {
+                screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
+                // The clash line under the aside counts the glance among what shows a page twice, so the
+                // editor redraws.
+                ScreensSave(screen, redraw);
+            }, PanelScreens.GlancePageWidth);
+            page.Uid = "screens.glance.page";
+            var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);
+            chip.Uid = "screens.glance.chip";
+            return ScreensWrap(PanelScreens.ControlsWidth(column), zone, page, chip);
+        }
+
+        /// <summary>Controls that sit side by side and wrap under each other past <paramref name="maxWidth"/>,
+        /// 8 apart: a row measures its control at infinite width, so the wrap is told how wide it may be.</summary>
+        private static FrameworkElement ScreensWrap(double maxWidth, params FrameworkElement[] controls)
+        {
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, MaxWidth = maxWidth };
+            foreach (var control in controls)
+            {
+                control.Margin = new Thickness(PanelScreens.WrapGap, 2, 0, 2);
+                control.VerticalAlignment = VerticalAlignment.Center;
+                wrap.Children.Add(control);
+            }
+            return wrap;
+        }
+
+        /// <summary>A caution line with its icon: "Zone B and zone C both show Relative." Said, and allowed.</summary>
+        private static FrameworkElement BuildScreensWarning(string message)
+        {
+            var text = Ui.Prose(message, Theme.SizeSmall, Theme.Caution);
+            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution);
+            icon.VerticalAlignment = VerticalAlignment.Top;
+            icon.Margin = new Thickness(0, 1, 0, 0);
+            var row = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 10, 0, 10) };
+            DockPanel.SetDock(icon, Dock.Left);
+            row.Children.Add(icon);
+            text.Margin = new Thickness(10, 0, 0, 0);
+            row.Children.Add(text);
             return row;
         }
 
-        private FrameworkElement BuildFacePicture(ScreenInstance screen, Contract.FaceSize face)
-        {
-            var plan = PanelFacePlan.For(face);
-            var grid = new Grid { Width = PanelFacePlan.PictureWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
-            var rows = new List<double> { plan.RevBar, PanelFacePlan.Seam };
-            if (plan.HasBar) rows.AddRange(new double[] { plan.Bar, PanelFacePlan.Seam });
-            rows.AddRange(new double[] { plan.Body, PanelFacePlan.Seam, plan.Band });
-            foreach (var height in rows) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+        // --- The picture --------------------------------------------------------------------------------
 
-            var row = 0;
-            AddAt(grid, BuildRevBarStrip(), row);
-            row += 2;
+        /// <summary>
+        /// The face as a picture of its own parts, each a press: the rev strip, the info bar, the three zones
+        /// and band D, 5 apart on the inset ground.
+        /// </summary>
+        private FrameworkElement BuildFacePicture(ScreenInstance screen, Contract.FaceSize face, double width, string key, Action<string> pick)
+        {
+            var plan = PanelFacePlan.For(face, PanelFacePlan.RowsWidth(width));
+            var rows = new StackPanel { Orientation = Orientation.Vertical };
+            rows.Children.Add(BuildRevStrip(plan.RevBar, PanelScreens.RevStripOn(Settings.ScreenRevBar(screen.Namespace))));
             if (plan.HasBar)
             {
-                AddAt(grid, BuildBarStrip(screen, face), row);
-                row += 2;
+                var bar = BuildInfoBarCell(screen, face, plan.Bar, key == PanelScreens.BarKey, () => pick(PanelScreens.BarKey));
+                bar.Margin = new Thickness(0, PanelFacePlan.Seam, 0, 0);
+                rows.Children.Add(bar);
             }
-            AddAt(grid, BuildFaceBody(screen, plan), row);
-            AddAt(grid, BuildBandStrip(screen), row + 2);
+            var body = BuildFaceBody(screen, plan, key, pick);
+            body.Margin = new Thickness(0, PanelFacePlan.Seam, 0, 0);
+            rows.Children.Add(body);
+            var band = BuildBandCell(screen, plan.Band, PanelFacePlan.BandButtonMax(plan.Width), key == "D", () => pick("D"));
+            band.Margin = new Thickness(0, PanelFacePlan.Seam, 0, 0);
+            rows.Children.Add(band);
             return new Border
             {
-                BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(1),
+                Width = width,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Child = grid,
+                Background = Ui.Brush(Theme.SurfaceInset),
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(PanelFacePlan.Frame),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Padding = new Thickness(PanelFacePlan.Inset),
+                Child = rows,
             };
         }
 
-        private static void AddAt(Grid grid, UIElement child, int row)
+        /// <summary>Twenty segments of a mid-range shift, which are not a control: whether they draw at all is
+        /// the Rev bar row under the picture, and what they draw is the car's.</summary>
+        private static FrameworkElement BuildRevStrip(double height, bool on)
         {
-            Grid.SetRow(child, row);
-            grid.Children.Add(child);
-        }
-
-        /// <summary>The rev bar, which is the one part of the face that is not configurable here: whether it
-        /// draws at all is a Data setting, and what it draws is the car's own shift points.</summary>
-        private static FrameworkElement BuildRevBarStrip()
-        {
+            var colours = PanelFacePlan.RevColours(on);
+            var grid = new Grid();
+            for (var i = 0; i < colours.Length; i++)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var segment = new Border
+                {
+                    Background = Ui.Brush(colours[i]),
+                    CornerRadius = new CornerRadius(1),
+                    Margin = new Thickness(i == 0 ? 0 : PanelFacePlan.RevGap, 0, 0, 0),
+                };
+                Grid.SetColumn(segment, i);
+                grid.Children.Add(segment);
+            }
             return new Border
             {
-                Background = Ui.Brush(Theme.SurfaceInset),
-                Padding = new Thickness(8, 0, 8, 0),
-                Child = Ui.Label("Rev bar"),
+                Height = height,
+                Background = Ui.Brush(Theme.SurfaceBase),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Padding = new Thickness(PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY, PanelFacePlan.RevPaddingX, PanelFacePlan.RevPaddingY),
+                Child = grid,
+                IsHitTestVisible = false,
             };
         }
 
-        /// <summary>The bar: an end at each side and the car settings strip between them.</summary>
-        private FrameworkElement BuildBarStrip(ScreenInstance screen, Contract.FaceSize face)
+        /// <summary>The info bar: an end at each side and the car's settings between them, 3 : 4 : 3.</summary>
+        private Button BuildInfoBarCell(ScreenInstance screen, Contract.FaceSize face, double height, bool selected, Action pick)
         {
-            var single = face.BarFieldsPerEnd == 1;
-            var left = BuildBarEnd(screen, "Left1", single ? null : "Left2", PanelFacePlan.BarEndLeftWidth);
-            var right = BuildBarEnd(screen, "Right1", single ? null : "Right2", PanelFacePlan.BarEndRightWidth);
-            var middle = Ui.Label("Car settings");
-            middle.HorizontalAlignment = HorizontalAlignment.Center;
-            var dock = new DockPanel { LastChildFill = true, Margin = new Thickness(8, 0, 8, 0) };
-            DockPanel.SetDock(left, Dock.Left);
-            DockPanel.SetDock(right, Dock.Right);
-            dock.Children.Add(left);
-            dock.Children.Add(right);
-            dock.Children.Add(middle);
-            return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = dock };
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarMiddleShare, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.BarEndShare, GridUnitType.Star) });
+            var leftFields = PanelScreens.BarEnd(screen.Face, face, true);
+            var rightFields = PanelScreens.BarEnd(screen.Face, face, false);
+            var left = ScreensCellText(leftFields, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
+            var middle = ScreensCellText(PanelScreens.InfoBarMiddle, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextLabel);
+            middle.TextAlignment = TextAlignment.Center;
+            var right = ScreensCellText(rightFields, PanelFacePlan.BarTextSize, FontWeights.Normal, Theme.TextSecondary);
+            right.TextAlignment = TextAlignment.Right;
+            Grid.SetColumn(middle, 1);
+            Grid.SetColumn(right, 2);
+            grid.Children.Add(left);
+            grid.Children.Add(middle);
+            grid.Children.Add(right);
+            var cell = ScreensZoneButton(grid, selected, pick, new Thickness(PanelFacePlan.BarPaddingX, 0, PanelFacePlan.BarPaddingX, 0));
+            cell.Height = height;
+            cell.VerticalContentAlignment = VerticalAlignment.Center;
+            // An end with two fields is cut short in a narrow bar, so the hover carries an end cut short whole.
+            ScreensHover(cell, () => PanelScreens.InfoBarTooltip(ScreensIsCut(left) ? leftFields : null, ScreensIsCut(right) ? rightFields : null));
+            cell.Uid = "screens.zone." + PanelScreens.BarKey;
+            return cell;
         }
 
-        /// <summary>
-        /// One end of the bar. An end carries two fields on a wide face, so the control opens a panel
-        /// with a picker for each rather than splitting into two boxes the plan has no room for.
-        /// </summary>
-        private FrameworkElement BuildBarEnd(ScreenInstance screen, string firstSlot, string secondSlot, double width)
+        /// <summary>The three body zones, in the order and along the axis this face draws them.</summary>
+        private FrameworkElement BuildFaceBody(ScreenInstance screen, PanelFacePlan plan, string key, Action<string> pick)
         {
-            var button = Ui.DropButton(width, BarEndCaption(screen, firstSlot, secondSlot), secondSlot == null ? "The field at this end of the bar" : "The two fields at this end of the bar");
-            barEndButtons[firstSlot] = button;
-            var rows = new List<UIElement>();
-            var slots = secondSlot == null ? new[] { firstSlot } : new[] { firstSlot, secondSlot };
-            foreach (var slot in slots)
-            {
-                var captured = slot;
-                var select = BuildPageSelect(FacePages.BarFields, screen.Face.BarField(captured), 200, index =>
-                {
-                    screen.Face.SetBarField(captured, index);
-                    Save(screen);
-                    Ui.SetDropText(button, BarEndCaption(screen, firstSlot, secondSlot));
-                });
-                rows.Add(Ui.Row(Ui.Label(secondSlot == null ? "Field" : slot == firstSlot ? "First" : "Second"), select));
-            }
-            var panel = Ui.VStack(8, rows.ToArray());
-            panel.Width = 260;
-            return Ui.Drop(button, panel);
-        }
-
-        private static string BarEndCaption(ScreenInstance screen, string firstSlot, string secondSlot)
-        {
-            var first = FacePages.FieldName(screen.Face.BarField(firstSlot));
-            return secondSlot == null ? first : FacePages.EndLabel(first, FacePages.FieldName(screen.Face.BarField(secondSlot)));
-        }
-
-        /// <summary>
-        /// The three body zones, in the order and along the axis this face draws them: B, A and C
-        /// across a wide face, A over B over C in portrait.
-        /// </summary>
-        private FrameworkElement BuildFaceBody(ScreenInstance screen, PanelFacePlan plan)
-        {
-            var grid = new Grid { Background = Ui.Brush(Theme.Rule) };
+            var grid = new Grid();
+            if (!plan.Stacked) grid.Height = plan.Body;
             for (var i = 0; i < plan.Letters.Length; i++)
             {
+                if (plan.Stacked) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(plan.Cells[i] + (i == 0 ? 0 : PanelFacePlan.Seam)) });
+                else grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(plan.Cells[i] + (i == 0 ? 0 : PanelFacePlan.Seam)) });
+            }
+            for (var i = 0; i < plan.Letters.Length; i++)
+            {
+                var letter = plan.Letters[i];
+                var cell = BuildZoneCell(screen, letter, key == letter, () => pick(letter), letter == "A" && !plan.Stacked);
                 if (plan.Stacked)
                 {
-                    if (i > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(PanelFacePlan.Seam) });
-                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(plan.Cells[i]) });
+                    cell.Margin = new Thickness(0, i == 0 ? 0 : PanelFacePlan.Seam, 0, 0);
+                    Grid.SetRow(cell, i);
                 }
                 else
                 {
-                    if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.Seam) });
-                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(plan.Cells[i]) });
+                    cell.Margin = new Thickness(i == 0 ? 0 : PanelFacePlan.Seam, 0, 0, 0);
+                    Grid.SetColumn(cell, i);
                 }
-            }
-            for (var i = 0; i < plan.Letters.Length; i++)
-            {
-                var cell = BuildZoneCell(screen, plan.Letters[i], plan.Stacked ? PanelFacePlan.PictureWidth : plan.Cells[i]);
-                if (plan.Stacked) Grid.SetRow(cell, i * 2);
-                else Grid.SetColumn(cell, i * 2);
                 grid.Children.Add(cell);
             }
             return grid;
         }
 
-        /// <summary>
-        /// One zone of the body: its letter, the page it opens on directly under it, how many pages it
-        /// cycles under that, and the class filter at the foot where the zone has a page it changes.
-        /// </summary>
-        /// <remarks>
-        /// The three read down in the order they are written here, which they did not before: a
-        /// DockPanel of three bottom-docked children draws them from the bottom up, so the count came
-        /// out above the select it counts. One stack is what holds the order the canvas draws, and an
-        /// edit that adds a fourth control to the dock cannot invert it again.
-        ///
-        /// The cell is the tightest box on the panel. At the reference face it is 138 high, of which the
-        /// padding takes 16, the letter about 16, the two controls 48 and the gaps between them 18,
-        /// which leaves the class filter the 40 a toggle and its label need; a control added here has to
-        /// shrink another or move out of the cell rather than draw past the seam.
-        /// </remarks>
-        private FrameworkElement BuildZoneCell(ScreenInstance screen, string letter, double width)
+        /// <summary>One zone: its letter and how many pages it cycles, the page it opens on, and the button
+        /// that advances it. Zone A's page is centred, as it sits in the middle of the face.</summary>
+        private Button BuildZoneCell(ScreenInstance screen, string letter, bool selected, Action pick, bool centred)
         {
-            var inner = PanelFacePlan.Inner(width);
-            var dock = new DockPanel { LastChildFill = false };
-            var stack = Ui.VStack(PanelFacePlan.CellGap,
-                Ui.Label(PanelFacePlan.ZoneLabel(letter), Theme.TextSecondary),
-                BuildZoneSelectFor(screen, letter, inner),
-                BuildMaskDrop(screen, letter, inner));
-            DockPanel.SetDock(stack, Dock.Top);
-            dock.Children.Add(stack);
+            var top = new DockPanel { LastChildFill = true };
+            var count = ScreensCellText(PanelScreens.ZoneCount(screen.Face, letter), PanelFacePlan.CountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            DockPanel.SetDock(count, Dock.Right);
+            top.Children.Add(count);
+            top.Children.Add(ScreensCellText(letter, PanelFacePlan.LetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data));
 
-            if (FacePages.OffersClassFilter(letter))
-            {
-                var classOnly = BuildClassFilterRow(screen, letter);
-                DockPanel.SetDock(classOnly, Dock.Bottom);
-                dock.Children.Add(classOnly);
-            }
+            var pageName = PanelScreens.OpensOnName(screen.Face, letter);
+            var page = ScreensCellText(pageName, PanelFacePlan.PageSize, FontWeights.SemiBold, Theme.TextPrimary);
+            page.VerticalAlignment = VerticalAlignment.Center;
+            if (centred) page.TextAlignment = TextAlignment.Center;
+            var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, letter)));
+            var button = ScreensCellText(buttonLine, PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
 
-            return new Border
-            {
-                Background = Ui.Brush(Theme.SurfaceBase),
-                Padding = new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY),
-                Child = dock,
-            };
+            var dock = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(top, Dock.Top);
+            DockPanel.SetDock(button, Dock.Bottom);
+            button.Margin = new Thickness(0, PanelFacePlan.CellGap, 0, 0);
+            page.Margin = new Thickness(0, PanelFacePlan.CellGap, 0, 0);
+            dock.Children.Add(top);
+            dock.Children.Add(button);
+            dock.Children.Add(page);
+            var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY));
+            // The page and the button line are cut short in a narrow cell, so the hover carries either whole
+            // where it is.
+            ScreensHover(cell, () => PanelScreens.ZoneCellTooltip(letter, ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));
+            cell.Uid = "screens.zone." + letter;
+            return cell;
         }
 
-        /// <summary>Band D, across the foot: the same controls as a body zone, laid along the row
-        /// rather than stacked, since a band has the width and not the height. The class filter is
-        /// among them because D7 reads it, and the row asks the same question a zone cell asks rather
-        /// than naming the letters itself, so one rule decides both.</summary>
-        private FrameworkElement BuildBandStrip(ScreenInstance screen)
+        /// <summary>Band D across the foot: the same facts as a zone, along the row.</summary>
+        private Button BuildBandCell(ScreenInstance screen, double height, double buttonMax, bool selected, Action pick)
         {
-            var children = new List<UIElement>
-            {
-                Ui.Label(PanelFacePlan.ZoneLabel("D"), Theme.TextSecondary),
-                BuildZoneSelectFor(screen, "D", PanelFacePlan.BandSelectWidth),
-                BuildMaskDrop(screen, "D", PanelFacePlan.BandSelectWidth),
-            };
-            if (FacePages.OffersClassFilter("D")) children.Add(BuildClassFilterRow(screen, "D"));
-            var row = Ui.HStack(PanelFacePlan.BandGap, children.ToArray());
-            row.Margin = new Thickness(8, 0, 8, 0);
-            return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = row };
+            var dock = new DockPanel { LastChildFill = true };
+            var letter = ScreensCellText("D", PanelFacePlan.BandLetterSize, FontWeights.SemiBold, selected ? Theme.Accent : Theme.TextSecondary, PanelFonts.Data);
+            letter.Margin = new Thickness(0, 0, PanelFacePlan.BandGap, 0);
+            DockPanel.SetDock(letter, Dock.Left);
+            dock.Children.Add(letter);
+            var buttonLine = PanelScreens.ZoneButtonLine(TriggersOf(Contract.CycleZoneAction(screen.Namespace, "D")));
+            var button = ScreensCellText(buttonLine, PanelFacePlan.ButtonLineSize, FontWeights.Normal, Theme.TextSecondary);
+            button.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
+            // The page is what the band shows; a long binding is cut short before it is.
+            button.MaxWidth = buttonMax;
+            DockPanel.SetDock(button, Dock.Right);
+            dock.Children.Add(button);
+            var count = ScreensCellText(PanelScreens.ZoneCount(screen.Face, "D"), PanelFacePlan.CountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            count.Margin = new Thickness(PanelFacePlan.BandGap, 0, 0, 0);
+            DockPanel.SetDock(count, Dock.Right);
+            dock.Children.Add(count);
+            var pageName = PanelScreens.OpensOnName(screen.Face, "D");
+            var page = ScreensCellText(pageName, PanelFacePlan.BandPageSize, FontWeights.SemiBold, Theme.TextPrimary);
+            dock.Children.Add(page);
+            var cell = ScreensZoneButton(dock, selected, pick, new Thickness(PanelFacePlan.CellPaddingX, 0, PanelFacePlan.CellPaddingX, 0));
+            cell.Height = height;
+            cell.VerticalContentAlignment = VerticalAlignment.Center;
+            ScreensHover(cell, () => PanelScreens.ZoneCellTooltip("D", ScreensIsCut(page) ? pageName : null, ScreensIsCut(button) ? buttonLine : null));
+            cell.Uid = "screens.zone.D";
+            return cell;
         }
 
-        /// <summary>The page a zone opens on. Writing it moves the live face too, so the dash on the desk
-        /// follows the panel rather than waiting for the next session.</summary>
-        private ComboBox BuildZoneSelectFor(ScreenInstance screen, string letter, double width)
+        /// <summary>A line of a cell, cut short rather than wrapped: a cell is as tall as the face makes it.</summary>
+        private static TextBlock ScreensCellText(string text, double size, FontWeight weight, string hex, FontFamily family = null)
         {
-            var pages = FacePages.For(letter);
-            var select = BuildPageSelect(pages, screen.Face.Start(letter), width, index =>
-            {
-                screen.Face.SetStart(letter, index);
-                Save(screen);
-                RefreshZone(screen, letter);
-                RefreshFaceWarning(screen);
-            });
-            select.ToolTip = "The page zone " + letter + " opens on";
-            // The field chrome, so that the two controls of a cell are one pair rather than SimHub's box
-            // above the panel's own. A ComboBox keeps SimHub's template, which is what Ui.Field leaves it.
-            Ui.Field(select, Theme.ControlHeightSm);
-            zoneSelects[letter] = select;
-            return select;
+            var block = Ui.Text(text ?? string.Empty, size, weight, hex, family);
+            block.TextTrimming = TextTrimming.CharacterEllipsis;
+            block.VerticalAlignment = VerticalAlignment.Center;
+            return block;
         }
 
         /// <summary>
-        /// Whether this zone's lists show the player's own class.
-        ///
-        /// It sits in the zone's own cell rather than beside the position mode, because it is a property
-        /// of the zone and not of the face: the point of it is zone B listing the race while zone C
-        /// lists the class a driver is actually racing in.
+        /// A part of the picture as a press (the artboard's .zone): the zone ground inside the rule, outlined 2
+        /// in the accent when it is the one the aside shows, and the hover ground under the pointer.
         /// </summary>
-        /// <remarks>
-        /// A toggle and a label beside it, because a boolean is a toggle everywhere else on the panel and
-        /// this was one of the two places it was not. Nothing but the control itself writes the setting,
-        /// so the toggle is not kept for refreshing the way the page select and the count are.
-        /// </remarks>
-        private FrameworkElement BuildClassFilterRow(ScreenInstance screen, string letter)
+        private static Button ScreensZoneButton(UIElement content, bool selected, Action pick, Thickness padding)
         {
-            var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(screen); });
-            toggle.ToolTip = "Show only your own class in zone " + letter;
-            toggle.VerticalAlignment = VerticalAlignment.Center;
-            toggle.HorizontalAlignment = HorizontalAlignment.Left;
-            // Measured inside a vertical stack, which is not a nicety. SHToggleButton declares no size of
-            // its own and grows to whatever it is measured against; every other toggle on the panel sits
-            // in a row of automatic height and so is measured against infinity, but this one is docked to
-            // the bottom of a cell as tall as the face's body, and it drew as a white disc filling zone B
-            // and zone C. A vertical StackPanel measures its children with an infinite height, which is
-            // the same question the rows ask and gets the same answer, without this file having to know
-            // what size SimHub draws a switch at.
-            var sized = Ui.VStack(0, toggle);
-            sized.VerticalAlignment = VerticalAlignment.Center;
-            // And a floor under its width, because SimHub's switch draws wider than it measures: the
-            // label beside it started underneath the knob. A floor rather than a fixed width, so a switch
-            // that is genuinely wider than this still gets the room it asks for.
-            sized.MinWidth = PanelFacePlan.SwitchWidth;
-            return Ui.HStack(PanelFacePlan.CellGap, sized, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
-        }
-
-        /// <summary>
-        /// The enabled pages of a zone. This is the control that decides how long a driver's cycle is,
-        /// which makes it the most consequential thing on the panel.
-        /// </summary>
-        private FrameworkElement BuildMaskDrop(ScreenInstance screen, string letter, double width)
-        {
-            var caption = MaskCaption(screen, letter);
-            var button = Ui.DropButton(width, caption, "Which pages zone " + letter + " cycles through");
-            DressAsCount(button, caption);
-            zoneMaskButtons[letter] = button;
-            return Ui.Drop(button, BuildMaskPanel(screen, letter));
-        }
-
-        /// <summary>
-        /// A count is not a value: the canvas sets it as a tracked label at eleven in text.label under a
-        /// twelve pixel chevron, where a drop button's caption is a value at twelve in text.primary.
-        /// </summary>
-        /// <remarks>
-        /// The chrome stays the kit's -- this rewrites the caption of a button Ui.DropButton built and
-        /// touches nothing else -- because the kit has no tracked-caption variant to ask for, and a
-        /// second drop button drawn here would be a field the control kit already covers. The variant
-        /// belongs in Widgets.cs beside DropButton; until it is there, the pair below is where it lives.
-        ///
-        /// A tracked label is one block per character rather than a TextBlock, so Ui.SetDropText has
-        /// nothing to write to and SetCountCaption replaces the whole caption instead. The gap of five
-        /// the canvas leaves between the caption and the chevron is the slack in a docked row rather
-        /// than a number: the caption takes the left of the box and the chevron the right.
-        /// </remarks>
-        private static void DressAsCount(ToggleButton button, string text)
-        {
-            var host = new Border { VerticalAlignment = VerticalAlignment.Center };
-            var chevron = Ui.Icon(Ui.ChevronIcon, Theme.TextLabel, PanelFacePlan.CountChevronSize);
-            chevron.HorizontalAlignment = HorizontalAlignment.Right;
-            var row = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(chevron, Dock.Right);
-            row.Children.Add(chevron);
-            row.Children.Add(host);
-            button.Content = row;
-            button.Tag = host;
-            SetCountCaption(button, text);
-        }
-
-        private static void SetCountCaption(ToggleButton button, string text)
-        {
-            var host = button.Tag as Border;
-            if (host != null) host.Child = Ui.Label(text, Theme.TextLabel, PanelFacePlan.CountCaptionSize);
-        }
-
-        private static string MaskCaption(ScreenInstance screen, string letter)
-        {
-            var pages = FacePages.For(letter).Count;
-            var on = 0;
-            for (var page = 0; page < pages; page++)
-            {
-                if (screen.Face.PageEnabled(letter, page)) on++;
-            }
-            return on + " of " + pages + " pages";
-        }
-
-        /// <summary>A checkbox per page, seven to a column, with All and None above them.</summary>
-        private FrameworkElement BuildMaskPanel(ScreenInstance screen, string letter)
-        {
-            const int perColumn = 7;
-            var pages = FacePages.For(letter);
-            var boxes = new List<CheckBox>();
-            zoneMaskBoxes[letter] = boxes;
-
-            var grid = new Grid();
-            var columns = (pages.Count + perColumn - 1) / perColumn;
-            var rows = Math.Min(pages.Count, perColumn);
-            for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            for (var r = 0; r < rows; r++) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            for (var i = 0; i < pages.Count; i++)
-            {
-                var page = pages[i].Number;
-                var box = new CheckBox
-                {
-                    Content = pages[i].Name,
-                    FontSize = Theme.SizeLabel,
-                    FontFamily = PanelFonts.Label,
-                    Foreground = Ui.Brush(Theme.TextPrimary),
-                    IsChecked = screen.Face.PageEnabled(letter, page),
-                    Margin = new Thickness(0, 0, 20, 6),
-                    MinWidth = 120,
-                };
-                box.Checked += (sender, args) => SetPage(screen, letter, page, true);
-                box.Unchecked += (sender, args) => SetPage(screen, letter, page, false);
-                boxes.Add(box);
-                Grid.SetColumn(box, i / perColumn);
-                Grid.SetRow(box, i % perColumn);
-                grid.Children.Add(box);
-            }
-
-            var all = BuildMaskLink("All", () => SetEveryPage(screen, letter, true));
-            var none = BuildMaskLink("None", () => SetEveryPage(screen, letter, false));
-            var header = Ui.Row(Ui.Label("Pages zone " + letter + " cycles"), Ui.HStack(12, all, none));
-            header.Margin = new Thickness(0, 0, 0, 10);
-            return Ui.VStack(0, header, grid);
-        }
-
-        private static Button BuildMaskLink(string text, Action clicked)
-        {
+            var edge = selected ? PanelFacePlan.SelectedEdge : PanelMetrics.BorderWeight;
+            var less = edge - PanelMetrics.BorderWeight;
             var button = new Button
             {
-                Content = Ui.Text(text, Theme.SizeLabel, FontWeights.Medium, Theme.Accent),
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(0),
+                Background = Ui.Brush(Theme.SurfaceZone),
+                BorderBrush = Ui.Brush(selected ? Theme.Accent : Theme.Rule),
+                BorderThickness = new Thickness(edge),
+                Padding = new Thickness(Math.Max(0, padding.Left - less), Math.Max(0, padding.Top - less), Math.Max(0, padding.Right - less), Math.Max(0, padding.Bottom - less)),
+                Content = content,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
                 Cursor = Cursors.Hand,
+                FocusVisualStyle = Ui.FocusRing(),
+                Template = ScreensZoneTemplate(),
             };
-            button.Click += (sender, args) => clicked();
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, PanelScreens.ZoneStatus(selected));
+            if (pick != null) button.Click += (sender, args) => pick();
             return button;
         }
 
-        private void SetPage(ScreenInstance screen, string letter, int page, bool enabled)
+        private static ControlTemplate ScreensZoneTemplate()
         {
-            screen.Face.SetPageEnabled(letter, page, enabled);
-            Save(screen);
-            RefreshZone(screen, letter);
-            RefreshFaceWarning(screen);
+            if (screensZoneTemplate != null) return screensZoneTemplate;
+            var chrome = new FrameworkElementFactory(typeof(Border), "chrome");
+            chrome.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            chrome.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            chrome.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            chrome.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            chrome.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, new TemplateBindingExtension(Control.HorizontalContentAlignmentProperty));
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, new TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
+            chrome.AppendChild(presenter);
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = chrome };
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(Border.BackgroundProperty, Ui.Brush(Theme.Hover), "chrome"));
+            template.Triggers.Add(hover);
+            screensZoneTemplate = template;
+            return template;
         }
 
-        /// <summary>None leaves the page the zone is on enabled, because a zone with an empty cycle has
-        /// nothing to draw; the settings object refuses it and the checkbox follows what it decided.</summary>
-        private void SetEveryPage(ScreenInstance screen, string letter, bool enabled)
+        // --- The asides ---------------------------------------------------------------------------------
+
+        /// <summary>The Info bar: a choice per end field, from FacePages.BarFields.</summary>
+        private FrameworkElement BuildInfoBarAside(ScreenInstance screen, Contract.FaceSize face, Action redraw)
         {
-            var pages = FacePages.For(letter);
-            if (enabled)
+            var stack = Ui.VStack(12, Ui.Heading(PanelScreens.InfoBarTitle));
+            var anchored = Ui.Anchor(stack, PanelScreens.AnchorInfoBar);
+            var fields = FacePages.BarFields.Select(field => field.Name).ToArray();
+            foreach (var row in PanelScreens.BarRows(face))
             {
-                for (var i = 0; i < pages.Count; i++) screen.Face.SetPageEnabled(letter, pages[i].Number, true);
-            }
-            else
-            {
-                var keep = screen.Face.Start(letter);
-                for (var i = 0; i < pages.Count; i++)
+                var slot = row.Slot;
+                var choice = Ui.ChoiceButton(fields, screen.Face.BarField(slot), index =>
                 {
-                    if (pages[i].Number != keep) screen.Face.SetPageEnabled(letter, pages[i].Number, false);
-                }
+                    screen.Face.SetBarField(slot, index);
+                    ScreensSave(screen, redraw);
+                });
+                choice.Uid = "screens.bar." + slot;
+                stack.Children.Add(ScreensAsideLine(Ui.Text(row.Label, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), choice));
             }
-            Save(screen);
-            RefreshZone(screen, letter);
-            RefreshFaceWarning(screen);
+            return anchored;
         }
 
-        /// <summary>Puts the controls of one zone back in step with the settings, which may have moved on
-        /// their own: turning off the page a zone sits on snaps it forward to the next enabled one.</summary>
-        private void RefreshZone(ScreenInstance screen, string letter)
+        /// <summary>A line of an aside: its words on the left and its control on the right.</summary>
+        private static FrameworkElement ScreensAsideLine(FrameworkElement words, FrameworkElement control)
         {
-            ComboBox select;
-            if (zoneSelects.TryGetValue(letter, out select))
-            {
-                var start = screen.Face.Start(letter);
-                if (select.SelectedIndex != start) select.SelectedIndex = start;
-            }
-            ToggleButton button;
-            if (zoneMaskButtons.TryGetValue(letter, out button)) SetCountCaption(button, MaskCaption(screen, letter));
-            List<CheckBox> boxes;
-            if (zoneMaskBoxes.TryGetValue(letter, out boxes))
-            {
-                var pages = FacePages.For(letter);
-                for (var i = 0; i < boxes.Count && i < pages.Count; i++)
-                {
-                    var enabled = screen.Face.PageEnabled(letter, pages[i].Number);
-                    if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
-                }
-            }
-        }
-
-        /// <summary>"Zone B and zone C both show Relative." Says so and allows it: a driver watching the
-        /// relative in two places is a choice and not a mistake.</summary>
-        private FrameworkElement BuildFaceWarning(ScreenInstance screen)
-        {
-            faceWarningText = Ui.Text("", Theme.SizeSmall, FontWeights.Normal, Theme.Caution);
-            faceWarningText.TextWrapping = TextWrapping.Wrap;
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            icon.Margin = new Thickness(0, 1, 0, 0);
-            faceWarningRow = Ui.HStack(10, icon, faceWarningText);
-            faceWarningRow.Visibility = Visibility.Collapsed;
-            return faceWarningRow;
-        }
-
-        private void RefreshFaceWarning(ScreenInstance screen)
-        {
-            // Called while the pane is still being assembled as well as after it, and after a tab has
-            // been left, so a row that is not there is nothing to refresh rather than a crash.
-            if (faceWarningText == null || faceWarningRow == null || screen?.Face == null) return;
-            var message = FacePageClash.Warning(screen.Face);
-            faceWarningText.Text = message;
-            faceWarningRow.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+            var line = new DockPanel { LastChildFill = true };
+            control.VerticalAlignment = VerticalAlignment.Center;
+            control.Margin = new Thickness(12, 0, 0, 0);
+            DockPanel.SetDock(control, Dock.Right);
+            line.Children.Add(control);
+            words.VerticalAlignment = VerticalAlignment.Center;
+            line.Children.Add(words);
+            return line;
         }
 
         /// <summary>
-        /// The quick glance on this screen: the one page a held button shows. The button itself is bound on
-        /// Shortcuts, with every other binding; the chip says what it is bound to and goes there.
+        /// A zone: its pages in the order it cycles from the page it opens on, which is drawn first and marked
+        /// First, each ticked into the cycle or not and dragged into place; then the class filter where
+        /// the zone lists cars, and the two buttons that page it.
         /// </summary>
-        private FrameworkElement BuildFaceGlanceRow(ScreenInstance screen)
+        private FrameworkElement BuildZoneAside(ScreenInstance screen, string letter, Action redraw)
         {
-            var chip = BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace));
-            return Ui.Row(PanelShortcuts.QuickGlanceTitle, null, Ui.HStack(8, BuildGlanceSelect(screen), chip));
+            var face = screen.Face;
+            var head = new DockPanel { LastChildFill = true };
+            var count = Ui.Text(PanelScreens.ZoneCount(face, letter), PanelScreens.HeadCountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            count.VerticalAlignment = VerticalAlignment.Center;
+            DockPanel.SetDock(count, Dock.Right);
+            head.Children.Add(count);
+            head.Children.Add(Ui.Heading(PanelFacePlan.ZoneLabel(letter)));
+
+            // A tick or an untick leaves the start where it is unless it unticked the start itself, which
+            // FaceSettings moves on to the next ticked page; a drag moves it only when it puts another page
+            // first, since the page drawn first is the one the zone opens on. Never a SetStart per press:
+            // that would put the running zone back on its first page every time a box was ticked.
+            Action settle = () =>
+            {
+                ScreensSave(screen, redraw);
+            };
+            var showAll = screensShowAll;
+            var rows = new List<FrameworkElement>();
+            foreach (var row in PanelScreens.ZoneRows(face, letter, showAll))
+            {
+                var page = row.Page;
+                rows.Add(BuildZonePageRow(row, on =>
+                {
+                    PanelScreens.Tick(face, letter, page, on);
+                    settle();
+                }));
+            }
+            var list = Ui.Reorderable(rows, (from, to) =>
+            {
+                PanelScreens.Reorder(face, letter, showAll, from, to);
+                settle();
+            });
+            var pages = Ui.VStack(2, list);
+            if (showAll && PanelScreens.ListsSoonModules(letter))
+            {
+                pages.Children.Add(Ui.Soon(BuildSoonPageRow(PanelSoon.CircleTracker.Title, Ui.SoonTag(PanelSoon.CircleTracker)), PanelSoon.CircleTracker));
+                pages.Children.Add(Ui.Soon(BuildSoonPageRow(PanelSoon.Launch.Title, Ui.SoonTag(PanelSoon.Launch)), PanelSoon.Launch));
+            }
+
+            var links = Ui.HStack(12,
+                ScreensLink("screens.showall", showAll ? PanelScreens.OnlyTicked : PanelScreens.ShowAll, () =>
+                {
+                    screensShowAll = !screensShowAll;
+                    redraw();
+                }),
+                ScreensLink("screens.all", PanelScreens.AllPages, () => { PanelScreens.SetEveryPage(face, letter, true); settle(); }, PanelScreens.AllPagesTooltip),
+                ScreensLink("screens.none", PanelScreens.NoPages, () => { PanelScreens.SetEveryPage(face, letter, false); settle(); }, PanelScreens.NoPagesTooltip));
+            var hint = Ui.HStack(6, Ui.Text(PanelScreens.DragHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary), Ui.NewTag());
+            var foot = ScreensAsideLine(links, hint);
+
+            var stack = Ui.VStack(14, head, pages, foot);
+            if (FacePages.OffersClassFilter(letter))
+            {
+                var classOnly = Ui.Switch(face.IsClassOnly(letter), on =>
+                {
+                    face.SetClassOnly(letter, on);
+                    ScreensSave(screen);
+                });
+                // No hover: the label beside it already says it. Named for a screen reader, which the label
+                // beside it is not tied to.
+                System.Windows.Automation.AutomationProperties.SetName(classOnly, PanelScreens.ClassOnlyTitle);
+                classOnly.Uid = "screens.classonly";
+                var line = ScreensAsideLine(Ui.Text(PanelScreens.ClassOnlyTitle, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary), classOnly);
+                stack.Children.Add(Ui.Anchor(ScreensRuled(line), PanelScreens.AnchorClassOnly));
+            }
+            var previous = Ui.HStack(8, Ui.Text(PanelScreens.PreviousPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), Ui.NewTag());
+            var nextChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);
+            nextChip.Uid = "screens.zone.next";
+            var backChip = ScreensCutChip(BindingChipFor(Contract.CycleZoneBackAction(screen.Namespace, letter)), PanelFacePlan.AsideChipMax);
+            backChip.Uid = "screens.zone.back";
+            stack.Children.Add(Ui.Anchor(ScreensRuled(Ui.VStack(10,
+                ScreensAsideLine(Ui.Text(PanelScreens.NextPageTitle, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary), nextChip),
+                ScreensAsideLine(previous, backChip))), PanelScreens.AnchorZonePaging));
+            return stack;
+        }
+
+        /// <summary>One page of the zone list: its tick, its name, and First or Not in iRacing after it. The
+        /// last ticked page cannot be unticked, since a zone with no pages draws nothing: its tick stays
+        /// answering, the settings refuse the untick, and the redraw puts the tick back. The whole row is the
+        /// tick's label, as the artboard's .pg is a label.</summary>
+        private static FrameworkElement BuildZonePageRow(ZoneRow row, Action<bool> ticked)
+        {
+            var box = new CheckBox
+            {
+                IsChecked = row.Ticked,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+                // The name is printed beside the tick, so only the locked page has something to add.
+                ToolTip = row.Locked ? PanelScreens.LastPageTooltip : null,
+                Uid = "screens.page." + row.Page,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(box, row.Name);
+            box.Checked += (sender, args) => ticked(true);
+            box.Unchecked += (sender, args) => ticked(false);
+            var line = new DockPanel { LastChildFill = true, Height = PanelScreens.PageRowHeight };
+            ScreensLabelFor(line, box);
+            DockPanel.SetDock(box, Dock.Left);
+            line.Children.Add(box);
+            if (row.First)
+            {
+                var first = Ui.Eyebrow(PanelScreens.FirstTag, Theme.Accent);
+                first.VerticalAlignment = VerticalAlignment.Center;
+                first.Margin = new Thickness(8, 0, 0, 0);
+                DockPanel.SetDock(first, Dock.Right);
+                line.Children.Add(first);
+            }
+            if (row.NotInIracing)
+            {
+                var none = Ui.Text(PanelScreens.NotInIracing, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary);
+                none.VerticalAlignment = VerticalAlignment.Center;
+                none.Margin = new Thickness(8, 0, 0, 0);
+                DockPanel.SetDock(none, Dock.Right);
+                line.Children.Add(none);
+            }
+            var name = ScreensCellText(row.Name, Theme.SizeBody, FontWeights.Normal, row.Ticked ? Theme.TextPrimary : Theme.TextSecondary);
+            line.Children.Add(name);
+            return line;
         }
 
         /// <summary>
-        /// The one page the glance shows, zone and page together.
+        /// Makes a press anywhere on <paramref name="row"/> toggle <paramref name="box"/>, as a label wrapped
+        /// round a checkbox does; a press on the box itself is the box's own.
         /// </summary>
         /// <remarks>
-        /// One select of fifty-four rather than a zone box beside a page box: the glance is one choice,
-        /// and a zone without a page means nothing. The list is Contract.FaceZoneLetters order, which is
-        /// the order the settings are in, and the item a row reads is PanelFacePlan.GlanceLabel, which is
-        /// where the wording is pinned.
+        /// On a release that ends a press on the same row, as the segmented option chooses: the press takes
+        /// the mouse, so a click that closed a flyout or a sheet's dim over the row does not tick it.
         /// </remarks>
-        private ComboBox BuildGlanceSelect(ScreenInstance screen)
+        private static void ScreensLabelFor(Panel row, CheckBox box)
         {
-            var options = PanelFacePlan.GlanceOptions();
-            var select = new ComboBox
+            row.Background = Brushes.Transparent;
+            row.Cursor = Cursors.Hand;
+            row.MouseLeftButtonDown += (sender, args) =>
             {
-                Width = PanelFacePlan.GlanceSelectWidth,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                ToolTip = "The page a held button shows",
+                var source = args.OriginalSource as DependencyObject;
+                if (source != null && (ReferenceEquals(source, box) || box.IsAncestorOf(source))) return;
+                if (row.CaptureMouse()) args.Handled = true;
             };
-            Ui.Field(select, Theme.ControlHeightSm);
-            foreach (var option in options) select.Items.Add(PanelFacePlan.GlanceLabel(option));
-            var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
-            var index = Array.IndexOf(options, glance);
-            select.SelectedIndex = index >= 0 ? index : 0;
-            select.SelectionChanged += (sender, args) =>
+            row.MouseLeftButtonUp += (sender, args) =>
             {
-                if (select.SelectedIndex < 0 || select.SelectedIndex >= options.Length) return;
-                screen.Face.QuickGlance = options[select.SelectedIndex];
-                Save(screen);
-                // The clash line counts the glance among the participants, so the warning has to be asked
-                // again here and not only when a zone moves.
-                RefreshFaceWarning(screen);
+                if (!row.IsMouseCaptured) return;
+                row.ReleaseMouseCapture();
+                args.Handled = true;
+                var at = args.GetPosition(row);
+                if (at.X < 0 || at.Y < 0 || at.X > row.ActualWidth || at.Y > row.ActualHeight) return;
+                box.IsChecked = box.IsChecked != true;
             };
-            return select;
+        }
+
+        /// <summary>A binding chip cut short at <paramref name="most"/> -- PanelFacePlan.AsideChipMax in the zone
+        /// aside, PanelScreens.GlanceChipMax beside a glance -- so a long device name leaves the words and the
+        /// controls beside it their room, with the whole binding in its hover where it is cut.</summary>
+        private static FrameworkElement ScreensCutChip(FrameworkElement chip, double most)
+        {
+            chip.MaxWidth = most;
+            var button = chip as ContentControl;
+            var label = button == null ? null : button.Content as TextBlock;
+            if (label != null)
+            {
+                label.TextTrimming = TextTrimming.CharacterEllipsis;
+                ScreensHover(chip, () => PanelScreens.ChipTooltip(label.Text, ScreensIsCut(label)));
+            }
+            return chip;
+        }
+
+        /// <summary>
+        /// Gives <paramref name="owner"/> a hover worked out as it opens, when the lines it reads have been laid
+        /// out and whether one of them is cut short is known.
+        /// </summary>
+        /// <remarks>
+        /// Set once now as well, since WPF raises ToolTipOpening only on an element that has a ToolTip, and it
+        /// reads the ToolTip again after the event, so the one written there is the one shown.
+        /// </remarks>
+        private static void ScreensHover(FrameworkElement owner, Func<string> hover)
+        {
+            owner.ToolTip = hover();
+            owner.ToolTipOpening += (sender, args) => owner.ToolTip = hover();
+        }
+
+        /// <summary>Gives <paramref name="owner"/> the hover <paramref name="hover"/> only while
+        /// <paramref name="text"/> is cut short: a line drawn whole says it already.</summary>
+        private static void ScreensHoverWhenCut(FrameworkElement owner, string hover, Func<TextBlock> text)
+        {
+            owner.ToolTip = hover;
+            owner.ToolTipOpening += (sender, args) =>
+            {
+                if (!ScreensIsCut(text())) args.Handled = true;
+            };
+        }
+
+        /// <summary>
+        /// Whether a line drawn with an ellipsis is cut short at the width it was laid out at: its whole text,
+        /// set in its own face and size, is wider than the line.
+        /// </summary>
+        private static bool ScreensIsCut(TextBlock block)
+        {
+            if (block == null || string.IsNullOrEmpty(block.Text)) return false;
+            var typeface = new Typeface(block.FontFamily, block.FontStyle, block.FontWeight, block.FontStretch);
+            var whole = new FormattedText(block.Text, CultureInfo.CurrentCulture, block.FlowDirection, typeface, block.FontSize, Brushes.Black,
+                VisualTreeHelper.GetDpi(block).PixelsPerDip);
+            return whole.WidthIncludingTrailingWhitespace > block.ActualWidth + 0.5;
+        }
+
+        /// <summary>The first line under <paramref name="root"/> that reads <paramref name="text"/>.</summary>
+        private static TextBlock ScreensTextIn(DependencyObject root, string text)
+        {
+            var block = root as TextBlock;
+            if (block != null && string.Equals(block.Text, text, StringComparison.Ordinal)) return block;
+            var count = root is Visual ? VisualTreeHelper.GetChildrenCount(root) : 0;
+            for (var i = 0; i < count; i++)
+            {
+                var found = ScreensTextIn(VisualTreeHelper.GetChild(root, i), text);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        /// <summary>A page not built yet, greyed in the list under Show all, beside the grip's room: 16 in, where
+        /// a real row's tick stands after its grip, so the ticks and the tags line up.</summary>
+        private static FrameworkElement BuildSoonPageRow(string title, FrameworkElement tag)
+        {
+            var line = new DockPanel { LastChildFill = true, Height = PanelScreens.PageRowHeight, Margin = new Thickness(16, 0, 0, 0) };
+            tag.VerticalAlignment = VerticalAlignment.Center;
+            DockPanel.SetDock(tag, Dock.Right);
+            line.Children.Add(tag);
+            var box = new CheckBox { IsChecked = false, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) };
+            DockPanel.SetDock(box, Dock.Left);
+            line.Children.Add(box);
+            line.Children.Add(ScreensCellText(title, Theme.SizeBody, FontWeights.Normal, Theme.TextSecondary));
+            return line;
+        }
+
+        /// <summary>A block of an aside under a rule, 12 below it.</summary>
+        private static FrameworkElement ScreensRuled(UIElement child)
+        {
+            return new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(0, 12, 0, 0),
+                Child = child,
+            };
+        }
+
+        /// <summary>A press drawn as a word in the accent, with nothing around it: Show all, All, None.</summary>
+        private static Button ScreensLink(string uid, string text, Action click, string tooltip = null)
+        {
+            var button = new Button
+            {
+                Uid = uid,
+                ToolTip = tooltip,
+                Content = Ui.Text(text, Theme.SizeSmall, FontWeights.Medium, Theme.Accent),
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Cursor = Cursors.Hand,
+                FocusVisualStyle = Ui.FocusRing(),
+                Template = ScreensZoneTemplate(),
+            };
+            button.Click += (sender, args) => click();
+            return button;
         }
     }
 }

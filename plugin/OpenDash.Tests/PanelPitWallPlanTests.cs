@@ -1,11 +1,12 @@
-// PanelPitWallPlanTests.cs: the three page miniatures the Rig tab draws, held against the canvas the way
-// PanelFacePlanTests holds the face's own picture.
+// PanelPitWallPlanTests.cs: the pit wall picture the Screens page draws -- one page at a time, the one "Page
+// on screen" picks -- held against the canvas the way PanelFacePlanTests holds the face's own picture.
 //
-// The picture and the sentences beside it disagreed before PanelPitWallPlan existed: the Tower page
-// stacked C above D and drew the wide zone down the left, while the row beside it read "Tower page, lower
-// left" for C and "lower right" for D, and the page's fixed panel was missing altogether. The last test
-// below is the one that keeps that from coming back: it reads each sentence's own words off the rectangle
-// the same table gives the zone, so a panel that moves either takes its sentence with it or fails here.
+// The picture disagreed with the words beside it before PanelPitWallPlan existed: the Tower page stacked C
+// above D and drew the wide zone down the left, while the row beside it read "Tower page, lower left" for C
+// and "lower right" for D, and the page's fixed panel was missing altogether. The rows no longer describe the
+// zones in words -- the picture beside the list shows them -- so what is held here is the table itself: every
+// panel inside its page, none covering another, and the zones the contract has, where the pit wall's pages
+// draw them.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,9 +16,15 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelPitWallPlanTests
     {
+        /// <summary>The content beside the full sidebar at a control that wide, with a 17 px scroll bar: 879 at
+        /// the artboard's 1200 frame, 3519 at 3840. It is PanelShell.ContentWidth(control, 17) once the column
+        /// has no ceiling, spelled out so the pin reads the same on either side of that change; the column
+        /// has no widest width to pin against.</summary>
+        private static double Column(double control) => control - PanelShell.SidebarWidth - 2 * PanelShell.MainPaddingX(PanelLayout.Full) - 17;
+
         private static PanelPitWallPlan.Page Page(string title)
         {
-            var page = PanelPitWallPlan.PageNamed(title);
+            var page = PanelPitWallPlan.Pages.FirstOrDefault(p => string.Equals(p.Title, title, StringComparison.Ordinal));
             Assert.True(page != null, "there is no page called " + title);
             return page;
         }
@@ -34,31 +41,96 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { x, y, width, height }, new[] { panel.X, panel.Y, panel.Width, panel.Height });
         }
 
-        /// <summary>The miniature itself: 1920 x 1080 at about 0.132, drawn 4 in from every edge, with its
-        /// page's name under it at the caption size.</summary>
+        /// <summary>The page table's design space: 1920 x 1080 at about 0.132, drawn 4 in from every edge.</summary>
         [Fact]
-        public void A_miniature_is_the_size_the_canvas_draws()
+        public void The_table_is_the_pit_walls_own_sixteen_by_nine()
         {
             Assert.Equal(253, PanelPitWallPlan.ThumbWidth);
             Assert.Equal(142, PanelPitWallPlan.ThumbHeight);
-            Assert.Equal(16, PanelPitWallPlan.ThumbGap);
             Assert.Equal(4, PanelPitWallPlan.Inset);
-            Assert.Equal(8, PanelPitWallPlan.CaptionGap);
-            Assert.Equal(Theme.SizeSmall, PanelPitWallPlan.CaptionSize);
             Assert.Equal(0.132, Math.Round(PanelPitWallPlan.ThumbWidth / 1920, 3));
             // The height follows from the width rather than being a scale of its own, so that the
-            // miniature is the pit wall's own 16 by 9 and not a rectangle near it.
+            // picture is the pit wall's own 16 by 9 and not a rectangle near it.
             Assert.Equal(PanelPitWallPlan.ThumbHeight, Math.Floor(1080 * PanelPitWallPlan.ThumbWidth / 1920));
+            Assert.Equal(PanelPitWallPlan.ThumbHeight, PanelPitWallPlan.PictureHeight(PanelPitWallPlan.ThumbWidth));
+            Assert.Equal(Math.Floor(1080 * 448.0 / 1920), PanelPitWallPlan.PictureHeight(448));
         }
 
-        /// <summary>Three miniatures, their frames and the two gaps between them, against the 896 a pane's
-        /// body is given. The row grew by half when the miniatures did, so this is what says it still fits.</summary>
+        /// <summary>The page on screen is drawn as wide as its column: the table scaled, every panel inside
+        /// the picture and in the same place relative to the others.</summary>
         [Fact]
-        public void The_row_of_three_fits_the_body_of_a_pane()
+        public void A_page_is_the_table_scaled_to_the_width()
         {
-            var width = 3 * (PanelPitWallPlan.ThumbWidth + 2 * PanelMetrics.BorderWeight) + 2 * PanelPitWallPlan.ThumbGap;
-            Assert.Equal(797, width);
-            Assert.True(width <= 896, "the row of three is " + width + " wide and the body is 896");
+            foreach (var page in PanelPitWallPlan.Pages)
+            {
+                Assert.Equal(page.Panels.Select(p => p.X), PanelPitWallPlan.Scaled(page, PanelPitWallPlan.ThumbWidth).Select(p => p.X));
+                foreach (var width in new double[] { 300, 448, 772 })
+                {
+                    var scaled = PanelPitWallPlan.Scaled(page, width);
+                    Assert.Equal(page.Panels.Count, scaled.Count);
+                    foreach (var panel in scaled)
+                    {
+                        Assert.True(panel.X >= 0 && panel.Right <= width, page.Title + " " + panel.Name + " leaves the picture at " + width);
+                        Assert.True(panel.Y >= 0 && panel.Bottom <= PanelPitWallPlan.PictureHeight(width), page.Title + " " + panel.Name + " leaves the picture at " + width);
+                    }
+                }
+            }
+            Assert.Empty(PanelPitWallPlan.Scaled(null, 300));
+            // Beside the picture: the zone list's card, 24 away, as the artboard draws it.
+            Assert.Equal(300, PanelPitWallPlan.ListWidth);
+            Assert.Equal(24, PanelPitWallPlan.ListGap);
+        }
+
+        /// <summary>The picture takes its column, frame included: beside the list the column is the content
+        /// less the list and the gap, stacked it is the content, never below the least; the page inside is the
+        /// column less the frame, so the rule is not drawn 2 px past the column and clipped.</summary>
+        [Fact]
+        public void The_picture_and_its_frame_fit_the_column()
+        {
+            Assert.Equal(Column(1200) - 324, PanelPitWallPlan.PictureWidthFor(Column(1200), true));
+            // Beside the list the picture stops where it stops stacked, and the list takes the rest: at a 4K
+            // window it was 3195 px wide and 1796 tall, which pushed the rows under it out of a 2160 window.
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.StackedMax + 324, true));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(1112, true));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(Column(3840), true));
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.PictureWidthFor(Column(3840), true))) <= PanelFacePlan.MaxHeight);
+            Assert.Equal(544, PanelPitWallPlan.PictureWidthFor(544, false));
+            // Stacked, the picture stops where its page would stand taller than the face's picture may, so
+            // the zone list and the rows under it stay in sight on a wide page.
+            Assert.Equal(750, PanelPitWallPlan.StackedMax);
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(999, false));
+            Assert.Equal(PanelPitWallPlan.StackedMax, PanelPitWallPlan.PictureWidthFor(Column(3840), false));
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax)) <= PanelFacePlan.MaxHeight);
+            Assert.True(PanelPitWallPlan.PictureHeight(PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.StackedMax + 1)) > PanelFacePlan.MaxHeight);
+            Assert.Equal(PanelPitWallPlan.PictureLeast, PanelPitWallPlan.PictureWidthFor(300, true));
+            Assert.Equal(120, PanelPitWallPlan.PictureLeast);
+            Assert.Equal(1, PanelPitWallPlan.Frame);
+            Assert.Equal(542, PanelPitWallPlan.CanvasWidth(544));
+            Assert.Equal(PanelPitWallPlan.PictureWidthFor(900, true), PanelPitWallPlan.CanvasWidth(PanelPitWallPlan.PictureWidthFor(900, true)) + 2 * PanelPitWallPlan.Frame);
+        }
+
+        /// <summary>
+        /// The editor reads the content width only up to where anything it draws stops changing: the picture
+        /// at StackedMax beside the list's least, which is past where the address box and the lines of controls
+        /// under it stop too. A wider window re-lays the list without rebuilding the page and reloading its
+        /// live preview (hooks 4.0 rule 11).
+        /// </summary>
+        [Fact]
+        public void The_editor_reads_the_width_only_as_far_as_its_drawing_changes()
+        {
+            Assert.Equal(1074, PanelPitWallPlan.ContentMost);
+            Assert.Equal(PanelPitWallPlan.StackedMax + PanelPitWallPlan.ListGap + PanelPitWallPlan.ListWidth, PanelPitWallPlan.ContentMost);
+            // Past it, every width the editor draws from is what it is at the bound.
+            foreach (var content in new[] { PanelPitWallPlan.ContentMost, PanelPitWallPlan.ContentMost + 1, Column(1920), Column(3840) })
+            {
+                Assert.Equal(PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.ContentMost, true), PanelPitWallPlan.PictureWidthFor(content, true));
+                Assert.Equal(PanelPitWallPlan.PictureWidthFor(PanelPitWallPlan.ContentMost, false), PanelPitWallPlan.PictureWidthFor(content, false));
+                Assert.Equal(PanelPitWallPlan.AddressWidth, PanelPitWallPlan.AddressWidthFor(content));
+            }
+            Assert.True(PanelPitWallPlan.ContentMost >= PanelScreens.ControlsColumnMost);
+            Assert.True(PanelPitWallPlan.ContentMost >= PanelPitWallPlan.AddressWidth + PanelShell.RowGap + PanelScreens.RowTitleLeast);
+            var wall = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.PitWall.cs"));
+            Assert.Contains("ContentWidthUpTo(PanelPitWallPlan.ContentMost)", wall);
         }
 
         /// <summary>The three pages, in the order the picture draws them.</summary>
@@ -163,106 +235,68 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(declared, drawn);
         }
 
-        /// <summary>The sentence each row carries, word for word, because it is what the panel reads out
-        /// loud and a rewrite of the table must not quietly rewrite it.</summary>
+        /// <summary>A portrait zone's choice says where the zone is, since the portrait wall has no picture; a
+        /// landscape zone says it with the picture beside its list, so the model has no words for it.</summary>
         [Fact]
-        public void A_zone_says_where_it_is_in_the_words_the_canvas_uses()
+        public void A_portrait_zone_says_where_it_is()
         {
-            Assert.Equal("Race page, upper right.", Description("RaceA"));
-            Assert.Equal("Race page, lower right.", Description("RaceB"));
-            Assert.Equal("Tower page, lower left.", Description("TowerA"));
-            Assert.Equal("Tower page, lower right.", Description("TowerB"));
-            Assert.Equal("Telemetry page, top.", Description("TelemetryA"));
-            // Every zone of every page has one, the portrait package's included.
-            foreach (var slot in Contract.PitWallZoneSlots) Assert.NotEqual(string.Empty, PanelPitWallPlan.ZoneDescription(slot));
-        }
-
-        private static string Description(string key)
-        {
-            return PanelPitWallPlan.ZoneDescription(Contract.PitWallZoneSlotByKey(key));
+            Assert.Equal("Upper left.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitA")));
+            Assert.Equal("Upper right.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitB")));
+            Assert.Equal("Lower left.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitC")));
+            Assert.Equal("Lower right.", PanelPitWallPlan.ZonePosition(Contract.PitWallZoneSlotByKey("PortraitD")));
+            Assert.Equal(string.Empty, PanelPitWallPlan.ZonePosition(null));
+            foreach (var slot in Contract.PitWallZoneSlots)
+            {
+                Assert.Equal(slot.Landscape, PanelPitWallPlan.ZonePosition(slot).Length == 0);
+            }
         }
 
         /// <summary>
-        /// Every sentence is true of the rectangle the picture draws.
+        /// Every landscape zone is drawn where the pit wall's own pages put it: the Race page's two zones down
+        /// the right beside the board, the Tower page's two side by side under the wide zone, the Telemetry
+        /// page's three stacked, top to bottom in letter order.
         /// </summary>
-        /// <remarks>
-        /// The words are checked rather than generated, because "lower left" is read against the zones
-        /// sharing a band where there are several and against the middle of the page where a zone is alone
-        /// in its band, and no phrasing rule short of that produces the sentences the canvas writes. What
-        /// matters is that a picture the words no longer describe cannot be committed.
-        /// </remarks>
         [Fact]
-        public void Every_zone_is_drawn_where_its_row_says_it_is()
+        public void Every_zone_is_drawn_where_the_pit_wall_draws_it()
         {
-            foreach (var slot in Contract.PitWallZoneSlots)
-            {
-                if (!slot.Landscape) continue;
-                var sentence = PanelPitWallPlan.ZoneDescription(slot);
-                Assert.StartsWith(slot.Page + " page, ", sentence, StringComparison.Ordinal);
-                var where = sentence.Substring((slot.Page + " page, ").Length).TrimEnd('.');
-                // The wide zone spans its column and is described rather than placed, so there is nothing
-                // left and right to check it against.
-                if (slot.Wide) continue;
-                AssertWhere(slot, where);
-            }
+            Assert.True(Panel("Race", "A").CentreY < PanelPitWallPlan.ThumbHeight / 2);
+            Assert.True(Panel("Race", "B").CentreY > PanelPitWallPlan.ThumbHeight / 2);
+            Assert.True(Panel("Race", "A").CentreX > PanelPitWallPlan.ThumbWidth / 2);
+            Assert.True(Panel("Tower", "A").X < Panel("Tower", "B").X);
+            Assert.True(Panel("Tower", "A").Y >= Panel("Tower", "Wide").Bottom);
+            Assert.Equal(Panel("Tower", "A").Y, Panel("Tower", "B").Y);
+            Assert.True(Panel("Telemetry", "A").Bottom <= Panel("Telemetry", "B").Y);
+            Assert.True(Panel("Telemetry", "B").Bottom <= Panel("Telemetry", "C").Y);
         }
 
-        private static void AssertWhere(Contract.PitWallZoneSlot slot, string where)
+        /// <summary>The web view address box is the artboard's 320, and narrower only where 320 would squeeze
+        /// its row's title under the least every other row keeps.</summary>
+        [Fact]
+        public void The_address_box_is_the_width_the_canvas_draws()
         {
-            var letter = slot.Slot;
-            var page = Page(slot.Page);
-            var panel = Panel(slot.Page, letter);
-            var zones = page.Panels.Where(p => p.Configurable).ToList();
-            var said = slot.Page + " page, " + where + ": " + letter;
-
-            if (where == "top" || where == "middle" || where == "bottom")
-            {
-                var order = zones.OrderBy(p => p.Y).Select(p => p.Name).ToList();
-                var expected = new List<string> { "top", "middle", "bottom" }[order.IndexOf(letter)];
-                Assert.True(where == expected, said + " is the " + expected + " band of three");
-                return;
-            }
-
-            if (where.StartsWith("upper", StringComparison.Ordinal))
-            {
-                Assert.True(panel.CentreY < PanelPitWallPlan.ThumbHeight / 2, said + " is drawn in the lower half");
-            }
-            else
-            {
-                Assert.True(panel.CentreY > PanelPitWallPlan.ThumbHeight / 2, said + " is drawn in the upper half");
-            }
-
-            // Beside another zone, left and right are which of the two is which; alone in its band, they
-            // are which side of the page it is on. One above the other rather than beside it fails here,
-            // because a zone alone in its band at x 118 sits right of the middle whatever the words say.
-            var band = zones.Where(p => p.Y < panel.Bottom && panel.Y < p.Bottom).ToList();
-            var left = where.EndsWith("left", StringComparison.Ordinal);
-            if (band.Count > 1)
-            {
-                var edge = left ? band.Min(p => p.X) : band.Max(p => p.X);
-                Assert.True(panel.X == edge, said + " is not the " + (left ? "left" : "right") + " of its band");
-            }
-            else if (left)
-            {
-                Assert.True(panel.CentreX < PanelPitWallPlan.ThumbWidth / 2, said + " is drawn right of the middle");
-            }
-            else
-            {
-                Assert.True(panel.CentreX > PanelPitWallPlan.ThumbWidth / 2, said + " is drawn left of the middle");
-            }
+            Assert.Equal(320, PanelPitWallPlan.AddressWidth);
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(Column(1200)));
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(Column(3840)));
+            Assert.Equal(320, PanelPitWallPlan.AddressWidthFor(320 + PanelShell.RowGap + PanelScreens.RowTitleLeast));
+            Assert.Equal(PanelScreens.ControlsWidth(400), PanelPitWallPlan.AddressWidthFor(400));
+            Assert.True(PanelPitWallPlan.AddressWidthFor(400) < 320);
         }
 
-        /// <summary>The six controls of the list under the picture, at the size the canvas draws them,
-        /// save the width, which the longest wide-zone label decides.</summary>
+        /// <summary>The fixed panels say what they show under their name, as the artboard's Race picture writes
+        /// "Board · Leaderboard"; a zone's page is its setting and the table leaves it empty.</summary>
         [Fact]
-        public void The_zone_list_is_the_size_the_canvas_draws()
+        public void A_fixed_panel_says_what_it_shows()
         {
-            Assert.Equal(260, PanelPitWallPlan.SelectWidth);
-            Assert.Equal(260, PanelPitWallPlan.AddressWidth);
-            Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);
-            Assert.Equal(32, PanelPitWallPlan.SelectHeight);
-            // Each page's group of zone rows, 18 below the one before.
-            Assert.Equal(18, PanelPitWallPlan.GroupGap);
+            Assert.Equal("Leaderboard", Panel("Race", "Board").Shows);
+            Assert.Equal("Leaderboard", Panel("Tower", "Tower").Shows);
+            foreach (var page in PanelPitWallPlan.Pages)
+            {
+                foreach (var panel in page.Panels)
+                {
+                    Assert.Equal(panel.Configurable, panel.Shows == null);
+                }
+                Assert.Equal(page.Panels.Select(p => p.Shows), PanelPitWallPlan.Scaled(page, 448).Select(p => p.Shows));
+            }
         }
 
         /// <summary>A watermark and not a value: what the empty box shows is exactly what
@@ -274,14 +308,79 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultWebViewUrl, Contract.NormaliseUrl(PanelPitWallPlan.AddressPlaceholder));
         }
 
-        /// <summary>The companion's grid: two columns, and the two gaps between its rows.</summary>
+        /// <summary>The companion's grid: three columns of seven where they fit, as the artboard draws them, fewer where a
+        /// module and "Not in iRacing" beside it would not.</summary>
         [Fact]
-        public void The_companion_grid_is_two_columns()
+        public void The_companion_grid_is_three_columns_where_they_fit()
         {
-            Assert.Equal(2, PanelCompanionPlan.ModuleColumns);
-            Assert.Equal(12, PanelCompanionPlan.ModuleRowGap);
-            Assert.Equal(40, PanelCompanionPlan.ModuleColumnGap);
-            Assert.Equal(11, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(3, PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(7, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(6, PanelCompanionPlan.ModuleGap);
+            Assert.Equal(34, PanelCompanionPlan.ModuleHeight);
+            Assert.Equal(10, PanelCompanionPlan.ModulePaddingX);
+            // The kit's card grid lays them out as it is measured: three from 612 of content, two below, and
+            // Compact's two at most, so the page never reads the width for them.
+            Assert.Equal(200, PanelCompanionPlan.ModuleLeast);
+            Assert.Equal(3, PanelShell.Columns(Column(1200), PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(3, PanelShell.Columns(Column(3840), PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(3, PanelShell.Columns(612, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(2, PanelShell.Columns(611, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(1, PanelShell.Columns(405, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns));
+            Assert.Equal(2, PanelShell.Columns(640, PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, PanelLayout.Compact));
+            var companion = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.Companion.cs"));
+            Assert.Contains("Ui.CardGrid(PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, cells)", companion);
+            Assert.Equal(11, PanelCompanionPlan.NoteSize);
+        }
+
+        /// <summary>The pit wall picture's panels: the name at 12 over the page at 14, padded 8 by 6.</summary>
+        [Fact]
+        public void A_pit_wall_panel_names_its_zone_over_its_page()
+        {
+            Assert.Equal(12, PanelPitWallPlan.ZoneNameSize);
+            Assert.Equal(14, PanelPitWallPlan.ZonePageSize);
+            Assert.Equal(8, PanelPitWallPlan.ZonePaddingX);
+            Assert.Equal(6, PanelPitWallPlan.ZonePaddingY);
+        }
+
+        /// <summary>
+        /// The round screen's disc: the artboard's 240 across and 32 from the rows, and on it the plan's own
+        /// cards -- 6 apart and padded 6 by 7, tighter than the artboard's two cards at 10 and 9 by 10, so that
+        /// the 800 round's six fit -- one column of 140 for two cards and two of 84 for six, every corner of
+        /// every card inside the disc; twelve cards are not drawn on it at all.
+        /// </summary>
+        [Fact]
+        public void A_round_screens_picture_is_the_artboards_disc_with_the_plans_cards()
+        {
+            Assert.Equal(240, PanelRoundPlan.PictureSize);
+            Assert.Equal(32, PanelRoundPlan.PictureGap);
+            Assert.Equal(6, PanelRoundPlan.CardGap);
+            Assert.Equal(6, PanelRoundPlan.CardPaddingX);
+            Assert.Equal(7, PanelRoundPlan.CardPaddingY);
+            Assert.Equal(1, PanelRoundPlan.Columns(2));
+            Assert.Equal(2, PanelRoundPlan.Columns(6));
+            Assert.Equal(2, PanelRoundPlan.Columns(Contract.SlotCount));
+            Assert.Equal(140, PanelRoundPlan.CardWidth(1));
+            Assert.Equal(84, PanelRoundPlan.CardWidth(2));
+            // A card is its rule, its padding and its two lines at their line height.
+            var lines = PanelFacePlan.LineHeight * (PanelShell.EyebrowSize + Theme.SizeBody);
+            Assert.Equal(PanelRoundPlan.CardHeight, Math.Ceiling(2 * PanelMetrics.BorderWeight + 2 * PanelRoundPlan.CardPaddingY + lines + PanelRoundPlan.CardLineGap));
+
+            // Every corner of the block of cards, which the picture centres on the disc, lies inside it.
+            var radius = PanelRoundPlan.PictureSize / 2;
+            foreach (var read in new[] { 2, 6 })
+            {
+                Assert.True(PanelRoundPlan.OnDisc(read));
+                var columns = PanelRoundPlan.Columns(read);
+                var rows = (read + columns - 1) / columns;
+                var width = columns * PanelRoundPlan.CardWidth(columns) + (columns - 1) * PanelRoundPlan.CardGap;
+                var height = rows * PanelRoundPlan.CardHeight + (rows - 1) * PanelRoundPlan.CardGap;
+                Assert.True(height < PanelRoundPlan.PictureSize, read + " cards stand " + height + " tall");
+                var corner = Math.Sqrt(width * width / 4 + height * height / 4);
+                Assert.True(corner <= radius, read + " cards put a corner " + corner + " from the disc's centre");
+            }
+            // Twelve, on a card face of another size, stand taller than the disc, so the rows are drawn alone.
+            Assert.False(PanelRoundPlan.OnDisc(Contract.SlotCount));
+            Assert.Equal(PanelRoundPlan.MostOnDisc, PanelScreens.CardsRead(new ScreenInstance { Kind = Contract.KindSlots, Width = 800, Height = 800 }));
         }
 
         /// <summary>A companion's section binds one action of OpenDash's, the held glance: its paging is
