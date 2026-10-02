@@ -1077,7 +1077,8 @@ namespace OpenDashPlugin
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(Title, PanelPage.Screens, AnchorCards, "your screens", "rig", "dashboard", "display"),
-            new PanelSearch.Entry(PanelAddScreen.AddButton, PanelPage.Screens, AnchorCards, "new", "dashboard", "display"),
+            // The dashed tile's own words, and its route, which opens the Add sheet as Home's empty-rig tile does.
+            new PanelSearch.Entry(PanelAddScreen.SectionTitle, PanelPage.Screens, AnchorAdd, "add screen", "new", "dashboard", "display"),
             new PanelSearch.Entry(RevBarTitle, PanelPage.Screens, AnchorRevBar, "shift lights", "revbar", "rpm"),
             new PanelSearch.Entry(FlagDisplayTitle, PanelPage.Screens, AnchorFlagDisplay, "band d", "full screen", "flags"),
             new PanelSearch.Entry(LapReviewTitle, PanelPage.Screens, AnchorLapReview, "last lap"),

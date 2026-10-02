@@ -220,7 +220,11 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelScreens.Search, entry => Assert.Contains(entry.Route.Anchor, anchors));
             Assert.Equal(PanelScreens.Search.Length, PanelScreens.Search.Select(entry => entry.Label).Distinct().Count());
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.Title && entry.Route.Anchor == PanelScreens.AnchorCards);
-            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
+            // Adding a screen is found by the dashed tile's words and lands where Home's empty-rig tile does, on
+            // the add tile, which opens the sheet; the sheet's own button, which search cannot press, is no label.
+            Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelAddScreen.SectionTitle && entry.Route.Anchor == PanelScreens.AnchorAdd);
+            Assert.DoesNotContain(PanelScreens.Search, entry => entry.Label == PanelAddScreen.AddButton);
+            Assert.Equal(PanelScreens.AnchorAdd, PanelSearch.Find(PanelScreens.Search, "add screen").First().Route.Anchor);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevBarTitle && entry.Route.Anchor == PanelScreens.AnchorRevBar);
             Assert.Contains(PanelScreens.Search, entry => entry.Label == PanelScreens.RevRingTitle && entry.Route.Anchor == PanelScreens.AnchorRevRing);
             // Every row title and heading the page draws is a search label.
