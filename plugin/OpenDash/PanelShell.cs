@@ -434,6 +434,21 @@ namespace OpenDashPlugin
         /// <summary>The dim laid over the main column while a sheet is open.</summary>
         public const double SheetDimOpacity = 0.6;
 
+        /// <summary>
+        /// Whether a press is a repeat of the click that opened or closed the sheet, and so is not the
+        /// driver's (#523): the sheet moved since the last fresh press (<paramref name="sheetMoved"/>), and WPF
+        /// counts this press as the second or a later one of a multiple click. On an empty rig a double-click
+        /// on an Add tile opened the sheet on the first press and closed it again on the second, which landed
+        /// on the dim; a sheet's own press closes the sheet and draws the page again under the pointer, where
+        /// the second press would flip whatever the new page put there. WPF counts clicks by time and place,
+        /// not by element, so only a fresh press, counted 1, clears the flag, and a triple-click's third press
+        /// is a repeat too.
+        /// </summary>
+        public static bool SheetSwallowsPress(bool sheetMoved, int clickCount)
+        {
+            return sheetMoved && clickCount > 1;
+        }
+
         /// <summary>How wide a sheet is in a control of that width.</summary>
         public static double SheetWidth(double controlWidth)
         {

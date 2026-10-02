@@ -88,6 +88,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
+        /// <summary>A repeat of the click that opened or closed the sheet is dropped on the control's root, until a
+        /// fresh press clears it (#523): a double-click on an Add tile leaves the sheet open, and a sheet's press
+        /// does not reach the page drawn again under the pointer.</summary>
+        [Fact]
+        public void A_double_click_that_opened_the_sheet_does_not_close_it()
+        {
+            Assert.True(PanelShell.SheetSwallowsPress(true, 2));
+            Assert.True(PanelShell.SheetSwallowsPress(true, 3));
+            Assert.False(PanelShell.SheetSwallowsPress(true, 1));
+            Assert.False(PanelShell.SheetSwallowsPress(false, 2));
+            var sheet = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Sheet.cs")), @"\s+", " ");
+            Assert.Contains("PreviewMouseLeftButtonDown += (sender, args) => { if (PanelShell.SheetSwallowsPress(sheetMoved, args.ClickCount)) { args.Handled = true; return; } sheetMoved = false; };", sheet);
+            Assert.Contains("sheetLayer.Visibility = Visibility.Visible; SheetMoved();", sheet);
+            Assert.Contains("sheetLayer.Visibility = Visibility.Collapsed; sheetPanel.Child = null; SheetMoved();", sheet);
+        }
+
         /// <summary>The flag box's by-hand route wraps its path box under the press where a column has no room
         /// for both (about 555 px), and keeps a copy's answer across a rebuild until the page is left (#523).</summary>
         [Fact]

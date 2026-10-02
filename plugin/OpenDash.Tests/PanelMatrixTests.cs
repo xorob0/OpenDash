@@ -330,29 +330,16 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(guard)));
             }
-            // A sheet opens inside the press that asks for it, over the page, and its presses sit at the bottom
-            // right, where the page's own Remove can be in a short window: the second press of a double-click on
-            // the page's press would confirm what the sheet is there to ask. Each sheet's press ignores a repeat,
-            // and is the press it guards (the save press is Rename's, the remove press Remove it's).
+            // A repeat of the click that opened a sheet, or of a sheet's press that closed it and drew the page
+            // again under the pointer, is the shell's to drop on the control's root (SettingsControl.Sheet.cs,
+            // PanelShellTests, #523), so the page no longer guards its sheet's presses or its root itself.
             foreach (var press in new[] { "add", "save", "remove" })
             {
                 Assert.Contains("var " + press + " = Ui.Button(", flat);
-                Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape(
-                    press + ".PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; }; " + press + ".Click += (sender, args) => { matrixSheetPressed = true;")));
+                Assert.DoesNotContain(press + ".PreviewMouseLeftButtonDown", flat);
             }
-            // A sheet's press closes the sheet and draws the page again under the pointer, so the second press of
-            // its double-click would land on whatever switch the new page puts there -- after Remove it, another
-            // matrix's -- and flip it. Each of the three sets the flag first, the page's root ignores the next
-            // press while it is set and is a repeat, and only a fresh press clears it: a triple-click's third press,
-            // which WPF counts as 3, is ignored too.
-            Assert.Contains("private bool matrixSheetPressed;", flat);
-            Assert.Contains("private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args) { if (matrixSheetPressed && args.ClickCount > 1) { args.Handled = true; return; } matrixSheetPressed = false; }", flat);
-            Assert.Single(System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat;")));
-            foreach (var press in new[] { "add.Click += (sender, args) => { matrixSheetPressed = true;", "save.Click += (sender, args) => { matrixSheetPressed = true;", "remove.Click += (sender, args) => { matrixSheetPressed = true;" })
-            {
-                Assert.Contains(press, flat);
-            }
-            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("matrixSheetPressed = true;")).Count);
+            Assert.DoesNotContain("matrixSheetPressed", flat);
+            Assert.DoesNotContain("MatrixIgnoreRepeat", flat);
             // The note is said inside that one message, never as a line of its own.
             Assert.DoesNotContain("Say(PanelMessage.Info(result.Note))", matrix);
             // SimHub is asked again whenever the shell asks what needs fixing (Go, Redraw, Check again and the
@@ -517,7 +504,7 @@ namespace OpenDashPlugin.Tests
                 "ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 // The rename and remove sheets.
                 "Settings.RenameMatrixPanel(matrix, name.Text); Save(); Redraw();",
-                "matrixSheetPressed = true; Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); Redraw(); Say(PanelMatrix.Removed(name, matrix));",
+                "Settings.RemoveMatrixPanel(matrix); Save(); Select(PanelPage.Matrix, null); Redraw(); Say(PanelMatrix.Removed(name, matrix));",
                 "cancel.Click += (sender, args) => CloseSheet();",
                 // The links.
                 "thresholds.Click += (sender, args) => Go(PanelMatrix.ThresholdsRoute);",
@@ -539,7 +526,7 @@ namespace OpenDashPlugin.Tests
                 "var device = MatrixLayer(Ui.Soon( MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.SimHubDevice));",
                 "foreach (var id in offered) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
                 "var offered = PanelMatrix.PreviewChips(PanelMatrix.OptionsFor(Settings, m)); var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m));",
-                "matrixSheetPressed = true; var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
+                "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
                 "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
                 "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));",
@@ -549,7 +536,7 @@ namespace OpenDashPlugin.Tests
                 // before the press with the one after it, never the typed one.
                 "var facts = MatrixFacts(m); var shown = facts == null ? null : facts.Shown;",
                 "var facts = MatrixFacts(m); if (facts != null && facts.Shown == false)",
-                "save.Click += (sender, args) => { matrixSheetPressed = true; var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); Settings.RenameMatrixPanel(matrix, name.Text);",
+                "save.Click += (sender, args) => { var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix); Settings.RenameMatrixPanel(matrix, name.Text);",
                 // The add tile's hover while it adds.
                 "if (PanelMatrix.AddEnabled(panels.Count, Settings.FreeMatrixSlot())) { add.ToolTip = PanelMatrix.AddTooltip; } else { add.IsEnabled = false;",
                 "OnLighting(() => Ui.Redim(picture, MatrixDim()));",
@@ -586,7 +573,7 @@ namespace OpenDashPlugin.Tests
                 "var page = PageLayout(PanelMatrix.Title, Ui.Anchor(BuildMatrixProfile(plan), PanelMatrix.AnchorProfile), "
                     + "PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null, "
                     + "Ui.Anchor(cards, PanelMatrix.AnchorPanels), slot == 0 ? null : BuildMatrixSelected(slot, selectedCard)); "
-                    + "page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat; return page; }",
+                    + "return page; }",
                 "var panels = Settings.MatrixPanels().ToList();",
                 "var cards = BuildMatrixCards(panels, slot, picture => selectedCard = picture);",
                 "if (m == selected) selectedPicture(picture);",
@@ -656,11 +643,11 @@ namespace OpenDashPlugin.Tests
                 // The sheets: the content number SimHub will give the new matrix, the presses by their words,
                 // the message after adding, and the rename box opening on the name.
                 "var slot = Settings.FreeMatrixSlot(); if (slot == 0) return;",
-                "var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large); add.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; }; add.Click += (sender, args) =>",
+                "var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large); add.Click += (sender, args) =>",
                 "Say(new PanelMessage( PanelMatrix.PanelAdded(",
                 "var name = Ui.Input(current, PanelMatrix.NameWidth); var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);",
                 "save.Click += (sender, args) =>",
-                "remove.Click += (sender, args) => { matrixSheetPressed = true; Settings.RemoveMatrixPanel(matrix);",
+                "remove.Click += (sender, args) => { Settings.RemoveMatrixPanel(matrix);",
             })
             {
                 Assert.Contains(pin, flat);

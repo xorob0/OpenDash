@@ -50,27 +50,6 @@ namespace OpenDashPlugin
         /// (PanelMatrix.ProfileTooltip): SimHub may still hold the copy that press was made over.</summary>
         private FlagBoxInstallState matrixFailedFrom = FlagBoxInstallState.NotInstalled;
 
-        /// <summary>
-        /// Set by a sheet's press, which closes the sheet and draws the page again under the pointer: the next
-        /// press on the page is then the second of a double-click when WPF counts it so, and is ignored. WPF
-        /// counts clicks by time and place, not by element, so without this it would land on whatever switch the
-        /// new page puts there -- after Remove it, on another matrix's -- and flip it. Cleared by the next press
-        /// that is not a repeat, so every further press of a triple-click is ignored as well.
-        /// </summary>
-        private bool matrixSheetPressed;
-
-        /// <summary>The page's guard for <see cref="matrixSheetPressed"/>, on the page's root.</summary>
-        private void MatrixIgnoreRepeat(object sender, MouseButtonEventArgs args)
-        {
-            // Armed for as long as the presses keep counting: a triple-click's third press is a repeat too.
-            if (matrixSheetPressed && args.ClickCount > 1)
-            {
-                args.Handled = true;
-                return;
-            }
-            matrixSheetPressed = false;
-        }
-
         private FlagBoxPlan MatrixPlan()
         {
             if (plugin.FlagBoxJson == null) return null;
@@ -109,7 +88,6 @@ namespace OpenDashPlugin
                 PanelMatrix.ShowsImportFallback(PanelMatrix.StateOf(plan)) ? BuildFlagBoxImportFallback(plan) : null,
                 Ui.Anchor(cards, PanelMatrix.AnchorPanels),
                 slot == 0 ? null : BuildMatrixSelected(slot, selectedCard));
-            page.PreviewMouseLeftButtonDown += MatrixIgnoreRepeat;
             return page;
         }
 
@@ -721,12 +699,10 @@ namespace OpenDashPlugin
             if (slot == 0) return;
             var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);
             var add = Ui.Button(PanelMatrix.AddPanel, PanelButtonKind.Primary, PanelButtonSize.Large);
-            // The sheet opens inside the press that asks for it, over the page, so the second press of a
-            // double-click on that press can land on this one before the sheet has been read: it is ignored.
-            add.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
+            // A repeat of the click that opened the sheet, or of this press once it has closed the sheet, is
+            // the shell's to drop (SettingsControl.Sheet.cs).
             add.Click += (sender, args) =>
             {
-                matrixSheetPressed = true;
                 var added = Settings.AddMatrixPanel(name.Text);
                 Save();
                 if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added));
@@ -754,10 +730,8 @@ namespace OpenDashPlugin
             var save = Ui.Button(PanelMatrix.Rename, PanelButtonKind.Primary, PanelButtonSize.Large);
             // A blank name is ignored by the settings, so the press waits for one.
             name.TextChanged += (sender, args) => save.IsEnabled = PanelMatrix.CanRename(name.Text);
-            save.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
             save.Click += (sender, args) =>
             {
-                matrixSheetPressed = true;
                 var before = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
                 Settings.RenameMatrixPanel(matrix, name.Text);
                 Save();
@@ -777,10 +751,8 @@ namespace OpenDashPlugin
         {
             var name = PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix);
             var remove = Ui.Button(PanelMatrix.RemoveConfirm, PanelButtonKind.Danger, PanelButtonSize.Large);
-            remove.PreviewMouseLeftButtonDown += (sender, args) => { if (args.ClickCount > 1) args.Handled = true; };
             remove.Click += (sender, args) =>
             {
-                matrixSheetPressed = true;
                 Settings.RemoveMatrixPanel(matrix);
                 Save();
                 Select(PanelPage.Matrix, null);

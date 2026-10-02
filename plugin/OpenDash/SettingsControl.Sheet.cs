@@ -24,6 +24,14 @@ namespace OpenDashPlugin
 
         private bool SheetOpen => sheetLayer.Visibility == Visibility.Visible;
 
+        /// <summary>Whether the sheet has opened or closed since the last fresh press (PanelShell.SheetSwallowsPress).</summary>
+        private bool sheetMoved;
+
+        private void SheetMoved()
+        {
+            sheetMoved = true;
+        }
+
         private UIElement BuildSheetLayer()
         {
             // Both sheet artboards dim in the inset ground and edge the sheet in the border ink.
@@ -57,6 +65,18 @@ namespace OpenDashPlugin
             KeyboardNavigation.SetControlTabNavigation(sheetPanel, KeyboardNavigationMode.Cycle);
             KeyboardNavigation.SetDirectionalNavigation(sheetPanel, KeyboardNavigationMode.Contained);
             sheetPanel.BorderThickness = new Thickness(PanelMetrics.BorderWeight, 0, 0, 0);
+            // A repeat of the click that opened or closed the sheet is dropped before anything sees it, on the
+            // control's root so that it covers the dim, the sheet and the page alike (#523); a fresh press clears
+            // the flag and goes on to its control.
+            PreviewMouseLeftButtonDown += (sender, args) =>
+            {
+                if (PanelShell.SheetSwallowsPress(sheetMoved, args.ClickCount))
+                {
+                    args.Handled = true;
+                    return;
+                }
+                sheetMoved = false;
+            };
             sheetLayer.Children.Add(dim);
             sheetLayer.Children.Add(sheetPanel);
             return sheetLayer;
@@ -129,6 +149,7 @@ namespace OpenDashPlugin
             sheetPanel.Child = sheet;
             SizeSheet();
             sheetLayer.Visibility = Visibility.Visible;
+            SheetMoved();
             // Focus opens on the body's first control, the first thing the sheet asks; a sheet that asks
             // nothing opens on its footer's first press, and only one with neither on Close.
             Dispatcher.BeginInvoke(new Action(() =>
@@ -176,6 +197,7 @@ namespace OpenDashPlugin
             var hadFocus = sheetPanel.IsKeyboardFocusWithin;
             sheetLayer.Visibility = Visibility.Collapsed;
             sheetPanel.Child = null;
+            SheetMoved();
             var opener = sheetOpener as UIElement;
             sheetOpener = null;
             var closed = sheetClosed;
