@@ -1327,5 +1327,28 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelEmulation.CarLeft, PanelHome.TryScenario(PanelEmulation.CarLeft));
             Assert.NotNull(PanelEmulation.Find(PanelHome.TryScenario(null)));
         }
+
+        /// <summary>
+        /// Ruling 1 has the restart phrase wrap and never be trimmed. Home's screen line trims (CharacterEllipsis),
+        /// so the phrase has to fit it at the narrowest card: measured in the face it is drawn in, Barlow Regular
+        /// at PanelHome.LineSize, against the card's minimum less its frame, the row's padding, and the dot and
+        /// the gap beside the line.
+        /// </summary>
+        [Fact]
+        public void The_restart_phrase_fits_a_screen_line_at_the_narrowest_card()
+        {
+            var room = PanelHome.CardMinWidth - 2 * PanelMetrics.BorderWeight - 2 * PanelHome.RowPaddingX - PanelHome.RowGap - PanelHome.DotSize;
+            var phrase = TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf")).Width(PanelCopy.RestartToLoad, PanelHome.LineSize);
+            Assert.True(phrase < room, "\"" + PanelCopy.RestartToLoad + "\" is " + phrase + " px on a line of " + room);
+            // The geometry measured is the geometry drawn: the line's size and weight, the row's padding, the
+            // card's frame, and the dot and its gap.
+            var code = PageCode();
+            Assert.Contains("var text = Ui.Text(string.Empty, PanelHome.LineSize, FontWeights.Normal, Theme.TextSecondary);", code);
+            Assert.Contains("Padding = new Thickness(PanelHome.RowPaddingX, PanelHome.RowPaddingY, PanelHome.RowPaddingX, PanelHome.RowPaddingY),", code);
+            Assert.Contains("Width = PanelHome.DotSize,", code);
+            Assert.Contains("Margin = new Thickness(PanelHome.RowGap, 0, 0, 0),", code);
+            Assert.Contains("return Ui.CardBox(stack, 0);", code);
+            Assert.Equal(PanelCopy.RestartToLoad, PanelHome.ScreenLine(new OpenDashSettings(), new ScreenInstance { Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 }, true, true).Text);
+        }
     }
 }
