@@ -87,55 +87,74 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The pairing the canvas draws: an older profile is the one thing on the page worth an accented
-        /// button, and everything else asks with an outline.
+        /// The Updates table's words for an older profile: "Update available" in the update ink, as the
+        /// artboard draws "Out of date", with the version in a column of its own. Its Update is the one press
+        /// the table carries.
         /// </summary>
         [Fact]
-        public void An_older_light_profile_offers_an_update_and_it_is_the_primary()
+        public void An_older_light_profile_says_an_update_is_available_and_offers_its_update()
         {
             var row = PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0");
-            Assert.Equal("Installed · 0.4.0", row.State);
-            Assert.Equal(Theme.StatusUpToDate, row.StateHex);
+            Assert.Equal("Update available", row.State);
+            Assert.Equal(Theme.StatusUpdateAvailable, row.StateHex);
             Assert.Equal("Update", row.Button);
-            Assert.Equal(PanelButton.Primary, row.Style);
+            Assert.Equal(PanelUpdates.RowUpdate, row.Button);
         }
 
+        /// <summary>Only an older profile has a press on the Updates table: a missing, failed or current one
+        /// is Reinstall everything's to write, and the table offers no Install or Reinstall of its own.</summary>
         [Fact]
-        public void An_uninstalled_profile_says_so_in_text_label_and_offers_an_outline_install()
+        public void Every_other_light_state_is_said_in_its_ink_and_offers_no_press()
         {
-            var row = PanelCopy.LightRow(FlagBoxInstallState.NotInstalled, null);
-            Assert.Equal("Not installed", row.State);
-            Assert.Equal(Theme.TextLabel, row.StateHex);
-            Assert.Equal("Install", row.Button);
-            Assert.Equal(PanelButton.Outline, row.Style);
+            var none = PanelCopy.LightRow(FlagBoxInstallState.NotInstalled, null);
+            Assert.Equal("Not installed", none.State);
+            Assert.Equal(Theme.TextLabel, none.StateHex);
+            Assert.Null(none.Button);
+
+            var current = PanelCopy.LightRow(FlagBoxInstallState.UpToDate, "0.5.0");
+            Assert.Equal("Up to date", current.State);
+            Assert.Equal(Theme.StatusUpToDate, current.StateHex);
+            Assert.Null(current.Button);
+
+            var failed = PanelCopy.LightRow(FlagBoxInstallState.Failed, null);
+            Assert.Equal("Install failed", failed.State);
+            Assert.Equal(Theme.StatusFailed, failed.StateHex);
+            Assert.Null(failed.Button);
         }
 
+        /// <summary>One word per thing (voice.md): a light profile's state is said in the words a
+        /// dashboard's is, InstallStatus.Label, and the version is not part of it.</summary>
         [Fact]
-        public void A_profile_already_at_this_version_offers_a_reinstall_rather_than_an_update()
+        public void A_light_row_says_its_state_in_the_dashboards_words()
         {
-            var row = PanelCopy.LightRow(FlagBoxInstallState.UpToDate, "0.5.0");
-            Assert.Equal("Installed · 0.5.0", row.State);
-            Assert.Equal("Reinstall", row.Button);
-            Assert.Equal(PanelButton.Outline, row.Style);
+            Assert.Equal(InstallStatus.UpdateAvailable.Label(), PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0").State);
+            Assert.Equal(InstallStatus.UpToDate.Label(), PanelCopy.LightRow(FlagBoxInstallState.UpToDate, "0.4.0").State);
+            Assert.Equal(InstallStatus.Failed.Label(), PanelCopy.LightRow(FlagBoxInstallState.Failed, "0.4.0").State);
+            Assert.Equal(InstallStatus.NotInstalled.Label(), PanelCopy.LightRow(FlagBoxInstallState.NotInstalled, "0.4.0").State);
+            Assert.DoesNotContain("0.4.0", PanelCopy.LightRow(FlagBoxInstallState.Outdated, "0.4.0").State);
         }
 
+        /// <summary>The table's one press is drawn from PanelUpdates' OffersUpdate, never from this row's Button or
+        /// Style, and every state's style stays an outline: the page's one primary is Download.</summary>
         [Fact]
-        public void A_failed_install_says_it_failed_and_offers_the_same_press_again()
+        public void No_light_state_is_a_primary()
         {
-            var row = PanelCopy.LightRow(FlagBoxInstallState.Failed, null);
-            Assert.Equal("Install failed", row.State);
-            Assert.Equal(Theme.StatusFailed, row.StateHex);
-            Assert.Equal("Install", row.Button);
-            Assert.Equal(PanelButton.Outline, row.Style);
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                Assert.Equal(PanelButton.Outline, PanelCopy.LightRow(state, "0.4.0").Style);
+            }
         }
 
-        /// <summary>Neither has a row of its own on the canvas, the section's own sentence covering both,
-        /// so they read as not installed rather than as an error a user cannot act on.</summary>
+        /// <summary>What the page cannot know it does not claim: with SimHub's settings out of reach, or no
+        /// profile in this build to compare with, the row reads "Unknown", the table's word for a version it
+        /// cannot read, and the row's hover says why.</summary>
         [Fact]
-        public void Nothing_embedded_and_SimHub_unreachable_read_as_not_installed()
+        public void Nothing_embedded_and_SimHub_unreachable_read_as_unknown()
         {
-            Assert.Equal("Not installed", PanelCopy.LightRow(FlagBoxInstallState.NotEmbedded, null).State);
-            Assert.Equal("Not installed", PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).State);
+            Assert.Equal("Unknown", PanelCopy.LightRow(FlagBoxInstallState.NotEmbedded, null).State);
+            Assert.Equal("Unknown", PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).State);
+            Assert.Equal(PanelUpdates.Unknown, PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).State);
+            Assert.Equal(Theme.TextLabel, PanelCopy.LightRow(FlagBoxInstallState.Unavailable, null).StateHex);
         }
 
         /// <summary>Written and not yet drawn: plugin-63 has not settled whether the Install tab removes a
@@ -213,18 +232,15 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>One primary per panel: of every pairing the table holds, exactly one is accented.</summary>
+        /// <summary>One primary per page. The Updates table's light rows are held to it where they are drawn
+        /// (PanelUpdatesTests.The_page_draws_one_primary_and_it_is_Download); this is the screen row's table.</summary>
         [Fact]
-        public void Only_one_pairing_in_the_table_is_a_primary()
+        public void No_pairing_in_the_table_is_a_primary()
         {
             var primaries = 0;
-            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
-            {
-                if (PanelCopy.LightRow(state, "0.4.0").Style == PanelButton.Primary) primaries++;
-            }
             if (PanelCopy.ScreenRow(true).Style == PanelButton.Primary) primaries++;
             if (PanelCopy.ScreenRow(false).Style == PanelButton.Primary) primaries++;
-            Assert.Equal(1, primaries);
+            Assert.Equal(0, primaries);
         }
     }
 }

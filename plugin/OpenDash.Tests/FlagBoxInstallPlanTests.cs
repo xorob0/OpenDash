@@ -55,7 +55,8 @@ namespace OpenDashPlugin.Tests
             var plan = FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>());
             Assert.Equal(FlagBoxInstallState.NotInstalled, plan.State);
             Assert.True(plan.WouldChange);
-            Assert.Equal("Install", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
+            // Reinstall everything installs it: the Updates table's row offers no press of its own.
+            Assert.Null(PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
         [Fact]
@@ -65,8 +66,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
             Assert.False(plan.WouldChange);
             Assert.Equal("0.2.0-rc.1", plan.InstalledVersion);
-            // Still pressable, because a user who has broken it in SimHub needs a way back.
-            Assert.Equal("Reinstall", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
+            // Nothing to press on the Updates table: a current profile is never rewritten there.
+            Assert.Null(PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
         [Fact]
@@ -149,7 +150,6 @@ namespace OpenDashPlugin.Tests
             // the copy in SimHub goes and their edits to it go with it -- and it is the press that is
             // never necessary, so it is the one that most needs saying before it is pressed.
             var upToDate = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
-            Assert.Equal("Reinstall", PanelCopy.LightRow(upToDate.State, upToDate.InstalledVersion).Button);
             var text = FlagBoxInstallPlan.Summary(upToDate, null);
             Assert.Contains("replaces", text, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("your changes", text, StringComparison.OrdinalIgnoreCase);

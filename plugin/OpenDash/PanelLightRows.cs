@@ -1,9 +1,12 @@
-// PanelLightRows.cs: which light profiles share a row on the Install tab, what that row is called, what
-// its caption says, and what it reports of the rig's own strips of those shapes.
+// PanelLightRows.cs: the census of the light profiles this build embeds -- which share a row, what a row is
+// called and captioned, and what it reports of the rig's own strips of those shapes -- and the light words
+// other pages read (DotHex, FlagBoxCaption, ShapeLabel, the Updates table's notes).
 //
-// Apart from SettingsControl.Install.Lights.cs for the reason PanelCopy.cs is apart from Widgets.cs: the
-// section is WPF and the net8.0 test project cannot compile a line of it, so everything a test can hold
-// lives here and the section draws from it. Pure: no WPF types.
+// NO PAGE DRAWS THE CENSUS ROWS NOW. The Install tab's Lights section drew them; the Updates page that
+// replaced it draws one row per strip on the rig (PanelUpdates.StripRow, SettingsControl.Updates.Lights.cs).
+// Rows, Label and NamedShapes stay because RowPlan and OutdatedBars, which SettingsControl.Profiles.cs still
+// reads, group by them, and because PanelLightRowsTests holds the embedded build to the generator through
+// them: the 121 profiles, the reversed twins, and the device captions against strip.ts. Pure: no WPF types.
 //
 // THE CENSUS IS WHAT THE BUILD EMBEDDED, and nothing here lists a shape. FlagBoxProfile.StripResourceNames
 // reads the profile resources out of the assembly, ShapeIdOf gives each one the id the generator wrote it
@@ -139,9 +142,10 @@ namespace OpenDashPlugin
         /// <summary>What the flag box row is under its name. The profile's own Name carries the name.</summary>
         public const string FlagBoxCaption = "8 × 8 matrix";
 
-        /// <summary>A build that embedded no profile at all has no rows to draw, and says why rather than
-        /// leaving the heading over nothing.</summary>
-        public const string NoProfiles = "This build ships no light profiles.";
+        /// <summary>Under the Updates table when the rig has a strip and this build embedded no strip profile
+        /// at all: the rows name the strips' profiles "LED profile", and the note uses the same word, in the
+        /// frame every note about the build takes (PanelUpdates.NoDashboards).</summary>
+        public const string NoProfiles = "This build ships no LED profiles.";
 
         /// <summary>
         /// What a strip row says when SimHub's LED driver cannot be reached.
@@ -383,18 +387,29 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The colour of a row's status dot.
+        /// The colour of a light profile's status dot, for a page that draws one beside words of its own (the
+        /// base's Matrix pill did).
         /// </summary>
         /// <remarks>
-        /// Read off <see cref="PanelCopy.LightRow"/> rather than from a second table, so the dot cannot
-        /// disagree with the words beside it. The one pairing a table carrying a single colour per state
-        /// cannot say is the uninstalled one: the canvas draws that dot in status.notInstalled and its label
-        /// in text.label. SettingsControl.Install.Packages.cs resolves the same pair the same way.
+        /// A fixed ink per state, read off no page's table. It read PanelCopy.LightRow, then PanelMatrix.ProfileRow,
+        /// and each time the table it read was reworded by the page that owns it the dot moved with it: when
+        /// ProfileRow's words gave up their ink, this returned null and Ui.Brush(null) threw while the Matrix
+        /// page built. A profile in SimHub, older or current, is the installed green the pill's words sit beside;
+        /// a failed one is the failure red; every state with no profile to show, SimHub's settings out of reach
+        /// and a build with none included, is status.notInstalled, which the canvas draws that dot in.
         /// </remarks>
         public static string DotHex(FlagBoxInstallState state)
         {
-            var ink = PanelCopy.LightRow(state, null).StateHex;
-            return string.Equals(ink, Theme.TextLabel, StringComparison.Ordinal) ? Theme.StatusNotInstalled : ink;
+            switch (state)
+            {
+                case FlagBoxInstallState.UpToDate:
+                case FlagBoxInstallState.Outdated:
+                    return Theme.StatusUpToDate;
+                case FlagBoxInstallState.Failed:
+                    return Theme.StatusFailed;
+                default:
+                    return Theme.StatusNotInstalled;
+            }
         }
 
         /// <summary>
@@ -452,45 +467,6 @@ namespace OpenDashPlugin
             var shapes = new HashSet<string>(shapeIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             return (bars ?? Enumerable.Empty<KeyValuePair<LedBar, FlagBoxPlan>>())
                 .Where(entry => entry.Key != null && entry.Value != null && entry.Key.ProfileShapeId != null && shapes.Contains(entry.Key.ProfileShapeId));
-        }
-
-        /// <summary>
-        /// The sentence a strip row carries as its tooltip: what is true now of the rig's strips of the
-        /// row's shapes.
-        /// </summary>
-        /// <remarks>
-        /// A strip row has no Install press, since a strip is added on the LEDs page, so the uninstalled
-        /// row says where to go rather than what to press. The one press it can have is Update, while a
-        /// strip of its shapes is older than this build, and that sentence carries the warning the flag
-        /// box's carries: an update replaces the copy in SimHub by id, edits and all. The flag box keeps
-        /// FlagBoxInstallPlan.Summary, which is written about the one profile OpenDash also writes to disk.
-        /// </remarks>
-        public static string Tooltip(int members, FlagBoxPlan plan)
-        {
-            var state = plan == null ? FlagBoxInstallState.NotInstalled : plan.State;
-            switch (state)
-            {
-                case FlagBoxInstallState.NotEmbedded:
-                    return "This build ships no such profile.";
-                case FlagBoxInstallState.Unavailable:
-                    return Unavailable;
-                case FlagBoxInstallState.NotInstalled:
-                    return (members <= 1 ? "No strip of this shape" : "No strip of these shapes") + " is in SimHub. Add one on the LEDs page.";
-                case FlagBoxInstallState.UpToDate:
-                    return "Installed and up to date" + (plan.InstalledVersion == null ? "." : " (" + plan.InstalledVersion + ").");
-                case FlagBoxInstallState.Outdated:
-                    return "A newer profile is available" + Versions(plan.InstalledVersion, plan.EmbeddedVersion) + ". " + FlagBoxInstallPlan.Replaces;
-                default:
-                    return "Install failed. See SimHub's log.";
-            }
-        }
-
-        /// <summary>" (0.3.0-rc.8 to 0.3.0)", or the new version alone when the copy in SimHub carries
-        /// none, which every strip installed before strips were stamped does.</summary>
-        private static string Versions(string installed, string embedded)
-        {
-            if (embedded == null) return string.Empty;
-            return installed == null ? " (" + embedded + ")" : " (" + installed + " to " + embedded + ")";
         }
     }
 }

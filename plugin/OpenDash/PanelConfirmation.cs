@@ -1,26 +1,27 @@
-// PanelConfirmation.cs: the one question the Install tab can have open before a press replaces a dashboard somebody
-// has edited, and what the next press on Update or Reinstall does with it.
+// PanelConfirmation.cs: the one question the Updates page can have open before a press replaces a dashboard
+// somebody has edited, and what the next press on Download or Reinstall everything does with it.
 //
 // Apart from the WPF file for the reason PanelPackageRow.cs is apart from Widgets.cs: the panel is net48 and the
 // net8.0 test project cannot compile a line of it, and whether a press may destroy somebody's work is the last rule
-// on the tab that ought to go untested. Pure: no WPF types.
+// on the page that ought to go untested. Pure: no WPF types.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace OpenDashPlugin
 {
-    /// <summary>The two presses on the Install tab that can replace a dashboard somebody has edited.</summary>
+    /// <summary>The two presses on the Updates page that can replace a dashboard somebody has edited: Download
+    /// (Update) and Reinstall everything (Reinstall).</summary>
     public enum ReplacingAction
     {
         Update,
         Reinstall,
     }
 
-    /// <summary>What a press on Update or Reinstall is to do, once the confirmation has been consulted.</summary>
+    /// <summary>What a press on Download or Reinstall everything is to do, once the confirmation has been consulted.</summary>
     public enum PressOutcome
     {
-        /// <summary>Put the question on the update line, and do nothing else.</summary>
+        /// <summary>Put the question on the press's line, and do nothing else.</summary>
         Ask,
 
         /// <summary>Run. Nothing on the rig is edited, so there is nothing to ask about and nothing to replace.</summary>
@@ -32,6 +33,8 @@ namespace OpenDashPlugin
 
     /// <summary>
     /// At most one question, for one of the two buttons, bound to the folders it named and to the line that shows it.
+    /// Each button has a line of its own on the Updates page, Download's on the update card and Reinstall
+    /// everything's beside it, and a question counts only while its own line shows it.
     /// </summary>
     /// <remarks>
     /// It used to be two booleans on the panel, one per button, each armed by its own first press and disarmed only by
@@ -39,14 +42,17 @@ namespace OpenDashPlugin
     /// that ran after Update had asked wrote its own sentence over the question and left Update reading "Replace
     /// anyway", and the next press on it replaced edited work with no question on screen, whatever had been edited
     /// since (#480). EditedConsent binds the yes that crosses a restart to one version; this binds the yes given on
-    /// the tab to one question.
+    /// the page to one question.
     ///
     /// A question is therefore held with the button that asked it, the folders it named and the sentence it put on
-    /// the line, and a second press is a yes only when all three still stand: the same button, the same edited
-    /// folders, and that sentence still on the line. Whatever else takes the line withdraws the question without
-    /// having to know that one was open, which is the property the two booleans lacked: the other button asking or
-    /// running, a check, its answer, the switch, "Put mine back", the tab being left, and any writer added later.
-    /// There is one question for both buttons because there is one line to show it on.
+    /// its line, and a second press is a yes only when all three still stand: the same button, the same edited
+    /// folders, and that sentence still on that button's line. Whatever else takes the line withdraws the question
+    /// without having to know that one was open, which is the property the two booleans lacked. There is one
+    /// question for both buttons, so the other button asking withdraws it (and the page clears the first line as it
+    /// asks), as does the other button running. Download's line is on the update card, so a check in flight, its
+    /// answer and the switch, which write or redraw the card, withdraw Download's question; they do not touch
+    /// Reinstall everything's line, and its question stands there, still the one on screen. "Put mine back" and the
+    /// page being left or drawn again take both lines, as will any writer added later to either.
     /// </remarks>
     public sealed class PanelConfirmation
     {
@@ -99,9 +105,10 @@ namespace OpenDashPlugin
             return action == ReplacingAction.Update ? UpdateLabel : ReinstallLabel;
         }
 
-        /// <summary>The two buttons' own verbs, which search lists the Reinstall row by.</summary>
-        public const string UpdateLabel = "Update";
-        public const string ReinstallLabel = "Reinstall";
+        /// <summary>The two buttons' own words: the update card's primary, and the press under the "In SimHub"
+        /// table, which search lists by its label.</summary>
+        public const string UpdateLabel = "Download";
+        public const string ReinstallLabel = "Reinstall everything";
 
         private bool IsAsking(ReplacingAction action, string showing)
         {

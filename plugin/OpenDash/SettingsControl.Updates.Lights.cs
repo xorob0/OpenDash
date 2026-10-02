@@ -1,17 +1,17 @@
-// SettingsControl.Updates.Lights.cs: the "Lights OpenDash can install" section of the Updates page -- the flag
-// box's row and one row per strip shape the build carries, with what the rig's strips of it hold in SimHub.
+// SettingsControl.Updates.Lights.cs: the light rows of the Updates page's "In SimHub" table -- one per strip on
+// the rig, with the version of its profile in SimHub, and the flag box profile's when the rig has a matrix --
+// and the half of Reinstall everything that brings older and missing light profiles forward.
 //
-// What decides a row -- which shapes share one, what it is called, what its caption and tooltip say -- is in
-// PanelLightRows.cs, which the test project compiles. Asking SimHub and installing are in
-// SettingsControl.Profiles.cs, shared with LEDs, Matrix and Home; the by-hand route for the flag box is on the
-// Matrix page, beside the profile it is the route for.
+// What a row says is PanelUpdates.StripRow and FlagBoxRow, over PanelCopy.LightRow's words. Asking SimHub and
+// installing are in SettingsControl.Profiles.cs, shared with LEDs, Matrix and Home.
 //
-// NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS (ADR 0013). A strip installed by an older build is reported
-// and offered an Update, and is not rewritten until that is pressed.
+// NOTHING IS WRITTEN TO SIMHUB EXCEPT ON A PRESS (ADR 0013). A profile installed by an older build is reported
+// with an Update press, which is where the strip-outdated fix sends a driver (PanelLeds.StripUpdateRoute), and
+// is not rewritten until that or Reinstall everything is pressed; a missing one is installed by Reinstall
+// everything alone (ruling 70), and one that is current is never rewritten.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -19,195 +19,251 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private const string LightsSectionLabel = PanelUpdates.LightsTitle;
-
-        private FrameworkElement BuildLightsSection()
-        {
-            var flagBoxPlan = SafePlan();
-            var rows = new List<UIElement>();
-            var flagBox = BuildFlagBoxRow(flagBoxPlan);
-            if (flagBox != null) rows.Add(flagBox);
-            bool stripsUnavailable;
-            rows.AddRange(BuildStripRows(typeof(OpenDash).Assembly, out stripsUnavailable));
-
-            var children = new List<UIElement> { Ui.Caption(PanelLightRows.SectionCaption, BodyWidth) };
-            if (rows.Count == 0)
-            {
-                children.Add(Ui.Caption(PanelLightRows.NoProfiles, BodyWidth));
-                return PageSection(LightsSectionLabel, children.ToArray());
-            }
-
-            // The rows go in as one child rather than as a child each: a section holds what it is given
-            // twenty apart, and an install row is separated by its own rule and by nothing else.
-            children.Add(Ui.VStack(0, rows.ToArray()));
-            // A row whose driver cannot be reached reads "Not installed", because that is the only pill
-            // PanelCopy has for a state nothing is known about. The sentence under the rows is what stops
-            // that pill being read as a fact: it says the settings could not be asked, which is what the
-            // press would run into.
-            if (stripsUnavailable) children.Add(Ui.Caption(PanelLightRows.Unavailable, BodyWidth));
-            return PageSection(LightsSectionLabel, children.ToArray());
-        }
-
         /// <summary>
-        /// The flag box's row, or nothing when this build carries no flag box profile.
+        /// What SimHub holds for each of the rig's strips, off one read of every LED device, each strip with its
+        /// plan as PanelUpdates.StripPlans reads the census: Unavailable for every strip when SimHub's LED
+        /// settings cannot be read, and NotEmbedded for a strip whose shape this build carries no profile for.
         /// </summary>
         /// <remarks>
-        /// The name is the profile's own, which the build wrote and FlagBoxProfile read back, rather than a
-        /// string here that a rename on the other side would leave stale. The sentence that used to be the
-        /// row's second line is its tooltip now: the canvas puts the shape there instead, and the sentence
-        /// -- which is the one that warns that a press replaces the copy in SimHub -- is what the row says
-        /// when it is asked.
+        /// Only the rig's own strips' profiles are opened for the census, as the attention check does: the
+        /// build runs on every resize and every return to the panel.
         /// </remarks>
-        private FrameworkElement BuildFlagBoxRow(FlagBoxPlan plan)
+        private IList<KeyValuePair<LedBar, FlagBoxPlan>> UpdatesStripPlans(out bool stripsReachable)
         {
-            if (plugin.FlagBoxJson == null) return null;
-            return BuildLightRow(
-                FlagBoxName(),
-                PanelLightRows.FlagBoxCaption,
-                plan,
-                InstallFlagBox,
-                current => FlagBoxInstallPlan.Summary(current, plugin.FlagBox?.Path),
-                button => button.ToolTip = "Adds OpenDash's profile. Your own profiles are never changed.");
-        }
-
-        /// <summary>
-        /// One row per strip or brow shape the build embedded, grouped the way the canvas groups them.
-        /// </summary>
-        /// <remarks>
-        /// One read of every LED device's profile list for all the rows rather than one per row or per
-        /// bar, and each of the rig's bars is looked for in them by the id it derives
-        /// (LedBarProfile.Plan). A row then reports what its shapes' bars hold (PanelLightRows.RowPlan).
-        ///
-        /// A shape this build did not embed has no row at all, which is the honest answer: a row for a
-        /// profile that is not there could only offer a press that does nothing.
-        ///
-        /// The rows' names come from <see cref="EmbeddedProfileNames"/>, read once for the plugin's lifetime,
-        /// and only the rig's own strips' profiles are opened for the census: this unpacked all 122 on every
-        /// build, and a build is now also a resize or a return to the panel.
-        /// </remarks>
-        private IList<UIElement> BuildStripRows(Assembly assembly, out bool unavailable)
-        {
-            var profiles = EmbeddedProfileNames(assembly).Select(pair => new LightProfile(pair.Key, pair.Value)).ToList();
-            Func<IDictionary<string, string>> rigJson = () => EmbeddedJsonFor(Settings.LedBarList().Where(bar => bar != null).Select(bar => bar.ProfileShapeId));
-
+            stripsReachable = true;
+            var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
+            if (bars.Count == 0) return new List<KeyValuePair<LedBar, FlagBoxPlan>>();
+            var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId));
             bool reachable;
-            var bars = BarCensus(rigJson(), out reachable);
-            unavailable = !reachable;
+            var census = BarCensus(embedded, out reachable);
+            stripsReachable = reachable;
+            return PanelUpdates.StripPlans(census, reachable, embedded.Keys);
+        }
 
-            var drawn = new List<UIElement>();
-            foreach (var row in PanelLightRows.Rows(profiles))
+        /// <summary>SimHub's LED devices, their names by id, off one read (LedTargets.All, which never throws):
+        /// whether a strip's device is listed, and the name the select step gives it.</summary>
+        private static IDictionary<string, string> UpdatesDevices()
+        {
+            var devices = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var target in LedTargets.All())
             {
-                // No Install press. A strip profile reaches SimHub as an LED bar's, under the name its
-                // owner gave it, because two strips that share one profile share one set of settings --
-                // which is the thing the bars exist to stop -- and a bar is added on the Lights tab. This
-                // row is the census: which shapes this build draws for, and what the rig's own strips of
-                // those shapes hold in SimHub.
-                var shapeIds = row.ShapeIds;
-                drawn.Add(BuildCensusRow(
-                    row.Name,
-                    row.Caption,
-                    shapeIds.Count,
-                    PanelLightRows.RowPlan(shapeIds, bars, reachable),
-                    () => UpdateBars(shapeIds, rigJson())));
+                if (target != null && target.Id != null) devices[target.Id] = target.Name;
             }
+            return devices;
+        }
+
+        /// <summary>Whether the table draws the flag box profile's row (PanelUpdates.DrawsFlagBoxRow).</summary>
+        private bool UpdatesDrawsFlagBox()
+        {
+            return PanelUpdates.DrawsFlagBoxRow(Settings.MatrixPanels().Any());
+        }
+
+        /// <summary>
+        /// The strips' rows, then the flag box's when the table draws it (<paramref name="flagBoxPlan"/> not null).
+        /// </summary>
+        private IList<FrameworkElement> UpdatesLightRows(IList<KeyValuePair<LedBar, FlagBoxPlan>> strips, IList<UpdatesRow> stripRows, FlagBoxPlan flagBoxPlan, UpdatesRow flagBoxRow, double versionWidth)
+        {
+            var drawn = new List<FrameworkElement>();
+            // Every strip's row is repainted by a press on any of them, each from its own strip's plan: the
+            // press reads SimHub again, and a row only ever says what its own strip holds.
+            var painters = new List<Action<IDictionary<string, FlagBoxPlan>, IDictionary<string, string>>>();
+            for (var i = 0; i < strips.Count; i++) drawn.Add(UpdatesStripRow(strips[i].Key, stripRows[i], versionWidth, painters));
+            if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, flagBoxRow, versionWidth));
             return drawn;
         }
 
+        /// <summary>The row's one press, Update, while its profile is older than this build's.</summary>
+        private static Button UpdatesRowPress()
+        {
+            var button = Ui.Button(PanelUpdates.RowUpdate, PanelButtonKind.Outline, PanelButtonSize.Small);
+            button.ToolTip = PanelUpdates.RowUpdateTooltip;
+            button.Margin = new Thickness(PanelUpdates.TableGap, 0, 0, 0);
+            return button;
+        }
+
+        /// <summary>Takes a press a repaint replaced out of the presses a run holds off (ShowRun).</summary>
+        private void UpdatesUnhold(Button press)
+        {
+            if (press != null) updatesRunPresses.Remove(press);
+        }
+
         /// <summary>
-        /// A strip row: what the shapes are and what the rig's strips of them hold in SimHub, with an
-        /// Update press while one of those strips is older than this build.
+        /// A strip's row, and its Update press while its profile is older than this build's and SimHub lists
+        /// its device.
         /// </summary>
         /// <remarks>
-        /// Update and nothing else, because it is the one thing this row can do that nothing else on the
-        /// panel does: a strip is added, moved and removed on the Lights tab, and an older copy in SimHub
-        /// is not rewritten on its own (ADR 0013, ADR 0017). The press redraws the row from what it
-        /// REPORTED, the way the flag box's does, so a strip that could not be rewritten leaves the row
-        /// saying so rather than a fresh read finding the others fine.
+        /// The press writes this strip alone, repaints every strip's row from its own plan -- what the write
+        /// REPORTED for a strip it could not write, so the row says so, and what SimHub now holds for the rest
+        /// -- and says what it did, as the LEDs page's Update does. A row was once repainted with one plan for
+        /// every strip of its shape, and a healthy strip read "Install failed" when another strip of that
+        /// shape could not be written.
         /// </remarks>
-        private FrameworkElement BuildCensusRow(string name, string caption, int members, FlagBoxPlan plan, Func<FlagBoxPlan> update)
+        private FrameworkElement UpdatesStripRow(LedBar bar, UpdatesRow first, double versionWidth, IList<Action<IDictionary<string, FlagBoxPlan>, IDictionary<string, string>>> painters)
         {
-            var pillHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            var actionHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            var row = Ui.InstallRow(null, name, caption, pillHost, actionHost);
-            Action<FlagBoxPlan> draw = null;
-            draw = current =>
+            var key = PanelUpdates.StripKey(bar);
+            var actionHost = new Border();
+            Action<UpdatesRow> paint;
+            var element = UpdatesTableRow(first, versionWidth, actionHost, out paint);
+
+            UpdatesLightsTally said = null;
+            Func<IDictionary<string, FlagBoxPlan>> update = () => UpdatesWriteStrips(PanelUpdates.RowUpdateWrites(key), out said);
+            Action<IDictionary<string, FlagBoxPlan>> draw = plans =>
             {
-                var state = PanelCopy.LightRow(current.State, current.InstalledVersion);
-                pillHost.Child = Ui.StatusPill(PanelLightRows.DotHex(current.State), state.State, state.StateHex);
-                row.ToolTip = PanelLightRows.Tooltip(members, current);
-                if (current.State != FlagBoxInstallState.Outdated)
+                var devices = UpdatesDevices();
+                foreach (var painter in painters.ToList()) painter(plans, devices);
+            };
+            Action<UpdatesRow> own = null;
+            own = row =>
+            {
+                paint(row);
+                var hadFocus = actionHost.IsKeyboardFocusWithin;
+                // The press this repaint replaces leaves the run's list with the tree, so the list holds only
+                // the presses this build draws (UpdatesUnhold).
+                UpdatesUnhold(actionHost.Child as Button);
+                actionHost.Child = null;
+                if (row.OffersUpdate)
                 {
-                    actionHost.Child = null;
-                    return;
+                    var button = UpdatesRowPress();
+                    button.IsEnabled = !applying;
+                    updatesRunPresses.Add(button);
+                    button.Click += (sender, args) =>
+                    {
+                        if (applying) return;
+                        draw(update());
+                        // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
+                        RefreshAttention();
+                        RefreshSidebar();
+                        UpdatesSay(said);
+                    };
+                    actionHost.Child = button;
                 }
-                var button = Ui.PrimaryButton(state.Button, PanelMetrics.RowButtonHeight);
-                button.MinWidth = ButtonMinWidth;
-                button.Click += (sender, args) =>
-                {
-                    draw(update());
-                    // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
-                    RefreshAttention();
-                    RefreshSidebar();
-                };
-                actionHost.Child = button;
+                if (hadFocus) UpdatesRefocus(actionHost.Child, updatesReinstall);
             };
-            draw(plan);
-            return row;
+            painters.Add((plans, devices) =>
+            {
+                FlagBoxPlan current;
+                if (plans != null && plans.TryGetValue(key, out current)) own(PanelUpdates.StripRow(bar.Name, current, PanelUpdates.DeviceListed(devices, bar)));
+            });
+            own(first);
+            return element;
+        }
+
+        /// <summary>What a light row's Update did, said as the LEDs and Matrix pages say theirs; nothing when
+        /// the press found nothing left to write.</summary>
+        private void UpdatesSay(UpdatesLightsTally said)
+        {
+            var line = PanelUpdates.LightsSaid(said, FlagBoxName(), Settings.MatrixPanels().ToList());
+            if (line != null) Say(line, said.Ok);
         }
 
         /// <summary>
-        /// An install row: what the profile is, the state it is in, and one button that changes it.
+        /// The flag box profile's row, named as SimHub lists it, and its Update press while the profile in
+        /// SimHub is older than this build's.
         /// </summary>
-        /// <remarks>
-        /// The pill and the button are held in hosts and swapped rather than edited, because the verb and
-        /// the button's face change together -- an update is the accented press and a reinstall is an
-        /// outline -- and a Button cannot be restyled in place.
-        ///
-        /// The row redraws from what the press REPORTED rather than from a fresh read of SimHub, which is
-        /// what keeps a partial failure inside a group visible: Install returns a plan per member, Combine
-        /// reduces them worst-first, and a member that could not be written leaves the row saying so rather
-        /// than the row asking again and finding the other eighteen fine. The controls are captured rather
-        /// than held in fields because a press runs on the UI thread between one draw and the next, so the
-        /// tab it belongs to cannot have been left underneath it.
-        /// </remarks>
-        private FrameworkElement BuildLightRow(
-            string name,
-            string caption,
-            FlagBoxPlan plan,
-            Func<FlagBoxPlan> press,
-            Func<FlagBoxPlan, string> tooltip,
-            Action<Button> adopt = null)
+        private FrameworkElement UpdatesFlagBoxRow(FlagBoxPlan plan, UpdatesRow first, double versionWidth)
         {
-            var pillHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            var actionHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            var row = Ui.InstallRow(null, name, caption, pillHost, actionHost);
+            var name = FlagBoxName();
+            var path = plugin.FlagBox == null ? null : plugin.FlagBox.Path;
+            var actionHost = new Border();
+            Action<UpdatesRow> paint;
+            var element = UpdatesTableRow(first, versionWidth, actionHost, out paint);
+            var drawn = plan;
+            UpdatesLightsTally said = null;
+            Func<FlagBoxPlan> press = () =>
+            {
+                var result = InstallFlagBox();
+                said = new UpdatesLightsTally();
+                said.FlagBox(drawn.State, result);
+                return result;
+            };
             Action<FlagBoxPlan> draw = null;
             draw = current =>
             {
-                var state = PanelCopy.LightRow(current.State, current.InstalledVersion);
-                pillHost.Child = Ui.StatusPill(PanelLightRows.DotHex(current.State), state.State, state.StateHex);
-                var button = state.Style == PanelButton.Primary
-                    ? Ui.PrimaryButton(state.Button, PanelMetrics.RowButtonHeight)
-                    : Ui.OutlineButton(state.Button, PanelMetrics.RowButtonHeight);
-                button.MinWidth = ButtonMinWidth;
-                // Nothing to press when there is no profile to install or nowhere to put it. The kit draws
-                // the disabled state at the canvas's 40 per cent, so nothing here has to dim it.
-                button.IsEnabled = current.State != FlagBoxInstallState.NotEmbedded
-                    && current.State != FlagBoxInstallState.Unavailable;
-                button.Click += (sender, args) =>
+                drawn = current;
+                var row = PanelUpdates.FlagBoxRow(name, current, path);
+                paint(row);
+                var hadFocus = actionHost.IsKeyboardFocusWithin;
+                // The press this repaint replaces leaves the run's list with the tree, so the list holds only
+                // the presses this build draws (UpdatesUnhold).
+                UpdatesUnhold(actionHost.Child as Button);
+                actionHost.Child = null;
+                if (row.OffersUpdate)
                 {
-                    draw(press());
-                    // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
-                    RefreshAttention();
-                    RefreshSidebar();
-                };
-                actionHost.Child = button;
-                row.ToolTip = tooltip(current);
-                if (adopt != null) adopt(button);
+                    var button = UpdatesRowPress();
+                    button.IsEnabled = !applying;
+                    updatesRunPresses.Add(button);
+                    button.Click += (sender, args) =>
+                    {
+                        if (applying) return;
+                        draw(press());
+                        // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
+                        RefreshAttention();
+                        RefreshSidebar();
+                        UpdatesSay(said);
+                    };
+                    actionHost.Child = button;
+                }
+                if (hadFocus) UpdatesRefocus(actionHost.Child, updatesReinstall);
             };
             draw(plan);
-            return row;
+            return element;
         }
 
+        /// <summary>
+        /// Writes the profiles of the rig's strips that <paramref name="wanted"/> picks from what SimHub holds
+        /// for each, each into the device it names, and returns every strip's plan as it then stands.
+        /// </summary>
+        /// <remarks>
+        /// The census is read at the press rather than carried from the draw, so what is written is what
+        /// SimHub holds when the button is pressed, and it is read through PanelUpdates.StripPlans, so a strip
+        /// this build has no profile for is NotEmbedded and never picked. Which strips are written, which are
+        /// left out because SimHub does not list their device, and what each row is repainted with
+        /// (PanelUpdates.AfterWrite) are PanelUpdates', where they are pinned; this reads SimHub and writes.
+        /// </remarks>
+        /// <param name="tally">What the writes did, strip by strip.</param>
+        private IDictionary<string, FlagBoxPlan> UpdatesWriteStrips(Func<LedBar, FlagBoxInstallState, bool> wanted, out UpdatesLightsTally tally)
+        {
+            tally = new UpdatesLightsTally();
+            var plans = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
+            var bars = Settings.LedBarList().Where(bar => bar != null && bar.ProfileShapeId != null).ToList();
+            if (bars.Count == 0) return plans;
+            var embedded = EmbeddedJsonFor(bars.Select(bar => bar.ProfileShapeId).Distinct(StringComparer.Ordinal));
+            var devices = UpdatesDevices();
+            Func<LedBar, bool> listed = bar => PanelUpdates.DeviceListed(devices, bar);
+            bool reachable;
+            var census = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);
+            var written = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
+            foreach (var entry in PanelUpdates.StripsToWrite(census, reachable, wanted, listed))
+            {
+                var bar = entry.Key;
+                var result = InstallBar(bar, embedded[bar.ProfileShapeId]);
+                tally.Strip(bar.Name, PanelUpdates.DeviceName(devices, bar), entry.Value.State, result);
+                written[PanelUpdates.StripKey(bar)] = result;
+            }
+            foreach (var bar in PanelUpdates.StripsWithoutDevice(census, reachable, wanted, listed))
+            {
+                Log.Warn("The profile for " + bar.Name + " was not written: SimHub does not list the LED device it names.");
+                tally.DeviceNotListed(bar.Name);
+            }
+            var after = PanelUpdates.StripPlans(BarCensus(embedded, out reachable), reachable, embedded.Keys);
+            return PanelUpdates.AfterWrite(after, reachable, written);
+        }
+
+        /// <summary>
+        /// Reinstall everything's lights (ruling 70): every strip whose profile in SimHub is older than this
+        /// build's, missing or failed, and the flag box profile likewise on a rig with a matrix, and nothing
+        /// that is current.
+        /// </summary>
+        private UpdatesLightsTally UpdatesBringLightsForward()
+        {
+            UpdatesLightsTally tally;
+            UpdatesWriteStrips(PanelUpdates.ReinstallWrites, out tally);
+            if (plugin.FlagBoxJson != null)
+            {
+                var before = SafePlan().State;
+                if (PanelUpdates.BringsFlagBoxForward(Settings.MatrixPanels().Any(), before)) tally.FlagBox(before, InstallFlagBox());
+            }
+            return tally;
+        }
     }
 }

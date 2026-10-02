@@ -1,9 +1,11 @@
-// SettingsControl.Updates.Plugin.cs: the "This plugin" section of the Updates page -- the version on disk,
-// the status pill, the reinstall, the daily update check and what applying one does.
+// SettingsControl.Updates.Plugin.cs: the Updates page's update card and check row, and the update flow behind
+// them -- applying a release, the restart it asks for, Reinstall everything with its twice-asked replace, and
+// Put mine back.
 //
 // The controls it writes into are declared in SettingsControl.Updates.cs, which drops them when the page is
-// left. Asking for a check and taking its answer are the shell's (SettingsControl.Live.cs), since the
-// sidebar's badge reads the answer on every page; this section draws it.
+// left or drawn again. Asking for a check and taking its answer are the shell's (SettingsControl.Live.cs),
+// since the sidebar's badge reads the answer on every page; this file draws it. What the card shows in each
+// state, and every sentence, is PanelUpdates'.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,6 +13,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Threading;
 using SimHub.Plugins.Styles;
 // Aliased rather than imported: System.Windows.Forms carries a Button of its own, and this file is
 // full of WPF ones. SHMessageBox answers with the Forms enum whatever the dialog it draws.
@@ -20,118 +24,275 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        /// <summary>The update card's place, which the card is drawn into now and whenever the check answers.</summary>
         private FrameworkElement BuildPluginSection()
         {
-            dashboardTitle = Ui.Body("OpenDash");
-            var caption = Ui.Caption("Reinstall writes every dashboard on your rig again. Your settings are kept.");
-            var text = Ui.VStack(4, dashboardTitle, caption);
-            text.MaxWidth = 460;
-            text.HorizontalAlignment = HorizontalAlignment.Left;
-
-            updateLine = Ui.Caption(string.Empty);
-            updateLine.Visibility = Visibility.Collapsed;
-            text.Children.Add(updateLine);
-
-            // The bar is this build's, dropped with the rest of its controls (BuildUpdatesPage); a run writes
-            // through updateProgressHost, so a rebuild while it downloads gets the bar and a run that finishes
-            // after the page has gone writes nowhere.
-            var progressHost = new Border
-            {
-                Visibility = Visibility.Collapsed,
-                // The 8 the component puts between its own two halves, which is the only rhythm the canvas
-                // gives this block; the VStack above applies its gap at construction and this arrives after.
-                Margin = new Thickness(0, PanelMetrics.ProgressGap, 0, 0),
-            };
-            text.Children.Add(progressHost);
-
-            statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            reinstallButton = BuildReinstallButton();
-            updateProgressHost = progressHost;
-            updateButton = BuildUpdateButton();
-            restoreButton = BuildRestoreButton();
-            var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
-
-            var section = PageSection(PanelUpdates.PluginTitle, Ui.Row(text, right), Ui.Anchor(BuildCheckRow(), PanelUpdates.AnchorCheck));
-            RefreshStatus();
-            RefreshUpdateLine();
-            RefreshRestoreButton();
-            if (applying) ShowRun();
-            return section;
+            updatesCardHost = new Border();
+            UpdatesDrawCard();
+            return updatesCardHost;
         }
 
-        /// <summary>The switch, its one sentence, and a button for somebody who would rather ask now.</summary>
+        /// <summary>
+        /// Draws the update card for the state the check, the run and the disk are in: an offer with Download
+        /// and its notes, a download with its bar, a staged plugin waiting for the restart, or nothing.
+        /// </summary>
+        /// <remarks>
+        /// Redrawn whole rather than edited, because each state is a different card. Download's question is
+        /// on the card's own line, so redrawing withdraws it, as any other writer of the line does.
+        /// </remarks>
+        private void UpdatesDrawCard()
+        {
+            if (updatesCardHost == null) return;
+            // A press on the card that redraws it takes the pressed control out of the tree, and keyboard focus
+            // with it; it is put back on what the redrawn card offers (UpdatesRefocus).
+            var hadFocus = updatesCardHost.IsKeyboardFocusWithin;
+            updatesCardLine = null;
+            updatesDownload = null;
+            updatesProgressHost = null;
+            updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());
+            if (updatesCard == UpdatesCard.None)
+            {
+                updatesCardHost.Child = null;
+                updatesCardHost.Visibility = Visibility.Collapsed;
+                if (hadFocus) UpdatesRefocus(updatesCheckNow);
+                return;
+            }
+            updatesCardHost.Visibility = Visibility.Visible;
+
+            var latest = updateStatus.LatestVersion;
+            var headLine = new WrapPanel { Orientation = Orientation.Horizontal };
+            var heading = Ui.Heading(PanelUpdates.Heading(latest), true);
+            heading.VerticalAlignment = VerticalAlignment.Bottom;
+            headLine.Children.Add(heading);
+            var installed = plugin.RigVersion;
+            if (PanelUpdates.ShowsYouHave(installed))
+            {
+                var have = Ui.HStack(PanelUpdates.YouHaveGap,
+                    Ui.Text(PanelUpdates.YouHave, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary),
+                    Ui.Numeral(installed, PanelUpdates.CardVersionSize, Theme.TextPrimary));
+                have.VerticalAlignment = VerticalAlignment.Bottom;
+                have.Margin = new Thickness(PanelUpdates.CardHeadingGap, 0, 0, PanelUpdates.YouHaveBaseline);
+                headLine.Children.Add(have);
+            }
+
+            // A download has no sentence under its heading: the bar's own head says the run, and a caption over
+            // it named the run a second time, with a second verb, and the heading's version again.
+            var note = PanelUpdates.CardNote(updatesCard, latest);
+            var text = note == null ? Ui.VStack(PanelUpdates.CardTextGap, headLine) : Ui.VStack(PanelUpdates.CardTextGap, headLine, Ui.Caption(note, BodyWidth));
+            updatesCardLine = Ui.Caption(string.Empty, BodyWidth);
+            updatesCardLine.Visibility = Visibility.Collapsed;
+            // Added after the stack was built, so it takes the stack's gap itself.
+            updatesCardLine.Margin = new Thickness(0, PanelUpdates.CardTextGap, 0, 0);
+            text.Children.Add(updatesCardLine);
+            if (updatesCard == UpdatesCard.Downloading)
+            {
+                updatesProgressHost = new Border { HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, PanelMetrics.ProgressGap, 0, 0) };
+                text.Children.Add(updatesProgressHost);
+            }
+
+            if (updatesCard == UpdatesCard.Available)
+            {
+                updatesDownload = Ui.Button(null, PanelButtonKind.Primary);
+                updatesDownload.MinWidth = ButtonMinWidth;
+                updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
+                updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));
+                updatesDownload.Click += (sender, args) => ApplyUpdate();
+            }
+            var head = new Border
+            {
+                Padding = new Thickness(PanelUpdates.CardPaddingX, PanelUpdates.CardPaddingY, PanelUpdates.CardPaddingX, PanelUpdates.CardPaddingY),
+                Child = UpdatesBeside(text, updatesDownload, PanelUpdates.CardGap, updatesWidth),
+            };
+
+            var card = new StackPanel { Orientation = Orientation.Vertical };
+            card.Children.Add(head);
+            if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());
+            updatesCardHost.Child = Ui.CardBox(card, 0);
+            if (applying) ShowRun();
+            if (hadFocus) UpdatesRefocus(updatesDownload, updatesCheckNow);
+        }
+
+        /// <summary>
+        /// Puts keyboard focus, once the redrawn controls are laid out, on the first of these that can take
+        /// it, or on the page's first control when none can: a press that redraws its own place in the page
+        /// must not leave the next Tab starting from SimHub's window.
+        /// </summary>
+        private void UpdatesRefocus(params UIElement[] candidates)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var target = candidates.FirstOrDefault(c => c != null && c.Focusable && c.IsVisible && c.IsEnabled);
+                if (target != null) Keyboard.Focus(target);
+                else if (updatesPage != null) updatesPage.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }), DispatcherPriority.Loaded);
+        }
+
+        /// <summary>The card's foot: the release's opening sentence and the link to every release.</summary>
+        /// <remarks>
+        /// The heading only over notes: a remembered offer (UpdateMark.Opening) carries none, and a heading
+        /// over nothing but the link is not drawn.
+        /// </remarks>
+        private FrameworkElement UpdatesReleaseNotes()
+        {
+            var notes = new StackPanel { Orientation = Orientation.Vertical };
+            var summary = UpdateWording.Summarise(updateStatus.Notes);
+            var heading = PanelUpdates.NotesHeading(summary);
+            if (heading != null)
+            {
+                notes.Children.Add(Ui.Eyebrow(heading));
+                var line = Ui.Prose(summary, Theme.SizeSmall, Theme.TextPrimary);
+                line.MaxWidth = BodyWidth;
+                line.HorizontalAlignment = HorizontalAlignment.Left;
+                line.Margin = new Thickness(0, PanelUpdates.NotesGap, 0, 0);
+                notes.Children.Add(line);
+            }
+            FrameworkElement link = BuildLink(PanelUpdates.EveryRelease, UpdateCheck.ReleasesPageUrl);
+            // The NEW tag after the link rather than inside it, where the link's own ink would take it.
+            if (PanelUpdates.IsNew(PanelUpdates.EveryRelease)) link = UpdatesTagged(link);
+            link.HorizontalAlignment = HorizontalAlignment.Left;
+            link.Margin = new Thickness(0, heading == null ? 0 : PanelUpdates.NotesGap, 0, 0);
+            notes.Children.Add(link);
+            return new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(PanelUpdates.CardPaddingX, PanelUpdates.NotesPaddingTop, PanelUpdates.CardPaddingX, PanelUpdates.NotesPaddingBottom),
+                Child = notes,
+            };
+        }
+
+        /// <summary>
+        /// The switch, UpdateWording's one sentence about it, when the last check answered, and a press for
+        /// somebody who would rather ask now. While the card is gone the row carries its line.
+        /// </summary>
         private FrameworkElement BuildCheckRow()
         {
             var toggle = BuildToggle(Settings.CheckForUpdates, on =>
             {
                 Settings.CheckForUpdates = on;
                 Save();
-                if (!on)
-                {
-                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.RigVersion };
-                }
-                RefreshUpdateLine();
+                // On, back to what the panel opens on, a remembered offer included, as the idle screen's
+                // mark shows it again; the card is drawn before asking, so a check the interval allows is
+                // said beside the offer it may replace.
+                updateStatus = PanelUpdates.Switched(on, plugin.LastUpdateStatus, plugin.OfferedUpdate, plugin.RigVersion);
+                UpdatesDrawCard();
+                if (on) Check(manual: false);
+                UpdatesRefreshCheck();
+                // An offer the switch withdrew is the sidebar's badge and Home's line too.
+                RefreshAttention();
+                RefreshSidebar();
             });
 
-            checkButton = BuildSecondaryButton("Check now", "Check for a new release now.");
-            checkButton.Click += (sender, args) => Check(manual: true);
+            updatesCheckNow = Ui.Button(PanelUpdates.CheckNow, PanelButtonKind.Outline, PanelButtonSize.Small);
+            updatesCheckNow.Click += (sender, args) => Check(manual: true);
 
-            var right = Ui.HStack(24, checkButton, toggle);
-            return Ui.Row(PanelUpdates.CheckTitle, UpdateWording.CheckCaption, right);
-        }
+            var row = Ui.SettingRow(PanelUpdates.CheckTitle, Ui.HStack(PanelUpdates.CheckControlsGap, updatesCheckNow, toggle), UpdateWording.CheckCaption);
+            // The artboard's .row at its own 14, and with no rule over it: it follows the card, not a row.
+            row.Padding = new Thickness(0, PanelKit.RowPaddingYUpdates, 0, PanelKit.RowPaddingYUpdates);
+            row.BorderThickness = new Thickness(0);
 
-        private Button BuildUpdateButton()
-        {
-            var button = BuildSecondaryButton(null, "Download the newest release.");
-            button.SetBinding(ContentControl.ContentProperty, LabelFromTheLine(ReplacingAction.Update));
-            button.Visibility = Visibility.Collapsed;
-            button.Click += (sender, args) => ApplyUpdate();
-            return button;
+            updatesLastChecked = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);
+            updatesCheckLine = Ui.Caption(string.Empty, PanelUpdates.CheckLineWidth);
+            // Added to the row's stack after it was built, so each takes the caption's gap itself.
+            updatesLastChecked.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            updatesCheckLine.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            var parts = row.Tag as RowParts;
+            var left = parts == null ? null : parts.TitleLine.Parent as Panel;
+            if (left != null)
+            {
+                left.Children.Add(updatesLastChecked);
+                left.Children.Add(updatesCheckLine);
+            }
+            UpdatesRefreshCheck();
+            return row;
         }
 
         /// <summary>
-        /// Draws the run that is downloading into this build: its line, its bar at the fraction it last
-        /// reported, and the three presses it holds off disabled, since each would return without a word
-        /// while it runs.
+        /// The check row's lines and its press, and the offer card's Download and line, from the check's state
+        /// and the card's. A check in flight over an offer is said on the card and holds Download off, since
+        /// the offer it would act on is being asked for again; the answer redraws the card.
+        /// </summary>
+        private void UpdatesRefreshCheck()
+        {
+            if (updatesLastChecked != null) updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);
+            if (updatesCheckLine != null)
+            {
+                var line = PanelUpdates.RowLine(updatesCard, updateStatus);
+                updatesCheckLine.Text = line ?? string.Empty;
+                updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
+            }
+            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);
+            if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
+            var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);
+            // Only ever written, never cleared, here: the line is Download's question otherwise, and the
+            // answer's redraw of the card takes this sentence away with the rest. Written in place of the
+            // question rather than through UpdatesAsk, so Reinstall everything's question stands.
+            if (cardLine != null && updatesCardLine != null)
+            {
+                updatesCardLine.Text = cardLine;
+                updatesCardLine.Visibility = Visibility.Visible;
+            }
+        }
+
+        /// <summary>
+        /// Draws the run that is downloading into this build: its bar at the fraction it last reported, and
+        /// the presses it holds off disabled, since each would return without a word while it runs.
         /// </summary>
         private void ShowRun()
         {
-            if (updateButton != null) updateButton.IsEnabled = false;
-            if (reinstallButton != null) reinstallButton.IsEnabled = false;
-            if (checkButton != null) checkButton.IsEnabled = false;
-            if (updateLine != null && applyingLine != null)
-            {
-                updateLine.Text = applyingLine;
-                updateLine.Visibility = Visibility.Visible;
-            }
-            if (updateProgressHost != null)
-            {
-                updateProgressHost.Child = Ui.Progress(applyingFraction);
-                updateProgressHost.Visibility = Visibility.Visible;
-            }
+            if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
+            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
+            foreach (var press in updatesRunPresses) press.IsEnabled = false;
+            if (updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(applyingFraction);
         }
 
         /// <summary>
-        /// A binding that draws Update's or Reinstall's label from the confirmation each time the update line changes.
+        /// A download's bar: Ui.Progress's word, percentage and 4 px accent bar, at its metrics, headed by the
+        /// verb the press and the run's line use (PanelUpdates.Downloading) rather than the shared bar's
+        /// "Installing". The page's own until Ui.Progress takes a word, and then it goes.
+        /// </summary>
+        private static FrameworkElement UpdatesProgress(double fraction)
+        {
+            var head = Ui.Row(Ui.Label(PanelUpdates.Downloading, Theme.TextPrimary),
+                Ui.Numeral(PanelCopy.Percent(fraction), Theme.SizeNumeral, Theme.TextSecondary));
+            var track = new Border
+            {
+                Height = PanelMetrics.ProgressBarHeight,
+                Background = Ui.Brush(Theme.SurfaceRaised),
+                Child = new System.Windows.Shapes.Rectangle
+                {
+                    Width = PanelMetrics.ProgressFill(fraction, PanelMetrics.ProgressWidth),
+                    Height = PanelMetrics.ProgressBarHeight,
+                    Fill = Ui.Brush(Theme.Accent),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                },
+            };
+            var stack = Ui.VStack(PanelMetrics.ProgressGap, head, track);
+            stack.Width = PanelMetrics.ProgressWidth;
+            return stack;
+        }
+
+        /// <summary>
+        /// A binding that draws Download's or Reinstall everything's label from the confirmation each time the
+        /// press's own line changes.
         /// </summary>
         /// <remarks>
         /// Bound to the line rather than set beside each sentence written to it, because the question is on the line
-        /// and a label set by hand outlived it (#480): Reinstall wrote its own sentence over Update's question and left
-        /// Update reading "Replace anyway". With the label a function of the line, whatever takes the line, a writer
-        /// added later included, turns it back into the button's verb, and it reads "Replace anyway" only while its own
-        /// question is what the line shows. The line is built before either button, so it is there to bind to.
+        /// and a label set by hand outlived it (#480). With the label a function of the line, whatever takes the
+        /// line, a writer added later included, turns it back into the button's words, and it reads "Replace anyway"
+        /// only while its own question is what the line shows. The line is built before its button.
         /// </remarks>
-        private Binding LabelFromTheLine(ReplacingAction action)
+        private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action)
         {
             return new Binding(nameof(TextBlock.Text))
             {
-                Source = updateLine,
+                Source = line,
                 Mode = BindingMode.OneWay,
                 Converter = new ConfirmationLabel(confirmation, action),
             };
         }
 
-        /// <summary>The converter behind <see cref="LabelFromTheLine"/>: the line's text in, the button's label out.</summary>
+        /// <summary>The converter behind <see cref="UpdatesLabelFrom"/>: the line's text in, the button's label out.</summary>
         private sealed class ConfirmationLabel : IValueConverter
         {
             private readonly PanelConfirmation confirmation;
@@ -155,61 +316,60 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Puts back the copy kept when a dashboard somebody edited was replaced.
+        /// Puts a question on a press's line, and takes the other press's question off its own: there is one
+        /// question at a time (PanelConfirmation), so the other line must not go on showing one that has
+        /// been withdrawn.
         /// </summary>
-        /// <remarks>
-        /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back.
-        /// Until this existed nothing in the plugin could put one back, so the promise was true only for somebody
-        /// willing to unzip a file by hand.
-        /// </remarks>
-        private Button BuildRestoreButton()
+        private void UpdatesAsk(TextBlock line, string question)
         {
-            var button = BuildSecondaryButton(PanelUpdates.PutMineBack, "Restore the dashboards your last update replaced.");
-            button.Visibility = Visibility.Collapsed;
-            button.Click += (sender, args) => RestoreKept();
-            return button;
+            foreach (var other in new[] { updatesCardLine, updatesReinstallLine })
+            {
+                if (other == null || other == line) continue;
+                other.Text = string.Empty;
+                other.Visibility = Visibility.Collapsed;
+            }
+            if (line == null) return;
+            line.Text = question;
+            line.Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// Put mine back: restores each copy kept when a dashboard somebody edited was replaced.
+        /// </summary>
+        /// <remarks>
+        /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back,
+        /// and this is the press that keeps the promise. It reads the disk first, so a folder edited in Dash
+        /// Studio since the card was drawn is the driver's and is left alone (UpdatesKept): PackageExtractor.Restore
+        /// deletes the folder it restores into and keeps no copy of it.
+        /// </remarks>
         private void RestoreKept()
         {
             if (applying) return;
+            plugin.Installer.Refresh();
             var root = plugin.Installer.SimHubRoot;
-            var restored = new List<string>();
-            foreach (var folder in plugin.Installer.Packages.Select(p => p.FolderName).Where(f => f != null).Distinct())
+            var restored = 0;
+            // A copy that could not be put back is said by name, since the card still offers it once the
+            // page is drawn again, and "nothing to put back" under it would say the opposite.
+            var failed = new List<string>();
+            foreach (var kept in UpdatesKept())
             {
-                var kept = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
-                if (kept == null) continue;
+                var folder = kept.Key;
                 try
                 {
-                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), kept)) restored.Add(folder);
+                    var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                    if (copy == null) continue;
+                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;
                 }
                 catch (Exception ex)
                 {
                     Log.Error("Putting back " + folder + " failed", ex);
+                    failed.Add(kept.Value);
                 }
             }
             plugin.Installer.Refresh();
             Save();
-            RefreshStatus();
-            if (updateLine == null) return;
-            updateLine.Text = restored.Count == 0
-                ? "There was nothing to put back."
-                : "Put back " + (restored.Count == 1 ? "1 dashboard" : restored.Count + " dashboards") + ". " + UpdateWording.Reopen;
-            updateLine.Visibility = Visibility.Visible;
-            RefreshRestoreButton();
-        }
-
-        /// <summary>The button appears only when there is something of the user's to put back.</summary>
-        private void RefreshRestoreButton()
-        {
-            if (restoreButton == null) return;
-            var root = plugin.Installer.SimHubRoot;
-            var any = plugin.Installer.Packages
-                .Select(p => p.FolderName)
-                .Where(f => f != null)
-                .Distinct()
-                .Any(f => PackageExtractor.KeptCopies(root, f).Any(path => path.Contains(PackageExtractor.EditedSuffix)));
-            restoreButton.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            Redraw();
+            Say(PanelUpdates.PutBack(restored, failed), restored > 0 && failed.Count == 0);
         }
 
         /// <summary>
@@ -220,8 +380,15 @@ namespace OpenDashPlugin
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
             if (applying) return;
+            // A check in flight holds Download off (UpdatesRefreshCheck), and its answer redraws the card: a
+            // press that reached here anyway has nothing to act on yet, and "No release to install" would be
+            // false in a moment.
+            if (updateStatus.State == UpdateState.Checking) return;
 
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            // A release to act on spends a Download that was waiting for its listing, whichever press found
+            // it: left standing, the next answer the page heard would download again by itself.
+            if (release != null) applyWaiting = false;
             if (release == null && updateStatus.State == UpdateState.UpdateAvailable && !applyWaiting)
             {
                 // The offer is the remembered one (UpdateMark.Opening): the release is known and its assets are
@@ -233,13 +400,12 @@ namespace OpenDashPlugin
             }
             if (release == null)
             {
-                // Nothing to act on, so the line says so and the button is put back where the status says it
-                // belongs, which is how a button left over from an earlier state disappears on the press that
-                // found it stale rather than staying to be pressed again.
-                RefreshUpdateLine();
-                if (updateLine == null) return;
-                updateLine.Text = UpdateWording.NothingToApply;
-                updateLine.Visibility = Visibility.Visible;
+                // Nothing to act on, so the card is put back where the status says it belongs, which is how a
+                // button left over from an earlier state disappears on the press that found it stale, and the
+                // line says so.
+                UpdatesDrawCard();
+                UpdatesRefreshCheck();
+                Say(UpdateWording.NothingToApply, false);
                 return;
             }
 
@@ -248,29 +414,26 @@ namespace OpenDashPlugin
             // has to see it in order to ask again.
             plugin.Installer.Refresh();
             var edited = plugin.Installer.EditedFolders;
-            var question = UpdateWording.ReplaceEditedQuestion(edited, onRestart: release.PluginAsset() != null);
-            var press = confirmation.Press(ReplacingAction.Update, edited, question, updateLine.Text);
+            var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);
+            var press = confirmation.Press(ReplacingAction.Update, edited, question, updatesCardLine == null ? null : updatesCardLine.Text);
             if (press == PressOutcome.Ask)
             {
-                // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
-                // settings page is worse than a button that changes what it says, which it does of itself once the
-                // question is on the line.
-                updateLine.Text = question;
-                updateLine.Visibility = Visibility.Visible;
+                // One click to be told, a second to mean it; the button reads "Replace anyway" of itself once the
+                // question is on its line.
+                UpdatesAsk(updatesCardLine, question);
                 return;
             }
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
             applying = true;
-            applyingLine = "Downloading " + updateStatus.LatestVersion + "…";
             applyingFraction = 0;
-            ShowRun();
+            UpdatesDrawCard();
+            UpdatesRefreshCheck();
 
             // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
             // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole
-            // percent is sent: the bar is redrawn exactly when the number above it would change, which caps the
-            // crossings at a hundred and one for the run. BeginInvoke rather than Invoke, because a download
-            // that waited for the panel to paint would be paced by the panel.
+            // percent is sent. BeginInvoke rather than Invoke, because a download that waited for the panel
+            // to paint would be paced by the panel.
             var shown = -1;
             Action<double> report = fraction =>
             {
@@ -281,63 +444,111 @@ namespace OpenDashPlugin
                 {
                     applyingFraction = fraction;
                     // The build that is showing now, which a rebuild since the press has replaced.
-                    if (applying && updateProgressHost != null) updateProgressHost.Child = Ui.Progress(fraction);
+                    if (applying && updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(fraction);
                 }));
             };
 
             UpdateService.InBackground(() =>
             {
-                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
-                Dispatcher.Invoke(() =>
+                UpdateOutcome outcome;
+                string said;
+                try
                 {
-                    applying = false;
-                    applyingLine = null;
-                    applyingFraction = 0;
-                    if (updateProgressHost != null)
-                    {
-                        updateProgressHost.Visibility = Visibility.Collapsed;
-                        updateProgressHost.Child = null;
-                    }
-                    if (updateButton != null) updateButton.IsEnabled = true;
-                    if (reinstallButton != null) reinstallButton.IsEnabled = true;
-                    if (checkButton != null) checkButton.IsEnabled = true;
-                    // An update writes the stock folders from their packages, so it brings the packages'
-                    // own titles with it; the names the driver gave their screens go back on top before
-                    // anything is saved. Nothing is rewritten where the title already reads that way.
-                    var titles = new SimHubInstallLog();
-                    foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
-                    // The yes to replacing edited dashboards is spent by the next start, not by this run, when
-                    // the dashboards come inside the plugin; it is saved with the rest just below.
-                    if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
-                    // The record is written in memory by the installer and saved here, on the UI thread, which is
-                    // the moment it is safe to serialise the settings.
-                    Save();
-                    plugin.Installer.Refresh();
-                    // The idle screen's mark compares the release it offers with what the rig now runs, and
-                    // the dashboards have just moved.
-                    plugin.RefreshUpdateMark();
-                    RefreshRestoreButton();
-                    updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
-                    RefreshStatus();
-                    // The button's visibility is computed nowhere but here, so a status that has just stopped
-                    // offering an update has to be redrawn or the button outlives the release it was offering.
-                    // It runs before the outcome sentence is written because it writes the line as well.
-                    RefreshUpdateLine();
-                    if (updateLine != null)
-                    {
-                        updateLine.Text = outcome.Line;
-                        updateLine.Visibility = Visibility.Visible;
-                    }
-                    // The one thing the run cannot do for itself. Asked here rather than before the
-                    // download, because until the assembly is staged there is nothing for a restart to
-                    // put in place, and asked at all because the sentence above it was not enough: see
-                    // UpdateWording.RestartTitle.
+                    outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
+                    said = outcome.Line;
+                }
+                catch (Exception ex)
+                {
+                    // A run that throws is still finished on the page: without a completion, applying would
+                    // stay true for the life of the control, the card would say "Downloading" until SimHub
+                    // restarts, and every press the run holds off would stay held off with it. The exception is
+                    // in the log, and the page says the failure in its own sentence, the shape
+                    // Reinstall everything's takes, rather than in UpdateOutcome.Line's reason slot.
+                    Log.Error("Applying " + release.Version + " failed", ex);
+                    outcome = new UpdateOutcome();
+                    said = PanelUpdates.UpdateFailed;
+                }
+                // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
+                // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
+                // SimHub closing mid-download saves it in End even though the completion below never runs.
+                //
+                // The one settings write off the interface thread, and an exception to OpenDash.cs's rule that
+                // the interface thread is the only writer: the counted run sets this one consent field before it
+                // finishes, so that End, which waits for the run (UpdateService.WaitForIdle) and then saves, keeps it. SimHub's
+                // close kills the process right after End, so the completion posted below never runs then.
+                if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
+                // Posted, not Invoked: End runs on the interface thread and waits there for this run
+                // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
+                // and SimHub's close would hang the whole grace and then report an install that had finished.
+                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));
+            }, new SimHubInstallLog(), mustFinish: true);
+        }
+
+        /// <summary>
+        /// A run's completion, on the interface thread: the run is over, the titles the driver gave their
+        /// screens go back on top, the settings are saved, and the page is drawn in the state the run left
+        /// when it is on screen.
+        /// </summary>
+        /// <remarks>
+        /// Posted, so nothing waits on it and nothing it throws reaches the run's own net: it keeps its own,
+        /// and clears the run first, so whatever throws cannot leave the page's presses held off until SimHub
+        /// restarts. The restart is offered outside that net, since a staged plugin waits for it whatever the
+        /// page did.
+        ///
+        /// A build's controls outlive SimHub showing another of its own pages, so an Updates build that is
+        /// there is not one the driver can see. While the panel is away the page is neither redrawn nor
+        /// counted as read: the return rebuilds it and reads the disk, so a dashboard edited in Dash Studio
+        /// meanwhile is drawn as it now is. Only the line is said, which the return keeps.
+        ///
+        /// A run that did not finish is said whatever page shows, since the line is the shell's and sits
+        /// above every page until the next Go: a run that failed while the driver was on Home would otherwise
+        /// leave no word anywhere but SimHub's log, and the card would offer Download again as if it had never
+        /// been pressed. One that finished says itself on the Updates page, or by the restart's dialog.
+        /// </remarks>
+        /// <param name="said">What the page says of the run: its outcome's line, or PanelUpdates.UpdateFailed
+        /// for a run that threw.</param>
+        private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome, string said)
+        {
+            applying = false;
+            applyingFraction = 0;
+            try
+            {
+                // An update writes the stock folders from their packages, so it brings the packages' own
+                // titles with it; the names the driver gave their screens go back on top before anything is
+                // saved. Nothing is rewritten where the title already reads that way.
+                var titles = new SimHubInstallLog();
+                foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
+                // The record is written in memory by the installer and saved here, on the UI thread, which is
+                // the moment it is safe to serialise the settings.
+                Save();
+                plugin.Installer.Refresh();
+                // The idle screen's mark compares the release it offers with what the rig now runs, and the
+                // dashboards have just moved.
+                plugin.RefreshUpdateMark();
+                updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);
+                var showing = updatesCardHost != null && IsLoaded;
+                if (showing)
+                {
+                    // That read is this visit's, so the redraw below does not hash every folder again.
+                    updatesRead = true;
+                    // The page is showing: draw it again in the state the run left, and say how it went.
+                    Redraw();
+                }
+                else
+                {
                     // The sidebar's badge and Home read the same answer.
                     RefreshAttention();
                     RefreshSidebar();
-                    if (outcome.PluginStaged) OfferRestart(release.Version);
-                });
-            }, new SimHubInstallLog(), mustFinish: true);
+                }
+                if (updatesCardHost != null || !outcome.Ok) Say(said, outcome.Ok);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Finishing the update on the panel failed", ex);
+            }
+            // The one thing the run cannot do for itself. Asked here rather than before the download, because
+            // until the assembly is staged there is nothing for a restart to put in place.
+            if (outcome.PluginStaged) OfferRestart(release.Version);
         }
 
         /// <summary>
@@ -354,6 +565,9 @@ namespace OpenDashPlugin
         /// `Application.Current.Shutdown()` rather than closing the main window: SimHub can be set to go
         /// to the tray on close, and a driver who has just been asked "close SimHub now?" and said yes
         /// would otherwise watch it minimise and nothing else happen.
+        ///
+        /// A "not now" says nothing: the card already reads UpdateWording.RestartLater for as long as the
+        /// swap waits.
         /// </remarks>
         private async void OfferRestart(string version)
         {
@@ -367,12 +581,8 @@ namespace OpenDashPlugin
                     MessageBoxImage.Question);
                 var now = answer == DialogResult.Yes;
                 PluginUpdate.AskToReopen(root, now);
-                if (updateLine != null)
-                {
-                    updateLine.Text = now ? UpdateWording.RestartGoing : UpdateWording.RestartLater;
-                    updateLine.Visibility = Visibility.Visible;
-                }
                 if (!now) return;
+                Say(UpdateWording.RestartGoing);
                 Save();
                 Application.Current.Shutdown();
             }
@@ -380,72 +590,18 @@ namespace OpenDashPlugin
             {
                 Log.Warn("Asking about the restart failed, so the plugin swap waits for an ordinary close: " + ex.Message);
                 PluginUpdate.AskToReopen(root, false);
-                if (updateLine == null) return;
-                updateLine.Text = UpdateWording.RestartFailed;
-                updateLine.Visibility = Visibility.Visible;
+                Say(UpdateWording.RestartFailed, false);
             }
         }
 
-        private void RefreshUpdateLine()
-        {
-            if (updateLine == null) return;
-            var line = updateStatus.Line;
-            // A staged assembly outlives the tab, the panel and the check, so the section says so every
-            // time it is drawn rather than only in the moment the download finished. Without this, a
-            // driver who says "later" and comes back tomorrow sees a plugin section that looks entirely
-            // ordinary and is running the old plugin.
-            //
-            // It also outranks "a newer version is available": since #438 an update stages the plugin and
-            // writes no dashboard, so the status that offered the release is still standing afterwards, and
-            // a button left under it would download the same plugin again rather than finish anything.
-            var pending = PluginUpdate.Pending(plugin.Installer.SimHubRoot);
-            if (pending && (line == null || updateStatus.State == UpdateState.UpdateAvailable)) line = UpdateWording.RestartLater;
-            updateLine.Text = line ?? string.Empty;
-            updateLine.Visibility = line != null && (updateStatus.IsVisible || updateStatus.Line == null) ? Visibility.Visible : Visibility.Collapsed;
-            if (updateButton != null)
-            {
-                updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable && !pending ? Visibility.Visible : Visibility.Collapsed;
-            }
-            // A run that is downloading owns the line and the presses until it answers: an answer or a
-            // rebuild meanwhile must not put the offer back with its buttons live.
-            if (applying) ShowRun();
-            // The pill reads this line's answer as well as the disk's, so it is refreshed with it.
-            RefreshStatus();
-        }
-
         /// <summary>
-        /// An outline button carrying the refresh icon, which is how Plugin.dc.html draws this row.
+        /// Reinstall everything: writes every dashboard the rig has again, asking once before replacing one
+        /// somebody has edited, then brings each light profile older than this build's forward.
         /// </summary>
         /// <remarks>
-        /// The component sheet uses the word "Reinstall" as the label on its primary swatches, but the
-        /// page itself draws this button transparent inside ui.border, so the swatch is a specimen and
-        /// the page is the instruction. The accented press the tab would spend on it is not owed here:
-        /// somebody opens Install to see what is on disk, and writing it all again is the repair.
-        ///
-        /// The label is kept as a block of its own because the confirmation rewrites it; replacing the
-        /// button's whole Content, which is what it did while the label was a bare string, would drop
-        /// the icon beside it and never put it back.
-        /// </remarks>
-        private Button BuildReinstallButton()
-        {
-            var button = Ui.OutlineButton(null);
-            button.MinWidth = ButtonMinWidth;
-            button.ToolTip = "Install every dashboard on your rig again.";
-            var label = Ui.Text(string.Empty, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
-            label.SetBinding(TextBlock.TextProperty, LabelFromTheLine(ReplacingAction.Reinstall));
-            button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), label);
-            button.Click += (sender, args) => Reinstall();
-            return button;
-        }
-
-        /// <summary>
-        /// Writes every dashboard the rig has again, asking once before replacing one somebody has edited.
-        /// </summary>
-        /// <remarks>
-        /// It used to leave an edited folder alone and report "Up to date", which made the button appear to have
-        /// worked while nothing happened. Worse, the only path that could replace an edited folder was the Update
-        /// button's second click, and that button appears only while a newer release exists, so a person who had
-        /// edited a dashboard had no way at all to get OpenDash's own version back.
+        /// A light profile that is current is never rewritten: a rewrite could only cost the edits made to it in
+        /// SimHub. One that is older, missing or failed is written (ruling 70, PanelUpdates.BringsForward), the
+        /// flag box's only on a rig with a matrix, where the table draws its row.
         /// </remarks>
         private void Reinstall()
         {
@@ -456,91 +612,41 @@ namespace OpenDashPlugin
             // From the disk at the press, for the reason ApplyUpdate reads it there.
             plugin.Installer.Refresh();
             var edited = plugin.Installer.EditedFolders;
-            var question = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
-                + ": " + string.Join(", ", edited)
-                + ". Reinstalling replaces your version. A copy is kept, and \"Put mine back\" restores it.";
-            var press = confirmation.Press(ReplacingAction.Reinstall, edited, question, updateLine.Text);
+            var question = PanelUpdates.ReinstallQuestion(UpdatesNames(edited));
+            var press = confirmation.Press(ReplacingAction.Reinstall, edited, question, updatesReinstallLine == null ? null : updatesReinstallLine.Text);
             if (press == PressOutcome.Ask)
             {
-                updateLine.Text = question;
-                updateLine.Visibility = Visibility.Visible;
+                UpdatesAsk(updatesReinstallLine, question);
                 return;
             }
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
-            reinstallButton.IsEnabled = false;
+            if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
+            int replaced = 0, held = 0;
+            var wroteFonts = false;
+            string failure = null;
             try
             {
                 // Every screen on the rig, a second one of a size included: the installer reads the rig and
                 // writes each folder with the screen's own name and namespace, so there is nothing to add after.
                 var writing = DateTime.UtcNow;
                 plugin.Installer.EnsureInstalled(true, replaceEdited);
-                var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
-                var held = plugin.Installer.Packages.Count(p => p.HeldBack);
-                // A font this press put into DashFonts is not drawn until SimHub restarts, so reopening, which is
-                // enough for everything else a reinstall writes, would leave that face missing.
-                var wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
-                updateLine.Text = held > 0
-                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them." + (wroteFonts ? " " + UpdateWording.RestartToSee : string.Empty)
-                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.ToSee(wroteFonts);
-                updateLine.Visibility = Visibility.Visible;
+                replaced = plugin.Installer.Packages.Count(p => p.Extracted);
+                held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                // A font this press put into DashFonts is not drawn until SimHub restarts.
+                wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
             }
             catch (Exception ex)
             {
                 Log.Error("Reinstall failed", ex);
-                updateLine.Text = "The reinstall did not finish: " + ex.Message;
-                updateLine.Visibility = Visibility.Visible;
+                failure = ex.Message;
             }
-            finally
-            {
-                // The kit draws a disabled button at the canvas's 40 per cent through a template trigger,
-                // so putting IsEnabled back is the whole of the re-enable: nothing here dimmed it by hand.
-                if (reinstallButton != null) reinstallButton.IsEnabled = true;
-                Save();
-                RefreshStatus();
-                RefreshRestoreButton();
-            }
-        }
 
-        /// <summary>Title "OpenDash <the version the rig runs>" and the status pill: a 6 px dot and a tracked label
-        /// showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
-        private void RefreshStatus()
-        {
-            if (dashboardTitle == null || statusHost == null) return;
-            var installer = plugin.Installer;
-            // The version the update line under it names, so that the two cannot disagree.
-            dashboardTitle.Text = DashboardInstaller.Summary(plugin.RigVersion);
-
-            // The worse of the two questions this section answers: what is on the disk against what
-            // the build carries, and what the daily check found waiting. Reading the first alone told a
-            // driver they were up to date directly above a line saying a newer release was there.
-            var status = DashboardInstaller.PillStatus(installer.Status, updateStatus.State);
-
-            string dot;
-            var label = Theme.TextPrimary;
-            switch (status)
-            {
-                case InstallStatus.UpToDate:
-                    dot = Theme.StatusUpToDate;
-                    break;
-                case InstallStatus.UpdateAvailable:
-                    dot = Theme.StatusUpdateAvailable;
-                    break;
-                case InstallStatus.Failed:
-                    dot = Theme.StatusFailed;
-                    break;
-                default:
-                    dot = Theme.StatusNotInstalled;
-                    label = Theme.TextLabel;
-                    break;
-            }
-            statusHost.Child = Ui.StatusPill(dot, status.Label(), label);
-            var report = installer.HasEmbeddedPackage
-                ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
-                : "This build of OpenDash ships no dashboards.";
-            // The release's own version belongs in the tooltip when the offer is what turned the pill:
-            // the pill says an update is available and the tooltip says which.
-            statusHost.ToolTip = updateStatus.State == UpdateState.UpdateAvailable && updateStatus.Line != null ? $"{report}\n{updateStatus.Line}" : report;
+            var lights = failure == null ? UpdatesBringLightsForward() : null;
+            Save();
+            Redraw();
+            if (failure != null) Say(PanelUpdates.ReinstallFailed, false);
+            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName(), Settings.MatrixPanels().ToList()), lights.Ok);
         }
     }
 }

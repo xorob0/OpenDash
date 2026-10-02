@@ -135,32 +135,42 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a light profile's row says and offers, from the state the install plan found it in.
+        /// What a light profile's row on the Updates page says, and the press it offers, from the state the
+        /// install plan found it in.
         /// </summary>
         /// <remarks>
-        /// The Updates page's: its census rows and PanelLightRows read it, and the Updates agent may reword
-        /// it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow.
+        /// The Updates page's: its "In SimHub" table reads it, dot included (PanelUpdates), and the Updates
+        /// agent may reword it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow, and
+        /// its pill's dot, PanelLightRows.DotHex, is a fixed ink per state that reads neither table.
         ///
-        /// One function rather than a label here and a style there, so that the panel cannot pair a verb
-        /// with the wrong button: an update is the one accented action on the page, and everything else is
-        /// an outline. The canvas draws two of these rows, the older profile and the uninstalled one. A
-        /// profile already at this version takes the panel's own Reinstall wording, which the "This
-        /// plugin" section draws as an outline; a failed install says what the status pill says and offers
-        /// the same press again. Nothing is embedded and SimHub being unreachable have no row of their
-        /// own, the section's own sentence covering both, so they read as not installed.
+        /// The state is a word and the version has a column of its own, so the words are the four the
+        /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
+        /// ink, as the artboard draws "Out of date". The one press the table carries is an older profile's
+        /// Update (PanelUpdates.RowUpdate), and every other state offers none, so its button is null; the
+        /// page draws it as an outline, its one primary being the update card's Download. A state the page
+        /// cannot know -- SimHub's settings out of reach, or no profile in this build to compare with -- is
+        /// "Unknown", the word the table already writes for a version it cannot read, and the row's hover
+        /// says why: calling it "Not installed" would claim what nobody has checked.
+        ///
+        /// Only State and StateHex are drawn. The row's press is PanelUpdates.StripRow's and FlagBoxRow's
+        /// OffersUpdate, since it also depends on SimHub listing the strip's device, so Button and Style here
+        /// are the RowAction's shape, read by no page: pinned as an outline so a primary never creeps back.
         /// </remarks>
         public static RowAction LightRow(FlagBoxInstallState state, string installedVersion)
         {
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Update", PanelButton.Primary);
+                    return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, PanelUpdates.RowUpdate, PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                    return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, null, PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
-                    return new RowAction(InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
+                    return new RowAction(InstallFailed, Theme.StatusFailed, null, PanelButton.Outline);
+                case FlagBoxInstallState.Unavailable:
+                case FlagBoxInstallState.NotEmbedded:
+                    return new RowAction(PanelUpdates.Unknown, Theme.TextLabel, null, PanelButton.Outline);
                 default:
-                    return new RowAction(NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
+                    return new RowAction(NotInstalled, Theme.TextLabel, null, PanelButton.Outline);
             }
         }
 
