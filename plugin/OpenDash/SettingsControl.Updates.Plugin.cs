@@ -243,33 +243,7 @@ namespace OpenDashPlugin
             if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
             foreach (var press in updatesRunPresses) press.IsEnabled = false;
-            if (updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(applyingFraction);
-        }
-
-        /// <summary>
-        /// A download's bar: Ui.Progress's word, percentage and 4 px accent bar, at its metrics, headed by the
-        /// verb the press and the run's line use (PanelUpdates.Downloading) rather than the shared bar's
-        /// "Installing". The page's own until Ui.Progress takes a word, and then it goes.
-        /// </summary>
-        private static FrameworkElement UpdatesProgress(double fraction)
-        {
-            var head = Ui.Row(Ui.Label(PanelUpdates.Downloading, Theme.TextPrimary),
-                Ui.Numeral(PanelCopy.Percent(fraction), Theme.SizeNumeral, Theme.TextSecondary));
-            var track = new Border
-            {
-                Height = PanelMetrics.ProgressBarHeight,
-                Background = Ui.Brush(Theme.SurfaceRaised),
-                Child = new System.Windows.Shapes.Rectangle
-                {
-                    Width = PanelMetrics.ProgressFill(fraction, PanelMetrics.ProgressWidth),
-                    Height = PanelMetrics.ProgressBarHeight,
-                    Fill = Ui.Brush(Theme.Accent),
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                },
-            };
-            var stack = Ui.VStack(PanelMetrics.ProgressGap, head, track);
-            stack.Width = PanelMetrics.ProgressWidth;
-            return stack;
+            if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
         }
 
         /// <summary>
@@ -453,7 +427,7 @@ namespace OpenDashPlugin
                 {
                     applyingFraction = fraction;
                     // The build that is showing now, which a rebuild since the press has replaced.
-                    if (applying && updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(fraction);
+                    if (applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
                 }));
             };
 

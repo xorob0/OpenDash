@@ -292,11 +292,12 @@ namespace OpenDashPlugin
             return pill;
         }
 
-        /// <summary>What a run reports while it is running: the word, the percentage it has reached, and a
-        /// 4 px accent bar under them. Accent, because the app is working rather than warning.</summary>
-        public static FrameworkElement Progress(double fraction, double width = PanelMetrics.ProgressWidth)
+        /// <summary>What a run reports while it is running: the word (<paramref name="word"/>, "Installing" unless
+        /// the caller names its run, as Updates' download does), the percentage it has reached, and a 4 px accent
+        /// bar under them. Accent, because the app is working rather than warning.</summary>
+        public static FrameworkElement Progress(double fraction, double width = PanelMetrics.ProgressWidth, string word = PanelCopy.Installing)
         {
-            var head = Row(Label(PanelCopy.Installing, Theme.TextPrimary),
+            var head = Row(Label(word, Theme.TextPrimary),
                 Numeral(PanelCopy.Percent(fraction), Theme.SizeNumeral, Theme.TextSecondary));
             var track = new Border
             {

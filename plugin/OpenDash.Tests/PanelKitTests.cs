@@ -266,6 +266,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(40, PanelKit.SliderValueMinWidth);
         }
 
+        /// <summary>The progress bar is headed by the word its caller passes, "Installing" unless told otherwise,
+        /// so a page whose run is a download says so without a copy of the bar (#523).</summary>
+        [Fact]
+        public void The_progress_bar_takes_its_head_word()
+        {
+            var widgets = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.cs"));
+            Assert.Contains("public static FrameworkElement Progress(double fraction, double width = PanelMetrics.ProgressWidth, string word = PanelCopy.Installing)", widgets);
+            Assert.Contains("var head = Row(Label(word, Theme.TextPrimary),", widgets);
+        }
+
         /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
         private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 

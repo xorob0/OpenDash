@@ -1834,8 +1834,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !applying; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesStripRow("));
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !applying; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesFlagBoxRow("));
             InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (applying) ShowRun();");
-            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(applyingFraction);", Method("private void ShowRun()"));
-            Assert.Contains("applyingFraction = fraction; if (applying && updatesProgressHost != null) updatesProgressHost.Child = UpdatesProgress(fraction);", Method("private void ApplyUpdate()"));
+            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ShowRun()"));
+            Assert.Contains("applyingFraction = fraction; if (applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ApplyUpdate()"));
             // The bar's host joins the card: since a download's card has no note, the bar is the only thing on
             // it that says a run is going, and a bar written into a detached host would leave the heading alone.
             InOrder(Method("private void UpdatesDrawCard()"),
@@ -1843,14 +1843,12 @@ namespace OpenDashPlugin.Tests
                 "updatesProgressHost = new Border",
                 "text.Children.Add(updatesProgressHost);",
                 "if (applying) ShowRun();");
-            // One verb for one run: the bar is headed "Downloading", as the press and the run's line say it,
-            // never the shared bar's "Installing".
+            // One verb for one run: the kit's bar is headed "Downloading", as the press and the run's line say it,
+            // never the shared bar's default "Installing" (#523: Ui.Progress takes the word, and the page's own
+            // copy of the bar is gone).
             Assert.Equal("Downloading", PanelUpdates.Downloading);
-            var bar = Method("private static FrameworkElement UpdatesProgress(double fraction)");
-            Assert.Contains("var head = Ui.Row(Ui.Label(PanelUpdates.Downloading, Theme.TextPrimary), Ui.Numeral(PanelCopy.Percent(fraction), Theme.SizeNumeral, Theme.TextSecondary));", bar);
-            Assert.Contains("Width = PanelMetrics.ProgressFill(fraction, PanelMetrics.ProgressWidth),", bar);
-            Assert.Contains("stack.Width = PanelMetrics.ProgressWidth;", bar);
-            Assert.DoesNotContain("Ui.Progress(", FlatCode());
+            Assert.DoesNotContain("UpdatesProgress(", FlatCode());
+            Assert.DoesNotContain("PanelMetrics.ProgressFill(", FlatCode());
         }
 
         /// <summary>
