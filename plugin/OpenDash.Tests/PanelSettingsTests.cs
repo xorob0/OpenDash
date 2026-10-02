@@ -977,6 +977,19 @@ namespace OpenDashPlugin.Tests
                 "line.Children.Add(name);",
                 "line.Children.Add(tag);",
                 "nameLine = line;"), page);
+            // The name cell: the name against the cell's left edge with its caption under it, and a greyed
+            // name's tag after it, centred on the name's line.
+            Assert.Matches(Lines(
+                "nameLine = line;",
+                "}",
+                "nameLine.HorizontalAlignment = HorizontalAlignment.Left;",
+                "var nameCell = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };",
+                "nameCell.Children.Add(nameLine);"), page);
+            Assert.Matches(Lines(
+                "var tag = Ui.SoonTag(soon);",
+                "tag.Margin = new Thickness(PanelSettings.TitleTagGap, 0, 0, 0);",
+                "tag.VerticalAlignment = VerticalAlignment.Center;",
+                "line.Children.Add(name);"), page);
             Assert.Matches(Lines(
                 "content.VerticalAlignment = VerticalAlignment.Center;",
                 "if (centred) content.HorizontalAlignment = HorizontalAlignment.Center;",
@@ -1523,6 +1536,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle,", page);
             Assert.Contains("Go(PanelPage.Shortcuts, PanelBindings.Anchor(action))", page);
             Assert.Contains(Contract.ToggleNightModeAction, Contract.RigActionNames());
+            // What the chip reads: the bindings of the action it was handed, and SimHub's name for them, or Not
+            // bound when there are none. The page draws the chip itself for the .key size, so no shell test
+            // covers these lines.
+            Assert.Matches(Lines(
+                "var triggers = TriggersOf(action);",
+                "Action open = () => Go(PanelPage.Shortcuts, PanelBindings.Anchor(action));"), page);
+            Assert.Matches(Lines(
+                "var text = PanelBindings.ChipText(triggers);",
+                "chip = Ui.BindingChip(text ?? Ui.NotBound, text != null, open, true);"), page);
         }
 
         /// <summary>Every greyed row of the page is one of the registry's Settings entries, and it draws all of
