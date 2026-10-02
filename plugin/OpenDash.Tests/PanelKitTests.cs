@@ -313,6 +313,41 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("TextTrimming", crumbs);
         }
 
+        /// <summary>
+        /// The kit's controls that were bare panels have automation peers, so a name a page gives them reaches a
+        /// screen reader (#523): a greyed row's Soon wrapper is a named group, the slider's surface a slider with
+        /// the RangeValue pattern, the segmented bar a group with the Value pattern, and a swatch chip is named by
+        /// its label and says whether it is pressed. The net48 controls cannot be built here, so the peers are
+        /// held by their source.
+        /// </summary>
+        [Fact]
+        public void The_kits_bare_panels_have_automation_peers()
+        {
+            var root = Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var peers = Regex.Replace(RepoPaths.Code(Path.Combine(root, "Widgets.Automation.cs")), @"\s+", " ");
+            Assert.Contains("internal sealed class GroupBorder : Border { protected override AutomationPeer OnCreateAutomationPeer() { return new GroupBorderPeer(this); }", peers);
+            Assert.Contains("protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Group; }", peers);
+            Assert.Contains("private sealed class SliderSurfacePeer : FrameworkElementAutomationPeer, IRangeValueProvider", peers);
+            Assert.Contains("protected override AutomationControlType GetAutomationControlTypeCore() { return AutomationControlType.Slider; }", peers);
+            Assert.Contains("return patternInterface == PatternInterface.RangeValue ? this : base.GetPattern(patternInterface);", peers);
+            Assert.Contains("internal sealed class SegmentedPeer : FrameworkElementAutomationPeer, IValueProvider", peers);
+            Assert.Contains("return patternInterface == PatternInterface.Value ? this : base.GetPattern(patternInterface);", peers);
+
+            Assert.Contains("var wrapper = new GroupBorder", Factory("SoonWith"));
+            Assert.Contains("if (title != null) AutomationName(wrapper, title);", Factory("SoonWith"));
+            var slider = Regex.Replace(Factory("Slider"), @"\s+", " ");
+            Assert.Contains("var surface = new SliderSurface {", slider);
+            Assert.Contains("surface.Report(current);", slider);
+            Assert.Contains("surface.Set = next =>", slider);
+            var chip = Regex.Replace(Factory("Chip"), @"\s+", " ");
+            Assert.Contains("if (swatchHex != null) { AutomationName(button, text); System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? \"checked\" : \"unchecked\"); }", chip);
+            Assert.Contains("return new SegmentedPeer(this);", RepoPaths.Code(Path.Combine(root, "Segmented.cs")));
+            // The two assemblies the patterns live in are referenced, or the plugin does not build.
+            var project = File.ReadAllText(Path.Combine(root, "OpenDash.csproj"));
+            Assert.Contains("<Reference Include=\"UIAutomationProvider\" />", project);
+            Assert.Contains("<Reference Include=\"UIAutomationTypes\" />", project);
+        }
+
         /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
         private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 

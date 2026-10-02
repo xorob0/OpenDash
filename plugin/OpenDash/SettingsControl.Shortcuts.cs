@@ -258,12 +258,9 @@ namespace OpenDashPlugin
             var caption = Ui.Caption(PanelShortcuts.IntroCaption, BodyWidth);
             // The artboard draws no words over the filter and names its group for a screen reader alone: with
             // no row title above it, as every other page's segmented control has, its three choices would be
-            // read out with nothing to say what they choose. The name is on a wrapper, because the filter is
-            // a Border, and a Border has no automation peer, so a name set on it reaches no screen reader;
-            // a UserControl has one. The wrapper takes no focus and sizes to the filter, so the filter's own
-            // alignment and margins still lay the header out, and hiding the filter hides it whole.
-            var group = new UserControl { Content = filter, Focusable = false, IsTabStop = false };
-            AutomationProperties.SetName(group, PanelShortcuts.FilterTitle);
+            // read out with nothing to say what they choose. The kit's segmented bar has an automation peer of
+            // its own (#523), so the name goes on the filter itself.
+            AutomationProperties.SetName(filter, PanelShortcuts.FilterTitle);
             FrameworkElement header;
             if (TwoColumns)
             {
@@ -274,16 +271,16 @@ namespace OpenDashPlugin
                 filter.VerticalAlignment = VerticalAlignment.Bottom;
                 filter.HorizontalAlignment = HorizontalAlignment.Right;
                 filter.Margin = new Thickness(PanelShell.RowGap, -PanelShortcuts.FilterRaise, 0, 0);
-                Grid.SetColumn(group, 1);
+                Grid.SetColumn(filter, 1);
                 grid.Children.Add(caption);
-                grid.Children.Add(group);
+                grid.Children.Add(filter);
                 header = grid;
             }
             else
             {
                 filter.HorizontalAlignment = HorizontalAlignment.Left;
                 filter.Margin = new Thickness(0, PanelShortcuts.FilterGapStacked, 0, 0);
-                header = Ui.VStack(0, caption, group);
+                header = Ui.VStack(0, caption, filter);
             }
             // The caption sits 8 under the title, where PageLayout sets every section the page's gap under the
             // one before it.

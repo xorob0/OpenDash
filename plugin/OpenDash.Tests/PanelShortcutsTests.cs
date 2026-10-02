@@ -1245,14 +1245,14 @@ namespace OpenDashPlugin.Tests
             // The header: the caption and the filter, the filter in the second column when two fit.
             var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
             Assert.Contains("grid.Children.Add(caption);", header);
-            Assert.DoesNotContain("grid.Children.Add(filter);", header);
             // The filter at the header's right in two columns, and at its left under the caption when the
-            // header stacks (Segmented's constructor sets Right); in either, its named wrapper is what the
-            // header holds.
+            // header stacks (Segmented's constructor sets Right); in either, the header holds the filter itself,
+            // which carries its own name since the kit's bar has a peer (#523).
             Assert.Contains("filter.HorizontalAlignment = HorizontalAlignment.Right;", Between(header, "if (TwoColumns)", "else"));
-            Assert.Matches(@"else\s*\{\s*filter\.HorizontalAlignment = HorizontalAlignment\.Left;\s*filter\.Margin = new Thickness\(0, PanelShortcuts\.FilterGapStacked, 0, 0\);\s*header = Ui\.VStack\(0, caption, group\);\s*\}", header);
-            Assert.Contains("Grid.SetColumn(group, 1);", header);
-            Assert.Contains("grid.Children.Add(group);", header);
+            Assert.Matches(@"else\s*\{\s*filter\.HorizontalAlignment = HorizontalAlignment\.Left;\s*filter\.Margin = new Thickness\(0, PanelShortcuts\.FilterGapStacked, 0, 0\);\s*header = Ui\.VStack\(0, caption, filter\);\s*\}", header);
+            Assert.Contains("Grid.SetColumn(filter, 1);", header);
+            Assert.Contains("grid.Children.Add(filter);", header);
+            Assert.DoesNotContain("UserControl", header);
             // The caption and the filter share a foot, which FilterRaise's 30 less 19 assumes.
             Assert.Contains("caption.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
             Assert.Contains("filter.VerticalAlignment = VerticalAlignment.Bottom;", Between(header, "if (TwoColumns)", "else"));
@@ -1399,14 +1399,12 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("stack.Children.Insert(0, Ui.HStack(12, title, Ui.NewTag()));", code);
             Assert.Contains("BuildSegmented(PanelShortcuts.FilterValues, PanelShortcuts.FilterLabels, shortcutsFilter,", code);
             // The filter stands alone at the header's right, under no row title, so it carries a group name for
-            // a screen reader: its three choices are never read out bare. The name is on a UserControl that
-            // holds the filter, because the filter is a Border, and a Border has no automation peer, so a name
-            // set on it would reach no screen reader; the wrapper takes no focus of its own.
+            // a screen reader: its three choices are never read out bare. The name is on the filter itself,
+            // since the kit's segmented bar has an automation peer of its own (#523).
             var header = Between(code, "private FrameworkElement BuildShortcutsHeader(", "return header;");
-            Assert.Matches(@"var group = new UserControl \{ Content = filter, Focusable = false, IsTabStop = false \};\s*AutomationProperties\.SetName\(group, PanelShortcuts\.FilterTitle\);", header);
-            // Two names on the page, the filter's wrapper's and each clash sentence's, both on elements with a peer.
+            Assert.Contains("AutomationProperties.SetName(filter, PanelShortcuts.FilterTitle);", header);
+            // Two names on the page, the filter's and each clash sentence's, both on elements with a peer.
             Assert.Equal(2, Regex.Matches(code, @"AutomationProperties\.SetName\(").Count);
-            Assert.DoesNotContain("SetName(filter", code);
             Assert.DoesNotContain("SetName(line", code);
             Assert.Contains("evaluate = () => ShortcutsEvaluate(groups, filter, banner, empty, touch);", code);
             Assert.Contains("if (editor != null) ShortcutsWatch(editor, changed);", code);

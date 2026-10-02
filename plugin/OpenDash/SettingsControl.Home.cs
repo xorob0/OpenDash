@@ -658,9 +658,8 @@ namespace OpenDashPlugin
             }, v => numeral.Text = PanelHome.Percent(v), false);
             // The eyebrows over the controls are text beside them, which names nothing to UI Automation, so each
             // control is given its own name, the slider the brightness in force, as its eyebrow says. The switch
-            // is a ToggleButton and is heard by it; the slider is the kit's bare surface, a Grid, which has no
-            // automation peer, so its name reaches nothing until Ui.Slider gives the surface one (asked of the
-            // kit). The call stays so that it takes effect then.
+            // is a ToggleButton and is heard by it; the slider is the kit's surface, which is read as a slider
+            // with its value (#523).
             System.Windows.Automation.AutomationProperties.SetName(slider, PanelHome.BrightnessLabel(nightOn));
             var label = Ui.Eyebrow(PanelHome.BrightnessLabel(nightOn));
             label.VerticalAlignment = VerticalAlignment.Center;

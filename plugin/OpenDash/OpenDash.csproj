@@ -23,6 +23,10 @@
     <Reference Include="PresentationCore" />
     <Reference Include="WindowsBase" />
     <Reference Include="System.Xaml" />
+    <!-- The automation peers' patterns (IRangeValueProvider, IValueProvider) and their identifiers; see
+         Widgets.Automation.cs. Part of .NET Framework, as WPF is. -->
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="UIAutomationTypes" />
     <!-- SHMessageBox, SimHub's own dialog, answers with a System.Windows.Forms.DialogResult. -->
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />

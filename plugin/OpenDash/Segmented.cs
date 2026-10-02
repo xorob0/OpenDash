@@ -71,6 +71,7 @@ namespace OpenDashPlugin
 
         private readonly List<Cell> cells = new List<Cell>();
         private readonly List<string> values = new List<string>();
+        private readonly List<string> labels = new List<string>();
         private string selected;
         private readonly double optionPadding;
 
@@ -108,6 +109,7 @@ namespace OpenDashPlugin
                 var cell = BuildCell(list[i], i == 0, i == list.Count - 1);
                 cells.Add(cell);
                 values.Add(list[i].Value);
+                labels.Add(list[i].Label);
                 panel.Children.Add(cell.Box);
             }
 
@@ -117,6 +119,32 @@ namespace OpenDashPlugin
         }
 
         public string Selected => selected;
+
+        /// <summary>The chosen option's word, which the bar's automation peer gives as its value.</summary>
+        public string SelectedLabel
+        {
+            get
+            {
+                var index = values.IndexOf(selected);
+                return index < 0 ? null : labels[index];
+            }
+        }
+
+        /// <summary>Chooses the option whose word or value is <paramref name="word"/>, as a press would: what a
+        /// screen reader's set value does.</summary>
+        public void SelectByWord(string word)
+        {
+            var index = labels.FindIndex(label => string.Equals(label, word, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) index = values.FindIndex(value => string.Equals(value, word, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) Select(values[index], true);
+        }
+
+        /// <summary>A peer of its own (#523), so a page names the bar directly and a screen reader reads that
+        /// name and the chosen word; a Border has none, and a name set on it reached nothing.</summary>
+        protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+        {
+            return new SegmentedPeer(this);
+        }
 
         /// <summary>
         /// A locked bar fades the way a disabled button does, to the kit's 40 per cent, unless it sits in a
@@ -203,8 +231,14 @@ namespace OpenDashPlugin
         {
             var index = values.IndexOf(value);
             if (index < 0 || cells[index].Disabled || value == selected) return;
+            var was = SelectedLabel;
             selected = value;
             Paint();
+            if (System.Windows.Automation.Peers.AutomationPeer.ListenerExists(System.Windows.Automation.Peers.AutomationEvents.PropertyChanged))
+            {
+                var peer = System.Windows.Automation.Peers.UIElementAutomationPeer.FromElement(this);
+                if (peer != null) peer.RaisePropertyChangedEvent(System.Windows.Automation.ValuePatternIdentifiers.ValueProperty, was ?? string.Empty, SelectedLabel ?? string.Empty);
+            }
             if (notify) Changed?.Invoke(value);
         }
 

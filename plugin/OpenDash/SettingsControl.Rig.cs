@@ -135,10 +135,8 @@ namespace OpenDashPlugin
             var nightGroup = Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(PanelSettings.NightModeTitle), night);
 
             var real = PanelSoon.RealHardware;
-            // Named on the switch itself: the name Ui.Soon gives goes on its Border, which has no automation
-            // peer, so a screen reader would otherwise reach an unnamed switch.
+            // Ui.Soon names its wrapper, a group a screen reader announces, so the switch inside needs no name.
             var realSwitch = Ui.Switch(false, null);
-            AutomationProperties.SetName(realSwitch, real.Title);
             var hardware = Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real);
 
             var reset = Ui.Button(PanelRigMap.ResetLayout, PanelButtonKind.Outline, PanelButtonSize.Small);
@@ -945,11 +943,8 @@ namespace OpenDashPlugin
                 foreach (var scenario in group.Scenarios)
                 {
                     var id = scenario.Id;
+                    // The kit names a swatch chip by its label and says whether it is pressed.
                     var chip = Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id));
-                    // A swatch chip's content is a panel, which gives the button no name of its own, and the
-                    // pressed chip is the artboard's aria-pressed: said as the kit's segmented control says it.
-                    AutomationProperties.SetName(chip, scenario.Label);
-                    AutomationProperties.SetItemStatus(chip, id == current ? "checked" : "unchecked");
                     chip.Margin = new Thickness(0, 0, PanelRigMap.ChipGap, PanelRigMap.ChipGap);
                     if (id == focus) focusChip = chip;
                     chips.Children.Add(chip);

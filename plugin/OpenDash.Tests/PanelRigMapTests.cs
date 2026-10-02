@@ -408,10 +408,7 @@ namespace OpenDashPlugin.Tests
                 "foreach (var group in PanelEmulation.Groups)",
                 "foreach (var scenario in group.Scenarios)",
                 "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",
-                // A swatch chip's content is a panel, which names no button: each is named, and says which
-                // is pressed as the kit's segmented control does.
-                "AutomationProperties.SetName(chip, scenario.Label);",
-                "AutomationProperties.SetItemStatus(chip, id == current ? \"checked\" : \"unchecked\");",
+                // A swatch chip is named and says whether it is pressed in the kit (#523), not here.
                 "chip.Margin = new Thickness(0, 0, PanelRigMap.ChipGap, PanelRigMap.ChipGap);",
                 "if (id == focus) focusChip = chip;",
                 "Ui.Eyebrow(group.Title)",
@@ -537,8 +534,13 @@ namespace OpenDashPlugin.Tests
             // Real hardware (#506) is drawn greyed, a switch with no handler, and nothing on the page
             // installs or writes to a device: the page emulates.
             var header = RigMethod("private FrameworkElement BuildRigHeader(");
-            InOrder(header, "var real = PanelSoon.RealHardware;", "var realSwitch = Ui.Switch(false, null);", "AutomationProperties.SetName(realSwitch, real.Title);", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real)");
+            InOrder(header, "var real = PanelSoon.RealHardware;", "var realSwitch = Ui.Switch(false, null);", "Ui.Soon(Ui.HStack(PanelRigMap.HeaderLabelGap, RigHeaderLabel(real.Title), Ui.SoonTag(real), realSwitch), real)");
+            // The Soon's wrapper carries the name and has a peer (#523), so the page names neither the switch
+            // nor a chip itself.
             var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs"));
+            Assert.DoesNotContain("SetName(realSwitch", page);
+            Assert.DoesNotContain("SetName(chip", page);
+            Assert.DoesNotContain("SetItemStatus(chip", page);
             foreach (var write in new[] { "InstallBar(", "ReinstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
             // The page calls DrawsLighting, so a wheel's lighting press rebuilds it on SimHub's interface
             // thread: its build reads nothing of SimHub's devices, profiles or disk (foundation §4).

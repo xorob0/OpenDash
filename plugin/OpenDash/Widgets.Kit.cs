@@ -578,7 +578,9 @@ namespace OpenDashPlugin
                 tag.Margin = new Thickness(8, 0, 0, 0);
                 parts.TitleLine.Children.Add(tag);
             }
-            var wrapper = new Border
+            // A GroupBorder rather than a Border, because a Border has no automation peer and the row's name set
+            // on it reached no screen reader (#523): the wrapper is announced as a named group around the row.
+            var wrapper = new GroupBorder
             {
                 Child = row,
                 Opacity = PanelShell.SoonOpacity,
@@ -676,6 +678,14 @@ namespace OpenDashPlugin
             {
                 button.MouseEnter += (sender, args) => label.Foreground = Brush(Theme.TextPrimary);
                 button.MouseLeave += (sender, args) => label.Foreground = Brush(Theme.TextSecondary);
+            }
+            if (swatchHex != null)
+            {
+                // The content is a panel, which gives the button no name of its own, so the chip is named by its
+                // label; and the pressed chip is the artboard's aria-pressed, said as RadioRow and ChoiceTile
+                // say theirs (#523).
+                AutomationName(button, text);
+                System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? "checked" : "unchecked");
             }
             if (click != null) button.Click += (sender, args) => click();
             return button;
@@ -1456,7 +1466,9 @@ namespace OpenDashPlugin
             var track = new Border { Height = PanelKit.SliderTrack, CornerRadius = new CornerRadius(PanelKit.SliderTrack / 2), Background = Brush(Theme.Border), VerticalAlignment = VerticalAlignment.Center };
             var fill = new Border { Height = PanelKit.SliderTrack, CornerRadius = new CornerRadius(PanelKit.SliderTrack / 2), Background = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
             var thumb = new Ellipse { Width = PanelKit.SliderThumb, Height = PanelKit.SliderThumb, Fill = Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
-            var surface = new Grid { Height = PanelKit.SliderHeight, Background = System.Windows.Media.Brushes.Transparent, Cursor = Cursors.Hand, Focusable = true, FocusVisualStyle = FocusRing(), MinWidth = PanelKit.SliderMinWidth };
+            // A SliderSurface rather than a bare Grid: a Grid has no automation peer, so the name a page gave the
+            // slider reached nothing; the surface is read as a slider with its value, and can be set (#523).
+            var surface = new SliderSurface { Height = PanelKit.SliderHeight, Background = System.Windows.Media.Brushes.Transparent, Cursor = Cursors.Hand, Focusable = true, FocusVisualStyle = FocusRing(), MinWidth = PanelKit.SliderMinWidth };
             surface.Children.Add(track);
             surface.Children.Add(fill);
             surface.Children.Add(thumb);
@@ -1476,6 +1488,7 @@ namespace OpenDashPlugin
                 fill.Width = width * current / 100.0;
                 thumb.Margin = new Thickness(Math.Max(0, Math.Min(width - thumb.Width, width * current / 100.0 - thumb.Width / 2)), 0, 0, 0);
                 if (numeral != null) numeral.Text = current + "%";
+                surface.Report(current);
             };
             Action<Point> seek = point =>
             {
@@ -1522,6 +1535,15 @@ namespace OpenDashPlugin
                 paint();
                 changed(current);
             };
+            // A screen reader's set value lands as a key press does: painted, and saved at once.
+            surface.Set = next =>
+            {
+                if (next == current) return;
+                current = next;
+                paint();
+                changed(current);
+            };
+            surface.Report(current);
 
             if (numeral == null) return surface;
             var dock = new DockPanel { LastChildFill = true, VerticalAlignment = VerticalAlignment.Center };
