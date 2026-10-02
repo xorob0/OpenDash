@@ -97,11 +97,9 @@ namespace OpenDashPlugin
             return PageLayout(PanelScreens.Title, null, sections.ToArray());
         }
 
-        /// <summary>Selects the screen a route to <paramref name="anchor"/> needs, and on a face opens the
-        /// zone, and the whole list, the row is drawn in.</summary>
         /// <summary>
         /// Opens the Add sheet for a route to the add tile (PanelScreens.AnchorAdd), once the page it arrives on
-        /// is drawn: Home's empty-rig tile goes there (#523).
+        /// is drawn: Home's empty-rig tile, Rig's empty canvas and a search for "Add a screen" go there (#523).
         /// </summary>
         /// <remarks>
         /// Go puts focus on the page's first control at Loaded. The sheet opens after that, at Input, so its own
@@ -120,6 +118,8 @@ namespace OpenDashPlugin
             }), DispatcherPriority.Input);
         }
 
+        /// <summary>Selects the screen a route to <paramref name="anchor"/> needs, and on a face opens the
+        /// zone, and the whole list, the row is drawn in.</summary>
         private void ScreensFollow(string anchor, IReadOnlyList<ScreenInstance> rig)
         {
             var current = SelectedScreen;

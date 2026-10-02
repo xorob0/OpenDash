@@ -639,5 +639,25 @@ namespace OpenDashPlugin.Tests
             build = build.Substring(0, build.IndexOf("return Ui.VStack(12,", StringComparison.Ordinal));
             Assert.Contains("DropPreview(); ClearTicks(); ClearUpdateHandlers(); lightingActions.Clear(); pageDrawsLighting = false; RunDropActions();", build);
         }
+
+        /// <summary>No member of the panel carries two summaries: a merge that stacks one member's summary over
+        /// another's leaves the first member undocumented and the second documented twice, and the compiler takes
+        /// the pair without a word.</summary>
+        [Fact]
+        public void No_member_of_the_panel_carries_two_summaries()
+        {
+            var root = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var files = System.IO.Directory.GetFiles(root, "*.cs")
+                .Where(path =>
+                {
+                    var name = System.IO.Path.GetFileName(path);
+                    return name.StartsWith("SettingsControl", StringComparison.Ordinal) || name.StartsWith("Panel", StringComparison.Ordinal) || name.StartsWith("Widgets", StringComparison.Ordinal);
+                });
+            foreach (var path in files)
+            {
+                var text = System.IO.File.ReadAllText(path);
+                Assert.False(Regex.IsMatch(text, @"</summary>\s*///\s*<summary>"), System.IO.Path.GetFileName(path) + " stacks two summaries on one member");
+            }
+        }
     }
 }
