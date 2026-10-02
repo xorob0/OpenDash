@@ -88,15 +88,126 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
-        /// <summary>The clock's rule as amended (#523): a tick may read in-memory settings, SimHub's unit strings
-        /// included, and never a device, a profile or the disk.</summary>
+        /// <summary>
+        /// The clock's rule as amended (#523): a tick may read in-memory settings, SimHub's unit strings included,
+        /// and never a device, a profile or the disk. Held on what every tick runs, not on the comment that states
+        /// the rule: each OnTick body on every page, followed into the page methods, the local actions and the
+        /// Panel* helpers it calls, is searched for the reads that reach SimHub's devices, its profiles or the
+        /// disk -- the set Home's own tick test bans (PanelHomeTests.The_tick_only_reads).
+        /// </summary>
         [Fact]
         public void A_tick_reads_memory_and_never_a_device_a_profile_or_the_disk()
         {
-            var live = System.Text.RegularExpressions.Regex.Replace(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Live.cs")), @"\s*//\s*", " ");
-            Assert.DoesNotContain("Nothing SimHub is asked on the tick", live);
-            Assert.Contains("A tick reads what is held in memory, SimHub's own settings included", live);
-            Assert.Contains("and never a device, a profile or the disk", live);
+            var root = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var pages = RepoPaths.SettingsControlSources().Select(RepoPaths.Code).ToList();
+            var shell = string.Join("\n", pages);
+            // Every method of the control, by name (overloads together), and every static method of a Panel* class.
+            var methods = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>(StringComparer.Ordinal);
+            foreach (Match method in Regex.Matches(shell, @"(?:private|internal|public|protected)\s+(?:static\s+)?[\w<>\[\],. ?]+\s+([A-Z]\w*)\s*\([^;{]*\)\s*\{"))
+            {
+                Add(methods, method.Groups[1].Value, TickBlock(shell, method.Index));
+            }
+            foreach (var path in System.IO.Directory.GetFiles(root, "Panel*.cs"))
+            {
+                var code = RepoPaths.Code(path);
+                foreach (Match type in Regex.Matches(code, @"static class (Panel\w+)"))
+                {
+                    foreach (Match method in Regex.Matches(code, @"public\s+static\s+[\w<>\[\],. ?]+\s+([A-Z]\w*)\s*\([^;{]*\)\s*\{"))
+                    {
+                        Add(methods, type.Groups[1].Value + "." + method.Groups[1].Value, TickBlock(code, method.Index));
+                    }
+                }
+            }
+            var banned = new[]
+            {
+                @"\bFile\.", @"\bDirectory\.", @"\bLedTargets\.", @"\bBarCensus\(", @"\bSafePlan\(", @"\bplugin\.Installer\b",
+                @"\bStripFacts\(", @"\bScreenFacts\(", @"\bMatrixFacts\(", @"\bFlagBoxInstaller\b", @"\bRefreshAttention\(",
+            };
+            var ticks = 0;
+            foreach (var page in pages)
+            {
+                foreach (Match tick in Regex.Matches(page, @"\bOnTick\((\(\) =>|\w+\))"))
+                {
+                    ticks++;
+                    string body;
+                    if (tick.Groups[1].Value.StartsWith("(", StringComparison.Ordinal))
+                    {
+                        var after = page.Substring(tick.Index + tick.Length).TrimStart();
+                        body = after.StartsWith("{", StringComparison.Ordinal) ? TickBlock(page, tick.Index + tick.Length) : page.Substring(tick.Index, page.IndexOf(';', tick.Index) - tick.Index);
+                    }
+                    else
+                    {
+                        body = LocalAction(page, tick.Groups[1].Value.TrimEnd(')'), tick.Index);
+                        Assert.True(body != null, "the tick's action " + tick.Groups[1].Value + " is not a local the page defines");
+                    }
+                    var run = new System.Collections.Generic.List<string> { body };
+                    var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal) { "OnTick" };
+                    for (var i = 0; i < run.Count; i++)
+                    {
+                        var text = run[i];
+                        foreach (Match call in Regex.Matches(text, @"(?<![.\w])([A-Z]\w*)\("))
+                        {
+                            System.Collections.Generic.List<string> found;
+                            if (seen.Add(call.Groups[1].Value) && methods.TryGetValue(call.Groups[1].Value, out found)) run.AddRange(found);
+                        }
+                        foreach (Match call in Regex.Matches(text, @"\b(Panel\w+\.[A-Z]\w*)\("))
+                        {
+                            System.Collections.Generic.List<string> found;
+                            if (seen.Add(call.Groups[1].Value) && methods.TryGetValue(call.Groups[1].Value, out found)) run.AddRange(found);
+                        }
+                        foreach (Match call in Regex.Matches(text, @"(?<![.\w])([a-z]\w*)\("))
+                        {
+                            if (!seen.Add("local:" + call.Groups[1].Value)) continue;
+                            var local = LocalAction(page, call.Groups[1].Value, tick.Index);
+                            if (local != null) run.Add(local);
+                        }
+                    }
+                    foreach (var text in run)
+                    {
+                        foreach (var read in banned) Assert.False(Regex.IsMatch(text, read), "a tick runs " + read + " in: " + text);
+                    }
+                }
+            }
+            Assert.True(ticks >= 9, "every page's ticks are read: " + ticks);
+        }
+
+        private static void Add(System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> methods, string name, string body)
+        {
+            System.Collections.Generic.List<string> bodies;
+            if (!methods.TryGetValue(name, out bodies)) methods[name] = bodies = new System.Collections.Generic.List<string>();
+            bodies.Add(body);
+        }
+
+        /// <summary>The body of the local action <paramref name="name"/> last assigned before <paramref name="before"/>
+        /// ("name = () =>", "name = value =>", "name = (a, b) =>"), or null where the page assigns none.</summary>
+        private static string LocalAction(string code, string name, int before)
+        {
+            Match last = null;
+            foreach (Match assigned in Regex.Matches(code, @"\b" + Regex.Escape(name) + @"\s*=\s*(?:\([^)]*\)|\w+)\s*=>"))
+            {
+                if (assigned.Index < before) last = assigned;
+            }
+            if (last == null) return null;
+            var after = code.Substring(last.Index + last.Length).TrimStart();
+            return after.StartsWith("{", StringComparison.Ordinal) ? TickBlock(code, last.Index + last.Length) : code.Substring(last.Index, code.IndexOf(';', last.Index) - last.Index);
+        }
+
+        /// <summary>The block that opens at the first brace at or after <paramref name="from"/>, to the brace that
+        /// closes it, a brace inside a string skipped.</summary>
+        private static string TickBlock(string code, int from)
+        {
+            var open = code.IndexOf('{', from);
+            Assert.True(open >= 0, "No block after " + from);
+            var depth = 0;
+            var quoted = false;
+            for (var i = open; i < code.Length; i++)
+            {
+                var c = code[i];
+                if (c == '"' && code[i - 1] != '\\') quoted = !quoted;
+                else if (!quoted && c == '{') depth++;
+                else if (!quoted && c == '}' && --depth == 0) return code.Substring(open, i - open + 1);
+            }
+            throw new InvalidOperationException("Unbalanced block after " + from);
         }
 
         /// <summary>A rebuild in place puts keyboard focus back and leaves the scroll where the driver had it:
