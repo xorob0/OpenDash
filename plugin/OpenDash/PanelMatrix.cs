@@ -461,10 +461,11 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The line under the name box, which says what the name is not: one profile paints every matrix, so
-        /// SimHub's list carries the profile's name and never this one. One sentence, in the form the Screens
-        /// and LEDs sheets give the same row ("Also shown in SimHub's ... list").
+        /// SimHub's matrix profile list carries the profile's name and never this one. One sentence, in the form
+        /// the Screens and LEDs sheets give the same row ("Also shown in SimHub's LED profile list."), the list
+        /// named as docs/flag-box.md and FlagBoxInstaller's log name it.
         /// </summary>
-        public const string NameCaption = "Not shown in SimHub's profile list.";
+        public const string NameCaption = "Not shown in SimHub's matrix profile list.";
 
         public const string Cancel = "Cancel";
 
