@@ -440,7 +440,6 @@ namespace OpenDashPlugin
             {
                 var size = MatrixTileSide();
                 tiles.Add(new RigTile(RigTileKind.Matrix, MatrixId(matrix), settings.MatrixName(matrix) ?? string.Empty, 0, 0, size, size, settings.MatrixSide(matrix)));
-
             }
             return tiles;
         }

@@ -134,8 +134,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0.43, PanelRigMap.PortraitBoardShare);
             Assert.Equal(0.49, PanelRigMap.PortraitZonesTop);
             Assert.Equal(0.02, PanelRigMap.PortraitCellGap);
-            Assert.Equal(Math.Round(800.0 / 1856, 2), PanelRigMap.PortraitBoardShare);
-            Assert.Equal(Math.Round(912.0 / 1856, 2), PanelRigMap.PortraitZonesTop);
+            Assert.Equal(PanelRigMap.PortraitBoardShare, Math.Round(800.0 / 1856, 2));
+            Assert.Equal(PanelRigMap.PortraitZonesTop, Math.Round(912.0 / 1856, 2));
         }
 
         [Fact]
