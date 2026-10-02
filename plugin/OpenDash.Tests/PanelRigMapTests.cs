@@ -433,8 +433,9 @@ namespace OpenDashPlugin.Tests
             InOrder(RigMethod("private void RigDrawChips("),
                 "var current = rigScenario;",
                 // 32 between two groups and 18 between two rows of them, as the artboard's `gap: 18px 32px`:
-                // the chips' own 6 counted in, and the last group's trailing gap taken back by the panel.
-                "var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };",
+                // the chips' own 6 counted in, and the last group's trailing gaps taken back by the panel, across
+                // and down, so the last row does not leave 18 under the page (#527).
+                "var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, -PanelRigMap.GroupGapY) };",
                 "foreach (var group in PanelEmulation.Groups)",
                 "foreach (var scenario in group.Scenarios)",
                 "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",

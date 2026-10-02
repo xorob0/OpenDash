@@ -960,9 +960,10 @@ namespace OpenDashPlugin
         private void RigDrawChips(Border host, IList<RigTileView> views, string focus)
         {
             var current = rigScenario;
-            // Every group carries the gap across on its right, and the panel takes back the last one's, so a
-            // group wraps only when it does not fit, as the artboard's flex-wrap does.
-            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };
+            // Every group carries the gap across on its right and the gap down under it, and the panel takes
+            // back the last column's and the last row's: a group wraps only when it does not fit, as the
+            // artboard's flex-wrap does, and the page ends its own padding under the chips, not 18 more.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, -PanelRigMap.GroupGapY) };
             Button focusChip = null;
             foreach (var group in PanelEmulation.Groups)
             {
