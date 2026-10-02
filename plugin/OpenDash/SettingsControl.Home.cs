@@ -455,11 +455,9 @@ namespace OpenDashPlugin
             {
                 strip.PaintedRun = runKey;
                 var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre);
-                if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex))
+                if (!Ui.Relight(strip.Picture, frame, StripStyle.Home))
                 {
-                    // Ui.Strip no longer draws the tree HomeRelight walks: draw the frame whole rather than
-                    // leave the picture dark, and say so once, since the in-place repaint wants fixing.
-                    HomeRelightMissed();
+                    // A frame of another shape than the picture: draw it whole rather than leave it dark.
                     strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim);
                     strip.Host.Child = strip.Picture;
                 }
@@ -469,49 +467,6 @@ namespace OpenDashPlugin
             strip.PaintedLine = lineKey;
             HomeSetLine(strip.Line, line, strip.KeepsRoom);
             HomeSetDot(strip.Dot, line.DotHex);
-        }
-
-        /// <summary>
-        /// Sets each LED of a picture Ui.Strip drew to a frame of the same shape, in place: the row, its
-        /// groups, and a Border per LED. False, touching nothing, when the picture is not that tree or not
-        /// that shape, so the caller can draw the frame whole instead.
-        /// </summary>
-        /// <remarks>
-        /// The walk mirrors Ui.Strip's private tree (Widgets.Lights.cs), which the tests cannot build. Asked
-        /// of the kit as Ui.Relight beside Ui.Redim, so the walk lives beside the tree it walks.
-        /// </remarks>
-        private static bool HomeRelight(Border picture, string[][] frame, string unlitHex)
-        {
-            var row = picture == null ? null : picture.Child as Panel;
-            if (row == null || frame == null || row.Children.Count != frame.Length) return false;
-            var leds = new List<Border>();
-            for (var g = 0; g < frame.Length; g++)
-            {
-                var group = row.Children[g] as Panel;
-                var lit = frame[g] ?? new string[0];
-                if (group == null || group.Children.Count != lit.Length) return false;
-                foreach (var child in group.Children)
-                {
-                    var led = child as Border;
-                    if (led == null) return false;
-                    leds.Add(led);
-                }
-            }
-            var at = 0;
-            foreach (var lit in frame)
-            {
-                foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex);
-            }
-            return true;
-        }
-
-        private static bool homeRelightWarned;
-
-        private static void HomeRelightMissed()
-        {
-            if (homeRelightWarned) return;
-            homeRelightWarned = true;
-            Log.Warn("Home could not repaint a strip in place, because Ui.Strip draws a different tree; it draws each frame whole instead.");
         }
 
         /// <summary>A matrix: its idle glyph (dark when no device shows it), its name and its content number.</summary>

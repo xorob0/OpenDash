@@ -882,10 +882,11 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var ns = strip.Bar.Namespace; var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
             Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
             Assert.Contains("var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected);", code);
-            Assert.Contains("var runKey = run ?? string.Empty; if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!HomeRelight(strip.Picture, frame, StripStyle.Home.UnlitHex)) {", code);
-            Assert.Contains("HomeRelightMissed(); strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim); strip.Host.Child = strip.Picture;", code);
-            // It says it repainted, so the caller neither draws the frame whole again nor warns.
-            Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Ui.Brush(hex ?? unlitHex); } return true; }", code);
+            // The kit repaints the picture in place (Ui.Relight, #523), and the page draws it whole only when the
+            // kit says the frame is not the picture's shape.
+            Assert.Contains("var runKey = run ?? string.Empty; if (runKey != strip.PaintedRun) { strip.PaintedRun = runKey; var frame = PanelEmulation.LiveFrame(run, strip.Ends, strip.Centre); if (!Ui.Relight(strip.Picture, frame, StripStyle.Home)) {", code);
+            Assert.Contains("strip.Picture = Ui.Strip(frame, StripStyle.Home, strip.Dim); strip.Host.Child = strip.Picture;", code);
+            Assert.DoesNotContain("HomeRelight", code);
             Assert.Contains("HomeSetLine(strip.Line, line, strip.KeepsRoom); HomeSetDot(strip.Dot, line.DotHex);", code);
             Assert.Contains("strip.Picture = Ui.Strip(PanelEmulation.LiveFrame(null, strip.Ends, strip.Centre), StripStyle.Home, dim);", code);
             Assert.Contains("OnTick(() => { foreach (var strip in live) HomePaintStrip(strip); });", code);
@@ -922,13 +923,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("private void HomePaintScreen(HomeScreen row) { var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart); var painted = line.Text", code);
 
             var ticked = new List<string>();
-            foreach (var head in new[] { "void HomePaintStrip(", "void HomePaintScreen(", "bool HomeRelight(", "void HomeRelightMissed(", "void HomeSetLine(", "void HomeSetDot(" })
+            foreach (var head in new[] { "void HomePaintStrip(", "void HomePaintScreen(", "void HomeSetLine(", "void HomeSetDot(" })
             {
                 Assert.Single(Regex.Matches(code, Regex.Escape(head)));
                 ticked.Add(Block(code, code.IndexOf(head, StringComparison.Ordinal)));
             }
             foreach (Match tick in Regex.Matches(code, Regex.Escape("OnTick(() =>"))) ticked.Add(Block(code, tick.Index));
-            Assert.Equal(8, ticked.Count);
+            Assert.Equal(6, ticked.Count);
             var calls = new[]
             {
                 @"\bRefreshAttention\(", @"\bCheckAgain\(", @"\bRedraw\(", @"\bRebuildPage\(", @"\bAttention\(",
@@ -1141,11 +1142,6 @@ namespace OpenDashPlugin.Tests
             // An issue's press is an outline press: one Primary per page, and there may be several issues.
             Assert.Contains("var press = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline);", code);
             Assert.DoesNotContain("PanelButtonKind.Primary", code);
-            // HomeRelight's walk of Ui.Strip's tree: every LED is collected before any is set, and a tree of
-            // another shape is refused whole.
-            Assert.Contains("var row = picture == null ? null : picture.Child as Panel; if (row == null || frame == null || row.Children.Count != frame.Length) return false;", code);
-            Assert.Contains("var leds = new List<Border>(); for (var g = 0; g < frame.Length; g++) { var group = row.Children[g] as Panel; var lit = frame[g] ?? new string[0]; if (group == null || group.Children.Count != lit.Length) return false; foreach (var child in group.Children) { var led = child as Border; if (led == null) return false; leds.Add(led); } }", code);
-            Assert.Contains("var at = 0; foreach (var lit in frame) {", code);
             // A device row: padded, ruled on top, its content stretched so the dot sits at the right edge, the
             // hand, the kit's focus ring, and the template whose chrome takes the hover ground.
             Assert.Contains("var row = new Button { Content = content, Padding = new Thickness(PanelHome.RowPaddingX, PanelHome.RowPaddingY, PanelHome.RowPaddingX, PanelHome.RowPaddingY), Background = Brushes.Transparent, BorderBrush = Ui.Brush(Theme.Rule), BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0), HorizontalContentAlignment = HorizontalAlignment.Stretch, Cursor = System.Windows.Input.Cursors.Hand, Template = HomeRowTemplate(), FocusVisualStyle = Ui.FocusRing(), };", code);

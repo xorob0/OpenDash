@@ -69,6 +69,38 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Sets each LED of a picture made by <see cref="Strip"/> to a frame of the same shape, in place: what a
+        /// page whose strip changes on the tick calls, so a live run repaints without a new tree each second.
+        /// False, touching nothing, when the picture is not a strip of that shape, so the caller can draw the
+        /// frame whole instead.
+        /// </summary>
+        public static bool Relight(Border picture, IList<string[]> frame, StripStyle style)
+        {
+            style = style ?? StripStyle.Card;
+            var row = picture == null ? null : picture.Child as Panel;
+            if (row == null || frame == null || row.Children.Count != frame.Count) return false;
+            var leds = new List<Border>();
+            for (var g = 0; g < frame.Count; g++)
+            {
+                var group = row.Children[g] as Panel;
+                var lit = frame[g] ?? new string[0];
+                if (group == null || group.Children.Count != lit.Length) return false;
+                foreach (var child in group.Children)
+                {
+                    var led = child as Border;
+                    if (led == null) return false;
+                    leds.Add(led);
+                }
+            }
+            var at = 0;
+            foreach (var lit in frame)
+            {
+                foreach (var hex in lit ?? new string[0]) leds[at++].Background = Brush(hex ?? style.UnlitHex);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// An 8x8: sixty-four round cells, row by row, <see cref="MatrixStyle.Gap"/> apart on the style's
         /// ground. Drawn on a canvas at exact positions, so the grid is the same size at every scale.
         /// </summary>

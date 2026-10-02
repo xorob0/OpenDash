@@ -276,6 +276,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var head = Row(Label(word, Theme.TextPrimary),", widgets);
         }
 
+        /// <summary>A strip's picture is repainted in place beside the tree that draws it (#523): every LED is
+        /// collected before any is set, a tree of another shape is refused whole, and an unlit LED takes the
+        /// style's unlit colour.</summary>
+        [Fact]
+        public void A_strip_is_relit_in_place_by_the_kit_that_drew_it()
+        {
+            var lights = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Lights.cs"));
+            var flat = Regex.Replace(lights, @"\s+", " ");
+            Assert.Contains("public static bool Relight(Border picture, IList<string[]> frame, StripStyle style)", flat);
+            Assert.Contains("var row = picture == null ? null : picture.Child as Panel; if (row == null || frame == null || row.Children.Count != frame.Count) return false;", flat);
+            Assert.Contains("if (group == null || group.Children.Count != lit.Length) return false;", flat);
+            Assert.Contains("foreach (var hex in lit ?? new string[0]) leds[at++].Background = Brush(hex ?? style.UnlitHex); } return true; }", flat);
+        }
+
         /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
         private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 
