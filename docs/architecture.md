@@ -99,10 +99,25 @@ A .NET Framework 4.8 class library named `OpenDash`, implementing `IPlugin` and
 `IWPFSettingsV2`. It is code-only WPF and builds with the .NET SDK on any platform, which is
 [ADR 0005](decisions/0005-plugin-builds-on-linux.md). On `Init` it reads its settings, compares the version of the embedded
 dashboard with the one installed under `DashTemplates/OpenDash/`, extracts the embedded package
-when the installed one is missing or older, and attaches one property per setting. The settings
-panel is a WPF control built from SimHub's own styles. The plugin renders nothing and does not
-implement `DataUpdate`. Details in
+when the installed one is missing or older, and attaches one property per setting. The plugin
+renders nothing and does not implement `DataUpdate`. Details in
 [research/simhub-plugin-sdk.md](research/simhub-plugin-sdk.md).
+
+The settings panel is a WPF control built from SimHub's own styles: a sidebar of pages beside one
+scrolling column. The sidebar carries the wordmark, a search over every setting, a live card for the
+game running, and the pages in order: Home, Rig, Screens, LEDs, Matrix, Shortcuts and Settings, with
+night mode and Updates pinned to its foot. An item shows its count where it has one, and an amber dot when Home has
+something to fix on that page. Home lists what needs fixing, what each device shows right now, and
+the quick controls. Rig draws every device as a schematic tile, with Preview chips that show what a
+flag or a warning would do; nothing is sent to the hardware. Screens, LEDs and Matrix each hold their
+devices as cards, with the selected one's settings beside them and an Add sheet. Shortcuts lists
+every action a wheel button can take, in SimHub's own binder. Settings holds what is rig-wide: race
+data, flags, alerts, lighting. Updates holds the plugin's update, what is installed in SimHub, and
+support. Below 1000 px of control width the sidebar folds to an icon rail, and below 760 the
+column's gutter narrows and a card grid holds two columns. `PanelShell` lays it out, `PanelNav`
+says what each item shows, and every word a page draws is a constant in its `Panel*.cs` file, which
+holds no WPF type and is tested on its own; the `SettingsControl.*.cs` partials build the controls
+from them. [design/plugin.md](design/plugin.md) is the page-by-page specification.
 
 ### Design (`design/`)
 
