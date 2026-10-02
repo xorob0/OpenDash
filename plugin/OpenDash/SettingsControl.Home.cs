@@ -194,9 +194,8 @@ namespace OpenDashPlugin
             switch (PanelHome.Press(issue))
             {
                 case HomePress.CheckAgain:
-                    // After the redraw, which clears the lines; said from what SimHub answered the second time.
-                    CheckAgain();
-                    Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject)));
+                    // The same press as the LEDs fix box's, said from what SimHub answered the second time.
+                    CheckAgainAndSay(issue);
                     return;
                 case HomePress.Reinstall:
                     var screen = Settings.ScreenByNamespace(issue.Subject);

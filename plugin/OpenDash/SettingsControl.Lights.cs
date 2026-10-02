@@ -385,7 +385,8 @@ namespace OpenDashPlugin
             var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace);
             if (issue == null) return null;
             var again = Ui.Button(issue.ActionLabel, PanelButtonKind.Outline, PanelButtonSize.Small);
-            again.Click += (sender, args) => CheckAgain();
+            // Home's press, outcome and all: where the strip is still unselected nothing here moves, so the line says so.
+            again.Click += (sender, args) => CheckAgainAndSay(issue);
             var box = Ui.FixBox(PanelLeds.NotSelectedTitle, null, issue.Steps, again);
             box.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);
             return box;

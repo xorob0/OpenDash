@@ -874,10 +874,10 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var facts = StripFacts(bar.Namespace);", code);
             Assert.Contains("Profile = facts == null ? null : facts.Profile, Selected = facts == null ? null : facts.Selected,", code);
             Assert.Contains("var profile = strip.Profile; var selected = strip.Selected; var cars = plugin.CarLights;", code);
-            // Read for the row, for the key an update check's answer is compared with, and for Check again's
-            // message; never on the tick.
+            // Read for the row and for the key an update check's answer is compared with; never on the tick.
+            // Check again's message reads them in the shell's CheckAgainAndSay, which the LEDs fix box shares.
             Assert.Single(Regex.Matches(code, @"StripFacts\(bar\.Namespace\); var strip = new HomeStrip"));
-            Assert.Equal(3, Regex.Matches(code, @"StripFacts\(").Count);
+            Assert.Equal(2, Regex.Matches(code, @"StripFacts\(").Count);
             // Each strip's own bar and each screen's own settings, never the first one's.
             Assert.Contains("var ns = strip.Bar.Namespace; var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected);", code);
             Assert.Contains("var run = live ? cars.Run(strip.Centre) : null;", code);
@@ -1209,7 +1209,7 @@ namespace OpenDashPlugin.Tests
             // the device it opens.
             Assert.Contains("System.Windows.Automation.AutomationProperties.SetName(row, name ?? string.Empty); row.Click += (sender, args) => click(); return row;", code);
             Assert.Equal(3, Regex.Matches(code, @"\bHomeRow\(").Count - 1);
-            Assert.Contains("case HomePress.CheckAgain: CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); return;", code);
+            Assert.Contains("case HomePress.CheckAgain: CheckAgainAndSay(issue); return;", code);
             Assert.Contains("case HomePress.Reinstall: var screen = Settings.ScreenByNamespace(issue.Subject); if (screen != null) { InstallScreenAgain(screen); return; } Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("case HomePress.Open: Open(issue.Page, issue.Subject, issue.Anchor); return;", code);
             Assert.Contains("default: Go(issue.Route); return;", code);

@@ -70,6 +70,17 @@ namespace OpenDashPlugin
             Redraw();
         }
 
+        /// <summary>
+        /// The "Check again" press on an issue's fix, wherever the issue is drawn (Home's list, the LEDs page's fix
+        /// box): asks again, then says what SimHub answered the second time, so the press is never silent where
+        /// nothing on screen moved. Said after the redraw, which clears the lines.
+        /// </summary>
+        private void CheckAgainAndSay(PanelIssue issue)
+        {
+            CheckAgain();
+            Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject)));
+        }
+
         /// <summary>Everything Home is told, each fact as read or as unknown.</summary>
         private AttentionInput Attention()
         {

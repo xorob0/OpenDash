@@ -598,7 +598,11 @@ namespace OpenDashPlugin.Tests
         {
             var leds = LedsSource();
             Holds(Body(leds, "private FrameworkElement LedsFix(", "private FrameworkElement LedsPreview("), "LedsFix",
-                "var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace); if (issue == null) return null;");
+                "var issue = PanelAttention.Of(issues, PanelAttention.StripUnselected, bar.Namespace); if (issue == null) return null;",
+                // Home's press for the same issue: the outcome is said, so a strip still unselected is not a dead press.
+                "again.Click += (sender, args) => CheckAgainAndSay(issue);");
+            var status = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs")), @"\s+", " ");
+            Assert.Contains("private void CheckAgainAndSay(PanelIssue issue) { CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); }", status);
             Holds(Body(leds, "private void InstallLedBarProfile(", "private void ReverseLedBar("), "InstallLedBarProfile",
                 "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
                 "if (plan == null) { Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name))); return; }");
@@ -1687,7 +1691,7 @@ namespace OpenDashPlugin.Tests
                 "ToolTipService.SetShowOnDisabled(picker, true);",
                 // The fix box: SimHub's steps and the press that asks again, at the artboard's padding.
                 "var box = Ui.FixBox(PanelLeds.NotSelectedTitle, null, issue.Steps, again);",
-                "again.Click += (sender, args) => CheckAgain();",
+                "again.Click += (sender, args) => CheckAgainAndSay(issue);",
                 "box.Padding = new Thickness(PanelKit.FixPaddingX, PanelKit.FixPaddingYLights, PanelKit.FixPaddingX, PanelKit.FixPaddingYLights);",
                 // Live draws the car's run for the strip's centre, which is the run the profile draws.
                 "running ? lights.Run(centre) : null",
