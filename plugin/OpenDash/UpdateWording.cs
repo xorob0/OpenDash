@@ -174,26 +174,48 @@ namespace OpenDashPlugin
 
         /// <summary>The release notes, cut to something that fits beside a button.</summary>
         /// <remarks>
-        /// The body is the release's section of CHANGELOG.md (#76), which opens with a sentence of prose and
-        /// then groups its changes under headings. A leading heading is dropped and the first real line is shown,
-        /// which is that opening sentence; the whole of it is a click away on the release page, which is what the
-        /// link is for. A release cut before that change carries GitHub's generated summary instead, and the same
-        /// rule turns it into the first pull request title, which is why the heading skip stays.
+        /// The body is the release's section of CHANGELOG.md (#76), which opens with a paragraph of prose and
+        /// then groups its changes under headings. A leading heading is dropped and the opening sentence of the
+        /// first paragraph is shown; the whole of it is a click away on the release page, which is what the link
+        /// is for. CHANGELOG.md is wrapped at a hundred columns, so the paragraph is read across its lines rather
+        /// than off the first of them, which ended the card mid-clause ("… A dashboard is", #529). A release cut
+        /// before that change carries GitHub's generated summary instead, a list, and the same rule turns it into
+        /// the first pull request title, which is why the heading skip stays and an item stands alone.
         /// </remarks>
         public static string Summarise(string notes, int maxLength = 140)
         {
             if (string.IsNullOrWhiteSpace(notes)) return null;
-            var lines = notes.Replace("\r\n", "\n").Split('\n');
-            foreach (var raw in lines)
+            var paragraph = new List<string>();
+            foreach (var raw in notes.Replace("\r\n", "\n").Split('\n'))
             {
                 var line = raw.Trim();
-                if (line.Length == 0) continue;
-                if (line.StartsWith("#", StringComparison.Ordinal)) continue;
+                if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
+                {
+                    if (paragraph.Count > 0) break;
+                    continue;
+                }
+                var item = line.StartsWith("*", StringComparison.Ordinal) || line.StartsWith("-", StringComparison.Ordinal);
+                if (item && paragraph.Count > 0) break;
                 line = line.TrimStart('*', '-', ' ');
                 if (line.Length == 0) continue;
-                return line.Length <= maxLength ? line : line.Substring(0, maxLength - 1).TrimEnd() + "…";
+                paragraph.Add(line);
+                if (item) break;
             }
-            return null;
+            if (paragraph.Count == 0) return null;
+            var text = string.Join(" ", paragraph);
+            var sentence = FirstSentenceEnd(text);
+            if (sentence > 0 && sentence <= maxLength) text = text.Substring(0, sentence);
+            return text.Length <= maxLength ? text : text.Substring(0, maxLength - 1).TrimEnd() + "…";
+        }
+
+        /// <summary>Where the first sentence ends, after its full stop, or 0 when the text holds one sentence.</summary>
+        private static int FirstSentenceEnd(string text)
+        {
+            for (var i = 0; i < text.Length - 1; i++)
+            {
+                if ((text[i] == '.' || text[i] == '!' || text[i] == '?') && text[i + 1] == ' ') return i + 1;
+            }
+            return 0;
         }
 
         private static string Show(string version) => string.IsNullOrWhiteSpace(version) ? "an unknown version" : version;
