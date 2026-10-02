@@ -79,7 +79,7 @@ export default function Install() {
             <strong>Every screen keeps its own settings.</strong> A face on the wheel and a face beside it are set up apart.
           </li>
           <li>
-            <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Updating is one click, then restart SimHub.
+            <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Press Download on the Updates page, then restart SimHub.
           </li>
         </ul>
       </Section>
@@ -123,7 +123,7 @@ export default function Install() {
             <strong>A value reads <code>--</code>.</strong> iRacing has not published it yet, or never does.
           </li>
           <li>
-            <strong>The shift lights look generic.</strong> Press Download on the LEDs page to fetch the car tables.
+            <strong>The shift lights look generic.</strong> Press Download under Lovely Car Data on the LEDs page.
           </li>
           <li>
             <strong>A wheel button does nothing.</strong> Bind the action of the screen you are looking at. Each screen has its own.

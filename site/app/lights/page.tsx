@@ -106,9 +106,9 @@ export default function Lights() {
       </Section>
 
       <Section
-        id="tab"
+        id="plugin"
         title="In the plugin"
-        lede="The LEDs page holds a group per strip, with its centre display and the car’s own rev lights, and the car tables. The Matrix page holds the flag box and up to four matrix panels. The Settings page holds the low fuel warning in laps, and brightness and night mode for every light."
+        lede="The LEDs page holds your strips, each with its rev lights, the car’s own rev lights and its centre display, and Lovely Car Data under Every strip. The Matrix page installs the flag box profile and holds its priority and up to four matrices. The Settings page holds the low fuel warning in laps, and brightness and night mode for every light."
       >
         <p className={`prose ${styles.more}`}>
           <Link href={INSTALL.href} className="link">
