@@ -6,17 +6,16 @@
  * catalogues in packages/dash, and with the build manifest when there is one.
  */
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FLAG_CATALOGUE } from '../../packages/dash/src/flags.ts';
 import { ALL_SHAPES, LEGACY_SHAPES } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
-import { downloads, flags, heroFace, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
+import { downloads, flags, heroFace, readBuildManifest, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
-const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
-const manifest: Manifest | null = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Manifest) : null;
+const manifest: Manifest | null = readBuildManifest(repoRoot);
 
 describe('the strip shapes', () => {
   const shapes = stripShapes(ALL_SHAPES, LEGACY_SHAPES);
